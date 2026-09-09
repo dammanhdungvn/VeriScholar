@@ -1,0 +1,17 @@
+[project]
+name = "core"
+version = "0.1.0"
+description = "Core domain entities, ports, and business rules for VeriScholar"
+readme = "README.md"
+authors = [
+    { name = "dammanhdungvn", email = "dammanhdungvn@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.13.5",
+    "pymupdf>=1.28.2"
+]
+
+[build-system]
+requires = ["uv_build>=0.12.9,<0.13.0"]
+build-backend = "uv_build"
