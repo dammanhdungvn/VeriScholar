@@ -25,7 +25,7 @@ Host Machine (Local Development / Server)
  ├── Docker Model Runner (Port 12434) ── [Local LLM: llama.cpp / ai/smollm2 / ai/llama3.2]
  │    └── Endpoint: http://localhost:12434/engines/llama.cpp/v1
  │
- ├── Port: 127.0.0.1:5432 (hoặc 0.0.0.0:5432)
+ ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ bind loopback, chống rò rỉ mạng LAN)
  │
  └── Docker Network: verischolar-net (Bridge)
       │
@@ -33,6 +33,10 @@ Host Machine (Local Development / Server)
            │
            ├── User: verischolar
            ├── Database: verischolar
+           │
+           ├── Cấu hình Gia cố & Hiệu năng:
+           │    ├── shm_size: 256mb (Shared memory cho HNSW vector index & parallel query workers)
+           │    └── security_opt: no-new-privileges:true (Chống leo thang đặc quyền root)
            │
            ├── Extensions Khởi tạo tự động (/docker-entrypoint-initdb.d/init.sql):
            │    ├── vector (pgvector 0.8.0)
@@ -61,19 +65,21 @@ Host Machine (Local Development / Server)
 
 | Thông số | Giá trị Mặc định | Ghi chú |
 | :--- | :--- | :--- |
-| **Host** | `localhost` (hoặc `127.0.0.1`) | Kết nối từ ứng dụng máy chủ host |
-| **Container Host** | `postgres` | Kết nối giữa các container trong cùng mạng Docker |
+| **Host IP Binding** | `127.0.0.1` | **Security Hardening**: Chỉ mở cục bộ, chặn thiết bị khác trong LAN truy cập |
 | **Port** | `5432` | Cổng tiêu chuẩn của PostgreSQL |
+| **Container Host** | `postgres` | Kết nối giữa các container trong cùng mạng Docker |
 | **Username** | `verischolar` | Siêu người dùng quản trị ứng dụng |
 | **Password** | `verischolar` | Mật khẩu tài khoản (override qua file `.env`) |
 | **Database** | `verischolar` | Database chính của dự án |
 | **Volume** | `verischolar-postgres-data` | Lưu trữ dữ liệu lâu dài (Persistent) |
+| **Shared Memory** | `256mb` | Cấp đủ bộ nhớ chia sẻ cho pgvector xây dựng chỉ mục HNSW |
+| **Security Option** | `no-new-privileges:true` | Ngăn chặn tiến trình container nâng quyền chiếm root |
 
 ### 2.3. Định dạng Connection Strings (URIs)
 
 - **Kết nối từ máy tính phát triển (Python/FastAPI qua `asyncpg`):**
   ```text
-  postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar
+  postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar
   ```
 - **Kết nối giữa các Docker Container (Container-to-Container):**
   ```text
@@ -84,7 +90,52 @@ Host Machine (Local Development / Server)
 
 ## 3. KHỞI CHẠY NHANH VỚI DOCKER COMPOSE (KHUYẾN NGHỊ)
 
-Sử dụng Docker Compose là phương pháp chuẩn mực, tự động hóa toàn bộ việc cấu hình biến môi trường, mount volume, tạo mạng và kích hoạt extension.
+Sử dụng Docker Compose là phương pháp chuẩn mực, tự động hóa toàn bộ việc cấu hình biến môi trường, mount volume, tạo mạng, cấp phát `shm_size` và kích hoạt extension.
+
+### Chi tiết tệp `docker-compose.yml`
+```yaml
+services:
+  postgres:
+    image: pgvector/pgvector:0.8.0-pg16
+    container_name: ${POSTGRES_CONTAINER_NAME:-verischolar-postgres-dev}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    shm_size: 256mb
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-verischolar}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-verischolar}
+      POSTGRES_DB: ${POSTGRES_DB:-verischolar}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - verischolar-postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${POSTGRES_USER:-verischolar} -d ${POSTGRES_DB:-verischolar}"
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      - verischolar-net
+
+volumes:
+  verischolar-postgres-data:
+    name: verischolar-postgres-data
+
+networks:
+  verischolar-net:
+    name: verischolar-net
+    driver: bridge
+```
 
 ### Bước 1: Chuẩn bị biến môi trường (Tùy chọn)
 Tạo file `.env` tại thư mục gốc của dự án (hoặc sử dụng giá trị mặc định có sẵn):
@@ -102,7 +153,7 @@ docker compose up -d
 ```bash
 docker compose ps
 ```
-*Kết quả kỳ vọng:* Container `verischolar-postgres-dev` ở trạng thái `Up ... (healthy)`.
+*Kết quả kỳ vọng:* Container `verischolar-postgres-dev` ở trạng thái `Up ... (healthy)` và bind tới `127.0.0.1:5432->5432/tcp`.
 
 ### Bước 4: Xem Logs Container
 ```bash
@@ -121,11 +172,12 @@ docker compose down
 
 ## 4. KHỞI CHẠY BẰNG LỆNH DOCKER THUẦN (STANDALONE CLI)
 
-Nếu bạn không muốn sử dụng Docker Compose, bạn có thể khởi chạy thủ công theo các bước sau:
+Nếu bạn không muốn sử dụng Docker Compose, bạn có thể khởi chạy thủ công theo các bước sau (bao gồm cờ gia cố bảo mật và bộ nhớ dùng chung):
 
-### Bước 1: Tạo Volume lưu trữ dữ liệu bền vững
+### Bước 1: Tạo Volume và Network
 ```bash
 docker volume create verischolar-postgres-data
+docker network create verischolar-net
 ```
 
 ### Bước 2: Khởi chạy Container
@@ -133,13 +185,17 @@ docker volume create verischolar-postgres-data
 docker run -d \
   --name verischolar-postgres-dev \
   --restart unless-stopped \
+  --network verischolar-net \
+  --security-opt no-new-privileges:true \
+  --shm-size=256mb \
   -e POSTGRES_USER=verischolar \
   -e POSTGRES_PASSWORD=verischolar \
   -e POSTGRES_DB=verischolar \
   -e PGDATA=/var/lib/postgresql/data/pgdata \
-  -p 5432:5432 \
+  -p 127.0.0.1:5432:5432 \
   -v verischolar-postgres-data:/var/lib/postgresql/data \
   -v $(pwd)/infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro \
+  --add-host host.docker.internal:host-gateway \
   pgvector/pgvector:0.8.0-pg16
 ```
 
@@ -181,6 +237,14 @@ SELECT to_tsvector('english', 'Academic paper citation grounding') @@ to_tsquery
 "
 ```
 *Kỳ vọng:* Trả về giá trị boolean `t` (true).
+
+### 5.4. Kiểm tra Cấu hình Bộ nhớ Chia sẻ (Shared Memory)
+```bash
+docker exec -i verischolar-postgres-dev psql -U verischolar -d verischolar -c "
+SHOW shared_buffers;
+"
+```
+*Kỳ vọng:* Trả về ít nhất `128MB`, bảo đảm không gian shared memory cho pgvector vận hành trơn tru.
 
 ---
 
@@ -226,6 +290,10 @@ docker exec -t verischolar-postgres-dev pg_restore -U verischolar -d verischolar
 ### 3. Lỗi: "Extension 'vector' does not exist"
 * **Nguyên nhân:** Bạn đang sử dụng image `postgres:16` hoặc `postgres:18` thông thường thay vì image có sẵn pgvector.
 * **Cách khắc phục:** Đảm bảo `image` trong `docker-compose.yml` luôn là `pgvector/pgvector:0.8.0-pg16`.
+
+### 4. Lỗi: "could not resize shared memory segment"
+* **Nguyên nhân:** pgvector cần nhiều RAM dùng chung (Shared Memory) khi dựng chỉ mục HNSW cho hàng chục ngàn vector 1024 chiều hoặc khi chạy worker truy vấn song song. Container mặc định của Docker chỉ cấp 64MB.
+* **Cách khắc phục:** Đảm bảo đã khai báo `shm_size: 256mb` (hoặc `512mb`) trong `docker-compose.yml`.
 
 ---
 
