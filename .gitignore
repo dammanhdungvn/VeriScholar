@@ -70,3 +70,4 @@ Thumbs.db
 .dmypy.json
 dmypy.json
 .ruff_cache/
+temp/
