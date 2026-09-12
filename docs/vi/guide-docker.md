@@ -40,28 +40,28 @@ Host Machine (Máy tính phát triển của bạn / Máy chủ)
  ├── Docker Model Runner (Port 12434) ── [Local LLM: llama.cpp / ai/smollm2 / ai/llama3.2]
  │    └── Endpoint: http://localhost:12434/engines/llama.cpp/v1
  │
- ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ mở loopback cục bộ, chống rò rỉ mạng LAN)
+ ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ mở loopback cục bộ cho PostgreSQL)
+ ├── Port: 127.0.0.1:6379 (Gia cố bảo mật: chỉ mở loopback cục bộ cho Redis 7)
  │
  └── Docker Network: verischolar-net (Mạng cầu nối ảo Bridge)
       │
-      └── Container: verischolar-postgres-dev (Image: pgvector/pgvector:0.8.0-pg16)
-           │
-           ├── User: verischolar
-           ├── Database: verischolar
-           │
-           ├── Cấu hình Gia cố & Hiệu năng:
-           │    ├── shm_size: 256mb (Bộ nhớ chia sẻ cho chỉ mục vector HNSW & đa luồng)
-           │    └── security_opt: no-new-privileges:true (Chống leo thang đặc quyền chiếm root)
-           │
-           ├── Extensions Khởi tạo tự động (/docker-entrypoint-initdb.d/init.sql):
-           │    ├── vector (pgvector 0.8.0 - lưu và tìm kiếm vector)
-           │    └── uuid-ossp (1.1 - tự động sinh khóa chính UUID)
-           │
-           ├── extra_hosts:
-           │    └── host.docker.internal:host-gateway (Giúp container gọi ngược về Docker Model Runner)
-           │
-           └── Persistent Storage (Phân vùng lưu trữ bền vững Named Volume):
-                └── verischolar-postgres-data ──> /var/lib/postgresql/data
+      ├── Container: verischolar-postgres-dev (Image: pgvector/pgvector:0.8.0-pg16)
+      │    ├── User: verischolar
+      │    ├── Database: verischolar
+      │    ├── Cấu hình Gia cố & Hiệu năng:
+      │    │    ├── shm_size: 256mb (Bộ nhớ chia sẻ cho chỉ mục vector HNSW & đa luồng)
+      │    │    └── security_opt: no-new-privileges:true (Chống leo thang đặc quyền chiếm root)
+      │    ├── Extensions Khởi tạo tự động (/docker-entrypoint-initdb.d/init.sql):
+      │    │    ├── vector (pgvector 0.8.0 - lưu và tìm kiếm vector)
+      │    │    └── uuid-ossp (1.1 - tự động sinh khóa chính UUID)
+      │    ├── extra_hosts:
+      │    │    └── host.docker.internal:host-gateway (Giúp container gọi ngược về Docker Model Runner)
+      │    └── Persistent Storage: verischolar-postgres-data ──> /var/lib/postgresql/data
+      │
+      └── Container: verischolar-redis-dev (Image: redis:7-alpine)
+           ├── Port: 127.0.0.1:6379:6379
+           ├── Vai trò: Redis Streams Durable Task Queue & Cửa sổ Idempotency 24h
+           └── Persistent Storage: verischolar-redis-data ──> /data
 ```
 
 ---
@@ -92,14 +92,13 @@ Host Machine (Máy tính phát triển của bạn / Máy chủ)
 
 ### 2.3. Định dạng Connection Strings (Chuỗi kết nối URIs)
 
-- **Kết nối từ máy tính phát triển (Python/FastAPI qua thư viện bất đồng bộ `asyncpg`):**
-  ```text
-  postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar
-  ```
-- **Kết nối giữa các Docker Container với nhau (Container-to-Container):**
-  ```text
-  postgresql+asyncpg://verischolar:verischolar@postgres:5432/verischolar
-  ```
+- **PostgreSQL Database (Async SQLAlchemy qua `asyncpg`):**
+  - Kết nối từ máy tính phát triển: `postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar`
+  - Kết nối giữa các Container: `postgresql+asyncpg://verischolar:verischolar@postgres:5432/verischolar`
+
+- **Redis 7 Task Broker & Cache (Redis Streams / ARQ / Idempotency):**
+  - Kết nối từ máy tính phát triển: `redis://127.0.0.1:6379/0`
+  - Kết nối giữa các Container: `redis://redis:6379/0`
 
 ---
 
@@ -107,7 +106,7 @@ Host Machine (Máy tính phát triển của bạn / Máy chủ)
 
 Sử dụng Docker Compose là phương pháp chuẩn mực, tự động hóa toàn bộ việc cấu hình biến môi trường, mount volume, tạo mạng, cấp phát `shm_size` và kích hoạt extension.
 
-### Chi tiết tệp `docker-compose.yml`
+### Chi tiết tệp `docker-compose.yml` (Chuẩn Toàn Hệ Thống)
 ```yaml
 services:
   postgres:
@@ -142,9 +141,28 @@ services:
     networks:
       - verischolar-net
 
+  redis:
+    image: redis:7-alpine
+    container_name: ${REDIS_CONTAINER_NAME:-verischolar-redis-dev}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy noeviction
+    volumes:
+      - verischolar-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - verischolar-net
+
 volumes:
   verischolar-postgres-data:
     name: verischolar-postgres-data
+  verischolar-redis-data:
+    name: verischolar-redis-data
 
 networks:
   verischolar-net:

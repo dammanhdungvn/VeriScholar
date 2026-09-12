@@ -362,7 +362,7 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
 
 ### 3.7. `DELETE /api/v1/documents/{id}` (Graph Cascade Purge - Zero Retention)
 - **Method:** `DELETE`
-- **Response (`204 No Content`):** Xóa vĩnh viễn tệp PDF vật lý, thực thi `ON DELETE CASCADE` xóa chunks, vectors trong PostgreSQL, dọn dẹp quan hệ tạm trong Graph và chuyển ghi chú liên quan sang trạng thái `[Source Document Detached]`.
+- **Response (`204 No Content`):** Thực thi `ON DELETE CASCADE` xóa toàn bộ chunks, vectors và metadata của người dùng trong PostgreSQL; giảm `ref_count` tại `document_storage_blobs` (xóa vĩnh viễn tệp PDF vật lý trên đĩa khi `ref_count == 0`); dọn dẹp quan hệ tạm trong Graph và chuyển ghi chú liên quan sang trạng thái `[Source Document Detached]`.
 
 ### 3.8. `POST /api/v1/documents/{id}:parse` (Custom Method: Bóc tách lại với Idempotency)
 - **Method:** `POST`
@@ -944,24 +944,26 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
   {
     "question": "So sánh hàm kích hoạt giữa Paper gốc và Paper Vaswani et al.?",
     "stream": true,
-    "scope": "multi_paper"
+    "scope": "multi_paper",
+    "focused_document_id": null
   }
   ```
+  *(Ghi chú `scope`: Có thể chọn `"multi_paper"` để tổng hợp đối chiếu trên toàn bộ 1 - 5 bài báo trong phiên, hoặc chọn `"single_paper"` kèm `"focused_document_id"` để chỉ đào sâu vào 1 bài báo đang mở tại Tab hiện tại).*
 - **Nguyên lý Đóng Gói Ngữ Cảnh Tầng Server:**
   Áp dụng **Cross-Document Context Namespacing** đóng gói XML tường minh `<document id="...">` và **Elastic Table Budgeting** cắt tỉa bảng biểu đảm bảo TTFT < 1s.
 - **Dòng Sự kiện SSE Phản hồi:**
   ```text
   event: start
-  data: {"message_id": "msg_9f1a2b3c", "created_at": "2026-09-12T10:15:00.000Z"}
+  data: {"turn_id": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c", "message_id": "msg_9f1a2b3c", "created_at": "2026-09-12T10:15:00.000Z"}
 
   event: citations
-  data: {"citations": [{"citation_id": "cit_1", "document_id": "c7a2e8c5-...", "document_title": "Attention Is All You Need", "page_number": 5, "bounding_boxes": [[0.1, 0.2, 0.8, 0.28, 5]]}]}
+  data: {"citations": [{"citation_id": "cit_1", "document_id": "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c", "document_title": "Attention Is All You Need", "page_number": 5, "bounding_boxes": [[0.1, 0.2, 0.8, 0.28, 5]]}]}
 
   event: token
   data: {"token": "Trong bài báo của Vaswani et al., hàm kích hoạt được sử dụng là ReLU..."}
 
   event: done
-  data: {"message_id": "msg_9f1a2b3c", "total_tokens": 128, "finish_reason": "stop"}
+  data: {"turn_id": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c", "message_id": "msg_9f1a2b3c", "total_tokens": 128, "finish_reason": "stop"}
   ```
   *(Khi không tìm thấy ngữ cảnh nào đạt ngưỡng rerank >= 0.35, server phát dòng phản hồi từ chối nhã nhặn kèm `finish_reason: "abstention"` thay vì trả về mã HTTP 404).*
 - **Xử lý Ngắt kết nối Máy trạm (Cancellation):** Nếu client bấm "Dừng sinh", server phát hiện đóng kết nối TCP và ngắt ngay coroutine LLM, ghi log mã **HTTP 499 (Client Closed Request)** để bảo toàn chi phí token.
@@ -969,7 +971,47 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
 ### 7.9. `GET /api/v1/sessions/{id}/messages` (Lịch sử hội thoại của phiên)
 - **Method:** `GET`
 - **Query Params:** `page` (int, default 1), `per_page` (int, default 50).
-- **Response (`200 OK` - Paginated Collection Envelope).**
+- **Response (`200 OK` - Paginated Collection Envelope):**
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "9f1a2b3c-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+        "session_id": "8b5a1f2e-4a6c-4c7b-9e1d-8f3b2a5c6d7e",
+        "question": "So sánh hàm kích hoạt giữa Paper gốc và Paper Vaswani et al.?",
+        "answer": "Trong bài báo của Vaswani et al., hàm kích hoạt được sử dụng là ReLU...",
+        "citations": [
+          {
+            "citation_id": "cit_1",
+            "document_id": "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c",
+            "document_title": "Attention Is All You Need",
+            "page_number": 5,
+            "bounding_boxes": [[0.1, 0.2, 0.8, 0.28, 5]]
+          }
+        ],
+        "total_tokens": 128,
+        "finish_reason": "stop",
+        "created_at": "2026-09-12T10:15:00.000Z"
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "page": 1,
+      "per_page": 50,
+      "total_pages": 1,
+      "request_id": "55b5aa93-3a91-4a22-b0bb-b01dc2c8c3a6",
+      "timestamp": "2026-09-12T10:20:00.000Z"
+    },
+    "links": {
+      "first": "/api/v1/sessions/8b5a1f2e-4a6c-4c7b-9e1d-8f3b2a5c6d7e/messages?page=1&per_page=50",
+      "prev": null,
+      "self": "/api/v1/sessions/8b5a1f2e-4a6c-4c7b-9e1d-8f3b2a5c6d7e/messages?page=1&per_page=50",
+      "next": null,
+      "last": "/api/v1/sessions/8b5a1f2e-4a6c-4c7b-9e1d-8f3b2a5c6d7e/messages?page=1&per_page=50"
+    }
+  }
+  ```
 
 ### 7.10. `DELETE /api/v1/sessions/{id}/messages` (Xóa toàn bộ tin nhắn - Idempotent)
 - **Method:** `DELETE`

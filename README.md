@@ -108,8 +108,10 @@ Each package in the monorepo has dedicated documentation detailing its internal 
 | :--- | :--- | :--- | :--- |
 | **`core`** | [`packages/core/`](packages/core/) | Pure Domain Core | Pure entities (`DocumentChunk`, `BoundingBox`), Ports, and Hybrid Search algorithms. |
 | **`api`** | [`apps/api/`](apps/api/) | Delivery & Observability | FastAPI server, pure ASGI TTFB tracing, secret masking, and adapters. 👉 **[Read API Guide](apps/api/README.md)** |
+| **`worker`** | [`apps/worker/`](docs/vi/backend-directory-structure.md) | Background Workers | Dedicated ingestion worker pool, Redis Streams consumer, explicit ACK, and DLQ. |
+| **`sandbox-broker`** | [`apps/sandbox-broker/`](docs/vi/backend-directory-structure.md) | Isolated Execution | Kernel-isolated compile sandbox (gVisor `runsc`) over internal gRPC/mTLS. |
 | **`web`** | [`apps/web/`](apps/web/) | User Interface | React 19, TypeScript, PDF.js visual grounding canvas overlay. |
-| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` initialization scripts. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
+| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` and Redis 7 setup. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
 
 ---
 

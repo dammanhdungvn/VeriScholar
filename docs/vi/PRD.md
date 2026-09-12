@@ -44,7 +44,7 @@ Sinh viên làm nghiên cứu khoa học, học viên cao học, nghiên cứu s
 * **Quyền kiểm soát lưu trữ & Dọn dẹp theo Đồ thị Phụ thuộc (Graph Cascade Purge Scope):** 
   - Cho phép người dùng xóa hoàn toàn dữ liệu bản thảo và tài liệu tải lên khỏi hệ thống bất cứ lúc nào trong một giao dịch ACID duy nhất.
   - Quy trình xóa thực thi dọn dẹp theo đồ thị phụ thuộc:
-    1. Xóa vĩnh viễn tệp PDF vật lý trên ổ đĩa lưu trữ.
+    1. Xóa vĩnh viễn tệp PDF vật lý trên ổ đĩa lưu trữ theo cơ chế Content-Addressable Storage (CAS): Giảm biến đếm tham chiếu (ref_count - 1), tệp vật lý được thu hồi và xóa sổ vật lý ngay khi ref_count = 0 để bảo toàn cam kết Zero-Retention mà không ảnh hưởng người dùng khác.
     2. Xóa theo tầng (`ON DELETE CASCADE`) toàn bộ các chunks, dense vectors, metadata, summaries và lịch sử chat trong cơ sở dữ liệu PostgreSQL.
     3. Ngắt liên kết và dọn dẹp các nút quan hệ tương ứng trong Đồ thị Trích dẫn (Citation Graph) theo cơ chế phân định vòng đời đồ thị tạm thời vs cố định, triệt tiêu hoàn toàn rủi ro phát sinh cạnh treo mồ côi (Dangling Edges).
     4. Đối với Sổ tay nghiên cứu: Áp dụng cơ chế Bản chụp Bằng chứng Đóng băng (Frozen Evidence Snapshot). Các ghi chú cá nhân (Personal Memo) do người dùng tự viết cùng các câu trích dẫn quan trọng được giữ lại để bảo toàn tư duy khoa học, nhưng tự động chuyển sang trạng thái ngắt nguồn `[Source Document Detached]`. Toàn bộ dữ liệu nguyên bản của bài báo PDF được xóa sổ 100% khỏi hệ thống.
