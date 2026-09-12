@@ -1,6 +1,6 @@
 # Thiết Kế Chi Tiết Toàn Bộ Cơ Sở Dữ Liệu - Nền Tảng VeriScholar (PostgreSQL 16 + pgvector)
 
-Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở dữ liệu (Database Schema DDL), chiến lược phân vùng và lập chỉ mục (Indexing Strategy), tối ưu hóa truy vấn Hybrid Search (Dense + Lexical RRF), cơ chế Khóa Lạc Quan (OCC), kiểm soát tranh chấp đồng thời (Concurrency Control & Row Locks), ràng buộc toàn vẹn đồ thị tri thức (Graph Integrity), và cam kết bảo mật xóa sổ dữ liệu (Zero-Retention Guarantee) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của dự án **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) và [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md).
+Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở dữ liệu (Database Schema DDL), chiến lược phân vùng và lập chỉ mục (Indexing Strategy), tối ưu hóa truy vấn Hybrid Search (Dense + Lexical RRF), cơ chế Khóa Lạc Quan (OCC), kiểm soát tranh chấp đồng thời (Concurrency Control & Row Locks), ràng buộc toàn vẹn đồ thị tri thức (Graph Integrity), phân tách lưu trữ đa người thuê Content-Addressable Storage (CAS), và cam kết bảo mật xóa sổ dữ liệu (Zero-Retention Guarantee) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của dự án **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) và [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md).
 
 ---
 
@@ -11,6 +11,7 @@ Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn
 ```mermaid
 erDiagram
     users ||--o{ documents : "owns"
+    document_storage_blobs ||--o{ documents : "deduplicates"
     users ||--o{ research_sessions : "owns"
     users ||--o{ research_notes : "owns"
     users ||--o{ drafts : "owns"
@@ -50,6 +51,7 @@ erDiagram
 7. **Bảo Toàn Bằng Chứng Đóng Băng Tự Động (Automated Note Decoupling):** Khi bài báo gốc bị xóa (`ON DELETE SET NULL`), trigger `handle_note_source_detached()` tự động chuyển `is_source_detached = TRUE` ở tầng cơ sở dữ liệu. Toàn bộ trích dẫn và siêu dữ liệu vẫn bảo toàn nguyên vẹn trong `frozen_snapshot JSONB`.
 8. **Chỉ Mục Tiền Tố Bảo Vệ Cascade:** Toàn bộ khóa ngoại `ON DELETE CASCADE` và `ON DELETE SET NULL` đều được trang bị B-Tree Index chuyên dụng để ngăn chặn Sequential Scan và Table Lock contention khi xóa tài liệu.
 9. **Chuẩn Ràng Buộc PostgreSQL 15+ `NULLS NOT DISTINCT`:** Bảng `folders` sử dụng `UNIQUE NULLS NOT DISTINCT` để ngăn chặn trùng tên các thư mục gốc có `parent_id IS NULL`.
+10. **Phân Tách Khối Dữ Liệu Nhị Phân & Thực Thể Tài Liệu (Multi-Tenant CAS Invariant):** Bảng `document_storage_blobs` quản lý tệp vật lý độc lập theo `content_hash` (SHA-256) và theo dõi `ref_count`. Mỗi người dùng luôn sở hữu bản ghi `documents` riêng biệt. Xóa tài liệu ở User A chỉ giảm `ref_count` và xóa cascade các thực thể con của User A, tuyệt đối không ảnh hưởng đến dữ liệu của User B.
 
 ---
 
@@ -122,17 +124,37 @@ FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ### 3.2. Module 1: Siêu Dữ Liệu Bài Báo, Chunks, Vector & Tóm Tắt
 
 ```sql
--- Bảng documents: Lưu trữ bài báo (hỗ trợ cả bài đọc tạm trong Session lẫn Thư viện Starred)
+-- Bảng document_storage_blobs: Khối lưu trữ nhị phân Content-Addressable Storage (CAS)
+-- Khử trùng lặp tệp vật lý và tính toán nhúng giữa các người dùng mà vẫn bảo toàn 100% quyền sở hữu riêng biệt
+CREATE TABLE document_storage_blobs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    content_hash VARCHAR(64) NOT NULL UNIQUE, -- SHA-256 mã băm nội dung file
+    storage_path TEXT NOT NULL,
+    file_size_bytes BIGINT NOT NULL CHECK (file_size_bytes > 0 AND file_size_bytes <= 52428800), -- Max 50MB
+    ref_count INT NOT NULL DEFAULT 1 CHECK (ref_count >= 0),
+    status VARCHAR(30) NOT NULL DEFAULT 'processing'
+        CHECK (status IN ('processing', 'completed', 'failed')),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_storage_blobs_hash ON document_storage_blobs(content_hash);
+CREATE TRIGGER trg_storage_blobs_updated_at
+BEFORE UPDATE ON document_storage_blobs
+FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- Bảng documents: Lưu trữ thực thể bài báo gắn riêng theo từng người dùng (Multi-Tenant Document Entity)
 CREATE TABLE documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blob_id UUID NULL REFERENCES document_storage_blobs(id) ON DELETE SET NULL,
     folder_id UUID NULL REFERENCES folders(id) ON DELETE SET NULL,
     filename VARCHAR(255) NOT NULL,
     title TEXT NULL,
     authors TEXT[] NULL,
     publication_year INT NULL CHECK (publication_year IS NULL OR publication_year >= 1800),
     doi VARCHAR(255) NULL,
-    content_hash VARCHAR(64) NOT NULL, -- SHA-256 mã băm nội dung file chống trùng lặp
+    content_hash VARCHAR(64) NOT NULL, -- SHA-256 mã băm nội dung file
     file_size_bytes BIGINT NOT NULL CHECK (file_size_bytes > 0 AND file_size_bytes <= 52428800), -- Max 50MB
     page_count INT NULL CHECK (page_count IS NULL OR page_count > 0),
     chunk_count INT NOT NULL DEFAULT 0 CHECK (chunk_count >= 0),
@@ -150,6 +172,7 @@ CREATE TABLE documents (
 
 CREATE INDEX idx_documents_user_persistent ON documents(user_id, is_persistent);
 CREATE INDEX idx_documents_user_folder ON documents(user_id, folder_id);
+CREATE INDEX idx_documents_blob_id ON documents(blob_id);
 CREATE INDEX idx_documents_content_hash ON documents(content_hash);
 CREATE INDEX idx_documents_status ON documents(status);
 CREATE INDEX idx_documents_created_at ON documents(created_at DESC);
@@ -655,10 +678,13 @@ $$ LANGUAGE plpgsql;
 2. **Bảo Tồn Dữ Liệu Sổ Tay Thông Minh (Non-destructive Note Decoupling):**
    - Trong bảng `research_notes`, khóa ngoại `document_id` và `chunk_id` được cấu hình `ON DELETE SET NULL`.
    - Khi tài liệu gốc bị xóa, trigger `handle_note_source_detached()` tự động kích hoạt chuyển cờ `is_source_detached = TRUE` ở tầng database. Dữ liệu trích dẫn và tọa độ Bounding Box vẫn được bảo toàn nguyên vẹn trong trường `frozen_snapshot JSONB`, giúp người dùng không bao giờ bị mất ghi chú hoặc công thức toán quý giá.
-3. **Phân Tách Ranh Giới Bộ Đệm Công Khai và Riêng Tư (Tenant Cache Isolation):**
+3. **Phân Tách Khối Dữ Liệu Nhị Phân & Thực Thể Riêng Biệt (Multi-Tenant CAS):**
+   - Bảng `document_storage_blobs` độc lập hoàn toàn với định danh người dùng, chỉ theo dõi số lượng tham chiếu `ref_count`.
+   - Lệnh xóa tài liệu của một người dùng chỉ xóa bản ghi trong bảng `documents` của chính người dùng đó và giảm `ref_count` tại blob. Tệp vật lý trên đĩa chỉ được thu hồi khi `ref_count == 0`, ngăn ngừa triệt để rò rỉ quyền riêng tư và bảo toàn trọn vẹn dữ liệu cho các người dùng khác.
+4. **Phân Tách Ranh Giới Bộ Đệm Công Khai và Riêng Tư (Tenant Cache Isolation):**
    - Bảng `global_academic_cache` độc lập hoàn toàn với dữ liệu cá nhân của người dùng, chỉ lưu trữ các thực thể công khai từ Crossref, Semantic Scholar, arXiv, PubMed.
    - Các bản thảo người dùng tự viết trong bảng `drafts` hoặc PDF tải lên được cô lập theo `user_id` và tuyệt đối không bao giờ được đưa vào bảng cache công cộng.
-4. **Kiểm Soát Phiên Bản Khóa Lạc Quan Tự Động (Database-Enforced OCC):**
+5. **Kiểm Soát Phiên Bản Khóa Lạc Quan Tự Động (Database-Enforced OCC):**
    - Trigger `handle_occ_and_timestamp()` tự động tăng `version` khi có lệnh UPDATE hợp lệ.
    - Các thao tác cập nhật trên `drafts`, `research_notes`, `research_sessions` bắt buộc thực hiện kiểm tra `WHERE id = :id AND version = :if_match_version`.
    - Nếu không có hàng nào được cập nhật (`ROW_COUNT == 0`), ứng dụng lập tức trả về mã lỗi `412 Precondition Failed` (kèm mã nghiệp vụ `CONCURRENCY_CONFLICT`).
