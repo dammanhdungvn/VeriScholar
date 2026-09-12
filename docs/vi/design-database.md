@@ -1,4 +1,4 @@
-# Thiết Kế Chi Tiết Toàn Bộ Cơ Sở Dữ Liệu - Nền Tảng VeriScholar (PostgreSQL 16 + pgvector)
+# Thiết Kế Chi Tiết Toàn Bộ Cơ Sở Dữ Liệu - Nền Tảng VeriScholar (PostgreSQL 18 + pgvector)
 
 Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở dữ liệu (Database Schema DDL), chiến lược phân vùng và lập chỉ mục (Indexing Strategy), tối ưu hóa truy vấn Hybrid Search (Dense + Lexical RRF), cơ chế Khóa Lạc Quan (OCC), kiểm soát tranh chấp đồng thời (Concurrency Control & Row Locks), ràng buộc toàn vẹn đồ thị tri thức (Graph Integrity), phân tách lưu trữ đa người thuê Content-Addressable Storage (CAS), và cam kết bảo mật xóa sổ dữ liệu (Zero-Retention Guarantee) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của dự án **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) và [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md).
 
@@ -6,7 +6,7 @@ Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở d�
 
 ## 0. BẢNG THUẬT NGỮ CƠ SỞ DỮ LIỆU DÀNH CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
 
-Để giúp các kỹ sư mới (Fresher / Junior) nắm vững thiết kế cơ sở dữ liệu quy mô lớn của VeriScholar (PostgreSQL 16 + pgvector), bảng dưới đây giải thích trực quan các thuật ngữ kỹ thuật cốt lõi:
+Để giúp các kỹ sư mới (Fresher / Junior) nắm vững thiết kế cơ sở dữ liệu quy mô lớn của VeriScholar (PostgreSQL 18 + pgvector), bảng dưới đây giải thích trực quan các thuật ngữ kỹ thuật cốt lõi:
 
 | Thuật ngữ | Khái niệm kỹ thuật | Giải thích trực quan cho Fresher |
 | :--- | :--- | :--- |
@@ -26,7 +26,7 @@ Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở d�
 
 ## 1. MÔ HÌNH DỮ LIỆU TỔNG QUAN (ERD TOÀN HỆ THỐNG)
 
-Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn 3NF và 1NF trên **PostgreSQL 16**, kết hợp chặt chẽ giữa quan hệ bảng, dữ liệu bán cấu trúc (JSONB GIN), vector đa chiều (`pgvector 1024-dim` từ mô hình `BGE-M3`), và Full-Text Search đa ngôn ngữ (`tsvector simple`).
+Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn 3NF và 1NF trên **PostgreSQL 18**, kết hợp chặt chẽ giữa quan hệ bảng, dữ liệu bán cấu trúc (JSONB GIN), vector đa chiều (`pgvector 1024-dim` từ mô hình `BGE-M3`), và Full-Text Search đa ngôn ngữ (`tsvector simple`).
 
 ```mermaid
 erDiagram

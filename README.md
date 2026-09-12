@@ -48,7 +48,7 @@ Traditional RAG pipelines truncate PDFs into unstructured text chunks, losing vi
 | :--- | :--- |
 | **Multimodal PDF Ingestion** | Dual-engine parser combining **PyMuPDF** (ultra-fast text/bbox extraction) and **Docling** (complex two-column and table layout analysis) via `DocumentParserPort`. |
 | **Atomic Evidence Retrieval** | Immutable `DocumentChunk` records with normalized `[x0, y0, x1, y1, page]` bounding boxes (1-indexed page, top-left origin). |
-| **Unified Relational & Vector DB** | **PostgreSQL 16 + `pgvector`** storing metadata, chunk hierarchies, and 1024-dim dense vectors (`BGE-M3` with HNSW index) in a single ACID store. |
+| **Unified Relational & Vector DB** | **PostgreSQL 18 + `pgvector`** storing metadata, chunk hierarchies, and 1024-dim dense vectors (`BGE-M3` with HNSW index) in a single ACID store. |
 | **Advanced Hybrid Search** | Reciprocal Rank Fusion (RRF) combining dense semantic vectors (`<=>` Cosine Distance) and sparse lexical keywords (`tsvector` BM25) directly in SQL. |
 | **Deterministic Cross-Encoder Reranking** | Two-stage retrieval pipeline with cross-encoder reranking (`bge-reranker` / `FlashRank`) ensuring top-5 precision under strict SLAs (< 5s). |
 | **Flexible LLM Runtime** | Seamless execution via **Docker Model Runner (DMR)** for local models (`ai/smollm2`, `ai/llama3.2`), or Cloud Gateways (OpenAI, Google Gemini). |
@@ -82,7 +82,7 @@ flowchart TD
 
     subgraph INFRA ["Infrastructure & Adapters"]
         PDF["PyMuPDF / Docling Parsers"]
-        PG[("PostgreSQL 16 + pgvector (HNSW) + tsvector")]
+        PG[("PostgreSQL 18 + pgvector (HNSW) + tsvector")]
         DMR["Docker Model Runner (Port 12434) / Cloud Gateways"]
     end
 
@@ -111,7 +111,7 @@ Each package in the monorepo has dedicated documentation detailing its internal 
 | **`worker`** | [`apps/worker/`](docs/vi/backend-directory-structure.md) | Background Workers | Dedicated ingestion worker pool, Redis Streams consumer, explicit ACK, and DLQ. |
 | **`sandbox-broker`** | [`apps/sandbox-broker/`](docs/vi/backend-directory-structure.md) | Isolated Execution | Kernel-isolated compile sandbox (gVisor `runsc`) over internal gRPC/mTLS. |
 | **`web`** | [`apps/web/`](apps/web/) | User Interface | React 19, TypeScript, PDF.js visual grounding canvas overlay. |
-| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` and Redis 7 setup. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
+| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 18 + `pgvector` and Redis 7 setup. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
 
 ---
 
@@ -138,7 +138,7 @@ pnpm --prefix apps/web install
 ### 2. Launch Local Database Infrastructure
 Spin up the PostgreSQL container with `pgvector` pre-configured:
 ```bash
-# Start PostgreSQL 16 + pgvector in the background
+# Start PostgreSQL 18 + pgvector in the background
 docker compose up -d
 
 # Verify container is healthy
@@ -217,7 +217,7 @@ Deep-dive architecture specifications and engineering guides are maintained in [
 - **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, session lifecycle, and SLAs.
 - **[System & Software Architecture](docs/vi/design-architecture.md):** Hexagonal architecture, Redis Streams task queue, Dedicated Sandbox Broker, and Early Connection Release.
 - **[REST & SSE API Specification](docs/vi/design-api.md):** 59 endpoints, Google Cloud AIP-136, RFC 9110 / RFC 7232 OCC (`412 Precondition Failed`).
-- **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 16 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
+- **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 18 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
 - **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide-docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
 - **[Production Logging Architecture Guide](docs/vi/guide-logging-system.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
 - **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.

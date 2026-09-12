@@ -47,7 +47,7 @@ flowchart TB
     end
 
     subgraph StoragePersistenceTier ["💾 TẦNG LƯU TRỮ & TÌM KIẾM DỮ LIỆU (PERSISTENCE TIER)"]
-        PostgresDB["PostgreSQL 16 + pgvector (Container)<br/>- Relational Metadata (documents, turns, drafts, notes...)<br/>- Multi-Tenant Content-Addressable Storage (CAS Blob Reference)<br/>- HNSW Vector Index (vector_cosine_ops, ef_search=100, iterative_scan)<br/>- GIN Sparse Index (to_tsvector 'simple' Full-Text Search)<br/>- Database-Enforced OCC Triggers & Session Capacity Locks (FOR UPDATE)"]
+        PostgresDB["PostgreSQL 18 + pgvector (Container)<br/>- Relational Metadata (documents, turns, drafts, notes...)<br/>- Multi-Tenant Content-Addressable Storage (CAS Blob Reference)<br/>- HNSW Vector Index (vector_cosine_ops, ef_search=100, iterative_scan)<br/>- GIN Sparse Index (to_tsvector 'simple' Full-Text Search)<br/>- Database-Enforced OCC Triggers & Session Capacity Locks (FOR UPDATE)"]
         LocalStorage["Local Object / File Storage (CAS)<br/>- Physical Blobs: storage/blobs/{content_hash}.pdf (Reference Counted)<br/>- Tenant Previews: storage/previews/{draft_id}.pdf<br/>- Path Traversal Shielding via UUID Filenames<br/>- Zero-Retention Physical Unlink khi ref_count = 0"]
     end
 
@@ -325,7 +325,7 @@ sequenceDiagram
     actor UserB as Người dùng B
     participant API as FastAPI Ingress (apps/api)
     participant Core as Ingestion UseCase (packages/core)
-    participant DB as PostgreSQL 16
+    participant DB as PostgreSQL 18
     participant Storage as File Storage (CAS)
     participant Queue as Redis Stream Task Queue
     participant Worker as Ingestion Worker Pool
@@ -380,7 +380,7 @@ sequenceDiagram
     participant API as FastAPI SSE Controller
     participant Core as SessionQAUseCase
     participant Pool as PostgreSQL Connection Pool
-    participant DB as PostgreSQL 16 (HNSW RRF)
+    participant DB as PostgreSQL 18 (HNSW RRF)
     participant LLM as Cost-Aware LLM Gateway
 
     User->>API: POST /api/v1/sessions/{id}/messages (question, stream=true)
@@ -428,7 +428,7 @@ sequenceDiagram
     participant Broker as Dedicated Sandbox Broker (gRPC / mTLS)
     participant Runner as gVisor Container Runner (runsc)
     participant LLM as Cloud Reasoning LLM
-    participant DB as PostgreSQL 16
+    participant DB as PostgreSQL 18
 
     User->>API: POST /api/v1/drafts/{id}:compile (Header: If-Match "v1")
     API->>Core: Kiểm tra phiên bản OCC
@@ -483,7 +483,7 @@ sequenceDiagram
     participant API as FastAPI Controller
     participant Core as SAFEUseCase
     participant LLM as LLM Decomposer & NLI Model
-    participant DB as PostgreSQL 16 (Hybrid Search RRF)
+    participant DB as PostgreSQL 18 (Hybrid Search RRF)
 
     User->>API: POST /api/v1/drafts/{id}:verify-claims (selected_text, document_ids)
     API->>Core: Tiếp nhận văn bản cần kiểm chứng
@@ -601,7 +601,7 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │   └── vi/
 │       ├── PRD.md                            # Product Requirements Document
 │       ├── design-api.md                     # 59 Endpoints REST / SSE Specification
-│       ├── design-database.md                # PostgreSQL 16 + pgvector DDL Schema
+│       ├── design-database.md                # PostgreSQL 18 + pgvector DDL Schema
 │       └── design-architecture.md            # System & Software Architecture Blueprint
 │
 ├── pyproject.toml                            # uv Workspace Root Configuration

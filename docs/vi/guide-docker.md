@@ -1,6 +1,6 @@
 # Hướng Dẫn Quản Trị Cơ Sở Dữ Liệu PostgreSQL & pgvector với Docker
 
-Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cơ sở dữ liệu **PostgreSQL 16 tích hợp pgvector** và **Docker Model Runner (Local LLM Inference - Chạy mô hình ngôn ngữ lớn ngay trên máy cục bộ)** cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
+Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cơ sở dữ liệu **PostgreSQL 18 tích hợp pgvector** và **Docker Model Runner (Local LLM Inference - Chạy mô hình ngôn ngữ lớn ngay trên máy cục bộ)** cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
 
 ---
 
@@ -21,7 +21,7 @@ Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai,
 
 ## 1. TỔNG QUAN KIẾN TRÚC VÀ LỰA CHỌN CÔNG NGHỆ
 
-### 1.1. Tại sao sử dụng `pgvector/pgvector:0.8.0-pg16`?
+### 1.1. Tại sao sử dụng `pgvector/pgvector:0.8.6-pg18`?
 Dự án **VeriScholar** (Module 1 - Single Paper Deep Read & Visual Grounding) yêu cầu:
 1. **Lưu trữ Quan hệ (Relational DB):** Quản lý thông tin bài báo (metadata), các đoạn văn bản cắt nhỏ (chunks), tài khoản người dùng với bảo đảm giao dịch ACID (Nguyên tử - Nhất quán - Cô lập - Bền vững).
 2. **Tìm kiếm Vector Ngữ nghĩa (Vector DB):** Lưu trữ và truy vấn Dense Vector 1024 chiều (mô hình nhúng đa ngữ **BGE-M3**) với chỉ mục đồ thị HNSW (Hierarchical Navigable Small World) qua toán tử khoảng cách góc Cosine Distance (`<=>`).
@@ -29,7 +29,7 @@ Dự án **VeriScholar** (Module 1 - Single Paper Deep Read & Visual Grounding) 
 
 > [!IMPORTANT]
 > **Quy tắc Image:** 
-> - Image chính thức được sử dụng là: **`pgvector/pgvector:0.8.0-pg16`** (dựa trên nền PostgreSQL 16 chính thức của Debian, tích hợp sẵn tiện ích mở rộng C-extension `vector`).
+> - Image chính thức được sử dụng là: **`pgvector/pgvector:0.8.6-pg18`** (dựa trên nền PostgreSQL 18 chính thức của Debian/Bookworm, tích hợp sẵn tiện ích mở rộng C-extension `vector` và tối ưu Asynchronous Direct I/O).
 > - **Tuyệt đối không dùng tag `:latest`** để đảm bảo tính nhất quán (reproducibility) trên mọi máy lập trình viên và máy chủ CI/CD.
 
 ### 1.2. Sơ đồ Cấu trúc Thành phần Hạ tầng
@@ -45,7 +45,7 @@ Host Machine (Máy tính phát triển của bạn / Máy chủ)
  │
  └── Docker Network: verischolar-net (Mạng cầu nối ảo Bridge)
       │
-      ├── Container: verischolar-postgres-dev (Image: pgvector/pgvector:0.8.0-pg16)
+      ├── Container: verischolar-postgres-dev (Image: pgvector/pgvector:0.8.6-pg18)
       │    ├── User: verischolar
       │    ├── Database: verischolar
       │    ├── Cấu hình Gia cố & Hiệu năng:
@@ -110,7 +110,7 @@ Sử dụng Docker Compose là phương pháp chuẩn mực, tự động hóa t
 ```yaml
 services:
   postgres:
-    image: pgvector/pgvector:0.8.0-pg16
+    image: pgvector/pgvector:0.8.6-pg18
     container_name: ${POSTGRES_CONTAINER_NAME:-verischolar-postgres-dev}
     restart: unless-stopped
     ports:
