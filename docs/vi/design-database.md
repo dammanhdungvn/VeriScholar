@@ -4,6 +4,26 @@ Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở d�
 
 ---
 
+## 0. BẢNG THUẬT NGỮ CƠ SỞ DỮ LIỆU DÀNH CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
+
+Để giúp các kỹ sư mới (Fresher / Junior) nắm vững thiết kế cơ sở dữ liệu quy mô lớn của VeriScholar (PostgreSQL 16 + pgvector), bảng dưới đây giải thích trực quan các thuật ngữ kỹ thuật cốt lõi:
+
+| Thuật ngữ | Khái niệm kỹ thuật | Giải thích trực quan cho Fresher |
+| :--- | :--- | :--- |
+| **1NF & 3NF** | First & Third Normal Form | Chuẩn hóa cơ sở dữ liệu: Thiết kế các cột dữ liệu nguyên tử (không nhét chuỗi hỗn độn vào 1 ô) và loại bỏ trùng lặp dữ liệu dư thừa giữa các bảng, đảm bảo cơ sở dữ liệu sạch sẽ và dễ truy vấn. |
+| **pgvector** | PostgreSQL Vector Extension | Tiện ích mở rộng biến PostgreSQL thành Vector Database, lưu trữ các vector số học đại diện cho ý nghĩa của câu chữ và hỗ trợ tìm kiếm ngữ nghĩa siêu nhanh. |
+| **HNSW Index** | Hierarchical Navigable Small World | Chỉ mục đồ thị đa tầng: Giúp tìm kiếm các vector có nội dung gần giống nhau nhất chỉ trong vài phần nghìn giây bằng cách nhảy qua các tầng đồ thị, thay vì phải quét tuần tự từng dòng trong hàng triệu bản ghi. |
+| **Cosine Distance (`<=>`)** | Cosine Distance Metric | Phép toán hình học đo góc giữa 2 vector: Góc càng hẹp (khoảng cách gần 0) thì nghĩa của 2 đoạn văn càng giống nhau, dùng để xếp hạng độ liên quan của tài liệu. |
+| **Lexical Search (`tsvector simple`)** | Full-Text Search (Sparse) | Tìm kiếm từ khóa chính xác từng ký tự: Dùng từ điển `simple` để giữ nguyên các công thức toán học, ký hiệu khoa học hay từ viết tắt mà không bị thuật ngữ ngữ pháp tiếng Anh làm biến đổi. |
+| **RRF** | Reciprocal Rank Fusion | Thuật toán dung hợp xếp hạng: Kết hợp danh sách điểm từ tìm kiếm ngữ nghĩa (vector) và tìm kiếm từ khóa thành một bảng xếp hạng chung chuẩn xác và công bằng nhất. |
+| **OCC** | Optimistic Concurrency Control (Khóa Lạc Quan) | Kỹ thuật kiểm soát sửa đổi đồng thời qua cột `version`: Khi người dùng lưu dữ liệu, trigger sẽ tự động tăng `version = version + 1`. Nếu phát hiện phiên bản không khớp (bị người khác sửa trước), giao dịch sẽ bị từ chối ngay lập tức. |
+| **Row Lock (`FOR UPDATE`)** | Explicit Row-Level Lock | Khóa hàng tường minh: Khóa dòng dữ liệu đang xử lý trong suốt thời gian giao dịch, bắt các giao dịch khác phải xếp hàng chờ; ngăn chặn triệt để lỗi 2 người cùng nạp bài báo thứ 5 cùng 1 lúc dẫn đến vượt quá hạn mức (Write Skew). |
+| **CAS (`content_hash`)** | Content-Addressable Storage | Lưu trữ theo mã băm nội dung: Đặt tên file vật lý bằng chính mã băm SHA-256 của file; nếu 2 người cùng nạp 1 file PDF giống hệt nhau, hệ thống chỉ lưu 1 file duy nhất trên đĩa cứng để tiết kiệm dung lượng. |
+| **Ref Count** | Reference Counting (`ref_count`) | Bộ đếm số người đang cùng dùng chung file vật lý: Khi User A xóa bài báo, `ref_count` giảm đi 1. Chỉ khi `ref_count = 0` (không còn ai sở hữu), file vật lý mới bị xóa vĩnh viễn khỏi đĩa cứng (Zero-Retention Guarantee). |
+| **Leaf Page Splits** | B-Tree Page Fragmentation | Hiện tượng phân mảnh trang bộ nhớ của cây chỉ mục khi chèn dữ liệu không có thứ tự; hệ thống dùng UUIDv7 hoặc khóa tuần tự để giúp việc ghi đĩa luôn êm ái và đạt hiệu năng cao. |
+
+---
+
 ## 1. MÔ HÌNH DỮ LIỆU TỔNG QUAN (ERD TOÀN HỆ THỐNG)
 
 Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn 3NF và 1NF trên **PostgreSQL 16**, kết hợp chặt chẽ giữa quan hệ bảng, dữ liệu bán cấu trúc (JSONB GIN), vector đa chiều (`pgvector 1024-dim` từ mô hình `BGE-M3`), và Full-Text Search đa ngôn ngữ (`tsvector simple`).

@@ -6,6 +6,25 @@
 
 ---
 
+### 1.1. BẢNG THUẬT NGỮ NGHIỆP VỤ & KỸ THUẬT CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
+
+Để giúp bất kỳ kỹ sư mới (Fresher / Junior) hoặc thành viên mới tham gia dự án đều có thể đọc hiểu trọn vẹn tài liệu yêu cầu sản phẩm này, bảng dưới đây giải thích trực quan các thuật ngữ then chốt:
+
+| Thuật ngữ | Tên tiếng Anh / Viết tắt | Giải thích trực quan cho Fresher |
+| :--- | :--- | :--- |
+| **RAG** | Retrieval-Augmented Generation | Kỹ thuật tìm kiếm tăng cường tạo sinh: Thay vì để AI tự nhớ kiến thức trong đầu (dễ bịa), hệ thống sẽ tìm kiếm các đoạn văn bản thực tế trong bài báo PDF trước, rồi mới đưa cho AI đọc để trả lời. |
+| **Hallucination** | AI Hallucination (Ảo giác AI) | Hiện tượng AI "chém gió" hoặc tự bịa ra thông tin, số liệu nghiên cứu hoặc tên tác giả bài báo không hề có thật trên đời. Mục tiêu tối thượng của VeriScholar là triệt tiêu 100% hiện tượng này. |
+| **Bounding Box** | Bounding Box Coordinate `[x0, y0, x1, y1, page]` | Khung chữ nhật bao quanh đoạn văn hoặc hình ảnh trên trang PDF; frontend dùng tọa độ này để vẽ khung viền vàng highlight nổi bật cho người dùng thấy rõ bằng chứng nằm ở đâu. |
+| **Zero-Retention Guarantee** | Zero Data Retention Policy | Cam kết bảo mật dữ liệu tuyệt đối: Khi người dùng xóa tài liệu, toàn bộ file PDF và dữ liệu liên quan sẽ bị xóa sạch vĩnh viễn khỏi hệ thống ngay lập tức, không lưu trữ ngầm và không dùng để huấn luyện AI. |
+| **OCC** | Optimistic Concurrency Control (Khóa Lạc Quan) | Kỹ thuật kiểm soát sửa đổi qua số phiên bản (`version`), giúp ngăn chặn việc 2 người cùng sửa một ghi chú dẫn đến người sửa sau ghi đè làm mất dữ liệu của người sửa trước. |
+| **Frozen Snapshot** | Frozen Evidence Snapshot | Bản chụp đóng băng bằng chứng: Khi bài báo gốc bị xóa, các ghi chú cá nhân và câu trích dẫn quan trọng của người dùng vẫn được bảo tồn nhưng tự động đánh dấu đã ngắt nguồn gốc `[Source Detached]`. |
+| **LaTeX & BibTeX** | LaTeX Document Preparation System | Hệ thống soạn thảo văn bản học thuật tiêu chuẩn của ngành kỹ thuật, tự động hóa việc đánh số công thức toán học và tạo danh mục tài liệu tham khảo định dạng BibTeX. |
+| **SAFE Fact-Checking** | Search-Augmented Factuality Evaluation | Thuật toán kiểm chứng sự thật tự động: Bóc tách từng câu viết của tác giả thành các khẳng định nhỏ, sau đó tự động tìm kiếm đối chiếu với tài liệu gốc để chấm điểm xem câu đó là Đúng, Sai hay Thiếu bằng chứng. |
+| **GraphRAG & 2-hop Graph** | 2-hop Citation Graph | Đồ thị mạng lưới trích dẫn: Trực quan hóa mạng lưới kết nối giữa các bài báo; "2-hop" nghĩa là xem được các bài trích dẫn trực tiếp bài đang đọc (1 bước) và các bài tiếp tục trích dẫn các bài đó (2 bước). |
+| **Crossref, S2, arXiv, PubMed** | Academic Discovery Databases | Các kho dữ liệu học thuật mở lớn nhất thế giới, cung cấp siêu dữ liệu bài báo khoa học chuẩn quốc tế thông qua API. |
+
+---
+
 ## 2. BÀI TOÁN, NGƯỜI DÙNG & CAM KẾT BẢO MẬT
 
 ### 2.1. Người dùng mục tiêu

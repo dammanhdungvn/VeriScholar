@@ -14,6 +14,27 @@ Tài liệu tuân thủ nghiêm ngặt các nguyên lý thiết kế API chuẩn
 
 ---
 
+## 0. BẢNG THUẬT NGỮ GIAO THỨC & API DÀNH CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
+
+Để giúp các kỹ sư mới (Fresher / Junior) dễ dàng tiếp cận và làm chủ bản đặc tả API gồm 59 endpoints chuẩn công nghiệp của VeriScholar, bảng dưới đây giải thích trực quan các thuật ngữ và giao thức cốt lõi:
+
+| Thuật ngữ | Tiêu chuẩn / Tên đầy đủ | Giải thích trực quan cho Fresher |
+| :--- | :--- | :--- |
+| **RESTful API** | Representational State Transfer | Kiến trúc thiết kế API tiêu chuẩn, coi mọi thực thể (bài báo, ghi chú, phiên nghiên cứu) là một "tài nguyên" (Resource) và thao tác với chúng thông qua các phương thức HTTP chuẩn (`GET`, `POST`, `PATCH`, `DELETE`). |
+| **AIP-136 Custom Methods (`:<verb>`)** | Google Cloud API Improvement Proposal 136 | Quy chuẩn thiết kế API của Google dành cho các hành động nghiệp vụ đặc biệt không thể diễn đạt trọn vẹn bằng động từ HTTP cơ bản. Cú pháp sử dụng dấu hai chấm `:` gắn vào sau URL, ví dụ: `POST /drafts/{id}:compile` (yêu cầu biên dịch mã LaTeX sang PDF) hoặc `POST /documents/{id}:reindex` (yêu cầu tính toán lại vector). |
+| **AIP-151 Streaming & Operations** | Google Cloud AIP-151 (LRO & Streams) | Chuẩn mực cho các tác vụ tốn nhiều thời gian và các luồng phản hồi dữ liệu theo thời gian thực (Real-time Streaming). |
+| **SSE (Server-Sent Events)** | Server-Sent Events (HTML5 Protocol) | Giao thức truyền dữ liệu một chiều thời gian thực từ máy chủ về trình duyệt qua một kết nối HTTP duy nhất. Giúp giao diện hiển thị từng chữ gõ ra mượt mà như ChatGPT (`event: token`) mà không phải tải lại toàn bộ trang web. |
+| **OCC (Khóa Lạc Quan)** | Optimistic Concurrency Control | Cơ chế chống xung đột dữ liệu khi nhiều người hoặc nhiều tab cùng sửa một tài liệu: Trước khi lưu, hệ thống kiểm tra xem tài liệu có bị ai khác sửa mất chưa. Nếu đã bị người khác sửa trước, hệ thống sẽ từ chối lưu bằng mã lỗi `412 Precondition Failed` thay vì ghi đè làm mất công sức của người khác. |
+| **`ETag` & `If-Match`** | RFC 9110 / RFC 7232 HTTP Headers | Bộ đôi tiêu đề HTTP thực thi khóa lạc quan: Máy chủ trả về mã hiệu phiên bản trong tiêu đề `ETag: "v1"`. Khi Client gửi yêu cầu sửa, Client phải đính kèm tiêu đề `If-Match: "v1"`. Nếu máy chủ nhận thấy version hiện tại đã nhảy lên `"v2"`, máy chủ lập tức từ chối với mã lỗi `412`. |
+| **RFC 8288** | Web Linking Specification (RFC 8288) | Tiêu chuẩn quốc tế cho điều hướng phân trang; trả về các đường dẫn liên kết đầy đủ (`first`: trang đầu, `prev`: trang trước, `self`: trang hiện tại, `next`: trang kế tiếp, `last`: trang cuối) giúp frontend chuyển trang an toàn và chính xác tuyệt đối. |
+| **Idempotency (`Idempotency-Key`)** | Idempotency Pattern (Tính lũy đẳng) | Đảm bảo khi người dùng bấm nút "Gửi" nhiều lần do mạng chập chờn hoặc máy chủ tự động thử lại (retry), hệ thống chỉ thực thi nghiệp vụ 1 lần duy nhất trong vòng 24 giờ. |
+| **HTTP 499 (Client Closed Request)** | Client Disconnect Status Code | Mã trạng thái ghi nhận khi người dùng đóng tab trình duyệt hoặc bấm nút "Hủy" (Cancel) giữa chừng khi máy chủ đang xử lý; backend sẽ lập tức dừng container Sandbox ngay (`docker kill`) để tiết kiệm RAM và CPU. |
+| **Bounding Box** | Bounding Box Coordinate `[x0, y0, x1, y1, page]` | Khung chữ nhật bao quanh đoạn văn bản, hình vẽ hoặc công thức toán học trên trang PDF. Tọa độ được chuẩn hóa tỉ lệ `[0.0, 1.0]` với gốc tọa độ `(0.0, 0.0)` nằm ở góc trên cùng bên trái (Top-Left) và số trang bắt đầu từ 1 (`page >= 1`). |
+| **Single Resource Envelope** | Single Resource JSON Envelope | Vỏ bọc bao thư phản hồi cho 1 tài nguyên duy nhất, luôn gồm 3 trường: `success` (trạng thái thành công/thất bại), `data` (dữ liệu chính) và `meta` (mã vết `request_id`, thời gian `timestamp`). |
+| **Paginated Collection Envelope** | Collection Envelope Wrapper | Vỏ bọc bao thư cho danh sách phân trang, bổ sung thêm đối tượng `meta` (tổng số bản ghi, trang hiện tại, số bản ghi mỗi trang, tổng số trang) và đối tượng `links` (đường dẫn RFC 8288). |
+
+---
+
 ## 1. QUY CHUẨN DỮ LIỆU & BẢNG MÃ LỖI TOÀN HỆ THỐNG
 
 ### 1.1. Quy chuẩn Bất biến Tọa độ Bounding Box & Khổ Trang (Spatial Invariants)

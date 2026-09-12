@@ -4,6 +4,25 @@ Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống 
 
 ---
 
+## 0. BẢNG THUẬT NGỮ KIẾN TRÚC HỆ THỐNG DÀNH CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
+
+Để giúp các kỹ sư mới (Fresher / Junior) nắm bắt toàn bộ bức tranh kiến trúc phân tán quy mô lớn của VeriScholar mà không gặp khó khăn trước các khái niệm nâng cao, bảng dưới đây giải thích trực quan các thuật ngữ cốt lõi:
+
+| Thuật ngữ | Khái niệm kỹ thuật | Giải thích trực quan cho Fresher |
+| :--- | :--- | :--- |
+| **Hexagonal Architecture** | Ports & Adapters Architecture | Kiến trúc lục giác: Tách biệt hoàn toàn nghiệp vụ cốt lõi (Domain Core) khỏi công nghệ bên ngoài (FastAPI, PostgreSQL, Redis). Nghiệp vụ chỉ nói chuyện qua các bản hợp đồng (Ports), công nghệ cụ thể được gắn vào qua các bộ điều hợp (Adapters). |
+| **Durable Task Queue** | Reliable Background Queue | Hàng đợi tác vụ bền vững (Redis Streams): Ghi tác vụ xuống đĩa an toàn, yêu cầu Worker xác nhận tường minh (Explicit ACK) khi làm xong và chuyển tác vụ hỏng vào hàng đợi thư chết (DLQ), chống hoàn toàn nguy cơ mất tác vụ (Task Evaporation). |
+| **Sandbox Broker Service** | Isolated Sandbox Microservice | Dịch vụ biên dịch mã cô lập: Đặt trên máy chủ riêng biệt, tuyệt đối không gắn file socket Docker (`/var/run/docker.sock`) vào máy chủ Web API để ngăn chặn triệt để tin tặc chiếm quyền điều khiển máy chủ (Privilege Escalation). |
+| **gVisor (`runsc`)** | Application Kernel Sandbox | Công nghệ ảo hóa an toàn của Google: Tạo ra một lớp bảo vệ bao bọc lấy mã lệnh chạy thử (mã LaTeX, script lạ), ngăn không cho mã độc can thiệp vào nhân hệ điều hành máy chủ. |
+| **Early Connection Release** | Early Database Session Release | Cơ chế giải phóng sớm kết nối cơ sở dữ liệu: Khi truyền luồng chữ thời gian thực (SSE) kéo dài 20-30 giây, máy chủ chỉ mượn kết nối cơ sở dữ liệu trong 50 mili-giây đầu để đọc thông tin rồi trả ngay lại bể kết nối (Pool), giúp hệ thống phục vụ hàng ngàn người cùng lúc mà không bị cạn kiệt kết nối. |
+| **Multi-Tenant CAS** | Content-Addressable Storage Blob | Lưu trữ tệp theo mã băm SHA-256 kết hợp đếm tham chiếu (`ref_count`): Cho phép nhiều người dùng cùng chia sẻ 1 file PDF vật lý giống nhau trên ổ cứng, nhưng mỗi người vẫn có quyền sở hữu riêng biệt; khi người cuối cùng xóa bài báo thì file vật lý mới bị xóa vĩnh viễn (Zero-Retention). |
+| **NLI** | Natural Language Inference | Suy luận ngôn ngữ tự nhiên: Kỹ thuật AI dùng trong thuật toán kiểm chứng sự thật SAFE, so sánh đối chiếu câu viết của người dùng với đoạn văn gốc trong bài báo để xác định câu đó là đúng (Entailment), sai (Contradiction) hay không có bằng chứng (Neutral). |
+| **Cycle Breaking** | Graph Loop Prevention | Thuật toán cắt chu trình trong đồ thị trích dẫn: Ngăn chặn vòng lặp vô tận khi duyệt cây tài liệu tham khảo (ví dụ bài báo A trích dẫn bài báo B, và bài báo B lại trích dẫn ngược lại bài báo A). |
+| **Sufficiency Gate** | Evidence Completeness Gate | Cổng kiểm tra tính đầy đủ của bằng chứng: Thuật toán AI tự động đánh giá xem các tài liệu được chọn trong thư mục đã đủ thông tin và dữ kiện để trả lời câu hỏi tổng hợp hay chưa trước khi tiến hành viết bài. |
+| **Top-Left Normalized Coordinates** | Spatial Coordinate Invariant | Hệ tọa độ chuẩn hóa: Gốc `(0.0, 0.0)` luôn nằm ở góc trên cùng bên trái của trang giấy, tọa độ các góc nằm trong khoảng từ `0.0` đến `1.0`, giúp hiển thị khung highlight chính xác bất kể trang giấy to hay nhỏ. |
+
+---
+
 ## 1. KIẾN TRÚC HỆ THỐNG TOÀN CẢNH (HIGH-LEVEL SYSTEM ARCHITECTURE)
 
 Nền tảng VeriScholar được thiết kế theo mô hình phân tầng hướng dịch vụ trong kiến trúc Monorepo (`uv workspace` cho backend Python và `pnpm` cho web frontend TypeScript/React), kết hợp hàng đợi tác vụ bền vững (**Durable Task Queue**), dịch vụ biên dịch cô lập cấp Kernel (**Sandbox Broker Service**), và cơ chế quản trị tài nguyên kết nối cơ sở dữ liệu ngắt sớm (**Early Session Release**).

@@ -1,6 +1,21 @@
 # Hướng Dẫn Quản Trị Cơ Sở Dữ Liệu PostgreSQL & pgvector với Docker
 
-Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cơ sở dữ liệu **PostgreSQL 16 tích hợp pgvector** và **Docker Model Runner (Local LLM Inference)** cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
+Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cơ sở dữ liệu **PostgreSQL 16 tích hợp pgvector** và **Docker Model Runner (Local LLM Inference - Chạy mô hình ngôn ngữ lớn ngay trên máy cục bộ)** cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
+
+---
+
+## 0. BẢNG THUẬT NGỮ HẠ TẦNG & DOCKER CHO KỸ SƯ MỚI (FRESHER GLOSSARY)
+
+| Thuật ngữ | Khái niệm tiếng Anh | Giải thích trực quan cho Fresher |
+| :--- | :--- | :--- |
+| **Docker Container** | Container Virtualization | Một "hộp đóng gói" nhẹ chứa mã nguồn ứng dụng cùng toàn bộ môi trường chạy cần thiết; giúp phần mềm chạy y hệt nhau trên máy Mac, Windows, Linux hay máy chủ đám mây. |
+| **Docker Compose** | Multi-Container Orchestrator | Công cụ giúp bạn khai báo và khởi động nhiều container (ví dụ: PostgreSQL, Redis) cùng lúc chỉ bằng một tệp cấu hình `docker-compose.yml` duy nhất. |
+| **Named Volume** | Persistent Named Storage Volume | Phân vùng ổ cứng có tên do Docker quản lý; đảm bảo khi bạn tắt container hoặc nâng cấp image thì dữ liệu trong cơ sở dữ liệu không bị mất. |
+| **Loopback Interface** | Loopback Address (`127.0.0.1`) | Địa chỉ IP nội bộ của chính chiếc máy tính bạn đang ngồi; chỉ những tiến trình chạy trên máy bạn mới kết nối được, ngăn chặn người lạ cùng mạng WiFi/LAN xâm nhập vào database. |
+| **Shared Memory (`shm_size`)** | POSIX Shared Memory | Vùng bộ nhớ RAM được chia sẻ giữa các luồng xử lý; PostgreSQL và pgvector rất cần vùng này để tăng tốc độ tính toán song song khi xây dựng chỉ mục tìm kiếm HNSW. |
+| **pgvector** | Vector Similarity Search Extension | Tiện ích mở rộng biến PostgreSQL thành một cơ sở dữ liệu vector mạnh mẽ, cho phép lưu trữ và tìm kiếm các đoạn văn bản tương đồng về ngữ nghĩa. |
+| **Docker Model Runner (DMR)** | Local AI Model Engine on Docker | Công cụ tích hợp sẵn trong Docker Desktop/Engine giúp bạn tải và chạy các mô hình AI mã nguồn mở (như `ai/smollm2`, `ai/llama3.2`) cục bộ qua cổng `12434` với chi phí 0 USD. |
+| **Healthcheck** | Automated Health Monitoring Probe | Lệnh kiểm tra sức khỏe định kỳ (ví dụ: `pg_isready`); Docker sẽ tự động thăm dò để biết database đã thực sự sẵn sàng nhận kết nối hay chưa. |
 
 ---
 
@@ -8,26 +23,26 @@ Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai,
 
 ### 1.1. Tại sao sử dụng `pgvector/pgvector:0.8.0-pg16`?
 Dự án **VeriScholar** (Module 1 - Single Paper Deep Read & Visual Grounding) yêu cầu:
-1. **Lưu trữ Quan hệ (Relational DB):** Quản lý metadata bài báo, chunks, người dùng với bảo đảm giao dịch ACID.
-2. **Tìm kiếm Vector Ngữ nghĩa (Vector DB):** Lưu trữ và truy vấn Dense Vector 1024 chiều (mô hình **BGE-M3**) với chỉ mục HNSW qua toán tử Cosine Distance (`<=>`).
-3. **Tìm kiếm Từ khóa (Lexical Search):** Hỗ trợ Sparse Search bằng **PostgreSQL Full-Text Search (`tsvector` & `tsquery`)** để thực hiện Hybrid Search.
+1. **Lưu trữ Quan hệ (Relational DB):** Quản lý thông tin bài báo (metadata), các đoạn văn bản cắt nhỏ (chunks), tài khoản người dùng với bảo đảm giao dịch ACID (Nguyên tử - Nhất quán - Cô lập - Bền vững).
+2. **Tìm kiếm Vector Ngữ nghĩa (Vector DB):** Lưu trữ và truy vấn Dense Vector 1024 chiều (mô hình nhúng đa ngữ **BGE-M3**) với chỉ mục đồ thị HNSW (Hierarchical Navigable Small World) qua toán tử khoảng cách góc Cosine Distance (`<=>`).
+3. **Tìm kiếm Từ khóa (Lexical Search):** Hỗ trợ tìm kiếm từ khóa chính xác (Sparse Search) bằng **PostgreSQL Full-Text Search (`tsvector` & `tsquery`)** để thực hiện tìm kiếm lai (Hybrid Search) kết hợp ngữ nghĩa và từ khóa.
 
 > [!IMPORTANT]
 > **Quy tắc Image:** 
-> - Image chính thức được sử dụng là: **`pgvector/pgvector:0.8.0-pg16`** (dựa trên nền PostgreSQL 16 chính thức của Debian, tích hợp sẵn C-extension `vector`).
+> - Image chính thức được sử dụng là: **`pgvector/pgvector:0.8.0-pg16`** (dựa trên nền PostgreSQL 16 chính thức của Debian, tích hợp sẵn tiện ích mở rộng C-extension `vector`).
 > - **Tuyệt đối không dùng tag `:latest`** để đảm bảo tính nhất quán (reproducibility) trên mọi máy lập trình viên và máy chủ CI/CD.
 
 ### 1.2. Sơ đồ Cấu trúc Thành phần Hạ tầng
 
 ```text
-Host Machine (Local Development / Server)
+Host Machine (Máy tính phát triển của bạn / Máy chủ)
  │
  ├── Docker Model Runner (Port 12434) ── [Local LLM: llama.cpp / ai/smollm2 / ai/llama3.2]
  │    └── Endpoint: http://localhost:12434/engines/llama.cpp/v1
  │
- ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ bind loopback, chống rò rỉ mạng LAN)
+ ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ mở loopback cục bộ, chống rò rỉ mạng LAN)
  │
- └── Docker Network: verischolar-net (Bridge)
+ └── Docker Network: verischolar-net (Mạng cầu nối ảo Bridge)
       │
       └── Container: verischolar-postgres-dev (Image: pgvector/pgvector:0.8.0-pg16)
            │
@@ -35,17 +50,17 @@ Host Machine (Local Development / Server)
            ├── Database: verischolar
            │
            ├── Cấu hình Gia cố & Hiệu năng:
-           │    ├── shm_size: 256mb (Shared memory cho HNSW vector index & parallel query workers)
-           │    └── security_opt: no-new-privileges:true (Chống leo thang đặc quyền root)
+           │    ├── shm_size: 256mb (Bộ nhớ chia sẻ cho chỉ mục vector HNSW & đa luồng)
+           │    └── security_opt: no-new-privileges:true (Chống leo thang đặc quyền chiếm root)
            │
            ├── Extensions Khởi tạo tự động (/docker-entrypoint-initdb.d/init.sql):
-           │    ├── vector (pgvector 0.8.0)
-           │    └── uuid-ossp (1.1)
+           │    ├── vector (pgvector 0.8.0 - lưu và tìm kiếm vector)
+           │    └── uuid-ossp (1.1 - tự động sinh khóa chính UUID)
            │
            ├── extra_hosts:
-           │    └── host.docker.internal:host-gateway (Giao tiếp với Docker Model Runner)
+           │    └── host.docker.internal:host-gateway (Giúp container gọi ngược về Docker Model Runner)
            │
-           └── Persistent Storage (Named Volume):
+           └── Persistent Storage (Phân vùng lưu trữ bền vững Named Volume):
                 └── verischolar-postgres-data ──> /var/lib/postgresql/data
 ```
 
@@ -58,30 +73,30 @@ Host Machine (Local Development / Server)
 | Môi trường | Container Name | Mục đích sử dụng |
 | :--- | :--- | :--- |
 | **Development** | `verischolar-postgres-dev` | Lập trình viên chạy thử nghiệm tại máy cá nhân |
-| **Staging** | `postgres-staging` | Môi trường kiểm thử tích hợp (CI/CD / Staging server) |
+| **Staging** | `postgres-staging` | Môi trường kiểm thử tích hợp tự động (CI/CD / Staging server) |
 | **Production** | `postgres-prod` | Môi trường vận hành thực tế cho người dùng cuối |
 
 ### 2.2. Thông số Cấu hình Mặc định (Local Development)
 
-| Thông số | Giá trị Mặc định | Ghi chú |
+| Thông số | Giá trị Mặc định | Ghi chú an toàn & hiệu năng |
 | :--- | :--- | :--- |
-| **Host IP Binding** | `127.0.0.1` | **Security Hardening**: Chỉ mở cục bộ, chặn thiết bị khác trong LAN truy cập |
-| **Port** | `5432` | Cổng tiêu chuẩn của PostgreSQL |
-| **Container Host** | `postgres` | Kết nối giữa các container trong cùng mạng Docker |
+| **Host IP Binding** | `127.0.0.1` | **Security Hardening**: Chỉ mở cục bộ, chặn thiết bị khác trong mạng LAN truy cập |
+| **Port** | `5432` | Cổng tiêu chuẩn mặc định của PostgreSQL |
+| **Container Host** | `postgres` | Tên miền kết nối giữa các container trong cùng mạng Docker |
 | **Username** | `verischolar` | Siêu người dùng quản trị ứng dụng |
-| **Password** | `verischolar` | Mật khẩu tài khoản (override qua file `.env`) |
-| **Database** | `verischolar` | Database chính của dự án |
-| **Volume** | `verischolar-postgres-data` | Lưu trữ dữ liệu lâu dài (Persistent) |
-| **Shared Memory** | `256mb` | Cấp đủ bộ nhớ chia sẻ cho pgvector xây dựng chỉ mục HNSW |
-| **Security Option** | `no-new-privileges:true` | Ngăn chặn tiến trình container nâng quyền chiếm root |
+| **Password** | `verischolar` | Mật khẩu tài khoản (có thể thay đổi linh hoạt qua file `.env`) |
+| **Database** | `verischolar` | Cơ sở dữ liệu chính của dự án |
+| **Volume** | `verischolar-postgres-data` | Lưu trữ dữ liệu lâu dài trên đĩa cứng (Persistent Storage) |
+| **Shared Memory** | `256mb` | Cấp đủ bộ nhớ chia sẻ cho pgvector xây dựng chỉ mục HNSW nhanh chóng |
+| **Security Option** | `no-new-privileges:true` | Ngăn chặn tiến trình bên trong container nâng quyền chiếm đoạt tài khoản root máy chủ |
 
-### 2.3. Định dạng Connection Strings (URIs)
+### 2.3. Định dạng Connection Strings (Chuỗi kết nối URIs)
 
-- **Kết nối từ máy tính phát triển (Python/FastAPI qua `asyncpg`):**
+- **Kết nối từ máy tính phát triển (Python/FastAPI qua thư viện bất đồng bộ `asyncpg`):**
   ```text
   postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar
   ```
-- **Kết nối giữa các Docker Container (Container-to-Container):**
+- **Kết nối giữa các Docker Container với nhau (Container-to-Container):**
   ```text
   postgresql+asyncpg://verischolar:verischolar@postgres:5432/verischolar
   ```
@@ -147,190 +162,4 @@ cp .env.example .env
 Tại thư mục gốc dự án, thực thi lệnh:
 ```bash
 docker compose up -d
-```
-
-### Bước 3: Kiểm tra trạng thái Container
-```bash
-docker compose ps
-```
-*Kết quả kỳ vọng:* Container `verischolar-postgres-dev` ở trạng thái `Up ... (healthy)` và bind tới `127.0.0.1:5432->5432/tcp`.
-
-### Bước 4: Xem Logs Container
-```bash
-docker logs -f verischolar-postgres-dev
-```
-
-### Bước 5: Dừng Container (Dữ liệu vẫn được bảo toàn)
-```bash
-docker compose down
-```
-
-> [!WARNING]
-> Nếu bạn chạy `docker compose down -v` (kèm cờ `-v`), Docker sẽ **xóa sạch volume `verischolar-postgres-data`** và làm mất toàn bộ dữ liệu PDF đã bóc tách cũng như các bảng trong database!
-
----
-
-## 4. KHỞI CHẠY BẰNG LỆNH DOCKER THUẦN (STANDALONE CLI)
-
-Nếu bạn không muốn sử dụng Docker Compose, bạn có thể khởi chạy thủ công theo các bước sau (bao gồm cờ gia cố bảo mật và bộ nhớ dùng chung):
-
-### Bước 1: Tạo Volume và Network
-```bash
-docker volume create verischolar-postgres-data
-docker network create verischolar-net
-```
-
-### Bước 2: Khởi chạy Container
-```bash
-docker run -d \
-  --name verischolar-postgres-dev \
-  --restart unless-stopped \
-  --network verischolar-net \
-  --security-opt no-new-privileges:true \
-  --shm-size=256mb \
-  -e POSTGRES_USER=verischolar \
-  -e POSTGRES_PASSWORD=verischolar \
-  -e POSTGRES_DB=verischolar \
-  -e PGDATA=/var/lib/postgresql/data/pgdata \
-  -p 127.0.0.1:5432:5432 \
-  -v verischolar-postgres-data:/var/lib/postgresql/data \
-  -v $(pwd)/infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro \
-  --add-host host.docker.internal:host-gateway \
-  pgvector/pgvector:0.8.0-pg16
-```
-
----
-
-## 5. KIỂM THỬ VÀ XÁC THỰC CƠ SỞ DỮ LIỆU (VERIFICATION)
-
-Sau khi khởi chạy container, bạn hãy chạy các lệnh sau để đảm bảo hệ thống đã sẵn sàng phục vụ cho bài toán Advanced RAG:
-
-### 5.1. Kiểm tra Extension `vector` và `uuid-ossp`
-```bash
-docker exec -i verischolar-postgres-dev psql -U verischolar -d verischolar -c "
-SELECT extname, extversion FROM pg_extension WHERE extname IN ('vector', 'uuid-ossp');
-"
-```
-*Kỳ vọng:*
-```text
-  extname  | extversion 
------------+------------
- vector    | 0.8.0
- uuid-ossp | 1.1
-(2 rows)
-```
-
-### 5.2. Kiểm tra Thao tác Vector Cosine Distance (`<=>`)
-```bash
-docker exec -i verischolar-postgres-dev psql -U verischolar -d verischolar -c "
-CREATE TEMPORARY TABLE test_vec (id serial, emb vector(3));
-INSERT INTO test_vec (emb) VALUES ('[1,2,3]'), ('[4,5,6]');
-SELECT id, emb <=> '[1,2,3]' AS cosine_distance FROM test_vec ORDER BY cosine_distance;
-"
-```
-*Kỳ vọng:* Trả về khoảng cách Cosine Distance, trong đó vector `[1,2,3]` có khoảng cách bằng `0`.
-
-### 5.3. Kiểm tra Full-Text Search (`tsvector`)
-```bash
-docker exec -i verischolar-postgres-dev psql -U verischolar -d verischolar -c "
-SELECT to_tsvector('english', 'Academic paper citation grounding') @@ to_tsquery('english', 'citation & grounding');
-"
-```
-*Kỳ vọng:* Trả về giá trị boolean `t` (true).
-
-### 5.4. Kiểm tra Cấu hình Bộ nhớ Chia sẻ (Shared Memory)
-```bash
-docker exec -i verischolar-postgres-dev psql -U verischolar -d verischolar -c "
-SHOW shared_buffers;
-"
-```
-*Kỳ vọng:* Trả về ít nhất `128MB`, bảo đảm không gian shared memory cho pgvector vận hành trơn tru.
-
----
-
-## 6. QUẢN LÝ DỮ LIỆU BỀN VỮNG (PERSISTENCE MANAGEMENT)
-
-### 6.1. Nguyên lý Bền vững của Docker Named Volume
-Khi sử dụng Named Volume `verischolar-postgres-data`, toàn bộ dữ liệu vật lý của PostgreSQL được lưu trữ tại `/var/lib/docker/volumes/verischolar-postgres-data/_data` trên máy chủ host. Việc `docker stop`, `docker rm` hay `docker compose down` chỉ hủy tiến trình container, **không làm mất dữ liệu**.
-
-### 6.2. Kiểm tra danh sách Volume trên máy
-```bash
-docker volume ls --filter name=verischolar
-```
-
-### 6.3. Sao lưu Dữ liệu (Backup via pg_dump)
-```bash
-docker exec -t verischolar-postgres-dev pg_dump -U verischolar -d verischolar -F c -b -v -f /tmp/backup.dump
-docker cp verischolar-postgres-dev:/tmp/backup.dump ./verischolar_backup_$(date +%Y%m%d).dump
-```
-
-### 6.4. Phục hồi Dữ liệu (Restore via pg_restore)
-```bash
-docker cp ./verischolar_backup.dump verischolar-postgres-dev:/tmp/backup.dump
-docker exec -t verischolar-postgres-dev pg_restore -U verischolar -d verischolar -v /tmp/backup.dump
-```
-
----
-
-## 7. CÁC LỖI THƯỜNG GẶP & CÁCH XỬ LÝ (TROUBLESHOOTING)
-
-### 1. Lỗi: "Address already in use: port 5432"
-* **Nguyên nhân:** Máy host đã cài PostgreSQL native hoặc có một container khác đang chiếm cổng 5432.
-* **Cách khắc phục:**
-  - Kiểm tra tiến trình đang chiếm cổng: `sudo lsof -i :5432` hoặc `sudo netstat -tulpn | grep 5432`.
-  - Tắt dịch vụ postgres nội bộ nếu có: `sudo systemctl stop postgresql`.
-  - Hoặc đổi cổng host trong `.env`: `POSTGRES_PORT=5433` (lúc này kết nối qua `localhost:5433`).
-
-### 2. Lỗi: "Password authentication failed for user 'verischolar'"
-* **Nguyên nhân:** Volume cũ đã được khởi tạo trước đó với mật khẩu khác. Khi chạy lại container, PostgreSQL phát hiện thư mục dữ liệu đã tồn tại nên **bỏ qua việc đọc biến `POSTGRES_PASSWORD` mới**.
-* **Cách khắc phục:**
-  - Xóa sạch volume cũ để khởi tạo lại từ đầu: `docker compose down -v && docker compose up -d`.
-  - Hoặc kết nối vào container và đổi mật khẩu: `docker exec -it verischolar-postgres-dev psql -U verischolar -c "ALTER USER verischolar WITH PASSWORD 'verischolar';"`
-
-### 3. Lỗi: "Extension 'vector' does not exist"
-* **Nguyên nhân:** Bạn đang sử dụng image `postgres:16` hoặc `postgres:18` thông thường thay vì image có sẵn pgvector.
-* **Cách khắc phục:** Đảm bảo `image` trong `docker-compose.yml` luôn là `pgvector/pgvector:0.8.0-pg16`.
-
-### 4. Lỗi: "could not resize shared memory segment"
-* **Nguyên nhân:** pgvector cần nhiều RAM dùng chung (Shared Memory) khi dựng chỉ mục HNSW cho hàng chục ngàn vector 1024 chiều hoặc khi chạy worker truy vấn song song. Container mặc định của Docker chỉ cấp 64MB.
-* **Cách khắc phục:** Đảm bảo đã khai báo `shm_size: 256mb` (hoặc `512mb`) trong `docker-compose.yml`.
-
----
-
-## 8. TÍCH HỢP DOCKER MODEL RUNNER (LOCAL LLM INFERENCE)
-
-Theo chuẩn kỹ thuật mới của Docker và skill [docker-model-runner](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/docker-model-runner/SKILL.md), VeriScholar hỗ trợ thực thi LLM cục bộ thông qua **Docker Model Runner (DMR)**.
-
-### 8.1. Kiểm tra trạng thái Docker Model Runner
-```bash
-docker model version
-docker model status
-```
-*Kết quả:* Docker Model Runner chạy trên cổng `12434` với backend `llama.cpp`.
-
-### 8.2. Kéo (Pull) và Chạy Mô Hình Cục Bộ
-```bash
-# Kéo mô hình siêu nhẹ cho môi trường development
-docker model pull ai/smollm2
-
-# Hoặc kéo mô hình mạnh mẽ hơn cho RAG
-docker model pull ai/llama3.2
-```
-
-### 8.3. OpenAI-Compatible API Endpoint
-Docker Model Runner tự động mở API chuẩn tương thích OpenAI tại cổng `12434`:
-- **URL Host:** `http://localhost:12434/engines/llama.cpp/v1`
-- **URL trong Container (Docker Compose qua `extra_hosts`):** `http://host.docker.internal:12434/engines/llama.cpp/v1`
-- **API Key:** `not-needed`
-
-### 8.4. Kiểm thử qua Curl
-```bash
-curl http://localhost:12434/engines/llama.cpp/v1/chat/completions \
-  -H "Content-Type: application/json" \
-  -d '{
-    "model": "ai/smollm2",
-    "messages": [
-      {"role": "user", "content": "Hello, VeriScholar!"}
-    ]
-  }'
 ```
