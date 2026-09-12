@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Automatically locate workspace root from file location
@@ -22,7 +22,11 @@ def get_default_reload_dirs() -> list[str]:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(
+            str(ROOT_DIR / "apps" / "api" / ".env"),
+            str(ROOT_DIR / ".env"),
+            ".env",
+        ),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -41,6 +45,35 @@ class Settings(BaseSettings):
     # Logging settings
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     LOG_FORMAT: Literal["console", "json"] = "console"
+
+    # Database settings (PostgreSQL + pgvector)
+    DATABASE_URL: str = "postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar"
+
+    @field_validator("DATABASE_URL", mode="after")
+    @classmethod
+    def assemble_async_db_url(cls, v: str) -> str:
+        """Ensures asyncpg driver prefix is used for SQLAlchemy async engine."""
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+asyncpg://", 1)
+        return v
+
+    # LLM Inference Providers
+    LLM_PROVIDER: Literal["docker-model-runner", "openai", "gemini", "ollama"] = (
+        "docker-model-runner"
+    )
+
+    # Docker Model Runner settings
+    DMR_BASE_URL: str = "http://localhost:12434/engines/llama.cpp/v1"
+    DMR_MODEL: str = "ai/smollm2"
+
+    # Cloud LLM Settings (SecretStr ensures no accidental leaks in logs/prints)
+    OPENAI_API_KEY: SecretStr | None = None
+    OPENAI_MODEL: str = "gpt-5.6-luna"
+
+    GEMINI_API_KEY: SecretStr | None = None
+    GEMINI_MODEL: str = "gemini-1.5-flash"
 
     @property
     def is_production(self) -> bool:

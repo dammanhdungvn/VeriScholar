@@ -9,6 +9,8 @@
 [![Python: 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![uv: workspace](https://img.shields.io/badge/uv-workspace-purple.svg)](https://github.com/astral-sh/uv)
 [![FastAPI: 0.115+](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![PostgreSQL: 16 + pgvector](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![Docker: Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 [![React: 19](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
 [![Code Style: Ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
@@ -16,6 +18,7 @@
 [Overview](#-overview) •
 [Key Features](#-key-features) •
 [Architecture](#-architecture) •
+[Workspace Components](#-workspace-components) •
 [Quickstart](#-quickstart) •
 [Quality Gates](#-quality-gates--testing) •
 [Documentation](#-documentation) •
@@ -34,6 +37,7 @@
 Traditional RAG pipelines truncate PDFs into unstructured text chunks, losing visual layout context (two-column flow, mathematical equations, tables, figures). VeriScholar treats academic documents as structured multimodal artifacts:
 - **Zero Hallucination:** Claims require direct textual/visual backing. If evidence is absent, the system explicitly abstains.
 - **Visual Grounding:** Interactive frontend highlights exact source bounding boxes in real time.
+- **Dual Local & Cloud Inference:** Run 100% offline with **Docker Model Runner (DMR)** / Ollama, or connect to state-of-the-art Cloud LLMs (OpenAI, Gemini).
 - **Production Observability:** Streaming TTFB (Time-To-First-Byte) tracking, automated PII/API-key redaction, and graceful client abort (HTTP 499) handling.
 
 ---
@@ -44,8 +48,10 @@ Traditional RAG pipelines truncate PDFs into unstructured text chunks, losing vi
 | :--- | :--- |
 | **Multimodal PDF Ingestion** | Dual-engine parser combining **PyMuPDF** (ultra-fast text/bbox extraction) and **Docling** (complex two-column and table layout analysis) via `DocumentParserPort`. |
 | **Atomic Evidence Retrieval** | Immutable `DocumentChunk` records with normalized `[x0, y0, x1, y1, page]` bounding boxes (1-indexed page, top-left origin). |
-| **Advanced Hybrid Search** | Reciprocal Rank Fusion (RRF) combining dense semantic vectors (`BGE-M3` / `pgvector` HNSW) and sparse lexical keywords (`tsvector` BM25). |
+| **Unified Relational & Vector DB** | **PostgreSQL 16 + `pgvector`** storing metadata, chunk hierarchies, and 1024-dim dense vectors (`BGE-M3` with HNSW index) in a single ACID store. |
+| **Advanced Hybrid Search** | Reciprocal Rank Fusion (RRF) combining dense semantic vectors (`<=>` Cosine Distance) and sparse lexical keywords (`tsvector` BM25) directly in SQL. |
 | **Deterministic Cross-Encoder Reranking** | Two-stage retrieval pipeline with cross-encoder reranking (`bge-reranker` / `FlashRank`) ensuring top-5 precision under strict SLAs (< 5s). |
+| **Flexible LLM Runtime** | Seamless execution via **Docker Model Runner (DMR)** for local models (`ai/smollm2`, `ai/llama3.2`), or Cloud Gateways (OpenAI, Google Gemini). |
 | **Interactive PDF Viewer** | React 19 + PDF.js canvas overlay rendering synchronized highlights directly on academic paper pages. |
 | **Production Observability** | Pure ASGI middleware capturing end-to-end latency, Time-To-First-Byte (TTFB), request tracing (`X-Request-ID`), and secret masking. |
 
@@ -71,13 +77,13 @@ flowchart TD
     subgraph DOMAIN ["Pure Domain Core (packages/core)"]
         Ports["DocumentParserPort | VectorStorePort | LLMGatewayPort"]
         Models["DocumentChunk | BoundingBox | GroundingCitation"]
-        Engine["Hybrid Search + Reranker Pipeline"]
+        Engine["Hybrid Search (RRF) + Reranker Pipeline"]
     end
 
     subgraph INFRA ["Infrastructure & Adapters"]
         PDF["PyMuPDF / Docling Parsers"]
-        PG["PostgreSQL 16 + pgvector (HNSW) + tsvector"]
-        LLM["Async LLM Gateways (OpenAI / Gemini / Ollama)"]
+        PG[("PostgreSQL 16 + pgvector (HNSW) + tsvector")]
+        DMR["Docker Model Runner (Port 12434) / Cloud Gateways"]
     end
 
     UI -->|HTTP / SSE Stream| ASGI
@@ -89,24 +95,23 @@ flowchart TD
     Engine --> Ports
     Ports --> PDF
     Ports --> PG
-    Ports --> LLM
+    Ports --> DMR
 ```
 
-### Monorepo Structure
-```text
-VeriScholar/
-├── packages/
-│   └── core/            # Pure domain models, ports, and algorithms (Zero web dependencies)
-├── apps/
-│   ├── api/             # FastAPI backend, routers, pure ASGI tracing, observability
-│   └── web/             # Frontend UI (React 19, TypeScript, PDF.js, Vite, Tailwind CSS)
-├── docs/
-│   └── vi/              # Comprehensive PRDs, architecture guides, and technical specs
-├── pyproject.toml       # Root workspace configuration managed via uv
-├── pnpm-lock.yaml       # Frontend dependency lockfile
-├── AGENTS.md            # Engineering protocol & AI agent behavioural rules
-└── README.md            # Project documentation entrypoint
-```
+---
+
+## 📦 Workspace Components
+
+Each package in the monorepo has dedicated documentation detailing its internal design:
+
+| Package | Path | Layer Role | Documentation |
+| :--- | :--- | :--- | :--- |
+| **`core`** | [`packages/core/`](packages/core/) | Pure Domain Core | Pure entities (`DocumentChunk`, `BoundingBox`), Ports, and Hybrid Search algorithms. |
+| **`api`** | [`apps/api/`](apps/api/) | Delivery & Observability | FastAPI server, pure ASGI TTFB tracing, secret masking, and adapters. 👉 **[Read API Guide](apps/api/README.md)** |
+| **`worker`** | [`apps/worker/`](docs/vi/backend-directory-structure.md) | Background Workers | Dedicated ingestion worker pool, Redis Streams consumer, explicit ACK, and DLQ. |
+| **`sandbox-broker`** | [`apps/sandbox-broker/`](docs/vi/backend-directory-structure.md) | Isolated Execution | Kernel-isolated compile sandbox (gVisor `runsc`) over internal gRPC/mTLS. |
+| **`web`** | [`apps/web/`](apps/web/) | User Interface | React 19, TypeScript, PDF.js visual grounding canvas overlay. |
+| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` and Redis 7 setup. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
 
 ---
 
@@ -116,7 +121,7 @@ VeriScholar/
 - **Python 3.12+**
 - **[uv](https://docs.astral.sh/uv/)** (recommended Python package manager)
 - **Node.js 20+** & **[pnpm 9+](https://pnpm.io/)**
-- **Docker & Docker Compose** (for PostgreSQL + `pgvector`)
+- **Docker & Docker Compose** (for PostgreSQL + `pgvector` and Docker Model Runner)
 
 ### 1. Clone & Setup Workspace
 ```bash
@@ -130,30 +135,45 @@ uv sync --all-packages
 pnpm --prefix apps/web install
 ```
 
-### 2. Configure Environment Variables
-Create your local `.env` configuration in `apps/api/`:
+### 2. Launch Local Database Infrastructure
+Spin up the PostgreSQL container with `pgvector` pre-configured:
 ```bash
-cat << 'EOF' > apps/api/.env
-ENVIRONMENT=development
-LOG_LEVEL=INFO
-LOG_FORMAT=console
-HOST=0.0.0.0
-PORT=8000
-EOF
+# Start PostgreSQL 16 + pgvector in the background
+docker compose up -d
+
+# Verify container is healthy
+docker compose ps
+# Expected: verischolar-postgres-dev ... Up (healthy)
 ```
 
-### 3. Launch Backend API
+### 3. (Optional) Run Local LLM with Docker Model Runner
+VeriScholar natively integrates with **Docker Model Runner (DMR)** for local inference:
+```bash
+# Pull lightweight model for development
+docker model pull ai/smollm2
+
+# Check running runner on port 12434
+docker model status
+```
+
+### 4. Configure Environment Variables
+Copy and customize the template in `apps/api/` (see [Configuration Guide](apps/api/README.md#%EF%B8%8F-configuration-reference)):
+```bash
+cp apps/api/.env.example apps/api/.env
+```
+
+### 5. Launch Backend API
 ```bash
 # Run FastAPI server with multi-directory hot-reload
 uv run --package api api
 
-# Verification
+# Verification probe
 curl http://localhost:8000/health
 # Response: {"status":"ok","service":"verischolar-api"}
 ```
-Interactive OpenAPI documentation will be accessible at: `http://localhost:8000/docs`.
+Interactive OpenAPI documentation is accessible at: `http://localhost:8000/docs`.
 
-### 4. Launch Frontend UI
+### 6. Launch Frontend UI
 ```bash
 # Start Vite development server
 pnpm --prefix apps/web dev
@@ -186,17 +206,22 @@ pnpm --prefix apps/web build
 - [x] **Zero Warning / Zero Lint:** Ruff and Oxlint exit cleanly.
 - [x] **Strict Async Hygiene:** Blocking CPU tasks (PDF rendering) offloaded via `asyncio.to_thread()`.
 - [x] **Atomic Evidence Invariant:** BoundingBox coordinates `[x0, y0, x1, y1, page]` (1-indexed, Top-Left) are preserved in all chunks.
-- [x] **Observability & PII Safe:** Automatic redaction of JWT tokens, OpenAI project keys (`sk-proj-...`), Anthropic keys, and Google AI keys (`AIzaSy...`).
+- [x] **Observability & PII Safe:** Automatic redaction of JWT tokens, OpenAI project keys (`sk-proj-...`), and Google AI keys (`AIzaSy...`).
 - [x] **Transaction Atomicity:** All database mutations scoped within `async with session.begin():`.
 
 ---
 
 ## 📚 Documentation
 
-Deep-dive architecture specifications and guides are maintained in [`docs/vi/`](docs/vi/):
-- **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, and SLAs.
-- **[Module 1 Technical Specification](docs/vi/specs/MODULE_1_TECH_SPEC.md):** Single Paper Deep Read architecture, layout chunking, and search equations.
-- **[Production Logging Architecture Guide](docs/vi/GUIDE_LOGGING_SYSTEM.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
+Deep-dive architecture specifications and engineering guides are maintained in [`docs/vi/`](docs/vi/):
+- **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, session lifecycle, and SLAs.
+- **[System & Software Architecture](docs/vi/design-architecture.md):** Hexagonal architecture, Redis Streams task queue, Dedicated Sandbox Broker, and Early Connection Release.
+- **[REST & SSE API Specification](docs/vi/design-api.md):** 59 endpoints, Google Cloud AIP-136, RFC 9110 / RFC 7232 OCC (`412 Precondition Failed`).
+- **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 16 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
+- **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide-docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
+- **[Production Logging Architecture Guide](docs/vi/guide-logging-system.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
+- **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.
+- **[Module 1 Tech Decisions & Trade-offs](docs/vi/techstack-backend-module-01.md):** Ingestion, storage, and retrieval stack trade-offs.
 - **[Engineering & Agent Protocol](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
 
 ---
@@ -206,7 +231,7 @@ Deep-dive architecture specifications and guides are maintained in [`docs/vi/`](
 We welcome contributions from the open-source community! Before submitting a pull request, please:
 1. Review [`AGENTS.md`](AGENTS.md) for architectural laws and behavioral standards.
 2. Ensure commit messages follow Conventional Commits: `[<package_name>] <type>: <description>`.
-3. Run the full verification suite (`pytest`, `ruff`, `oxlint`, `tsc -b`).
+3. Run the full verification suite (`pytest`, `ruff`, `oxlint`, `tsc -b`, `vite build`).
 
 ---
 

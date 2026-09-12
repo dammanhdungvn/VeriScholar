@@ -115,7 +115,7 @@ Behavioral guidelines, architectural laws, clean code standards, and workflow in
     - `[web] feat: render bounding box overlay on pdf page`
     - `[docs] docs: update guide logging system with eval suite`
 - **Pre-Commit Verification:**
-  - Backend: Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pytest`.
+  - Backend: Run `uv run ruff check .`, `uv run ruff format --check .`, and `uv run pytest``.
   - Frontend (if modified): Run `pnpm --prefix apps/web lint`, `pnpm --prefix apps/web exec tsc -b`, and `pnpm --prefix apps/web build`.
   - Ensure no sensitive tokens, API keys, or `.env` files are tracked by git.
   - Verify all database mutations are wrapped inside explicit transactions (`async with session.begin():`).
@@ -217,7 +217,7 @@ Before considering any task complete, cross-check and verify every item:
 - [ ] **Async Execution Hygiene:** No blocking synchronous I/O or heavy CPU operations (e.g., PyMuPDF rendering, Docling layout analysis) run directly inside the async event loop; always offloaded via `asyncio.to_thread()`.
 - [ ] **Database Transaction Integrity:** All database write/mutation operations are scoped inside explicit transaction context managers (`async with session.begin():`); no partial writes or dangling uncommitted transactions.
 - [ ] **Automated Verifications Passed:** All unit and integration tests covering the affected codebase pass (`uv run pytest`).
-- [ ] **Observability & PII Safe:** Log outputs adhere to `GUIDE_LOGGING_SYSTEM.md`, sanitize tokens/keys, and propagate `X-Request-ID`.
+- [ ] **Observability & PII Safe:** Log outputs adhere to `docs/vi/guide-logging-system.md`, sanitize tokens/keys, and propagate `X-Request-ID`.
 - [ ] **Atomic Evidence Preserved:** Normalized `BoundingBox` coordinates are preserved on all `DocumentChunk` instances (`page >= 1`, Top-Left origin `[0.0, 1.0]`); never downgraded to raw unstructured text.
 - [ ] **Ingestion Idempotency Enforced:** Documents calculate SHA-256 hash to prevent duplicate chunking and vector index pollution.
 - [ ] **Contract & Schema Safety:** Any modified API routes return predictable, structured error envelopes and follow the staged N-1 rollout discipline.
