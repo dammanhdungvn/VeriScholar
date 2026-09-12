@@ -109,7 +109,7 @@ Each package in the monorepo has dedicated documentation detailing its internal 
 | **`core`** | [`packages/core/`](packages/core/) | Pure Domain Core | Pure entities (`DocumentChunk`, `BoundingBox`), Ports, and Hybrid Search algorithms. |
 | **`api`** | [`apps/api/`](apps/api/) | Delivery & Observability | FastAPI server, pure ASGI TTFB tracing, secret masking, and adapters. 👉 **[Read API Guide](apps/api/README.md)** |
 | **`web`** | [`apps/web/`](apps/web/) | User Interface | React 19, TypeScript, PDF.js visual grounding canvas overlay. |
-| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` initialization scripts. 👉 **[Read Docker Guide](docs/vi/guide_docker.md)** |
+| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 16 + `pgvector` initialization scripts. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
 
 ---
 
@@ -211,11 +211,15 @@ pnpm --prefix apps/web build
 
 ## 📚 Documentation
 
-Deep-dive architecture specifications and guides are maintained in [`docs/vi/`](docs/vi/):
-- **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, and SLAs.
-- **[Module 1 Technical Specification](docs/vi/specs/MODULE_1_TECH_SPEC.md):** Single Paper Deep Read architecture, layout chunking, and search equations.
-- **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide_docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
-- **[Production Logging Architecture Guide](docs/vi/GUIDE_LOGGING_SYSTEM.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
+Deep-dive architecture specifications and engineering guides are maintained in [`docs/vi/`](docs/vi/):
+- **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, session lifecycle, and SLAs.
+- **[System & Software Architecture](docs/vi/design-architecture.md):** Hexagonal architecture, Redis Streams task queue, Dedicated Sandbox Broker, and Early Connection Release.
+- **[REST & SSE API Specification](docs/vi/design-api.md):** 59 endpoints, Google Cloud AIP-136, RFC 9110 / RFC 7232 OCC (`412 Precondition Failed`).
+- **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 16 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
+- **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide-docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
+- **[Production Logging Architecture Guide](docs/vi/guide-logging-system.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
+- **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.
+- **[Module 1 Tech Decisions & Trade-offs](docs/vi/techstack-backend-module-01.md):** Ingestion, storage, and retrieval stack trade-offs.
 - **[Engineering & Agent Protocol](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
 
 ---

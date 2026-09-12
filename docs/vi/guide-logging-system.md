@@ -23,11 +23,11 @@ HTTP Request (Client)
 │  - Ghi nhận start_time                                 │
 └────────────────────────────────────────────────────────┘
       │
-      ├──> FastAPI Router / Business Logic (apps/api)
-      │      └── structlog.get_logger(...) [Structured Log]
+      ├─► FastAPI Router / Business Logic (apps/api)
+      │      └─► structlog.get_logger(...) [Structured Log]
       │
-      ├──> http.response.start ──> Tính ttfb_ms & Gắn X-Request-ID Header
-      ├──> http.response.body  ──> Stream SSE hoặc JSON Payload
+      ├─► http.response.start ──► Tính ttfb_ms & Gắn X-Request-ID Header
+      ├─► http.response.body  ──► Stream SSE hoặc JSON Payload
       │
       ▼
 ┌────────────────────────────────────────────────────────┐
@@ -100,7 +100,7 @@ HTTP Request (Client)
 ```bash
 uv run pytest -s -v apps/api/tests/test_logging.py
 ```
-*Kỳ vọng:* 8/8 test passed trong $< 1$ giây.
+*Kỳ vọng:* 8/8 test passed trong < 1 giây.
 
 ### Bước 2: Khởi chạy API Server
 ```bash
