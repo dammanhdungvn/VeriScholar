@@ -106,13 +106,13 @@ Tài liệu này định nghĩa cấu trúc tổ chức mã nguồn backend củ
 │   │   └── Dockerfile.web
 │   ├── postgres/
 │   │   └── init.sql                          # Khởi tạo extension CSDL (pgvector lưu vector, uuid-ossp sinh khóa)
-│   └── docker-compose.yml                    # Ngăn xếp phát triển cục bộ (Postgres 16, Redis 7, DMR)
+│   └── docker-compose.yml                    # Ngăn xếp phát triển cục bộ (Postgres 18, Redis 7, DMR)
 │
 ├── docs/                                     # Toàn Bộ Hồ Sơ Tài Liệu Kỹ Thuật Dự Án
 │   └── vi/
 │       ├── PRD.md                            # Tài liệu Yêu cầu Sản phẩm (Product Requirements Document)
 │       ├── design-api.md                     # Đặc tả 59 Endpoints REST / SSE (Chuẩn AIP-136, RFC 9110)
-│       ├── design-database.md                # Lược đồ cơ sở dữ liệu PostgreSQL 16 + pgvector DDL
+│       ├── design-database.md                # Lược đồ cơ sở dữ liệu PostgreSQL 18 + pgvector DDL
 │       ├── design-architecture.md            # Bản thiết kế kiến trúc hệ thống & phần mềm toàn diện
 │       ├── guide-docker.md                   # Hướng dẫn thiết lập Docker & PostgreSQL/pgvector
 │       ├── guide-logging-system.md           # Hướng dẫn hệ thống Structlog, Pure ASGI & Giám sát vận hành
