@@ -9,10 +9,12 @@ from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
+    DocumentDetailResponseData,
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
     DocumentUploadResponseData,
+    PageMetadataItem,
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
@@ -303,4 +305,90 @@ class DocumentService:
             data=data,
             meta=meta,
             links=links,
+        )
+
+    async def get_document_detail(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentDetailResponseData:
+        """Retrieve full details of a specific document including spatial page dimensions.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant isolation).
+            db: Active async database session.
+
+        Returns:
+            DocumentDetailResponseData with normalized pages_metadata.
+
+        Raises:
+            HTTPException(404): When document does not exist or belongs to another user.
+        """
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check permissions.",
+                },
+            )
+
+        # Normalize pages_metadata
+        normalized_pages: list[PageMetadataItem] = []
+        if doc.pages_metadata:
+            for p in doc.pages_metadata:
+                if isinstance(p, dict):
+                    if "dimensions" in p:
+                        dims = [float(d) for d in p["dimensions"]]
+                    elif "width_pt" in p and "height_pt" in p:
+                        dims = [float(p["width_pt"]), float(p["height_pt"])]
+                    else:
+                        dims = [0.0, 0.0]
+                    page_num = p.get("page_number") or p.get("page", 1)
+                    rotation = p.get("rotation_deg", 0)
+                    normalized_pages.append(
+                        PageMetadataItem(
+                            page_number=int(page_num),
+                            dimensions=dims,
+                            rotation_deg=int(rotation),
+                        )
+                    )
+                elif isinstance(p, (list, tuple)) and len(p) >= 3:
+                    page_num = int(p[0])
+                    width = float(p[1])
+                    height = float(p[2])
+                    rotation = int(p[3]) if len(p) > 3 else 0
+                    normalized_pages.append(
+                        PageMetadataItem(
+                            page_number=page_num,
+                            dimensions=[width, height],
+                            rotation_deg=rotation,
+                        )
+                    )
+
+        return DocumentDetailResponseData(
+            id=doc.id,
+            filename=doc.filename,
+            title=doc.title,
+            authors=doc.authors,
+            publication_year=doc.publication_year,
+            doi=doc.doi,
+            page_count=doc.page_count,
+            chunk_count=doc.chunk_count,
+            file_size_bytes=doc.file_size_bytes,
+            status=doc.status,
+            is_persistent=doc.is_persistent,
+            pages_metadata=normalized_pages,
+            created_at=doc.created_at,
         )

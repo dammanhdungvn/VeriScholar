@@ -5,7 +5,11 @@ from uuid import UUID
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_document_service
-from api.schemas.document import DocumentListPaginatedEnvelope, DocumentUploadEnvelope
+from api.schemas.document import (
+    DocumentDetailEnvelope,
+    DocumentListPaginatedEnvelope,
+    DocumentUploadEnvelope,
+)
 from api.schemas.envelope import ResponseMeta
 from api.services.document_service import DocumentService
 from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
@@ -123,4 +127,49 @@ async def list_documents(
         page=page,
         per_page=per_page,
         status_filter=status_filter,
+    )
+
+
+@router.get(
+    "/{document_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentDetailEnvelope,
+    summary="Chi tiết tài liệu kèm Spatial Metadata",
+    description=(
+        "Lấy thông tin siêu dữ liệu chi tiết của bài báo học thuật, bao gồm mảng "
+        "kích thước hình học (`dimensions`) và góc xoay (`rotation_deg`) từng trang PDF "
+        "phục vụ dựng khung vẽ trực quan trên Web Canvas (PDF.js).\n\n"
+        "**Tính năng kỹ thuật:**\n"
+        "- Đảm bảo cô lập dữ liệu người dùng (Multi-tenant Scoping).\n"
+        "- Trả về danh sách `pages_metadata` chuẩn hóa với page 1-indexed.\n"
+        "- Bao bọc Single Resource Envelope chuẩn với `request_id` và `timestamp`."
+    ),
+    responses={
+        200: {
+            "description": "Lấy chi tiết tài liệu và Spatial Metadata thành công.",
+        },
+        404: {
+            "description": "Không tìm thấy tài liệu hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng document_id không phải UUID hợp lệ.",
+        },
+    },
+)
+async def get_document_detail(
+    document_id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentDetailEnvelope:
+    """Retrieve detailed document metadata and spatial page dimensions."""
+    data = await service.get_document_detail(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+    )
+    return DocumentDetailEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
     )
