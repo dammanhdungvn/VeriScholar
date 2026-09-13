@@ -3,7 +3,7 @@
 from datetime import datetime
 from uuid import UUID
 
-from api.schemas.envelope import SingleResponseEnvelope
+from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
 from pydantic import BaseModel, Field
 
 
@@ -37,3 +37,23 @@ class DocumentUploadResponseData(BaseModel):
 
 class DocumentUploadEnvelope(SingleResponseEnvelope[DocumentUploadResponseData]):
     """Top-level single resource envelope for document upload."""
+
+
+class DocumentListItem(BaseModel):
+    """Document summary item in paginated collection."""
+
+    id: UUID = Field(description="Unique document ID")
+    filename: str = Field(description="Original uploaded filename")
+    title: str | None = Field(
+        default=None,
+        description="Extracted academic paper title if available",
+    )
+    status: str = Field(description="Document processing status")
+    is_persistent: bool = Field(
+        description="Whether document is permanently saved to library",
+    )
+    created_at: datetime = Field(description="Document creation timestamp")
+
+
+class DocumentListPaginatedEnvelope(PaginatedResponseEnvelope[DocumentListItem]):
+    """Top-level paginated collection envelope for documents."""

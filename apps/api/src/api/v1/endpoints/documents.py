@@ -5,10 +5,10 @@ from uuid import UUID
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_document_service
-from api.schemas.document import DocumentUploadEnvelope
+from api.schemas.document import DocumentListPaginatedEnvelope, DocumentUploadEnvelope
 from api.schemas.envelope import ResponseMeta
 from api.services.document_service import DocumentService
-from fastapi import APIRouter, Depends, File, Form, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/documents", tags=["Module 1: Documents"])
@@ -67,4 +67,60 @@ async def upload_document(
         success=True,
         data=data,
         meta=ResponseMeta(),
+    )
+
+
+@router.get(
+    "",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentListPaginatedEnvelope,
+    summary="Danh sách bài báo (phân trang page/per_page)",
+    description=(
+        "Lấy danh sách các bài báo khoa học thuộc quyền sở hữu của người dùng hiện tại.\n\n"
+        "**Tính năng kỹ thuật:**\n"
+        "- Phân trang chuẩn **RFC 8288** (`first`, `prev`, `self`, `next`, `last`).\n"
+        "- Đảm bảo cô lập dữ liệu người dùng (Multi-tenant Scoping).\n"
+        "- Hỗ trợ lọc theo trạng thái xử lý (`status`).\n"
+        "- Sắp xếp mặc định theo thứ tự thời gian tạo mới nhất (`created_at DESC`)."
+    ),
+    responses={
+        200: {
+            "description": "Truy vấn danh sách bài báo thành công kèm siêu dữ liệu phân trang.",
+        },
+        422: {
+            "description": "Tham số phân trang không hợp lệ (page < 1 hoặc per_page > 100).",
+        },
+    },
+)
+async def list_documents(
+    page: int = Query(
+        1,
+        ge=1,
+        description="Số thứ tự trang kết quả (1-indexed)",
+    ),
+    per_page: int = Query(
+        20,
+        ge=1,
+        le=100,
+        description="Số lượng bài báo tối đa trên mỗi trang (1-100)",
+    ),
+    status_filter: str | None = Query(
+        None,
+        alias="status",
+        description=(
+            "Tùy chọn lọc theo trạng thái tài liệu "
+            "('uploaded', 'pending', 'processing', 'completed', 'failed')"
+        ),
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentListPaginatedEnvelope:
+    """Retrieve paginated documents collection for current user."""
+    return await service.list_documents(
+        user_id=current_user.id,
+        db=db,
+        page=page,
+        per_page=per_page,
+        status_filter=status_filter,
     )

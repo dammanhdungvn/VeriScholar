@@ -1,13 +1,20 @@
 """Document Ingestion Service coordinating CAS storage and database persistence."""
 
 import hashlib
+import math
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
-from api.schemas.document import DocumentLinks, DocumentUploadResponseData
+from api.schemas.document import (
+    DocumentLinks,
+    DocumentListItem,
+    DocumentListPaginatedEnvelope,
+    DocumentUploadResponseData,
+)
+from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.ports.storage import IBlobStoragePort
 from fastapi import HTTPException, UploadFile, status
@@ -206,5 +213,94 @@ class DocumentService:
             is_persistent=doc.is_persistent,
             session_id=session_id,
             created_at=doc.created_at,
+            links=links,
+        )
+
+    async def list_documents(
+        self,
+        user_id: UUID,
+        db: AsyncSession,
+        page: int = 1,
+        per_page: int = 20,
+        status_filter: str | None = None,
+    ) -> DocumentListPaginatedEnvelope:
+        """Retrieve paginated list of user documents conforming to RFC 8288.
+
+        Args:
+            user_id: Authenticated user identifier.
+            db: Active async database session.
+            page: 1-based page index.
+            per_page: Number of documents per page.
+            status_filter: Optional status filter.
+
+        Returns:
+            DocumentListPaginatedEnvelope with data, meta, and navigation links.
+        """
+        where_clauses = [DocumentModel.user_id == user_id]
+        if status_filter:
+            where_clauses.append(DocumentModel.status == status_filter)
+
+        # 1. Total count query
+        count_stmt = select(func.count(DocumentModel.id)).where(*where_clauses)
+        count_res = await db.execute(count_stmt)
+        total = count_res.scalar() or 0
+
+        # Calculate total pages
+        total_pages = max(1, math.ceil(total / per_page))
+
+        # 2. Paginated items query
+        offset = (page - 1) * per_page
+        items_stmt = (
+            select(DocumentModel)
+            .where(*where_clauses)
+            .order_by(DocumentModel.created_at.desc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        items_res = await db.execute(items_stmt)
+        documents = items_res.scalars().all()
+
+        data = [
+            DocumentListItem(
+                id=doc.id,
+                filename=doc.filename,
+                title=doc.title,
+                status=doc.status,
+                is_persistent=doc.is_persistent,
+                created_at=doc.created_at,
+            )
+            for doc in documents
+        ]
+
+        # 3. Construct RFC 8288 pagination links
+        def _build_url(p: int) -> str:
+            if status_filter:
+                return f"/api/v1/documents?page={p}&per_page={per_page}&status={status_filter}"
+            return f"/api/v1/documents?page={p}&per_page={per_page}"
+
+        first_link = _build_url(1)
+        last_link = _build_url(total_pages)
+        self_link = _build_url(page)
+        prev_link = _build_url(page - 1) if page > 1 else None
+        next_link = _build_url(page + 1) if page < total_pages else None
+
+        meta = PaginationMeta(
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+        )
+        links = PaginationLinks(
+            first=first_link,
+            prev=prev_link,
+            self=self_link,
+            next=next_link,
+            last=last_link,
+        )
+
+        return DocumentListPaginatedEnvelope(
+            success=True,
+            data=data,
+            meta=meta,
             links=links,
         )
