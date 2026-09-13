@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class DocumentLinks(BaseModel):
@@ -188,3 +188,60 @@ class DocumentStarResponseData(BaseModel):
 
 class DocumentStarEnvelope(SingleResponseEnvelope[DocumentStarResponseData]):
     """Top-level single resource envelope for document star promotion."""
+
+
+class DocumentParseRequest(BaseModel):
+    """Configuration options for triggering or re-triggering document parsing."""
+
+    chunk_size: int = Field(
+        default=512,
+        ge=100,
+        le=2048,
+        description="Target token count per semantic chunk (default: 512)",
+    )
+    chunk_overlap: int = Field(
+        default=50,
+        ge=0,
+        le=200,
+        description="Token overlap between adjacent chunks (default: 50)",
+    )
+    extract_tables: bool = Field(
+        default=True,
+        description="Whether to perform specialized layout detection for tables and figures",
+    )
+    force_reparse: bool = Field(
+        default=False,
+        description="Force re-parsing even if document was already processed or is processing",
+    )
+
+    @model_validator(mode="after")
+    def validate_overlap_less_than_size(self) -> "DocumentParseRequest":
+        if self.chunk_overlap >= self.chunk_size:
+            raise ValueError("chunk_overlap must be strictly less than chunk_size")
+        return self
+
+
+class DocumentParseLinks(BaseModel):
+    """Navigation links for polling parsing progress and accessing parsed document."""
+
+    status_url: str = Field(description="URL to poll parsing progress and stage breakdown")
+    detail_url: str = Field(description="URL to access document metadata and pages")
+
+
+class DocumentParseResponseData(BaseModel):
+    """Payload data returned when a document parse task is accepted."""
+
+    id: UUID = Field(description="Unique document identifier")
+    status: str = Field(description="Updated document status ('processing', 'completed')")
+    stage: str = Field(description="Ingestion pipeline stage ('validation', 'queued')")
+    progress: int = Field(
+        ge=0,
+        le=100,
+        description="Initial parsing progress percentage (0-100)",
+    )
+    message: str = Field(description="Human-readable guidance message regarding the parse task")
+    links: DocumentParseLinks = Field(description="HATEOAS resource links")
+
+
+class DocumentParseEnvelope(SingleResponseEnvelope[DocumentParseResponseData]):
+    """Top-level single resource envelope for document parse initiation."""

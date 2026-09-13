@@ -4,10 +4,12 @@ from uuid import UUID
 
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.deps import get_current_user, get_document_service
+from api.deps import get_current_user, get_document_service, get_idempotency_port
 from api.schemas.document import (
     DocumentDetailEnvelope,
     DocumentListPaginatedEnvelope,
+    DocumentParseEnvelope,
+    DocumentParseRequest,
     DocumentStarEnvelope,
     DocumentStarRequest,
     DocumentStatusEnvelope,
@@ -15,8 +17,9 @@ from api.schemas.document import (
 )
 from api.schemas.envelope import ResponseMeta
 from api.services.document_service import DocumentService
+from core.ports.idempotency import IIdempotencyPort
 from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile, status
-from fastapi.responses import StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/documents", tags=["Module 1: Documents"])
@@ -435,3 +438,109 @@ async def delete_document(
         db=db,
     )
     return None
+
+
+PARSE_DESCRIPTION = (
+    "🎯 **Mục đích:** Kích hoạt hoặc bóc tách lại bài báo theo các tùy chọn cấu hình chunking, "
+    "hỗ trợ cơ chế Idempotency chống gửi trùng lặp.\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo (bắt buộc, Path parameter).\n"
+    "- `Idempotency-Key`: UUID khóa khử trùng lặp (tùy chọn, Header, cửa sổ 24 giờ).\n"
+    "- `chunk_size`: Kích thước token mục tiêu cho mỗi chunk (mặc định: 512, từ 100 đến 2048).\n"
+    "- `chunk_overlap`: Số token gối đầu (mặc định: 50, từ 0 đến 200, phải nhỏ hơn chunk_size).\n"
+    "- `extract_tables`: Bật nhận diện bố cục bảng biểu & hình ảnh chuyên sâu (mặc định: true).\n"
+    "- `force_reparse`: Bắt buộc tái bóc tách lại bài báo (mặc định: false).\n\n"
+    "📤 **Đầu ra (HTTP 202 Accepted):**\n"
+    "- Trả về `id`, `status: processing`, `stage: validation`, `progress: 0`, và các liên kết "
+    "HATEOAS (`status_url`, `detail_url`).\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Khi gửi kèm `Idempotency-Key`, các request trùng lặp trong 24 giờ sẽ nhận lại phản hồi gốc "
+    "kèm header `X-Cache: Idempotent-Hit` mà không thực thi lại pipeline.\n"
+    "- Nếu tài liệu đang xử lý (`status=processing`) và không bật `force_reparse=true`, hệ thống "
+    "trả về lỗi `409 DOCUMENT_PROCESSING`.\n"
+    "- Nếu tài liệu đã hoàn tất (`status=completed`) và không bật `force_reparse=true`, hệ thống "
+    "trả về thông báo trạng thái hiện tại kèm hướng dẫn sử dụng `force_reparse`.\n"
+    "- Lỗi thường gặp: `404` (không tìm thấy), `409` (đang xử lý), `422` (sai định dạng)."
+)
+
+
+@router.post(
+    "/{document_id}:parse",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DocumentParseEnvelope,
+    summary="Kích hoạt / Bóc tách lại với Idempotency",
+    description=PARSE_DESCRIPTION,
+    responses={
+        202: {
+            "description": "Tiến trình bóc tách bài báo được tiếp nhận thành công.",
+            "model": DocumentParseEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        409: {
+            "description": "Bài báo đang trong tiến trình xử lý và chưa hoàn tất.",
+        },
+        422: {
+            "description": "Tham số đầu vào hoặc UUID không hợp lệ.",
+        },
+    },
+)
+async def parse_document(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần bóc tách",
+    ),
+    payload: DocumentParseRequest = Body(
+        default_factory=DocumentParseRequest,
+        description="Tùy chọn cấu hình bóc tách và chunking",
+    ),
+    idempotency_key: str | None = Header(
+        default=None,
+        alias="Idempotency-Key",
+        description="Khóa UUID khử trùng lặp trong vòng 24 giờ",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+    idempotency: IIdempotencyPort = Depends(get_idempotency_port),
+) -> DocumentParseEnvelope | JSONResponse:
+    """Trigger or re-trigger document parsing with 24-hour idempotency protection."""
+    cache_key = None
+    if idempotency_key:
+        cache_key = f"idempotency:parse:{current_user.id}:{document_id}:{idempotency_key}"
+        cached_resp = await idempotency.get_response(cache_key)
+        if cached_resp is not None:
+            return JSONResponse(
+                status_code=status.HTTP_202_ACCEPTED,
+                content=cached_resp,
+                headers={"X-Cache": "Idempotent-Hit"},
+            )
+
+    data = await service.trigger_parse_document(
+        document_id=document_id,
+        user_id=current_user.id,
+        parse_req=payload,
+        db=db,
+    )
+
+    envelope = DocumentParseEnvelope(
+        data=data,
+        meta=ResponseMeta(),
+    )
+    envelope_dict = envelope.model_dump(mode="json")
+
+    if cache_key:
+        await idempotency.store_response(
+            key=cache_key,
+            response_data=envelope_dict,
+            status_code=status.HTTP_202_ACCEPTED,
+            ttl_seconds=86400,
+        )
+        return JSONResponse(
+            status_code=status.HTTP_202_ACCEPTED,
+            content=envelope_dict,
+            headers={"X-Cache": "Miss"},
+        )
+
+    return envelope

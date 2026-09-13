@@ -15,6 +15,9 @@ from api.schemas.document import (
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
+    DocumentParseLinks,
+    DocumentParseRequest,
+    DocumentParseResponseData,
     DocumentStarResponseData,
     DocumentStatusResponseData,
     DocumentUploadResponseData,
@@ -798,3 +801,111 @@ class DocumentService:
                 await self.storage.delete_blob(content_hash)
 
         await db.flush()
+
+    async def trigger_parse_document(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        parse_req: DocumentParseRequest,
+        db: AsyncSession,
+    ) -> DocumentParseResponseData:
+        """Trigger or re-trigger parsing pipeline for an uploaded document.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant isolation).
+            parse_req: Parsing options (chunk_size, chunk_overlap, extract_tables, etc.).
+            db: Active async database session.
+
+        Returns:
+            DocumentParseResponseData with status, stage, progress and navigation links.
+
+        Raises:
+            HTTPException(404): When document not found or belongs to another user.
+            HTTPException(409): When document is currently processing and force_reparse=False.
+        """
+        # 1. Query document with multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        status_url = f"/api/v1/documents/{document_id}/status"
+        detail_url = f"/api/v1/documents/{document_id}"
+        links = DocumentParseLinks(status_url=status_url, detail_url=detail_url)
+
+        # 2. State machine checks
+        if doc.status == "processing" and not parse_req.force_reparse:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "DOCUMENT_PROCESSING",
+                    "message": (
+                        f"Document '{document_id}' is already being processed (stage: {doc.stage})."
+                    ),
+                    "field": "id",
+                    "action": (
+                        f"Poll progress via GET {status_url} or pass force_reparse=true to restart."
+                    ),
+                },
+            )
+
+        if doc.status == "completed" and not parse_req.force_reparse:
+            return DocumentParseResponseData(
+                id=doc.id,
+                status=doc.status,
+                stage=doc.stage,
+                progress=doc.progress,
+                message="Document already parsed. Set force_reparse=true to reprocess.",
+                links=links,
+            )
+
+        # 3. Transition document state to processing / validation
+        now = datetime.now(UTC)
+        doc.status = "processing"
+        doc.stage = "validation"
+        doc.progress = 0
+        doc.error_message = None
+        doc.updated_at = now
+
+        # Update or record parse_options in parsed_metadata
+        current_meta = dict(doc.parsed_metadata) if doc.parsed_metadata else {}
+        current_meta["parse_options"] = {
+            "chunk_size": parse_req.chunk_size,
+            "chunk_overlap": parse_req.chunk_overlap,
+            "extract_tables": parse_req.extract_tables,
+            "force_reparse": parse_req.force_reparse,
+            "triggered_at": now.isoformat(),
+        }
+        current_meta["stages_detail"] = {
+            "validation": "in_progress",
+            "layout_detection": "pending",
+            "ocr": "pending",
+            "chunking": "pending",
+            "embedding": "pending",
+        }
+        doc.parsed_metadata = current_meta
+
+        await db.flush()
+
+        return DocumentParseResponseData(
+            id=doc.id,
+            status=doc.status,
+            stage=doc.stage,
+            progress=doc.progress,
+            message="Document parsing pipeline initiated.",
+            links=links,
+        )

@@ -2,7 +2,9 @@
 
 from uuid import UUID
 
+from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIdempotencyAdapter
 from core.adapters.storage.local import LocalStorageAdapter
+from core.ports.idempotency import IIdempotencyPort
 from core.ports.storage import IBlobStoragePort
 from fastapi import Depends
 from sqlalchemy import select
@@ -14,10 +16,23 @@ from api.services.document_service import DocumentService
 
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
+_idempotency_adapter: IIdempotencyPort | None = None
+
 
 def get_storage() -> IBlobStoragePort:
     """Dependency providing the configured blob storage port."""
     return LocalStorageAdapter(base_directory="storage/blobs")
+
+
+def get_idempotency_port() -> IIdempotencyPort:
+    """Dependency providing the configured idempotency port (Redis with in-memory fallback)."""
+    global _idempotency_adapter
+    if _idempotency_adapter is None:
+        _idempotency_adapter = RedisIdempotencyAdapter(
+            redis_url="redis://localhost:6379/0",
+            fallback=InMemoryIdempotencyAdapter(),
+        )
+    return _idempotency_adapter
 
 
 def get_document_service(
