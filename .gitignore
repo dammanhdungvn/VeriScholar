@@ -71,3 +71,7 @@ Thumbs.db
 dmypy.json
 .ruff_cache/
 temp/
+
+# Local Storage & Runtime Artifacts (Root-only)
+/storage/
+/data/

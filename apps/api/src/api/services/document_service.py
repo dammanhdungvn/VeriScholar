@@ -1,0 +1,210 @@
+"""Document Ingestion Service coordinating CAS storage and database persistence."""
+
+import hashlib
+from datetime import UTC, datetime
+from uuid import UUID, uuid4
+
+from api.db.models.blob import DocumentStorageBlobModel
+from api.db.models.document import DocumentModel
+from api.db.models.session import ResearchSessionModel, SessionDocumentModel
+from api.schemas.document import DocumentLinks, DocumentUploadResponseData
+from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
+from core.ports.storage import IBlobStoragePort
+from fastapi import HTTPException, UploadFile, status
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+PDF_MAGIC_BYTES = b"%PDF-"
+MAX_SESSION_DOCUMENTS = 5
+
+
+class DocumentService:
+    """Service handling document upload, CAS deduplication, and session attachment."""
+
+    def __init__(self, storage: IBlobStoragePort) -> None:
+        self.storage = storage
+
+    async def upload_document(
+        self,
+        file: UploadFile,
+        user_id: UUID,
+        db: AsyncSession,
+        session_id: UUID | None = None,
+    ) -> DocumentUploadResponseData:
+        """Process an uploaded PDF file, perform CAS deduplication, and register document record.
+
+        Args:
+            file: FastAPI UploadFile object.
+            user_id: Authenticated user identifier.
+            db: Active async database session.
+            session_id: Optional research session to link the document to.
+
+        Returns:
+            Structured DocumentUploadResponseData.
+        """
+        filename = file.filename or "untitled.pdf"
+
+        # 1. Read initial chunk to validate Magic Bytes (%PDF-)
+        initial_chunk = await file.read(1024)
+        if not initial_chunk.startswith(PDF_MAGIC_BYTES):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_FILE_TYPE",
+                    "message": "File is not a valid PDF (missing %PDF- header magic bytes).",
+                    "field": "file",
+                    "action": "Ensure the uploaded file is a valid non-corrupted PDF document.",
+                },
+            )
+
+        # 2. Stream and compute SHA-256 hash while enforcing 50MB ceiling
+        hasher = hashlib.sha256()
+        hasher.update(initial_chunk)
+        total_size = len(initial_chunk)
+        chunks: list[bytes] = [initial_chunk]
+
+        while True:
+            chunk = await file.read(64 * 1024)  # 64 KB buffer
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail={
+                        "code": "FILE_TOO_LARGE",
+                        "message": (
+                            f"File exceeds maximum size limit of {MAX_FILE_SIZE_BYTES} bytes."
+                        ),
+                        "field": "file",
+                        "action": "Compress the PDF or choose a file under 50MB.",
+                    },
+                )
+            hasher.update(chunk)
+            chunks.append(chunk)
+
+        content_hash = hasher.hexdigest()
+
+        # 3. Validate session if session_id is provided
+        if session_id is not None:
+            stmt_session = select(ResearchSessionModel).where(
+                ResearchSessionModel.id == session_id,
+                ResearchSessionModel.user_id == user_id,
+            )
+            res_session = await db.execute(stmt_session)
+            session_obj = res_session.scalar_one_or_none()
+            if session_obj is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "SESSION_NOT_FOUND",
+                        "message": f"Research session '{session_id}' not found.",
+                        "field": "session_id",
+                        "action": "Verify session_id exists and belongs to the authenticated user.",
+                    },
+                )
+
+            # Check max 5 documents per session
+            stmt_count = (
+                select(func.count())
+                .select_from(SessionDocumentModel)
+                .where(SessionDocumentModel.session_id == session_id)
+            )
+            res_count = await db.execute(stmt_count)
+            current_doc_count = res_count.scalar() or 0
+            if current_doc_count >= MAX_SESSION_DOCUMENTS:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail={
+                        "code": "SESSION_DOCUMENT_LIMIT_EXCEEDED",
+                        "message": (
+                            f"Session already has {current_doc_count} documents. "
+                            f"Maximum allowed is {MAX_SESSION_DOCUMENTS}."
+                        ),
+                        "field": "session_id",
+                        "action": "Remove a document from session before adding a new one.",
+                    },
+                )
+
+        # 4. CAS Lookup: Check if blob already exists
+        stmt_blob = select(DocumentStorageBlobModel).where(
+            DocumentStorageBlobModel.content_hash == content_hash
+        )
+        res_blob = await db.execute(stmt_blob)
+        blob = res_blob.scalar_one_or_none()
+
+        now = datetime.now(UTC)
+
+        if blob is not None:
+            # Deduplicated: Increment reference count
+            blob.ref_count += 1
+        else:
+            # Physical save via Storage Port
+            async def _stream_chunks():
+                for c in chunks:
+                    yield c
+
+            storage_path, _ = await self.storage.save_blob(_stream_chunks(), content_hash)
+
+            blob = DocumentStorageBlobModel(
+                id=uuid4(),
+                content_hash=content_hash,
+                storage_path=storage_path,
+                file_size_bytes=total_size,
+                ref_count=1,
+                status="processing",
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(blob)
+            await db.flush()
+
+        # 5. Create user Document record
+        doc = DocumentModel(
+            id=uuid4(),
+            user_id=user_id,
+            blob_id=blob.id,
+            filename=filename,
+            content_hash=content_hash,
+            file_size_bytes=total_size,
+            status="uploaded",
+            stage="queued",
+            progress=0,
+            is_persistent=False,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(doc)
+        await db.flush()
+
+        # 6. Associate with session if requested
+        if session_id is not None:
+            session_doc = SessionDocumentModel(
+                session_id=session_id,
+                document_id=doc.id,
+                added_at=now,
+            )
+            db.add(session_doc)
+            await db.flush()
+
+        doc_id_str = str(doc.id)
+        links = DocumentLinks(
+            self_url=f"/api/v1/documents/{doc_id_str}",
+            status_url=f"/api/v1/documents/{doc_id_str}/status",
+            file_url=f"/api/v1/documents/{doc_id_str}/file",
+            parse_url=f"/api/v1/documents/{doc_id_str}:parse",
+        )
+
+        return DocumentUploadResponseData(
+            id=doc.id,
+            filename=doc.filename,
+            file_size_bytes=doc.file_size_bytes,
+            content_hash=doc.content_hash,
+            status=doc.status,
+            stage=doc.stage,
+            progress=doc.progress,
+            is_persistent=doc.is_persistent,
+            session_id=session_id,
+            created_at=doc.created_at,
+            links=links,
+        )
