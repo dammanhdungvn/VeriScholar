@@ -57,3 +57,42 @@ class DocumentListItem(BaseModel):
 
 class DocumentListPaginatedEnvelope(PaginatedResponseEnvelope[DocumentListItem]):
     """Top-level paginated collection envelope for documents."""
+
+
+class PageMetadataItem(BaseModel):
+    """Geometric and orientation metadata for a single PDF page."""
+
+    page_number: int = Field(ge=1, description="1-indexed document page number")
+    dimensions: list[float] = Field(
+        description="Page dimensions in typographical points [width_pt, height_pt]"
+    )
+    rotation_deg: int = Field(
+        default=0, description="Page rotation orientation in degrees (0, 90, 180, 270)"
+    )
+
+
+class DocumentDetailResponseData(BaseModel):
+    """Detailed document metadata including spatial page dimensions."""
+
+    id: UUID = Field(description="Unique document ID")
+    filename: str = Field(description="Original uploaded filename")
+    title: str | None = Field(
+        default=None, description="Extracted academic paper title if available"
+    )
+    authors: list[str] | None = Field(default=None, description="Extracted list of author names")
+    publication_year: int | None = Field(default=None, description="Publication year")
+    doi: str | None = Field(default=None, description="Digital Object Identifier")
+    page_count: int | None = Field(default=None, description="Total page count")
+    chunk_count: int = Field(default=0, description="Total extracted text chunks")
+    file_size_bytes: int = Field(description="Total file size in bytes")
+    status: str = Field(description="Document processing status")
+    is_persistent: bool = Field(description="Whether document is permanently saved to library")
+    pages_metadata: list[PageMetadataItem] = Field(
+        default_factory=list,
+        description="Spatial page dimensions and rotation for Canvas rendering",
+    )
+    created_at: datetime = Field(description="Document creation timestamp")
+
+
+class DocumentDetailEnvelope(SingleResponseEnvelope[DocumentDetailResponseData]):
+    """Top-level single resource envelope for document detail."""
