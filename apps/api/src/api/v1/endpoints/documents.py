@@ -8,12 +8,14 @@ from api.deps import get_current_user, get_document_service
 from api.schemas.document import (
     DocumentDetailEnvelope,
     DocumentListPaginatedEnvelope,
+    DocumentStarEnvelope,
+    DocumentStarRequest,
     DocumentStatusEnvelope,
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
 from api.services.document_service import DocumentService
-from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile, status
+from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -114,6 +116,24 @@ STATUS_DESCRIPTION = (
     "\n"
     "⚠️ **Lưu ý:**\n"
     '- Dừng polling ngay khi `status == "completed"` hoặc `status == "failed"`.'
+)
+
+STAR_DESCRIPTION = (
+    "🎯 **Mục đích:** Lưu bài báo từ phiên nghiên cứu tạm thời vào kho thư viện "
+    "cá nhân vĩnh viễn (Star).\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `folder_id`: UUID thư mục đề tài nghiên cứu (tùy chọn, Request body). "
+    'Mặc định là `{ "folder_id": null }` để lưu bài báo vào thư viện chung.\n\n'
+    "📤 **Đầu ra (HTTP 200):**\n"
+    "- Trả về thông tin bài báo với `is_persistent: true` và `folder_id` "
+    "đã gán trong một giao dịch ACID.\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Thao tác mang tính lũy thừa (Idempotent): gọi lại nhiều lần sẽ cập nhật "
+    "folder_id mà không tạo bản ghi trùng lặp.\n"
+    "- Khi thao tác trên Swagger UI: hãy chọn example 'Lưu vào thư viện chung' "
+    '({ "folder_id": null }). Chỉ truyền UUID vào folder_id khi bạn đã tạo '
+    "thư mục thực tế trong hệ thống."
 )
 
 
@@ -302,6 +322,61 @@ async def get_document_status(
         db=db,
     )
     return DocumentStatusEnvelope(
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+@router.post(
+    "/{document_id}:star",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentStarEnvelope,
+    summary="Lưu bài báo vào thư viện cá nhân (Star/Promotion)",
+    description=STAR_DESCRIPTION,
+    responses={
+        200: {"description": "Lưu bài báo vào thư viện cá nhân thành công."},
+        404: {
+            "description": "Không tìm thấy bài báo hoặc thư mục được chỉ định.",
+        },
+        422: {"description": "Định dạng UUID không hợp lệ."},
+    },
+)
+async def star_document(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần lưu vào thư viện cá nhân",
+    ),
+    payload: DocumentStarRequest | None = Body(
+        default=None,
+        openapi_examples={
+            "without_folder": {
+                "summary": "Lưu vào thư viện chung (Mặc định)",
+                "description": (
+                    "Lưu bài báo vào thư viện cá nhân mà không gán thư mục (folder_id: null)"
+                ),
+                "value": {"folder_id": None},
+            },
+            "with_folder": {
+                "summary": "Lưu kèm gán vào thư mục",
+                "description": "Lưu bài báo và phân loại vào thư mục nghiên cứu cụ thể",
+                "value": {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
+            },
+        },
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentStarEnvelope:
+    """Promote a document to persistent user library retention (Star)."""
+    folder_id = payload.folder_id if payload else None
+    data = await service.star_document(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        folder_id=folder_id,
+    )
+    return DocumentStarEnvelope(
+        success=True,
         data=data,
         meta=ResponseMeta(),
     )

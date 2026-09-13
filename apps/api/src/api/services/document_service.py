@@ -8,12 +8,14 @@ from uuid import UUID, uuid4
 
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
+from api.db.models.folder import FolderModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
     DocumentDetailResponseData,
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
+    DocumentStarResponseData,
     DocumentStatusResponseData,
     DocumentUploadResponseData,
     PageMetadataItem,
@@ -392,6 +394,7 @@ class DocumentService:
             file_size_bytes=doc.file_size_bytes,
             status=doc.status,
             is_persistent=doc.is_persistent,
+            folder_id=doc.folder_id,
             pages_metadata=normalized_pages,
             created_at=doc.created_at,
         )
@@ -645,4 +648,80 @@ class DocumentService:
             progress=doc.progress,
             stages_detail=stages_detail,
             error_message=doc.error_message,
+        )
+
+    async def star_document(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        folder_id: UUID | None = None,
+    ) -> DocumentStarResponseData:
+        """Promote a document to persistent library retention in an atomic ACID transaction.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant isolation).
+            db: Active async database session.
+            folder_id: Optional folder identifier to associate the starred document with.
+
+        Returns:
+            DocumentStarResponseData with is_persistent=True and assigned folder_id.
+
+        Raises:
+            HTTPException(404): If folder does not exist or document does not exist/belong to user.
+        """
+        # 1. Validate folder ownership if provided
+        if folder_id is not None:
+            folder_stmt = select(FolderModel).where(
+                FolderModel.id == folder_id,
+                FolderModel.user_id == user_id,
+            )
+            folder_res = await db.execute(folder_stmt)
+            folder = folder_res.scalar_one_or_none()
+            if folder is None:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail={
+                        "code": "FOLDER_NOT_FOUND",
+                        "message": f"Folder '{folder_id}' not found or access denied.",
+                        "field": "folder_id",
+                        "action": "Verify folder ID or check user permissions.",
+                    },
+                )
+
+        # 2. Query document with multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 3. Update persistence and folder association atomically
+        now = datetime.now(UTC)
+        doc.is_persistent = True
+        doc.folder_id = folder_id
+        doc.updated_at = now
+        await db.flush()
+
+        return DocumentStarResponseData(
+            id=doc.id,
+            filename=doc.filename,
+            title=doc.title,
+            status=doc.status,
+            is_persistent=doc.is_persistent,
+            folder_id=doc.folder_id,
+            updated_at=doc.updated_at,
         )
