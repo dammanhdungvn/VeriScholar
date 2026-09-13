@@ -14,8 +14,10 @@ from api.schemas.document import (
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
+    DocumentStatusResponseData,
     DocumentUploadResponseData,
     PageMetadataItem,
+    StagesDetail,
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
@@ -517,3 +519,130 @@ class DocumentService:
                     "action": f"Ensure byte range is within 0 to {file_size - 1}.",
                 },
             )
+
+    @staticmethod
+    def _compute_stages_detail(
+        status_val: str,
+        stage_val: str,
+        parsed_metadata: dict | None = None,
+    ) -> StagesDetail:
+        """Compute or extract the 5-stage ingestion pipeline progress breakdown."""
+        if (
+            parsed_metadata
+            and isinstance(parsed_metadata, dict)
+            and "stages_detail" in parsed_metadata
+        ):
+            stored = parsed_metadata["stages_detail"]
+            if isinstance(stored, dict):
+                return StagesDetail(
+                    validation=stored.get("validation", "pending"),
+                    layout_detection=stored.get("layout_detection", "pending"),
+                    ocr=stored.get("ocr", "pending"),
+                    chunking=stored.get("chunking", "pending"),
+                    embedding=stored.get("embedding", "pending"),
+                )
+
+        pipeline_order = ["validation", "layout_detection", "ocr", "chunking", "embedding"]
+        stage_norm = stage_val.lower().strip()
+        stage_map = {
+            "validation": 0,
+            "layout_detection": 1,
+            "running_ocr": 2,
+            "ocr": 2,
+            "parsing": 2,
+            "chunking": 3,
+            "embedding": 4,
+        }
+
+        if status_val == "completed":
+            return StagesDetail(
+                validation="completed",
+                layout_detection="completed",
+                ocr="completed",
+                chunking="completed",
+                embedding="completed",
+            )
+
+        if status_val == "failed":
+            curr_idx = stage_map.get(stage_norm, 0)
+            details = {}
+            for i, st in enumerate(pipeline_order):
+                if i < curr_idx:
+                    details[st] = "completed"
+                elif i == curr_idx:
+                    details[st] = "failed"
+                else:
+                    details[st] = "pending"
+            return StagesDetail(**details)
+
+        if status_val in ("uploaded", "pending") and stage_norm == "queued":
+            return StagesDetail(
+                validation="pending",
+                layout_detection="pending",
+                ocr="pending",
+                chunking="pending",
+                embedding="pending",
+            )
+
+        curr_idx = stage_map.get(stage_norm, 0)
+        details = {}
+        for i, st in enumerate(pipeline_order):
+            if i < curr_idx:
+                details[st] = "completed"
+            elif i == curr_idx:
+                details[st] = "in_progress"
+            else:
+                details[st] = "pending"
+        return StagesDetail(**details)
+
+    async def get_document_status(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentStatusResponseData:
+        """Query document processing progress and stage detail.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant scoping).
+            db: Active async database session.
+
+        Returns:
+            DocumentStatusResponseData containing status, stage, progress and stages_detail.
+
+        Raises:
+            HTTPException(404): When document is not found or not owned by user.
+        """
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check permissions.",
+                },
+            )
+
+        stages_detail = self._compute_stages_detail(
+            status_val=doc.status,
+            stage_val=doc.stage,
+            parsed_metadata=doc.parsed_metadata,
+        )
+
+        return DocumentStatusResponseData(
+            id=doc.id,
+            status=doc.status,
+            stage=doc.stage,
+            progress=doc.progress,
+            stages_detail=stages_detail,
+            error_message=doc.error_message,
+        )

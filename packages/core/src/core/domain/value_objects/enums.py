@@ -17,6 +17,9 @@ class DocumentStage(StrEnum):
     """Specific processing stage within the ingestion pipeline."""
 
     QUEUED = "queued"
+    VALIDATION = "validation"
+    LAYOUT_DETECTION = "layout_detection"
+    RUNNING_OCR = "running_ocr"
     PARSING = "parsing"
     CHUNKING = "chunking"
     EMBEDDING = "embedding"
