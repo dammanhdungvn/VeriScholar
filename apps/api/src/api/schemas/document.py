@@ -96,3 +96,51 @@ class DocumentDetailResponseData(BaseModel):
 
 class DocumentDetailEnvelope(SingleResponseEnvelope[DocumentDetailResponseData]):
     """Top-level single resource envelope for document detail."""
+
+
+class StagesDetail(BaseModel):
+    """Execution status breakdown across the 5-stage ingestion pipeline."""
+
+    validation: str = Field(
+        default="pending",
+        description="Format, integrity and PDF magic bytes validation stage",
+    )
+    layout_detection: str = Field(
+        default="pending",
+        description="Two-tier layout and column structure analysis stage",
+    )
+    ocr: str = Field(
+        default="pending",
+        description="Text, table and mathematical formula extraction stage",
+    )
+    chunking: str = Field(
+        default="pending",
+        description="Semantic chunking and spatial BoundingBox grounding stage",
+    )
+    embedding: str = Field(
+        default="pending",
+        description="Dense vector embedding generation and HNSW indexing stage",
+    )
+
+
+class DocumentStatusResponseData(BaseModel):
+    """Payload data returned when polling document processing status."""
+
+    id: UUID = Field(description="Unique document identifier")
+    status: str = Field(
+        description="High-level document status ('uploaded', 'processing', 'completed', 'failed')",
+    )
+    stage: str = Field(
+        description="Active ingestion stage ('queued', 'running_ocr', 'chunking', etc.)",
+    )
+    progress: int = Field(
+        ge=0, le=100, description="Overall processing completion percentage (0-100)"
+    )
+    stages_detail: StagesDetail = Field(description="Sub-stage breakdown of the ingestion pipeline")
+    error_message: str | None = Field(
+        default=None, description="Detailed failure description if failed"
+    )
+
+
+class DocumentStatusEnvelope(SingleResponseEnvelope[DocumentStatusResponseData]):
+    """Top-level single resource envelope for document status polling."""

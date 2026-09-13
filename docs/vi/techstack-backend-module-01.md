@@ -303,3 +303,26 @@ Tài liệu Lựa chọn Công nghệ Backend & Đánh đổi Kỹ thuật cho M
 5. Đường ống Tích hợp Liên tục 7 Chốt chặn: [`guide-ci.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/guide-ci.md).
 
 **CHÍNH THỨC XÁC NHẬN: BẢN THIẾT KẾ ĐÃ ĐƯỢC ĐÓNG BĂNG (PRODUCTION-READY & FREEZE). DỰ ÁN ĐÃ SẴN SÀNG ĐỂ TIẾN HÀNH KHỞI TẠO VÀ TRIỂN KHAI MÃ NGUỒN CHO MODULE 1.**
+
+---
+
+## 7. QUY CHUẨN TÍCH HỢP SDK CHÍNH THỨC, CHIẾN LƯỢC PHÂN KỲ & BẢO VỆ DỮ LIỆU ADMIN
+
+Để bảo đảm tính nhất quán kiến trúc và định hướng vận hành dài hạn trong môi trường Production, các nguyên tắc sau đây được đóng băng và bắt buộc tuân thủ:
+
+### 7.1. Nguyên Tắc Cách Ly SDK Chính Thức (Hexagonal SDK Isolation Law)
+- **Bắt buộc dùng SDK/Driver chính thức:** Toàn bộ các công nghệ hạ tầng và AI (như PyMuPDF C-bindings, SQLAlchemy 2.0 / asyncpg, pgvector, OpenAI Python SDK, Anthropic Claude SDK) phải sử dụng thư viện SDK chính thức do nhà phát hành cung cấp để bảo đảm hiệu năng tối ưu, tính năng streaming SSE và các bản vá lỗ hổng bảo mật.
+- **Cách ly tuyệt đối (Anti-Vendor Lock-in):** SDK chính thức **chỉ được phép xuất hiện tại tầng Driven Adapters** (`packages/core/src/core/adapters/`).
+- **Bất biến Domain:** Tầng nghiệp vụ lõi (`packages/core/src/core/domain/` và `use_cases/`) tuyệt đối không phụ thuộc trực tiếp vào bất kỳ SDK bên thứ ba nào. Mọi tương tác phải thông qua các giao diện cổng trừu tượng (Ports / Protocols, ví dụ: `IBlobStoragePort`, `ILLMGatewayPort`). Khi cần hoán đổi nhà cung cấp AI hoặc hạ tầng, chỉ cần viết thêm Adapter mới mà không làm thay đổi nghiệp vụ lõi.
+
+### 7.2. Chiến Lược Phân Kỳ Triển Khai (Value-First vs. Foundation-First)
+- **Ưu tiên Giá trị Cốt lõi (Value-First Slice):** Tập trung hoàn thành trọn vẹn chuỗi giá trị cốt lõi của Module 1 (Tải lên -> Bóc tách Bounding Box -> Khai thác RAG -> Trình chiếu Canvas trực quan) trước khi xây dựng giao diện đăng ký/đăng nhập hoàn chỉnh.
+- **Sẵn sàng Multi-Tenant (Mock Identity Injection):** Toàn bộ thực thể và endpoint API ngay từ ngày đầu tiên đều phải gắn chặt với `user_id` thông qua Dependency Injection (`current_user = Depends(get_current_user)`). Điều này bảo đảm dữ liệu luôn được cô lập nhiều người dùng (Multi-tenant Scoping), giúp việc tích hợp các hệ thống định danh thực tế (JWT, Google OAuth, ORCID) sau này diễn ra tức thì mà không cần tái cấu trúc cơ sở dữ liệu.
+
+### 7.3. 4 Trụ Cột Quản Trị Admin & Cam Kết Bảo Mật Tuyệt Đối (Zero-Retention Admin Governance)
+VeriScholar phục vụ giới nghiên cứu học thuật đỉnh cao, nơi ý tưởng bản thảo và bài báo khoa học là tài sản bảo mật tối mật. Hệ thống tuân thủ nghiêm ngặt các quy chuẩn quản trị sau:
+1. **Cam kết Không Đọc Trộm (Zero-Retention & Zero-Inspection):** Tuyệt đối không xây dựng giao diện hay công cụ Admin cho phép ban quản trị giải mã hoặc đọc trộm nội dung tài liệu riêng tư, bản thảo hoặc phiên chat của người dùng.
+2. **Trụ cột 1 - Quản trị Hạn mức Token & Chi phí LLM:** Giám sát thời gian thực số lượng token tiêu thụ và chi phí API theo từng User/Lab; tự động ngắt tải hoặc kích hoạt Rate Limit khi vượt ngân sách.
+3. **Trụ cột 2 - Quản lý Lưu trữ & Dọn dẹp Retention 30 Ngày:** Tự động giám sát kho lưu trữ CAS (`storage/blobs/`), kích hoạt quy trình dọn dẹp các phiên nghiên cứu tạm thời sau 30 ngày (TTL 30 days) để thu hồi tài nguyên đĩa.
+4. **Trụ cột 3 - Giám sát An ninh Sandbox:** Theo dõi sức khỏe và mức tiêu thụ tài nguyên của các container cô lập gVisor thực hiện biên dịch mã nguồn bản thảo (phòng chống tấn công DoS hoặc lợi dụng hạ tầng).
+5. **Trụ cột 4 - Quản trị Không gian Cộng tác (Lab Workspace):** Cung cấp công cụ cho Trưởng nhóm nghiên cứu (Lab PI) quản lý thành viên, chia sẻ tài liệu chung và phân bổ hạn mức chi phí token trong nội bộ Lab.
