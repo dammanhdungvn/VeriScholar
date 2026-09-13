@@ -308,7 +308,7 @@ Sinh viên làm nghiên cứu khoa học, học viên cao học, nghiên cứu s
   Khi người dùng đặt câu hỏi so sánh trên kho tài liệu, Agent phân rã bài toán và tìm kiếm theo 3 tầng ưu tiên:
   - **Tầng 1 (Curated Knowledge Tier):** Quét ưu tiên trên kho các bản đúc kết tri thức Smart Notes do chính người dùng đã lưu và tổng hợp từ Module 1. Đây là dữ liệu có độ tin cậy cao nhất.
   - **Tầng 2 (Document Metadata & Abstracts Tier):** Quét tiêu đề, tóm tắt, bảng mục lục và bảng thông số của toàn bộ thư viện bài báo để chọn lọc Top 3 - 5 bài liên quan mật thiết nhất.
-  - **Tầng 3 (Deep Raw Chunks Tier):** Chỉ khi cần số liệu kỹ thuật cực kỳ chi tiết, hệ thống mới truy vấn sâu xuống các chunks văn bản thô của những bài báo đã được chọn lọc qua Hybrid Search (Dense BGE-M3 + Sparse BM25) kết hợp Cross-Encoder Reranking có áp ngưỡng cắt điểm liên quan để lọc bẫy gây nhiễu.
+  - **Tầng 3 (Deep Raw Chunks Tier):** Chỉ khi cần số liệu kỹ thuật cực kỳ chi tiết, hệ thống mới truy vấn sâu xuống các chunks văn bản thô của những bài báo đã được chọn lọc qua Hybrid Search (Dense OpenAI text-embedding-3-small 1536-dim + Sparse Full-Text simple) kết hợp Cross-Encoder Reranking có áp ngưỡng cắt điểm liên quan để lọc bẫy gây nhiễu.
   - **Cổng Đánh Giá Mức Độ Đầy Đủ Bằng Chứng (Sufficiency Verification Gate):**
     - Để tránh việc Agent dừng quá sớm (Premature Stopping) hoặc đào sâu không cần thiết gây chậm trễ (Over-retrieval):
       - Sau khi quét Tầng 1 (Smart Notes) và Tầng 2 (Metadata & Abstracts), hệ thống chạy bộ kiểm tra độ đầy đủ thông tin (Sufficiency Evaluator).

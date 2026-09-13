@@ -14,6 +14,7 @@ from api.core.config import settings
 from api.core.logging import setup_logging
 from api.middleware.tracing import PureASGITracingMiddleware
 from api.schemas.error import ErrorDetail, ErrorResponse
+from api.v1.router import api_v1_router
 
 # 1. Setup logging system at module load time (strictly before FastAPI/Uvicorn startup)
 setup_logging()
@@ -59,13 +60,24 @@ async def http_exception_handler(
         status_code=exc.status_code,
         detail=exc.detail,
     )
-    error_payload = ErrorResponse(
-        success=False,
-        error=ErrorDetail(
+
+    if isinstance(exc.detail, dict):
+        error_detail = ErrorDetail(
+            code=str(exc.detail.get("code", f"HTTP_{exc.status_code}")),
+            message=str(exc.detail.get("message", "An error occurred.")),
+            field=exc.detail.get("field"),
+            action=exc.detail.get("action", "Check the request parameters or route path."),
+        )
+    else:
+        error_detail = ErrorDetail(
             code=f"HTTP_{exc.status_code}",
             message=str(exc.detail),
             action="Check the request parameters or route path.",
-        ),
+        )
+
+    error_payload = ErrorResponse(
+        success=False,
+        error=error_detail,
     )
     return JSONResponse(status_code=exc.status_code, content=error_payload.model_dump())
 
@@ -127,7 +139,11 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     )
 
 
-# 4. Standard Core Endpoints
+# 4. Mount API Routes
+app.include_router(api_v1_router)
+
+
+# 5. Standard Core Endpoints
 @app.get("/health", tags=["system"])
 async def health_check() -> dict[str, str]:
     """Health check endpoint for container probes and uptime monitoring."""

@@ -67,11 +67,18 @@ Configuration is managed via `api.core.config.Settings`, which reads from `apps/
 | `LOG_LEVEL` | `str` | `INFO` | Structlog level: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`. |
 | `LOG_FORMAT` | `str` | `console` | `console` (colored via Rich) or `json` (single-line structured logs). |
 | `DATABASE_URL` | `str` | *PostgreSQL URI* | Async connection string. Auto-converts `postgresql://` to `postgresql+asyncpg://`. |
-| `LLM_PROVIDER` | `str` | `docker-model-runner` | Selected LLM backend: `docker-model-runner`, `openai`, `gemini`, `ollama`. |
-| `DMR_BASE_URL` | `str` | `http://localhost:12434/engines/llama.cpp/v1` | Local Docker Model Runner endpoint. |
-| `DMR_MODEL` | `str` | `ai/smollm2` | Target local model for Docker Model Runner. |
+| `LLM_PROVIDER` | `str` | `openai` | Selected LLM backend: `openai`, `gemini`, `anthropic`. |
+| `EMBEDDING_PROVIDER` | `str` | `openai` | Selected Embedding backend: `openai`. |
+| `RERANK_PROVIDER` | `str` | `cohere` | Selected Reranker backend: `cohere`. |
 | `OPENAI_API_KEY` | `SecretStr`| `None` | OpenAI secret key (masked automatically in memory and logs). |
-| `OPENAI_MODEL` | `str` | `gpt-5.6-luna` | OpenAI model identifier. |
+| `OPENAI_MODEL` | `str` | `5.6-luna` | OpenAI model identifier (supports thinking mode). |
+| `EMBEDDING_MODEL` | `str` | `text-embedding-3-small` | OpenAI embedding model identifier. |
+| `EMBEDDING_DIMENSIONS` | `int` | `1536` | Embedding vector dimensions. |
+| `COHERE_API_KEY` | `SecretStr` | `None` | Cohere secret API key for Reranker. |
+| `COHERE_RERANK_MODEL` | `str` | `rerank-v3.5` | Cohere Rerank model identifier. |
+| `COHERE_RELEVANCE_THRESHOLD` | `float` | `0.35` | Minimum relevance score threshold for Abstention Prompting. |
+| `AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT` | `str` | `None` | Optional Azure Document Intelligence endpoint for scanned PDF OCR. |
+| `AZURE_DOCUMENT_INTELLIGENCE_KEY` | `SecretStr` | `None` | Optional Azure Document Intelligence API key. |
 
 ---
 

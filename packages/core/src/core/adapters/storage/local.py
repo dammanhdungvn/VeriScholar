@@ -1,0 +1,116 @@
+"""Local filesystem Content-Addressable Storage (CAS) adapter.
+
+Organizes blobs in a 2-tier fan-out directory structure:
+storage/blobs/ab/cd/abcdef123456...pdf
+Guarantees atomic file writes via temporary files and rename operations.
+"""
+
+import asyncio
+import hashlib
+import os
+from collections.abc import AsyncIterator
+from pathlib import Path
+
+from core.domain.exceptions import InvariantViolationError
+from core.ports.storage import IBlobStoragePort
+
+
+class LocalStorageAdapter(IBlobStoragePort):
+    """Filesystem-backed Content-Addressable Storage adapter."""
+
+    def __init__(self, base_directory: Path | str = "storage/blobs") -> None:
+        self.base_dir = Path(base_directory).resolve()
+        self.base_dir.mkdir(parents=True, exist_ok=True)
+
+    def _resolve_path(self, content_hash: str) -> Path:
+        """Derive 2-tier partitioned filesystem path from content hash."""
+        clean_hash = content_hash.lower().strip()
+        prefix1 = clean_hash[:2]
+        prefix2 = clean_hash[2:4]
+        return self.base_dir / prefix1 / prefix2 / f"{clean_hash}.pdf"
+
+    def get_blob_path(self, content_hash: str) -> str:
+        """Return canonical absolute or relative path to the blob file."""
+        return str(self._resolve_path(content_hash))
+
+    async def blob_exists(self, content_hash: str) -> bool:
+        """Check whether physical blob file exists on disk."""
+        target_path = self._resolve_path(content_hash)
+        return await asyncio.to_thread(target_path.is_file)
+
+    async def save_blob(
+        self,
+        stream: AsyncIterator[bytes],
+        content_hash: str,
+    ) -> tuple[str, int]:
+        """Stream bytes atomically to disk, validating SHA-256 integrity.
+
+        Args:
+            stream: Byte stream generator.
+            content_hash: Expected SHA-256 hash.
+
+        Returns:
+            Tuple of (relative_storage_path, total_bytes).
+        """
+        clean_hash = content_hash.lower().strip()
+        final_path = self._resolve_path(clean_hash)
+
+        # Check if already present on disk (CAS deduplication)
+        if await self.blob_exists(clean_hash):
+            file_size = await asyncio.to_thread(final_path.stat)
+            relative_path = str(final_path.relative_to(self.base_dir.parent))
+            return relative_path, file_size.st_size
+
+        # Prepare parent directories
+        await asyncio.to_thread(final_path.parent.mkdir, parents=True, exist_ok=True)
+
+        temp_path = final_path.with_suffix(".tmp")
+        hasher = hashlib.sha256()
+        total_bytes = 0
+
+        # Atomic write loop
+        try:
+            with open(temp_path, "wb") as f:
+                async for chunk in stream:
+                    if not chunk:
+                        continue
+                    total_bytes += len(chunk)
+                    hasher.update(chunk)
+                    f.write(chunk)
+
+            calculated_hash = hasher.hexdigest()
+            if calculated_hash != clean_hash:
+                raise InvariantViolationError(
+                    f"Integrity check failed: hash '{calculated_hash}' != '{clean_hash}'"
+                )
+
+            # Atomic replace
+            await asyncio.to_thread(os.replace, temp_path, final_path)
+        except Exception:
+            if temp_path.exists():
+                await asyncio.to_thread(temp_path.unlink, missing_ok=True)
+            raise
+
+        relative_path = str(final_path.relative_to(self.base_dir.parent))
+        return relative_path, total_bytes
+
+    async def delete_blob(self, content_hash: str) -> bool:
+        """Safely delete blob file when ref_count reaches 0."""
+        target_path = self._resolve_path(content_hash)
+        if not await asyncio.to_thread(target_path.is_file):
+            return False
+
+        await asyncio.to_thread(target_path.unlink, missing_ok=True)
+
+        # Cleanup empty parent directories if any
+        try:
+            p2 = target_path.parent
+            if p2.exists() and not any(p2.iterdir()):
+                p2.rmdir()
+                p1 = p2.parent
+                if p1.exists() and not any(p1.iterdir()):
+                    p1.rmdir()
+        except OSError:
+            pass
+
+        return True
