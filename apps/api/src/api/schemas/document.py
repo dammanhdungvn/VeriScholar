@@ -4,7 +4,7 @@ from datetime import datetime
 from uuid import UUID
 
 from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class DocumentLinks(BaseModel):
@@ -152,9 +152,19 @@ class DocumentStatusEnvelope(SingleResponseEnvelope[DocumentStatusResponseData])
 class DocumentStarRequest(BaseModel):
     """Payload for starring a document and optionally associating it with a folder."""
 
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {"folder_id": None},
+                {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
+            ]
+        }
+    )
+
     folder_id: UUID | None = Field(
         default=None,
-        description="Optional folder UUID to organize the starred document into",
+        description="Optional folder UUID to organize the starred document into (default: null)",
+        examples=[None],
     )
 
 
