@@ -116,6 +116,7 @@ Tài liệu này định nghĩa cấu trúc tổ chức mã nguồn backend củ
 │       ├── design-architecture.md            # Bản thiết kế kiến trúc hệ thống & phần mềm toàn diện
 │       ├── guide-docker.md                   # Hướng dẫn thiết lập Docker & PostgreSQL/pgvector
 │       ├── guide-logging-system.md           # Hướng dẫn hệ thống Structlog, Pure ASGI & Giám sát vận hành
+│       ├── guide-ci.md                       # Hướng dẫn thiết lập đường ống CI, Quality Gates và GitHub Actions
 │       ├── backend-directory-structure.md    # Cấu trúc thư mục Monorepo & Phân bổ kiến trúc lục giác
 │       └── techstack-backend-module-01.md    # Quyết định công nghệ & Đánh đổi kỹ thuật Module 1
 │

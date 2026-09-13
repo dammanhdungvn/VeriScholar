@@ -9,7 +9,7 @@
 [![Python: 3.12+](https://img.shields.io/badge/python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![uv: workspace](https://img.shields.io/badge/uv-workspace-purple.svg)](https://github.com/astral-sh/uv)
 [![FastAPI: 0.115+](https://img.shields.io/badge/FastAPI-0.115%2B-009688.svg?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
-[![PostgreSQL: 16 + pgvector](https://img.shields.io/badge/PostgreSQL-16%20%2B%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
+[![PostgreSQL: 18 + pgvector](https://img.shields.io/badge/PostgreSQL-18%20%2B%20pgvector-336791.svg?logo=postgresql&logoColor=white)](https://github.com/pgvector/pgvector)
 [![Docker: Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](https://www.docker.com/)
 [![React: 19](https://img.shields.io/badge/React-19-61DAFB.svg?logo=react&logoColor=black)](https://react.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0-3178C6.svg?logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -220,6 +220,7 @@ Deep-dive architecture specifications and engineering guides are maintained in [
 - **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 18 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
 - **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide-docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
 - **[Production Logging Architecture Guide](docs/vi/guide-logging-system.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
+- **[Continuous Integration (CI) Guide](docs/vi/guide-ci.md):** GitHub Actions Quality Gates, hermetic monorepo caching with uv and pnpm, and security invariants.
 - **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.
 - **[Module 1 Tech Decisions & Trade-offs](docs/vi/techstack-backend-module-01.md):** Ingestion, storage, and retrieval stack trade-offs.
 - **[Engineering & Agent Protocol](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
