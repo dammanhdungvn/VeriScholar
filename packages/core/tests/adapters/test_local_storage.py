@@ -80,3 +80,37 @@ async def test_local_storage_delete_blob(tmp_path: Path) -> None:
 
     # Deleting already deleted blob returns False
     assert await storage.delete_blob(expected_hash) is False
+
+
+@pytest.mark.asyncio
+async def test_local_storage_stream_blob_range(tmp_path: Path) -> None:
+    storage = LocalStorageAdapter(base_directory=tmp_path / "blobs")
+    content = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+    expected_hash = hashlib.sha256(content).hexdigest()
+
+    await storage.save_blob(_make_stream(content), expected_hash)
+
+    # 1. Full stream without end_byte
+    full_chunks = []
+    async for chunk in storage.stream_blob_range(expected_hash, start_byte=0, chunk_size=10):
+        full_chunks.append(chunk)
+    assert b"".join(full_chunks) == content
+
+    # 2. Slice stream with start_byte and end_byte
+    slice_chunks = []
+    async for chunk in storage.stream_blob_range(
+        expected_hash, start_byte=10, end_byte=19, chunk_size=4
+    ):
+        slice_chunks.append(chunk)
+    assert b"".join(slice_chunks) == content[10:20]
+
+    # 3. Stream with invalid range returns empty
+    empty_chunks = []
+    async for chunk in storage.stream_blob_range(expected_hash, start_byte=100, end_byte=120):
+        empty_chunks.append(chunk)
+    assert b"".join(empty_chunks) == b""
+
+    # 4. Stream non-existent blob raises FileNotFoundError
+    with pytest.raises(FileNotFoundError):
+        async for _ in storage.stream_blob_range("0" * 64):
+            pass

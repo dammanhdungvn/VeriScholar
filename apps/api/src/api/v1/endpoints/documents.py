@@ -12,7 +12,8 @@ from api.schemas.document import (
 )
 from api.schemas.envelope import ResponseMeta
 from api.services.document_service import DocumentService
-from fastapi import APIRouter, Depends, File, Form, Query, UploadFile, status
+from fastapi import APIRouter, Depends, File, Form, Header, Query, UploadFile, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/documents", tags=["Module 1: Documents"])
@@ -172,4 +173,56 @@ async def get_document_detail(
         success=True,
         data=data,
         meta=ResponseMeta(),
+    )
+
+
+@router.get(
+    "/{document_id}/file",
+    response_class=StreamingResponse,
+    summary="Stream PDF nhị phân cho Canvas (HTTP 206 Partial Content)",
+    description=(
+        "Stream tệp nhị phân PDF phục vụ hiển thị trực quan trên Web Canvas (PDF.js).\n\n"
+        "**Tính năng kỹ thuật:**\n"
+        "- Hỗ trợ tiêu đề `Range: bytes=start-end` cho HTTP 206 Partial Content "
+        "(lazy-loading trang tối ưu hóa băng thông).\n"
+        "- Hỗ trợ HTTP 200 OK khi client tải toàn bộ tệp.\n"
+        "- Trả về `Accept-Ranges: bytes` và `Content-Disposition: inline`.\n"
+        "- Bảo đảm an toàn Multi-tenant Scoping: trả về 404 nếu không sở hữu tài liệu."
+    ),
+    responses={
+        200: {
+            "description": "Tải toàn bộ tệp PDF thành công.",
+            "content": {"application/pdf": {}},
+        },
+        206: {
+            "description": "Phản hồi phân đoạn tệp PDF (Partial Content).",
+            "content": {"application/pdf": {}},
+        },
+        404: {
+            "description": "Không tìm thấy tài liệu hoặc tệp nhị phân bị thiếu.",
+        },
+        416: {
+            "description": "Dải byte yêu cầu nằm ngoài phạm vi kích thước tệp.",
+        },
+    },
+)
+async def stream_document_file(
+    document_id: UUID,
+    range_header: str | None = Header(default=None, alias="Range"),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> StreamingResponse:
+    """Stream PDF binary chunks supporting HTTP 206 Partial Content."""
+    stream, headers, status_code = await service.get_document_file_stream(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        range_header=range_header,
+    )
+    return StreamingResponse(
+        content=stream,
+        status_code=status_code,
+        headers=headers,
+        media_type="application/pdf",
     )

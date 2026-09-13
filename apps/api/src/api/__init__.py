@@ -79,7 +79,12 @@ async def http_exception_handler(
         success=False,
         error=error_detail,
     )
-    return JSONResponse(status_code=exc.status_code, content=error_payload.model_dump())
+    headers = getattr(exc, "headers", None)
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=error_payload.model_dump(),
+        headers=headers,
+    )
 
 
 @app.exception_handler(RequestValidationError)

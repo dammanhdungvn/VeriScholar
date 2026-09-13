@@ -114,3 +114,46 @@ class LocalStorageAdapter(IBlobStoragePort):
             pass
 
         return True
+
+    async def stream_blob_range(
+        self,
+        content_hash: str,
+        start_byte: int = 0,
+        end_byte: int | None = None,
+        chunk_size: int = 64 * 1024,
+    ) -> AsyncIterator[bytes]:
+        """Stream binary slice from local disk without whole-file memory buffering.
+
+        Supports HTTP 206 Partial Content range streaming for Web Canvas / PDF.js.
+        """
+        target_path = self._resolve_path(content_hash)
+        if not await asyncio.to_thread(target_path.is_file):
+            raise FileNotFoundError(f"Blob file not found for hash: {content_hash}")
+
+        file_size = await asyncio.to_thread(os.path.getsize, target_path)
+        actual_end = file_size - 1 if end_byte is None else min(end_byte, file_size - 1)
+
+        if start_byte < 0 or start_byte > actual_end or start_byte >= file_size:
+            return
+
+        def _read_chunk(file_handle, bytes_to_read: int) -> bytes:
+            return file_handle.read(bytes_to_read)
+
+        def _open_and_seek(file_path: Path, offset: int):
+            f = open(file_path, "rb")
+            if offset > 0:
+                f.seek(offset)
+            return f
+
+        f = await asyncio.to_thread(_open_and_seek, target_path, start_byte)
+        try:
+            bytes_remaining = (actual_end - start_byte) + 1
+            while bytes_remaining > 0:
+                read_size = min(chunk_size, bytes_remaining)
+                chunk = await asyncio.to_thread(_read_chunk, f, read_size)
+                if not chunk:
+                    break
+                bytes_remaining -= len(chunk)
+                yield chunk
+        finally:
+            await asyncio.to_thread(f.close)

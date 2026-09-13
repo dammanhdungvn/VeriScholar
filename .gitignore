@@ -74,5 +74,7 @@ dmypy.json
 temp/
 
 # Local Storage & Runtime Artifacts (Root-only)
-storage/
+/storage/
 /data/
+
+apps/api/storage/
