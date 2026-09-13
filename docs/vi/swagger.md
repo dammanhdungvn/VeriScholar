@@ -457,3 +457,55 @@ TAG: Module 1: Documents
   ```
 * **`422 Unprocessable Entity`** - `document_id` hoặc `folder_id` không phải định dạng UUID hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [DELETE] `/api/v1/documents/{document_id}`
+**Summary:** `Xóa bài báo theo đồ thị phụ thuộc (Zero-Retention)`  
+**Operation ID:** `delete_document_api_v1_documents__document_id__delete`
+
+#### Mô tả (Description)
+🎯 **Mục đích:** Xóa vĩnh viễn bài báo khỏi hệ thống theo cam kết không lưu giữ (Zero-Retention Guarantee).
+
+📥 **Đầu vào:**
+* `document_id`: UUID của bài báo khoa học cần xóa (bắt buộc, Path parameter).
+
+📤 **Đầu ra (HTTP 204 No Content):**
+* Phản hồi trống (Empty response body), xác nhận đã hoàn tất xóa bài báo và các thực thể phụ thuộc.
+
+⚠️ **Lưu ý:**
+* Tự động thực thi `ON DELETE CASCADE` xóa sạch các đoạn văn bản (chunks), vector nhúng (embeddings), và liên kết phiên làm việc (session_documents).
+* Tự động giải phóng Content-Addressable Storage (CAS): giảm `ref_count` trong bảng `document_storage_blobs`; chỉ xóa tệp PDF vật lý trên đĩa khi `ref_count == 0`.
+* Thao tác mang tính lũy thừa (Idempotent): gọi lần 1 trả về `204 No Content`, các lần gọi tiếp theo khi tài liệu đã bị xóa sẽ trả về `404 DOCUMENT_NOT_FOUND`.
+* Đảm bảo cô lập dữ liệu (Multi-tenant): Cố gắng xóa tài liệu của người khác hoặc tài liệu không tồn tại sẽ nhận mã lỗi `404 DOCUMENT_NOT_FOUND`.
+* Lỗi thường gặp: `404` (tài liệu không tồn tại hoặc không thuộc quyền sở hữu của user), `422` (sai định dạng UUID).
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `document_id` | `string (uuid)` | **Có** | UUID của bài báo khoa học cần xóa khỏi hệ thống |
+
+#### Request Body
+*Không yêu cầu Request Body (Body trống).*
+
+#### Responses
+* **`204 No Content`** - Xóa bài báo và các dữ liệu liên quan thành công. Không có nội dung trả về trong response body.
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 'e3b0c442-98fc-1c14-9afb-f4c8996fb924' not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - `document_id` không phải định dạng UUID hợp lệ.  
+  *Content-Type:* `application/json`

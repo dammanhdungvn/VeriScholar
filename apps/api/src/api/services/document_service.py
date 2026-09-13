@@ -725,3 +725,76 @@ class DocumentService:
             folder_id=doc.folder_id,
             updated_at=doc.updated_at,
         )
+
+    async def delete_document(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> None:
+        """Purge a document according to Zero-Retention Guarantee & CAS Multi-Tenant Invariant.
+
+        1. Enforce multi-tenant scoping: Document must exist and belong to `user_id`.
+        2. Delete `DocumentModel` record (PostgreSQL cascades child chunks/vectors/sessions).
+        3. Inspect associated CAS `DocumentStorageBlobModel`:
+           - Decrement `blob.ref_count -= 1`.
+           - If `blob.ref_count <= 0`:
+             - Remove blob row from database.
+             - Permanently delete underlying physical binary file from storage.
+        4. Flush database changes.
+
+        Args:
+            document_id: Unique document identifier to delete.
+            user_id: Authenticated user identifier (enforces multi-tenant isolation).
+            db: Active async database session.
+
+        Raises:
+            HTTPException(404): When document does not exist or belongs to another user.
+        """
+        # 1. Query document with multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        blob_id = doc.blob_id
+        content_hash = doc.content_hash
+
+        # 2. Delete document entity from PostgreSQL
+        await db.delete(doc)
+
+        # 3. Handle CAS blob reference counting and physical purge
+        blob = None
+        if blob_id is not None:
+            blob_stmt = select(DocumentStorageBlobModel).where(
+                DocumentStorageBlobModel.id == blob_id
+            )
+            blob_res = await db.execute(blob_stmt)
+            blob = blob_res.scalar_one_or_none()
+        elif content_hash:
+            blob_stmt = select(DocumentStorageBlobModel).where(
+                DocumentStorageBlobModel.content_hash == content_hash
+            )
+            blob_res = await db.execute(blob_stmt)
+            blob = blob_res.scalar_one_or_none()
+
+        if blob is not None:
+            blob.ref_count -= 1
+            if blob.ref_count <= 0:
+                await db.delete(blob)
+                await self.storage.delete_blob(content_hash)
+
+        await db.flush()
