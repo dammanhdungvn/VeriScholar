@@ -371,3 +371,89 @@ TAG: Module 1: Documents
   *Content-Type:* `application/json`
 * **`422 Unprocessable Entity`** - `document_id` không phải định dạng UUID hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [POST] `/api/v1/documents/{document_id}:star`
+**Summary:** `Lưu bài báo vào thư viện cá nhân (Star/Promotion)`  
+**Operation ID:** `star_document_api_v1_documents__document_id__star_post`
+
+#### Mô tả (Description)
+🎯 **Mục đích:** Lưu bài báo từ phiên nghiên cứu tạm thời vào kho thư viện cá nhân vĩnh viễn (Star).
+
+📥 **Đầu vào:**
+* `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).
+* `folder_id`: UUID thư mục đề tài nghiên cứu (tùy chọn, Request body). Mặc định là `{ "folder_id": null }` để lưu bài báo vào thư viện chung.
+
+📤 **Đầu ra (HTTP 200):**
+* Trả về thông tin bài báo với `is_persistent: true` và `folder_id` đã gán trong một giao dịch ACID.
+
+⚠️ **Lưu ý:**
+* Thao tác mang tính lũy thừa (Idempotent): gọi lại nhiều lần sẽ cập nhật `folder_id` mà không tạo bản ghi trùng lặp.
+* Khi thao tác trên Swagger UI: hãy chọn example 'Lưu vào thư viện chung' (`{ "folder_id": null }`). Chỉ truyền UUID vào `folder_id` khi bạn đã tạo thư mục thực tế trong hệ thống (nếu truyền UUID ngẫu nhiên sẽ nhận lỗi `404 FOLDER_NOT_FOUND`).
+* Lỗi thường gặp: `404` (tài liệu hoặc thư mục không tồn tại / không thuộc quyền sở hữu của user), `422` (sai UUID).
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `document_id` | `string (uuid)` | **Có** | UUID của bài báo cần lưu vào thư viện cá nhân |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `folder_id` | `string (uuid)` | Không | `null` | UUID thư mục nghiên cứu muốn phân loại tài liệu vào (để trống hoặc `null` nếu lưu tự do) |
+
+**Ví dụ 1 (Mặc định - Lưu vào thư viện chung không gán thư mục):**
+```json
+{
+  "folder_id": null
+}
+```
+
+**Ví dụ 2 (Lưu kèm phân loại vào thư mục nghiên cứu):**
+```json
+{
+  "folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"
+}
+```
+
+#### Responses
+* **`200 OK`** - Lưu bài báo vào thư viện cá nhân thành công.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e3b0c442-98fc-1c14-9afb-f4c8996fb924",
+      "filename": "attention_is_all_you_need.pdf",
+      "title": "Attention Is All You Need",
+      "status": "completed",
+      "is_persistent": true,
+      "folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89",
+      "updated_at": "2026-09-13T10:05:00Z"
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc thư mục được chỉ định.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "FOLDER_NOT_FOUND",
+      "message": "Folder '8a391512-4217-48f1-a1b7-d1fa18600d89' not found or access denied.",
+      "field": "folder_id",
+      "action": "Verify folder ID or check user permissions."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - `document_id` hoặc `folder_id` không phải định dạng UUID hợp lệ.  
+  *Content-Type:* `application/json`
