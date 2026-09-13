@@ -215,8 +215,6 @@ jobs:
               - 'uv.lock'
             frontend:
               - 'apps/web/**'
-              - 'pnpm-lock.yaml'
-              - 'package.json'
 
   security-scan:
     name: Security & Secret Leak Detection
@@ -306,6 +304,9 @@ jobs:
     if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
 
     steps:
       - name: Checkout repository
@@ -321,6 +322,7 @@ jobs:
         with:
           node-version: 20
           cache: "pnpm"
+          cache-dependency-path: "apps/web/pnpm-lock.yaml"
 
       - name: Install frontend dependencies (Frozen Lockfile)
         run: |
@@ -332,15 +334,15 @@ jobs:
 
       - name: Run Oxlint (Fast code linting)
         run: |
-          pnpm --prefix apps/web lint
+          pnpm lint
 
       - name: Run TypeScript type-checking
         run: |
-          pnpm --prefix apps/web exec tsc -b
+          pnpm exec tsc -b
 
       - name: Run Vite production build test
         run: |
-          pnpm --prefix apps/web build
+          pnpm build
 ```
 
 ---
@@ -425,6 +427,13 @@ pnpm --prefix apps/web build
 ### Sự cố 4: Lỗi `pnpm audit` phát hiện lỗ hổng bảo mật (Vulnerabilities Found)
 - **Triệu chứng:** Bước `pnpm audit --prod` báo mã thoát khác 0 do có phụ thuộc chứa lỗ hổng bảo mật mức nghiêm trọng (High/Critical).
 - **Cách khắc phục:** Chạy `pnpm update <package_name>` hoặc `pnpm audit --fix` để nâng cấp phiên bản bản vá an toàn, sau đó commit lại tệp khóa `pnpm-lock.yaml`.
+
+### Sự cố 5: Lỗi không tìm thấy `pnpm-lock.yaml` trong Monorepo Subfolder
+- **Triệu chứng:** Bước `Install frontend dependencies (Frozen Lockfile)` hoặc `actions/setup-node` báo lỗi `Dependencies lock file is not found in root. Supported file patterns: pnpm-lock.yaml`.
+- **Nguyên nhân:** Trong Monorepo VeriScholar, frontend nằm ở thư mục con `apps/web/`, nên tệp `pnpm-lock.yaml` và `package.json` nằm tại `apps/web/` chứ không nằm ở thư mục gốc repo.
+- **Cách khắc phục:**
+  1. Thêm `cache-dependency-path: "apps/web/pnpm-lock.yaml"` vào bước `actions/setup-node@v4`.
+  2. Cấu hình `defaults.run.working-directory: apps/web` cho toàn bộ Job `frontend-checks` để các lệnh `pnpm install --frozen-lockfile`, `pnpm audit --prod`, `pnpm lint` và `pnpm build` tự động thực thi đúng ngữ cảnh thư mục `apps/web/`.
 
 ---
 
