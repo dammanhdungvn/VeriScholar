@@ -380,3 +380,58 @@ async def star_document(
         data=data,
         meta=ResponseMeta(),
     )
+
+
+DELETE_DESCRIPTION = (
+    "🎯 **Mục đích:** Xóa vĩnh viễn bài báo khỏi hệ thống theo đồ thị phụ thuộc "
+    "và cam kết không lưu giữ (Zero-Retention Guarantee).\n\n"
+    "📥 **Đầu vào (Path parameter):**\n"
+    "- `document_id`: UUID của bài báo khoa học cần xóa (bắt buộc).\n\n"
+    "📤 **Đầu ra (HTTP 204 No Content):**\n"
+    "- Không có nội dung trả về (Empty response body).\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Tự động thực thi `ON DELETE CASCADE` xóa sạch các đoạn văn bản (chunks), "
+    "vector nhúng (embeddings), và liên kết phiên làm việc (session_documents).\n"
+    "- Tự động giải phóng Content-Addressable Storage (CAS): giảm `ref_count` "
+    "trong bảng `document_storage_blobs`; chỉ xóa tệp PDF vật lý trên đĩa "
+    "khi `ref_count == 0`.\n"
+    "- Đảm bảo cô lập dữ liệu (Multi-tenant): Cố gắng xóa tài liệu của người khác "
+    "hoặc tài liệu không tồn tại sẽ nhận mã lỗi `404 DOCUMENT_NOT_FOUND`."
+)
+
+
+@router.delete(
+    "/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Xóa bài báo theo đồ thị phụ thuộc (Zero-Retention)",
+    description=DELETE_DESCRIPTION,
+    responses={
+        204: {
+            "description": (
+                "Xóa bài báo và các dữ liệu liên quan thành công (Không có nội dung trả về)."
+            )
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def delete_document(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần xóa",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> None:
+    """Permanently delete a document, cascading its dependency graph (Zero-Retention)."""
+    await service.delete_document(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+    )
+    return None
