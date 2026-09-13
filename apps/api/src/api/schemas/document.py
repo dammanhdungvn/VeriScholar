@@ -87,6 +87,9 @@ class DocumentDetailResponseData(BaseModel):
     file_size_bytes: int = Field(description="Total file size in bytes")
     status: str = Field(description="Document processing status")
     is_persistent: bool = Field(description="Whether document is permanently saved to library")
+    folder_id: UUID | None = Field(
+        default=None, description="Associated folder UUID if categorized"
+    )
     pages_metadata: list[PageMetadataItem] = Field(
         default_factory=list,
         description="Spatial page dimensions and rotation for Canvas rendering",
@@ -144,3 +147,34 @@ class DocumentStatusResponseData(BaseModel):
 
 class DocumentStatusEnvelope(SingleResponseEnvelope[DocumentStatusResponseData]):
     """Top-level single resource envelope for document status polling."""
+
+
+class DocumentStarRequest(BaseModel):
+    """Payload for starring a document and optionally associating it with a folder."""
+
+    folder_id: UUID | None = Field(
+        default=None,
+        description="Optional folder UUID to organize the starred document into",
+    )
+
+
+class DocumentStarResponseData(BaseModel):
+    """Payload data returned after starring a document."""
+
+    id: UUID = Field(description="Unique document identifier")
+    filename: str = Field(description="Original uploaded filename")
+    title: str | None = Field(default=None, description="Document academic title")
+    status: str = Field(description="Document processing status")
+    is_persistent: bool = Field(
+        default=True,
+        description="Whether document is permanently saved to library (always True after star)",
+    )
+    folder_id: UUID | None = Field(
+        default=None,
+        description="Associated folder UUID if organized into a folder",
+    )
+    updated_at: datetime = Field(description="Last updated timestamp")
+
+
+class DocumentStarEnvelope(SingleResponseEnvelope[DocumentStarResponseData]):
+    """Top-level single resource envelope for document star promotion."""

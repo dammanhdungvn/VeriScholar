@@ -8,6 +8,8 @@ from api.deps import get_current_user, get_document_service
 from api.schemas.document import (
     DocumentDetailEnvelope,
     DocumentListPaginatedEnvelope,
+    DocumentStarEnvelope,
+    DocumentStarRequest,
     DocumentStatusEnvelope,
     DocumentUploadEnvelope,
 )
@@ -114,6 +116,23 @@ STATUS_DESCRIPTION = (
     "\n"
     "⚠️ **Lưu ý:**\n"
     '- Dừng polling ngay khi `status == "completed"` hoặc `status == "failed"`.'
+)
+
+STAR_DESCRIPTION = (
+    "🎯 **Mục đích:** Lưu bài báo từ phiên nghiên cứu tạm thời vào kho thư viện "
+    "cá nhân vĩnh viễn (Star).\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (Path parameter).\n"
+    "- `folder_id`: UUID thư mục đề tài nghiên cứu cần gán bài báo vào "
+    "(tùy chọn, Request body).\n\n"
+    "📤 **Đầu ra (HTTP 200):**\n"
+    "- Trả về thông tin bài báo với `is_persistent: true` và `folder_id` "
+    "đã gán trong một giao dịch ACID.\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Thao tác mang tính lũy thừa (Idempotent): gọi lại nhiều lần sẽ cập nhật "
+    "folder_id mà không tạo bản ghi trùng lặp.\n"
+    "- Lỗi thường gặp: `404` (tài liệu hoặc thư mục không tồn tại / không "
+    "thuộc quyền sở hữu của user), `422` (sai UUID)."
 )
 
 
@@ -302,6 +321,42 @@ async def get_document_status(
         db=db,
     )
     return DocumentStatusEnvelope(
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+@router.post(
+    "/{document_id}:star",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentStarEnvelope,
+    summary="Lưu bài báo vào thư viện cá nhân (Star/Promotion)",
+    description=STAR_DESCRIPTION,
+    responses={
+        200: {"description": "Lưu bài báo vào thư viện cá nhân thành công."},
+        404: {
+            "description": "Không tìm thấy bài báo hoặc thư mục được chỉ định.",
+        },
+        422: {"description": "Định dạng UUID không hợp lệ."},
+    },
+)
+async def star_document(
+    document_id: UUID,
+    payload: DocumentStarRequest | None = None,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentStarEnvelope:
+    """Promote a document to persistent user library retention (Star)."""
+    folder_id = payload.folder_id if payload else None
+    data = await service.star_document(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        folder_id=folder_id,
+    )
+    return DocumentStarEnvelope(
+        success=True,
         data=data,
         meta=ResponseMeta(),
     )
