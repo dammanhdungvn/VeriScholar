@@ -38,3 +38,23 @@ class IBlobStoragePort(Protocol):
     async def delete_blob(self, content_hash: str) -> bool:
         """Permanently purge physical blob from storage."""
         ...
+
+    async def stream_blob_range(
+        self,
+        content_hash: str,
+        start_byte: int = 0,
+        end_byte: int | None = None,
+        chunk_size: int = 64 * 1024,
+    ) -> AsyncIterator[bytes]:
+        """Stream a specific byte slice from storage for HTTP Range / Canvas lazy loading.
+
+        Args:
+            content_hash: SHA-256 hexadecimal hash identifying the payload.
+            start_byte: 0-indexed beginning byte offset (inclusive).
+            end_byte: 0-indexed ending byte offset (inclusive). If None, streams to EOF.
+            chunk_size: Maximum buffer chunk size per yield.
+
+        Yields:
+            Asynchronous byte slices.
+        """
+        ...

@@ -2,6 +2,7 @@
 
 import hashlib
 import math
+from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
@@ -392,3 +393,127 @@ class DocumentService:
             pages_metadata=normalized_pages,
             created_at=doc.created_at,
         )
+
+    async def get_document_file_stream(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        range_header: str | None = None,
+    ) -> tuple[AsyncIterator[bytes], dict[str, str], int]:
+        """Prepare binary stream and HTTP headers for document PDF streaming.
+
+        Supports HTTP 206 Partial Content (Range header) for Web Canvas lazy-loading.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant scoping).
+            db: Active async database session.
+            range_header: Optional HTTP 'Range' header string, e.g. 'bytes=0-1024'.
+
+        Returns:
+            Tuple of (async_byte_iterator, response_headers_dict, http_status_code).
+
+        Raises:
+            HTTPException(404): When document or physical file blob is not found.
+            HTTPException(416): When requested byte range is unsatisfiable.
+        """
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check permissions.",
+                },
+            )
+
+        content_hash = doc.content_hash
+        if not await self.storage.blob_exists(content_hash):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FILE_NOT_FOUND",
+                    "message": f"Underlying physical file for document '{document_id}' not found.",
+                    "field": "content_hash",
+                    "action": "Re-upload document file.",
+                },
+            )
+
+        file_size = doc.file_size_bytes
+        safe_filename = doc.filename.replace('"', '"')
+
+        headers = {
+            "Content-Type": "application/pdf",
+            "Accept-Ranges": "bytes",
+            "Content-Disposition": f'inline; filename="{safe_filename}"',
+        }
+
+        # Full file streaming (no Range header)
+        if not range_header:
+            headers["Content-Length"] = str(file_size)
+            stream = self.storage.stream_blob_range(content_hash, start_byte=0, end_byte=None)
+            return stream, headers, status.HTTP_200_OK
+
+        # Parse HTTP Range header (RFC 9110)
+        # Standard format: 'bytes=start-end' or 'bytes=start-'
+        if not range_header.startswith("bytes="):
+            headers["Content-Length"] = str(file_size)
+            stream = self.storage.stream_blob_range(content_hash, start_byte=0, end_byte=None)
+            return stream, headers, status.HTTP_200_OK
+
+        range_val = range_header[len("bytes=") :].strip()
+        parts = range_val.split("-")
+
+        try:
+            if len(parts) != 2:
+                raise ValueError("Invalid range parts count")
+
+            start_str, end_str = parts[0].strip(), parts[1].strip()
+
+            if start_str and end_str:
+                start = int(start_str)
+                end = int(end_str)
+            elif start_str and not end_str:
+                start = int(start_str)
+                end = file_size - 1
+            elif not start_str and end_str:
+                # Suffix byte range: e.g. bytes=-500 means last 500 bytes
+                suffix_len = int(end_str)
+                start = max(0, file_size - suffix_len)
+                end = file_size - 1
+            else:
+                raise ValueError("Both start and end omitted")
+
+            if start < 0 or start >= file_size or start > end:
+                raise ValueError("Unsatisfiable range boundary")
+
+            # Cap end at file_size - 1
+            end = min(end, file_size - 1)
+            content_length = (end - start) + 1
+
+            headers["Content-Range"] = f"bytes {start}-{end}/{file_size}"
+            headers["Content-Length"] = str(content_length)
+
+            stream = self.storage.stream_blob_range(content_hash, start_byte=start, end_byte=end)
+            return stream, headers, status.HTTP_206_PARTIAL_CONTENT
+
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_416_RANGE_NOT_SATISFIABLE,
+                headers={"Content-Range": f"bytes */{file_size}"},
+                detail={
+                    "code": "RANGE_NOT_SATISFIABLE",
+                    "message": f"Range '{range_header}' unsatisfiable for size {file_size}B.",
+                    "field": "Range",
+                    "action": f"Ensure byte range is within 0 to {file_size - 1}.",
+                },
+            )
