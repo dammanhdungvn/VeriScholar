@@ -53,7 +53,7 @@ Tài liệu này định nghĩa cấu trúc tổ chức mã nguồn backend củ
 │   ├── worker/                               # Ingestion Worker Pool (Tiến trình xử lý ngầm bền vững)
 │   │   ├── src/
 │   │   │   ├── worker.py                     # Vòng lặp nhận việc từ Redis Streams (Explicit ACK, DLQ)
-│   │   │   └── tasks/                        # Phân tích bố cục, Cắt đoạn văn bản, Tính vector nhúng BGE-M3
+│   │   │   └── tasks/                        # Phân tích bố cục, Cắt đoạn văn bản, Tính vector nhúng OpenAI 1536-dim
 │   │   └── Dockerfile.worker
 │   │
 │   ├── sandbox-broker/                       # Microservice Biên Dịch Cô Lập (Chạy trên máy chủ độc lập)
@@ -94,9 +94,9 @@ Tài liệu này định nghĩa cấu trúc tổ chức mã nguồn backend củ
 │                   ├── database/             # SQLAlchemy 2.0 Async Models, Repositories, Migrations
 │                   ├── queue/                # Bộ điều hợp đẩy việc vào hàng đợi Redis Streams
 │                   ├── cache/                # Bộ điều hợp khóa trùng lặp Idempotency & Giới hạn tần suất Leaky Bucket
-│                   ├── parsers/              # Bộ điều hợp bóc tách PDF bằng thư viện PyMuPDF (fitz)
+│                   ├── parsers/              # Bộ điều hợp bóc tách PDF 2 tầng (PyMuPDF Fast-Path & Azure Document Intelligence)
 │                   ├── sandbox/              # Bộ điều hợp gọi gRPC sang dịch vụ Sandbox Broker
-│                   ├── llm/                  # Bộ định tuyến mô hình AI tiết kiệm chi phí (Docker Model Runner / Cloud)
+│                   ├── llm/                  # LLM Gateway Router (5.6-luna / OpenAI Compatible)
 │                   └── storage/              # Bộ điều hợp lưu file vật lý CAS có đếm tham chiếu (ref_count)
 │
 ├── infra/                                    # Mã Khởi Tạo Hạ Tầng (Infrastructure as Code)
@@ -106,7 +106,7 @@ Tài liệu này định nghĩa cấu trúc tổ chức mã nguồn backend củ
 │   │   └── Dockerfile.web
 │   ├── postgres/
 │   │   └── init.sql                          # Khởi tạo extension CSDL (pgvector lưu vector, uuid-ossp sinh khóa)
-│   └── docker-compose.yml                    # Ngăn xếp phát triển cục bộ (Postgres 18, Redis 7, DMR)
+│   └── docker-compose.yml                    # Ngăn xếp phát triển cục bộ (PostgreSQL 18, Redis 7)
 │
 ├── docs/                                     # Toàn Bộ Hồ Sơ Tài Liệu Kỹ Thuật Dự Án
 │   └── vi/

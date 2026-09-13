@@ -26,7 +26,7 @@ Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở d�
 
 ## 1. MÔ HÌNH DỮ LIỆU TỔNG QUAN (ERD TOÀN HỆ THỐNG)
 
-Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn 3NF và 1NF trên **PostgreSQL 18**, kết hợp chặt chẽ giữa quan hệ bảng, dữ liệu bán cấu trúc (JSONB GIN), vector đa chiều (`pgvector 1024-dim` từ mô hình `BGE-M3`), và Full-Text Search đa ngôn ngữ (`tsvector simple`).
+Hệ thống cơ sở dữ liệu VeriScholar được thiết kế theo chuẩn 3NF và 1NF trên **PostgreSQL 18**, kết hợp chặt chẽ giữa quan hệ bảng, dữ liệu bán cấu trúc (JSONB GIN), vector đa chiều (`pgvector 1536-dim` từ mô hình OpenAI `text-embedding-3-small`), và Full-Text Search đa ngôn ngữ (`tsvector simple`).
 
 ```mermaid
 erDiagram
@@ -63,7 +63,7 @@ erDiagram
 ## 2. QUY CHUẨN KIỂU DỮ LIỆU & BẤT BIẾN TOÀN CỤC
 
 1. **Khóa Chính (Primary Keys):** Sử dụng kiểu `UUID` sinh ngẫu nhiên qua `gen_random_uuid()` hoặc time-ordered UUIDv7 để chống lộ quy mô hệ thống (IDOR) và triệt tiêu phân mảnh B-Tree (Leaf Page Splits).
-2. **Dense Vector Embeddings:** Kiểu `vector(1024)` tương thích với mô hình nhúng đa ngôn ngữ `BGE-M3`.
+2. **Dense Vector Embeddings:** Kiểu `vector(1536)` tương thích với mô hình nhúng đám mây OpenAI `text-embedding-3-small` (1536 chiều bản địa).
 3. **Bất Biến Bounding Box:** Kiểu `JSONB` với ràng buộc kiểm tra không bao giờ mang giá trị `NULL`. Luôn khởi tạo mặc định bằng `'[]'::jsonb`. Cấu trúc mảng chuẩn: `[[x0, y0, x1, y1, page], ...]`, trong đó `x0, y0, x1, y1` là số thực thuộc đoạn `[0.0, 1.0]` và `page >= 1`.
 4. **Bất Biến Khổ Trang & Góc Xoay:** Trường `pages_metadata` trong bảng `documents` lưu trữ mảng JSONB: `[{"page_number": 1, "dimensions": [width_pt, height_pt], "rotation_deg": 0}, ...]` để PDF.js Canvas render khớp tọa độ 100%.
 5. **Kiểm Soát Đồng Thời Lạc Quan Bất Biến (Database-Enforced OCC):** Trường `version INT NOT NULL DEFAULT 1` tại các bảng `drafts`, `research_notes`, `research_sessions` được quản trị tự động thông qua Database Trigger `handle_occ_and_timestamp()`. Trigger tự động tăng `NEW.version = OLD.version + 1` nhằm loại bỏ rủi ro tầng ứng dụng quên cập nhật version hoặc câu lệnh SQL raw làm sai lệch chuỗi phiên bản (RFC 9110 / RFC 7232).
@@ -205,7 +205,7 @@ CREATE TRIGGER trg_documents_updated_at
 BEFORE UPDATE ON documents
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
--- Bảng document_chunks: Trái tim của RAG (Dense Vector 1024-dim + Sparse Lexical tsvector simple)
+-- Bảng document_chunks: Trái tim của RAG (Dense Vector 1536-dim + Sparse Lexical tsvector simple)
 -- Sử dụng từ điển 'simple' để tương thích hoàn toàn truy vấn đa ngữ (Cross-Lingual English/Vietnamese)
 CREATE TABLE document_chunks (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -215,7 +215,7 @@ CREATE TABLE document_chunks (
     content TEXT NOT NULL,
     bounding_boxes JSONB NOT NULL DEFAULT '[]'::jsonb, -- Non-null invariant: [[x0, y0, x1, y1, page], ...]
     token_count INT NOT NULL CHECK (token_count > 0),
-    embedding vector(1024) NOT NULL, -- Dense vector BGE-M3 1024 chiều
+    embedding vector(1536) NOT NULL, -- Dense vector OpenAI text-embedding-3-small 1536 chiều
     tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     UNIQUE (document_id, chunk_index)
@@ -562,7 +562,7 @@ CREATE INDEX idx_shares_user ON shares(user_id, created_at DESC);
 ```sql
 CREATE OR REPLACE FUNCTION match_document_chunks_rrf(
     p_document_ids UUID[],
-    p_query_embedding vector(1024),
+    p_query_embedding vector(1536),
     p_query_text TEXT,
     p_candidate_limit INT DEFAULT 40,
     p_final_limit INT DEFAULT 8

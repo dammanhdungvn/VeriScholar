@@ -39,7 +39,7 @@ flowchart TB
 
     subgraph TaskQueueTier ["📬 TẦNG HÀNG ĐỢI TÁC VỤ BỀN VỮNG (DURABLE TASK QUEUE & WORKERS)"]
         RedisBroker["Redis 7 Streams / ARQ Task Broker<br/>- Transactional Outbox Pattern<br/>- Consumer Groups, Explicit ACK, DLQ (Dead-Letter Queue)<br/>- Chống bốc hơi tác vụ (Task Evaporation Protection)"]
-        IngestionWorker["Dedicated Ingestion Worker Pool<br/>- Xử lý bất đồng bộ các tệp PDF lớn (<= 50MB, 100 trang)<br/>- PyMuPDF Layout Analysis, BGE-M3 Dense Embedding<br/>- Tự động khôi phục và Retry khi có sự cố OOM / Worker crash"]
+        IngestionWorker["Dedicated Ingestion Worker Pool<br/>- Xử lý bất đồng bộ các tệp PDF lớn (<= 50MB, 100 trang)<br/>- Two-Tier Ingestion Gate (PyMuPDF Fast-Path & Azure Document Intelligence Scanned Fallback)<br/>- OpenAI text-embedding-3-small (1536-dim)<br/>- Tự động khôi phục và Retry khi có sự cố OOM / Worker crash"]
     end
 
     subgraph HexagonalCoreTier ["🧠 TẦNG NGHIỆP VỤ CỐT LÕI (HEXAGONAL APPLICATION CORE - packages/core)"]
@@ -56,10 +56,10 @@ flowchart TB
     end
 
     subgraph InferenceAITier ["🤖 TẦNG SUY LUẬN MÔ HÌNH HỌC THUẬT (INFERENCE GATEWAY TIER)"]
-        LLMGateway["Cost-Aware LLM Gateway Router<br/>(packages/core/src/core/infrastructure/llm)"]
-        LocalDMR["Local Docker Model Runner (Port 12434)<br/>- llama.cpp / ai/smollm2 (0 USD Token Cost)<br/>- Metadata extraction, Title parsing, Claim decomposition"]
-        CloudLLM["Cloud Frontier LLMs<br/>- OpenAI / Anthropic Deep Reasoning Models<br/>- Cross-document Synthesis, NLI Verification, LaTeX Self-Healing"]
-        EmbeddingEngine["BGE-M3 Multilingual Embedding Engine<br/>- Dense Vector 1024-dim Normalization"]
+        LLMGateway["OpenAI-Compatible LLM Gateway Router<br/>(packages/core/src/core/infrastructure/llm)"]
+        LunaLLM["5.6-luna Frontier Reasoning Model<br/>- OpenAI-Compatible API Client<br/>- Thinking Mode Toggle (enable_thinking: true/false)<br/>- Cross-document Synthesis, LaTeX Self-Healing, Grounded Q&A"]
+        CohereReranker["Cohere Rerank API v3.5 (Cloud HTTP)<br/>- Fast Cross-Encoder Scoring (80-150ms)<br/>- Relevance Gate >= 0.35 & Abstention Prompting"]
+        EmbeddingEngine["OpenAI text-embedding-3-small<br/>- Dense Vector 1536-dim Normalization"]
     end
 
     subgraph ExternalAcademicTier ["🌐 TẦNG TÍCH HỢP HỌC THUẬT QUỐC TẾ (EXTERNAL SCHOLAR SERVICES)"]
@@ -78,8 +78,8 @@ flowchart TB
     DomainCore -->|Binary PDF CAS Stream| LocalStorage
     DomainCore -->|gRPC nội bộ / mTLS (Không dùng docker.sock)| SandboxService
     DomainCore -->|LLM & Vector Invocations| LLMGateway
-    LLMGateway -->|Tier 0 Local| LocalDMR
-    LLMGateway -->|Tier 3 Cloud| CloudLLM
+    LLMGateway -->|Reasoning with Thinking Toggle| LunaLLM
+    LLMGateway -->|Reranking HTTP| CohereReranker
     LLMGateway -->|Vector Embeddings| EmbeddingEngine
     DomainCore -->|External Resolving via Leaky Bucket| ExternalAcademicTier
 ```
@@ -150,10 +150,11 @@ flowchart LR
         RefRepoPort["IReferenceRepository"]
         ShareRepoPort["IShareRepository"]
         TaskQueuePort["ITaskQueueProducer (Redis Streams)"]
-        PDFParserPort["IPDFParser (PyMuPDF)"]
+        PDFParserPort["IPDFParser (Two-Tier Parser Interface)"]
         SandboxPort["ISandboxBrokerClient (gRPC)"]
-        LLMGatewayPort["ILLMGateway"]
-        EmbeddingPort["IEmbeddingService (BGE-M3)"]
+        LLMGatewayPort["ILLMGateway (5.6-luna with Thinking Toggle)"]
+        EmbeddingPort["IEmbeddingPort (OpenAI text-embedding-3-small 1536-dim)"]
+        RerankPort["IRerankPort (Cohere Rerank v3.5)"]
         AcademicAPIPort["IAcademicService (Crossref/S2)"]
         StoragePort["IContentAddressableStorage (CAS)"]
     end
@@ -165,9 +166,11 @@ flowchart LR
         SQLDraftRepo["PostgresDraftRepository"]
         RedisStreamAdapter["RedisStreamTaskProducerAdapter"]
         SandboxGRPCAdapter["SandboxBrokerGRPCClientAdapter"]
-        PyMuPDFAdapter["PyMuPDFEngineAdapter"]
-        BGEEmbeddingAdapter["BGEModelEmbeddingAdapter"]
-        HybridLLMAdapter["CostAwareLLMGatewayAdapter"]
+        PyMuPDFAdapter["PyMuPDFEngineAdapter (Digital Fast-Path)"]
+        AzureOCRAdapter["AzureDocIntelligenceAdapter (Scanned Fallback)"]
+        OpenAIEmbeddingAdapter["OpenAIEmbeddingAdapter (1536-dim)"]
+        CohereRerankAdapter["CohereRerankAdapter (v3.5)"]
+        LunaLLMAdapter["LunaLLMGatewayAdapter"]
         ExternalScholarAdapter["ScholarAPIClientAdapter"]
         LocalCASAdapter["LocalCASStorageAdapter"]
     end
@@ -208,8 +211,10 @@ flowchart LR
     RedisStreamAdapter -.->|Implements| TaskQueuePort
     SandboxGRPCAdapter -.->|Implements| SandboxPort
     PyMuPDFAdapter -.->|Implements| PDFParserPort
-    BGEEmbeddingAdapter -.->|Implements| EmbeddingPort
-    HybridLLMAdapter -.->|Implements| LLMGatewayPort
+    AzureOCRAdapter -.->|Implements| PDFParserPort
+    OpenAIEmbeddingAdapter -.->|Implements| EmbeddingPort
+    CohereRerankAdapter -.->|Implements| RerankPort
+    LunaLLMAdapter -.->|Implements| LLMGatewayPort
     ExternalScholarAdapter -.->|Implements| AcademicAPIPort
     LocalCASAdapter -.->|Implements| StoragePort
 ```
@@ -330,7 +335,7 @@ sequenceDiagram
     participant Queue as Redis Stream Task Queue
     participant Worker as Ingestion Worker Pool
     participant Parser as PyMuPDF Extractor
-    participant Embedder as BGE-M3 Embedder
+    participant Embedder as OpenAI text-embedding-3-small (1536-dim)
 
     UserB->>API: POST /api/v1/documents (file PDF, multipart)
     API->>API: Kiểm tra Magic Bytes (%PDF-1.) & File Size (<= 50MB)
@@ -355,10 +360,18 @@ sequenceDiagram
         Note over Queue,Worker: Xử lý Bất đồng bộ qua Worker Pool Độc lập
         Worker->>Queue: XREADGROUP GROUP ingestion_group worker_1 STREAMS ingestion_stream >
         Queue-->>Worker: Nhận task (doc_id, blob_id, storage_path)
-        Worker->>Parser: Bóc tách cấu trúc trang, TOC, Bounding Boxes
-        Parser-->>Worker: Khổ trang, góc xoay & Bounding Boxes
+        participant CloudOCR as Azure Document Intelligence (Cloud OCR)
+        Worker->>Worker: Heuristic Text-Layer Check (Mật độ ký tự < 50ms)
+        alt Digital PDF (Mật độ >= 100 ký tự/trang - 90% bài báo số)
+            Worker->>Parser: PyMuPDF bóc tách trực tiếp Text Layer & BBoxes (< 1s)
+            Parser-->>Worker: Khổ trang, góc xoay & Bounding Boxes
+        else Scanned PDF (Mật độ < 100 ký tự/trang - Bài scan / ảnh chụp)
+            Worker->>DB: UPDATE documents SET stage='running_ocr'
+            Worker->>CloudOCR: Phân tích layout chuyên sâu (prebuilt-layout, 8-15s)
+            CloudOCR-->>Worker: Công thức LaTeX, bảng số liệu, polygon BBoxes
+        end
         Worker->>Worker: Hierarchical Chunking (Khổ đoạn tiêu chuẩn)
-        Worker->>Embedder: Sinh vector nhúng 1024-dim cho từng chunk
+        Worker->>Embedder: Sinh vector nhúng 1536-dim cho từng chunk
         Embedder-->>Worker: Mảng Dense Vectors
         Worker->>DB: INSERT INTO document_chunks (embedding, tsv simple, bboxes)
         Worker->>Worker: Sinh tóm tắt 3 ý cốt lõi
@@ -381,20 +394,25 @@ sequenceDiagram
     participant Core as SessionQAUseCase
     participant Pool as PostgreSQL Connection Pool
     participant DB as PostgreSQL 18 (HNSW RRF)
-    participant LLM as Cost-Aware LLM Gateway
+    participant Reranker as Cohere Rerank API v3.5
+    participant LLM as 5.6-luna Gateway (Thinking Toggle)
 
-    User->>API: POST /api/v1/sessions/{id}/messages (question, stream=true)
+    User->>API: POST /api/v1/sessions/{id}/messages (question, stream=true, enable_thinking=false/true)
     API->>Core: Khởi tạo luồng hỏi đáp đa bài
     
     Note over Core,DB: Giai đoạn 1: Lấy ngữ cảnh nhanh (< 50ms)
     Core->>Pool: Mượn kết nối DB từ Connection Pool
     Pool-->>Core: db_connection
     Core->>DB: CALL match_document_chunks_rrf(doc_ids, query_embedding, query_text)
-    DB-->>Core: Danh sách top chunks (rrf_score, content, bounding_boxes)
+    DB-->>Core: Danh sách candidate chunks (Top 20-25)
     Core->>Pool: Commit & ĐÓNG KẾT NỐI NGAY LẬP TỨC (Trả về Pool)
     Note over Pool: 0 DB Connections Held during streaming!
 
-    Note over Core,LLM: Giai đoạn 2: Streaming Tokens (5s - 15s)
+    Note over Core,Reranker: Chấm điểm tương quan chéo (80-150ms)
+    Core->>Reranker: POST rerank-v3.5 (query, candidates)
+    Reranker-->>Core: Ranked chunks (Relevance score >= 0.35)
+
+    Note over Core,LLM: Giai đoạn 2: Streaming Tokens với Thinking Mode (5s - 15s)
     API-->>User: HTTP 200 OK (Content-Type: text/event-stream)
     Core->>LLM: Gửi Prompt kèm trích dẫn nguyên văn & Bounding Boxes
     loop Streaming từng Token về Client
@@ -587,7 +605,7 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │                   ├── cache/                # Redis Idempotency & Leaky Bucket Limiter
 │                   ├── parsers/              # PyMuPDF (fitz) Engine Adapter
 │                   ├── sandbox/              # Sandbox Broker gRPC Client Adapter
-│                   ├── llm/                  # Cost-Aware LLM Gateway Router (Local DMR / Cloud)
+│                   ├── llm/                  # LLM Gateway Router (5.6-luna / OpenAI Compatible)
 │                   └── storage/              # Local CAS File Storage with Ref-Counted Unlink
 │
 ├── infra/                                    # Infrastructure as Code

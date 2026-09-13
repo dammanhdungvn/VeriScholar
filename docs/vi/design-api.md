@@ -945,10 +945,12 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
     "question": "So sánh hàm kích hoạt giữa Paper gốc và Paper Vaswani et al.?",
     "stream": true,
     "scope": "multi_paper",
-    "focused_document_id": null
+    "focused_document_id": null,
+    "enable_thinking": false
   }
   ```
   *(Ghi chú `scope`: Có thể chọn `"multi_paper"` để tổng hợp đối chiếu trên toàn bộ 1 - 5 bài báo trong phiên, hoặc chọn `"single_paper"` kèm `"focused_document_id"` để chỉ đào sâu vào 1 bài báo đang mở tại Tab hiện tại).*
+  *(Ghi chú `enable_thinking`: Mặc định `false`. Khi bật `true`, mô hình `5.6-luna` sẽ kích hoạt cơ chế suy luận chuyên sâu (Thinking Mode) để đối chiếu, phản biện học thuật và chứng minh công thức phức tạp; khi tắt `false`, mô hình sẽ trả lời trực tiếp để tối ưu hóa thời gian phản hồi TTFT).*
 - **Nguyên lý Đóng Gói Ngữ Cảnh Tầng Server:**
   Áp dụng **Cross-Document Context Namespacing** đóng gói XML tường minh `<document id="...">` và **Elastic Table Budgeting** cắt tỉa bảng biểu đảm bảo TTFT < 1s.
 - **Dòng Sự kiện SSE Phản hồi:**

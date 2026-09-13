@@ -59,6 +59,7 @@ apps/web/.vite/
 # IDE & OS
 .vscode/
 .idea/
+.zed/
 *.swp
 *.swo
 *~

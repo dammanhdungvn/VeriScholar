@@ -1,6 +1,6 @@
 # Hướng Dẫn Quản Trị Cơ Sở Dữ Liệu PostgreSQL & pgvector với Docker
 
-Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cơ sở dữ liệu **PostgreSQL 18 tích hợp pgvector** và **Docker Model Runner (Local LLM Inference - Chạy mô hình ngôn ngữ lớn ngay trên máy cục bộ)** cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
+Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai, cấu hình và quản trị cụm hạ tầng cục bộ (**PostgreSQL 18 tích hợp pgvector** và **Redis 7**) cho dự án **VeriScholar** theo chuẩn mực công nghiệp và mã nguồn mở.
 
 ---
 
@@ -14,7 +14,6 @@ Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai,
 | **Loopback Interface** | Loopback Address (`127.0.0.1`) | Địa chỉ IP nội bộ của chính chiếc máy tính bạn đang ngồi; chỉ những tiến trình chạy trên máy bạn mới kết nối được, ngăn chặn người lạ cùng mạng WiFi/LAN xâm nhập vào database. |
 | **Shared Memory (`shm_size`)** | POSIX Shared Memory | Vùng bộ nhớ RAM được chia sẻ giữa các luồng xử lý; PostgreSQL và pgvector rất cần vùng này để tăng tốc độ tính toán song song khi xây dựng chỉ mục tìm kiếm HNSW. |
 | **pgvector** | Vector Similarity Search Extension | Tiện ích mở rộng biến PostgreSQL thành một cơ sở dữ liệu vector mạnh mẽ, cho phép lưu trữ và tìm kiếm các đoạn văn bản tương đồng về ngữ nghĩa. |
-| **Docker Model Runner (DMR)** | Local AI Model Engine on Docker | Công cụ tích hợp sẵn trong Docker Desktop/Engine giúp bạn tải và chạy các mô hình AI mã nguồn mở (như `ai/smollm2`, `ai/llama3.2`) cục bộ qua cổng `12434` với chi phí 0 USD. |
 | **Healthcheck** | Automated Health Monitoring Probe | Lệnh kiểm tra sức khỏe định kỳ (ví dụ: `pg_isready`); Docker sẽ tự động thăm dò để biết database đã thực sự sẵn sàng nhận kết nối hay chưa. |
 
 ---
@@ -24,7 +23,7 @@ Tài liệu này cung cấp hướng dẫn toàn diện về cách triển khai,
 ### 1.1. Tại sao sử dụng `pgvector/pgvector:0.8.6-pg18`?
 Dự án **VeriScholar** (Module 1 - Single Paper Deep Read & Visual Grounding) yêu cầu:
 1. **Lưu trữ Quan hệ (Relational DB):** Quản lý thông tin bài báo (metadata), các đoạn văn bản cắt nhỏ (chunks), tài khoản người dùng với bảo đảm giao dịch ACID (Nguyên tử - Nhất quán - Cô lập - Bền vững).
-2. **Tìm kiếm Vector Ngữ nghĩa (Vector DB):** Lưu trữ và truy vấn Dense Vector 1024 chiều (mô hình nhúng đa ngữ **BGE-M3**) với chỉ mục đồ thị HNSW (Hierarchical Navigable Small World) qua toán tử khoảng cách góc Cosine Distance (`<=>`).
+2. **Tìm kiếm Vector Ngữ nghĩa (Vector DB):** Lưu trữ và truy vấn Dense Vector 1536 chiều (mô hình nhúng đám mây OpenAI **text-embedding-3-small**) với chỉ mục đồ thị HNSW (Hierarchical Navigable Small World) qua toán tử khoảng cách góc Cosine Distance (`<=>`).
 3. **Tìm kiếm Từ khóa (Lexical Search):** Hỗ trợ tìm kiếm từ khóa chính xác (Sparse Search) bằng **PostgreSQL Full-Text Search (`tsvector` & `tsquery`)** để thực hiện tìm kiếm lai (Hybrid Search) kết hợp ngữ nghĩa và từ khóa.
 
 > [!IMPORTANT]
@@ -36,9 +35,6 @@ Dự án **VeriScholar** (Module 1 - Single Paper Deep Read & Visual Grounding) 
 
 ```text
 Host Machine (Máy tính phát triển của bạn / Máy chủ)
- │
- ├── Docker Model Runner (Port 12434) ── [Local LLM: llama.cpp / ai/smollm2 / ai/llama3.2]
- │    └── Endpoint: http://localhost:12434/engines/llama.cpp/v1
  │
  ├── Port: 127.0.0.1:5432 (Gia cố bảo mật: chỉ mở loopback cục bộ cho PostgreSQL)
  ├── Port: 127.0.0.1:6379 (Gia cố bảo mật: chỉ mở loopback cục bộ cho Redis 7)
@@ -55,7 +51,7 @@ Host Machine (Máy tính phát triển của bạn / Máy chủ)
       │    │    ├── vector (pgvector 0.8.0 - lưu và tìm kiếm vector)
       │    │    └── uuid-ossp (1.1 - tự động sinh khóa chính UUID)
       │    ├── extra_hosts:
-      │    │    └── host.docker.internal:host-gateway (Giúp container gọi ngược về Docker Model Runner)
+      │    │    └── host.docker.internal:host-gateway (Định tuyến kết nối ngược về máy chủ Host)
       │    └── Persistent Storage: verischolar-postgres-data ──> /var/lib/postgresql/data
       │
       └── Container: verischolar-redis-dev (Image: redis:7-alpine)
