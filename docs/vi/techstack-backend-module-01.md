@@ -1,6 +1,6 @@
 # Lựa Chọn Công Nghệ Backend & Đánh Đổi Kỹ Thuật (Module 1 - Deep Read)
 
-Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi và đánh đổi kỹ thuật (Engineering Trade-offs) cho **Module 1: Đọc Sâu & Đối Thoại Kép Bài Báo Học Thuật** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) và [design-database.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md).
+Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi, đánh đổi kỹ thuật (Engineering Trade-offs) và thiết kế **Đường ống Dữ liệu Advanced RAG Toàn diện (End-to-End Advanced RAG Pipeline)** cho **Module 1: Đọc Sâu & Đối Thoại Kép Bài Báo Học Thuật** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) và [design-database.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md).
 
 ---
 
@@ -18,6 +18,8 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
 | **Cross-Encoder Reranker** | Cross-Encoder Reranker Model | Mô hình AI chuyên dụng (như `bge-reranker-v2-m3`) nhận vào cả câu hỏi và đoạn văn bản cùng lúc để chấm điểm xác suất tương quan thực tế (từ 0.0 đến 1.0), giúp lọc bỏ các đoạn gây nhiễu. |
 | **ONNX Runtime INT8** | Open Neural Network Exchange Quantization | Định dạng mô hình nén và tối ưu hóa suy luận toán học 8-bit trên CPU máy chủ, giúp mô hình AI chạy nhanh gấp 3 đến 5 lần mà không cần card đồ họa GPU rời. |
 | **Table Stitching** | Cross-Page Table Stitching | Kỹ thuật ghép nối bảng biểu vắt ngang nhiều trang PDF bằng thuật toán nhận diện tiêu đề cột (header) ở trang trước để nối liền các dòng dữ liệu ở trang tiếp theo. |
+| **CAS Deduplication** | Content-Addressed Storage Deduplication | Cơ chế khử trùng lặp tệp thông qua mã băm nội dung SHA-256 (`content_hash`): nếu 2 người dùng tải lên cùng 1 bài báo, hệ thống chỉ lưu và bóc tách đúng 1 lần duy nhất để tiết kiệm dung lượng và chi phí embedding. |
+| **Early Connection Release** | Early DB Connection Release Pattern | Mẫu thiết kế giải phóng kết nối cơ sở dữ liệu ngay lập tức sau khi truy vấn xong dữ liệu (dưới 50ms) trước khi mở luồng Server-Sent Events (SSE) kéo dài hàng chục giây, chống cạn kiệt Connection Pool của PostgreSQL. |
 | **OpenAI Frontier Models** | OpenAI Frontier LLMs (`gpt-4o`, `gpt-4o-mini`, `o3-mini`) | Dòng mô hình trí tuệ nhân tạo đám mây hàng đầu của OpenAI có khả năng suy luận logic học thuật vượt trội, đọc hiểu ngữ cảnh phức tạp và tuân thủ định dạng JSON nghiêm ngặt. |
 | **DMR** | Docker Model Runner | Tiện ích tích hợp sẵn của Docker giúp chạy các mô hình AI mã nguồn mở ngay trên máy tính cục bộ qua cổng 12434 với chi phí 0 USD bản quyền API và không phụ thuộc kết nối Internet bên ngoài. |
 | **Grounded Generation** | Hallucination-Free Generation | Sinh văn bản có căn cứ: Mọi câu trả lời của AI bắt buộc phải dựa trên bằng chứng có trong bài báo; nếu không có bằng chứng, AI phải từ chối trả lời (Abstention) thay vì tự bịa ra thông tin. |
@@ -41,22 +43,182 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
 
 ---
 
-## 2. PHÂN TÍCH CHUYÊN SÂU CÁC QUYẾT ĐỊNH ĐÁNH ĐỔI KỸ THUẬT
+## 2. TẠI SAO LOẠI BỎ CÁC FRAMEWORK AGENT TRUNG GIAN (LANGCHAIN / AUTOGEN / CREWAI)?
 
-### 2.1. Bổ sung Mô hình Reranker (`bge-reranker-v2-m3`): Giải quyết bài toán Distractor Mitigation
-- **Nút thắt:** Phương pháp tìm kiếm lai (Hybrid Search) qua RRF kết hợp Dense Vector (BGE-M3) và Sparse Lexical (`tsvector`) chỉ thực hiện nhiệm vụ *thu thập ứng viên* (Candidate Retrieval, lấy Top 30 đến 40 chunks). RRF chỉ là phép cộng thứ hạng thô dựa trên vị trí danh sách chứ không đưa ra điểm số xác suất tương quan ngữ nghĩa thực tế.
+Dưới lăng kính của *AI Engineering* (Chip Huyen) và *Hands-On RAG for Production* (Ofer Mendelevitch & Forrest Sheng Bao), hệ thống **VeriScholar chủ động loại bỏ hoàn toàn các framework agent trung gian cồng kềnh** (như LangChain, LlamaIndex, AutoGen hay CrewAI) để tự xây dựng trực tiếp thông qua **SDK chính thức (Official OpenAI SDK)**, `httpx` (gọi Docker Model Runner) và kiến trúc lục giác thuần túy (Ports & Adapters).
+
+Quyết định kỹ thuật này mang lại 4 lợi ích cốt tử cho môi trường sản xuất:
+
+1. **Kiểm soát tuyệt đối Hợp đồng Tọa độ (Spatial Invariants):**
+   - Các thư viện ngoài thường coi văn bản là chuỗi trần (`str`) kèm theo siêu dữ liệu lỏng lẻo (`dict`).
+   - VeriScholar yêu cầu các ràng buộc hình học bất biến nghiêm ngặt: mảng 2 chiều không-null `[[x0, y0, x1, y1, page], ...]`, ma trận kích thước trang `[width_pt, height_pt]` và góc xoay `rotation_deg`. Tự viết adapter đảm bảo dữ liệu tọa độ không bị cắt xén, trôi lệch hay phân tích sai định dạng.
+
+2. **Phòng thủ Prompt Injection & Thứ bậc Chỉ thị (Instruction Hierarchy):**
+   - Các framework agent thường tự ý chèn prompt ẩn, memory wrapper hoặc chuỗi suy luận nội bộ khó kiểm soát và dễ bị khai thác qua bẫy dữ liệu học thuật.
+   - Tự đóng gói prompt giúp hệ thống cô lập an toàn dữ liệu bài báo chưa tin cậy trong các thẻ XML phân tách như `<data_context_untrusted>`, tuân thủ tiêu chuẩn bảo mật OWASP Top 10 for LLM Applications.
+
+3. **Quản trị Kết nối Cơ sở Dữ liệu (Early Connection Release Pattern):**
+   - Các framework RAG thường giữ session kết nối database xuyên suốt quá trình LLM sinh token, gây cạn kiệt Connection Pool của PostgreSQL khi có hàng trăm kết nối SSE kéo dài hàng chục giây.
+   - Việc tự điều phối luồng cho phép ngắt kết nối database ngay lập tức sau khi truy vấn xong chunks (dưới 50ms) và chỉ mở lại một kết nối mới trong chốc lát (dưới 20ms) sau khi quá trình stream hoàn tất để ghi nhận lượt hội thoại vào bảng `session_turns`.
+
+4. **Xử lý Ngắt Kết Nối Máy Trạm (HTTP 499 / Client Disconnect):**
+   - Khi người dùng bấm "Dừng sinh câu trả lời" hoặc đóng tab trình duyệt, luồng mã nguồn sử dụng `httpx` và asyncio generator sẽ bắt trực tiếp ngoại lệ `ClientDisconnect`, lập tức hủy bỏ coroutine gọi OpenAI API để chặn đứng tình trạng lãng phí token không cần thiết.
+
+---
+
+## 3. ĐƯỜNG ỐNG DỮ LIỆU ADVANCED RAG TOÀN DIỆN (END-TO-END ADVANCED RAG PIPELINE)
+
+Hệ thống VeriScholar triển khai kiến trúc **Multimodal Academic RAG** qua 4 giai đoạn độc lập, có ranh giới module rõ ràng:
+
+### 3.1. Sơ Đồ Kiến Trúc Luồng Tổng Thể (End-to-End Pipeline Architecture)
+
+```mermaid
+flowchart TD
+    subgraph INGESTION["Giai đoạn 1: Ingestion & Bóc tách Tọa độ"]
+        A["PDF Upload (Tệp PDF thô)"] --> B["CAS Deduplication (Mã băm SHA-256)"]
+        B --> C["Redis Streams: ingestion_stream"]
+        C --> D["Worker: PyMuPDF + Table Stitching"]
+        D --> E["BGE-M3 Dense Embedding (1024-dim)"]
+        E --> F["PostgreSQL 18: HNSW Index + GIN Full-Text"]
+    end
+
+    subgraph RETRIEVAL["Giai đoạn 2: Thu thập Ứng viên Lai (Hybrid Retrieval)"]
+        Q["User Query (Câu hỏi người dùng)"] --> QV["BGE-M3 Query Vector (1024-dim)"]
+        QV --> H["Stored Function: match_document_chunks_rrf"]
+        F -.-> H
+        H --> CP["Candidate Pool (Top 20 - 25 Chunks)"]
+        CP --> ER["Early DB Connection Release (< 50ms)"]
+    end
+
+    subgraph RERANK["Giai đoạn 3: Chấm điểm Chéo & Chống Bẫy Nhiễu (Reranking)"]
+        ER --> RERANKER["bge-reranker-v2-m3-onnx-int8 (CPU 150-250ms)"]
+        RERANKER --> GATE{"Relevance Score >= 0.35?"}
+        GATE -- "Không (Score < 0.35)" --> ABSTAIN["Abstention: Từ chối bịa thông tin<br/>finish_reason: abstention"]
+        GATE -- "Có (Score >= 0.35)" --> TOPK["Top 6 - 8 Chunks Verified Evidence<br/>Tổng độ dài <= 3.500 tokens"]
+    end
+
+    subgraph GENERATION["Giai đoạn 4: Sinh Câu Trả Lời & Truyền Luồng SSE"]
+        TOPK --> PROMPT["XML Prompting: data_context_untrusted"]
+        PROMPT --> LLM["OpenAI gpt-4o / Local DMR Qwen2.5-7B"]
+        LLM --> SSE["Server-Sent Events (SSE Stream)"]
+        SSE --> FE["Web Client: Tokens + Viền vàng Highlight Canvas"]
+        FE --> LOG["Mở kết nối DB (< 20ms): Lưu session_turns"]
+    end
+```
+
+---
+
+### 3.2. Giai Đoạn 1: Nạp Tài Liệu & Bóc Tách Tọa Độ (Ingestion Pipeline)
+
+1. **Tiếp nhận & Khử Trùng Lặp Nội Dung (CAS Deduplication):**
+   - API tiếp nhận tệp PDF, kiểm tra chữ ký Magic Bytes (`%PDF-`) và tính toán mã băm `SHA-256` (`content_hash`).
+   - Nếu `content_hash` đã tồn tại trong bảng `document_storage_blobs`, hệ thống lập tức tái sử dụng các chunks và vectors đã bóc tách từ trước (tăng trường `ref_count`), cấp bản ghi `documents` mới cho người dùng chỉ trong 10ms mà không tiêu tốn tài nguyên xử lý lại.
+
+2. **Đẩy vào Hàng Đợi Bền Vững (Durable Task Queue):**
+   - Nếu là tệp mới, lưu trữ blob lên hệ thống tệp cục bộ (`document_storage_blobs`) và đẩy tác vụ bóc tách vào **Redis Streams** thông qua lệnh `XADD ingestion_stream`.
+   - Tiến trình Worker độc lập (`apps/worker`) nhận tác vụ qua cơ chế Consumer Group, hỗ trợ xác nhận tường minh (Explicit ACK) và xử lý lại có giãn cách để chống mất tác vụ khi máy chủ khởi động lại.
+
+3. **Bóc Tách Tôn Trọng Cấu Trúc Học Thuật (PyMuPDF):**
+   - Sử dụng thư viện `fitz` (PyMuPDF) để phân tích thứ tự đọc tự nhiên và phát hiện ranh giới 2 cột chuẩn xác.
+   - Áp dụng thuật toán **Table Stitching Rule-based**: nhận diện cấu trúc tiêu đề cột (header) ở cuối trang trước để khâu nối các dòng dữ liệu ở đầu trang tiếp theo, bảo toàn nguyên vẹn ngữ nghĩa của bảng số liệu thực nghiệm.
+   - Trích xuất tọa độ chuẩn hóa hình học trên thang đo `[0.0, 1.0]` cho từng khối văn bản:
+     - `x0 = x0_pt / width_pt`
+     - `y0 = y0_pt / height_pt`
+     - `x1 = x1_pt / width_pt`
+     - `y1 = y1_pt / height_pt`
+     - Gốc tọa độ `[0.0, 0.0]` tại góc trên cùng bên trái (Top-Left), độc lập hoàn toàn với kích thước hiển thị của màn hình.
+
+4. **Vector Hóa & Lưu Trữ Lưỡng Hợp Nhất (Relational + Vector Storage):**
+   - Phân đoạn ngữ nghĩa học thuật: độ dài mỗi chunk từ 300 đến 512 tokens, gối đầu 10% (overlap) để không làm đứt gãy ý niệm khoa học.
+   - Gọi mô hình **`BGE-M3`** sinh vector dense 1024 chiều cho từng chunk.
+   - Thực thi lưu trữ nguyên khối vào bảng `document_chunks` trên PostgreSQL 18 gồm:
+     - `content`: Nội dung văn bản thô của đoạn trích.
+     - `embedding`: Vector nhúng `vector(1024)` đánh chỉ mục HNSW `vector_cosine_ops`.
+     - `bounding_boxes`: Mảng JSONB chứa danh sách tọa độ viền hộp và số trang.
+     - `tsv`: Cột chỉ mục tìm kiếm từ khóa `tsvector` sinh tự động qua từ điển `'simple'`.
+
+---
+
+### 3.3. Giai Đoạn 2: Thu Thập Ứng Viên Lai (Hybrid Candidate Retrieval Pipeline)
+
+1. **Nhúng Câu Hỏi Song Song:**
+   - Khi người dùng gửi câu hỏi, hệ thống gọi `BGE-M3` để nhúng nội dung câu hỏi thành query vector 1024 chiều.
+
+2. **Thực thi Stored Procedure `match_document_chunks_rrf` trên PostgreSQL 18:**
+   - **Nhánh Dense Vector:** Quét nhanh trên chỉ mục đồ thị HNSW (`vector_cosine_ops`), cấu hình phiên làm việc `ef_search = 100` và `iterative_scan = 'relaxed'`, kết hợp bộ lọc quyền sở hữu `document_id = ANY(p_document_ids)` để không bỏ sót các đoạn liên quan.
+   - **Nhánh Sparse Lexical:** Quét trên chỉ mục GIN với mệnh đề `tsv @@ plainto_tsquery('simple', query)`, bắt chuẩn xác các thuật ngữ khoa học, mã hóa chất, số hiệu gen hoặc tên tác giả.
+   - **Thuật toán Reciprocal Rank Fusion (RRF):** Kết hợp thứ tự xếp hạng của 2 nhánh theo công thức chuẩn:
+     ```text
+     RRF_Score = 1.0 / (60 + Dense_Rank) + 1.0 / (60 + Lexical_Rank)
+     ```
+   - Trích xuất **Top 20 đến 25 chunks** có điểm RRF cao nhất làm tập ứng viên tiềm năng (Candidate Pool).
+
+3. **Giải Phóng Kết Nối Cơ Sở Dữ Liệu Sớm (Early Connection Release):**
+   - Ngay sau khi đọc xong danh sách ứng viên, đóng phiên làm việc của database session lập tức (thời gian chiếm dụng kết nối dưới 50ms) để trả tài nguyên về Connection Pool.
+
+---
+
+### 3.4. Giai Đoạn 3: Chấm Điểm Chéo & Chống Bẫy Nhiễu (Reranking & Distractor Mitigation)
+
+1. **Cross-Encoder Chấm Điểm Ngữ Nghĩa Chéo (`bge-reranker-v2-m3-onnx-int8`):**
+   - Đưa tập 20 - 25 chunks ứng viên cùng câu hỏi người dùng vào mô hình `bge-reranker-v2-m3-onnx-int8`.
+   - Mô hình thực hiện phép tính Cross-Attention đồng thời giữa câu hỏi và đoạn trích, xuất ra điểm số xác suất tương quan ngữ nghĩa thực tế (Relevance Score) chuẩn hóa từ 0.0 đến 1.0. Tối ưu hóa INT8 trên CPU giữ thời gian suy luận chỉ từ 150 đến 250ms.
+
+2. **Chốt Chặn Kiểm Soát Ngưỡng Mức Độ Tương Quan (Relevance Gate >= 0.35):**
+   - **Điều kiện Từ chối (Abstention):** Nếu toàn bộ các chunks ứng viên đều có điểm tương quan dưới 0.35 (`score < 0.35`), hệ thống lập tức ngắt luồng suy luận, trả về thông báo từ chối có căn cứ:
+     *"Tài liệu được cung cấp không chứa thông tin hoặc bằng chứng xác thực để trả lời câu hỏi này."*
+     Kèm theo cờ `finish_reason: "abstention"`, triệt tiêu 100% hiện tượng ảo giác (Hallucination).
+
+3. **Khống Chế Định Ngạch Ngữ Cảnh (Token Budgeting):**
+   - Nếu có các chunks vượt qua ngưỡng `>= 0.35`, hệ thống sắp xếp theo điểm giảm dần và chọn lọc **Top 6 đến 8 chunks** cao nhất, bảo đảm tổng dung lượng ngữ cảnh gửi tới LLM không vượt quá 3.500 tokens.
+
+---
+
+### 3.5. Giai Đoạn 4: Sinh Câu Trả Lời Có Căn Cứ & Truyền Luồng SSE (Grounded Generation Pipeline)
+
+1. **Đóng Gói Prompt Cách Ly An Toàn (Namespacing & Anti-Injection):**
+   - Dữ liệu trích xuất từ bài báo được đặt trong thẻ cô lập dữ liệu chưa kiểm chứng nhằm vô hiệu hóa các đòn tấn công Prompt Injection ẩn trong tài liệu:
+     ```xml
+     <data_context_untrusted>
+       <document id="doc_102" title="Attention Is All You Need">
+         <chunk id="c_14" page="3" bbox="[[0.12, 0.34, 0.88, 0.45, 3]]">
+           The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...
+         </chunk>
+       </document>
+     </data_context_untrusted>
+     ```
+
+2. **Kích Hoạt Mô Hình Qua SDK Chính Thức:**
+   - Sử dụng thư viện `openai` chính thức gọi mô hình **`gpt-4o`** (hoặc thư viện `httpx` gọi **`Qwen2.5-7B-Instruct`** qua Docker Model Runner API) với cờ `stream=True`.
+   - Bắt buộc mô hình sinh nội dung tuân thủ kèm mã trích dẫn nguồn `[^chunk_id]`.
+
+3. **Truyền Luồng Dữ Liệu Thời Gian Thực (Server-Sent Events):**
+   - Gửi sự kiện mở đầu: `event: start`
+   - Gửi siêu dữ liệu dẫn nguồn: `event: citations` chứa danh sách Bounding Boxes và trang dẫn chứng để giao diện Frontend vẽ ngay khung viền vàng trên Canvas PDF.js.
+   - Truyền từng đoạn văn bản: `event: token`
+   - Gửi sự kiện kết thúc: `event: done` kèm số lượng token đã sử dụng.
+
+4. **Lưu Vết Hội Thoại Bền Vững:**
+   - Mở một kết nối database mới chỉ trong thời gian chớp nhoáng (dưới 20ms) để ghi nhận câu hỏi, câu trả lời và danh sách trích dẫn vào bảng `session_turns` rồi đóng kết nối lại ngay lập tức.
+
+---
+
+## 4. PHÂN TÍCH CHUYÊN SÂU CÁC QUYẾT ĐỊNH ĐÁNH ĐỔI KỸ THUẬT
+
+### 4.1. Bổ sung Mô hình Reranker (`bge-reranker-v2-m3`): Giải quyết bài toán Distractor Mitigation
+- **Nút thắt:** Phương pháp tìm kiếm lai (Hybrid Search) qua RRF kết hợp Dense Vector (BGE-M3) và Sparse Lexical (`tsvector`) chỉ thực hiện nhiệm vụ *thu thập ứng viên* (Candidate Retrieval, lấy Top 20 đến 25 chunks). RRF chỉ là phép cộng thứ hạng thô dựa trên vị trí danh sách chứ không đưa ra điểm số xác suất tương quan ngữ nghĩa thực tế.
 - **Giải pháp kỹ thuật:** Đưa mô hình Cross-Encoder **`bge-reranker-v2-m3`** vào vị trí trung gian giữa Retrieval và LLM Gateway:
   1. Nhận vào cặp `(Query, Chunk)` và tính toán trực tiếp ma trận chú ý chéo (Cross-Attention).
   2. Xuất ra điểm số tương quan chuẩn hóa trong thang điểm từ 0.0 đến 1.0.
   3. Áp dụng **Ngưỡng cắt >= 0.35** (Relevance Threshold): Nếu tất cả các chunks đều có điểm dưới 0.35, hệ thống lập tức kích hoạt chỉ dẫn *Abstention Prompting* để LLM từ chối trả lời ("Tài liệu không cung cấp đủ bằng chứng để trả lời câu hỏi này"), triệt tiêu 100% hiện tượng ảo giác (Hallucination).
 
-### 2.2. Tối ưu hóa Nút thắt Độ trễ Reranker trên CPU (SLA TTFT dưới 1 giây)
+### 4.2. Tối ưu hóa Nút thắt Độ trễ Reranker trên CPU (SLA TTFT dưới 1 giây)
 - **Nút thắt tiềm ẩn:** Mô hình Cross-Encoder thực hiện self-attention trên cặp `(Query + Chunk)`. Khi chạy PyTorch tiêu chuẩn trên CPU không có card đồ họa GPU, việc chấm điểm đồng thời 40 chunks có thể mất từ 1.2 đến 2.5 giây, vi phạm cam kết thời gian phản hồi token đầu tiên (Time-to-First-Token - TTFT dưới 1 giây) qua luồng SSE.
 - **Giải pháp kỹ thuật:**
   1. **Cắt giảm phễu ứng viên thích ứng (Adaptive Candidate Pool):** Thay vì nạp toàn bộ 40 chunks, chỉ trích xuất **Top 20 đến 25 chunks** có điểm RRF cao nhất từ PostgreSQL đưa vào Reranker.
   2. **Tăng tốc suy luận CPU bằng ONNX Runtime / Optimum INT8:** Sử dụng bản phân phối lượng tử hóa INT8 (`bge-reranker-v2-m3-onnx-int8`). Cơ chế này giảm thời gian chấm điểm xuống còn **150 đến 250ms** trên CPU 4 lõi mà không làm suy giảm độ chính xác xếp hạng, bảo đảm duy trì trọn vẹn SLA TTFT dưới 1 giây.
 
-### 2.3. Định vị Mô hình LLM: Chuẩn hóa OpenAI Frontier Models kết hợp Phân tầng Cục bộ
+### 4.3. Định vị Mô hình LLM: Chuẩn hóa OpenAI Frontier Models kết hợp Phân tầng Cục bộ
 - **Định vị OpenAI Models làm Cloud Gateway:**
   - **`gpt-4o`:** Đóng vai trò mô hình suy luận đỉnh cao (Frontier Reasoning Model), chịu trách nhiệm sinh câu trả lời đối thoại kép, phân tích tổng hợp chéo nhiều bài báo học thuật và bảo đảm định dạng JSON chứa mảng Bounding Box `[x0, y0, x1, y1, page]` với độ chính xác tuyệt đối.
   - **`gpt-4o-mini`:** Đóng vai trò mô hình tra cứu tối ưu chi phí (Cost-Optimized Model) cho các câu hỏi đơn giản, truy vấn định nghĩa hoặc tóm tắt nhanh từng đoạn văn.
@@ -64,19 +226,19 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
   - Các mô hình siêu nhỏ dưới 3B tham số (như `ai/smollm2`) không đủ năng lực suy luận ngữ cảnh học thuật phức tạp và dễ bị lỗi cấu trúc khi xuất tọa độ hình học. Do đó, `smollm2` (1.7B) chỉ được dùng cho các tác vụ phân tích nhẹ: Chuẩn hóa tiêu đề (`title cleaning`), bóc tách danh sách tác giả, hoặc gán nhãn tags.
   - Khi người dùng cần chạy suy luận trả lời câu hỏi hoàn toàn cục bộ (Offline Grounded Q&A), hệ thống kích hoạt **`Qwen2.5-7B-Instruct`** hoặc **`Llama-3.1-8B-Instruct`** (lượng tử hóa 4-bit Q4_K_M) thông qua Docker Model Runner trên cổng 12434.
 
-### 2.4. Giải pháp Bóc tách Tài liệu: PyMuPDF kết hợp Heuristics Khâu nối Bảng biểu (Table Stitching)
+### 4.4. Giải pháp Bóc tách Tài liệu: PyMuPDF kết hợp Heuristics Khâu nối Bảng biểu (Table Stitching)
 - **Nút thắt:** PyMuPDF (`fitz`) có ưu thế vượt trội về tốc độ (dưới 1 giây cho 20 trang tài liệu) và trích xuất tọa độ Bounding Box chính xác, nhưng mặc định không tự động ghép các bảng biểu vắt ngang 2 trang giấy và không tự chuyển công thức toán học thành mã ký hiệu chuẩn.
 - **Giải pháp kỹ thuật:**
   - Áp dụng module **Table Stitching Rule-based**: Nhận diện cấu trúc header của bảng ở cuối trang trước và khâu nối các hàng dữ liệu tiếp theo ở đầu trang sau, giữ nguyên tính toàn vẹn ngữ nghĩa của bảng số liệu khoa học.
   - Áp dụng Heuristic font toán học (symbol / italic fonts) và tọa độ dòng chữ (baseline) để nhận diện biểu thức toán học và bao bọc bằng ký hiệu phân cách chuẩn, tránh hiện tượng công thức bị vỡ mảnh khi chia chunk.
 
-### 2.5. Đồng bộ Phiên bản Cơ sở Dữ liệu: PostgreSQL 18 + `pgvector 0.8.6`
+### 4.5. Đồng bộ Phiên bản Cơ sở Dữ liệu: PostgreSQL 18 + `pgvector 0.8.6`
 - **Thực tế hệ thống:** Toàn bộ hệ thống VeriScholar đã được nâng cấp đồng bộ lên **PostgreSQL 18** và `pgvector/pgvector:0.8.6-pg18` trên tất cả các tài liệu kỹ thuật ([`design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md), [`design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md), [`guide-docker.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/guide-docker.md)) và cấu hình hạ tầng thực tế ([`docker-compose.yml`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docker-compose.yml)).
 - **Lợi thế kỹ thuật:** PostgreSQL 18 kết hợp `pgvector 0.8.6` mang lại hiệu năng tối ưu với chỉ mục HNSW cải tiến, hỗ trợ `vector_cosine_ops`, cấu hình `iterative_scan = 'relaxed'` và truy vấn song song (Parallel Query Execution) vượt trội, đáp ứng tải tìm kiếm vector đa người dùng trong môi trường sản xuất.
 
 ---
 
-## 3. ĐỊNH NGẠCH TÀI NGUYÊN & YÊU CẦU PHẦN CỨNG CỤC BỘ (LOCAL HARDWARE FOOTPRINT INVARIANT)
+## 5. ĐỊNH NGẠCH TÀI NGUYÊN & YÊU CẦU PHẦN CỨNG CỤC BỘ (LOCAL HARDWARE FOOTPRINT INVARIANT)
 
 Để bảo đảm hệ thống chạy mượt mà trên máy tính cục bộ của các kỹ sư phát triển mà không gặp hiện tượng tràn bộ nhớ (Out-Of-Memory / OOM-Killed) khi kích hoạt đồng thời toàn bộ cụm dịch vụ, tài nguyên RAM được định ngạch như sau:
 
@@ -95,7 +257,7 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
 
 ---
 
-## 4. TRẠNG THÁI NGHIỆM THU & ĐÓNG BĂNG THIẾT KẾ (DESIGN FREEZE STATUS)
+## 6. TRẠNG THÁI NGHIỆM THU & ĐÓNG BĂNG THIẾT KẾ (DESIGN FREEZE STATUS)
 
 Tài liệu Lựa chọn Công nghệ Backend & Đánh đổi Kỹ thuật cho Module 1 đã đạt sự khớp nối hoàn chỉnh 100% với 5 trụ cột đặc tả của hệ thống:
 1. Bản yêu cầu nghiệp vụ học thuật: [`PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md).
