@@ -124,7 +124,7 @@ STAR_DESCRIPTION = (
     "📥 **Đầu vào:**\n"
     "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
     "- `folder_id`: UUID thư mục đề tài nghiên cứu (tùy chọn, Request body). "
-    "Mặc định để `null` hoặc `{}` nếu chỉ muốn lưu bài báo vào thư viện chung.\n\n"
+    'Mặc định là `{ "folder_id": null }` để lưu bài báo vào thư viện chung.\n\n'
     "📤 **Đầu ra (HTTP 200):**\n"
     "- Trả về thông tin bài báo với `is_persistent: true` và `folder_id` "
     "đã gán trong một giao dịch ACID.\n\n"

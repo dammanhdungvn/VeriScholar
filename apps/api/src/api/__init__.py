@@ -1,11 +1,13 @@
 import asyncio
 from collections.abc import AsyncGenerator, AsyncIterable
 from contextlib import asynccontextmanager
+from typing import Any
 
 import structlog
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
+from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -165,6 +167,40 @@ async def demo_sse_events() -> AsyncIterable[ServerSentEvent]:
             event="progress",
             id=str(i),
         )
+
+
+def custom_openapi() -> dict[str, Any]:
+    """Generates custom OpenAPI schema ensuring explicit null fields in examples."""
+    if app.openapi_schema:
+        return app.openapi_schema
+
+    openapi_schema = get_openapi(
+        title=app.title,
+        version=app.version,
+        openapi_version=app.openapi_version,
+        description=app.description,
+        routes=app.routes,
+    )
+
+    star_path = openapi_schema.get("paths", {}).get("/api/v1/documents/{document_id}:star", {})
+    post_op = star_path.get("post", {})
+    req_body_json = post_op.get("requestBody", {}).get("content", {}).get("application/json", {})
+    if "examples" in req_body_json and "without_folder" in req_body_json["examples"]:
+        req_body_json["examples"]["without_folder"]["value"] = {"folder_id": None}
+
+    components_schemas = openapi_schema.get("components", {}).get("schemas", {})
+    if "DocumentStarRequest" in components_schemas:
+        components_schemas["DocumentStarRequest"]["example"] = {"folder_id": None}
+        components_schemas["DocumentStarRequest"]["examples"] = [
+            {"folder_id": None},
+            {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
+        ]
+
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+
+app.openapi = custom_openapi  # type: ignore[method-assign]
 
 
 def main() -> None:
