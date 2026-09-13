@@ -40,8 +40,6 @@ jobs:
               - 'uv.lock'
             frontend:
               - 'apps/web/**'
-              - 'pnpm-lock.yaml'
-              - 'package.json'
 
   security-scan:
     name: Security & Secret Leak Detection
@@ -131,6 +129,9 @@ jobs:
     if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: apps/web
 
     steps:
       - name: Checkout repository
@@ -146,6 +147,7 @@ jobs:
         with:
           node-version: 20
           cache: "pnpm"
+          cache-dependency-path: "apps/web/pnpm-lock.yaml"
 
       - name: Install frontend dependencies (Frozen Lockfile)
         run: |
@@ -157,12 +159,12 @@ jobs:
 
       - name: Run Oxlint (Fast code linting)
         run: |
-          pnpm --prefix apps/web lint
+          pnpm lint
 
       - name: Run TypeScript type-checking
         run: |
-          pnpm --prefix apps/web exec tsc -b
+          pnpm exec tsc -b
 
       - name: Run Vite production build test
         run: |
-          pnpm --prefix apps/web build
+          pnpm build
