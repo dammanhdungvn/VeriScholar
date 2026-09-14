@@ -7,6 +7,8 @@ from api.db.session import get_db
 from api.deps import get_current_user, get_document_service, get_idempotency_port
 from api.schemas.document import (
     DocumentDetailEnvelope,
+    DocumentExtractReferencesEnvelope,
+    DocumentExtractReferencesRequest,
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
     DocumentParseRequest,
@@ -544,3 +546,68 @@ async def parse_document(
         )
 
     return envelope
+
+
+EXTRACT_REFERENCES_DESCRIPTION = (
+    "🎯 **Mục đích:** Bóc tách toàn bộ danh mục tài liệu tham khảo (References / Bibliography) "
+    "từ bài báo khoa học, phân tích cú pháp chi tiết thành các trường học thuật (Title, Authors, "
+    "Year, arXiv ID, DOI) và lưu vào cơ sở dữ liệu.\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `force_reextract`: Bỏ qua bộ nhớ đệm DB và bóc tách lại từ PDF (mặc định: false).\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- `document_id`: UUID tài liệu.\n"
+    "- `total_extracted`: Tổng số tài liệu tham khảo bóc tách được.\n"
+    "- `references`: Danh sách tham khảo với `ref_index`, `raw_text` và `parsed` "
+    "(title, authors, year, arxiv_id, doi).\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Sử dụng bộ đệm database: Lần gọi tiếp theo trả về kết quả ngay (< 15ms).\n"
+    "- Đảm bảo cô lập người dùng: Trả về `404 DOCUMENT_NOT_FOUND` nếu không thuộc quyền sở hữu."
+)
+
+
+@router.post(
+    "/{document_id}:extract-references",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentExtractReferencesEnvelope,
+    summary="Bóc tách danh mục tài liệu tham khảo",
+    description=EXTRACT_REFERENCES_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Bóc tách danh mục tài liệu tham khảo thành công.",
+            "model": DocumentExtractReferencesEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def extract_references(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần bóc tách danh mục tham khảo",
+    ),
+    payload: DocumentExtractReferencesRequest | None = Body(
+        default=None,
+        description="Tùy chọn cấu hình bóc tách tài liệu tham khảo",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentExtractReferencesEnvelope:
+    """Extract or retrieve structured scholarly references from a document."""
+    force_reextract = payload.force_reextract if payload else False
+    data = await service.extract_document_references(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        force_reextract=force_reextract,
+    )
+    return DocumentExtractReferencesEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
