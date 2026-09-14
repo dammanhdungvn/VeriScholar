@@ -268,6 +268,50 @@ flowchart TD
 - **Bảo toàn Bounding Box:** Chuyển đổi mảng 8 tọa độ polygon của Azure thành Bounding Box chuẩn `[x0, y0, x1, y1, page]` theo hệ quy chiếu Top-Left `[0.0, 1.0]`.
 - **Table Stitching & Font Encoding:** Đối với Digital PDF, PyMuPDF kết hợp giải thuật kiểm tra đường biên cột trang trước và trang sau để khâu nối bảng vắt trang, kết hợp chuẩn hóa Unicode các font toán học (CMSY, CMMI, MSAM).
 
+#### 4. Kiến Trúc Phân Đoạn 4 Tầng Ngữ Nghĩa (Hierarchical & Structure-Aware Chunking):
+Tuyệt đối loại bỏ cơ chế cắt cứng ngây thơ (Naive Chunking) vốn gây đứt gãy công thức toán học, xé nát bảng biểu hoặc ngắt ngang xương câu lập luận. Toàn bộ tài liệu được bóc tách qua quy trình 4 tầng cấu trúc:
+
+```
+                  [ Bài báo khoa học PDF ]
+                             │
+                             ▼
+  Tầng 1: Tách theo Mục lớn (Section-Aware Splitting)
+          ├── Section 1: Introduction
+          ├── Section 2: Related Work
+          └── Section 3: Methodology (Không bao giờ gộp chéo Section)
+                             │
+                             ▼
+  Tầng 2: Tách theo Khối ngữ nghĩa (Block-Level / Table / Equation)
+          ├── Khối công thức toán: Giữ nguyên 1 khối trọn vẹn (LaTeX)
+          ├── Khối bảng biểu (Table): Giữ nguyên trọn cấu trúc ma trận
+          └── Khối đoạn văn bản (Paragraphs)
+                             │
+                             ▼
+  Tầng 3: Ngắt câu thông minh (Sentence-Boundary Splitting)
+          └── Nếu một đoạn văn dài vượt quá `chunk_size` (mặc định: 512 tokens):
+              Hệ thống dùng thuật toán ngắt câu hoàn chỉnh (tại dấu chấm '.', '?')
+              chứ TUYỆT ĐỐI không bao giờ chặt ngang xương một câu!
+                             │
+                             ▼
+  Tầng 4: Đính kèm Ngữ cảnh cha (Contextual Enrichment Header)
+          └── Mỗi chunk trước khi mang đi embedding sẽ được tự động gắn thêm:
+              [Document: Attention Is All You Need > Section: Multi-Head Attention]
+              -> Đảm bảo khi tìm kiếm, vector luôn hiểu đầy đủ ngữ cảnh gốc.
+```
+
+#### 5. Khung Đánh Giá Chất Lượng Bóc Tách & Chunking (Eval-Driven Development - EDD):
+Nhằm bảo đảm chất lượng bóc tách và phân đoạn đạt chuẩn sản xuất mà không vi phạm cam kết bảo mật Zero-Retention (không gửi dữ liệu bài báo ra SaaS bên ngoài như LangSmith), hệ thống áp dụng phương pháp **Eval-Driven Development (EDD)** tích hợp thư viện mã nguồn mở **Ragas** và bộ test harness tự động:
+
+1. **Bộ chỉ số đo lường định lượng (Evaluation Metrics):**
+   - **Bounding Box IoU (>= 0.85):** Đo độ chính xác của tọa độ khung viền vàng highlight trên giao diện PDF Canvas.
+   - **Table Integrity Ratio (Mục tiêu: 100%):** Kiểm chứng tính toàn vẹn cấu trúc bảng số liệu vắt trang sau khi Table Stitching.
+   - **Boundary Integrity Ratio (Mục tiêu: 100%):** Đo tỷ lệ chunk ngắt câu chuẩn mực tại ranh giới ngữ pháp, 0% bị chặt đôi câu.
+   - **Section Leakage Rate (Mục tiêu: 0%):** Tỷ lệ câu của mục này bị rò rỉ sang chunk của mục khác.
+   - **Ragas Context Recall & Context Precision (>= 0.90):** Đánh giá năng lực truy xuất thông tin bằng bộ bài báo chuẩn (Golden Dataset).
+2. **Quy trình kiểm thử hồi quy tự động:**
+   - Bộ eval suite được tổ chức độc lập và tích hợp trực tiếp vào đường ống GitHub Actions CI/CD.
+   - Mọi thay đổi về thuật toán chunking hoặc prompt bóc tách bắt buộc phải vượt qua ngưỡng điểm chuẩn (pass@k) trước khi được merge.
+
 ### 4.5. Đồng bộ Phiên bản Cơ sở Dữ liệu: PostgreSQL 18 + `pgvector 0.8.6`
 - **Thực tế hệ thống:** Toàn bộ hệ thống VeriScholar đã được nâng cấp đồng bộ lên **PostgreSQL 18** và `pgvector/pgvector:0.8.6-pg18` trên tất cả các tài liệu kỹ thuật ([`design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md), [`design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md), [`guide-docker.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/guide-docker.md)) và cấu hình hạ tầng thực tế ([`docker-compose.yml`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docker-compose.yml)).
 - **Lợi thế kỹ thuật:** PostgreSQL 18 kết hợp `pgvector 0.8.6` mang lại hiệu năng tối ưu với chỉ mục HNSW cải tiến, hỗ trợ `vector_cosine_ops`, cấu hình `iterative_scan = 'relaxed'` và truy vấn song song (Parallel Query Execution) vượt trội, đáp ứng tải tìm kiếm vector đa người dùng trong môi trường sản xuất.

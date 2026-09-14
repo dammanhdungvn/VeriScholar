@@ -107,6 +107,15 @@ async def validation_exception_handler(
         first_error_msg=msg,
         field=field_name,
     )
+    clean_errors = []
+    for err in errors:
+        clean_err = dict(err)
+        if "ctx" in clean_err and isinstance(clean_err["ctx"], dict):
+            clean_err["ctx"] = {
+                k: str(v) if isinstance(v, Exception) else v for k, v in clean_err["ctx"].items()
+            }
+        clean_errors.append(clean_err)
+
     error_payload = ErrorResponse(
         success=False,
         error=ErrorDetail(
@@ -115,7 +124,7 @@ async def validation_exception_handler(
             field=field_name,
             action="Ensure request payload matches the OpenAPI schema specification.",
         ),
-        meta={"errors": errors},
+        meta={"errors": clean_errors},
     )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
