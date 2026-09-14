@@ -509,3 +509,137 @@ TAG: Module 1: Documents
   ```
 * **`422 Unprocessable Entity`** - `document_id` không phải định dạng UUID hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [POST] `/api/v1/documents/{document_id}:parse`
+**Summary:** `Kích hoạt / Bóc tách lại với Idempotency`  
+**Operation ID:** `parse_document_api_v1_documents__document_id__parse_post`
+
+#### Mô tả (Description)
+🎯 **Mục đích:** Kích hoạt hoặc tái kích hoạt tiến trình bóc tách (parsing), trích xuất văn bản, bảng biểu và sinh embedding cho bài báo khoa học. Cung cấp cơ chế Idempotency với cửa sổ 24 giờ chống gửi yêu cầu trùng lặp.
+
+📥 **Đầu vào:**
+* `document_id`: UUID của bài báo khoa học cần bóc tách (bắt buộc, Path parameter).
+* `Idempotency-Key`: Chuỗi UUID định danh yêu cầu chống trùng lặp trong 24 giờ (tùy chọn, Header parameter).
+* `chunk_size`: Kích thước token mục tiêu cho từng đoạn văn bản (mặc định: `512`, khoảng giá trị: `100` đến `2048`).
+* `chunk_overlap`: Số lượng token gối đầu giữa các đoạn liền kề (mặc định: `50`, khoảng giá trị: `0` đến `200`, phải nhỏ hơn `chunk_size`).
+* `extract_tables`: Bật nhận diện bố cục bảng biểu và hình ảnh chuyên sâu (mặc định: `true`).
+* `force_reparse`: Bắt buộc tái bóc tách lại bài báo (mặc định: `false`).
+
+📤 **Đầu ra (HTTP 202 Accepted):**
+* Trả về thông tin tiến trình đã được tiếp nhận: `id`, `status: processing`, `stage: validation`, `progress: 0`, thông điệp hướng dẫn và các siêu liên kết HATEOAS (`status_url`, `detail_url`).
+* Nếu có header `Idempotency-Key`, phản hồi trả về kèm header `X-Cache: Miss` (lần đầu) hoặc `X-Cache: Idempotent-Hit` (nếu trùng lặp trong 24 giờ).
+
+⚠️ **Lưu ý:**
+* Khử trùng lặp Idempotency 24 giờ: Khi gửi kèm header `Idempotency-Key`, hệ thống lưu kết quả xử lý và trả về phản hồi gốc kèm header `X-Cache: Idempotent-Hit` đối với các yêu cầu trùng lặp tiếp theo mà không kích hoạt lại pipeline.
+* Máy trạng thái (State Machine):
+  - Nếu tài liệu đang xử lý (`status == "processing"`) và `force_reparse == false`: Hệ thống chặn và trả về lỗi `409 DOCUMENT_PROCESSING`.
+  - Nếu tài liệu đang xử lý (`status == "processing"`) và `force_reparse == true`: Hệ thống hủy tác vụ cũ và khởi động lại tiến trình từ đầu (`stage: validation`, `progress: 0`).
+  - Nếu tài liệu đã hoàn tất (`status == "completed"`) và `force_reparse == false`: Hệ thống trả về trạng thái hoàn tất hiện tại kèm thông điệp hướng dẫn sử dụng `force_reparse`.
+  - Nếu tài liệu đã hoàn tất (`status == "completed"`) và `force_reparse == true`: Hệ thống chuyển trạng thái sang `processing` và tiến hành bóc tách lại.
+* Cô lập người dùng (Multi-tenant): Chỉ chủ sở hữu bài báo mới có quyền kích hoạt bóc tách; truy cập tài liệu người khác sẽ trả về lỗi `404 DOCUMENT_NOT_FOUND`.
+* Lỗi thường gặp: `404` (tài liệu không tồn tại), `409` (đang xử lý), `422` (sai định dạng UUID hoặc chunk_overlap >= chunk_size).
+
+#### Parameters (Path & Header)
+| Tên tham số | Vị trí | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `document_id` | `path` | `string (uuid)` | **Có** | - | UUID của bài báo khoa học cần kích hoạt bóc tách |
+| `Idempotency-Key` | `header` | `string` | Không | `null` | Khóa UUID khử trùng lặp trong vòng 24 giờ |
+
+#### Request Body
+*Content-Type:* `application/json`
+
+| Trường dữ liệu | Kiểu dữ liệu | Bắt buộc | Mặc định | Giới hạn | Mô tả |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `chunk_size` | `integer` | Không | `512` | 100 <= x <= 2048 | Số token mục tiêu cho mỗi chunk |
+| `chunk_overlap` | `integer` | Không | `50` | 0 <= x <= 200 | Số token gối đầu (< chunk_size) |
+| `extract_tables` | `boolean` | Không | `true` | - | Bật phát hiện bố cục bảng biểu / hình ảnh |
+| `force_reparse` | `boolean` | Không | `false` | - | Bắt buộc tái bóc tách ngay cả khi đã hoàn tất |
+
+##### Ví dụ Request Body:
+```json
+{
+  "chunk_size": 512,
+  "chunk_overlap": 50,
+  "extract_tables": true,
+  "force_reparse": false
+}
+```
+
+#### Responses
+* **`202 Accepted`** - Tiến trình bóc tách bài báo được tiếp nhận thành công.  
+  *Headers:*  
+  - `X-Cache`: `Miss` (lần đầu) hoặc `Idempotent-Hit` (khi trùng lặp khóa trong 24 giờ)  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e3b0c442-98fc-1c14-9afb-f4c8996fb924",
+      "status": "processing",
+      "stage": "validation",
+      "progress": 0,
+      "message": "Document parsing pipeline initiated.",
+      "links": {
+        "status_url": "/api/v1/documents/e3b0c442-98fc-1c14-9afb-f4c8996fb924/status",
+        "detail_url": "/api/v1/documents/e3b0c442-98fc-1c14-9afb-f4c8996fb924"
+      }
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 'e3b0c442-98fc-1c14-9afb-f4c8996fb924' not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`409 Conflict`** - Bài báo đang trong tiến trình xử lý và chưa hoàn tất.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_PROCESSING",
+      "message": "Document 'e3b0c442-98fc-1c14-9afb-f4c8996fb924' is already being processed (stage: ocr).",
+      "field": "id",
+      "action": "Poll progress via GET /api/v1/documents/e3b0c442-98fc-1c14-9afb-f4c8996fb924/status or pass force_reparse=true to restart."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Tham số đầu vào hoặc định dạng UUID không hợp lệ (ví dụ: chunk_overlap >= chunk_size).  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "Value error, chunk_overlap must be strictly less than chunk_size",
+      "field": "body",
+      "action": "Ensure request payload matches the OpenAPI schema specification."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
