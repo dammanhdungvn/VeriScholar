@@ -438,3 +438,51 @@ async def test_openapi_schema_contains_extract_references_endpoint() -> None:
     assert post_op["summary"] == "Bóc tách danh mục tài liệu tham khảo"
     assert "200" in post_op["responses"]
     assert "Module 1: Documents" in post_op["tags"]
+
+
+@pytest.mark.asyncio
+async def test_extract_references_with_real_local_storage_adapter(tmp_path) -> None:
+    """End-to-end test with real LocalStorageAdapter (guarantees adapter parity)."""
+    import hashlib
+
+    from core.adapters.storage.local import LocalStorageAdapter
+
+    storage = LocalStorageAdapter(base_directory=tmp_path / "blobs")
+    pdf_bytes = create_synthetic_pdf_with_references()
+    content_hash = hashlib.sha256(pdf_bytes).hexdigest()
+
+    async def _stream():
+        yield pdf_bytes
+
+    await storage.save_blob(_stream(), content_hash)
+    assert await storage.blob_exists(content_hash) is True
+
+    doc_id = uuid4()
+    user_id = DEFAULT_DEV_USER_ID
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user_id,
+        filename="paper.pdf",
+        content_hash=content_hash,
+        file_size_bytes=len(pdf_bytes),
+        page_count=2,
+        status="completed",
+        stage="completed",
+        progress=100,
+    )
+    fake_db = InMemoryAsyncReferenceSession()
+    fake_db.add(doc)
+
+    service = DocumentService(storage=storage)
+    result = await service.extract_document_references(
+        document_id=doc_id,
+        user_id=user_id,
+        db=fake_db,
+        force_reextract=False,
+    )
+
+    assert result.total_extracted == 3
+    assert len(result.references) == 3
+    assert result.references[0].parsed.title == "Layer normalization"
+    assert result.references[0].parsed.year == 2016
+    assert result.references[0].parsed.arxiv_id == "1607.06450"

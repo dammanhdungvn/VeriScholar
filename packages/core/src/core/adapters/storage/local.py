@@ -115,6 +115,13 @@ class LocalStorageAdapter(IBlobStoragePort):
 
         return True
 
+    async def read_blob(self, content_hash: str) -> bytes:
+        """Read entire physical blob binary into memory."""
+        target_path = self._resolve_path(content_hash)
+        if not await asyncio.to_thread(target_path.is_file):
+            raise FileNotFoundError(f"Blob file not found for hash: {content_hash}")
+        return await asyncio.to_thread(target_path.read_bytes)
+
     async def stream_blob_range(
         self,
         content_hash: str,

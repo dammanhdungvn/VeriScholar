@@ -39,6 +39,10 @@ class IBlobStoragePort(Protocol):
         """Permanently purge physical blob from storage."""
         ...
 
+    async def read_blob(self, content_hash: str) -> bytes:
+        """Read entire physical blob binary into memory."""
+        ...
+
     async def stream_blob_range(
         self,
         content_hash: str,
