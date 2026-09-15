@@ -80,7 +80,7 @@ sequenceDiagram
 
 - **Báo cáo định dạng Markdown (Dành cho người đọc):**
   - Nằm tại thư mục: `temp/output/test/`
-  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`
+  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).
