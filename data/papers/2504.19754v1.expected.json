@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "paper_id": "2504.19754v1.pdf",
+  "expected_reference_count": 20,
+  "min_acceptable_recall": 0.95,
+  "min_acceptable_precision": 0.95,
+  "expected_dois": [
+    "10.1007/978-3-319-30671-1_58",
+    "10.48550/arxiv.2410.12837",
+    "10.1016/j.neucom.2023.126356",
+    "10.1561/1500000019"
+  ],
+  "expected_arxiv_ids": [
+    "2404.14219",
+    "1611.09268",
+    "2402.03216",
+    "2405.06211",
+    "2312.10997",
+    "2409.04701",
+    "2310.19923",
+    "2410.12837",
+    "2406.16008",
+    "2410.05229",
+    "2004.04906",
+    "1803.09337",
+    "2406.14673",
+    "2210.07316",
+    "2409.10173"
+  ],
+  "sample_references": [
+    {
+      "ref_index": 1,
+      "title": "Phi-3 technical report: A highly capable language model locally on your phone",
+      "year": 2024,
+      "arxiv_id": "2404.14219"
+    },
+    {
+      "ref_index": 5,
+      "title": "Longrope: Extending LLM context window beyond 2 million tokens",
+      "year": 2024
+    },
+    {
+      "ref_index": 8,
+      "title": "Loft: Local proxy fine-tuning for large language models",
+      "year": 2024,
+      "arxiv_id": "2410.12837",
+      "doi": "10.48550/arxiv.2410.12837"
+    },
+    {
+      "ref_index": 12,
+      "title": "Finding optimal breakpoints in long documents using small language models",
+      "year": 2024
+    },
+    {
+      "ref_index": 13,
+      "title": "Dense passage retrieval for open-domain question answering",
+      "year": 2020,
+      "arxiv_id": "2004.04906"
+    },
+    {
+      "ref_index": 15,
+      "title": "Retrieval-augmented generation for knowledge-intensive NLP tasks",
+      "year": 2020
+    }
+  ]
+}

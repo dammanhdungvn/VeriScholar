@@ -1,35 +1,60 @@
 [project]
 name = "verischolar"
 version = "0.1.0"
+description = "VeriScholar — AI-powered academic paper verification"
+readme = "README.md"
 requires-python = ">=3.12"
-dependencies = []
-description = "verischolar: open-source academic research & writing AI assistant"
-
-[tool.uv.workspace]
-members = [
-    "packages/core",
-    "apps/api",
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.10.0",
+    "pydantic-settings>=2.7.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "pgvector>=0.3.6",
+    "structlog>=24.4.0",
+    "httpx>=0.28.0",
+    "python-multipart>=0.0.20",
+    "pypdf>=5.1.0",
+    "python-dotenv>=1.0.0",
 ]
-
-[tool.uv.sources]
-core = { workspace = true }
 
 [dependency-groups]
 dev = [
     "pytest>=8.3.0",
-    "pytest-asyncio>=0.24.0",
-    "pytest-cov>=7.1.0",
-    "ruff>=0.9.0",
+    "pytest-asyncio>=0.25.0",
+    "pytest-cov>=6.0.0",
+    "ruff>=0.8.0",
+    "mypy>=1.14.0",
+    "aiosqlite>=0.20.0",
 ]
 
 [tool.ruff]
 target-version = "py312"
 line-length = 100
 exclude = [
-    ".agents",
+    ".git",
     ".venv",
-    "apps/web/node_modules",
+    ".agents",
+    "__pycache__",
+    "build",
+    "dist",
+    "apps/web",
+    "docs",
 ]
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+
+[tool.pytest.ini_options]
+testpaths = [
+    "apps/api/tests",
+    "packages/core/tests",
+]
+norecursedirs = [
+    ".agents",
+    ".venv",
+    "apps/web",
+    "scripts",
+    "docs",
+]
