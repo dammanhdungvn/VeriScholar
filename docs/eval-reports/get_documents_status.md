@@ -1,6 +1,6 @@
 # API Evaluation Snapshot: GET /api/v1/documents/{document_id}/status
 
-> **Audit Header**: Session Tag: `test_eval_a650fdf7` | Mode: Automated Autotest  
+> **Audit Header**: Session Tag: `test_eval_aa57ec6e` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/get_documents_status/`  
 > **Quality Gate**: **PASSED**
 
@@ -10,7 +10,7 @@
 
 | Scenario | Status | Latency | Result | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Pipeline Stages Detail & Progress Audit | `200` | 5.7 ms | PASS | Status: uploaded, Progress: 0%, Stages: ['validation', 'layout_detection', 'ocr', 'chunking', 'embedding'] |
+| Pipeline Stages Detail & Progress Audit | `200` | 5.5 ms | PASS | Status: uploaded, Progress: 0%, Stages: ['validation', 'layout_detection', 'ocr', 'chunking', 'embedding'] |
 
 ---
 

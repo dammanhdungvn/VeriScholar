@@ -1,35 +1,88 @@
 # API Evaluation Snapshot: POST /api/v1/documents
 
-> **Audit Header**: Session Tag: `test_eval_a650fdf7` | Mode: Automated Autotest  
+> **Audit Header**: Session Tag: `test_eval_9ca5d981` | Mode: CAS Ingestion & Deduplication  
+> **Target Output**: `temp/output/test/post_documents_upload.md`  
 > **Raw Artifacts**: `tests/.artifacts/post_documents_upload/`  
 > **Payload Checksums (SHA-256)**:  
-> - `1706.03762v7_initial.json`: `8e9f906c297768d21fc47d685ff813ad5ac03b801fb63bfdbc294ba96f14ea80`
-> - `1706.03762v7_duplicate.json`: `c768c247a095a47bc56bb9c5617da4c78a4b90a46cf807a09bea82613a1e1f61`
-> - `2504.19754v1_initial.json`: `43f7b1f7b921c2ad278e3167700c7706ba4a4d85e5bfce60418add0e6deccc82`
-> - `2504.19754v1_duplicate.json`: `bef5a2dcee86f1fc322f11128a6f702a25576eee73cc26bf265c4a8e761acab7`
-> - `2507.12425v1_initial.json`: `ae61002193b095b9701ff83682297aa22a102f048c2f5fa9fbc1c8fe9bf6bc1e`
-> - `2507.12425v1_duplicate.json`: `30dfc8efe17f83e38313aed92a74606a621070f4b91e63d2b3be388edd2322cf`
-> - `corrupted_structure.json`: `aa3ebf045ef747ed680e20274577fcae8bdbd1ac47e53a8c93db2c0a3e38b934`  
+> - `Attention Is All You Need_initial.json`: `4486c5a6af0a105749a4dbc544e53d4db41bb768d20d8c47c634a82769e2467d`
+> - `Attention Is All You Need_duplicate.json`: `730e7e407faf097b8482dd6926e01c66cc8aa7e1b1ce1794b1d7cac9a5545b50`  
 > **Quality Gate**: **PASSED**
 
 ---
 
 ## 1. Executive Summary & Verification Matrix
 
-| Test Scenario | HTTP Status | Latency | Status |
-| :--- | :--- | :--- | :--- |
-| Valid PDF Upload (1706.03762v7.pdf) | `201` (exp: `201`) | 81.1 ms | PASS |
-| CAS Deduplication Check (1706.03762v7.pdf) | `201` (exp: `201`) | 17.5 ms | PASS |
-| Valid PDF Upload (2504.19754v1.pdf) | `201` (exp: `201`) | 10.7 ms | PASS |
-| CAS Deduplication Check (2504.19754v1.pdf) | `201` (exp: `201`) | 9.7 ms | PASS |
-| Valid PDF Upload (2507.12425v1.pdf) | `201` (exp: `201`) | 10.4 ms | PASS |
-| CAS Deduplication Check (2507.12425v1.pdf) | `201` (exp: `201`) | 12.5 ms | PASS |
-| Corrupted PDF Header Rejection | `400` (exp: `400`) | 4.0 ms | PASS |
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| Valid PDF Upload (Attention Is All You Need.pdf) | `201` | 83.0 ms | PASS | Doc ID: 5b44ba0d-3986-4383-8f7d-8093cbd94526 | Hash: bdfaa68d8984... |
+| CAS Deduplication (Attention Is All You Need.pdf) | `201` | 13.9 ms | PASS | CAS Dedup Matched Hash: bdfaa68d8984... |
 
 ---
 
-## 2. Invariants & Architecture Checks
-- **CAS Deduplication**: Re-uploading identical binary computes exact SHA-256.
-- **Validation Ingress Barrier**: Corrupted PDF binary is rejected with HTTP 400.
-- **Zero-Storage Retention**: Ephemeral test tenant cleaned up on evaluation exit.
-- **Payload Integrity**: Checksums cryptographically bound to raw json artifacts.
+## 2. Invariants & Storage Integrity
+- **Content-Addressable Storage (CAS)**: Cryptographic SHA-256 matches bitwise identical uploads.
+- **Zero-Retention Hermetic Safety**: Temporary test documents are tracked and cascade-purged on context exit (or retained via `--keep-data`).
+- **Robust Multipart Parsing**: Validates special character preservation in filename payloads.
+- **Deterministic Refresh**: Output markdown refreshed cleanly at `temp/output/test/post_documents_upload.md`.
+
+---
+
+## 3. Full Raw Payloads (Untruncated)
+
+### Case 1: Valid PDF Upload (Attention Is All You Need.pdf) (Status: `201`)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "5b44ba0d-3986-4383-8f7d-8093cbd94526",
+    "filename": "Attention Is All You Need.pdf",
+    "file_size_bytes": 2215244,
+    "content_hash": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+    "status": "uploaded",
+    "stage": "queued",
+    "progress": 0,
+    "is_persistent": false,
+    "session_id": null,
+    "created_at": "2026-09-15T12:21:30.294849Z",
+    "links": {
+      "self_url": "/api/v1/documents/5b44ba0d-3986-4383-8f7d-8093cbd94526",
+      "status_url": "/api/v1/documents/5b44ba0d-3986-4383-8f7d-8093cbd94526/status",
+      "file_url": "/api/v1/documents/5b44ba0d-3986-4383-8f7d-8093cbd94526/file",
+      "parse_url": "/api/v1/documents/5b44ba0d-3986-4383-8f7d-8093cbd94526:parse"
+    }
+  },
+  "meta": {
+    "request_id": "req_8931c39395bd",
+    "timestamp": "2026-09-15T12:21:30.300277Z"
+  }
+}
+```
+
+### Case 2: CAS Deduplication (Attention Is All You Need.pdf) (Status: `201`)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "99c55a31-c222-40e2-acc6-b0225a55d442",
+    "filename": "copy_Attention Is All You Need.pdf",
+    "file_size_bytes": 2215244,
+    "content_hash": "bdfaa68d8984f0dc02beaca527b76f207d99b666d31d1da728ee0728182df697",
+    "status": "uploaded",
+    "stage": "queued",
+    "progress": 0,
+    "is_persistent": false,
+    "session_id": null,
+    "created_at": "2026-09-15T12:21:30.314367Z",
+    "links": {
+      "self_url": "/api/v1/documents/99c55a31-c222-40e2-acc6-b0225a55d442",
+      "status_url": "/api/v1/documents/99c55a31-c222-40e2-acc6-b0225a55d442/status",
+      "file_url": "/api/v1/documents/99c55a31-c222-40e2-acc6-b0225a55d442/file",
+      "parse_url": "/api/v1/documents/99c55a31-c222-40e2-acc6-b0225a55d442:parse"
+    }
+  },
+  "meta": {
+    "request_id": "req_4dfe5423072f",
+    "timestamp": "2026-09-15T12:21:30.315585Z"
+  }
+}
+```

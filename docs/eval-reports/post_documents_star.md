@@ -1,6 +1,6 @@
 # API Evaluation Snapshot: POST /api/v1/documents/{document_id}:star
 
-> **Audit Header**: Session Tag: `test_eval_a650fdf7` | Mode: Automated Autotest  
+> **Audit Header**: Session Tag: `test_eval_aa57ec6e` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/post_documents_star/`  
 > **Quality Gate**: **PASSED**
 
@@ -10,8 +10,8 @@
 
 | Scenario | Status | Latency | Result | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Library Star Promotion (folder_id: null) | `200` | 9.7 ms | PASS | is_persistent: True, folder_id: None |
-| Idempotent Star Invocation | `200` | 12.0 ms | PASS | Ensures idempotent persistence state update |
+| Library Star Promotion (folder_id: null) | `200` | 10.1 ms | PASS | is_persistent: True, folder_id: None |
+| Idempotent Star Invocation | `200` | 9.2 ms | PASS | Ensures idempotent persistence state update |
 
 ---
 

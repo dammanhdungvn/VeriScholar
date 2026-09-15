@@ -53,15 +53,16 @@ dmypy.json
 .ruff_cache/
 temp/
 
-# Local Storage & Runtime Artifacts (Root-only)
+# Local Storage & Runtime Artifacts
 /storage/
+apps/storage/
+apps/api/storage/
+storage/
 /data/*
 !/data/papers/
 /data/papers/*
 !/data/papers/*.expected.json
 !/data/papers/golden_eval_dataset.json
-
-apps/api/storage/
 
 # Node / Frontend
 node_modules/

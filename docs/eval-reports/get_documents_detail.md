@@ -1,6 +1,6 @@
 # API Evaluation Snapshot: GET /api/v1/documents/{document_id}
 
-> **Audit Header**: Session Tag: `test_eval_a650fdf7` | Mode: Automated Autotest  
+> **Audit Header**: Session Tag: `test_eval_aa57ec6e` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/get_documents_detail/`  
 > **Quality Gate**: **PASSED**
 
@@ -10,8 +10,8 @@
 
 | Scenario | Status | Latency | Result | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Fetch Valid Document Detail & Spatial Metadata | `200` | 6.5 ms | PASS | Filename: 1706.03762v7.pdf, Pages meta: True |
-| Non-existent Document ID (HTTP 404) | `404` | 4.7 ms | PASS | Error code: DOCUMENT_NOT_FOUND |
+| Fetch Valid Document Detail & Spatial Metadata | `200` | 5.6 ms | PASS | Filename: 1706.03762v7.pdf, Pages meta: True |
+| Non-existent Document ID (HTTP 404) | `404` | 4.5 ms | PASS | Error code: DOCUMENT_NOT_FOUND |
 
 ---
 

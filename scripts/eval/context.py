@@ -11,19 +11,27 @@ class EvaluationContext:
     """Async Context Manager providing an isolated evaluation session and guaranteed cleanup.
 
     Follows the Hermetic Testing principle:
-    - Session tagged with unique identifier.
+    - Session tagged with unique identifier (or custom user_id).
     - Connects directly via ASGITransport to the live FastAPI application, ensuring
       zero latency, direct connection to real PostgreSQL/Redis/Cloud services,
       and absolute immunity against stale out-of-process server cache.
     - Tracks all document IDs created during testing.
     - Cleans up tracked resources exclusively via the standard REST endpoint:
-      DELETE /api/v1/documents/{document_id}
+      DELETE /api/v1/documents/{document_id} (unless keep_data is requested for manual inspection).
     """
 
-    def __init__(self, base_url: str | None = None, use_live_server: bool = False):
+    def __init__(
+        self,
+        base_url: str | None = None,
+        use_live_server: bool = False,
+        keep_data: bool = False,
+        user_id: str | None = None,
+    ):
         self.base_url = base_url or "http://test"
         self.use_live_server = use_live_server
-        self.session_tag = f"test_eval_{uuid.uuid4().hex[:8]}"
+        self.keep_data = keep_data
+        self.user_id = user_id
+        self.session_tag = user_id if user_id else f"test_eval_{uuid.uuid4().hex[:8]}"
         self.headers = {
             "x-user-id": self.session_tag,
             "x-session-id": self.session_tag,
@@ -59,7 +67,9 @@ class EvaluationContext:
             self.created_document_ids.append(document_id)
 
     async def cleanup(self) -> list[str]:
-        """Purge all tracked documents using the standard REST API."""
+        """Purge all tracked documents using the standard REST API, unless keep_data is True."""
+        if self.keep_data:
+            return []
         cleaned = []
         if not self.client:
             return cleaned

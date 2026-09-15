@@ -1,15 +1,14 @@
 from pathlib import Path
 from typing import Literal
-
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Automatically locate workspace root from file location
-ROOT_DIR = Path(__file__).resolve().parents[3]
+# Monorepo Root Directory: apps/api/src/api/core -> parents[4] is repo root
+ROOT_DIR = Path(__file__).resolve().parents[4]
 
 
 def get_default_reload_dirs() -> list[str]:
-    """Dynamically resolves watch directories using absolute paths."""
+    """Dynamically resolves watch directories for uvicorn reloader."""
     api_src = ROOT_DIR / "apps" / "api" / "src"
     core_src = ROOT_DIR / "packages" / "core" / "src"
     dirs: list[str] = []
@@ -42,12 +41,17 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     RELOAD_DIRS: list[str] = Field(default_factory=get_default_reload_dirs)
 
+    # Storage settings (CAS Physical Blobs)
+    STORAGE_DIR: Path = ROOT_DIR / "storage" / "blobs"
+
     # Logging settings
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     LOG_FORMAT: Literal["console", "json"] = "console"
+    SQL_ECHO: bool = False
 
     # Database settings (PostgreSQL + pgvector)
     DATABASE_URL: str = "postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar"
+    TEST_DATABASE_URL: str | None = None
 
     @field_validator("DATABASE_URL", mode="after")
     @classmethod

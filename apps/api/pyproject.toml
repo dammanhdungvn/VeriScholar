@@ -21,6 +21,9 @@ dependencies = [
     "pgvector>=0.3.6",
 ]
 
+[tool.uv.sources]
+core = { workspace = true }
+
 [project.scripts]
 api = "api:main"
 

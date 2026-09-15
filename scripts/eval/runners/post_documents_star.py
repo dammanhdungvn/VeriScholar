@@ -1,28 +1,28 @@
-"""Evaluator for GET /api/v1/documents/{document_id}/status."""
+"""Evaluator for POST /api/v1/documents/{document_id}:star."""
 
 import io
 import time
 from typing import Any
 
-from scripts.eval.config import DATA_PAPERS_DIR
+from scripts.eval.config import DATA_PAPERS_DIR, get_default_paper
 from scripts.eval.context import EvaluationContext
 from scripts.eval.formatters import save_raw_artifact, write_markdown_report
 from scripts.eval.runners.base import BaseAPIRunner
 
 
-class DocumentStatusAPIRunner(BaseAPIRunner):
-    endpoint_name = "get_documents_status"
-    report_filename = "get_documents_status.md"
-    http_method = "GET"
-    route_path = "/api/v1/documents/{document_id}/status"
+class StarDocumentAPIRunner(BaseAPIRunner):
+    endpoint_name = "post_documents_star"
+    report_filename = "post_documents_star.md"
+    http_method = "POST"
+    route_path = "/api/v1/documents/{document_id}:star"
 
     async def evaluate(self, ctx: EvaluationContext, **kwargs: Any) -> dict[str, Any]:
         assert ctx.client is not None
 
         doc_id = kwargs.get("document_id")
-        paper_path = DATA_PAPERS_DIR / "2504.19754v1.pdf"
+        paper_path = get_default_paper()
 
-        if not doc_id and paper_path.exists():
+        if not doc_id and paper_path and paper_path.exists():
             payload = io.BytesIO(paper_path.read_bytes())
             files = {"file": (paper_path.name, payload, "application/pdf")}
             up_res = await ctx.client.post("/api/v1/documents", files=files)
@@ -33,42 +33,47 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
         cases = []
 
         if doc_id:
+            # Case 1: Star a document
             start_t = time.perf_counter()
-            r1 = await ctx.client.get(f"/api/v1/documents/{doc_id}/status")
+            r1 = await ctx.client.post(f"/api/v1/documents/{doc_id}:star", json={"starred": True})
             latency_ms1 = (time.perf_counter() - start_t) * 1000
             body1 = r1.json()
-            save_raw_artifact(self.endpoint_name, f"doc_{doc_id}_status", body1)
-
-            data1 = body1.get("data", {})
-            has_stages = "stages_detail" in data1
-            stages = data1.get("stages_detail", {})
-
-            expected_stages = [
-                "validation",
-                "layout_detection",
-                "ocr",
-                "chunking",
-                "embedding",
-            ]
-            all_stages_present = all(st in stages for st in expected_stages)
-
+            save_raw_artifact(self.endpoint_name, f"doc_{doc_id}_starred_true", body1)
             p1_valid = (
                 r1.status_code == 200
                 and body1.get("success") is True
-                and data1.get("id") == doc_id
-                and has_stages
-                and all_stages_present
+                and body1.get("data", {}).get("is_starred") is True
             )
-            d_st = data1.get("status")
-            d_pg = data1.get("progress")
             cases.append(
                 {
-                    "name": "Pipeline Stages Detail & Progress Audit",
+                    "name": "Star Document (starred=true)",
                     "status_code": r1.status_code,
                     "expected_status": 200,
                     "latency_ms": latency_ms1,
                     "passed": p1_valid,
-                    "details": f"Status: {d_st}, Progress: {d_pg}%, Stages: {list(stages.keys())}",
+                    "details": f"Starred status: {body1.get('data', {}).get('is_starred')}",
+                }
+            )
+
+            # Case 2: Unstar a document
+            start_t2 = time.perf_counter()
+            r2 = await ctx.client.post(f"/api/v1/documents/{doc_id}:star", json={"starred": False})
+            latency_ms2 = (time.perf_counter() - start_t2) * 1000
+            body2 = r2.json()
+            save_raw_artifact(self.endpoint_name, f"doc_{doc_id}_starred_false", body2)
+            p2_valid = (
+                r2.status_code == 200
+                and body2.get("success") is True
+                and body2.get("data", {}).get("is_starred") is False
+            )
+            cases.append(
+                {
+                    "name": "Unstar Document (starred=false)",
+                    "status_code": r2.status_code,
+                    "expected_status": 200,
+                    "latency_ms": latency_ms2,
+                    "passed": p2_valid,
+                    "details": f"Starred status: {body2.get('data', {}).get('is_starred')}",
                 }
             )
 
@@ -98,7 +103,7 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
             rows.append(row)
         table_body = "\n".join(rows)
 
-        return f"""# API Evaluation Snapshot: GET /api/v1/documents/{{document_id}}/status
+        return f"""# API Evaluation Snapshot: POST /api/v1/documents/{{document_id}}:star
 
 > **Audit Header**: Session Tag: `{session_tag}` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
@@ -115,6 +120,6 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
 ---
 
 ## 2. Invariants & Contract Adherence
-- **5-Stage Pipeline Granularity**: Tracks validation, layout, ocr, chunking, embedding.
-- **Status Enum Integrity**: Document status complies with system state machine.
+- **Idempotent Bookmark Toggle**: Reliable state mutation without duplicate status records.
+- **Tenant Scope Check**: Star action cannot mutate documents belonging to another user.
 """

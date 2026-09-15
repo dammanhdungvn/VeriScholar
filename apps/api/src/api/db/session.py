@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 engine = create_async_engine(
     settings.DATABASE_URL,
-    echo=settings.DEBUG,
+    echo=settings.SQL_ECHO,
     pool_pre_ping=True,
 )
 
@@ -28,4 +28,3 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
             await session.commit()
         except Exception:
             await session.rollback()
-            raise

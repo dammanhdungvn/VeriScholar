@@ -11,7 +11,7 @@ Tài liệu này cung cấp đặc tả kiến trúc và hướng dẫn vận h�
 | **Observability** | System Observability | Khả năng quan sát và đo lường trạng thái bên trong của hệ thống phần mềm thông qua các dữ liệu đầu ra như Logs (nhật ký), Metrics (chỉ số đo lường) và Traces (dấu vết cuộc gọi). |
 | **ASGI** | Asynchronous Server Gateway Interface | Chuẩn giao tiếp bất đồng bộ giữa máy chủ web Python (như Uvicorn) và ứng dụng web (FastAPI), cho phép xử lý hàng nghìn kết nối đồng thời mà không bị nghẽn. |
 | **Pure ASGI Middleware** | Pure ASGI Middleware (Outermost Layer) | Lớp phần mềm trung gian bọc ngoài cùng ứng dụng ở mức độ giao thức thuần túy; không dùng bộ đệm giữ dữ liệu trong RAM giúp ngăn ngừa tràn bộ nhớ (Memory Leak) khi truyền luồng dữ liệu dài. |
-| **TTFB** | Time-To-First-Byte | Thời gian phản hồi byte đầu tiên: Khoảng thời gian từ lúc client gửi request cho đến khoảnh khắc mili-giây đầu tiên máy chủ bắt đầu gửi mẩu dữ liệu đầu tiên về. |
+| **TTFB** | Time-To-First-Byte | Thời gian phản hồi byte đầu tiên: Khoảng thời gian từ lúc client gửi request cho đến khoảnh khắc mili-giây đầu tiên máy chủ bắt đầu gửi mẫu dữ liệu đầu tiên về. |
 | **PII Redaction** | Personally Identifiable Information Sanitization | Cơ chế tự động phát hiện và che giấu thông tin nhạy cảm (mật khẩu, mã khóa bí mật API keys, JWT Token) thành chuỗi `***REDACTED***` để bảo mật an toàn thông tin, không cho lộ ra file log. |
 | **Client Disconnect (HTTP 499)** | Client Closed Request (HTTP 499 Status) | Mã trạng thái ghi nhận khi người dùng chủ động đóng trình duyệt hoặc hủy thao tác giữa chừng trong lúc server đang tính toán xử lý; server sẽ lập tức dừng công việc để tiết kiệm tài nguyên. |
 | **Error Envelope** | Standardized Error Envelope | Bao thư lỗi chuẩn hóa: Mọi thông báo lỗi trả về cho người dùng đều có chung một cấu trúc JSON nhất quán (`success: false`, `error: { code, message, details }`), giúp lập trình viên frontend dễ dàng xử lý giao diện hiển thị. |
@@ -42,7 +42,7 @@ HTTP Request (Client gửi yêu cầu)
       │      └─► structlog.get_logger(...) [Nhật ký có cấu trúc JSON]
       │
       ├─► http.response.start ──► Tính ttfb_ms & Gắn tiêu đề X-Request-ID Header
-      ├─► http.response.body  ──► Stream SSE từng mẩu hoặc JSON Payload
+      ├─► http.response.body  ──► Stream SSE từng mẫu hoặc JSON Payload
       │
       ▼
 ┌────────────────────────────────────────────────────────┐
@@ -58,7 +58,7 @@ HTTP Request (Client gửi yêu cầu)
 
 | Thành phần | Đường dẫn | Trách nhiệm chính trong hệ thống |
 | :--- | :--- | :--- |
-| **Settings** *(Cấu hình)* | `apps/api/src/api/core/config.py` | Quản trị biến môi trường qua Pydantic Settings (`ENVIRONMENT`, `LOG_LEVEL`, `LOG_FORMAT`, `RELOAD_DIRS`) |
+| **Settings** *(Cấu hình)* | `apps/api/src/api/core/config.py` | Quản trị biến môi trường qua Pydantic Settings (`ENVIRONMENT`, `LOG_LEVEL`, `LOG_FORMAT`, `SQL_ECHO`, `RELOAD_DIRS`) |
 | **Core Logger** *(Bộ ghi nhật ký cốt lõi)* | `apps/api/src/api/core/logging.py` | Cấu hình structlog, bộ xử lý ProcessorFormatter, bộ lọc che giấu PII masking, vô hiệu hóa log mặc định `uvicorn.access` |
 | **Tracing** *(Bộ truy vết luồng)* | `apps/api/src/api/middleware/tracing.py` | Middleware đo lường TTFB, tổng thời gian xử lý (Total Duration), bẫy ngắt kết nối HTTP 499, quản trị contextvars |
 | **Error Schema** *(Lược đồ thông điệp lỗi)* | `apps/api/src/api/schemas/error.py` | Lớp dữ liệu Pydantic model định nghĩa cấu trúc chuẩn cho `ErrorDetail` và `ErrorResponse` |
@@ -136,3 +136,13 @@ curl -N http://127.0.0.1:8000/events
 # 4. Kiểm thử Bẫy Lỗi Đường dẫn không tồn tại (HTTP 404)
 curl -i http://127.0.0.1:8000/non-existent-route
 ```
+
+---
+
+## 6. KIỂM SOÁT NHẬT KÝ TRUY VẤN SQL (DATABASE QUERY LOG HYGIENE)
+
+| Biến cấu hình | Mặc định | Ý nghĩa & Khuyến nghị vận hành |
+| :--- | :--- | :--- |
+| `SQL_ECHO` | `false` | Điều khiển in câu lệnh SQL thô của SQLAlchemy Engine ra terminal. Thiết lập `false` trong môi trường phát triển và chạy test để ngăn ngừa ngập lụt màn hình (terminal flooding); chỉ bật `true` khi cần điều tra câu lệnh SQL cấp ORM chi tiết. |
+
+- Trong các kịch bản chạy kịch bản kiểm thử API tự động (`scripts/eval_api.py`), logger `sqlalchemy.engine` được mặc định cấu hình ở mức `WARNING` để bảo đảm màn hình terminal hiển thị ma trận kết quả sạch và trực quan. Kỹ sư có thể truyền cờ `--debug-sql` khi cần hiển thị toàn bộ câu lệnh SQL thô.

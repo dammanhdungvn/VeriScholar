@@ -18,13 +18,28 @@ elif ROOT_ENV.exists():
 
 # Paths
 DATA_PAPERS_DIR = PROJECT_ROOT / "data" / "papers"
+PAPERS_DIR = DATA_PAPERS_DIR
 FIXTURES_DIR = DATA_PAPERS_DIR / "fixtures"
-REPORTS_DIR = PROJECT_ROOT / "docs" / "eval-reports"
+TEMP_OUTPUT_TEST_DIR = PROJECT_ROOT / "temp" / "output" / "test"
+REPORTS_DIR = TEMP_OUTPUT_TEST_DIR
+LEGACY_REPORTS_DIR = PROJECT_ROOT / "docs" / "eval-reports"
 ARTIFACTS_DIR = PROJECT_ROOT / "tests" / ".artifacts"
 
 # Ensure directories exist
-REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+TEMP_OUTPUT_TEST_DIR.mkdir(parents=True, exist_ok=True)
+LEGACY_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def get_available_papers() -> list[Path]:
+    """Returns all non-corrupted PDF files currently present in DATA_PAPERS_DIR."""
+    return sorted([p for p in DATA_PAPERS_DIR.glob("*.pdf") if not p.name.startswith("corrupted")])
+
+
+def get_default_paper() -> Path | None:
+    """Returns the primary available PDF paper for prerequisite uploads."""
+    papers = get_available_papers()
+    return papers[0] if papers else None
 
 
 @dataclass(frozen=True)

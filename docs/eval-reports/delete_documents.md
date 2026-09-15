@@ -1,6 +1,6 @@
 # API Evaluation Snapshot: DELETE /api/v1/documents/{document_id}
 
-> **Audit Header**: Session Tag: `test_eval_a650fdf7` | Mode: Automated Autotest  
+> **Audit Header**: Session Tag: `test_eval_aa57ec6e` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/delete_documents/`  
 > **Quality Gate**: **PASSED**
 
@@ -10,9 +10,9 @@
 
 | Scenario | Status | Latency | Result | Notes |
 | :--- | :--- | :--- | :--- | :--- |
-| Zero-Retention Cascade Deletion | `204` | 11.4 ms | PASS | Status: HTTP 204 (Cascade delete succeeded) |
-| Immediate 404 Verification Post-Purge | `404` | 4.6 ms | PASS | Received HTTP 404 (DOCUMENT_NOT_FOUND) |
-| Non-existent Document Deletion Guard | `404` | 4.6 ms | PASS | Received HTTP 404 (DOCUMENT_NOT_FOUND) |
+| Zero-Retention Cascade Deletion | `204` | 11.6 ms | PASS | Status: HTTP 204 (Cascade delete succeeded) |
+| Immediate 404 Verification Post-Purge | `404` | 4.5 ms | PASS | Received HTTP 404 (DOCUMENT_NOT_FOUND) |
+| Non-existent Document Deletion Guard | `404` | 4.1 ms | PASS | Received HTTP 404 (DOCUMENT_NOT_FOUND) |
 
 ---
 

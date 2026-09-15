@@ -1,82 +1,79 @@
-"""VeriScholar Unified API Evaluation Harness CLI.
+"""VeriScholar API Evaluation & Snapshot Automation Harness.
 
-Allows executing automated autotest runner for a single API endpoint:
-    uv run python scripts/eval_api.py --api upload
-
-Or executing all 9 Module 1 endpoints sequentially in a unified test run:
-    uv run python scripts/eval_api.py --all
-
-Includes Anti-Cheating Invariant Gate: protects Ground Truth baseline immutability.
+Orchestrates sequential testing of Module 1 APIs against the Golden Papers Dataset,
+enforcing Quality Budgets, Zero-Cost VCR replay, and Anti-Cheat Invariants.
 """
 
 import argparse
 import asyncio
 import json
+import logging
 import signal
 import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
-# Ensure project root and API package source are in Python path
+# Ensure project root is in sys.path
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
-apps_api_src = PROJECT_ROOT / "apps" / "api" / "src"
-if apps_api_src.exists() and str(apps_api_src) not in sys.path:
-    sys.path.insert(0, str(apps_api_src))
-packages_core_src = PROJECT_ROOT / "packages" / "core" / "src"
-if packages_core_src.exists() and str(packages_core_src) not in sys.path:
-    sys.path.insert(0, str(packages_core_src))
 
-from scripts.eval.config import ARTIFACTS_DIR, REPORTS_DIR  # noqa: E402
+from scripts.eval.config import (  # noqa: E402
+    ARTIFACTS_DIR,
+    DATA_PAPERS_DIR,
+    REPORTS_DIR,
+    TEMP_OUTPUT_TEST_DIR,
+)
 from scripts.eval.context import EvaluationContext  # noqa: E402
-from scripts.eval.runners import MODULE_1_ORDER, RUNNERS_MAP  # noqa: E402
+from scripts.eval.runners import (  # noqa: E402
+    MODULE_1_ORDER,
+    RUNNERS_MAP,
+)
 
 
 def check_ground_truth_integrity(allow_blessed: bool = False) -> tuple[bool, str]:
-    """Verify that Ground Truth files have not been secretly tampered with."""
+    """Anti-Cheat Invariant 1: Ensures Golden Dataset ground truth files have not been modified."""
     if allow_blessed:
-        return True, "Ground truth modifications explicitly permitted via --bless."
+        return True, "Snapshot Blessing enabled (--bless)."
 
     try:
-        cmd = [
-            "git",
-            "status",
-            "--porcelain",
-            "--",
-            "data/papers/",
-        ]
-        res = subprocess.run(cmd, capture_output=True, text=True, cwd=PROJECT_ROOT)
-        lines = [line.strip() for line in res.stdout.splitlines() if line.strip()]
+        proc = subprocess.run(
+            ["git", "status", "--porcelain", "--", str(DATA_PAPERS_DIR)],
+            capture_output=True,
+            text=True,
+            cwd=PROJECT_ROOT,
+        )
+        if proc.returncode == 0 and proc.stdout.strip():
+            dirty_files = []
+            for line in proc.stdout.strip().splitlines():
+                if len(line) >= 3:
+                    file_path = line[3:].strip()
+                    if file_path.endswith(".expected.json") or file_path.endswith(
+                        "golden_eval_dataset.json"
+                    ):
+                        dirty_files.append(file_path)
 
-        # Detect modifications to existing tracked expected json files
-        tampered = []
-        for line in lines:
-            status_code = line[:2]
-            filename = line[3:]
-            if any(ext in filename for ext in [".expected.json", "golden_eval_dataset.json"]):
-                if any(c in status_code for c in ["M", "D", "R"]):
-                    tampered.append(f"  [{status_code}] {filename}")
-
-        if tampered:
-            msg = (
-                "[CRITICAL] VIOLATION: Phát hiện thay đổi trái phép trong Ground Truth baseline!\n"
-                + "\n".join(tampered)
-                + "\nĐể ngăn chặn Reward Hacking (Specification Gaming), runner tự hủy.\n"
-                "Nếu đây là thay đổi hợp thức do con người phê duyệt, hãy chạy kèm cờ: --bless"
-            )
-            return False, msg
-
-        return True, "Ground truth integrity verified (No illicit modifications)."
+            if dirty_files:
+                return False, (
+                    "PHÁT HIỆN GIAN LẬN: Tệp Ground Truth bị thay đổi trái phép:\n  "
+                    + "\n  ".join(dirty_files)
+                    + "\nSử dụng cờ --bless nếu bạn chủ đích cập nhật dữ liệu chuẩn đối chứng."
+                )
     except Exception as e:
-        return True, f"Git status check skipped: {e}"
+        return True, f"Bỏ qua kiểm tra git: {e}"
+
+    return True, "Ground Truth integrity verified."
 
 
 async def run_single_api(
     api_alias: str,
     base_url: str,
     ci_gate: bool = False,
+    keep_data: bool = False,
+    user_id: str | None = None,
+    paper: str | None = None,
+    interactive: bool = False,
 ) -> bool:
     """Execute evaluation for a single API endpoint."""
     if api_alias not in RUNNERS_MAP:
@@ -90,15 +87,21 @@ async def run_single_api(
     print(f"  Chạy Autotest Snapshot: [{runner.http_method}] {runner.route_path}")
     print("=" * 70)
 
-    async with EvaluationContext(base_url=base_url) as ctx:
+    async with EvaluationContext(
+        base_url=base_url,
+        keep_data=keep_data,
+        user_id=user_id,
+    ) as ctx:
         mode_str = "In-Process ASGI" if ctx._is_asgi_fallback else f"Live HTTP ({base_url})"
         print(f"[*] Phiên làm việc: {ctx.session_tag} | Kết nối: {mode_str}")
+        if keep_data:
+            print("[*] Chế độ Seed Data (--keep-data): Bảo tồn bản ghi database và tệp vật lý.")
 
-        result = await runner.evaluate(ctx)
+        result = await runner.evaluate(ctx, paper=paper, interactive=interactive)
         passed = result.get("all_passed", False)
         status_tag = "[PASS]" if passed else "[FAIL]"
-        report_path = REPORTS_DIR / runner.report_filename
-        print(f"{status_tag} Kết quả: {status_tag} | Báo cáo: {report_path}")
+        report_path = TEMP_OUTPUT_TEST_DIR / runner.report_filename
+        print(f"\n{status_tag} Kết quả: {status_tag} | Báo cáo đầy đủ: {report_path}")
 
         if not passed and ci_gate:
             return False
@@ -108,6 +111,9 @@ async def run_single_api(
 async def run_all_apis(
     base_url: str,
     ci_gate: bool = False,
+    keep_data: bool = False,
+    user_id: str | None = None,
+    interactive: bool = False,
 ) -> bool:
     """Execute end-to-end sequential evaluation for all 9 Module 1 APIs."""
     print("\n" + "=" * 72)
@@ -118,32 +124,19 @@ async def run_all_apis(
     passed_count = 0
     all_results: dict[str, Any] = {}
 
-    async with EvaluationContext(base_url=base_url) as ctx:
-        mode_str = "In-Process ASGI" if ctx._is_asgi_fallback else f"Live HTTP ({base_url})"
-        print(f"[*] Session Tenant: {ctx.session_tag} | Transport: {mode_str}\n")
-
-        # Share primary document_id across pipeline flow when possible
-        shared_doc_id = None
-
+    async with EvaluationContext(
+        base_url=base_url,
+        keep_data=keep_data,
+        user_id=user_id,
+    ) as ctx:
         for idx, alias in enumerate(MODULE_1_ORDER, 1):
             runner_cls = RUNNERS_MAP[alias]
             runner = runner_cls()
-            banner = f"[{idx}/{total}] Đánh giá: [{runner.http_method}] {runner.route_path} ..."
-            print(banner, end=" ")
-
+            print(f"\n[{idx}/{total}] Đang đánh giá: [{runner.http_method}] {runner.route_path}...")
             try:
-                res = await runner.evaluate(ctx, document_id=shared_doc_id)
-                passed = res.get("all_passed", False)
+                res = await runner.evaluate(ctx, interactive=interactive)
                 all_results[alias] = res
-
-                # Capture uploaded document_id for downstream pipeline endpoints
-                if alias == "upload":
-                    for c in res.get("cases", []):
-                        if c.get("doc_id"):
-                            shared_doc_id = c["doc_id"]
-                            break
-
-                if passed:
+                if res.get("all_passed", False):
                     passed_count += 1
                     print("✓ PASSED")
                 else:
@@ -168,7 +161,7 @@ async def run_all_apis(
     print("\n" + "=" * 72)
     print(f"  TỔNG KẾT: {passed_count}/{total} APIs ĐẠT CHUẨN QUALITY GATE")
     print(f"  Tệp chỉ số máy đọc: {summary_file}")
-    print(f"  Thư mục báo cáo Markdown: {REPORTS_DIR}")
+    print(f"  Thư mục báo cáo Markdown: {TEMP_OUTPUT_TEST_DIR}")
     print("=" * 72 + "\n")
 
     is_success = passed_count == total
@@ -206,8 +199,41 @@ def main() -> None:
         default="http://localhost:8000",
         help="Địa chỉ gốc của API server (Mặc định: http://localhost:8000)",
     )
+    parser.add_argument(
+        "--paper",
+        type=str,
+        default=None,
+        help="Chỉ định tệp paper PDF cụ thể để kiểm thử (ví dụ: 'Attention Is All You Need.pdf')",
+    )
+    parser.add_argument(
+        "--keep-data",
+        "-k",
+        action="store_true",
+        help="Giữ lại dữ liệu đã tạo trong DB (không dọn dẹp) để phục vụ kiểm thử thủ công/Swagger",
+    )
+    parser.add_argument(
+        "--user-id",
+        type=str,
+        default=None,
+        help="Gán session/user ID cụ thể cho việc nạp tài liệu (ví dụ để kiểm tra qua Swagger)",
+    )
+    parser.add_argument(
+        "--confirm-overwrite",
+        "-i",
+        action="store_true",
+        help="Dừng lại hỏi xác nhận ghi đè trước khi làm mới tệp báo cáo markdown đã tồn tại",
+    )
+    parser.add_argument(
+        "--debug-sql",
+        action="store_true",
+        help="Bật in log SQL chi tiết từ SQLAlchemy Engine ra terminal",
+    )
 
     args = parser.parse_args()
+
+    # Query log hygiene: silence verbose SQL logging unless explicitly asked
+    if not args.debug_sql:
+        logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
 
     if not args.api and not args.all:
         parser.print_help()
@@ -216,40 +242,51 @@ def main() -> None:
     # Invariant Gate: Check Ground Truth integrity against Git
     gt_ok, gt_msg = check_ground_truth_integrity(allow_blessed=args.bless)
     if not gt_ok:
-        print(f"\n{gt_msg}\n", file=sys.stderr)
+        print(f"\n[CRITICAL SECURITY GATE] {gt_msg}\n", file=sys.stderr)
         sys.exit(2)
 
-    # Attach signal handler for graceful cleanup
+    # Signal-Safe Cancellation setup
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     main_task = None
 
-    def handle_signal():
+    def handle_sig():
         if main_task and not main_task.done():
-            print("\n[WARN] Nhận tín hiệu ngắt. Kích hoạt dọn dẹp tài nguyên trước khi thoát...")
             main_task.cancel()
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
-            loop.add_signal_handler(sig, handle_signal)
+            loop.add_signal_handler(sig, handle_sig)
         except NotImplementedError:
             pass
 
-    async def runner_wrapper():
+    async def _runner():
         if args.api:
-            return await run_single_api(args.api, base_url=args.base_url, ci_gate=args.ci_gate)
+            return await run_single_api(
+                api_alias=args.api,
+                base_url=args.base_url,
+                ci_gate=args.ci_gate,
+                keep_data=args.keep_data,
+                user_id=args.user_id,
+                paper=args.paper,
+                interactive=args.confirm_overwrite,
+            )
         else:
-            return await run_all_apis(base_url=args.base_url, ci_gate=args.ci_gate)
+            return await run_all_apis(
+                base_url=args.base_url,
+                ci_gate=args.ci_gate,
+                keep_data=args.keep_data,
+                user_id=args.user_id,
+                interactive=args.confirm_overwrite,
+            )
 
+    main_task = loop.create_task(_runner())
     try:
-        main_task = loop.create_task(runner_wrapper())
         success = loop.run_until_complete(main_task)
         sys.exit(0 if success else 1)
-    except (KeyboardInterrupt, asyncio.CancelledError):
-        print("\n[INFO] Đã hủy tiến trình đánh giá theo yêu cầu.")
+    except asyncio.CancelledError:
+        print("\n[WARN] Nhận tín hiệu dừng (SIGINT). Đã dọn dẹp khép kín qua REST API.")
         sys.exit(130)
-    finally:
-        loop.close()
 
 
 if __name__ == "__main__":

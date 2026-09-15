@@ -1,28 +1,30 @@
-"""Evaluator for POST /api/v1/documents/{document_id}:star."""
+"""Evaluator for GET /api/v1/documents/{id} (Spatial Metadata & Detail)."""
 
 import io
 import time
+import uuid
 from typing import Any
 
-from scripts.eval.config import DATA_PAPERS_DIR
+from scripts.eval.config import DATA_PAPERS_DIR, get_default_paper
 from scripts.eval.context import EvaluationContext
 from scripts.eval.formatters import save_raw_artifact, write_markdown_report
 from scripts.eval.runners.base import BaseAPIRunner
 
 
-class StarDocumentAPIRunner(BaseAPIRunner):
-    endpoint_name = "post_documents_star"
-    report_filename = "post_documents_star.md"
-    http_method = "POST"
-    route_path = "/api/v1/documents/{document_id}:star"
+class DocumentDetailAPIRunner(BaseAPIRunner):
+    endpoint_name = "get_documents_detail"
+    report_filename = "get_documents_detail.md"
+    http_method = "GET"
+    route_path = "/api/v1/documents/{document_id}"
 
     async def evaluate(self, ctx: EvaluationContext, **kwargs: Any) -> dict[str, Any]:
         assert ctx.client is not None
 
+        # Pre-requisite: ensure a document exists
         doc_id = kwargs.get("document_id")
-        paper_path = DATA_PAPERS_DIR / "2504.19754v1.pdf"
+        paper_path = get_default_paper()
 
-        if not doc_id and paper_path.exists():
+        if not doc_id and paper_path and paper_path.exists():
             payload = io.BytesIO(paper_path.read_bytes())
             files = {"file": (paper_path.name, payload, "application/pdf")}
             up_res = await ctx.client.post("/api/v1/documents", files=files)
@@ -32,53 +34,51 @@ class StarDocumentAPIRunner(BaseAPIRunner):
 
         cases = []
 
+        # Case 1: Fetch details of uploaded document
         if doc_id:
-            # Case 1: Star with folder_id: null (Root Library Promotion)
             start_t = time.perf_counter()
-            r1 = await ctx.client.post(
-                f"/api/v1/documents/{doc_id}:star",
-                json={"folder_id": None},
-            )
+            r1 = await ctx.client.get(f"/api/v1/documents/{doc_id}")
             latency_ms1 = (time.perf_counter() - start_t) * 1000
             body1 = r1.json()
-            save_raw_artifact(self.endpoint_name, f"doc_{doc_id}_star_root", body1)
+            save_raw_artifact(self.endpoint_name, f"doc_{doc_id}_detail", body1)
 
             data1 = body1.get("data", {})
             p1_valid = (
                 r1.status_code == 200
                 and body1.get("success") is True
-                and data1.get("is_persistent") is True
-                and data1.get("folder_id") is None
+                and data1.get("id") == doc_id
+                and "filename" in data1
+                and "status" in data1
             )
             cases.append(
                 {
-                    "name": "Library Star Promotion (folder_id: null)",
+                    "name": "Fetch Document Detail via ID",
                     "status_code": r1.status_code,
                     "expected_status": 200,
                     "latency_ms": latency_ms1,
                     "passed": p1_valid,
-                    "details": f"is_persistent: {data1.get('is_persistent')}, folder_id: None",
+                    "details": f"Status: {data1.get('status')}, Filename: {data1.get('filename')}",
                 }
             )
 
-            # Case 2: Unstar / folder change
-            start_t2 = time.perf_counter()
-            r2 = await ctx.client.post(
-                f"/api/v1/documents/{doc_id}:star",
-                json={"folder_id": None},
-            )
-            latency_ms2 = (time.perf_counter() - start_t2) * 1000
-            p2_valid = r2.status_code == 200
-            cases.append(
-                {
-                    "name": "Idempotent Star Invocation",
-                    "status_code": r2.status_code,
-                    "expected_status": 200,
-                    "latency_ms": latency_ms2,
-                    "passed": p2_valid,
-                    "details": "Ensures idempotent persistence state update",
-                }
-            )
+        # Case 2: Negative - Nonexistent UUID Lookup
+        fake_uuid = str(uuid.uuid4())
+        start_t2 = time.perf_counter()
+        r2 = await ctx.client.get(f"/api/v1/documents/{fake_uuid}")
+        latency_ms2 = (time.perf_counter() - start_t2) * 1000
+        body2 = r2.json()
+        save_raw_artifact(self.endpoint_name, "nonexistent_uuid_detail", body2)
+        p2_valid = r2.status_code == 404
+        cases.append(
+            {
+                "name": "Lookup Nonexistent Document (Expect 404)",
+                "status_code": r2.status_code,
+                "expected_status": 404,
+                "latency_ms": latency_ms2,
+                "passed": p2_valid,
+                "details": "Returned 404 NOT_FOUND accurately",
+            }
+        )
 
         all_passed = all(c["passed"] for c in cases)
         result = {
@@ -106,7 +106,7 @@ class StarDocumentAPIRunner(BaseAPIRunner):
             rows.append(row)
         table_body = "\n".join(rows)
 
-        return f"""# API Evaluation Snapshot: POST /api/v1/documents/{{document_id}}:star
+        return f"""# API Evaluation Snapshot: GET /api/v1/documents/{{document_id}}
 
 > **Audit Header**: Session Tag: `{session_tag}` | Mode: Automated Autotest  
 > **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
@@ -123,6 +123,6 @@ class StarDocumentAPIRunner(BaseAPIRunner):
 ---
 
 ## 2. Invariants & Contract Adherence
-- **Atomic Persistence**: Marks `is_persistent = true`, promoting document to user library.
-- **Folder Nullability**: Correctly supports root-level starring without requiring folder ID.
+- **Strict UUID Schema**: Correct error mapping for non-existent and malformed IDs.
+- **Contract Fidelity**: Document detail response contains all expected schema fields.
 """

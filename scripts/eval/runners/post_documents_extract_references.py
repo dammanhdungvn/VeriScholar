@@ -12,6 +12,7 @@ from scripts.eval.config import DATA_PAPERS_DIR, QualityBudget
 from scripts.eval.context import EvaluationContext
 from scripts.eval.formatters import save_raw_artifact, write_markdown_report
 from scripts.eval.matchers import is_reference_match
+from scripts.eval.metrics import EntitySanityMetric, TextIntegrityMetric
 from scripts.eval.runners.base import BaseAPIRunner
 
 
@@ -24,6 +25,8 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
             report_filename="post_documents_extract_references.md",
         )
         self.budget = QualityBudget(min_recall=0.90, min_precision=0.95)
+        self.entity_metric = EntitySanityMetric()
+        self.text_metric = TextIntegrityMetric()
 
     async def evaluate(
         self,
@@ -133,6 +136,27 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
                 year_val = parsed.get("year")
                 if year_val and (year_val < 1900 or year_val > 2030):
                     linter_logs.append(f"[{paper_path.name}] #{idx}: Anomalous year {year_val}")
+
+            # Pluggable Deep Quality Metrics
+            parsed_entities = [
+                ext.get("parsed", {})
+                for ext in extracted_items
+                if isinstance(ext.get("parsed"), dict)
+            ]
+            if parsed_entities:
+                sanity_res = self.entity_metric.measure(parsed_entities)
+                for err in sanity_res.error_samples:
+                    err_msg = f"{err.get('error')} - {err.get('detail')}"
+                    linter_logs.append(f"[{paper_path.name}] Entity Anomaly: {err_msg}")
+
+            raw_combined = " ".join(
+                ext.get("raw_text", "") for ext in extracted_items if ext.get("raw_text")
+            )
+            if raw_combined:
+                text_res = self.text_metric.measure(raw_combined)
+                for err in text_res.error_samples:
+                    err_msg = f"{err.get('error')} - {err.get('detail')}"
+                    linter_logs.append(f"[{paper_path.name}] Text Anomaly: {err_msg}")
 
             # Calculate strict metrics
             if expected_path.exists():
