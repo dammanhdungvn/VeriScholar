@@ -2,8 +2,8 @@
 
 import hashlib
 import json
+import re
 import sys
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -32,70 +32,65 @@ def check_and_prepare_output_file(report_filename: str | Path, interactive: bool
 
     if target_path.exists():
         if interactive:
-            print(f"[?] Tệp báo cáo '{target_path.name}' đã tồn tại tại {TEMP_OUTPUT_TEST_DIR}.")
-            choice = input("    Bạn có muốn xóa để làm mới không? [y/N]: ").strip().lower()
+            print(f"\n[CẢNH BÁO] Tệp báo cáo '{target_path.name}' đã tồn tại tại {TEMP_OUTPUT_TEST_DIR}.")
+            choice = input("Bạn có muốn ghi đè và làm mới snapshot này không? (y/N): ").strip().lower()
             if choice not in ("y", "yes"):
-                print("[-] Hủy thao tác theo yêu cầu người dùng.")
+                print("[*] Đã hủy thao tác theo yêu cầu của bạn.")
                 sys.exit(0)
-
-        # Clean refresh
-        try:
-            target_path.unlink()
+        else:
             print(f"[*] Tệp báo cáo cũ đã tồn tại: {target_path.name} -> Tự động làm mới (Clean Refresh)...")
-        except OSError as e:
-            print(f"[!] Không thể xóa tệp báo cáo cũ: {e}")
 
     return target_path
 
 
 def smart_fold_for_terminal(
     val: Any,
-    max_list_items: int = 2,
-    max_str_len: int = 150,
+    max_list_items: int = 3,
+    max_str_len: int = 120,
     max_vector_dims: int = 4,
 ) -> Any:
-    """Recursively transforms heavy payloads for safe, compact terminal display.
-
-    Protections:
-    - Vector embeddings (list of floats > 4): folded to summary string.
-    - Long lists (> max_list_items): keeps head & tail, summarizes omitted middle.
-    - Binary content / base64: summarized into descriptive token.
-    - Long strings (> max_str_len): truncated with character count indicator.
-    """
+    """Recursively process response payloads for safe, readable terminal rendering."""
     if isinstance(val, (bytes, bytearray)):
         return f"[Binary stream payload: {len(val):,} bytes]"
 
-    if isinstance(val, list):
-        if len(val) == 0:
-            return []
-        # Check if this is an embedding vector (all numbers)
-        if len(val) > max_vector_dims and all(isinstance(x, (int, float)) for x in val[:5]):
-            dims = len(val)
-            head_sample = ", ".join(f"{x:.4f}" if isinstance(x, float) else str(x) for x in val[:3])
-            tail_sample = f"{val[-1]:.4f}" if isinstance(val[-1], float) else str(val[-1])
-            return f"[float vector x {dims} dimensions: {head_sample}, ... {tail_sample}]"
-
-        # Apply Head-Tail folding for long lists
-        if len(val) > max_list_items:
-            head = [smart_fold_for_terminal(item, max_list_items, max_str_len, max_vector_dims) for item in val[:max_list_items]]
-            tail = [smart_fold_for_terminal(val[-1], max_list_items, max_str_len, max_vector_dims)]
-            omitted = len(val) - max_list_items - 1
-            if omitted > 0:
-                head.append(f"... [{omitted} phần tử đã được gấp gọn - xem toàn bộ tại temp/output/test/...] ...")
-            head.extend(tail)
-            return head
-
-        return [smart_fold_for_terminal(item, max_list_items, max_str_len, max_vector_dims) for item in val]
-
     if isinstance(val, dict):
-        folded_dict: dict[str, Any] = {}
+        folded_dict = {}
         for k, v in val.items():
-            # Check for base64 / binary markers
-            if isinstance(v, str) and (k.endswith(("_base64", "_data", "_binary")) or len(v) > 500 and v.startswith("data:image/")):
-                folded_dict[k] = f"[base64/data token: {len(v):,} characters]"
-            else:
-                folded_dict[k] = smart_fold_for_terminal(v, max_list_items, max_str_len, max_vector_dims)
+            k_lower = k.lower()
+            # 1. Truncate long hex / binary strings
+            if isinstance(v, str) and ("hash" in k_lower or "sha256" in k_lower or len(v) > 64):
+                if re.fullmatch(r"[a-fA-F0-9]{64,}", v):
+                    folded_dict[k] = f"{v[:8]}...{v[-8:]} (hash {len(v)} hex)"
+                    continue
+
+            # 2. Vector embedding folding
+            if (
+                isinstance(v, list)
+                and len(v) > max_vector_dims
+                and all(isinstance(x, (int, float)) for x in v[:5])
+            ):
+                head = [round(x, 4) if isinstance(x, float) else x for x in v[:3]]
+                folded_dict[k] = f"[{', '.join(map(str, head))}, ...] (vector len: {len(v)})"
+                continue
+
+            # 3. List of items: keep head and tail if long
+            if isinstance(v, list) and len(v) > max_list_items:
+                head_items = [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in v[:2]]
+                tail_item = smart_fold_for_terminal(v[-1], max_list_items, max_str_len, max_vector_dims)
+                omitted_count = len(v) - 3
+                folded_dict[k] = head_items + [f"... [{omitted_count} items omitted] ...", tail_item]
+                continue
+
+            folded_dict[k] = smart_fold_for_terminal(v, max_list_items, max_str_len, max_vector_dims)
         return folded_dict
+
+    if isinstance(val, list):
+        if len(val) > max_list_items:
+            head_items = [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in val[:2]]
+            tail_item = smart_fold_for_terminal(val[-1], max_list_items, max_str_len, max_vector_dims)
+            omitted_count = len(val) - 3
+            return head_items + [f"... [{omitted_count} items omitted] ...", tail_item]
+        return [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in val]
 
     if isinstance(val, str):
         if len(val) > max_str_len:
@@ -132,7 +127,7 @@ def format_terminal_box(
     if req_headers:
         lines.append("│ HEADERS:")
         for hk, hv in req_headers.items():
-            if hk.lower() in ("x-user-id", "content-type", "accept", "authorization", "idempotency-key"):
+            if hk.lower() in ("x-user-id", "content-type", "accept", "authorization", "idempotency-key", "range"):
                 lines.append(f"│   {hk:<13}: {hv}")
     if form_data:
         lines.append("│ FORM-DATA:")
@@ -147,12 +142,19 @@ def format_terminal_box(
     lines.append("└─────────────────────────────────────────────────────────────────────────────")
 
     # 2. RESPONSE OUTPUT BOX
-    lines.append(f"\n┌── [RESPONSE OUTPUT] (HTTP {status_code} | {latency_ms:.1f} ms) ─────────────────────────────────────")
+    lines.append(f"\n┌── [RESPONSE OUTPUT] (HTTP {status_code} | {latency_ms:.1f} ms) ─────────────────────")
     if res_headers:
         lines.append("│ HEADERS:")
         for rhk, rhv in res_headers.items():
-            if rhk.lower() in ("content-type", "x-request-id", "content-length", "content-range"):
-                lines.append(f"│   {rhk:<13}: {rhv}")
+            if rhk.lower() in (
+                "content-type",
+                "x-request-id",
+                "content-length",
+                "content-range",
+                "accept-ranges",
+                "content-disposition",
+            ):
+                lines.append(f"│   {rhk:<19}: {rhv}")
     if res_body is not None:
         lines.append("│ BODY:")
         folded_res = smart_fold_for_terminal(res_body)
