@@ -22,12 +22,10 @@ PAPERS_DIR = DATA_PAPERS_DIR
 FIXTURES_DIR = DATA_PAPERS_DIR / "fixtures"
 TEMP_OUTPUT_TEST_DIR = PROJECT_ROOT / "temp" / "output" / "test"
 REPORTS_DIR = TEMP_OUTPUT_TEST_DIR
-LEGACY_REPORTS_DIR = PROJECT_ROOT / "docs" / "eval-reports"
 ARTIFACTS_DIR = PROJECT_ROOT / "tests" / ".artifacts"
 
 # Ensure directories exist
 TEMP_OUTPUT_TEST_DIR.mkdir(parents=True, exist_ok=True)
-LEGACY_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
@@ -44,10 +42,11 @@ def get_default_paper() -> Path | None:
 
 @dataclass(frozen=True)
 class QualityBudget:
-    """Quality budget thresholds for CI/CD gates and evaluation passes."""
+    """Quality budget thresholds for evaluation gate."""
 
-    min_recall: float = 0.90
-    min_precision: float = 0.95
-    min_spatial_iou: float = 0.70
-    max_latency_ms: float = 10000.0
-    allow_critical_warnings: bool = False
+    max_latency_ms: float = 2000.0
+    min_cascading_f1: float = 0.80
+    min_spatial_iou: float = 0.85
+    min_text_edit_ratio: float = 0.90
+    min_citation_coverage: float = 0.85
+    zero_hallucination_required: bool = True

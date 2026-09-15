@@ -9,7 +9,6 @@ from typing import Any
 
 from scripts.eval.config import (
     ARTIFACTS_DIR,
-    LEGACY_REPORTS_DIR,
     REPORTS_DIR,
     TEMP_OUTPUT_TEST_DIR,
 )
@@ -24,51 +23,156 @@ def compute_sha256(data: Any) -> str:
 def check_and_prepare_output_file(report_filename: str | Path, interactive: bool = False) -> Path:
     """Checks if the target markdown report file already exists in temp/output/test/.
 
-    If exists, either prompts the developer for overwrite permission or cleanly refreshes it.
+    If it exists:
+    - If interactive=True, prompts the user (y/n) to overwrite.
+    - If interactive=False (default/CI), cleanly deletes the old report and prepares for refresh.
     """
     TEMP_OUTPUT_TEST_DIR.mkdir(parents=True, exist_ok=True)
-    report_path = (
-        report_filename
-        if isinstance(report_filename, Path) and report_filename.is_absolute()
-        else TEMP_OUTPUT_TEST_DIR / Path(report_filename).name
-    )
+    target_path = TEMP_OUTPUT_TEST_DIR / Path(report_filename).name
 
-    if report_path.exists():
+    if target_path.exists():
         if interactive:
-            sys.stdout.write(
-                f"\n[?] Tệp '{report_path.name}' đã tồn tại trong temp/output/test/.\n"
-                "    Bạn có muốn làm mới và ghi đè? (y/n): "
-            )
-            sys.stdout.flush()
-            choice = sys.stdin.readline().strip().lower()
+            print(f"[?] Tệp báo cáo '{target_path.name}' đã tồn tại tại {TEMP_OUTPUT_TEST_DIR}.")
+            choice = input("    Bạn có muốn xóa để làm mới không? [y/N]: ").strip().lower()
             if choice not in ("y", "yes"):
-                print("    [!] Hủy tiến trình ghi đè báo cáo theo yêu cầu.")
-                return report_path
+                print("[-] Hủy thao tác theo yêu cầu người dùng.")
+                sys.exit(0)
 
-        print(f"[*] Tệp báo cáo cũ đã tồn tại: {report_path.name} -> Tự động làm mới (Clean Refresh)...")
+        # Clean refresh
         try:
-            report_path.unlink()
-        except OSError:
-            pass
+            target_path.unlink()
+            print(f"[*] Tệp báo cáo cũ đã tồn tại: {target_path.name} -> Tự động làm mới (Clean Refresh)...")
+        except OSError as e:
+            print(f"[!] Không thể xóa tệp báo cáo cũ: {e}")
 
-    return report_path
-
-
-def save_raw_artifact(endpoint_name: str, test_scenario: str, payload: Any) -> tuple[Path, str]:
-    """Saves raw API response into hermetic artifact folder, decoupled from report Markdown."""
-    target_dir = ARTIFACTS_DIR / endpoint_name
-    target_dir.mkdir(parents=True, exist_ok=True)
-
-    filename = f"{test_scenario}.json"
-    file_path = target_dir / filename
-
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(payload, f, indent=2, ensure_ascii=False)
-
-    return file_path, compute_sha256(payload)
+    return target_path
 
 
-def fold_heavy_payload(data: Any, max_list_items: int = 3) -> Any:
+def smart_fold_for_terminal(
+    val: Any,
+    max_list_items: int = 2,
+    max_str_len: int = 150,
+    max_vector_dims: int = 4,
+) -> Any:
+    """Recursively transforms heavy payloads for safe, compact terminal display.
+
+    Protections:
+    - Vector embeddings (list of floats > 4): folded to summary string.
+    - Long lists (> max_list_items): keeps head & tail, summarizes omitted middle.
+    - Binary content / base64: summarized into descriptive token.
+    - Long strings (> max_str_len): truncated with character count indicator.
+    """
+    if isinstance(val, (bytes, bytearray)):
+        return f"[Binary stream payload: {len(val):,} bytes]"
+
+    if isinstance(val, list):
+        if len(val) == 0:
+            return []
+        # Check if this is an embedding vector (all numbers)
+        if len(val) > max_vector_dims and all(isinstance(x, (int, float)) for x in val[:5]):
+            dims = len(val)
+            head_sample = ", ".join(f"{x:.4f}" if isinstance(x, float) else str(x) for x in val[:3])
+            tail_sample = f"{val[-1]:.4f}" if isinstance(val[-1], float) else str(val[-1])
+            return f"[float vector x {dims} dimensions: {head_sample}, ... {tail_sample}]"
+
+        # Apply Head-Tail folding for long lists
+        if len(val) > max_list_items:
+            head = [smart_fold_for_terminal(item, max_list_items, max_str_len, max_vector_dims) for item in val[:max_list_items]]
+            tail = [smart_fold_for_terminal(val[-1], max_list_items, max_str_len, max_vector_dims)]
+            omitted = len(val) - max_list_items - 1
+            if omitted > 0:
+                head.append(f"... [{omitted} phần tử đã được gấp gọn - xem toàn bộ tại temp/output/test/...] ...")
+            head.extend(tail)
+            return head
+
+        return [smart_fold_for_terminal(item, max_list_items, max_str_len, max_vector_dims) for item in val]
+
+    if isinstance(val, dict):
+        folded_dict: dict[str, Any] = {}
+        for k, v in val.items():
+            # Check for base64 / binary markers
+            if isinstance(v, str) and (k.endswith(("_base64", "_data", "_binary")) or len(v) > 500 and v.startswith("data:image/")):
+                folded_dict[k] = f"[base64/data token: {len(v):,} characters]"
+            else:
+                folded_dict[k] = smart_fold_for_terminal(v, max_list_items, max_str_len, max_vector_dims)
+        return folded_dict
+
+    if isinstance(val, str):
+        if len(val) > max_str_len:
+            omitted_chars = len(val) - max_str_len
+            return f"{val[:max_str_len]}... [{omitted_chars} ký tự tiếp theo]"
+        return val
+
+    return val
+
+
+def format_terminal_box(
+    method: str,
+    path: str,
+    req_headers: dict[str, Any] | None = None,
+    form_data: dict[str, Any] | None = None,
+    req_body: Any | None = None,
+    status_code: int = 200,
+    latency_ms: float = 0.0,
+    res_headers: dict[str, Any] | None = None,
+    res_body: Any | None = None,
+    quality_checks: list[tuple[bool, str]] | None = None,
+) -> str:
+    """Renders a structured, beautiful 3-part Unicode boxed HTTP exchange on the terminal.
+
+    Box 1: [REQUEST INPUT]
+    Box 2: [RESPONSE OUTPUT] (with smart payload folding)
+    Box 3: [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ]
+    """
+    lines: list[str] = []
+
+    # 1. REQUEST INPUT BOX
+    lines.append("┌── [REQUEST INPUT] ──────────────────────────────────────────────────────────")
+    lines.append(f"│ METHOD : {method.upper()} {path}")
+    if req_headers:
+        lines.append("│ HEADERS:")
+        for hk, hv in req_headers.items():
+            if hk.lower() in ("x-user-id", "content-type", "accept", "authorization", "idempotency-key"):
+                lines.append(f"│   {hk:<13}: {hv}")
+    if form_data:
+        lines.append("│ FORM-DATA:")
+        for fk, fv in form_data.items():
+            lines.append(f"│   {fk:<13}: {fv}")
+    if req_body is not None:
+        lines.append("│ BODY:")
+        folded_req = smart_fold_for_terminal(req_body)
+        body_text = json.dumps(folded_req, indent=2, ensure_ascii=False)
+        for bl in body_text.splitlines():
+            lines.append(f"│ {bl}")
+    lines.append("└─────────────────────────────────────────────────────────────────────────────")
+
+    # 2. RESPONSE OUTPUT BOX
+    lines.append(f"\n┌── [RESPONSE OUTPUT] (HTTP {status_code} | {latency_ms:.1f} ms) ─────────────────────────────────────")
+    if res_headers:
+        lines.append("│ HEADERS:")
+        for rhk, rhv in res_headers.items():
+            if rhk.lower() in ("content-type", "x-request-id", "content-length", "content-range"):
+                lines.append(f"│   {rhk:<13}: {rhv}")
+    if res_body is not None:
+        lines.append("│ BODY:")
+        folded_res = smart_fold_for_terminal(res_body)
+        res_text = json.dumps(folded_res, indent=2, ensure_ascii=False)
+        for rl in res_text.splitlines():
+            lines.append(f"│ {rl}")
+    lines.append("└─────────────────────────────────────────────────────────────────────────────")
+
+    # 3. QUALITY ASSURANCE & VERIFICATION BOX
+    if quality_checks:
+        lines.append("\n┌── [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ] ────────────────────────────────────────")
+        for passed, label in quality_checks:
+            icon = "✓" if passed else "✗"
+            lines.append(f"│ {icon} {label}")
+        lines.append("└─────────────────────────────────────────────────────────────────────────────")
+
+    return "\n".join(lines)
+
+
+def fold_heavy_payload(data: Any, max_vector_dim: int = 4, max_list_items: int = 3) -> Any:
     """Recursively folds massive data fields (embeddings, base64 strings, long lists)
 
     to ensure logs and markdown summaries never cause context overflow (< 50 KB).
@@ -91,168 +195,43 @@ def fold_heavy_payload(data: Any, max_list_items: int = 3) -> Any:
             # 3. Fold long item lists (e.g. chunks, pages)
             elif isinstance(v, list) and len(v) > max_list_items:
                 folded[k] = [
-                    fold_heavy_payload(v[0], max_list_items),
+                    fold_heavy_payload(v[0], max_vector_dim, max_list_items),
                     f"... {len(v) - 2} items folded (inspect via CLI) ...",
-                    fold_heavy_payload(v[-1], max_list_items),
+                    fold_heavy_payload(v[-1], max_vector_dim, max_list_items),
                 ]
             else:
-                folded[k] = fold_heavy_payload(v, max_list_items)
+                folded[k] = fold_heavy_payload(v, max_vector_dim, max_list_items)
         return folded
     elif isinstance(data, list):
         if len(data) > max_list_items:
             return [
-                fold_heavy_payload(data[0], max_list_items),
+                fold_heavy_payload(data[0], max_vector_dim, max_list_items),
                 f"... {len(data) - 2} items folded (inspect via CLI) ...",
-                fold_heavy_payload(data[-1], max_list_items),
+                fold_heavy_payload(data[-1], max_vector_dim, max_list_items),
             ]
-        return [fold_heavy_payload(x, max_list_items) for x in data]
+        return [fold_heavy_payload(item, max_vector_dim, max_list_items) for item in data]
     return data
 
 
-def smart_fold_for_terminal(data: Any, max_list_items: int = 2, max_str_len: int = 200) -> Any:
-    """Intelligently folds massive fields (vectors, binaries, base64, long arrays)
+def save_raw_artifact(endpoint_name: str, scenario_tag: str, payload: Any) -> tuple[Path, str]:
+    """Saves raw untruncated JSON payload into tests/.artifacts/<endpoint_name>/."""
+    endpoint_dir = ARTIFACTS_DIR / endpoint_name
+    endpoint_dir.mkdir(parents=True, exist_ok=True)
 
-    for terminal display to keep the screen readable, fast, and prevent freezing.
-    """
-    if isinstance(data, (bytes, bytearray)):
-        return f"[Binary stream: {len(data):,} bytes]"
+    artifact_file = endpoint_dir / f"{scenario_tag}.json"
+    with open(artifact_file, "w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
 
-    if isinstance(data, str):
-        if data.startswith("data:image/") or (len(data) > 500 and " " not in data[:100]):
-            return f"[base64 payload ({len(data):,} bytes)]"
-        if len(data) > max_str_len:
-            return data[:max_str_len] + f"... [{len(data) - max_str_len} ký tự tiếp theo]"
-        return data
-
-    if isinstance(data, dict):
-        folded: dict[str, Any] = {}
-        for k, v in data.items():
-            # Vectors
-            if k in ("embedding", "embeddings", "vector", "vectors", "dense_vector") and isinstance(
-                v, list
-            ):
-                if v and all(isinstance(x, (int, float)) for x in v[:5]):
-                    preview = f"{v[0]:.3f}, {v[1]:.3f}, ... {v[-1]:.3f}" if len(v) >= 2 else ""
-                    folded[k] = f"[float vector x {len(v)} dimensions: {preview}]"
-                    continue
-            # Binaries / Base64
-            if (
-                k in ("thumbnail", "thumbnail_base64", "pdf_bytes", "content_bytes")
-                and isinstance(v, str)
-                and len(v) > 80
-            ):
-                folded[k] = f"[base64 payload ({len(v):,} bytes)]"
-                continue
-            folded[k] = smart_fold_for_terminal(v, max_list_items, max_str_len)
-        return folded
-
-    if isinstance(data, list):
-        if not data:
-            return []
-        # Float vector check
-        if len(data) > 10 and all(isinstance(x, (int, float)) for x in data[:5]):
-            preview = f"{data[0]:.3f}, {data[1]:.3f}, ... {data[-1]:.3f}"
-            return f"[float vector x {len(data)} dimensions: {preview}]"
-
-        if len(data) > max_list_items:
-            first_folded = smart_fold_for_terminal(data[0], max_list_items, max_str_len)
-            folded_list = [first_folded]
-            if max_list_items >= 2 and len(data) > 2:
-                second_folded = smart_fold_for_terminal(data[1], max_list_items, max_str_len)
-                folded_list.append(second_folded)
-            folded_list.append(
-                f"... [{len(data) - len(folded_list)} phần tử đã được gấp gọn - xem toàn bộ tại file markdown] ..."
-            )
-            folded_list.append(smart_fold_for_terminal(data[-1], max_list_items, max_str_len))
-            return folded_list
-
-        return [smart_fold_for_terminal(x, max_list_items, max_str_len) for x in data]
-
-    return data
-
-
-def format_terminal_box(
-    method: str,
-    path: str,
-    req_headers: dict[str, Any] | None,
-    form_data: dict[str, Any] | None,
-    req_body: Any | None,
-    status_code: int,
-    latency_ms: float,
-    res_headers: dict[str, Any] | None,
-    res_body: Any | None,
-    quality_checks: list[tuple[bool, str]],
-) -> str:
-    """Renders a beautiful 3-part boxed HTTP Exchange view for developer & AI terminal inspection."""
-    lines: list[str] = []
-    w = 78
-
-    # 1. REQUEST INPUT BOX
-    lines.append("┌── [REQUEST INPUT] " + "─" * (w - 20))
-    lines.append(f"│ METHOD : {method} {path}")
-    if req_headers:
-        lines.append("│ HEADERS:")
-        for k, v in req_headers.items():
-            lines.append(f"│   {k:<13}: {v}")
-    if form_data:
-        lines.append("│ FORM-DATA:")
-        for k, v in form_data.items():
-            lines.append(f"│   {k:<13}: {v}")
-    elif req_body is not None:
-        lines.append("│ BODY:")
-        folded_req = smart_fold_for_terminal(req_body)
-        body_json = json.dumps(folded_req, indent=2, ensure_ascii=False)
-        for bline in body_json.splitlines():
-            lines.append(f"│ {bline}")
-    lines.append("└" + "─" * (w - 1))
-
-    # 2. RESPONSE OUTPUT BOX
-    res_title = f"HTTP {status_code} | {latency_ms:.1f} ms"
-    lines.append(f"\n┌── [RESPONSE OUTPUT] ({res_title}) " + "─" * max(2, w - 24 - len(res_title)))
-    if res_headers:
-        lines.append("│ HEADERS:")
-        for k in ("content-type", "x-request-id", "content-length"):
-            if k in res_headers:
-                lines.append(f"│   {k:<13}: {res_headers[k]}")
-    lines.append("│ BODY:")
-    if isinstance(res_body, (bytes, bytearray)):
-        lines.append(f"│ [Binary stream payload: {len(res_body):,} bytes - application/pdf]")
-    elif res_body is not None:
-        folded_res = smart_fold_for_terminal(res_body)
-        body_str = (
-            json.dumps(folded_res, indent=2, ensure_ascii=False)
-            if isinstance(folded_res, (dict, list))
-            else str(folded_res)
-        )
-        for bline in body_str.splitlines():
-            lines.append(f"│ {bline}")
-    lines.append("└" + "─" * (w - 1))
-
-    # 3. QUALITY CHECK MATRIX BOX
-    lines.append("\n┌── [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ] " + "─" * (w - 38))
-    for passed, detail in quality_checks:
-        icon = "✓" if passed else "✗"
-        lines.append(f"│ {icon} {detail}")
-    lines.append("└" + "─" * (w - 1))
-
-    return "\n".join(lines)
+    sha = compute_sha256(payload)
+    return artifact_file, sha
 
 
 def write_markdown_report(report_name: str, content: str) -> Path:
-    """Writes standardized evaluation markdown report into temp/output/test/ and mirrors to legacy."""
+    """Writes standardized evaluation markdown report into temp/output/test/."""
     TEMP_OUTPUT_TEST_DIR.mkdir(parents=True, exist_ok=True)
     report_path = TEMP_OUTPUT_TEST_DIR / Path(report_name).name
 
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(content.strip() + "\n")
-
-    # Mirror to legacy docs/eval-reports for backward compatibility
-    try:
-        LEGACY_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-        legacy_path = LEGACY_REPORTS_DIR / Path(report_name).name
-        with open(legacy_path, "w", encoding="utf-8") as f:
-            f.write(content.strip() + "\n")
-    except OSError:
-        pass
 
     return report_path
