@@ -21,6 +21,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "star": StarDocumentAPIRunner,
     "parse": ParseDocumentAPIRunner,
     "extract-references": ExtractReferencesAPIRunner,
+    "extract-refs": ExtractReferencesAPIRunner,
     "delete": DeleteDocumentAPIRunner,
     # Canonical Endpoint Identifiers (Matching File Names 1-to-1)
     "post_documents_upload": UploadAPIRunner,
@@ -48,6 +49,8 @@ MODULE_1_ORDER = [
 
 __all__ = [
     "BaseAPIRunner",
+    "RUNNERS_MAP",
+    "MODULE_1_ORDER",
     "UploadAPIRunner",
     "ListDocumentsAPIRunner",
     "DocumentDetailAPIRunner",
@@ -57,6 +60,4 @@ __all__ = [
     "ParseDocumentAPIRunner",
     "ExtractReferencesAPIRunner",
     "DeleteDocumentAPIRunner",
-    "RUNNERS_MAP",
-    "MODULE_1_ORDER",
 ]

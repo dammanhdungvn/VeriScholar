@@ -1,32 +1,45 @@
-# 🛠️ Hướng Dẫn Vận Hành Scripts Kiểm Thử Tự Động (Evaluation Harness)
+# 🧪 VeriScholar Evaluation Harness & Script Guide
 
-Thư mục `scripts/` chứa toàn bộ công cụ dòng lệnh (CLI) phục vụ việc chạy kiểm thử tự động (**Autotest Snapshots**), đo lường độ trễ, kiểm chứng chất lượng nghiệp vụ (CAS Deduplication, Phân trang RFC 8288, Trích xuất tham khảo, Bounding Box IoU) và soi chiếu dữ liệu chi tiết của hệ thống **VeriScholar**.
+Tài liệu hướng dẫn sử dụng và vận hành bộ công cụ kiểm thử tự động (**Evaluation Harness / Autotest**) cho các API thuộc **Module 1 (Document Ingestion & Management)** theo đúng tiêu chuẩn thiết kế [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
 
 ---
 
-## 📌 1. Bảng Tra Cứu Lệnh Chạy Từng API (API Evaluation Reference Table)
+## 📌 1. Danh Mục Các API Đã Hoàn Thiện Runner
 
-Hệ thống hỗ trợ 2 chế độ chạy cho mỗi API:
-- **Chạy Trọn Vẹn (Full Dataset - Mặc Định):** Duyệt qua toàn bộ danh mục tài liệu mẫu có trong `data/papers/` và các kịch bản biên.
-- **Chạy Lẻ (Single Target):** Thêm cờ `--paper "<tên_bài_báo.pdf>"` khi bạn muốn tập trung debug nhanh một bài báo cụ thể.
+Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn bộ theo quy trình chuẩn hóa:
 
-| STT | Phương Thức & Route | Alias CLI | Lệnh Chạy Toàn Bộ (Full Dataset) | Lệnh Chạy Lẻ 1 Bài Báo (Single Paper) |
+| STT | API Endpoint (Canonical) | Alias Ngắn | Lệnh Chạy Toàn Bộ Dataset | Lệnh Chạy Đơn Lẻ 1 Bài Báo |
 | :---: | :--- | :---: | :--- | :--- |
 | **1** | `POST /api/v1/documents` | `upload` | `uv run python scripts/eval_api.py --api upload --bless` | `uv run python scripts/eval_api.py --api upload --paper "Attention Is All You Need.pdf" --bless` |
-| **2** | `GET /api/v1/documents` | `list` | `uv run python scripts/eval_api.py --api list --bless` | *(API danh sách không áp dụng lọc lẻ theo bài báo)* |
+| **2** | `GET /api/v1/documents` | `list` | `uv run python scripts/eval_api.py --api list --bless` | `uv run python scripts/eval_api.py --api list --paper "Attention Is All You Need.pdf" --bless` |
 | **3** | `GET /api/v1/documents/{id}` | `detail` | `uv run python scripts/eval_api.py --api detail --bless` | `uv run python scripts/eval_api.py --api detail --paper "Attention Is All You Need.pdf" --bless` |
 | **4** | `GET /api/v1/documents/{id}/file` | `stream` | `uv run python scripts/eval_api.py --api stream --bless` | `uv run python scripts/eval_api.py --api stream --paper "Attention Is All You Need.pdf" --bless` |
-| **5** | `GET /api/v1/documents/{id}/status` | `status` | `uv run python scripts/eval_api.py --api status --bless` | `uv run python scripts/eval_api.py --api status --paper "Attention Is All You Need.pdf" --bless` |
+| **5** | `GET /api/v1/documents/{id}/status`| `status` | `uv run python scripts/eval_api.py --api status --bless` | `uv run python scripts/eval_api.py --api status --paper "Attention Is All You Need.pdf" --bless` |
 | **6** | `POST /api/v1/documents/{id}:star` | `star` | `uv run python scripts/eval_api.py --api star --bless` | `uv run python scripts/eval_api.py --api star --paper "Attention Is All You Need.pdf" --bless` |
-| **7** | `POST /api/v1/documents/{id}:parse` | `parse` | `uv run python scripts/eval_api.py --api parse --bless` | `uv run python scripts/eval_api.py --api parse --paper "Attention Is All You Need.pdf" --bless` |
+| **7** | `POST /api/v1/documents/{id}:parse`| `parse` | `uv run python scripts/eval_api.py --api parse --bless` | `uv run python scripts/eval_api.py --api parse --paper "Attention Is All You Need.pdf" --bless` |
 | **8** | `POST /api/v1/documents/{id}:extract-references` | `extract-refs` | `uv run python scripts/eval_api.py --api extract-refs --bless` | `uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless` |
 | **9** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
 
 ---
 
-## ⚡ 2. Lệnh Chạy Toàn Bộ 9 APIs (Full Pipeline Regression)
+## ⚡ 2. Cách Chạy Script Đánh Giá
 
-Khi muốn kiểm thử toàn diện toàn bộ 9 APIs của Module 1 để đảm bảo không bị hồi quy (regression):
+### 2.1. Chạy Từng API Đơn Lẻ (Single Runner)
+Sử dụng cờ `--api <tên_endpoint_hoặc_alias>`:
+
+```bash
+# Ví dụ 1: Đánh giá API Upload tài liệu
+uv run python scripts/eval_api.py --api upload --bless
+
+# Ví dụ 2: Đánh giá API Lấy chi tiết tài liệu với 1 bài báo chỉ định
+uv run python scripts/eval_api.py --api detail --paper "Attention Is All You Need.pdf" --bless
+
+# Ví dụ 3: Đánh giá API Bóc tách danh mục tham khảo
+uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless
+```
+
+### 2.2. Chạy Toàn Bộ Suite Module 1 (All Endpoints)
+Chạy tuần tự toàn bộ 9 API theo đúng thứ tự vòng đời tài liệu:
 
 ```bash
 uv run python scripts/eval_api.py --all --bless
@@ -34,19 +47,16 @@ uv run python scripts/eval_api.py --all --bless
 
 ---
 
-## ⚙️ 3. Giải Thích Các Cờ Lệnh CLI Phổ Biến
+## 🛠️ 3. Các Tùy Chọn Dòng Lệnh Nâng Cao (CLI Flags)
 
-| Cờ Lệnh (Flag) | Ý Nghĩa Kỹ Thuật | Khi Nào Cần Dùng? |
-| :--- | :--- | :--- |
-| `--bless` | **Chạy Không Hỏi**: Bỏ qua hộp thoại xác nhận ghi đè tệp báo cáo cũ, tự động xóa sạch và tạo snapshot mới. | Dùng trong CI/CD hoặc khi bạn muốn chạy nhanh không cần gõ `y`. |
-| `--paper "<file.pdf>"` | **Chỉ Định Bài Báo**: Chỉ chạy kiểm thử trên đúng bài báo được chỉ định trong `data/papers/`. | Dùng khi đang phát triển (develop) hoặc debug chuyên sâu 1 bài báo. |
-| `-k`, `--keep-data` | **Bảo Tồn Dữ Liệu (Không Xóa)**: Ngăn runner gọi `DELETE /api/v1/documents/{id}` ở bước dọn dẹp cuối cùng. | Dùng khi bạn muốn giữ lại dữ liệu trong Database để soi chiếu thủ công. |
-| `--ci` | **Bật Cổng CI (Quality Gate)**: Dừng chương trình với mã thoát khác 0 (`exit code 1`) ngay khi có kịch bản thất bại. | Dùng trong kịch bản GitHub Actions hoặc Pre-merge hook. |
-| `--url "<http://...>"` | **Chạy Với Live Server**: Chạy kiểm thử qua mạng HTTP thật thay vì chạy trực tiếp trong tiến trình (In-Process ASGI). | Dùng khi server FastAPI đang chạy tách biệt trên Docker hoặc VPS. |
+- `--paper <tên_file.pdf>`: Chỉ định chính xác 1 bài báo khoa học trong thư mục `data/papers/` để chạy kiểm thử cục bộ nhanh chóng (ví dụ: `--paper "Attention Is All You Need.pdf"`).
+- `--bless`: Tự động cập nhật snapshot đối chiếu khi bạn chủ động thay đổi logic hoặc chuẩn hóa định dạng dữ liệu đầu ra.
+- `-k`, `--keep-data`: Giữ lại tài liệu trong cơ sở dữ liệu sau khi chạy xong để kiểm tra thủ công (mặc định runner sẽ tự động xóa sạch để bảo đảm tính khép kín Zero-Retention).
+- `--interactive`: Bật chế độ tương tác hỏi trước khi ghi đè tệp báo cáo cũ (mặc định runner chạy tự động không chặn dòng lệnh).
 
 ---
 
-## 🔄 4. Cơ Chế Hoạt Động Của Một Vòng Kiểm Thử (Hermetic Testing)
+## 🔄 4. Cơ Chế Vận Hành & Khép Kín Dữ Liệu (Hermetic Cycle)
 
 Mỗi lần chạy script kiểm thử, hệ thống thực hiện chu trình khép kín nhằm bảo đảm tính độc lập, không làm rác môi trường phát triển:
 
@@ -80,7 +90,7 @@ sequenceDiagram
 
 - **Báo cáo định dạng Markdown (Dành cho người đọc):**
   - Nằm tại thư mục: `temp/output/test/`
-  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`, `temp/output/test/post_documents_star.md`, `temp/output/test/post_documents_parse.md`
+  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`, `temp/output/test/post_documents_star.md`, `temp/output/test/post_documents_parse.md`, `temp/output/test/post_documents_extract_references.md`
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).
@@ -93,13 +103,13 @@ Khi cần đào sâu kiểm tra dữ liệu JSON gốc hoặc tìm xem hệ th�
 
 ```bash
 # Xem danh sách toàn bộ file kết quả và artifact hiện có:
-uv run python scripts/eval/surgical_inspect.py --summary
+uv run python scripts/eval_api.py --summary
 
 # Soi chi tiết toàn bộ dữ liệu của một bài báo:
 uv run python scripts/eval/surgical_inspect.py -a "Attention Is All You Need_initial"
 
-# Chỉ lọc ra các trường hợp bị lỗi hoặc bất thường:
-uv run python scripts/eval/surgical_inspect.py -a "Attention Is All You Need_initial" --errors-only
+# Tìm kiếm nhanh chuỗi lỗi hoặc keyword trong toàn bộ artifacts:
+uv run python scripts/eval/surgical_inspect.py -q "error"
 ```
 
 ---
