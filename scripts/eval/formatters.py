@@ -9,7 +9,6 @@ from typing import Any
 
 from scripts.eval.config import (
     ARTIFACTS_DIR,
-    REPORTS_DIR,
     TEMP_OUTPUT_TEST_DIR,
 )
 
@@ -32,13 +31,19 @@ def check_and_prepare_output_file(report_filename: str | Path, interactive: bool
 
     if target_path.exists():
         if interactive:
-            print(f"\n[CẢNH BÁO] Tệp báo cáo '{target_path.name}' đã tồn tại tại {TEMP_OUTPUT_TEST_DIR}.")
-            choice = input("Bạn có muốn ghi đè và làm mới snapshot này không? (y/N): ").strip().lower()
+            print(
+                f"\n[CẢNH BÁO] Tệp báo cáo '{target_path.name}' đã tồn tại tại {TEMP_OUTPUT_TEST_DIR}."
+            )
+            choice = (
+                input("Bạn có muốn ghi đè và làm mới snapshot này không? (y/N): ").strip().lower()
+            )
             if choice not in ("y", "yes"):
                 print("[*] Đã hủy thao tác theo yêu cầu của bạn.")
                 sys.exit(0)
         else:
-            print(f"[*] Tệp báo cáo cũ đã tồn tại: {target_path.name} -> Tự động làm mới (Clean Refresh)...")
+            print(
+                f"[*] Tệp báo cáo cũ đã tồn tại: {target_path.name} -> Tự động làm mới (Clean Refresh)..."
+            )
 
     return target_path
 
@@ -75,22 +80,39 @@ def smart_fold_for_terminal(
 
             # 3. List of items: keep head and tail if long
             if isinstance(v, list) and len(v) > max_list_items:
-                head_items = [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in v[:2]]
-                tail_item = smart_fold_for_terminal(v[-1], max_list_items, max_str_len, max_vector_dims)
+                head_items = [
+                    smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims)
+                    for x in v[:2]
+                ]
+                tail_item = smart_fold_for_terminal(
+                    v[-1], max_list_items, max_str_len, max_vector_dims
+                )
                 omitted_count = len(v) - 3
-                folded_dict[k] = head_items + [f"... [{omitted_count} items omitted] ...", tail_item]
+                folded_dict[k] = head_items + [
+                    f"... [{omitted_count} items omitted] ...",
+                    tail_item,
+                ]
                 continue
 
-            folded_dict[k] = smart_fold_for_terminal(v, max_list_items, max_str_len, max_vector_dims)
+            folded_dict[k] = smart_fold_for_terminal(
+                v, max_list_items, max_str_len, max_vector_dims
+            )
         return folded_dict
 
     if isinstance(val, list):
         if len(val) > max_list_items:
-            head_items = [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in val[:2]]
-            tail_item = smart_fold_for_terminal(val[-1], max_list_items, max_str_len, max_vector_dims)
+            head_items = [
+                smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims)
+                for x in val[:2]
+            ]
+            tail_item = smart_fold_for_terminal(
+                val[-1], max_list_items, max_str_len, max_vector_dims
+            )
             omitted_count = len(val) - 3
             return head_items + [f"... [{omitted_count} items omitted] ...", tail_item]
-        return [smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in val]
+        return [
+            smart_fold_for_terminal(x, max_list_items, max_str_len, max_vector_dims) for x in val
+        ]
 
     if isinstance(val, str):
         if len(val) > max_str_len:
@@ -127,7 +149,14 @@ def format_terminal_box(
     if req_headers:
         lines.append("│ HEADERS:")
         for hk, hv in req_headers.items():
-            if hk.lower() in ("x-user-id", "content-type", "accept", "authorization", "idempotency-key", "range"):
+            if hk.lower() in (
+                "x-user-id",
+                "content-type",
+                "accept",
+                "authorization",
+                "idempotency-key",
+                "range",
+            ):
                 lines.append(f"│   {hk:<13}: {hv}")
     if form_data:
         lines.append("│ FORM-DATA:")
@@ -142,7 +171,9 @@ def format_terminal_box(
     lines.append("└─────────────────────────────────────────────────────────────────────────────")
 
     # 2. RESPONSE OUTPUT BOX
-    lines.append(f"\n┌── [RESPONSE OUTPUT] (HTTP {status_code} | {latency_ms:.1f} ms) ─────────────────────")
+    lines.append(
+        f"\n┌── [RESPONSE OUTPUT] (HTTP {status_code} | {latency_ms:.1f} ms) ─────────────────────"
+    )
     if res_headers:
         lines.append("│ HEADERS:")
         for rhk, rhv in res_headers.items():
@@ -165,11 +196,15 @@ def format_terminal_box(
 
     # 3. QUALITY ASSURANCE & VERIFICATION BOX
     if quality_checks:
-        lines.append("\n┌── [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ] ────────────────────────────────────────")
+        lines.append(
+            "\n┌── [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ] ────────────────────────────────────────"
+        )
         for passed, label in quality_checks:
             icon = "✓" if passed else "✗"
             lines.append(f"│ {icon} {label}")
-        lines.append("└─────────────────────────────────────────────────────────────────────────────")
+        lines.append(
+            "└─────────────────────────────────────────────────────────────────────────────"
+        )
 
     return "\n".join(lines)
 

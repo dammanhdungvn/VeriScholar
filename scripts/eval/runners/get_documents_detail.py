@@ -73,7 +73,9 @@ class DocumentDetailAPIRunner(BaseAPIRunner):
                 if seeded_doc_id:
                     ctx.track_document(seeded_doc_id)
             else:
-                linter_warnings.append(f"Failed to seed document for detail test: HTTP {up_res.status_code}")
+                linter_warnings.append(
+                    f"Failed to seed document for detail test: HTTP {up_res.status_code}"
+                )
                 return {
                     "endpoint": self.endpoint_name,
                     "all_passed": False,
@@ -186,9 +188,15 @@ class DocumentDetailAPIRunner(BaseAPIRunner):
             (r1.status_code == 200, f"HTTP Status Code : {r1.status_code} OK (Kỳ vọng: 200)"),
             (data1.get("id") == seeded_doc_id, f"Document ID Match: {seeded_doc_id}"),
             (data1.get("filename") == target_paper.name, f"Filename Match   : {target_paper.name}"),
-            (data1.get("file_size_bytes") == file_size_bytes, f"Byte Size Match  : {file_size_bytes:,} bytes"),
+            (
+                data1.get("file_size_bytes") == file_size_bytes,
+                f"Byte Size Match  : {file_size_bytes:,} bytes",
+            ),
             (pages_valid, f"Spatial Metadata : PASS (Cấu trúc {len(pages_meta)} trang hợp lệ)"),
-            (p2_valid, "Nonexistent Guard: PASS (UUID không tồn tại trả về 404 DOCUMENT_NOT_FOUND)"),
+            (
+                p2_valid,
+                "Nonexistent Guard: PASS (UUID không tồn tại trả về 404 DOCUMENT_NOT_FOUND)",
+            ),
             (p3_valid, "Malformed Guard  : PASS (Chuỗi không phải UUID bị chặn 422)"),
         ]
         terminal_box = format_terminal_box(
@@ -260,7 +268,7 @@ class DocumentDetailAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

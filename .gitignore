@@ -71,3 +71,4 @@ out/
 
 # Evaluation Artifacts (Raw Payloads & JSON fixtures)
 tests/.artifacts/
+test-results.xml

@@ -70,7 +70,9 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
                 if seeded_doc_id:
                     ctx.track_document(seeded_doc_id)
             else:
-                linter_warnings.append(f"Failed to seed document for extract-references test: HTTP {up_res.status_code}")
+                linter_warnings.append(
+                    f"Failed to seed document for extract-references test: HTTP {up_res.status_code}"
+                )
                 return {
                     "endpoint": self.endpoint_name,
                     "all_passed": False,
@@ -114,7 +116,9 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
         sample_ref_info = ""
         if refs1:
             first_parsed = refs1[0].get("parsed", {})
-            sample_ref_info = f" | Ref #1: '{first_parsed.get('title')}' ({first_parsed.get('year', 'N/A')})"
+            sample_ref_info = (
+                f" | Ref #1: '{first_parsed.get('title')}' ({first_parsed.get('year', 'N/A')})"
+            )
 
         cases.append(
             {
@@ -257,8 +261,14 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
 
         # In-Terminal HTTP Exchange Display (Visual Box for the primary reference extraction)
         checks = [
-            (r1.status_code == 200, f"Status Code & Envelope  : {r1.status_code} OK (Kỳ vọng: 200)"),
-            (total_extracted1 > 0, f"Reference Extraction    : PASS ({total_extracted1} mục tham khảo)"),
+            (
+                r1.status_code == 200,
+                f"Status Code & Envelope  : {r1.status_code} OK (Kỳ vọng: 200)",
+            ),
+            (
+                total_extracted1 > 0,
+                f"Reference Extraction    : PASS ({total_extracted1} mục tham khảo)",
+            ),
             (p2_valid, f"Database Cache Speed    : PASS ({latency_ms2:.2f} ms < 20ms)"),
             (p3_valid, "Force Re-extract Reset  : PASS (force_reextract=true tái bóc tách)"),
             (p4_valid, "Document Guard (404)    : PASS (UUID không tồn tại trả về 404)"),
@@ -272,7 +282,9 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
                 "document_id": seeded_doc_id,
                 "total_extracted": total_extracted1,
                 "sample_references": refs1[:2] if refs1 else [],
-                "note": f"... {total_extracted1} references parsed into database" if total_extracted1 > 2 else "All references shown",
+                "note": f"... {total_extracted1} references parsed into database"
+                if total_extracted1 > 2
+                else "All references shown",
             },
             "meta": body1.get("meta"),
         }
@@ -349,7 +361,7 @@ class ExtractReferencesAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

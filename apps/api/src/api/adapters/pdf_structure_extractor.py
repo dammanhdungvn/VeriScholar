@@ -8,13 +8,15 @@ from core.domain.entities.structure import DocumentSection, DocumentStructure
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.ports.structure import IStructureExtractorPort
 
+_TITLE_MAX_PAGE_HEIGHT_RATIO: float = 0.45
+_MAX_HEADING_TEXT_LENGTH: int = 80
+_MAX_HEADING_PREFIX_LENGTH_DIFF: int = 15
+
 
 class PyMuPDFStructureExtractor(IStructureExtractorPort):
     """Concrete implementation of IStructureExtractorPort using PyMuPDF (fitz)."""
 
-    HEADING_NUMBER_REGEX = re.compile(
-        r"^(?:([1-9]\d*(?:\.\d+)*)\s+)?([A-Z][a-zA-Z0-9\s\:\?\-–—]+)$"
-    )
+    HEADING_NUMBER_REGEX = re.compile(r"^(?:([1-9]\d*(?:\.\d+)*)\s+)?([A-Z][a-zA-Z0-9\s\:\?\–—]+)$")
     KNOWN_SECTION_KEYWORDS = {
         "abstract",
         "introduction",
@@ -82,10 +84,10 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
                 or "proceedings" in lower_text
             ):
                 continue
-            # Y-coordinate check: title is usually in the top half of page 1 (y1 < height * 0.45)
+            # Y-coordinate check: title is usually in the top half of page 1
             y1 = b[3]
             page_height = first_page.rect.height
-            if y1 <= page_height * 0.45:
+            if y1 <= page_height * _TITLE_MAX_PAGE_HEIGHT_RATIO:
                 # Estimate font size by height / number of lines
                 num_lines = max(1, len(b[4].strip().splitlines()))
                 line_height = (b[3] - b[1]) / num_lines
@@ -108,9 +110,7 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
         return None
 
-    def _extract_abstract(
-        self, doc: pymupdf.Document
-    ) -> tuple[str | None, list[BoundingBox]]:
+    def _extract_abstract(self, doc: pymupdf.Document) -> tuple[str | None, list[BoundingBox]]:
         """Locate Abstract heading and paragraph on page 1 (or 2) with normalized bounding box."""
         for page_idx in range(min(2, len(doc))):
             page = doc[page_idx]
@@ -120,7 +120,9 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
             for i, b in enumerate(blocks):
                 cleaned_block = " ".join(b[4].strip().split())
-                if cleaned_block.lower() == "abstract" or cleaned_block.lower().startswith("abstract:"):
+                if cleaned_block.lower() == "abstract" or cleaned_block.lower().startswith(
+                    "abstract:"
+                ):
                     # The following block is typically the abstract body
                     if i + 1 < len(blocks):
                         body_block = blocks[i + 1]
@@ -168,9 +170,7 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
         # Tier 1: Try PDF Outline / Bookmarks (get_toc)
         toc = doc.get_toc()
         if len(toc) >= 2:
-            sections = self._build_sections_from_toc(doc, toc)
-            if len(sections) >= 2:
-                return sections
+            return self._build_sections_from_toc(doc, toc)
 
         # Tier 2: Heuristic Text Block Scanning
         return self._build_sections_from_heuristic(doc)
@@ -178,10 +178,10 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
     def _build_sections_from_toc(
         self, doc: pymupdf.Document, toc: list[list]
     ) -> list[DocumentSection]:
-        """Build sections list from PyMuPDF TOC outline entries, enriching with text block prefixes."""
+        """Build sections list from PyMuPDF TOC outline entries."""
         sections: list[DocumentSection] = []
         for item in toc:
-            lvl, raw_title, page_num = item[0], item[1].strip(), item[2]
+            _, raw_title, page_num = item[0], item[1].strip(), item[2]
             if not raw_title or page_num < 1 or page_num > len(doc):
                 continue
 
@@ -196,7 +196,10 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
             blocks = page.get_text("blocks")
             for b in blocks:
                 cleaned_text = " ".join(b[4].strip().split())
-                if cleaned_text.lower().endswith(raw_title.lower()) and len(cleaned_text) < len(raw_title) + 15:
+                if (
+                    cleaned_text.lower().endswith(raw_title.lower())
+                    and len(cleaned_text) < len(raw_title) + _MAX_HEADING_PREFIX_LENGTH_DIFF
+                ):
                     resolved_title = cleaned_text
                     resolved_bbox = (b[0], b[1], b[2], b[3])
                     break
@@ -217,38 +220,6 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
                             page=page_num,
                         )
                     )
-            else:
-                # Search on page for heading bounding box
-                search_term = raw_title.splitlines()[0] if raw_title else ""
-                rects = page.search_for(search_term) if search_term else []
-                if rects:
-                    r = rects[0]
-                    x0 = max(0.0, min(1.0, r.x0 / width))
-                    y0 = max(0.0, min(1.0, r.y0 / height))
-                    x1 = max(0.0, min(1.0, r.x1 / width))
-                    y1 = max(0.0, min(1.0, r.y1 / height))
-                    if x0 < x1 and y0 < y1:
-                        boxes.append(
-                            BoundingBox(
-                                x0=round(x0, 4),
-                                y0=round(y0, 4),
-                                x1=round(x1, 4),
-                                y1=round(y1, 4),
-                                page=page_num,
-                            )
-                        )
-
-            if not boxes:
-                # Default safe bounding box on destination page
-                boxes.append(
-                    BoundingBox(
-                        x0=0.1,
-                        y0=0.1,
-                        x1=0.9,
-                        y1=0.15,
-                        page=page_num,
-                    )
-                )
 
             sections.append(
                 DocumentSection(
@@ -260,14 +231,13 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
         return sections
 
-    def _build_sections_from_heuristic(
-        self, doc: pymupdf.Document
-    ) -> list[DocumentSection]:
+    def _build_sections_from_heuristic(self, doc: pymupdf.Document) -> list[DocumentSection]:
         """Heuristically detect section headings from page text blocks."""
         sections: list[DocumentSection] = []
         seen_titles: set[str] = set()
 
-        for page_idx, page in enumerate(doc):
+        for page_idx in range(len(doc)):
+            page: pymupdf.Page = doc[page_idx]
             page_num = page_idx + 1
             width = page.rect.width
             height = page.rect.height
@@ -275,7 +245,7 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
             for b in blocks:
                 cleaned = " ".join(b[4].strip().split())
-                if not cleaned or len(cleaned) > 80:
+                if not cleaned or len(cleaned) > _MAX_HEADING_TEXT_LENGTH:
                     continue
 
                 # Check if matches numbered heading (e.g. "1 Introduction", "3.1 Encoder")

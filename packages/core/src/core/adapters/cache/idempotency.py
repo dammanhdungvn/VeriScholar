@@ -10,6 +10,8 @@ from core.ports.idempotency import IIdempotencyPort
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_IDEMPOTENCY_TTL_SECONDS: int = 86_400  # 24 hours retention window
+
 
 class InMemoryIdempotencyAdapter(IIdempotencyPort):
     """Deterministic in-memory idempotency cache for development, testing and fallback."""
@@ -35,7 +37,7 @@ class InMemoryIdempotencyAdapter(IIdempotencyPort):
         key: str,
         response_data: dict[str, Any],
         status_code: int = 202,
-        ttl_seconds: int = 86400,
+        ttl_seconds: int = DEFAULT_IDEMPOTENCY_TTL_SECONDS,
     ) -> None:
         """Store response data associated with key with expiration TTL in seconds."""
         expires_at = time.time() + ttl_seconds
@@ -62,7 +64,7 @@ class RedisIdempotencyAdapter(IIdempotencyPort):
     async def _get_client(self) -> Any:
         if self._client is None and self._redis_available:
             try:
-                import redis.asyncio as aioredis
+                import redis.asyncio as aioredis  # type: ignore[import-not-found]
 
                 self._client = aioredis.from_url(
                     self.redis_url,
@@ -96,7 +98,7 @@ class RedisIdempotencyAdapter(IIdempotencyPort):
         key: str,
         response_data: dict[str, Any],
         status_code: int = 202,
-        ttl_seconds: int = 86400,
+        ttl_seconds: int = DEFAULT_IDEMPOTENCY_TTL_SECONDS,
     ) -> None:
         """Store into Redis with TTL or fallback to in-memory cache."""
         client = await self._get_client()

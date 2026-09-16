@@ -5,7 +5,7 @@ from typing import Any
 
 import structlog
 from api.core.config import settings
-from structlog.types import EventDict, WrappedLogger
+from structlog.types import EventDict, Processor, WrappedLogger
 
 # Strict compiled regex for PII & sensitive tokens masking
 SENSITIVE_KEY_RE = re.compile(
@@ -37,21 +37,20 @@ def mask_sensitive_value(key: str, value: Any) -> Any:
 
 
 def mask_pii_processor(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
-    """Structlog processor that sanitizes sensitive data from all event dict keys/values."""
-    for key, val in list(event_dict.items()):
-        event_dict[key] = mask_sensitive_value(key, val)
+    """Structlog processor that masks sensitive tokens across keys and values."""
+    for key, value in list(event_dict.items()):
+        event_dict[key] = mask_sensitive_value(key, value)
     return event_dict
 
 
 def setup_logging() -> None:
-    """Configures structlog and integrates with Python standard library logging.
+    """Configures structured JSON logging with request tracing context and PII masking.
 
-    Enforces uniform JSON/Console output, PII masking, and contextvars propagation.
     Must be called at module load time before FastAPI app or Uvicorn startup.
     """
     log_level = getattr(logging, settings.LOG_LEVEL.upper(), logging.INFO)
 
-    shared_processors: list[structlog.types.Processor] = [
+    shared_processors: list[Processor] = [
         structlog.contextvars.merge_contextvars,
         structlog.stdlib.add_log_level,
         structlog.stdlib.add_logger_name,
@@ -61,6 +60,7 @@ def setup_logging() -> None:
         mask_pii_processor,
     ]
 
+    formatter_processor: Processor
     if settings.LOG_FORMAT == "json" or settings.is_production:
         formatter_processor = structlog.processors.JSONRenderer()
     else:

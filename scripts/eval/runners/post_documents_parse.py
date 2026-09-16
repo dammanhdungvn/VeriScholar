@@ -70,7 +70,9 @@ class ParseDocumentAPIRunner(BaseAPIRunner):
                 if seeded_doc_id:
                     ctx.track_document(seeded_doc_id)
             else:
-                linter_warnings.append(f"Failed to seed document for parse test: HTTP {up_res.status_code}")
+                linter_warnings.append(
+                    f"Failed to seed document for parse test: HTTP {up_res.status_code}"
+                )
                 return {
                     "endpoint": self.endpoint_name,
                     "all_passed": False,
@@ -108,7 +110,8 @@ class ParseDocumentAPIRunner(BaseAPIRunner):
             and data1.get("status") == "processing"
             and data1.get("stage") == "validation"
             and data1.get("progress") == 0
-            and data1.get("links", {}).get("status_url") == f"/api/v1/documents/{seeded_doc_id}/status"
+            and data1.get("links", {}).get("status_url")
+            == f"/api/v1/documents/{seeded_doc_id}/status"
             and data1.get("links", {}).get("detail_url") == f"/api/v1/documents/{seeded_doc_id}"
             and "request_id" in meta1
             and "timestamp" in meta1
@@ -308,11 +311,17 @@ class ParseDocumentAPIRunner(BaseAPIRunner):
 
         # In-Terminal HTTP Exchange Display (Visual Box for the primary parse dispatch)
         checks = [
-            (r1.status_code == 202, f"Status Code & Envelope: {r1.status_code} Accepted (Kỳ vọng: 202)"),
+            (
+                r1.status_code == 202,
+                f"Status Code & Envelope: {r1.status_code} Accepted (Kỳ vọng: 202)",
+            ),
             (cache_header1 == "Miss", "Idempotency Cache Miss : PASS (X-Cache: Miss)"),
             (p2_valid, "Idempotency Cache Hit  : PASS (X-Cache: Idempotent-Hit)"),
             (p3_valid, "Processing State Lock  : PASS (409 Conflict khi kích hoạt trùng lặp)"),
-            (p4_valid, "Force Reparse Reset    : PASS (force_reparse=true tái kích hoạt thành công)"),
+            (
+                p4_valid,
+                "Force Reparse Reset    : PASS (force_reparse=true tái kích hoạt thành công)",
+            ),
             (p5_valid, "Chunking Parameter (422: PASS (overlap >= size bị chặn 422)"),
             (p6_valid, "Document Guard (404)   : PASS (UUID không tồn tại trả về 404)"),
         ]
@@ -389,7 +398,7 @@ class ParseDocumentAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

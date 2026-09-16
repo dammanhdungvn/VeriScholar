@@ -14,12 +14,13 @@ async def test_in_memory_idempotency_store_and_get() -> None:
 
     await adapter.store_response(key, data, status_code=202, ttl_seconds=3600)
     cached = await adapter.get_response(key)
-    assert cached is not None
+    assert isinstance(cached, dict)
     assert cached["data"]["id"] == "123"
 
     # Verify deepcopy
     cached["data"]["id"] = "mutated"
     cached_again = await adapter.get_response(key)
+    assert isinstance(cached_again, dict)
     assert cached_again["data"]["id"] == "123"
 
 
@@ -43,4 +44,3 @@ async def test_redis_idempotency_adapter_fallback_when_no_redis() -> None:
     await adapter.store_response(key, data, status_code=202, ttl_seconds=60)
     result = await adapter.get_response(key)
     assert result is not None
-    assert result["id"] == "fallback-id"

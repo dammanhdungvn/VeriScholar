@@ -1,8 +1,9 @@
 """Automated integration tests for POST /api/v1/documents endpoint."""
 
-from collections.abc import AsyncGenerator
+from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
@@ -51,7 +52,7 @@ class InMemoryAsyncSession:
     async def rollback(self) -> None:
         pass
 
-    async def execute(self, statement: object) -> MagicMock:
+    async def execute(self, statement: Any) -> MagicMock:
         result_mock = MagicMock()
         stmt_str = str(statement)
         try:
@@ -124,7 +125,7 @@ def client(
     mock_storage: LocalStorageAdapter,
     mock_db: InMemoryAsyncSession,
     test_user: UserModel,
-) -> AsyncGenerator[AsyncClient, None]:
+) -> Generator[AsyncClient, None, None]:
     async def _override_get_db() -> AsyncGenerator[AsyncSession, None]:
         yield mock_db  # type: ignore[misc]
 

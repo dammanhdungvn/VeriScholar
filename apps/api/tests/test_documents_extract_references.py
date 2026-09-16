@@ -1,6 +1,7 @@
 """Automated integration tests for POST /api/v1/documents/{id}:extract-references endpoint."""
 
 from collections.abc import AsyncGenerator, AsyncIterator, Generator
+from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
@@ -23,7 +24,7 @@ class InMemoryAsyncReferenceSession:
 
     def __init__(self) -> None:
         self.documents: dict[UUID, DocumentModel] = {}
-        self.references: dict[UUID, list[ReferenceItemModel]] = {}
+        self.references: dict[Any, list[ReferenceItemModel]] = {}
 
     def add(self, obj: object) -> None:
         if isinstance(obj, DocumentModel):
@@ -45,7 +46,7 @@ class InMemoryAsyncReferenceSession:
     async def delete(self, obj: object) -> None:
         pass
 
-    async def execute(self, statement: object) -> MagicMock:
+    async def execute(self, statement: Any) -> MagicMock:
         result_mock = MagicMock()
         stmt_str = str(statement)
 
@@ -91,13 +92,16 @@ class InMemoryStorageDouble(IBlobStoragePort):
         self.blobs: dict[str, bytes] = {}
         self.read_calls: int = 0
 
-    async def save_blob(self, content_hash: str, stream: AsyncIterator[bytes]) -> int:
+    def get_blob_path(self, content_hash: str) -> str:
+        return f"storage/{content_hash}.pdf"
+
+    async def save_blob(self, stream: AsyncIterator[bytes], content_hash: str) -> tuple[str, int]:
         chunks = []
         async for chunk in stream:
             chunks.append(chunk)
         data = b"".join(chunks)
         self.blobs[content_hash] = data
-        return len(data)
+        return f"storage/{content_hash}.pdf", len(data)
 
     async def blob_exists(self, content_hash: str) -> bool:
         return content_hash in self.blobs
@@ -109,12 +113,19 @@ class InMemoryStorageDouble(IBlobStoragePort):
     async def delete_blob(self, content_hash: str) -> bool:
         return self.blobs.pop(content_hash, None) is not None
 
-    async def stream_blob_range(
-        self, content_hash: str, start_byte: int = 0, end_byte: int | None = None
+    def stream_blob_range(
+        self,
+        content_hash: str,
+        start_byte: int = 0,
+        end_byte: int | None = None,
+        chunk_size: int = 64 * 1024,
     ) -> AsyncIterator[bytes]:
-        data = self.blobs[content_hash]
-        end = len(data) if end_byte is None else end_byte + 1
-        yield data[start_byte:end]
+        async def _generator():
+            data = self.blobs[content_hash]
+            end = len(data) if end_byte is None else end_byte + 1
+            yield data[start_byte:end]
+
+        return _generator()
 
 
 def create_synthetic_pdf_with_references() -> bytes:
@@ -477,7 +488,7 @@ async def test_extract_references_with_real_local_storage_adapter(tmp_path) -> N
     result = await service.extract_document_references(
         document_id=doc_id,
         user_id=user_id,
-        db=fake_db,
+        db=fake_db,  # type: ignore[arg-type]
         force_reextract=False,
     )
 

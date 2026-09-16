@@ -43,7 +43,7 @@ class IBlobStoragePort(Protocol):
         """Read entire physical blob binary into memory."""
         ...
 
-    async def stream_blob_range(
+    def stream_blob_range(
         self,
         content_hash: str,
         start_byte: int = 0,

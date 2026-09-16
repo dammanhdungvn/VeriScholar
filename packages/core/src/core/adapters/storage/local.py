@@ -7,12 +7,17 @@ Guarantees atomic file writes via temporary files and rename operations.
 
 import asyncio
 import hashlib
+import logging
 import os
 from collections.abc import AsyncIterator
 from pathlib import Path
 
 from core.domain.exceptions import InvariantViolationError
 from core.ports.storage import IBlobStoragePort
+
+logger = logging.getLogger(__name__)
+
+DEFAULT_STORAGE_CHUNK_SIZE_BYTES: int = 64 * 1024  # 64 KB buffer chunk
 
 
 class LocalStorageAdapter(IBlobStoragePort):
@@ -43,10 +48,10 @@ class LocalStorageAdapter(IBlobStoragePort):
         stream: AsyncIterator[bytes],
         content_hash: str,
     ) -> tuple[str, int]:
-        """Stream bytes atomically to disk, validating SHA-256 integrity.
+        """Stream bytes from upload to disk atomically, verifying hash integrity.
 
         Args:
-            stream: Byte stream generator.
+            stream: Asynchronous byte iterator.
             content_hash: Expected SHA-256 hash.
 
         Returns:
@@ -102,17 +107,18 @@ class LocalStorageAdapter(IBlobStoragePort):
 
         await asyncio.to_thread(target_path.unlink, missing_ok=True)
 
-        # Cleanup empty parent directories if any
-        try:
-            p2 = target_path.parent
-            if p2.exists() and not any(p2.iterdir()):
-                p2.rmdir()
-                p1 = p2.parent
-                if p1.exists() and not any(p1.iterdir()):
-                    p1.rmdir()
-        except OSError:
-            pass
+        def _cleanup_empty_parents(path: Path) -> None:
+            try:
+                p2 = path.parent
+                if p2.exists() and not any(p2.iterdir()):
+                    p2.rmdir()
+                    p1 = p2.parent
+                    if p1.exists() and not any(p1.iterdir()):
+                        p1.rmdir()
+            except OSError as err:
+                logger.debug("Storage cleanup: directory not empty or permission denied: %s", err)
 
+        await asyncio.to_thread(_cleanup_empty_parents, target_path)
         return True
 
     async def read_blob(self, content_hash: str) -> bytes:
@@ -127,7 +133,7 @@ class LocalStorageAdapter(IBlobStoragePort):
         content_hash: str,
         start_byte: int = 0,
         end_byte: int | None = None,
-        chunk_size: int = 64 * 1024,
+        chunk_size: int = DEFAULT_STORAGE_CHUNK_SIZE_BYTES,
     ) -> AsyncIterator[bytes]:
         """Stream binary slice from local disk without whole-file memory buffering.
 
