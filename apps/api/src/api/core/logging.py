@@ -36,9 +36,7 @@ def mask_sensitive_value(key: str, value: Any) -> Any:
     return value
 
 
-def mask_pii_processor(
-    logger: WrappedLogger, method_name: str, event_dict: EventDict
-) -> EventDict:
+def mask_pii_processor(logger: WrappedLogger, method_name: str, event_dict: EventDict) -> EventDict:
     """Structlog processor that masks sensitive tokens across keys and values."""
     for key, value in list(event_dict.items()):
         event_dict[key] = mask_sensitive_value(key, value)

@@ -43,7 +43,7 @@ class ListDocumentsAPIRunner(BaseAPIRunner):
         if available_papers:
             for idx in range(3):
                 p = available_papers[idx % len(available_papers)]
-                fn = f"seed_{idx+1}_{p.name}" if idx >= len(available_papers) else p.name
+                fn = f"seed_{idx + 1}_{p.name}" if idx >= len(available_papers) else p.name
                 files = {"file": (fn, p.read_bytes(), "application/pdf")}
                 up_res = await ctx.client.post("/api/v1/documents", files=files)
                 if up_res.status_code in (200, 201):
@@ -229,7 +229,10 @@ class ListDocumentsAPIRunner(BaseAPIRunner):
 
         # In-Terminal HTTP Exchange Display (Visual Box for the core pagination request)
         checks = [
-            (r_slice.status_code == 200, f"HTTP Status Code : {r_slice.status_code} OK (Kỳ vọng: 200)"),
+            (
+                r_slice.status_code == 200,
+                f"HTTP Status Code : {r_slice.status_code} OK (Kỳ vọng: 200)",
+            ),
             (len(data1) == 2, f"Page Limit Match : {len(data1)} items / page (Khớp per_page=2)"),
             (is_chronological, "Chronological Ord: PASS (Sắp xếp created_at DESC)"),
             (
@@ -307,7 +310,7 @@ class ListDocumentsAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

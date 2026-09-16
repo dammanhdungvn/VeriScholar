@@ -22,7 +22,6 @@ if str(PROJECT_ROOT) not in sys.path:
 from scripts.eval.config import (  # noqa: E402
     ARTIFACTS_DIR,
     DATA_PAPERS_DIR,
-    REPORTS_DIR,
     TEMP_OUTPUT_TEST_DIR,
 )
 from scripts.eval.context import EvaluationContext  # noqa: E402

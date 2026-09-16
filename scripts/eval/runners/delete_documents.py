@@ -2,10 +2,9 @@
 
 import io
 import time
-import uuid
 from typing import Any
 
-from scripts.eval.config import DATA_PAPERS_DIR, get_default_paper
+from scripts.eval.config import get_default_paper
 from scripts.eval.context import EvaluationContext
 from scripts.eval.formatters import save_raw_artifact, write_markdown_report
 from scripts.eval.runners.base import BaseAPIRunner

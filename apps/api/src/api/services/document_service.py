@@ -1149,8 +1149,10 @@ class DocumentService:
 
         # 2. Check cached structure in parsed_metadata
         cached_meta = dict(doc.parsed_metadata) if doc.parsed_metadata else {}
-        if not force_refresh and "structure" in cached_meta and isinstance(
-            cached_meta["structure"], dict
+        if (
+            not force_refresh
+            and "structure" in cached_meta
+            and isinstance(cached_meta["structure"], dict)
         ):
             struct_cache = cached_meta["structure"]
             sections_data = [

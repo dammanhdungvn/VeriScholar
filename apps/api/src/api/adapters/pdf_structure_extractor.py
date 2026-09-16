@@ -16,9 +16,7 @@ _MAX_HEADING_PREFIX_LENGTH_DIFF: int = 15
 class PyMuPDFStructureExtractor(IStructureExtractorPort):
     """Concrete implementation of IStructureExtractorPort using PyMuPDF (fitz)."""
 
-    HEADING_NUMBER_REGEX = re.compile(
-        r"^(?:([1-9]\d*(?:\.\d+)*)\s+)?([A-Z][a-zA-Z0-9\s\:\?\–—]+)$"
-    )
+    HEADING_NUMBER_REGEX = re.compile(r"^(?:([1-9]\d*(?:\.\d+)*)\s+)?([A-Z][a-zA-Z0-9\s\:\?\–—]+)$")
     KNOWN_SECTION_KEYWORDS = {
         "abstract",
         "introduction",
@@ -112,9 +110,7 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
         return None
 
-    def _extract_abstract(
-        self, doc: pymupdf.Document
-    ) -> tuple[str | None, list[BoundingBox]]:
+    def _extract_abstract(self, doc: pymupdf.Document) -> tuple[str | None, list[BoundingBox]]:
         """Locate Abstract heading and paragraph on page 1 (or 2) with normalized bounding box."""
         for page_idx in range(min(2, len(doc))):
             page = doc[page_idx]
@@ -200,9 +196,10 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
             blocks = page.get_text("blocks")
             for b in blocks:
                 cleaned_text = " ".join(b[4].strip().split())
-                if cleaned_text.lower().endswith(
-                    raw_title.lower()
-                ) and len(cleaned_text) < len(raw_title) + _MAX_HEADING_PREFIX_LENGTH_DIFF:
+                if (
+                    cleaned_text.lower().endswith(raw_title.lower())
+                    and len(cleaned_text) < len(raw_title) + _MAX_HEADING_PREFIX_LENGTH_DIFF
+                ):
                     resolved_title = cleaned_text
                     resolved_bbox = (b[0], b[1], b[2], b[3])
                     break
@@ -234,9 +231,7 @@ class PyMuPDFStructureExtractor(IStructureExtractorPort):
 
         return sections
 
-    def _build_sections_from_heuristic(
-        self, doc: pymupdf.Document
-    ) -> list[DocumentSection]:
+    def _build_sections_from_heuristic(self, doc: pymupdf.Document) -> list[DocumentSection]:
         """Heuristically detect section headings from page text blocks."""
         sections: list[DocumentSection] = []
         seen_titles: set[str] = set()

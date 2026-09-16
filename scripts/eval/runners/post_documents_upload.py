@@ -6,7 +6,7 @@ import urllib.parse
 from pathlib import Path
 from typing import Any
 
-from scripts.eval.config import DATA_PAPERS_DIR, TEMP_OUTPUT_TEST_DIR, get_available_papers
+from scripts.eval.config import DATA_PAPERS_DIR, get_available_papers
 from scripts.eval.context import EvaluationContext
 from scripts.eval.formatters import (
     check_and_prepare_output_file,
@@ -117,11 +117,9 @@ class UploadAPIRunner(BaseAPIRunner):
             if doc_id_dup:
                 ctx.track_document(doc_id_dup)
 
-            is_cas_dedup = (
-                r_dup.status_code == 201
-                and body_dup.get("data", {}).get("content_hash")
-                == body1.get("data", {}).get("content_hash")
-            )
+            is_cas_dedup = r_dup.status_code == 201 and body_dup.get("data", {}).get(
+                "content_hash"
+            ) == body1.get("data", {}).get("content_hash")
             cases.append(
                 {
                     "name": f"CAS Deduplication ({paper_path.name})",
@@ -138,7 +136,10 @@ class UploadAPIRunner(BaseAPIRunner):
             # Render In-Terminal HTTP Exchange Box for Developer & AI Immediate Inspection
             content_hash = body1.get("data", {}).get("content_hash", "N/A")
             checks = [
-                (r1.status_code == 201, f"HTTP Status Code : {r1.status_code} Created (Kỳ vọng: 201)"),
+                (
+                    r1.status_code == 201,
+                    f"HTTP Status Code : {r1.status_code} Created (Kỳ vọng: 201)",
+                ),
                 (content_hash != "N/A", f"Content Hash CAS : {content_hash}"),
                 (
                     is_cas_dedup,
@@ -153,7 +154,9 @@ class UploadAPIRunner(BaseAPIRunner):
                 method=self.http_method,
                 path=self.route_path,
                 req_headers={"x-user-id": ctx.session_tag, "content-type": "multipart/form-data"},
-                form_data={"file": f"{paper_path.name} ({len(pdf_bytes):,} bytes | application/pdf)"},
+                form_data={
+                    "file": f"{paper_path.name} ({len(pdf_bytes):,} bytes | application/pdf)"
+                },
                 req_body=None,
                 status_code=r1.status_code,
                 latency_ms=latency_ms1,
@@ -238,7 +241,7 @@ class UploadAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

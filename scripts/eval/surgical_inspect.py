@@ -37,11 +37,15 @@ def list_available_artifacts() -> None:
             sz_kb = r.stat().st_size / 1024
             print(f"  ├── {r.name:<45} ({sz_kb:.1f} KB)")
     else:
-        print("  └── (Chưa có báo cáo nào. Hãy chạy: uv run python scripts/eval_api.py --api upload)")
+        print(
+            "  └── (Chưa có báo cáo nào. Hãy chạy: uv run python scripts/eval_api.py --api upload)"
+        )
 
     # 2. Raw JSON Artifacts
     print(f"\n[📁] Tệp Artifact Raw JSON: {ARTIFACTS_DIR}")
-    endpoints = sorted([d for d in ARTIFACTS_DIR.iterdir() if d.is_dir()]) if ARTIFACTS_DIR.exists() else []
+    endpoints = (
+        sorted([d for d in ARTIFACTS_DIR.iterdir() if d.is_dir()]) if ARTIFACTS_DIR.exists() else []
+    )
     if endpoints:
         for ep in endpoints:
             files = sorted(ep.glob("*.json"))
@@ -54,9 +58,15 @@ def list_available_artifacts() -> None:
 
     print("\n" + "=" * 72)
     print("  GỢI Ý LỆNH:")
-    print("  • Soi chi tiết payload:  uv run python scripts/eval/surgical_inspect.py -a <tên_file_hoặc_endpoint>")
-    print("  • Soi chunk thứ n:       uv run python scripts/eval/surgical_inspect.py -a <tên_file> --chunk 0")
-    print("  • Soi lỗi bất thường:    uv run python scripts/eval/surgical_inspect.py -a <tên_file> --errors-only")
+    print(
+        "  • Soi chi tiết payload:  uv run python scripts/eval/surgical_inspect.py -a <tên_file_hoặc_endpoint>"
+    )
+    print(
+        "  • Soi chunk thứ n:       uv run python scripts/eval/surgical_inspect.py -a <tên_file> --chunk 0"
+    )
+    print(
+        "  • Soi lỗi bất thường:    uv run python scripts/eval/surgical_inspect.py -a <tên_file> --errors-only"
+    )
     print("=" * 72 + "\n")
 
 
@@ -115,11 +125,17 @@ def inspect_chunk(data: Any, chunk_idx: int) -> None:
     chunks = payload.get("chunks", []) if isinstance(payload, dict) else payload
 
     if not isinstance(chunks, list):
-        print(f"Error: Payload does not contain a list of chunks (type: {type(chunks)})", file=sys.stderr)
+        print(
+            f"Error: Payload does not contain a list of chunks (type: {type(chunks)})",
+            file=sys.stderr,
+        )
         return
 
     if chunk_idx < 0 or chunk_idx >= len(chunks):
-        print(f"Error: Chunk index {chunk_idx} out of range (total chunks: {len(chunks)})", file=sys.stderr)
+        print(
+            f"Error: Chunk index {chunk_idx} out of range (total chunks: {len(chunks)})",
+            file=sys.stderr,
+        )
         return
 
     target = chunks[chunk_idx]
@@ -133,11 +149,17 @@ def inspect_ref(data: Any, ref_idx: int) -> None:
     refs = payload.get("references", []) if isinstance(payload, dict) else payload
 
     if not isinstance(refs, list):
-        print(f"Error: Payload does not contain a list of references (type: {type(refs)})", file=sys.stderr)
+        print(
+            f"Error: Payload does not contain a list of references (type: {type(refs)})",
+            file=sys.stderr,
+        )
         return
 
     if ref_idx < 0 or ref_idx >= len(refs):
-        print(f"Error: Reference index {ref_idx} out of range (total references: {len(refs)})", file=sys.stderr)
+        print(
+            f"Error: Reference index {ref_idx} out of range (total references: {len(refs)})",
+            file=sys.stderr,
+        )
         return
 
     target = refs[ref_idx]

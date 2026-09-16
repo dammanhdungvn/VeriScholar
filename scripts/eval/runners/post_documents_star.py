@@ -70,7 +70,9 @@ class StarDocumentAPIRunner(BaseAPIRunner):
                 if seeded_doc_id:
                     ctx.track_document(seeded_doc_id)
             else:
-                linter_warnings.append(f"Failed to seed document for star test: HTTP {up_res.status_code}")
+                linter_warnings.append(
+                    f"Failed to seed document for star test: HTTP {up_res.status_code}"
+                )
                 return {
                     "endpoint": self.endpoint_name,
                     "all_passed": False,
@@ -150,7 +152,7 @@ class StarDocumentAPIRunner(BaseAPIRunner):
                 "expected_status": 200,
                 "latency_ms": latency_ms2,
                 "passed": p2_valid,
-                "details": f"Repeated star maintained is_persistent=True without duplication",
+                "details": "Repeated star maintained is_persistent=True without duplication",
                 "raw_response": body2,
             }
         )
@@ -249,7 +251,10 @@ class StarDocumentAPIRunner(BaseAPIRunner):
         # In-Terminal HTTP Exchange Display (Visual Box for the primary star operation)
         checks = [
             (r1.status_code == 200, f"Status Code & Envelope: {r1.status_code} OK (Kỳ vọng: 200)"),
-            (data1.get("is_persistent") is True, "Persistence Promotion : PASS (is_persistent = True)"),
+            (
+                data1.get("is_persistent") is True,
+                "Persistence Promotion : PASS (is_persistent = True)",
+            ),
             (data1.get("folder_id") is None, "Default Folder State : PASS (folder_id = None)"),
             (p2_valid, "Idempotent Execution : PASS (gọi lại lần 2 vẫn 200 OK)"),
             (p3_valid, "Folder Guard (404)   : PASS (Thư mục ma bị từ chối FOLDER_NOT_FOUND)"),
@@ -325,7 +330,7 @@ class StarDocumentAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

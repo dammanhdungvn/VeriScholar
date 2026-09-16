@@ -70,7 +70,9 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
                 if seeded_doc_id:
                     ctx.track_document(seeded_doc_id)
             else:
-                linter_warnings.append(f"Failed to seed document for status test: HTTP {up_res.status_code}")
+                linter_warnings.append(
+                    f"Failed to seed document for status test: HTTP {up_res.status_code}"
+                )
                 return {
                     "endpoint": self.endpoint_name,
                     "all_passed": False,
@@ -127,11 +129,15 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
         # Scenario 2: Progress & Error Message Field Integrity (HTTP 200 OK)
         progress_val = data1.get("progress", -1)
         progress_bounded = isinstance(progress_val, int) and 0 <= progress_val <= 100
-        error_msg_valid = data1.get("error_message") is None or isinstance(data1.get("error_message"), str)
+        error_msg_valid = data1.get("error_message") is None or isinstance(
+            data1.get("error_message"), str
+        )
         content_type_valid = "application/json" in r1.headers.get("content-type", "")
         latency_budget_valid = latency_ms1 < 50.0  # Quality Budget: < 50ms for DB index read
 
-        p2_valid = progress_bounded and error_msg_valid and content_type_valid and latency_budget_valid
+        p2_valid = (
+            progress_bounded and error_msg_valid and content_type_valid and latency_budget_valid
+        )
         cases.append(
             {
                 "name": "Progress Bound & Envelope Invariant Audit",
@@ -210,7 +216,10 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
                 data1.get("status") == "uploaded" and data1.get("stage") == "queued",
                 f"State & Stage Matrix : {data1.get('status')} | {data1.get('stage')} | {data1.get('progress')}%",
             ),
-            (stages_all_present and stages_all_pending, "5-Stage Breakdown    : 5/5 sub-stages verified (pending)"),
+            (
+                stages_all_present and stages_all_pending,
+                "5-Stage Breakdown    : 5/5 sub-stages verified (pending)",
+            ),
             (progress_bounded, "Progress Bounded     : PASS (0 <= progress <= 100)"),
             (p3_valid, "Nonexistent Guard    : PASS (UUID không tồn tại trả về 404)"),
             (p4_valid, "Malformed Guard      : PASS (Chuỗi sai UUID bị chặn 422)"),
@@ -284,7 +293,7 @@ class DocumentStatusAPIRunner(BaseAPIRunner):
         warning_block = ""
         if warnings:
             w_lines = [f"- `[WARN]` {w}" for w in warnings]
-            warning_block = f"\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
+            warning_block = "\n## 4. Linter Warnings\n" + "\n".join(w_lines) + "\n"
 
         target_rel_path = f"temp/output/test/{self.report_filename}"
 

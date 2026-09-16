@@ -76,9 +76,7 @@ class InMemoryStorageDouble(IBlobStoragePort):
     def get_blob_path(self, content_hash: str) -> str:
         return f"storage/{content_hash}.pdf"
 
-    async def save_blob(
-        self, stream: AsyncIterator[bytes], content_hash: str
-    ) -> tuple[str, int]:
+    async def save_blob(self, stream: AsyncIterator[bytes], content_hash: str) -> tuple[str, int]:
         chunks = []
         async for chunk in stream:
             chunks.append(chunk)
