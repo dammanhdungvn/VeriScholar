@@ -6,10 +6,13 @@ from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIde
 from core.adapters.storage.local import LocalStorageAdapter
 from core.ports.idempotency import IIdempotencyPort
 from core.ports.storage import IBlobStoragePort
+from core.ports.summary import IDocumentSummarizerPort
 from fastapi import Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
+from api.adapters.llm_summarizer import LLMGroundedSummarizer
 from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
@@ -36,11 +39,23 @@ def get_idempotency_port() -> IIdempotencyPort:
     return _idempotency_adapter
 
 
+def get_document_summarizer() -> IDocumentSummarizerPort:
+    """Dependency providing LLMGroundedSummarizer with heuristic fallback."""
+    api_key = settings.OPENAI_API_KEY.get_secret_value() if settings.OPENAI_API_KEY else None
+    return LLMGroundedSummarizer(
+        api_key=api_key,
+        base_url=settings.OPENAI_BASE_URL,
+        model=settings.OPENAI_MODEL,
+        fallback=HeuristicGroundedSummarizer(),
+    )
+
+
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
+    summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
 ) -> DocumentService:
-    """Dependency providing DocumentService with bound storage port."""
-    return DocumentService(storage=storage)
+    """Dependency providing DocumentService with bound storage and summarizer ports."""
+    return DocumentService(storage=storage, summarizer=summarizer)
 
 
 async def get_current_user(

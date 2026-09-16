@@ -22,7 +22,8 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **10** | `GET /api/v1/documents/{id}/chunks` | `chunks` | `uv run python scripts/eval_api.py --api chunks --bless` | `uv run python scripts/eval_api.py --api chunks --paper "Attention Is All You Need.pdf" --bless` |
 | **11** | `GET /api/v1/documents/{id}/chunks/{chunk_id}` | `chunk_detail` | `uv run python scripts/eval_api.py --api chunk_detail --bless` | `uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless` |
 | **12** | `GET /api/v1/documents/{id}/summary` | `summary` | `uv run python scripts/eval_api.py --api summary --bless` | `uv run python scripts/eval_api.py --api summary --paper "Attention Is All You Need.pdf" --bless` |
-| **13** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
+| **13** | `POST /api/v1/documents/{id}/summary:generate` | `summary-generate` | `uv run python scripts/eval_api.py --api summary-generate --bless` | `uv run python scripts/eval_api.py --api summary-generate --paper "Attention Is All You Need.pdf" --bless` |
+| **14** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
 
 ---
 
@@ -49,10 +50,13 @@ uv run python scripts/eval_api.py --api chunks --paper "Attention Is All You Nee
 
 # Ví dụ 6: Đánh giá API Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)
 uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless
+
+# Ví dụ 7: Đánh giá API Sinh mới tóm tắt 3 ý (Custom Method AIP-136)
+uv run python scripts/eval_api.py --api summary-generate --paper "Attention Is All You Need.pdf" --bless
 ```
 
 ### 2.2. Chạy Toàn Bộ Suite Module 1 (All Endpoints)
-Chạy tuần tự toàn bộ 12 API theo đúng thứ tự vòng đời tài liệu:
+Chạy tuần tự toàn bộ 14 API theo đúng thứ tự vòng đời tài liệu:
 
 ```bash
 uv run python scripts/eval_api.py --all --bless

@@ -19,6 +19,7 @@ from api.schemas.document import (
     DocumentStatusEnvelope,
     DocumentStructureEnvelope,
     DocumentSummaryEnvelope,
+    DocumentSummaryGenerateRequest,
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
@@ -868,4 +869,94 @@ async def get_document_summary(
         document_id=document_id,
         user_id=current_user.id,
         db=db,
+    )
+
+
+GENERATE_DOCUMENT_SUMMARY_DESCRIPTION = """
+🎯 **Mục đích:** Kích hoạt Custom Method (Google AIP-136) để sinh mới hoặc lấy lại bản tóm tắt 3 ý
+kèm tọa độ dẫn chứng Bounding Boxes.
+
+📥 **Đầu vào:**
+- `document_id`: UUID của bài báo khoa học.
+- `Idempotency-Key`: Khóa chống trùng lặp (Header tùy chọn, cửa sổ 24 giờ).
+- Body JSON: `{ "force": false }`
+  - Nếu `force = false` (mặc định): Trả về bản tóm tắt có sẵn trong DB (Cache Hit, SLA < 10ms).
+  - Nếu `force = true`: Ép buộc tái tổng hợp (Re-synthesis) và cập nhật cơ sở dữ liệu.
+
+📤 **Đầu ra:**
+- `200 OK`: Trả về `DocumentSummaryEnvelope` với header `X-Cache`.
+- `404 DOCUMENT_NOT_FOUND`: Không tìm thấy tài liệu hoặc không có quyền truy cập.
+- `409 DOCUMENT_PROCESSING`: Tài liệu đang xử lý nền.
+- `422 DOCUMENT_FAILED`: Tài liệu thất bại trong khâu tiền xử lý.
+"""
+
+
+@router.post(
+    "/{document_id}/summary:generate",
+    response_model=DocumentSummaryEnvelope,
+    status_code=status.HTTP_200_OK,
+    summary="14. Custom Method: Sinh mới tóm tắt 3 ý",
+    description=GENERATE_DOCUMENT_SUMMARY_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Sinh mới hoặc lấy lại bản tóm tắt 3 ý cốt lõi thành công.",
+            "headers": {
+                "X-Cache": {
+                    "description": "Trạng thái cache: Idempotent-Hit, Cache-Hit, hoặc Generated",
+                    "schema": {"type": "string"},
+                }
+            },
+        },
+        404: {"description": "Không tìm thấy tài liệu hoặc không có quyền truy cập."},
+        409: {"description": "Tài liệu đang xử lý nền (DOCUMENT_PROCESSING)."},
+        422: {"description": "Tài liệu xử lý thất bại (DOCUMENT_FAILED) hoặc UUID không hợp lệ."},
+    },
+)
+async def generate_document_summary(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học",
+    ),
+    payload: DocumentSummaryGenerateRequest = Body(
+        default_factory=DocumentSummaryGenerateRequest,
+    ),
+    idempotency_key: str | None = Header(
+        None,
+        alias="Idempotency-Key",
+        description="UUID khóa khử trùng lặp 24 giờ",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    idempotency: IIdempotencyPort = Depends(get_idempotency_port),
+    service: DocumentService = Depends(get_document_service),
+) -> JSONResponse:
+    """Trigger 3-point grounded summary generation with 24-hour idempotency protection."""
+    if idempotency_key:
+        cache_key = (
+            f"idempotency:summary_generate:{current_user.id}:{document_id}:{idempotency_key}"
+        )
+        cached_resp = await idempotency.get_response(cache_key)
+        if cached_resp:
+            return JSONResponse(
+                content=cached_resp,
+                headers={"X-Cache": "Idempotent-Hit"},
+            )
+
+    envelope, cache_status = await service.generate_document_summary(
+        document_id=document_id,
+        user_id=current_user.id,
+        force=payload.force,
+        db=db,
+    )
+
+    resp_dict = envelope.model_dump(mode="json")
+    if idempotency_key:
+        cache_key = (
+            f"idempotency:summary_generate:{current_user.id}:{document_id}:{idempotency_key}"
+        )
+        await idempotency.store_response(cache_key, resp_dict, ttl_seconds=86400)
+
+    return JSONResponse(
+        content=resp_dict,
+        headers={"X-Cache": cache_status},
     )

@@ -75,6 +75,7 @@ class Settings(BaseSettings):
 
     # Cloud LLM Settings (SecretStr ensures no accidental leaks in logs/prints)
     OPENAI_API_KEY: SecretStr | None = None
+    OPENAI_BASE_URL: str = "https://api.openai.com/v1"
     OPENAI_MODEL: str = "gpt-5.6-luna"
 
     GEMINI_API_KEY: SecretStr | None = None
