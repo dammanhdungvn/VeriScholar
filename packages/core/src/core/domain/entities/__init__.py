@@ -10,11 +10,14 @@ from core.domain.entities.reference import (
     parse_reference_item,
 )
 from core.domain.entities.session_turn import SessionTurn
+from core.domain.entities.structure import DocumentSection, DocumentStructure
 
 __all__ = [
     "Document",
     "DocumentChunk",
+    "DocumentSection",
     "DocumentStorageBlob",
+    "DocumentStructure",
     "ExtractedReference",
     "ParsedReferenceInfo",
     "SessionTurn",

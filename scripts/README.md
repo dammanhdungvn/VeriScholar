@@ -18,7 +18,8 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **6** | `POST /api/v1/documents/{id}:star` | `star` | `uv run python scripts/eval_api.py --api star --bless` | `uv run python scripts/eval_api.py --api star --paper "Attention Is All You Need.pdf" --bless` |
 | **7** | `POST /api/v1/documents/{id}:parse`| `parse` | `uv run python scripts/eval_api.py --api parse --bless` | `uv run python scripts/eval_api.py --api parse --paper "Attention Is All You Need.pdf" --bless` |
 | **8** | `POST /api/v1/documents/{id}:extract-references` | `extract-refs` | `uv run python scripts/eval_api.py --api extract-refs --bless` | `uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless` |
-| **9** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
+| **9** | `GET /api/v1/documents/{id}/structure` | `structure` | `uv run python scripts/eval_api.py --api structure --bless` | `uv run python scripts/eval_api.py --api structure --paper "Attention Is All You Need.pdf" --bless` |
+| **10** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
 
 ---
 
@@ -36,6 +37,9 @@ uv run python scripts/eval_api.py --api detail --paper "Attention Is All You Nee
 
 # Ví dụ 3: Đánh giá API Bóc tách danh mục tham khảo
 uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless
+
+# Ví dụ 4: Đánh giá API Bóc tách cấu trúc bài báo (TOC, Abstract, Sections)
+uv run python scripts/eval_api.py --api structure --paper "Attention Is All You Need.pdf" --bless
 ```
 
 ### 2.2. Chạy Toàn Bộ Suite Module 1 (All Endpoints)
@@ -90,7 +94,7 @@ sequenceDiagram
 
 - **Báo cáo định dạng Markdown (Dành cho người đọc):**
   - Nằm tại thư mục: `temp/output/test/`
-  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`, `temp/output/test/post_documents_star.md`, `temp/output/test/post_documents_parse.md`, `temp/output/test/post_documents_extract_references.md`
+  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`, `temp/output/test/post_documents_star.md`, `temp/output/test/post_documents_parse.md`, `temp/output/test/post_documents_extract_references.md`, `temp/output/test/get_documents_structure.md`
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).

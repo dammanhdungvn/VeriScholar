@@ -765,3 +765,86 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
     }
   }
   ```
+
+
+---
+
+### [GET] `/api/v1/documents/{document_id}/structure`
+**Summary:** `Truy xuất cấu trúc bài báo (TOC, Headings, Sections, Abstract)`  
+**Operation ID:** `get_document_structure_api_v1_documents__document_id__structure_get`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Truy xuất cấu trúc bài báo khoa học (Table of Contents, Headings, Sections).
+* **Mục đích:** Cung cấp thông tin cấu trúc phân cấp (Sections, Headings) và toàn văn Abstract kèm tọa độ Bounding Box chuẩn hóa `[x0, y0, x1, y1, page]` nhằm phục vụ điều hướng (TOC navigation bar) và hiển thị tương tác trên giao diện Deep Reading Canvas (PDF.js).
+* **Cơ chế lưu đệm cơ sở dữ liệu (Database Cache):** Cấu trúc được lưu trực tiếp vào trường `parsed_metadata["structure"]` (PostgreSQL JSONB với GIN index). Lần truy vấn sau trả về tức thì trong < 15ms mà không cần bóc tách lại từ PDF.
+* **Tái bóc tách (Force Refresh):** Cho phép truyền Query parameter `?force_refresh=true` để bỏ qua bộ đệm cơ sở dữ liệu và ép phân tích lại từ tệp nhị phân PDF lưu trong CAS storage.
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập dữ liệu của người dùng khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters
+| Vị trí | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `path` | `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học. |
+| `query` | `force_refresh` | `boolean` | Không | Nếu `true`, bỏ qua bộ nhớ đệm và phân tích lại cấu trúc từ PDF gốc. Mặc định: `false`. |
+
+#### Responses
+* **`200 OK`** - Truy xuất cấu trúc bài báo thành công.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "document_id": "e3b0c442-98fc-1c14-9afb-f4c8996fb924",
+      "title": "Attention Is All You Need",
+      "abstract": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks...",
+      "abstract_bounding_boxes": [
+        [0.2346, 0.5219, 0.7654, 0.6543, 1]
+      ],
+      "sections": [
+        {
+          "title": "1 Introduction",
+          "page_number": 2,
+          "bounding_boxes": [
+            [0.1765, 0.0919, 0.3118, 0.107, 2]
+          ]
+        },
+        {
+          "title": "2 Background",
+          "page_number": 2,
+          "bounding_boxes": [
+            [0.1765, 0.4585, 0.3085, 0.4736, 2]
+          ]
+        },
+        {
+          "title": "3 Model Architecture",
+          "page_number": 2,
+          "bounding_boxes": [
+            [0.1765, 0.8112, 0.3694, 0.8263, 2]
+          ]
+        }
+      ]
+    },
+    "meta": {
+      "request_id": "req_51ad5379d56e",
+      "timestamp": "2026-09-16T03:27:18.047347Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 'e3b0c442-98fc-1c14-9afb-f4c8996fb924' not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "req_404_abc123",
+      "timestamp": "2026-09-16T03:27:18.113645Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Định dạng `document_id` không phải UUID hợp lệ.  
+  *Content-Type:* `application/json`
