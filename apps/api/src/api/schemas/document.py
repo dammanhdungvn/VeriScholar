@@ -346,3 +346,53 @@ class DocumentChunkItem(BaseModel):
 
 class DocumentChunkPaginatedEnvelope(PaginatedResponseEnvelope[DocumentChunkItem]):
     """Top-level RFC 8288 paginated collection envelope for document chunks."""
+
+
+class DocumentChunkNavigationLinks(BaseModel):
+    """Hypermedia navigation links for chunk detail and reader traversal."""
+
+    self: str = Field(description="Canonical URI of current chunk")
+    document: str = Field(description="Parent document resource URI")
+    chunks: str = Field(description="Collection URI of all chunks for parent document")
+    prev_chunk: str | None = Field(
+        default=None,
+        description="URI of sequentially preceding chunk, if available",
+    )
+    next_chunk: str | None = Field(
+        default=None,
+        description="URI of sequentially succeeding chunk, if available",
+    )
+
+
+class DocumentChunkDetailData(BaseModel):
+    """Detailed representation of an academic evidence chunk."""
+
+    id: UUID = Field(description="Unique chunk identifier")
+    document_id: UUID = Field(description="Parent document identifier")
+    chunk_index: int = Field(ge=0, description="0-indexed sequence position in document")
+    page_number: int = Field(ge=1, description="1-indexed page where chunk begins")
+    content: str = Field(description="Full textual content of the chunk")
+    bounding_boxes: list[list[float | int]] = Field(
+        default_factory=list,
+        description="List of normalized [x0, y0, x1, y1, page] bounding boxes for Canvas overlay",
+    )
+    token_count: int = Field(gt=0, description="Calculated token count of chunk content")
+    embedding_dimension: int | None = Field(
+        default=None,
+        description="Dimension size of dense vector embedding if generated",
+    )
+    created_at: datetime | None = Field(
+        default=None,
+        description="Timestamp when chunk was extracted and persisted",
+    )
+    updated_at: datetime | None = Field(
+        default=None,
+        description="Timestamp of last chunk update",
+    )
+    links: DocumentChunkNavigationLinks = Field(
+        description="Hypermedia navigational links for sequential reading traversal"
+    )
+
+
+class DocumentChunkDetailEnvelope(SingleResponseEnvelope[DocumentChunkDetailData]):
+    """Top-level single resource envelope for document chunk detail."""
