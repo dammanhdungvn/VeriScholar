@@ -161,6 +161,14 @@ class DocumentService:
         if blob is not None:
             # Deduplicated: Increment reference count
             blob.ref_count += 1
+            # Self-healing: Ensure physical file exists in storage
+            if not await self.storage.blob_exists(content_hash):
+
+                async def _stream_chunks_repair():
+                    for c in chunks:
+                        yield c
+
+                await self.storage.save_blob(_stream_chunks_repair(), content_hash)
         else:
             # Physical save via Storage Port
             async def _stream_chunks():

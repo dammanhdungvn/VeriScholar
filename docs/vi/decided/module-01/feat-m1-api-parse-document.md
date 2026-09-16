@@ -165,7 +165,7 @@ Trong `apps/api/src/api/v1/endpoints/documents.py`:
 2. **Điều kiện 2 - Master Autotest Runner:**
    - Chạy tích hợp toàn bộ qua `apps/api/tests/run_all_api_tests.py` (Toàn bộ 78 tests passed).
 3. **Điều kiện 3 - Bộ Autotest Đo Lường Chất Lượng Định Lượng (Eval Harness):**
-   - Tệp test eval: `apps/api/tests/evals/test_parse_chunking_eval.py`.
+   - Tệp test eval: `tests/evals/test_parse_chunking_eval.py`.
    - Nạp dữ liệu từ `data/papers/golden_eval_dataset.json` và 3 bài báo PDF chuẩn.
    - Kiểm chứng 5 chỉ số EDD:
      + Boundary Integrity Ratio = 100% (không ngắt đôi câu).
