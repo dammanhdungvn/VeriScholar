@@ -8,7 +8,6 @@ from api.deps import get_current_user, get_document_service, get_idempotency_por
 from api.schemas.document import (
     DocumentDetailEnvelope,
     DocumentExtractReferencesEnvelope,
-    DocumentStructureEnvelope,
     DocumentExtractReferencesRequest,
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
@@ -16,6 +15,7 @@ from api.schemas.document import (
     DocumentStarEnvelope,
     DocumentStarRequest,
     DocumentStatusEnvelope,
+    DocumentStructureEnvelope,
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
@@ -620,7 +620,8 @@ GET_STRUCTURE_DESCRIPTION = (
     "và hiển thị trên giao diện Deep Reading Canvas (PDF.js).\n\n"
     "📥 **Đầu vào:**\n"
     "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
-    "- `force_refresh`: Bỏ qua bộ đệm database và ép bóc tách lại từ tệp PDF gốc (mặc định: false, Query parameter).\n\n"
+    "- `force_refresh`: Bỏ qua bộ đệm database và ép bóc tách lại từ tệp PDF gốc "
+    "(mặc định: false, Query parameter).\n\n"
     "📤 **Đầu ra (HTTP 200 OK):**\n"
     "- `document_id`: UUID tài liệu.\n"
     "- `title`: Tiêu đề học thuật của bài báo.\n"

@@ -1,6 +1,7 @@
 """Automated integration tests for POST /api/v1/documents/{id}:parse endpoint."""
 
 from collections.abc import AsyncGenerator, Generator
+from typing import Any
 from unittest.mock import MagicMock
 from uuid import UUID, uuid4
 
@@ -39,7 +40,7 @@ class InMemoryAsyncParseSession:
     async def rollback(self) -> None:
         pass
 
-    async def execute(self, statement: object) -> MagicMock:
+    async def execute(self, statement: Any) -> MagicMock:
         result_mock = MagicMock()
         stmt_str = str(statement)
 
@@ -198,6 +199,7 @@ async def test_parse_document_with_custom_chunking_options(
     )
 
     assert response.status_code == 202
+    assert sample_uploaded_document.parsed_metadata is not None
     options = sample_uploaded_document.parsed_metadata["parse_options"]
     assert options["chunk_size"] == 1024
     assert options["chunk_overlap"] == 128

@@ -94,6 +94,7 @@ def parse_reference_item(raw_item: str, ref_index: int) -> ExtractedReference:
 
     # 3. Extract Year with priority to academic citation dates
     # First: check date in parentheses: (2020), (03 2016), (Oct 2024), (10 2024)
+    year: int | None = None
     paren_year_match = re.search(
         r"\((?:(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|\d{1,2})\s+)?((?:19|20)\d{2})\)",
         cleaned,

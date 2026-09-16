@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
@@ -15,16 +16,16 @@ from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
     DocumentDetailResponseData,
     DocumentExtractReferencesResponseData,
-    DocumentSectionResponse,
-    DocumentStructureData,
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
     DocumentParseLinks,
     DocumentParseRequest,
     DocumentParseResponseData,
+    DocumentSectionResponse,
     DocumentStarResponseData,
     DocumentStatusResponseData,
+    DocumentStructureData,
     DocumentUploadResponseData,
     PageMetadataItem,
     ParsedReferenceItemSchema,
@@ -34,7 +35,7 @@ from api.schemas.document import (
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.reference import ExtractedReference, extract_references_from_text
-from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
+from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from fastapi import HTTPException, UploadFile, status
@@ -192,7 +193,7 @@ class DocumentService:
                 storage_path=storage_path,
                 file_size_bytes=total_size,
                 ref_count=1,
-                status="processing",
+                status=BlobStatus.PROCESSING.value,
                 created_at=now,
                 updated_at=now,
             )
@@ -207,8 +208,8 @@ class DocumentService:
             filename=filename,
             content_hash=content_hash,
             file_size_bytes=total_size,
-            status="uploaded",
-            stage="queued",
+            status=DocumentStatus.UPLOADED.value,
+            stage=DocumentStage.QUEUED.value,
             progress=0,
             is_persistent=False,
             created_at=now,
@@ -583,7 +584,7 @@ class DocumentService:
             "embedding": 4,
         }
 
-        if status_val == "completed":
+        if status_val == DocumentStatus.COMPLETED.value:
             return StagesDetail(
                 validation="completed",
                 layout_detection="completed",
@@ -592,7 +593,7 @@ class DocumentService:
                 embedding="completed",
             )
 
-        if status_val == "failed":
+        if status_val == DocumentStatus.FAILED.value:
             curr_idx = stage_map.get(stage_norm, 0)
             details = {}
             for i, st in enumerate(pipeline_order):
@@ -604,7 +605,10 @@ class DocumentService:
                     details[st] = "pending"
             return StagesDetail(**details)
 
-        if status_val in ("uploaded", "pending") and stage_norm == "queued":
+        if (
+            status_val in (DocumentStatus.UPLOADED.value, DocumentStatus.PENDING.value)
+            and stage_norm == DocumentStage.QUEUED.value
+        ):
             return StagesDetail(
                 validation="pending",
                 layout_detection="pending",
@@ -871,7 +875,7 @@ class DocumentService:
         links = DocumentParseLinks(status_url=status_url, detail_url=detail_url)
 
         # 2. State machine checks
-        if doc.status == "processing" and not parse_req.force_reparse:
+        if doc.status == DocumentStatus.PROCESSING.value and not parse_req.force_reparse:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={
@@ -886,7 +890,7 @@ class DocumentService:
                 },
             )
 
-        if doc.status == "completed" and not parse_req.force_reparse:
+        if doc.status == DocumentStatus.COMPLETED.value and not parse_req.force_reparse:
             return DocumentParseResponseData(
                 id=doc.id,
                 status=doc.status,
@@ -898,8 +902,8 @@ class DocumentService:
 
         # 3. Transition document state to processing / validation
         now = datetime.now(UTC)
-        doc.status = "processing"
-        doc.stage = "validation"
+        doc.status = DocumentStatus.PROCESSING.value
+        doc.stage = DocumentStage.VALIDATION.value
         doc.progress = 0
         doc.error_message = None
         doc.updated_at = now
@@ -1067,7 +1071,6 @@ class DocumentService:
         )
 
     @staticmethod
-    @staticmethod
     def _extract_references_from_pdf_stream(pdf_bytes: bytes) -> list[ExtractedReference]:
         """Synchronously scan PDF pages and extract reference entries (runs in thread pool)."""
         import re
@@ -1146,7 +1149,9 @@ class DocumentService:
 
         # 2. Check cached structure in parsed_metadata
         cached_meta = dict(doc.parsed_metadata) if doc.parsed_metadata else {}
-        if not force_refresh and "structure" in cached_meta and isinstance(cached_meta["structure"], dict):
+        if not force_refresh and "structure" in cached_meta and isinstance(
+            cached_meta["structure"], dict
+        ):
             struct_cache = cached_meta["structure"]
             sections_data = [
                 DocumentSectionResponse(

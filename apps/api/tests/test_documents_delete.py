@@ -2,6 +2,7 @@
 
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import UUID, uuid4
 
@@ -48,7 +49,7 @@ class InMemoryAsyncDeleteSession:
     async def rollback(self) -> None:
         pass
 
-    async def execute(self, statement: object) -> MagicMock:
+    async def execute(self, statement: Any) -> MagicMock:
         result_mock = MagicMock()
         stmt_str = str(statement)
 
