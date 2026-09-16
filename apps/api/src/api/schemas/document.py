@@ -321,3 +321,28 @@ class DocumentStructureData(BaseModel):
 
 class DocumentStructureEnvelope(SingleResponseEnvelope[DocumentStructureData]):
     """Top-level single resource envelope for document structure."""
+
+
+class DocumentChunkItem(BaseModel):
+    """Single chunk item in paginated collection."""
+
+    id: UUID = Field(description="Unique chunk identifier")
+    document_id: UUID = Field(description="Parent document identifier")
+    chunk_index: int = Field(ge=0, description="0-indexed sequence position in document")
+    page_number: int = Field(ge=1, description="1-indexed page where chunk begins")
+    content: str | None = Field(
+        default=None,
+        description=(
+            "Textual content of the chunk. Returned as null when "
+            "include_content=false to save bandwidth."
+        ),
+    )
+    bounding_boxes: list[list[float | int]] = Field(
+        default_factory=list,
+        description="List of normalized [x0, y0, x1, y1, page] bounding boxes for Canvas overlay",
+    )
+    token_count: int = Field(gt=0, description="Calculated token count of chunk content")
+
+
+class DocumentChunkPaginatedEnvelope(PaginatedResponseEnvelope[DocumentChunkItem]):
+    """Top-level RFC 8288 paginated collection envelope for document chunks."""

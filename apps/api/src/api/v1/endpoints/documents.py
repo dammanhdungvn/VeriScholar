@@ -6,6 +6,7 @@ from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_document_service, get_idempotency_port
 from api.schemas.document import (
+    DocumentChunkPaginatedEnvelope,
     DocumentDetailEnvelope,
     DocumentExtractReferencesEnvelope,
     DocumentExtractReferencesRequest,
@@ -677,4 +678,82 @@ async def get_document_structure(
         success=True,
         data=data,
         meta=ResponseMeta(),
+    )
+
+
+GET_CHUNKS_DESCRIPTION = (
+    "🎯 **Mục đích:** Truy xuất danh sách các khối văn bản ngữ nghĩa (Chunks) "
+    "kèm tọa độ không gian chính xác (Bounding Boxes) để hiển thị lớp phủ highlight "
+    "trực quan trên PDF.js Web Canvas.\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo (bắt buộc, Path parameter).\n"
+    "- `page`: Số thứ tự trang phân trang kết quả (mặc định: 1, 1-indexed).\n"
+    "- `per_page`: Số lượng chunk trên mỗi trang kết quả (mặc định: 50, 1-200).\n"
+    "- `page_number`: Tùy chọn lọc các chunk thuộc riêng một trang vật lý của "
+    "file PDF (1-indexed).\n"
+    "- `include_content`: Cờ tối ưu băng thông (mặc định: true). Khi đặt `false`, "
+    "trường `content` trả về `null`, giúp tiết kiệm hơn 80% dung lượng payload "
+    "chỉ để vẽ highlight.\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- Danh sách các chunks kèm theo siêu dữ liệu phân trang chuẩn RFC 8288 "
+    "(first, prev, self, next, last).\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Nếu tài liệu chưa từng được phân đoạn trước đó, hệ thống sẽ tự động bóc "
+    "tách và lưu vào cơ sở dữ liệu."
+)
+
+
+@router.get(
+    "/{document_id}/chunks",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentChunkPaginatedEnvelope,
+    summary="Danh sách Chunks (phân trang + include_content)",
+    description=GET_CHUNKS_DESCRIPTION,
+    responses={
+        200: {"description": "Truy xuất danh sách chunks thành công kèm siêu dữ liệu phân trang."},
+        404: {"description": "Không tìm thấy tài liệu hoặc người dùng không có quyền truy cập."},
+        422: {"description": "Tham số phân trang hoặc định dạng UUID không hợp lệ."},
+    },
+)
+async def get_document_chunks(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học",
+    ),
+    page: int = Query(
+        1,
+        ge=1,
+        description="Số thứ tự trang kết quả (1-indexed)",
+    ),
+    per_page: int = Query(
+        50,
+        ge=1,
+        le=200,
+        description="Số lượng chunks tối đa trên mỗi trang (1-200)",
+    ),
+    page_number: int | None = Query(
+        None,
+        ge=1,
+        description="Tùy chọn lọc các chunk thuộc riêng một trang cụ thể của file PDF",
+    ),
+    include_content: bool = Query(
+        True,
+        description=(
+            "Nếu false, trường content trả về null giúp giảm >80% dung lượng "
+            "payload phục vụ vẽ Canvas"
+        ),
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentChunkPaginatedEnvelope:
+    """Retrieve paginated chunks of a document with visual grounding bounding boxes."""
+    return await service.get_document_chunks(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        page=page,
+        per_page=per_page,
+        page_number=page_number,
+        include_content=include_content,
     )
