@@ -15,6 +15,8 @@ from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
     DocumentDetailResponseData,
     DocumentExtractReferencesResponseData,
+    DocumentSectionResponse,
+    DocumentStructureData,
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
@@ -32,7 +34,9 @@ from api.schemas.document import (
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.reference import ExtractedReference, extract_references_from_text
+from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
 from core.ports.storage import IBlobStoragePort
+from core.ports.structure import IStructureExtractorPort
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -44,8 +48,13 @@ MAX_SESSION_DOCUMENTS = 5
 class DocumentService:
     """Service handling document upload, CAS deduplication, and session attachment."""
 
-    def __init__(self, storage: IBlobStoragePort) -> None:
+    def __init__(
+        self,
+        storage: IBlobStoragePort,
+        structure_extractor: IStructureExtractorPort | None = None,
+    ) -> None:
         self.storage = storage
+        self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
 
     async def upload_document(
         self,
@@ -1100,3 +1109,111 @@ class DocumentService:
             return []
 
         return extract_references_from_text(full_ref_text)
+
+    async def get_document_structure(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        force_refresh: bool = False,
+    ) -> DocumentStructureData:
+        """Retrieve or extract hierarchical document structure (TOC, abstract, and sections).
+
+        Args:
+            document_id: UUID of the target scholarly document.
+            user_id: Authenticated user identifier for tenant isolation.
+            db: Active async database session.
+            force_refresh: If True, bypass cached structure and re-extract from PDF.
+
+        Returns:
+            DocumentStructureData containing title, abstract, and sections.
+        """
+        # 1. Fetch document and enforce multi-tenant isolation
+        stmt = select(DocumentModel).where(DocumentModel.id == document_id)
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if not doc or doc.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Check cached structure in parsed_metadata
+        cached_meta = dict(doc.parsed_metadata) if doc.parsed_metadata else {}
+        if not force_refresh and "structure" in cached_meta and isinstance(cached_meta["structure"], dict):
+            struct_cache = cached_meta["structure"]
+            sections_data = [
+                DocumentSectionResponse(
+                    title=s.get("title", ""),
+                    page_number=s.get("page_number", 1),
+                    bounding_boxes=s.get("bounding_boxes", []),
+                )
+                for s in struct_cache.get("sections", [])
+            ]
+            return DocumentStructureData(
+                document_id=doc.id,
+                title=struct_cache.get("title") or doc.title,
+                abstract=struct_cache.get("abstract"),
+                abstract_bounding_boxes=struct_cache.get("abstract_bounding_boxes", []),
+                sections=sections_data,
+            )
+
+        # 3. Read raw PDF binary from CAS Storage
+        pdf_bytes = await self.storage.read_blob(doc.content_hash)
+
+        # 4. Extract structure in worker thread (CPU-bound)
+        structure_entity = await asyncio.to_thread(
+            self.structure_extractor.extract_structure,
+            pdf_bytes,
+            doc.id,
+        )
+
+        # 5. Build cache payload and persist to PostgreSQL
+        sections_cache = [
+            {
+                "title": s.title,
+                "page_number": s.page_number,
+                "bounding_boxes": [b.to_list() for b in s.bounding_boxes],
+            }
+            for s in structure_entity.sections
+        ]
+        abstract_boxes = [b.to_list() for b in structure_entity.abstract_bounding_boxes]
+
+        cached_meta["structure"] = {
+            "title": structure_entity.title,
+            "abstract": structure_entity.abstract,
+            "abstract_bounding_boxes": abstract_boxes,
+            "sections": sections_cache,
+            "extracted_at": datetime.now(UTC).isoformat(),
+        }
+        doc.parsed_metadata = cached_meta
+
+        # Backfill document title if empty
+        if not doc.title and structure_entity.title:
+            doc.title = structure_entity.title
+
+        doc.updated_at = datetime.now(UTC)
+        await db.flush()
+
+        sections_resp = [
+            DocumentSectionResponse(
+                title=s.title,
+                page_number=s.page_number,
+                bounding_boxes=[b.to_list() for b in s.bounding_boxes],
+            )
+            for s in structure_entity.sections
+        ]
+
+        return DocumentStructureData(
+            document_id=doc.id,
+            title=structure_entity.title or doc.title,
+            abstract=structure_entity.abstract,
+            abstract_bounding_boxes=abstract_boxes,
+            sections=sections_resp,
+        )

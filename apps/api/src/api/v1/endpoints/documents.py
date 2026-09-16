@@ -8,6 +8,7 @@ from api.deps import get_current_user, get_document_service, get_idempotency_por
 from api.schemas.document import (
     DocumentDetailEnvelope,
     DocumentExtractReferencesEnvelope,
+    DocumentStructureEnvelope,
     DocumentExtractReferencesRequest,
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
@@ -607,6 +608,71 @@ async def extract_references(
         force_reextract=force_reextract,
     )
     return DocumentExtractReferencesEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+GET_STRUCTURE_DESCRIPTION = (
+    "🎯 **Mục đích:** Truy xuất cấu trúc phân cấp bài báo khoa học (Table of Contents, "
+    "Headings, Sections và Abstract) kèm tọa độ Bounding Box chuẩn hóa để phục vụ điều hướng "
+    "và hiển thị trên giao diện Deep Reading Canvas (PDF.js).\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `force_refresh`: Bỏ qua bộ đệm database và ép bóc tách lại từ tệp PDF gốc (mặc định: false, Query parameter).\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- `document_id`: UUID tài liệu.\n"
+    "- `title`: Tiêu đề học thuật của bài báo.\n"
+    "- `abstract`: Toàn văn phần tóm tắt tác giả.\n"
+    "- `abstract_bounding_boxes`: Danh sách Bounding Box chuẩn hóa [[x0, y0, x1, y1, page], ...].\n"
+    "- `sections`: Danh sách các mục (title, page_number, bounding_boxes).\n\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Tối ưu hóa phản hồi: Trả về trực tiếp từ bộ đệm database (< 15ms) nếu đã được xử lý.\n"
+    "- Đảm bảo cô lập người dùng: Trả về `404 DOCUMENT_NOT_FOUND` nếu không thuộc quyền sở hữu."
+)
+
+
+@router.get(
+    "/{document_id}/structure",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentStructureEnvelope,
+    summary="Truy xuất cấu trúc bài báo (TOC, Headings, Sections)",
+    description=GET_STRUCTURE_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Truy xuất cấu trúc bài báo thành công.",
+            "model": DocumentStructureEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def get_document_structure(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần truy xuất cấu trúc",
+    ),
+    force_refresh: bool = Query(
+        default=False,
+        description="Nếu True, bỏ qua bộ nhớ đệm và phân tích lại cấu trúc từ PDF",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentStructureEnvelope:
+    """Retrieve or extract hierarchical document structure (TOC, abstract, and sections)."""
+    data = await service.get_document_structure(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        force_refresh=force_refresh,
+    )
+    return DocumentStructureEnvelope(
         success=True,
         data=data,
         meta=ResponseMeta(),

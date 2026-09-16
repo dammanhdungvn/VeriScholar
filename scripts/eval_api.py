@@ -156,7 +156,7 @@ async def run_all_apis(
             "endpoints": all_results,
         }
         with open(summary_file, "w", encoding="utf-8") as f:
-            json.dump(summary_payload, f, indent=2, ensure_ascii=False)
+            json.dump(summary_payload, f, indent=2, ensure_ascii=False, default=str)
 
     print("\n" + "=" * 72)
     print(f"  TỔNG KẾT: {passed_count}/{total} APIs ĐẠT CHUẨN QUALITY GATE")

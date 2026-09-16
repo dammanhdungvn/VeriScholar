@@ -290,3 +290,34 @@ class DocumentExtractReferencesEnvelope(
     SingleResponseEnvelope[DocumentExtractReferencesResponseData]
 ):
     """Top-level single resource envelope for document reference extraction."""
+
+
+class DocumentSectionResponse(BaseModel):
+    """Section or heading item in the document's structure."""
+
+    title: str = Field(description="Heading or section title text")
+    page_number: int = Field(ge=1, description="1-indexed page number where heading is located")
+    bounding_boxes: list[list[float]] = Field(
+        default_factory=list,
+        description="Normalized bounding boxes [[x0, y0, x1, y1, page], ...]",
+    )
+
+
+class DocumentStructureData(BaseModel):
+    """Structured outline, abstract, and sections of an academic paper."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    title: str | None = Field(default=None, description="Extracted scholarly paper title")
+    abstract: str | None = Field(default=None, description="Extracted paper abstract text")
+    abstract_bounding_boxes: list[list[float]] = Field(
+        default_factory=list,
+        description="Normalized bounding boxes covering abstract [[x0, y0, x1, y1, page], ...]",
+    )
+    sections: list[DocumentSectionResponse] = Field(
+        default_factory=list,
+        description="Ordered list of document headings and sections",
+    )
+
+
+class DocumentStructureEnvelope(SingleResponseEnvelope[DocumentStructureData]):
+    """Top-level single resource envelope for document structure."""
