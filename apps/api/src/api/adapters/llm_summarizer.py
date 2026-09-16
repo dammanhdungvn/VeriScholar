@@ -19,24 +19,9 @@ from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.summary import DocumentSummary, SummaryPoint
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.ports.summary import IDocumentSummarizerPort
+from core.prompts import default_registry
 
 logger = logging.getLogger(__name__)
-
-SUMMARY_SYSTEM_PROMPT = """You are an expert scholarly research assistant.
-Analyze the provided research paper (title, abstract, and representative text sections).
-Extract exactly three core research dimensions and provide a direct verbatim quote
-from the text as evidence for each dimension.
-
-Respond STRICTLY with a valid JSON object matching this schema:
-{
-  "problem_statement": "<Clear summary of the core research problem or gap addressed>",
-  "problem_quote": "<Exact verbatim sentence from provided text that states problem>",
-  "contributions": "<Clear summary of primary novel contribution or method proposed>",
-  "contribution_quote": "<Exact verbatim sentence from text describing contribution>",
-  "limitations": "<Clear summary of known limitations, assumptions, or future work>",
-  "limitation_quote": "<Exact verbatim sentence from text discussing limitations>"
-}
-Do not include markdown code block backticks. Return raw JSON only."""
 
 
 class LLMGroundedSummarizer(IDocumentSummarizerPort):
@@ -118,13 +103,13 @@ class LLMGroundedSummarizer(IDocumentSummarizerPort):
         try:
             # Build context combining head and tail/structural sections
             repr_chunks = self._select_representative_chunks(chunks, max_chunks=16)
-            chunk_context = "\n---\n".join(
-                f"[Chunk Page {c.page_number}]: {c.content}" for c in repr_chunks
-            )
-            user_prompt = (
-                f"Paper Title: {title or 'Unknown'}\n\n"
-                f"Abstract: {abstract or 'Not available'}\n\n"
-                f"Extracted Paper Content:\n{chunk_context}\n"
+
+            # Load prompt template from Prompts-as-Code registry
+            prompt_tmpl = default_registry.get("document-grounded-summary")
+            messages = prompt_tmpl.render_messages(
+                title=title or "Unknown",
+                abstract=abstract or "Not available",
+                chunks=repr_chunks,
             )
 
             headers = {
@@ -133,10 +118,7 @@ class LLMGroundedSummarizer(IDocumentSummarizerPort):
             }
             payload: dict[str, Any] = {
                 "model": self.model,
-                "messages": [
-                    {"role": "system", "content": SUMMARY_SYSTEM_PROMPT},
-                    {"role": "user", "content": user_prompt},
-                ],
+                "messages": messages,
                 "response_format": {"type": "json_object"},
             }
 
