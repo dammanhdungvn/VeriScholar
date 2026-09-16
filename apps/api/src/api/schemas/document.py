@@ -245,3 +245,48 @@ class DocumentParseResponseData(BaseModel):
 
 class DocumentParseEnvelope(SingleResponseEnvelope[DocumentParseResponseData]):
     """Top-level single resource envelope for document parse initiation."""
+
+
+class ParsedReferenceItemSchema(BaseModel):
+    """Structured fields parsed from academic citation text."""
+
+    title: str | None = Field(default=None, description="Extracted scholarly paper title")
+    authors: list[str] = Field(default_factory=list, description="Extracted list of author names")
+    year: int | None = Field(default=None, description="Publication year")
+    arxiv_id: str | None = Field(default=None, description="arXiv identifier if present")
+    doi: str | None = Field(default=None, description="Digital Object Identifier if present")
+
+
+class ReferenceItemResponse(BaseModel):
+    """Single reference item within the extracted bibliography."""
+
+    ref_index: int = Field(ge=1, description="1-indexed reference position")
+    raw_text: str = Field(description="Full raw reference citation string")
+    parsed: ParsedReferenceItemSchema = Field(description="Parsed academic metadata")
+
+
+class DocumentExtractReferencesRequest(BaseModel):
+    """Configuration options for extracting document references."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    force_reextract: bool = Field(
+        default=False,
+        description="If True, bypass database cache and re-extract references from PDF file",
+    )
+
+
+class DocumentExtractReferencesResponseData(BaseModel):
+    """Payload data returned when document references are extracted."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    total_extracted: int = Field(ge=0, description="Total number of extracted references")
+    references: list[ReferenceItemResponse] = Field(
+        default_factory=list, description="List of structured reference items"
+    )
+
+
+class DocumentExtractReferencesEnvelope(
+    SingleResponseEnvelope[DocumentExtractReferencesResponseData]
+):
+    """Top-level single resource envelope for document reference extraction."""

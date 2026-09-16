@@ -34,6 +34,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         host=settings.HOST,
         port=settings.PORT,
     )
+    # Ensure all declared database tables exist
+    import api.db.models  # noqa: F401
+    from api.db.models.base import Base
+    from api.db.session import engine
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
     yield
     logger.info("application_shutdown", log_type="lifecycle")
 

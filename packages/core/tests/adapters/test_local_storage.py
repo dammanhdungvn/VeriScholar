@@ -114,3 +114,17 @@ async def test_local_storage_stream_blob_range(tmp_path: Path) -> None:
     with pytest.raises(FileNotFoundError):
         async for _ in storage.stream_blob_range("0" * 64):
             pass
+
+
+@pytest.mark.asyncio
+async def test_local_storage_read_blob(tmp_path: Path) -> None:
+    storage = LocalStorageAdapter(base_directory=tmp_path / "blobs")
+    content = b"%PDF-1.4 sample pdf binary data"
+    expected_hash = hashlib.sha256(content).hexdigest()
+
+    await storage.save_blob(_make_stream(content), expected_hash)
+    read_data = await storage.read_blob(expected_hash)
+    assert read_data == content
+
+    with pytest.raises(FileNotFoundError):
+        await storage.read_blob("0" * 64)

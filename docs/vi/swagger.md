@@ -643,3 +643,125 @@ TAG: Module 1: Documents
     }
   }
   ```
+
+---
+
+### [POST] `/api/v1/documents/{document_id}:extract-references`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Bóc tách danh mục tài liệu tham khảo (References / Bibliography).
+* **Mục đích:** Bóc tách toàn bộ danh mục tài liệu tham khảo từ bài báo khoa học, phân tích cú pháp chi tiết thành các trường học thuật cấu trúc (`title`, `authors`, `year`, `arxiv_id`, `doi`) và lưu trữ vào cơ sở dữ liệu `reference_items`.
+* **Cơ chế lưu đệm cơ sở dữ liệu (Database Cache):** Sau khi bóc tách lần đầu, toàn bộ danh mục được lưu vào cơ sở dữ liệu. Các lần gọi tiếp theo sẽ trả về kết quả ngay lập tức (< 15ms) mà không cần quét lại tệp PDF.
+* **Tái bóc tách (Force Re-extract):** Cho phép truyền `force_reextract: true` để xóa bỏ dữ liệu cũ và bóc tách lại từ tệp nhị phân PDF lưu trong Content-Addressable Storage (CAS).
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập dữ liệu của người dùng khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `document_id` | `string` (UUID) | Có | UUID định danh duy nhất của bài báo khoa học cần bóc tách tham khảo. |
+
+#### Request Body (`application/json`)
+Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
+
+##### Ví dụ Request Body:
+```json
+{
+  "force_reextract": false
+}
+```
+
+#### Responses
+* **`200 OK`** - Bóc tách hoặc truy xuất danh mục tài liệu tham khảo thành công.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "document_id": "e3b0c442-98fc-1c14-9afb-f4c8996fb924",
+      "total_extracted": 3,
+      "references": [
+        {
+          "ref_index": 1,
+          "raw_text": "Jimmy Lei Ba, Jamie Ryan Kiros, and Geoffrey E Hinton. Layer normalization. arXiv preprint arXiv:1607.06450, 2016.",
+          "parsed": {
+            "title": "Layer normalization",
+            "authors": [
+              "Jimmy Lei Ba",
+              "Jamie Ryan Kiros",
+              "Geoffrey E Hinton"
+            ],
+            "year": 2016,
+            "arxiv_id": "1607.06450",
+            "doi": null
+          }
+        },
+        {
+          "ref_index": 2,
+          "raw_text": "Dzmitry Bahdanau, Kyunghyun Cho, and Yoshua Bengio. Neural machine translation by jointly learning to align and translate. arXiv:1409.0473, 2014.",
+          "parsed": {
+            "title": "Neural machine translation by jointly learning to align and translate",
+            "authors": [
+              "Dzmitry Bahdanau",
+              "Kyunghyun Cho",
+              "Yoshua Bengio"
+            ],
+            "year": 2014,
+            "arxiv_id": "1409.0473",
+            "doi": null
+          }
+        },
+        {
+          "ref_index": 3,
+          "raw_text": "Ashish Vaswani et al. Attention is all you need. In NeurIPS, 2017. doi:10.5555/3295222.3295349",
+          "parsed": {
+            "title": "Attention is all you need",
+            "authors": [
+              "Ashish Vaswani et al."
+            ],
+            "year": 2017,
+            "arxiv_id": null,
+            "doi": "10.5555/3295222.3295349"
+          }
+        }
+      ]
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 'e3b0c442-98fc-1c14-9afb-f4c8996fb924' not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Định dạng UUID không hợp lệ.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "VALIDATION_ERROR",
+      "message": "Input should be a valid UUID, invalid character: expected an optional prefix of `urn:uuid:` followed by [0-9a-fA-F-], found `n` at 1",
+      "field": "document_id",
+      "action": "Ensure request payload matches the OpenAPI schema specification."
+    },
+    "meta": {
+      "request_id": "2b3cd45e-6f78-90ab-cdef-1234567890ab",
+      "timestamp": "2026-09-13T10:05:00Z"
+    }
+  }
+  ```

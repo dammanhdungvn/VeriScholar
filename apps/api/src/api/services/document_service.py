@@ -1,5 +1,6 @@
 """Document Ingestion Service coordinating CAS storage and database persistence."""
 
+import asyncio
 import hashlib
 import math
 from collections.abc import AsyncIterator
@@ -9,9 +10,11 @@ from uuid import UUID, uuid4
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
+from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
     DocumentDetailResponseData,
+    DocumentExtractReferencesResponseData,
     DocumentLinks,
     DocumentListItem,
     DocumentListPaginatedEnvelope,
@@ -22,13 +25,16 @@ from api.schemas.document import (
     DocumentStatusResponseData,
     DocumentUploadResponseData,
     PageMetadataItem,
+    ParsedReferenceItemSchema,
+    ReferenceItemResponse,
     StagesDetail,
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
+from core.domain.entities.reference import ExtractedReference, extract_references_from_text
 from core.ports.storage import IBlobStoragePort
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 PDF_MAGIC_BYTES = b"%PDF-"
@@ -909,3 +915,180 @@ class DocumentService:
             message="Document parsing pipeline initiated.",
             links=links,
         )
+
+    async def extract_document_references(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        force_reextract: bool = False,
+    ) -> DocumentExtractReferencesResponseData:
+        """Extract or retrieve cached scholarly references from a document.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant scoping).
+            db: Active async database session.
+            force_reextract: If True, bypass database cache and re-extract from PDF.
+
+        Returns:
+            DocumentExtractReferencesResponseData containing document_id, total_extracted,
+            and structured references list.
+
+        Raises:
+            HTTPException(404): If document not found or belongs to another user,
+                                or physical PDF blob is missing.
+        """
+        # 1. Enforce multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Check cached database references if not forcing re-extraction
+        if not force_reextract:
+            cached_stmt = (
+                select(ReferenceItemModel)
+                .where(ReferenceItemModel.document_id == document_id)
+                .order_by(ReferenceItemModel.ref_index.asc())
+            )
+            cached_res = await db.execute(cached_stmt)
+            cached_items = cached_res.scalars().all()
+            if cached_items:
+                return DocumentExtractReferencesResponseData(
+                    document_id=document_id,
+                    total_extracted=len(cached_items),
+                    references=[
+                        ReferenceItemResponse(
+                            ref_index=item.ref_index,
+                            raw_text=item.raw_text,
+                            parsed=ParsedReferenceItemSchema(
+                                title=item.parsed_title,
+                                authors=item.parsed_authors or [],
+                                year=item.parsed_year,
+                                arxiv_id=item.arxiv_id,
+                                doi=item.doi,
+                            ),
+                        )
+                        for item in cached_items
+                    ],
+                )
+
+        # 3. Read binary PDF blob from storage
+        content_hash = doc.content_hash
+        if not await self.storage.blob_exists(content_hash):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FILE_NOT_FOUND",
+                    "message": f"Underlying physical file for document '{document_id}' not found.",
+                    "field": "content_hash",
+                    "action": "Re-upload document file.",
+                },
+            )
+
+        pdf_bytes = await self.storage.read_blob(content_hash)
+
+        # 4. Extract references from PDF offloaded to background thread
+        extracted_refs: list[ExtractedReference] = await asyncio.to_thread(
+            self._extract_references_from_pdf_stream, pdf_bytes
+        )
+
+        # 5. Clear previous references in database if re-extracting
+        if force_reextract:
+            del_stmt = delete(ReferenceItemModel).where(
+                ReferenceItemModel.document_id == document_id
+            )
+            await db.execute(del_stmt)
+
+        # 6. Persist extracted references
+        for ref in extracted_refs:
+            ref_model = ReferenceItemModel(
+                document_id=document_id,
+                ref_index=ref.ref_index,
+                raw_text=ref.raw_text,
+                parsed_title=ref.parsed.title,
+                parsed_authors=ref.parsed.authors,
+                parsed_year=ref.parsed.year,
+                doi=ref.parsed.doi,
+                arxiv_id=ref.parsed.arxiv_id,
+            )
+            db.add(ref_model)
+
+        await db.flush()
+
+        return DocumentExtractReferencesResponseData(
+            document_id=document_id,
+            total_extracted=len(extracted_refs),
+            references=[
+                ReferenceItemResponse(
+                    ref_index=r.ref_index,
+                    raw_text=r.raw_text,
+                    parsed=ParsedReferenceItemSchema(
+                        title=r.parsed.title,
+                        authors=r.parsed.authors,
+                        year=r.parsed.year,
+                        arxiv_id=r.parsed.arxiv_id,
+                        doi=r.parsed.doi,
+                    ),
+                )
+                for r in extracted_refs
+            ],
+        )
+
+    @staticmethod
+    @staticmethod
+    def _extract_references_from_pdf_stream(pdf_bytes: bytes) -> list[ExtractedReference]:
+        """Synchronously scan PDF pages and extract reference entries (runs in thread pool)."""
+        import re
+
+        import pymupdf
+
+        doc = pymupdf.open(stream=pdf_bytes, filetype="pdf")
+        total_pages = len(doc)
+        if total_pages == 0:
+            return []
+
+        ref_pattern = re.compile(
+            r"(?im)(?:^|\n)\s*(?:\[?\d+\]?|\d+\.)?\s*"
+            r"(?:references|bibliography|works\s+cited)\s*(?:\n|$)"
+        )
+        stop_pattern = re.compile(
+            r"(?im)(?:^|\n)\s*(?:appendix|attention visualizations|"
+            r"acknowledgements|author contributions)\b"
+        )
+
+        full_ref_text = ""
+        found_ref_heading = False
+
+        for page_idx in range(total_pages):
+            page_text = doc[page_idx].get_text()
+            if not found_ref_heading:
+                match = ref_pattern.search(page_text)
+                if match:
+                    found_ref_heading = True
+                    full_ref_text += page_text[match.end() :]
+            else:
+                stop_match = stop_pattern.search(page_text)
+                if stop_match:
+                    full_ref_text += page_text[: stop_match.start()]
+                    break
+                full_ref_text += "\n" + page_text
+
+        if not found_ref_heading or not full_ref_text.strip():
+            return []
+
+        return extract_references_from_text(full_ref_text)
