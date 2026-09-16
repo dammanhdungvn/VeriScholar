@@ -6,6 +6,7 @@ from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_document_service, get_idempotency_port
 from api.schemas.document import (
+    DocumentChunkDetailEnvelope,
     DocumentChunkPaginatedEnvelope,
     DocumentDetailEnvelope,
     DocumentExtractReferencesEnvelope,
@@ -756,4 +757,65 @@ async def get_document_chunks(
         per_page=per_page,
         page_number=page_number,
         include_content=include_content,
+    )
+
+
+GET_CHUNK_DETAIL_DESCRIPTION = (
+    "🎯 **Mục đích:** Truy xuất toàn văn nội dung, tọa độ Bounding Boxes hình học "
+    "chuẩn hóa và liên kết điều hướng lân cận cho một đoạn bằng chứng (Chunk) cụ thể.\n"
+    "\n"
+    "📥 **Đầu vào (Path parameters):**\n"
+    "- `document_id`: UUID của bài báo khoa học.\n"
+    "- `chunk_id`: UUID của đoạn bằng chứng (Chunk).\n"
+    "\n"
+    "📤 **Đầu ra (HTTP 200):**\n"
+    "- `content`: Toàn văn nội dung đoạn văn bản.\n"
+    "- `bounding_boxes`: Danh sách tọa độ chuẩn hóa [[x0, y0, x1, y1, page], ...] "
+    "hỗ trợ Deep Reading Canvas highlight.\n"
+    "- `token_count`: Số lượng tokens tính toán của đoạn.\n"
+    "- `links`: Các liên kết điều hướng lân cận `prev_chunk` và `next_chunk` "
+    "phục vụ Citation Inspector duyệt mở rộng ngữ cảnh.\n"
+    "\n"
+    "⚠️ **Lưu ý:**\n"
+    "- Nếu `chunk_id` không tồn tại trong tài liệu: trả về `404 CHUNK_NOT_FOUND`.\n"
+    "- Nếu `document_id` không tồn tại hoặc sai quyền sở hữu: trả về `404 DOCUMENT_NOT_FOUND`."
+)
+
+
+@router.get(
+    "/{document_id}/chunks/{chunk_id}",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentChunkDetailEnvelope,
+    summary="Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)",
+    description=GET_CHUNK_DETAIL_DESCRIPTION,
+    responses={
+        200: {
+            "description": (
+                "Truy xuất chi tiết đoạn bằng chứng thành công kèm tọa độ bounding boxes "
+                "và navigational links."
+            )
+        },
+        404: {"description": "Không tìm thấy tài liệu hoặc không tìm thấy chunk tương ứng."},
+        422: {"description": "Định dạng UUID không hợp lệ."},
+    },
+)
+async def get_document_chunk_detail(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học",
+    ),
+    chunk_id: UUID = Path(
+        ...,
+        description="UUID của đoạn bằng chứng (Chunk)",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentChunkDetailEnvelope:
+    """Retrieve detailed content, spatial coordinates, and traversal links of a single chunk."""
+    return await service.get_document_chunk_detail(
+        document_id=document_id,
+        chunk_id=chunk_id,
+        user_id=current_user.id,
+        db=db,
     )

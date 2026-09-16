@@ -928,3 +928,81 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
   ```
 * **`422 Unprocessable Entity`** - Tham số phân trang hoặc định dạng UUID không hợp lệ (ví dụ: `per_page > 200` hoặc `page < 1`).  
   *Content-Type:* `application/json`
+
+
+---
+
+### [GET] `/api/v1/documents/{document_id}/chunks/{chunk_id}`
+**Summary:** `Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)`  
+**Operation ID:** `get_document_chunk_detail_api_v1_documents__document_id__chunks__chunk_id__get`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Truy xuất toàn văn nội dung, tọa độ Bounding Boxes hình học chuẩn hóa và liên kết điều hướng lân cận cho một đoạn bằng chứng (Chunk) cụ thể.
+* **Mục đích:** Cung cấp đầy đủ nội dung văn bản gốc, tọa độ chuẩn hóa `[x0, y0, x1, y1, page]` và liên kết lân cận (`prev_chunk`, `next_chunk`) phục vụ giao diện Deep Reading Canvas nhảy đến vị trí đoạn văn bản, đồng thời hỗ trợ Citation Inspector duyệt mở rộng ngữ cảnh trước và sau của bằng chứng khoa học.
+* **Liên kết HATEOAS & Điều hướng (Hypermedia Links):**
+  - `self`: URL định danh đoạn văn bản hiện tại.
+  - `document`: URL tài liệu cha (`/api/v1/documents/{document_id}`).
+  - `chunks`: URL danh sách tất cả chunks (`/api/v1/documents/{document_id}/chunks`).
+  - `prev_chunk`: URL đoạn văn bản đứng liền trước (`chunk_index - 1`), hoặc `null` nếu là chunk đầu tiên.
+  - `next_chunk`: URL đoạn văn bản đứng liền sau (`chunk_index + 1`), hoặc `null` nếu là chunk cuối cùng.
+* **Tự động bóc tách On-demand (On-Demand Extraction):** Nếu tài liệu chưa từng được phân đoạn, hệ thống tự động bóc tách và lưu vào cơ sở dữ liệu trước khi truy xuất chunk.
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập tài liệu của người dùng khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters
+| Vị trí | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `path` | `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học. |
+| `path` | `chunk_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của đoạn bằng chứng (Chunk). |
+
+#### Responses
+* **`200 OK`** - Truy xuất chi tiết đoạn bằng chứng thành công kèm tọa độ bounding boxes và navigational links.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "1cf7b489-e75d-425b-b52d-7c310ef90d51",
+      "document_id": "6697dc74-f24c-4ae2-8993-ec83f6817078",
+      "chunk_index": 1,
+      "page_number": 1,
+      "content": "Attention mechanisms have become an integral part of compelling sequence modeling and transduction models...",
+      "bounding_boxes": [
+        [0.1663, 0.2292, 0.8337, 0.3854, 1]
+      ],
+      "token_count": 42,
+      "embedding_dimension": 1536,
+      "created_at": "2026-09-16T04:01:32.612558Z",
+      "updated_at": "2026-09-16T04:01:32.612558Z",
+      "links": {
+        "self": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks/1cf7b489-e75d-425b-b52d-7c310ef90d51",
+        "document": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078",
+        "chunks": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks",
+        "prev_chunk": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks/0bf6a378-d14c-42eb-9112-aa310ef90d10",
+        "next_chunk": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks/2de8c590-f86d-43bc-a43e-8c420fa01e62"
+      }
+    },
+    "meta": {
+      "request_id": "req_0562b36b173b",
+      "timestamp": "2026-09-16T04:01:32.612558Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy tài liệu hoặc không tìm thấy chunk tương ứng.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "CHUNK_NOT_FOUND",
+      "message": "Chunk 1cf7b489-e75d-425b-b52d-7c310ef90d51 not found for document 6697dc74-f24c-4ae2-8993-ec83f6817078.",
+      "field": "chunk_id",
+      "action": "Verify chunk ID or query GET /api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks for available chunks."
+    },
+    "meta": {
+      "request_id": "req_404_chunk123",
+      "timestamp": "2026-09-16T04:01:32.638705Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Định dạng UUID của `document_id` hoặc `chunk_id` không hợp lệ.  
+  *Content-Type:* `application/json`

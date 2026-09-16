@@ -16,7 +16,10 @@ from api.db.models.folder import FolderModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
+    DocumentChunkDetailData,
+    DocumentChunkDetailEnvelope,
     DocumentChunkItem,
+    DocumentChunkNavigationLinks,
     DocumentChunkPaginatedEnvelope,
     DocumentDetailResponseData,
     DocumentExtractReferencesResponseData,
@@ -1285,6 +1288,7 @@ class DocumentService:
                     doc.id,
                 )
                 if extracted_chunks:
+                    now = datetime.now(UTC)
                     chunk_models = [
                         DocumentChunkModel(
                             id=ec.id,
@@ -1295,6 +1299,8 @@ class DocumentService:
                             bounding_boxes=ec.bounding_boxes_raw,
                             token_count=ec.token_count,
                             embedding=None,
+                            created_at=now,
+                            updated_at=now,
                         )
                         for ec in extracted_chunks
                     ]
@@ -1372,4 +1378,153 @@ class DocumentService:
             data=data,
             meta=meta,
             links=links,
+        )
+
+    async def get_document_chunk_detail(
+        self,
+        db: AsyncSession,
+        user_id: UUID,
+        document_id: UUID,
+        chunk_id: UUID,
+    ) -> DocumentChunkDetailEnvelope:
+        """Retrieve detailed content, bounding boxes, and navigation links for a chunk.
+
+        Execution flow:
+        1. Fetch document and enforce multi-tenant isolation (user_id check).
+           Raise 404 DOCUMENT_NOT_FOUND if missing or unauthorized.
+        2. If document has 0 chunks and has physical blob, perform on-demand extraction.
+        3. Query DocumentChunkModel where document_id == document_id and id == chunk_id.
+           Raise 404 CHUNK_NOT_FOUND if chunk does not exist for this document.
+        4. Query adjacent chunk IDs (prev_chunk for chunk_index - 1, next_chunk for chunk_index + 1)
+           using fast indexed lookup.
+        5. Construct hypermedia navigation links and return DocumentChunkDetailEnvelope.
+        """
+        # 1. Fetch document and enforce multi-tenant isolation
+        stmt = select(DocumentModel).where(DocumentModel.id == document_id)
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if not doc or doc.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. If no chunks exist and document has physical file blob, perform on-demand extraction
+        count_existing_stmt = (
+            select(func.count())
+            .select_from(DocumentChunkModel)
+            .where(DocumentChunkModel.document_id == document_id)
+        )
+        count_res = await db.execute(count_existing_stmt)
+        existing_count = count_res.scalar() or 0
+
+        if existing_count == 0 and doc.content_hash:
+            if await self.storage.blob_exists(doc.content_hash):
+                pdf_bytes = await self.storage.read_blob(doc.content_hash)
+                extracted_chunks = await asyncio.to_thread(
+                    self.chunk_extractor.extract_chunks,
+                    pdf_bytes,
+                    doc.id,
+                )
+                if extracted_chunks:
+                    now = datetime.now(UTC)
+                    chunk_models = [
+                        DocumentChunkModel(
+                            id=ec.id,
+                            document_id=ec.document_id,
+                            chunk_index=ec.chunk_index,
+                            page_number=ec.page_number,
+                            content=ec.content,
+                            bounding_boxes=ec.bounding_boxes_raw,
+                            token_count=ec.token_count,
+                            embedding=None,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        for ec in extracted_chunks
+                    ]
+                    db.add_all(chunk_models)
+                    doc.chunk_count = len(chunk_models)
+                    doc.updated_at = datetime.now(UTC)
+                    await db.flush()
+
+        # 3. Query the requested chunk
+        chunk_stmt = select(DocumentChunkModel).where(
+            DocumentChunkModel.document_id == document_id,
+            DocumentChunkModel.id == chunk_id,
+        )
+        chunk_res = await db.execute(chunk_stmt)
+        chunk = chunk_res.scalar_one_or_none()
+
+        if not chunk:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "CHUNK_NOT_FOUND",
+                    "message": f"Chunk '{chunk_id}' not found for document '{document_id}'.",
+                    "field": "chunk_id",
+                    "action": (
+                        f"Verify chunk ID or query GET /api/v1/documents/{document_id}/chunks "
+                        "for available chunks."
+                    ),
+                },
+            )
+
+        # 4. Resolve previous and next chunk IDs for reader traversal
+        prev_chunk_id: UUID | None = None
+        next_chunk_id: UUID | None = None
+
+        if chunk.chunk_index > 0:
+            prev_stmt = select(DocumentChunkModel.id).where(
+                DocumentChunkModel.document_id == document_id,
+                DocumentChunkModel.chunk_index == chunk.chunk_index - 1,
+            )
+            prev_res = await db.execute(prev_stmt)
+            prev_chunk_id = prev_res.scalar_one_or_none()
+
+        next_stmt = select(DocumentChunkModel.id).where(
+            DocumentChunkModel.document_id == document_id,
+            DocumentChunkModel.chunk_index == chunk.chunk_index + 1,
+        )
+        next_res = await db.execute(next_stmt)
+        next_chunk_id = next_res.scalar_one_or_none()
+
+        # 5. Build navigational links
+        base_doc_url = f"/api/v1/documents/{document_id}"
+        links = DocumentChunkNavigationLinks(
+            self=f"{base_doc_url}/chunks/{chunk.id}",
+            document=base_doc_url,
+            chunks=f"{base_doc_url}/chunks",
+            prev_chunk=f"{base_doc_url}/chunks/{prev_chunk_id}" if prev_chunk_id else None,
+            next_chunk=f"{base_doc_url}/chunks/{next_chunk_id}" if next_chunk_id else None,
+        )
+
+        embedding_dim = (
+            len(chunk.embedding) if chunk.embedding and isinstance(chunk.embedding, list) else None
+        )
+
+        now = datetime.now(UTC)
+        data = DocumentChunkDetailData(
+            id=chunk.id,
+            document_id=chunk.document_id,
+            chunk_index=chunk.chunk_index,
+            page_number=chunk.page_number,
+            content=chunk.content,
+            bounding_boxes=chunk.bounding_boxes or [],
+            token_count=chunk.token_count,
+            embedding_dimension=embedding_dim,
+            created_at=chunk.created_at or now,
+            updated_at=chunk.updated_at or now,
+            links=links,
+        )
+
+        return DocumentChunkDetailEnvelope(
+            success=True,
+            data=data,
         )

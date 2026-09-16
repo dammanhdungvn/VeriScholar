@@ -19,7 +19,9 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **7** | `POST /api/v1/documents/{id}:parse`| `parse` | `uv run python scripts/eval_api.py --api parse --bless` | `uv run python scripts/eval_api.py --api parse --paper "Attention Is All You Need.pdf" --bless` |
 | **8** | `POST /api/v1/documents/{id}:extract-references` | `extract-refs` | `uv run python scripts/eval_api.py --api extract-refs --bless` | `uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless` |
 | **9** | `GET /api/v1/documents/{id}/structure` | `structure` | `uv run python scripts/eval_api.py --api structure --bless` | `uv run python scripts/eval_api.py --api structure --paper "Attention Is All You Need.pdf" --bless` |
-| **10** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
+| **10** | `GET /api/v1/documents/{id}/chunks` | `chunks` | `uv run python scripts/eval_api.py --api chunks --bless` | `uv run python scripts/eval_api.py --api chunks --paper "Attention Is All You Need.pdf" --bless` |
+| **11** | `GET /api/v1/documents/{id}/chunks/{chunk_id}` | `chunk_detail` | `uv run python scripts/eval_api.py --api chunk_detail --bless` | `uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless` |
+| **12** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
 
 ---
 
@@ -40,10 +42,16 @@ uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All Y
 
 # Ví dụ 4: Đánh giá API Bóc tách cấu trúc bài báo (TOC, Abstract, Sections)
 uv run python scripts/eval_api.py --api structure --paper "Attention Is All You Need.pdf" --bless
+
+# Ví dụ 5: Đánh giá API Danh sách Chunks (phân trang + bounding boxes)
+uv run python scripts/eval_api.py --api chunks --paper "Attention Is All You Need.pdf" --bless
+
+# Ví dụ 6: Đánh giá API Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)
+uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless
 ```
 
 ### 2.2. Chạy Toàn Bộ Suite Module 1 (All Endpoints)
-Chạy tuần tự toàn bộ 9 API theo đúng thứ tự vòng đời tài liệu:
+Chạy tuần tự toàn bộ 12 API theo đúng thứ tự vòng đời tài liệu:
 
 ```bash
 uv run python scripts/eval_api.py --all --bless
@@ -94,7 +102,7 @@ sequenceDiagram
 
 - **Báo cáo định dạng Markdown (Dành cho người đọc):**
   - Nằm tại thư mục: `temp/output/test/`
-  - Ví dụ: `temp/output/test/get_documents_detail.md`, `temp/output/test/post_documents_upload.md`, `temp/output/test/get_documents_file_stream.md`, `temp/output/test/get_documents_status.md`, `temp/output/test/post_documents_star.md`, `temp/output/test/post_documents_parse.md`, `temp/output/test/post_documents_extract_references.md`, `temp/output/test/get_documents_structure.md`
+  - Ví dụ: `post_documents_upload.md`, `get_documents_list.md`, `get_documents_detail.md`, `get_documents_file_stream.md`, `get_documents_status.md`, `post_documents_star.md`, `post_documents_parse.md`, `post_documents_extract_references.md`, `get_documents_structure.md`, `get_documents_chunks.md`, `get_documents_chunk_detail.md`, `delete_documents.md`.
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).
