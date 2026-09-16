@@ -2,6 +2,7 @@
 
 from scripts.eval.runners.base import BaseAPIRunner
 from scripts.eval.runners.delete_documents import DeleteDocumentAPIRunner
+from scripts.eval.runners.get_documents_chunks import DocumentChunksAPIRunner
 from scripts.eval.runners.get_documents_detail import DocumentDetailAPIRunner
 from scripts.eval.runners.get_documents_file_stream import StreamFileAPIRunner
 from scripts.eval.runners.get_documents_list import ListDocumentsAPIRunner
@@ -24,6 +25,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "extract-references": ExtractReferencesAPIRunner,
     "extract-refs": ExtractReferencesAPIRunner,
     "structure": DocumentStructureAPIRunner,
+    "chunks": DocumentChunksAPIRunner,
     "delete": DeleteDocumentAPIRunner,
     # Canonical Endpoint Identifiers (Matching File Names 1-to-1)
     "post_documents_upload": UploadAPIRunner,
@@ -35,6 +37,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "post_documents_parse": ParseDocumentAPIRunner,
     "post_documents_extract_references": ExtractReferencesAPIRunner,
     "get_documents_structure": DocumentStructureAPIRunner,
+    "get_documents_chunks": DocumentChunksAPIRunner,
     "delete_documents": DeleteDocumentAPIRunner,
 }
 
@@ -48,6 +51,7 @@ MODULE_1_ORDER = [
     "post_documents_parse",
     "post_documents_extract_references",
     "get_documents_structure",
+    "get_documents_chunks",
     "delete_documents",
 ]
 
@@ -64,5 +68,6 @@ __all__ = [
     "ParseDocumentAPIRunner",
     "ExtractReferencesAPIRunner",
     "DocumentStructureAPIRunner",
+    "DocumentChunksAPIRunner",
     "DeleteDocumentAPIRunner",
 ]

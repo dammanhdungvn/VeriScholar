@@ -848,3 +848,83 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
   ```
 * **`422 Unprocessable Entity`** - Định dạng `document_id` không phải UUID hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [GET] `/api/v1/documents/{document_id}/chunks`
+**Summary:** `Danh sách Chunks (phân trang + include_content)`  
+**Operation ID:** `get_document_chunks_api_v1_documents__document_id__chunks_get`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Truy xuất danh sách các đoạn văn bản ngữ nghĩa (Chunks) kèm tọa độ không gian chính xác (Bounding Boxes).
+* **Mục đích:** Cung cấp tọa độ không gian chuẩn hóa `[x0, y0, x1, y1, page]` và nội dung văn bản của từng khối đoạn văn phục vụ hiển thị lớp phủ highlight trực quan trên PDF.js Canvas và hỗ trợ Hybrid RAG retrieval.
+* **Tối ưu hóa băng thông (Bandwidth Optimization):** Hỗ trợ tham số `include_content=false`. Khi đặt giá trị này, trường `content` trả về `null`, giúp tiết kiệm hơn 80% dung lượng payload truyền tải khi frontend chỉ cần tọa độ hình học để vẽ bounding boxes.
+* **Lọc theo trang vật lý (Page Filtering):** Cho phép truyền `?page_number={n}` để chỉ lấy các chunks thuộc riêng một trang vật lý của file PDF, tối ưu hóa quá trình lazy-load từng trang trên Canvas.
+* **Tự động bóc tách & Lưu đệm (On-Demand Extraction & Persistence):** Nếu tài liệu chưa được phân đoạn trước đó, hệ thống tự động bóc tách từ file PDF gốc qua PyMuPDF, lưu vào bảng `document_chunks` và cập nhật `chunk_count` của tài liệu trong một giao dịch ACID. Các lần truy vấn sau trả về trực tiếp từ cơ sở dữ liệu trong < 15ms.
+* **Phân trang chuẩn RFC 8288 (HATEOAS Links):** Trả về đầy đủ siêu dữ liệu phân trang và các liên kết điều hướng `first`, `prev`, `self`, `next`, `last`.
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập tài liệu của người khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters
+| Vị trí | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `path` | `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học. |
+| `query` | `page` | `integer` | Không | Số thứ tự trang kết quả (1-indexed). Mặc định: `1`, tối thiểu: `1`. |
+| `query` | `per_page` | `integer` | Không | Số lượng chunks tối đa mỗi trang. Mặc định: `50`, từ `1` đến `200`. |
+| `query` | `page_number` | `integer` | Không | Tùy chọn lọc các chunk thuộc riêng một trang vật lý của file PDF (1-indexed). |
+| `query` | `include_content` | `boolean` | Không | Nếu `false`, trường `content` trả về `null` giúp tiết kiệm >80% dung lượng payload phục vụ vẽ Canvas. Mặc định: `true`. |
+
+#### Responses
+* **`200 OK`** - Truy xuất danh sách chunks thành công kèm siêu dữ liệu phân trang.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "1cf7b489-e75d-425b-b52d-7c310ef90d51",
+        "document_id": "6697dc74-f24c-4ae2-8993-ec83f6817078",
+        "chunk_index": 0,
+        "page_number": 1,
+        "content": "Advancing Retrieval-Augmented Generation for Structured Enterprise Data...",
+        "bounding_boxes": [
+          [0.1663, 0.1292, 0.8337, 0.1854, 1]
+        ],
+        "token_count": 5
+      }
+    ],
+    "meta": {
+      "total": 154,
+      "page": 1,
+      "per_page": 10,
+      "total_pages": 16,
+      "request_id": "req_0562b36b173b",
+      "timestamp": "2026-09-16T04:01:32.612558Z"
+    },
+    "links": {
+      "first": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks?page=1&per_page=10",
+      "prev": null,
+      "self": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks?page=1&per_page=10",
+      "next": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks?page=2&per_page=10",
+      "last": "/api/v1/documents/6697dc74-f24c-4ae2-8993-ec83f6817078/chunks?page=16&per_page=10"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 6b26d29f-ad24-4c96-b2bc-a02def948ee8 not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "req_404_chunk123",
+      "timestamp": "2026-09-16T04:01:32.638705Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Tham số phân trang hoặc định dạng UUID không hợp lệ (ví dụ: `per_page > 200` hoặc `page < 1`).  
+  *Content-Type:* `application/json`

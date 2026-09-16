@@ -296,6 +296,8 @@ Hệ thống hỗ trợ 2 chế độ vận hành dọn dẹp dữ liệu:
     - `temp/output/test/post_documents_star.md`
     - `temp/output/test/post_documents_parse.md`
     - `temp/output/test/post_documents_extract_references.md`
+    - `temp/output/test/get_documents_structure.md`
+    - `temp/output/test/get_documents_chunks.md`
     - `temp/output/test/delete_documents.md`
 - **Cơ chế kiểm tra tệp tồn tại & Làm mới (Clean Refresh):**
   - Trước khi ghi báo cáo mới, runner gọi hàm `check_and_prepare_output_file(target_file)`.

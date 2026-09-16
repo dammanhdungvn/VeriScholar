@@ -7,13 +7,17 @@ from collections.abc import AsyncIterator
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from api.adapters.chunk_extractor import PyMuPDFChunkExtractor
 from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
 from api.db.models.blob import DocumentStorageBlobModel
+from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.document import (
+    DocumentChunkItem,
+    DocumentChunkPaginatedEnvelope,
     DocumentDetailResponseData,
     DocumentExtractReferencesResponseData,
     DocumentLinks,
@@ -36,6 +40,7 @@ from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.reference import ExtractedReference, extract_references_from_text
 from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
+from core.ports.chunk import IChunkExtractorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from fastapi import HTTPException, UploadFile, status
@@ -53,9 +58,11 @@ class DocumentService:
         self,
         storage: IBlobStoragePort,
         structure_extractor: IStructureExtractorPort | None = None,
+        chunk_extractor: IChunkExtractorPort | None = None,
     ) -> None:
         self.storage = storage
         self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
+        self.chunk_extractor = chunk_extractor or PyMuPDFChunkExtractor()
 
     async def upload_document(
         self,
@@ -1223,4 +1230,146 @@ class DocumentService:
             abstract=structure_entity.abstract,
             abstract_bounding_boxes=abstract_boxes,
             sections=sections_resp,
+        )
+
+    async def get_document_chunks(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        page: int = 1,
+        per_page: int = 50,
+        page_number: int | None = None,
+        include_content: bool = True,
+    ) -> DocumentChunkPaginatedEnvelope:
+        """Retrieve paginated chunks of a document with optional projection and page filtering.
+
+        1. Multi-tenant guard: Check document exists and belongs to current user.
+        2. Check existing chunks in document_chunks table.
+        3. If empty and document has blob, extract chunks on-demand and persist.
+        4. Filter by page_number if specified, paginate, and project include_content.
+        5. Return DocumentChunkPaginatedEnvelope with RFC 8288 links.
+        """
+        # 1. Fetch document and enforce multi-tenant isolation
+        stmt = select(DocumentModel).where(DocumentModel.id == document_id)
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if not doc or doc.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Check existing chunks in database
+        count_existing_stmt = (
+            select(func.count())
+            .select_from(DocumentChunkModel)
+            .where(DocumentChunkModel.document_id == document_id)
+        )
+        count_res = await db.execute(count_existing_stmt)
+        existing_count = count_res.scalar() or 0
+
+        # 3. If no chunks exist and document has physical file blob, perform on-demand extraction
+        if existing_count == 0 and doc.content_hash:
+            if await self.storage.blob_exists(doc.content_hash):
+                pdf_bytes = await self.storage.read_blob(doc.content_hash)
+                extracted_chunks = await asyncio.to_thread(
+                    self.chunk_extractor.extract_chunks,
+                    pdf_bytes,
+                    doc.id,
+                )
+                if extracted_chunks:
+                    chunk_models = [
+                        DocumentChunkModel(
+                            id=ec.id,
+                            document_id=ec.document_id,
+                            chunk_index=ec.chunk_index,
+                            page_number=ec.page_number,
+                            content=ec.content,
+                            bounding_boxes=ec.bounding_boxes_raw,
+                            token_count=ec.token_count,
+                            embedding=None,
+                        )
+                        for ec in extracted_chunks
+                    ]
+                    db.add_all(chunk_models)
+                    doc.chunk_count = len(chunk_models)
+                    doc.updated_at = datetime.now(UTC)
+                    await db.flush()
+
+        # 4. Build query with optional page_number filtering
+        where_clauses = [DocumentChunkModel.document_id == document_id]
+        if page_number is not None:
+            where_clauses.append(DocumentChunkModel.page_number == page_number)
+
+        total_stmt = select(func.count()).select_from(DocumentChunkModel).where(*where_clauses)
+        total_res = await db.execute(total_stmt)
+        total = total_res.scalar() or 0
+
+        total_pages = max(1, math.ceil(total / per_page))
+        offset = (page - 1) * per_page
+
+        items_stmt = (
+            select(DocumentChunkModel)
+            .where(*where_clauses)
+            .order_by(DocumentChunkModel.chunk_index.asc())
+            .offset(offset)
+            .limit(per_page)
+        )
+        items_res = await db.execute(items_stmt)
+        chunk_rows = items_res.scalars().all()
+
+        data = [
+            DocumentChunkItem(
+                id=row.id,
+                document_id=row.document_id,
+                chunk_index=row.chunk_index,
+                page_number=row.page_number,
+                content=row.content if include_content else None,
+                bounding_boxes=row.bounding_boxes or [],
+                token_count=row.token_count,
+            )
+            for row in chunk_rows
+        ]
+
+        # 5. Build RFC 8288 pagination links
+        def _build_url(p: int) -> str:
+            base = f"/api/v1/documents/{document_id}/chunks?page={p}&per_page={per_page}"
+            if page_number is not None:
+                base += f"&page_number={page_number}"
+            if not include_content:
+                base += "&include_content=false"
+            return base
+
+        first_link = _build_url(1)
+        last_link = _build_url(total_pages)
+        self_link = _build_url(page)
+        prev_link = _build_url(page - 1) if page > 1 else None
+        next_link = _build_url(page + 1) if page < total_pages else None
+
+        meta = PaginationMeta(
+            total=total,
+            page=page,
+            per_page=per_page,
+            total_pages=total_pages,
+        )
+        links = PaginationLinks(
+            first=first_link,
+            prev=prev_link,
+            self=self_link,
+            next=next_link,
+            last=last_link,
+        )
+
+        return DocumentChunkPaginatedEnvelope(
+            success=True,
+            data=data,
+            meta=meta,
+            links=links,
         )

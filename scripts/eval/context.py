@@ -49,7 +49,13 @@ class EvaluationContext:
             )
             self._is_asgi_fallback = False
         else:
+            import api.db.models  # noqa: F401
             from api import app
+            from api.db.models.base import Base
+            from api.db.session import engine
+
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
 
             self.client = httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
