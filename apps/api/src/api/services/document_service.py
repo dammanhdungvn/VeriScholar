@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from api.adapters.chunk_extractor import PyMuPDFChunkExtractor
+from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
 from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.chunk import DocumentChunkModel
@@ -15,6 +16,7 @@ from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
+from api.db.models.summary import DocumentSummaryModel
 from api.schemas.document import (
     DocumentChunkDetailData,
     DocumentChunkDetailEnvelope,
@@ -33,19 +35,25 @@ from api.schemas.document import (
     DocumentStarResponseData,
     DocumentStatusResponseData,
     DocumentStructureData,
+    DocumentSummaryData,
+    DocumentSummaryEnvelope,
     DocumentUploadResponseData,
     PageMetadataItem,
     ParsedReferenceItemSchema,
     ReferenceItemResponse,
     StagesDetail,
+    SummaryPointResponse,
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
+from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.reference import ExtractedReference, extract_references_from_text
+from core.domain.value_objects.bounding_box import BoundingBox
 from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
 from core.ports.chunk import IChunkExtractorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
+from core.ports.summary import IDocumentSummarizerPort
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,10 +70,12 @@ class DocumentService:
         storage: IBlobStoragePort,
         structure_extractor: IStructureExtractorPort | None = None,
         chunk_extractor: IChunkExtractorPort | None = None,
+        summarizer: IDocumentSummarizerPort | None = None,
     ) -> None:
         self.storage = storage
         self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
         self.chunk_extractor = chunk_extractor or PyMuPDFChunkExtractor()
+        self.summarizer = summarizer or HeuristicGroundedSummarizer()
 
     async def upload_document(
         self,
@@ -1308,6 +1318,11 @@ class DocumentService:
                     doc.chunk_count = len(chunk_models)
                     doc.updated_at = datetime.now(UTC)
                     await db.flush()
+                    # Ingestion Pre-computation: Pre-generate summary if missing
+                    try:
+                        await self._precompute_summary_if_missing(doc, chunk_models, pdf_bytes, db)
+                    except Exception:
+                        pass
 
         # 4. Build query with optional page_number filtering
         where_clauses = [DocumentChunkModel.document_id == document_id]
@@ -1525,6 +1540,252 @@ class DocumentService:
         )
 
         return DocumentChunkDetailEnvelope(
+            success=True,
+            data=data,
+        )
+
+    async def _precompute_summary_if_missing(
+        self,
+        doc: DocumentModel,
+        chunk_models: list[DocumentChunkModel],
+        pdf_bytes: bytes | None,
+        db: AsyncSession,
+    ) -> DocumentSummaryModel:
+        """Precompute and persist 3-point grounded summary to DB cache if not already present."""
+        sum_stmt = select(DocumentSummaryModel).where(
+            DocumentSummaryModel.document_id == doc.id
+        )
+        sum_res = await db.execute(sum_stmt)
+        existing = sum_res.scalar_one_or_none()
+        if existing is not None:
+            return existing
+
+        domain_chunks = []
+        for cm in chunk_models:
+            boxes = []
+            if cm.bounding_boxes:
+                for b in cm.bounding_boxes:
+                    if isinstance(b, (list, tuple)) and len(b) >= 5:
+                        try:
+                            boxes.append(
+                                BoundingBox(
+                                    x0=float(b[0]),
+                                    y0=float(b[1]),
+                                    x1=float(b[2]),
+                                    y1=float(b[3]),
+                                    page=int(b[4]),
+                                )
+                            )
+                        except Exception:
+                            pass
+            domain_chunks.append(
+                DocumentChunk(
+                    id=cm.id,
+                    document_id=cm.document_id,
+                    chunk_index=cm.chunk_index,
+                    page_number=cm.page_number,
+                    content=cm.content,
+                    bounding_boxes=boxes,
+                    token_count=cm.token_count,
+                )
+            )
+
+        abstract_text = None
+        if doc.parsed_metadata and isinstance(doc.parsed_metadata, dict):
+            struct_data = doc.parsed_metadata.get("structure")
+            if isinstance(struct_data, dict):
+                abstract_text = struct_data.get("abstract")
+
+        generated = await self.summarizer.summarize(
+            document_id=doc.id,
+            title=doc.title,
+            abstract=abstract_text,
+            chunks=domain_chunks,
+            pdf_bytes=pdf_bytes,
+        )
+
+        def _serialize_boxes(boxes_in):
+            out = []
+            for b in boxes_in:
+                if hasattr(b, "to_list"):
+                    out.append(b.to_list())
+                elif isinstance(b, (list, tuple)):
+                    out.append(list(b))
+            return out
+
+        now = datetime.now(UTC)
+        summary_record = DocumentSummaryModel(
+            id=uuid4(),
+            document_id=doc.id,
+            problem_statement=generated.problem_statement.text,
+            problem_citations=_serialize_boxes(generated.problem_statement.bounding_boxes),
+            contributions=generated.contributions.text,
+            contribution_citations=_serialize_boxes(generated.contributions.bounding_boxes),
+            limitations=generated.limitations.text,
+            limitation_citations=_serialize_boxes(generated.limitations.bounding_boxes),
+            total_tokens=generated.total_tokens,
+            latency_ms=generated.latency_ms,
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(summary_record)
+        await db.flush()
+        return summary_record
+
+    async def get_document_summary(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentSummaryEnvelope:
+        """Retrieve the singleton 3-point grounded summary for a document.
+
+        Adheres strictly to Google Cloud AIP-130 and AIP-136 Singleton sub-resource design.
+
+        Execution flow:
+        1. Fetch document and enforce multi-tenant isolation (user_id check).
+           Raise 404 DOCUMENT_NOT_FOUND if missing or unauthorized.
+        2. Status check:
+           - If status in ('pending', 'processing'), raise 409 DOCUMENT_PROCESSING.
+           - If status == 'failed', raise 422 DOCUMENT_FAILED.
+        3. Query DocumentSummaryModel where document_id == document_id.
+           - Cache Hit: Map stored JSONB and fields to DocumentSummaryData and return.
+           - Cache Miss (On-demand synthesis fallback):
+             a. Ensure document chunks exist (extract on-demand from storage if needed).
+             b. Call self.summarizer.summarize(...) with pdf_bytes.
+             c. Persist to document_summaries table.
+             d. Map and return DocumentSummaryEnvelope.
+        """
+        # 1. Fetch document and enforce multi-tenant isolation
+        stmt = select(DocumentModel).where(DocumentModel.id == document_id)
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if not doc or doc.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Lifecycle Status Guard
+        pending_states = (
+            DocumentStatus.PENDING.value,
+            DocumentStatus.PROCESSING.value,
+            "pending",
+            "processing",
+        )
+        if doc.status in pending_states:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "DOCUMENT_PROCESSING",
+                    "message": (
+                        f"Document '{document_id}' is still being processed. "
+                        "Wait for completion before querying summary."
+                    ),
+                    "field": "id",
+                    "action": f"Poll GET /api/v1/documents/{document_id}/status until completed.",
+                },
+            )
+        if doc.status in (DocumentStatus.FAILED.value, "failed"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "DOCUMENT_FAILED",
+                    "message": (
+                        f"Document '{document_id}' failed processing. "
+                        "Summary cannot be extracted."
+                    ),
+                    "field": "id",
+                    "action": f"Check error_message in /documents/{document_id}/status.",
+                },
+            )
+
+        # 3. Query DocumentSummaryModel
+        sum_stmt = select(DocumentSummaryModel).where(
+            DocumentSummaryModel.document_id == document_id
+        )
+        sum_res = await db.execute(sum_stmt)
+        summary_record = sum_res.scalar_one_or_none()
+
+        if summary_record is None:
+            # 4. On-demand Synthesis Fallback
+            pdf_bytes = None
+            if doc.content_hash and await self.storage.blob_exists(doc.content_hash):
+                pdf_bytes = await self.storage.read_blob(doc.content_hash)
+
+            # Ensure chunks exist
+            chunks_stmt = (
+                select(DocumentChunkModel)
+                .where(DocumentChunkModel.document_id == document_id)
+                .order_by(DocumentChunkModel.chunk_index.asc())
+            )
+            chunks_res = await db.execute(chunks_stmt)
+            chunk_models = list(chunks_res.scalars().all())
+
+            if not chunk_models and pdf_bytes:
+                extracted_chunks = await asyncio.to_thread(
+                    self.chunk_extractor.extract_chunks,
+                    pdf_bytes,
+                    doc.id,
+                )
+                if extracted_chunks:
+                    now = datetime.now(UTC)
+                    new_chunks = [
+                        DocumentChunkModel(
+                            id=ec.id,
+                            document_id=ec.document_id,
+                            chunk_index=ec.chunk_index,
+                            page_number=ec.page_number,
+                            content=ec.content,
+                            bounding_boxes=ec.bounding_boxes_raw,
+                            token_count=ec.token_count,
+                            embedding=None,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        for ec in extracted_chunks
+                    ]
+                    db.add_all(new_chunks)
+                    doc.chunk_count = len(new_chunks)
+                    doc.updated_at = datetime.now(UTC)
+                    await db.flush()
+                    chunk_models = new_chunks
+
+            summary_record = await self._precompute_summary_if_missing(
+                doc=doc,
+                chunk_models=chunk_models,
+                pdf_bytes=pdf_bytes,
+                db=db,
+            )
+
+        now = datetime.now(UTC)
+        data = DocumentSummaryData(
+            document_id=summary_record.document_id,
+            problem_statement=SummaryPointResponse(
+                text=summary_record.problem_statement,
+                bounding_boxes=summary_record.problem_citations or [],
+            ),
+            contributions=SummaryPointResponse(
+                text=summary_record.contributions,
+                bounding_boxes=summary_record.contribution_citations or [],
+            ),
+            limitations=SummaryPointResponse(
+                text=summary_record.limitations,
+                bounding_boxes=summary_record.limitation_citations or [],
+            ),
+            total_tokens=summary_record.total_tokens,
+            latency_ms=summary_record.latency_ms,
+            created_at=summary_record.created_at or now,
+            updated_at=summary_record.updated_at or now,
+        )
+
+        return DocumentSummaryEnvelope(
             success=True,
             data=data,
         )

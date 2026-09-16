@@ -18,6 +18,7 @@ from api.schemas.document import (
     DocumentStarRequest,
     DocumentStatusEnvelope,
     DocumentStructureEnvelope,
+    DocumentSummaryEnvelope,
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
@@ -816,6 +817,55 @@ async def get_document_chunk_detail(
     return await service.get_document_chunk_detail(
         document_id=document_id,
         chunk_id=chunk_id,
+        user_id=current_user.id,
+        db=db,
+    )
+
+
+GET_DOCUMENT_SUMMARY_DESCRIPTION = """🎯 **Mục đích:**
+Lấy bản tóm tắt 3 ý cốt lõi (Vấn đề, Đóng góp, Hạn chế) theo chuẩn Google AIP-130 Singleton.
+
+🔍 **Đặc điểm nổi bật (Visual Grounding):**
+- Mỗi luận điểm tóm tắt được liên kết với chứng cứ thực tế trên PDF
+  thông qua danh sách tọa độ Bounding Boxes 5-tuples `[x0, y0, x1, y1, page]`.
+- Hỗ trợ Deep Reading Canvas (PDF.js) lập tức cuộn và highlight vùng dẫn chứng màu vàng.
+
+⚡ **Hiệu năng & Vận hành:**
+- Point query trực tiếp từ database cache với độ trễ < 10ms.
+- Tự động tổng hợp on-demand fallback nếu bài báo chưa có bản tóm tắt.
+
+⚠️ **Mã lỗi nghiệp vụ (RFC 7807):**
+- `404 DOCUMENT_NOT_FOUND`: Tài liệu không tồn tại hoặc không thuộc quyền sở hữu của user.
+- `409 DOCUMENT_PROCESSING`: Tài liệu đang trong quá trình bóc tách/xử lý nền.
+- `422 DOCUMENT_FAILED`: Tài liệu thất bại trong khâu tiền xử lý.
+"""
+@router.get(
+    "/{document_id}/summary",
+    response_model=DocumentSummaryEnvelope,
+    status_code=status.HTTP_200_OK,
+    summary="13. Lấy bản tóm tắt 3 ý cốt lõi (Grounded Summary)",
+    description=GET_DOCUMENT_SUMMARY_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Truy xuất bản tóm tắt 3 ý cốt lõi thành công kèm Bounding Boxes."
+        },
+        404: {"description": "Không tìm thấy tài liệu hoặc không có quyền truy cập."},
+        409: {"description": "Tài liệu đang xử lý nền (DOCUMENT_PROCESSING)."},
+        422: {"description": "Tài liệu xử lý thất bại (DOCUMENT_FAILED) hoặc UUID không hợp lệ."},
+    },
+)
+async def get_document_summary(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentSummaryEnvelope:
+    """Retrieve the 3-point grounded summary for a document."""
+    return await service.get_document_summary(
+        document_id=document_id,
         user_id=current_user.id,
         db=db,
     )

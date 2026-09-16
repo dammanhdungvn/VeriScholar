@@ -11,6 +11,7 @@ from core.domain.entities.reference import (
 )
 from core.domain.entities.session_turn import SessionTurn
 from core.domain.entities.structure import DocumentSection, DocumentStructure
+from core.domain.entities.summary import DocumentSummary, SummaryPoint
 
 __all__ = [
     "Document",
@@ -18,9 +19,11 @@ __all__ = [
     "DocumentSection",
     "DocumentStorageBlob",
     "DocumentStructure",
+    "DocumentSummary",
     "ExtractedReference",
     "ParsedReferenceInfo",
     "SessionTurn",
+    "SummaryPoint",
     "extract_references_from_text",
     "parse_reference_item",
 ]

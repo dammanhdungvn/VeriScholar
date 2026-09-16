@@ -9,6 +9,7 @@ from scripts.eval.runners.get_documents_file_stream import StreamFileAPIRunner
 from scripts.eval.runners.get_documents_list import ListDocumentsAPIRunner
 from scripts.eval.runners.get_documents_status import DocumentStatusAPIRunner
 from scripts.eval.runners.get_documents_structure import DocumentStructureAPIRunner
+from scripts.eval.runners.get_documents_summary import DocumentSummaryAPIRunner
 from scripts.eval.runners.post_documents_extract_references import ExtractReferencesAPIRunner
 from scripts.eval.runners.post_documents_parse import ParseDocumentAPIRunner
 from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
@@ -30,6 +31,8 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "chunk_detail": DocumentChunkDetailAPIRunner,
     "chunk-detail": DocumentChunkDetailAPIRunner,
     "chunk": DocumentChunkDetailAPIRunner,
+    "summary": DocumentSummaryAPIRunner,
+    "document-summary": DocumentSummaryAPIRunner,
     "delete": DeleteDocumentAPIRunner,
     # Canonical Endpoint Identifiers (Matching File Names 1-to-1)
     "post_documents_upload": UploadAPIRunner,
@@ -43,6 +46,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "get_documents_structure": DocumentStructureAPIRunner,
     "get_documents_chunks": DocumentChunksAPIRunner,
     "get_documents_chunk_detail": DocumentChunkDetailAPIRunner,
+    "get_documents_summary": DocumentSummaryAPIRunner,
     "delete_documents": DeleteDocumentAPIRunner,
 }
 
@@ -58,6 +62,7 @@ MODULE_1_ORDER = [
     "get_documents_structure",
     "get_documents_chunks",
     "get_documents_chunk_detail",
+    "get_documents_summary",
     "delete_documents",
 ]
 
@@ -76,5 +81,6 @@ __all__ = [
     "DocumentStructureAPIRunner",
     "DocumentChunksAPIRunner",
     "DocumentChunkDetailAPIRunner",
+    "DocumentSummaryAPIRunner",
     "DeleteDocumentAPIRunner",
 ]

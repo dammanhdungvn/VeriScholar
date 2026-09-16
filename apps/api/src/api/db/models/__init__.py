@@ -7,6 +7,7 @@ from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
+from api.db.models.summary import DocumentSummaryModel
 from api.db.models.user import UserModel
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "DocumentChunkModel",
     "DocumentModel",
     "DocumentStorageBlobModel",
+    "DocumentSummaryModel",
     "FolderModel",
     "ReferenceItemModel",
     "ResearchSessionModel",
