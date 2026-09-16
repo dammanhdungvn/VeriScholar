@@ -85,7 +85,13 @@ class DocumentSummaryAPIRunner(BaseAPIRunner):
             if not isinstance(box, (list, tuple)) or len(box) != 5:
                 return False
             x0, y0, x1, y1, pg = box
-            return 0.0 <= x0 <= 1.0 and 0.0 <= y0 <= 1.0 and 0.0 <= x1 <= 1.0 and 0.0 <= y1 <= 1.0 and pg >= 1
+            return (
+                0.0 <= x0 <= 1.0
+                and 0.0 <= y0 <= 1.0
+                and 0.0 <= x1 <= 1.0
+                and 0.0 <= y1 <= 1.0
+                and pg >= 1
+            )
 
         # Scenario 1: Standard Retrieval & Grounding Synthesis (200 OK)
         t0 = time.perf_counter()
@@ -108,7 +114,9 @@ class DocumentSummaryAPIRunner(BaseAPIRunner):
             and data1.get("total_tokens", 0) > 0
         )
 
-        c1_audit_path, c1_sha = save_raw_artifact(self.endpoint_name, "case1_standard_summary", body1)
+        c1_audit_path, c1_sha = save_raw_artifact(
+            self.endpoint_name, "case1_standard_summary", body1
+        )
         artifact_checksums["case1_standard_summary"] = c1_sha
 
         cases.append(
@@ -314,11 +322,15 @@ class DocumentSummaryAPIRunner(BaseAPIRunner):
                     "boxes_count": len(p1_prob.get("bounding_boxes") or []),
                 },
                 "contributions": {
-                    "text": (p1_contr.get("text", "")[:60] + "...") if p1_contr.get("text") else None,
+                    "text": (p1_contr.get("text", "")[:60] + "...")
+                    if p1_contr.get("text")
+                    else None,
                     "boxes_count": len(p1_contr.get("bounding_boxes") or []),
                 },
                 "limitations": {
-                    "text": (p1_limit.get("text", "")[:60] + "...") if p1_limit.get("text") else None,
+                    "text": (p1_limit.get("text", "")[:60] + "...")
+                    if p1_limit.get("text")
+                    else None,
                     "boxes_count": len(p1_limit.get("bounding_boxes") or []),
                 },
                 "total_tokens": data1.get("total_tokens"),

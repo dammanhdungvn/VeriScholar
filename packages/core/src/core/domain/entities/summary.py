@@ -26,17 +26,13 @@ class DocumentSummary(BaseModel):
     problem_statement: SummaryPoint = Field(
         ..., description="Core research problem addressed by the paper"
     )
-    contributions: SummaryPoint = Field(
-        ..., description="Key contributions and novel proposals"
-    )
+    contributions: SummaryPoint = Field(..., description="Key contributions and novel proposals")
     limitations: SummaryPoint = Field(
         ..., description="Remaining limitations, assumptions, or research gaps"
     )
     total_tokens: int = Field(
         default=0, ge=0, description="Total tokens consumed during generation"
     )
-    latency_ms: int = Field(
-        default=0, ge=0, description="Generation latency in milliseconds"
-    )
+    latency_ms: int = Field(default=0, ge=0, description="Generation latency in milliseconds")
     created_at: datetime | None = Field(default=None)
     updated_at: datetime | None = Field(default=None)

@@ -424,9 +424,7 @@ class DocumentSummaryData(BaseModel):
     total_tokens: int | None = Field(
         default=0, description="Estimated or actual tokens consumed during generation"
     )
-    latency_ms: int | None = Field(
-        default=0, description="Generation latency in milliseconds"
-    )
+    latency_ms: int | None = Field(default=0, description="Generation latency in milliseconds")
     created_at: datetime | None = Field(
         default=None, description="Timestamp when summary was generated and stored"
     )

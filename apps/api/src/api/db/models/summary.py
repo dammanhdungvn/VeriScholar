@@ -23,16 +23,10 @@ class DocumentSummaryModel(IdentifiableTimestampedModel):
         index=True,
     )
     problem_statement: Mapped[str] = mapped_column(Text, nullable=False)
-    problem_citations: Mapped[list] = mapped_column(
-        JSONType, default=list, nullable=False
-    )
+    problem_citations: Mapped[list] = mapped_column(JSONType, default=list, nullable=False)
     contributions: Mapped[str] = mapped_column(Text, nullable=False)
-    contribution_citations: Mapped[list] = mapped_column(
-        JSONType, default=list, nullable=False
-    )
+    contribution_citations: Mapped[list] = mapped_column(JSONType, default=list, nullable=False)
     limitations: Mapped[str] = mapped_column(Text, nullable=False)
-    limitation_citations: Mapped[list] = mapped_column(
-        JSONType, default=list, nullable=False
-    )
+    limitation_citations: Mapped[list] = mapped_column(JSONType, default=list, nullable=False)
     total_tokens: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     latency_ms: Mapped[int] = mapped_column(Integer, default=0, nullable=False)

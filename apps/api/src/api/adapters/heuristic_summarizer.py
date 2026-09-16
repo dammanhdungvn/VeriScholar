@@ -125,9 +125,7 @@ class HeuristicGroundedSummarizer(IDocumentSummarizerPort):
                         prob_chk = chk
                         break
             if not problem_text:
-                problem_text = (
-                    f"Core research problem investigated in {title or 'this paper'}."
-                )
+                problem_text = f"Core research problem investigated in {title or 'this paper'}."
 
         # Resolve bounding boxes (Micro-precision search or chunk fallback)
         if prob_chk:
@@ -175,9 +173,7 @@ class HeuristicGroundedSummarizer(IDocumentSummarizerPort):
                         contrib_chk = chk
                         break
             if not contrib_text:
-                contrib_text = (
-                    f"Methodological advancements proposed in {title or 'this paper'}."
-                )
+                contrib_text = f"Methodological advancements proposed in {title or 'this paper'}."
 
         if contrib_chk:
             contrib_boxes = self._resolve_boxes(pdf_doc, contrib_chk, contrib_text)
@@ -226,10 +222,8 @@ class HeuristicGroundedSummarizer(IDocumentSummarizerPort):
                     break
             if not limitation_text:
                 limitation_text = (
-                    (
                     "Empirical constraints, edge cases, and computational "
                     "trade-offs highlighted for future research."
-                )
                 )
 
         if lim_chk:

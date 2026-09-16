@@ -1552,9 +1552,7 @@ class DocumentService:
         db: AsyncSession,
     ) -> DocumentSummaryModel:
         """Precompute and persist 3-point grounded summary to DB cache if not already present."""
-        sum_stmt = select(DocumentSummaryModel).where(
-            DocumentSummaryModel.document_id == doc.id
-        )
+        sum_stmt = select(DocumentSummaryModel).where(DocumentSummaryModel.document_id == doc.id)
         sum_res = await db.execute(sum_stmt)
         existing = sum_res.scalar_one_or_none()
         if existing is not None:
@@ -1698,8 +1696,7 @@ class DocumentService:
                 detail={
                     "code": "DOCUMENT_FAILED",
                     "message": (
-                        f"Document '{document_id}' failed processing. "
-                        "Summary cannot be extracted."
+                        f"Document '{document_id}' failed processing. Summary cannot be extracted."
                     ),
                     "field": "id",
                     "action": f"Check error_message in /documents/{document_id}/status.",

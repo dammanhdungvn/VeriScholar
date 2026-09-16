@@ -839,6 +839,8 @@ Lấy bản tóm tắt 3 ý cốt lõi (Vấn đề, Đóng góp, Hạn chế) t
 - `409 DOCUMENT_PROCESSING`: Tài liệu đang trong quá trình bóc tách/xử lý nền.
 - `422 DOCUMENT_FAILED`: Tài liệu thất bại trong khâu tiền xử lý.
 """
+
+
 @router.get(
     "/{document_id}/summary",
     response_model=DocumentSummaryEnvelope,
@@ -846,9 +848,7 @@ Lấy bản tóm tắt 3 ý cốt lõi (Vấn đề, Đóng góp, Hạn chế) t
     summary="13. Lấy bản tóm tắt 3 ý cốt lõi (Grounded Summary)",
     description=GET_DOCUMENT_SUMMARY_DESCRIPTION,
     responses={
-        200: {
-            "description": "Truy xuất bản tóm tắt 3 ý cốt lõi thành công kèm Bounding Boxes."
-        },
+        200: {"description": "Truy xuất bản tóm tắt 3 ý cốt lõi thành công kèm Bounding Boxes."},
         404: {"description": "Không tìm thấy tài liệu hoặc không có quyền truy cập."},
         409: {"description": "Tài liệu đang xử lý nền (DOCUMENT_PROCESSING)."},
         422: {"description": "Tài liệu xử lý thất bại (DOCUMENT_FAILED) hoặc UUID không hợp lệ."},
