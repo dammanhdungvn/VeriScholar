@@ -1761,6 +1761,12 @@ class DocumentService:
                 db=db,
             )
 
+        return self._map_summary_model_to_envelope(summary_record)
+
+    def _map_summary_model_to_envelope(
+        self, summary_record: DocumentSummaryModel
+    ) -> DocumentSummaryEnvelope:
+        """Map DocumentSummaryModel ORM record to DocumentSummaryEnvelope schema."""
         now = datetime.now(UTC)
         data = DocumentSummaryData(
             document_id=summary_record.document_id,
@@ -1781,8 +1787,190 @@ class DocumentService:
             created_at=summary_record.created_at or now,
             updated_at=summary_record.updated_at or now,
         )
-
         return DocumentSummaryEnvelope(
             success=True,
             data=data,
         )
+
+    async def generate_document_summary(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        force: bool,
+        db: AsyncSession,
+    ) -> tuple[DocumentSummaryEnvelope, str]:
+        """Generate or retrieve a 3-point grounded summary according to Google AIP-136.
+
+        Args:
+            document_id: Target document identifier.
+            user_id: Authenticated user identifier for ownership check.
+            force: If True, forces re-synthesis even if a cached summary already exists.
+            db: Active async database session.
+
+        Returns:
+            Tuple of (DocumentSummaryEnvelope, cache_status) where cache_status is
+            'Cache-Hit' or 'Generated'.
+        """
+        # 1. Multi-tenant & Document Existence Guard
+        stmt = select(DocumentModel).where(DocumentModel.id == document_id)
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+
+        if doc is None or doc.user_id != user_id:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Ensure UUID exists and belongs to the authenticated user.",
+                },
+            )
+
+        # 2. Lifecycle Status Guard
+        pending_states = (
+            DocumentStatus.PENDING.value,
+            DocumentStatus.PROCESSING.value,
+            "pending",
+            "processing",
+        )
+        if doc.status in pending_states:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "DOCUMENT_PROCESSING",
+                    "message": (
+                        f"Document '{document_id}' is still being processed. "
+                        "Wait for completion before generating summary."
+                    ),
+                    "field": "id",
+                    "action": f"Poll GET /api/v1/documents/{document_id}/status until completed.",
+                },
+            )
+        if doc.status in (DocumentStatus.FAILED.value, "failed"):
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "DOCUMENT_FAILED",
+                    "message": (
+                        f"Document '{document_id}' failed processing. Summary cannot be generated."
+                    ),
+                    "field": "id",
+                    "action": f"Check error_message in /documents/{document_id}/status.",
+                },
+            )
+
+        # 3. Query existing summary
+        sum_stmt = select(DocumentSummaryModel).where(
+            DocumentSummaryModel.document_id == document_id
+        )
+        sum_res = await db.execute(sum_stmt)
+        summary_record = sum_res.scalar_one_or_none()
+
+        # If summary exists and force is False -> Immediate Cache-Hit
+        if summary_record is not None and not force:
+            return self._map_summary_model_to_envelope(summary_record), "Cache-Hit"
+
+        # 4. Perform synthesis (initial or forced re-synthesis)
+        pdf_bytes = None
+        if doc.content_hash and await self.storage.blob_exists(doc.content_hash):
+            pdf_bytes = await self.storage.read_blob(doc.content_hash)
+
+        chunks_stmt = (
+            select(DocumentChunkModel)
+            .where(DocumentChunkModel.document_id == document_id)
+            .order_by(DocumentChunkModel.chunk_index.asc())
+        )
+        chunks_res = await db.execute(chunks_stmt)
+        chunk_models = list(chunks_res.scalars().all())
+
+        if not chunk_models and pdf_bytes:
+            extracted_chunks = await asyncio.to_thread(
+                self.chunk_extractor.extract_chunks,
+                pdf_bytes,
+                doc.id,
+            )
+            if extracted_chunks:
+                now = datetime.now(UTC)
+                new_chunks = [
+                    DocumentChunkModel(
+                        id=ec.id,
+                        document_id=ec.document_id,
+                        chunk_index=ec.chunk_index,
+                        page_number=ec.page_number,
+                        content=ec.content,
+                        bounding_boxes=ec.bounding_boxes_raw,
+                        token_count=ec.token_count,
+                        embedding=None,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    for ec in extracted_chunks
+                ]
+                db.add_all(new_chunks)
+                doc.chunk_count = len(new_chunks)
+                doc.updated_at = datetime.now(UTC)
+                await db.flush()
+                chunk_models = new_chunks
+
+        domain_chunks = [
+            DocumentChunk(
+                id=c.id,
+                document_id=c.document_id,
+                chunk_index=c.chunk_index,
+                page_number=c.page_number,
+                content=c.content,
+                bounding_boxes=[BoundingBox.from_list(b) for b in (c.bounding_boxes or [])],
+                token_count=c.token_count,
+            )
+            for c in chunk_models
+        ]
+
+        abstract_text = None
+        if doc.parsed_metadata and isinstance(doc.parsed_metadata, dict):
+            struct_data = doc.parsed_metadata.get("structure")
+            if isinstance(struct_data, dict):
+                abstract_text = struct_data.get("abstract")
+
+        domain_summary = await self.summarizer.summarize(
+            document_id=doc.id,
+            title=doc.title,
+            abstract=abstract_text,
+            chunks=domain_chunks,
+            pdf_bytes=pdf_bytes,
+        )
+
+        prob_boxes = [b.to_list() for b in domain_summary.problem_statement.bounding_boxes]
+        contr_boxes = [b.to_list() for b in domain_summary.contributions.bounding_boxes]
+        limit_boxes = [b.to_list() for b in domain_summary.limitations.bounding_boxes]
+
+        now = datetime.now(UTC)
+        if summary_record is not None:
+            summary_record.problem_statement = domain_summary.problem_statement.text
+            summary_record.problem_citations = prob_boxes
+            summary_record.contributions = domain_summary.contributions.text
+            summary_record.contribution_citations = contr_boxes
+            summary_record.limitations = domain_summary.limitations.text
+            summary_record.limitation_citations = limit_boxes
+            summary_record.total_tokens = domain_summary.total_tokens
+            summary_record.latency_ms = domain_summary.latency_ms
+            summary_record.updated_at = now
+        else:
+            summary_record = DocumentSummaryModel(
+                id=uuid4(),
+                document_id=doc.id,
+                problem_statement=domain_summary.problem_statement.text,
+                problem_citations=prob_boxes,
+                contributions=domain_summary.contributions.text,
+                contribution_citations=contr_boxes,
+                limitations=domain_summary.limitations.text,
+                limitation_citations=limit_boxes,
+                total_tokens=domain_summary.total_tokens,
+                latency_ms=domain_summary.latency_ms,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(summary_record)
+
+        await db.commit()
+        return self._map_summary_model_to_envelope(summary_record), "Generated"

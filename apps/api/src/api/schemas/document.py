@@ -435,3 +435,15 @@ class DocumentSummaryData(BaseModel):
 
 class DocumentSummaryEnvelope(SingleResponseEnvelope[DocumentSummaryData]):
     """Top-level single resource envelope for 3-point grounded document summary."""
+
+
+class DocumentSummaryGenerateRequest(BaseModel):
+    """Request payload for triggering 3-point grounded summary generation."""
+
+    force: bool = Field(
+        default=False,
+        description=(
+            "If true, forces re-synthesis even if a cached summary already exists. "
+            "If false, returns existing summary immediately if present."
+        ),
+    )

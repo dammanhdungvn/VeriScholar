@@ -1095,3 +1095,110 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
   ```
 * **`422 Unprocessable Entity`** - Bài báo bị lỗi bóc tách hoặc định dạng UUID không hợp lệ.  
   *Content-Type:* `application/json`
+
+
+---
+
+### [POST] `/api/v1/documents/{document_id}/summary:generate`
+**Summary:** `Custom Method (AIP-136): Sinh mới / Tái tổng hợp tóm tắt 3 ý cốt lõi (Problem, Contributions, Limitations) kèm Bounding Boxes`  
+**Operation ID:** `generate_document_summary_api_v1_documents__document_id__summary_generate_post`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Kích hoạt quy trình sinh mới hoặc tái tổng hợp bản tóm tắt 3 ý cốt lõi (Vấn đề nghiên cứu, Đóng góp chính, Giới hạn/Hướng phát triển tương lai) kèm tọa độ Bounding Boxes chuẩn hóa từ mô hình LLM với cơ chế phân rã trích dẫn (visual grounding).
+* **Chuẩn thiết kế Custom Method (Google AIP-136):** Sử dụng cú pháp custom method chuẩn `:generate` gắn trực tiếp vào singleton resource `documents/{document_id}/summary`.
+* **Cơ chế Cache và Tái tổng hợp (`force` parameter):**
+  - Khi `force=false` (mặc định): Tự động trả về bản tóm tắt hiện có trong cơ sở dữ liệu (Cache Hit SLA < 100ms) kèm HTTP header `X-Cache: Cache-Hit`. Nếu chưa có trong CSDL, hệ thống mới gọi LLM để sinh bản tóm tắt đầu tiên và trả về `X-Cache: Generated`.
+  - Khi `force=true`: Ép buộc hệ thống bỏ qua cache CSDL, gọi LLM tái sinh bản tóm tắt mới nhất, cập nhật lại CSDL và trả về `X-Cache: Generated`.
+* **Bảo vệ chống gửi trùng lặp (Idempotency Key):**
+  - Hỗ trợ HTTP header tùy chọn `Idempotency-Key` (hoặc `X-Idempotency-Key`).
+  - Khi client gửi cùng một khóa idempotency trong khoảng thời gian hiệu lực, hệ thống trả về kết quả đã cache kèm HTTP header `X-Cache: Idempotent-Hit`.
+* **Khả năng dự phòng lỗi (Resilient Fallback):**
+  - Trong trường hợp dịch vụ LLM bên ngoài bị gián đoạn hoặc gặp lỗi, hệ thống tự động kích hoạt bộ trích dẫn Heuristic Grounded Summarizer dựa trên phân tích cấu trúc tài liệu để đảm bảo tính liên tục của dịch vụ.
+* **Bảo vệ vòng đời tài liệu (Lifecycle Protection):**
+  - Trả về `409 Conflict` (`DOCUMENT_PROCESSING`) nếu bài báo đang trong hàng đợi hoặc đang bóc tách.
+  - Trả về `422 Unprocessable Content` (`DOCUMENT_FAILED`) nếu bài báo bị lỗi khi nạp.
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập tài liệu của người dùng khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học. |
+
+#### Request Headers
+| Tên Header | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Idempotency-Key` | `string` | Không | Khóa định danh yêu cầu chống gửi lặp lại (Idempotency Key). |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `force` | `boolean` | Không | `false` | Cờ ép buộc tái tổng hợp: `false` sử dụng cache CSDL (nếu có); `true` ép gọi LLM sinh mới. |
+
+#### Responses
+* **`200 OK`** - Sinh mới hoặc truy xuất tóm tắt 3 ý cốt lõi thành công kèm tọa độ Visual Grounding Bounding Boxes.  
+  *Headers:* `X-Cache: Cache-Hit | Generated | Idempotent-Hit`  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "document_id": "6a6cbadb-517c-40db-bcdf-c57975cc016a",
+      "problem_statement": {
+        "text": "The research addresses the inability of conventional RAG systems to handle structured enterprise data.",
+        "bounding_boxes": [
+          [0.1176, 0.3165, 0.2185, 0.3346, 1]
+        ]
+      },
+      "contributions": {
+        "text": "The work proposes an enterprise-focused RAG framework that combines semantic routing with schema linking.",
+        "bounding_boxes": [
+          [0.1176, 0.3509, 0.4919, 0.9121, 1]
+        ]
+      },
+      "limitations": {
+        "text": "The framework currently does not support multimodal data or complex tabular reasoning.",
+        "bounding_boxes": [
+          [0.5081, 0.3199, 0.8824, 0.5047, 1]
+        ]
+      },
+      "total_tokens": 1825,
+      "latency_ms": 7573
+    },
+    "meta": {
+      "request_id": "8dbfde90-4f96-426d-9306-7223dcd7d5d5",
+      "timestamp": "2026-09-16T08:48:10.980100Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document \"ad48ceb3-dc25-464a-9d75-08adcddf02f8\" not found.",
+      "field": "id",
+      "action": "Ensure UUID exists and belongs to the authenticated user."
+    },
+    "meta": {
+      "request_id": "8f700731-e725-44ff-a8fd-e248f1ba0b00",
+      "timestamp": "2026-09-16T08:08:05.557020Z"
+    }
+  }
+  ```
+* **`409 Conflict`** - Bài báo đang được xử lý trong hàng đợi, chưa thể trích xuất tóm tắt.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_PROCESSING",
+      "message": "Document is still being processed. Wait for completion before querying summary.",
+      "field": "id",
+      "action": "Poll GET /api/v1/documents/{id}/status until status is \"completed\"."
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Bài báo bị lỗi bóc tách hoặc định dạng UUID / tham số không hợp lệ.  
+  *Content-Type:* `application/json`

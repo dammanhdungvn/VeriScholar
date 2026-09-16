@@ -300,6 +300,7 @@ Hệ thống hỗ trợ 2 chế độ vận hành dọn dẹp dữ liệu:
     - `temp/output/test/get_documents_chunks.md`
     - `temp/output/test/get_documents_chunk_detail.md`
     - `temp/output/test/get_documents_summary.md`
+    - `temp/output/test/post_documents_summary_generate.md`
     - `temp/output/test/delete_documents.md`
 - **Cơ chế kiểm tra tệp tồn tại & Làm mới (Clean Refresh):**
   - Trước khi ghi báo cáo mới, runner gọi hàm `check_and_prepare_output_file(target_file)`.
