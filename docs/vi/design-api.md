@@ -474,6 +474,7 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
 
 ### 3.13. `GET /api/v1/documents/{id}/summary` (Singleton: Bản tóm tắt 3 ý cốt lõi)
 - **Method:** `GET`
+- **Mô tả:** Lấy bản tóm tắt 3 ý cốt lõi (*problem_statement*, *contributions*, *limitations*) kèm tọa độ dẫn chứng vi mô (Micro-precision Bounding Boxes) để highlight trực quan trên PDF Canvas. Hỗ trợ tiền tính toán trong pipeline ingestion và trả về qua DB cache với độ trễ < 5ms.
 - **Response (`200 OK`):**
   ```json
   {

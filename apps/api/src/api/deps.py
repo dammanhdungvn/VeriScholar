@@ -54,7 +54,8 @@ async def get_current_user(
         user = UserModel(
             id=DEFAULT_DEV_USER_ID,
             email="developer@verischolar.org",
-            display_name="VeriScholar Developer",
+            full_name="VeriScholar Developer",
+            hashed_password="dev_dummy_password",
             is_active=True,
         )
         db.add(user)

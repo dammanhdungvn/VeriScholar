@@ -1006,3 +1006,92 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
   ```
 * **`422 Unprocessable Entity`** - Định dạng UUID của `document_id` hoặc `chunk_id` không hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [GET] `/api/v1/documents/{document_id}/summary`
+**Summary:** `Lấy bản tóm tắt 3 ý cốt lõi (Problem, Contributions, Limitations) kèm Bounding Boxes`  
+**Operation ID:** `get_document_summary_api_v1_documents__document_id__summary_get`
+
+#### Mô tả (Description)
+* **Tóm tắt (Summary):** Truy xuất bản tóm tắt 3 ý cốt lõi (Vấn đề nghiên cứu, Đóng góp chính, và Giới hạn/Hướng phát triển tương lai) kèm tọa độ không gian Bounding Boxes chuẩn hóa cho bài báo.
+* **Mục đích:** Cung cấp thông tin tóm tắt nhanh, cô đọng phục vụ hiển thị trên thẻ bài báo (Document Card), thanh bên (Sidebar Summary), hoặc Quick Inspect Modal mà không cần đọc toàn bộ văn bản. Hỗ trợ bấm vào từng ý tóm tắt để nhảy đến bằng chứng trực quan trên giao diện đọc PDF Canvas (Visual Grounding).
+* **Chuẩn thiết kế Singleton Sub-resource (Google AIP-130):** Endpoint `/summary` đóng vai trò là một singleton sub-resource trực thuộc `documents/{id}` (mỗi bài báo chỉ có duy nhất 1 bản tóm tắt, không cần ID con).
+* **Tự động tổng hợp On-Demand:** Trường hợp bài báo đã hoàn thành xử lý nhưng chưa có bản tóm tắt trong CSDL, hệ thống tự động bóc tách và trích xuất bằng chứng theo heuristic / LLM, lưu vào CSDL và trả về ngay trong cùng một yêu cầu.
+* **Bảo vệ vòng đời tài liệu (Lifecycle Protection):**
+  - Trả về `409 Conflict` (`DOCUMENT_PROCESSING`) nếu bài báo đang trong hàng đợi hoặc đang bóc tách.
+  - Trả về `422 Unprocessable Content` (`DOCUMENT_FAILED`) nếu bài báo bị lỗi khi nạp.
+* **Bảo mật & Cô lập:** Tuân thủ đa người dùng (Multi-tenant isolation), từ chối truy cập tài liệu của người dùng khác với mã lỗi `404 DOCUMENT_NOT_FOUND`.
+
+#### Parameters
+| Vị trí | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `path` | `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học. |
+
+#### Responses
+* **`200 OK`** - Truy xuất bản tóm tắt 3 ý cốt lõi thành công kèm tọa độ Visual Grounding Bounding Boxes.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "document_id": "1960d8cb-f708-49b0-aa05-8ae54c869306",
+      "problem_statement": {
+        "text": "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks that include an encoder and a decoder.",
+        "bounding_boxes": [
+          [0.102, 0.155, 0.898, 0.182, 1]
+        ]
+      },
+      "contributions": {
+        "text": "On the WMT 2014 English-to-French translation task, our model establishes a new state-of-the-art BLEU score of 41.8 after training for 3.5 days on eight GPUs.",
+        "bounding_boxes": [
+          [0.102, 0.450, 0.898, 0.485, 2]
+        ]
+      },
+      "limitations": {
+        "text": "Computational complexity scales quadratically with sequence length, posing challenges for long documents.",
+        "bounding_boxes": [
+          [0.102, 0.720, 0.898, 0.755, 9]
+        ]
+      },
+      "total_tokens": 130,
+      "latency_ms": 1
+    },
+    "meta": {
+      "request_id": "0779c162-e9e2-40e0-ac01-439b05cae079",
+      "timestamp": "2026-09-16T08:08:05.544031Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document "ad48ceb3-dc25-464a-9d75-08adcddf02f8" not found.",
+      "field": "id",
+      "action": "Verify document ID or check access permissions."
+    },
+    "meta": {
+      "request_id": "8f700731-e725-44ff-a8fd-e248f1ba0b00",
+      "timestamp": "2026-09-16T08:08:05.557020Z"
+    }
+  }
+  ```
+* **`409 Conflict`** - Bài báo đang được xử lý trong hàng đợi, chưa thể trích xuất tóm tắt.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_PROCESSING",
+      "message": "Document is still being processed. Wait for completion before querying summary.",
+      "field": "id",
+      "action": "Poll GET /api/v1/documents/{id}/status until status is "completed"."
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Bài báo bị lỗi bóc tách hoặc định dạng UUID không hợp lệ.  
+  *Content-Type:* `application/json`

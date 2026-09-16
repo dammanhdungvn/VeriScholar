@@ -396,3 +396,42 @@ class DocumentChunkDetailData(BaseModel):
 
 class DocumentChunkDetailEnvelope(SingleResponseEnvelope[DocumentChunkDetailData]):
     """Top-level single resource envelope for document chunk detail."""
+
+
+class SummaryPointResponse(BaseModel):
+    """Grounded summary point containing textual synthesis and visual citations."""
+
+    text: str = Field(description="Synthesized summary claim or narrative")
+    bounding_boxes: list[list[float | int]] = Field(
+        default_factory=list,
+        description="List of normalized [x0, y0, x1, y1, page] bounding boxes for Canvas grounding",
+    )
+
+
+class DocumentSummaryData(BaseModel):
+    """Singleton 3-point grounded summary representation."""
+
+    document_id: UUID = Field(description="Associated parent document UUID")
+    problem_statement: SummaryPointResponse = Field(
+        description="Core research problem addressed by the paper"
+    )
+    contributions: SummaryPointResponse = Field(
+        description="Key contributions, methodology, and novel proposals"
+    )
+    limitations: SummaryPointResponse = Field(
+        description="Remaining limitations, assumptions, and research gaps"
+    )
+    total_tokens: int | None = Field(
+        default=0, description="Estimated or actual tokens consumed during generation"
+    )
+    latency_ms: int | None = Field(default=0, description="Generation latency in milliseconds")
+    created_at: datetime | None = Field(
+        default=None, description="Timestamp when summary was generated and stored"
+    )
+    updated_at: datetime | None = Field(
+        default=None, description="Timestamp when summary was last modified"
+    )
+
+
+class DocumentSummaryEnvelope(SingleResponseEnvelope[DocumentSummaryData]):
+    """Top-level single resource envelope for 3-point grounded document summary."""
