@@ -16,37 +16,39 @@ parts/
 sdist/
 var/
 wheels/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
+
+# Environment & Secrets
+.env
+.env.*
+!.env.example
+*.env
+
+# Virtual Environment
+.venv/
+env/
+venv/
+ENV/
+
+# Testing & Coverage
+.pytest_cache/
 .coverage
 .coverage.*
 htmlcov/
+coverage.xml
+*.cover
 
-# Virtual Environments
-.venv/
-venv/
-ENV/
-env/
-
-# Environment Variables
-.env
-.env.local
-.env.*.local
-!.env.example
-
-# IDE
-.idea/
+# IDE & Editor
 .vscode/
+.idea/
 *.swp
 *.swo
 *~
 .DS_Store
-Thumbs.db
 
-# MyPy / Ruff
+# Static Typing & Linting
 .mypy_cache/
 .dmypy.json
 dmypy.json
@@ -62,6 +64,7 @@ storage/
 !/data/papers/
 /data/papers/*
 !/data/papers/*.expected.json
+!/data/papers/*.pdf
 !/data/papers/golden_eval_dataset.json
 
 # Node / Frontend
