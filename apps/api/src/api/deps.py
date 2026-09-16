@@ -5,6 +5,7 @@ from uuid import UUID
 from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIdempotencyAdapter
 from core.adapters.storage.local import LocalStorageAdapter
 from core.ports.idempotency import IIdempotencyPort
+from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
 from fastapi import Depends
@@ -13,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
 from api.adapters.llm_summarizer import LLMGroundedSummarizer
+from api.adapters.pdf_annotator import PyMuPdfAnnotator
 from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
@@ -21,6 +23,7 @@ from api.services.document_service import DocumentService
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 _idempotency_adapter: IIdempotencyPort | None = None
+_pdf_annotator_adapter: IPdfAnnotatorPort | None = None
 
 
 def get_storage() -> IBlobStoragePort:
@@ -50,12 +53,25 @@ def get_document_summarizer() -> IDocumentSummarizerPort:
     )
 
 
+def get_pdf_annotator() -> IPdfAnnotatorPort:
+    """Dependency providing the PyMuPdfAnnotator adapter."""
+    global _pdf_annotator_adapter
+    if _pdf_annotator_adapter is None:
+        _pdf_annotator_adapter = PyMuPdfAnnotator()
+    return _pdf_annotator_adapter
+
+
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
     summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
+    pdf_annotator: IPdfAnnotatorPort = Depends(get_pdf_annotator),
 ) -> DocumentService:
-    """Dependency providing DocumentService with bound storage and summarizer ports."""
-    return DocumentService(storage=storage, summarizer=summarizer)
+    """Dependency providing DocumentService with bound storage, summarizer, and annotator ports."""
+    return DocumentService(
+        storage=storage,
+        summarizer=summarizer,
+        pdf_annotator=pdf_annotator,
+    )
 
 
 async def get_current_user(

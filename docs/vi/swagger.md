@@ -1202,3 +1202,64 @@ Body tùy chọn (Optional). Mặc định là `{ "force_reextract": false }`.
   ```
 * **`422 Unprocessable Entity`** - Bài báo bị lỗi bóc tách hoặc định dạng UUID / tham số không hợp lệ.  
   *Content-Type:* `application/json`
+
+---
+
+### [GET] `/api/v1/documents/{document_id}/export-pdf`
+
+Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotations chuẩn ISO 32000-1 / ISO 32000-2), cây thư mục điều hướng (Bookmarks / Outlines) và Metadata chuẩn hóa được gắn trực tiếp vào luồng nhị phân PDF. Các điểm trích dẫn grounded (Problem Statement, Contributions, Limitations) xuất hiện dưới dạng highlight màu tương ứng và sticky popup notes có thể đọc và tương tác trên Adobe Acrobat, Preview, Chrome PDF Viewer, Foxit Reader, Zotero, Mendeley.
+
+#### Đặc điểm kỹ thuật
+* **Chuẩn ISO 32000 Conformance:** Sử dụng subtype `/Highlight` và `/QuadPoints` để vẽ highlight chuẩn quốc tế, không làm hỏng cấu trúc văn bản tệp PDF gốc (vẫn copy text, tìm kiếm Ctrl+F bình thường).
+* **Semantic Color Hierarchy:**
+  - Problem Statement: San hô / Coral (`RGB(0.95, 0.40, 0.30)`)
+  - Contributions: Ngọc lục bảo / Emerald (`RGB(0.15, 0.75, 0.45)`)
+  - Limitations: Thạch anh tím / Violet (`RGB(0.60, 0.35, 0.85)`)
+* **Metadata & Popup Notes:** Mỗi highlight chứa tiêu đề danh mục và nội dung text trích xuất nguyên bản để tra cứu tức thì khi hover/click.
+* **Tự động nhúng PDF Bookmarks (Outlines Navigation):** Tự động chèn cây mục lục điều hướng ở thanh bên trái (Sidebar Table of Contents) trỏ trực tiếp đến trang và vị trí của từng phát hiện AI:
+  ```text
+  📑 VeriScholar AI Grounded Summary
+     ├── 🟧 Problem Statement
+     ├── 🟩 Contributions
+     └── 🟪 Limitations
+  ```
+* **Chuẩn hóa Document Metadata (Zotero / Mendeley / EndNote Support):** Cập nhật metadata nhị phân của tài liệu (`Title`, `Author`, `Subject`, `Keywords`, `Producer`) giúp các phần mềm quản lý trích dẫn tự động nhận diện thông tin bài báo.
+* **Lọc danh mục linh hoạt (`categories`):** Hỗ trợ lọc các danh mục cần highlight thông qua query parameter `categories=problem_statement,contributions`.
+* **Tùy chọn xuất file sạch:** Hỗ trợ query parameter `include_highlights=false` để tải tệp PDF gốc không chứa annotations.
+* **Tương thích RFC 6266:** Header `Content-Disposition: attachment; filename="<tên_tệp>_annotated.pdf"; filename*=UTF-8''...` hỗ trợ tên file Unicode tiếng Việt an toàn.
+* **Header đếm số lượng:** Header `X-Annotation-Count` phản ánh chính xác số lượng highlight được gắn vào tài liệu.
+
+#### Parameters
+| Vị trí | Tên tham số | Kiểu dữ liệu | Mặc định | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `path` | `document_id` | `string (uuid)` | - | **Có** | UUID định danh duy nhất của tài liệu cần xuất PDF. |
+| `query` | `include_highlights` | `boolean` | `true` | Không | Nếu `true`, gắn các highlight ISO 32000 tương ứng các ý cốt lõi. Nếu `false`, trả về PDF gốc. |
+| `query` | `categories` | `string` | `null` | Không | Danh sách các danh mục cần highlight cách nhau bởi dấu phẩy (`problem_statement`, `contributions`, `limitations`). Bỏ trống = tất cả. |
+
+#### Responses
+* **`200 OK`** - Luồng dữ liệu nhị phân PDF chuẩn ISO.  
+  *Content-Type:* `application/pdf`  
+  *Headers:*
+  - `Content-Disposition`: `attachment; filename="..._annotated.pdf"; filename*=UTF-8''...`
+  - `Content-Length`: `438500`
+  - `X-Annotation-Count`: `7`
+  - `Cache-Control`: `private, no-transform`
+* **`404 Not Found`** - Không tìm thấy tài liệu hoặc người dùng không có quyền truy cập (Multi-tenant isolation).  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document 'f47ac10b-58cc-4372-a567-0e02b2c3d479' not found.",
+      "field": "id",
+      "action": "Ensure UUID exists and belongs to the authenticated user."
+    },
+    "meta": {
+      "request_id": "8f700731-e725-44ff-a8fd-e248f1ba0b00",
+      "timestamp": "2026-09-16T15:40:00Z"
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Định dạng UUID không hợp lệ hoặc dữ liệu PDF vật lý bị lỗi.  
+  *Content-Type:* `application/json`

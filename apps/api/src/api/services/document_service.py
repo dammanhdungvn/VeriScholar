@@ -5,10 +5,12 @@ import hashlib
 import math
 from collections.abc import AsyncIterator
 from datetime import UTC, datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 from api.adapters.chunk_extractor import PyMuPDFChunkExtractor
 from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
+from api.adapters.pdf_annotator import PyMuPdfAnnotator
 from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
 from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.chunk import DocumentChunkModel
@@ -50,7 +52,9 @@ from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.reference import ExtractedReference, extract_references_from_text
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
+from core.domain.value_objects.pdf_annotation import AnnotationCategory, PdfAnnotation
 from core.ports.chunk import IChunkExtractorPort
+from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from core.ports.summary import IDocumentSummarizerPort
@@ -71,11 +75,13 @@ class DocumentService:
         structure_extractor: IStructureExtractorPort | None = None,
         chunk_extractor: IChunkExtractorPort | None = None,
         summarizer: IDocumentSummarizerPort | None = None,
+        pdf_annotator: IPdfAnnotatorPort | None = None,
     ) -> None:
         self.storage = storage
         self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
         self.chunk_extractor = chunk_extractor or PyMuPDFChunkExtractor()
         self.summarizer = summarizer or HeuristicGroundedSummarizer()
+        self.pdf_annotator = pdf_annotator or PyMuPdfAnnotator()
 
     async def upload_document(
         self,
@@ -1974,3 +1980,160 @@ class DocumentService:
 
         await db.commit()
         return self._map_summary_model_to_envelope(summary_record), "Generated"
+
+    async def export_annotated_pdf(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        include_highlights: bool = True,
+        categories: list[str] | None = None,
+    ) -> tuple[bytes, str, int]:
+        """Export document PDF optionally embedded with ISO 32000 native highlight annotations.
+
+        Args:
+            document_id: Target document UUID.
+            user_id: Authenticated user ID for multi-tenant isolation.
+            db: Active async database session.
+            include_highlights: Whether to embed AI grounded summary highlights into the PDF.
+            categories: Optional list of categories to filter highlights.
+
+        Returns:
+            Tuple of (pdf_bytes, filename, annotation_count).
+
+        Raises:
+            HTTPException: 404 if document is not found or not owned by user.
+            HTTPException: 404 if physical PDF blob cannot be retrieved from storage.
+        """
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        result = await db.execute(stmt)
+        doc = result.scalar_one_or_none()
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Ensure UUID exists and belongs to the authenticated user.",
+                },
+            )
+
+        try:
+            pdf_bytes = await self.storage.read_blob(doc.content_hash)
+        except Exception as ex:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FILE_NOT_FOUND",
+                    "message": "Physical document file could not be retrieved from storage.",
+                    "field": "id",
+                    "action": "Re-upload the document.",
+                },
+            ) from ex
+
+        raw_stem = Path(doc.filename).stem if doc.filename else "document"
+
+        # If user explicitly turns off highlights, return clean PDF
+        if not include_highlights:
+            filename = f"{raw_stem}.pdf"
+            return pdf_bytes, filename, 0
+
+        # Query existing summary for visual grounding bounding boxes
+        summary_stmt = select(DocumentSummaryModel).where(
+            DocumentSummaryModel.document_id == doc.id
+        )
+        summary_result = await db.execute(summary_stmt)
+        summary = summary_result.scalar_one_or_none()
+
+        if summary is None:
+            filename = f"{raw_stem}_annotated.pdf"
+            return pdf_bytes, filename, 0
+
+        allowed_cats: set[str] | None = None
+        if categories:
+            allowed_cats = {c.strip().lower() for c in categories if c.strip()}
+
+        annotations: list[PdfAnnotation] = []
+
+        # 1. Problem Statement citations (Coral / Red-Orange)
+        include_prob = (
+            allowed_cats is None or "problem_statement" in allowed_cats or "problem" in allowed_cats
+        )
+        if include_prob and summary.problem_statement and summary.problem_citations:
+            for item in summary.problem_citations:
+                try:
+                    box = BoundingBox.from_list(item)
+                    annotations.append(
+                        PdfAnnotation(
+                            page_number=box.page,
+                            bounding_box=box,
+                            title="VeriScholar AI [Problem Statement]",
+                            content=summary.problem_statement,
+                            category=AnnotationCategory.PROBLEM_STATEMENT,
+                            color_rgb=(0.95, 0.40, 0.35),
+                            opacity=0.40,
+                        )
+                    )
+                except Exception:
+                    continue
+
+        # 2. Contributions citations (Emerald / Green)
+        include_contrib = (
+            allowed_cats is None
+            or "contributions" in allowed_cats
+            or "contribution" in allowed_cats
+        )
+        if include_contrib and summary.contributions and summary.contribution_citations:
+            for item in summary.contribution_citations:
+                try:
+                    box = BoundingBox.from_list(item)
+                    annotations.append(
+                        PdfAnnotation(
+                            page_number=box.page,
+                            bounding_box=box,
+                            title="VeriScholar AI [Contributions]",
+                            content=summary.contributions,
+                            category=AnnotationCategory.CONTRIBUTION,
+                            color_rgb=(0.15, 0.75, 0.45),
+                            opacity=0.40,
+                        )
+                    )
+                except Exception:
+                    continue
+
+        # 3. Limitations citations (Violet / Purple)
+        include_limit = (
+            allowed_cats is None or "limitations" in allowed_cats or "limitation" in allowed_cats
+        )
+        if include_limit and summary.limitations and summary.limitation_citations:
+            for item in summary.limitation_citations:
+                try:
+                    box = BoundingBox.from_list(item)
+                    annotations.append(
+                        PdfAnnotation(
+                            page_number=box.page,
+                            bounding_box=box,
+                            title="VeriScholar AI [Limitations]",
+                            content=summary.limitations,
+                            category=AnnotationCategory.LIMITATION,
+                            color_rgb=(0.65, 0.35, 0.85),
+                            opacity=0.40,
+                        )
+                    )
+                except Exception:
+                    continue
+
+        authors_list = doc.authors if isinstance(doc.authors, list) else None
+        annotated_bytes = self.pdf_annotator.annotate_pdf(
+            pdf_bytes=pdf_bytes,
+            annotations=annotations,
+            document_title=doc.title or raw_stem,
+            authors=authors_list,
+            add_bookmarks=include_highlights,
+        )
+        filename = f"{raw_stem}_annotated.pdf"
+        return annotated_bytes, filename, len(annotations)

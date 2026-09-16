@@ -23,7 +23,8 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **11** | `GET /api/v1/documents/{id}/chunks/{chunk_id}` | `chunk_detail` | `uv run python scripts/eval_api.py --api chunk_detail --bless` | `uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless` |
 | **12** | `GET /api/v1/documents/{id}/summary` | `summary` | `uv run python scripts/eval_api.py --api summary --bless` | `uv run python scripts/eval_api.py --api summary --paper "Attention Is All You Need.pdf" --bless` |
 | **13** | `POST /api/v1/documents/{id}/summary:generate` | `summary-generate` | `uv run python scripts/eval_api.py --api summary-generate --bless` | `uv run python scripts/eval_api.py --api summary-generate --paper "Attention Is All You Need.pdf" --bless` |
-| **14** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
+| **14** | `GET /api/v1/documents/{id}/export-pdf` | `export-pdf` | `uv run python scripts/eval_api.py --api export-pdf --bless` | `uv run python scripts/eval_api.py --api export-pdf --paper "Attention Is All You Need.pdf" --bless` |
+| **15** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
 
 ---
 
