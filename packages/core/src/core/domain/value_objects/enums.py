@@ -42,3 +42,13 @@ class SessionTurnFinishReason(StrEnum):
     LENGTH = "length"
     ABSTENTION = "abstention"
     ERROR = "error"
+
+
+class SessionActiveTab(StrEnum):
+    """Active UI tab within the dual-pane research workspace."""
+
+    CHAT = "chat"
+    NOTES = "notes"
+    SUMMARY = "summary"
+    GRAPH = "graph"
+    DRAFT = "draft"

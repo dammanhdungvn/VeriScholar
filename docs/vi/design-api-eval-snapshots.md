@@ -409,6 +409,51 @@ Dưới đây là cấu trúc tệp báo cáo mẫu được sinh ra tại `temp
 
 ---
 
+### 7.2. Snapshot Mẫu: POST /api/v1/sessions (#45 Khởi tạo phiên nghiên cứu)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/post_sessions_create.md`:
+
+````markdown
+# API Evaluation Snapshot: POST /api/v1/sessions
+
+> **Audit Header**: Session Tag: `test_eval_02b3acb3` | Target: `#45 Khởi tạo phiên nghiên cứu đa bài mới`  
+> **Target Output**: `temp/output/test/post_sessions_create.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `create_valid_session_201.json`: `1a49508e9bcb3a78c2a870f659098b69132de8798ac445ea170db68bdaf9c274`  
+> - `create_empty_session_201.json`: `bf3857f717e658ef0d1de565660e22ae7c5b838a3d0a8c057b1f932bd1ab1a88`  
+> - `capacity_guard_exceeded_400.json`: `09336f18ad41f18c5688fb4e2ff028627ab09a0165efba4db6e8fae150053aab`  
+> - `dedup_documents_201.json`: `9a19a29654faed1757edc850a8015e4ebb085b211decc4ff6e883bd11e4a64a2`  
+> - `nonexistent_document_404.json`: `9616a0eb72f3ba54314195e91714ee8e968f8e21212a932c2939c6f50effa10a`  
+> - `whitespace_title_422.json`: `cf88e23a639dad1abc621fcc9bc908cf3dd78ff985259b4161362eafc722fd1b`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Create Session with Valid Documents (201 Created) | `201` | `201` | 28.1ms | PASS | Initialized session with active doc, default canvas viewport, Location & ETag headers |
+| Create Empty Session (201 Created) | `201` | `201` | 12.2ms | PASS | Empty document set cleanly handled with null active_document_id |
+| Auto-naming Fallback when Title is Null | `201` | `201` | 14.5ms | PASS | Automatically generated descriptive title from first document |
+| Idempotency Protection (Idempotency-Key) | `200` | `200` | 2.1ms | PASS | Replayed identical key returning cached session with X-Cache: Idempotent-Hit |
+| Embedded Document Metadata (include_documents=true) | `201` | `201` | 15.0ms | PASS | Embedded rich document metadata and status warnings without extra requests |
+| Capacity Guard Exceeded (Expect HTTP 400) | `400` | `400` | 6.8ms | PASS | Blocked > 5 papers with 400 (SESSION_CAPACITY_EXCEEDED) |
+| Duplicate Document Deduplication (201 Created) | `201` | `201` | 11.7ms | PASS | Deduplicated repeated document IDs while maintaining sequential order |
+| Nonexistent Document Guard (Expect HTTP 404) | `404` | `404` | 6.0ms | PASS | Blocked unowned or missing document ID with 404 (DOCUMENT_NOT_FOUND) |
+| Validation Guard Whitespace Title (Expect HTTP 422) | `422` | `422` | 3.5ms | PASS | Pydantic validator blocked whitespace-only string with 422 |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **RFC 7231 & 201 Invariants**: Headers `Location: /api/v1/sessions/{id}` và `ETag: "v1"` kiểm soát đồng thời lạc quan.
+- **Active Document Invariant**: Tự động gán tài liệu đầu tiên nạp vào làm active document.
+- **Capacity Guard Invariant**: Giới hạn tối đa 5 tài liệu/phiên, vượt quá trả về 400 `SESSION_CAPACITY_EXCEEDED`.
+- **Hermetic Lifecycle**: Cascade purge sạch tài liệu qua REST API chuẩn sau khi đánh giá.
+````
+
+---
+
 ## 8. Thiết Kế Kiến Trúc Script Runner (`scripts/eval_api.py`)
 
 Cấu trúc script runner hoàn chỉnh:

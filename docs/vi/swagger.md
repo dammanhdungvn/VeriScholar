@@ -1263,3 +1263,687 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
   ```
 * **`422 Unprocessable Entity`** - Định dạng UUID không hợp lệ hoặc dữ liệu PDF vật lý bị lỗi.  
   *Content-Type:* `application/json`
+
+---
+
+## 3. Nhóm API Phiên nghiên cứu đa bài (Research Sessions)
+
+### [POST] `/api/v1/sessions`
+**Summary:** `# 45. Khởi tạo phiên nghiên cứu đa bài mới (Research Session)`  
+**Operation ID:** `create_session_api_v1_sessions_post`
+
+#### Mô tả (Description)
+* **Khởi tạo phiên nghiên cứu (Research Session):** Tạo một workspace làm việc mới cho phép nạp từ 0 đến tối đa 5 bài báo khoa học cùng lúc phục vụ tổng hợp, so sánh, đối chiếu đa tài liệu.
+* **Cơ chế Idempotency chống gửi trùng lặp:** Hỗ trợ header `Idempotency-Key` (hoặc `X-Idempotency-Key`). Khi gửi cùng một key trong 24 giờ, hệ thống trả về phiên đã tạo kèm header `X-Cache: Idempotent-Hit`.
+* **Cơ chế Auto-naming Fallback:** Trường `title` là tùy chọn. Nếu không truyền, hệ thống tự động đặt tên theo bài báo đầu tiên `Nghiên cứu: {doc.title}` hoặc `Phiên nghiên cứu {DD/MM/YYYY HH:mm}` nếu phiên rỗng. Chuỗi chỉ gồm khoảng trắng vẫn bị chặn `422`.
+* **Cơ chế Active Document:** Tự động gán `active_document_id` trỏ đến tài liệu đầu tiên trong danh sách `initial_document_ids` (hoặc `null` nếu phiên khởi tạo rỗng).
+* **Trạng thái Viewport Canvas:** Khởi tạo `viewport_state` với các giá trị mặc định chuẩn `{"page": 1, "zoom_ratio": 1.0, "scroll_top": 0.0}` và tab mặc định `active_tab: "chat"`.
+* **Nhúng Metadata Bài Báo (`include_documents=true`):** Tùy chọn trả về mảng `documents` chi tiết (title, filename, status, file_size_bytes, added_at, display_order) giúp frontend hiển thị tab ngay mà không cần gọi nhiều request phụ.
+* **Cảnh báo trạng thái (`warnings`):** Tự động phát hiện và cảnh báo nếu có tài liệu nạp vào chưa hoàn tất bóc tách (status `processing` hoặc `failed`).
+* **RFC 7231 & REST Headers:**
+  - Trả về mã trạng thái HTTP `201 Created` (hoặc `200 OK` khi Idempotent Cache Hit).
+  - Cung cấp header `Location: /api/v1/sessions/{session_id}`.
+  - Cung cấp header `ETag: "v1"` kiểm soát đồng thời lạc quan (Optimistic Concurrency Control).
+* **Ràng buộc dung lượng (Capacity Guard):** Nếu số lượng tài liệu trong `initial_document_ids` vượt quá 5, hệ thống từ chối và trả về lỗi `400 Bad Request` với mã lỗi `SESSION_CAPACITY_EXCEEDED`.
+* **Bảo mật Đa người dùng (Multi-tenant Isolation):** Tất cả tài liệu nạp vào phải thuộc quyền sở hữu của người dùng hiện tại; nếu có tài liệu không tồn tại hoặc thuộc người khác, trả về `404 Not Found` (`DOCUMENT_NOT_FOUND`).
+
+#### Request Headers
+| Tên Header | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Idempotency-Key` | `string` | Không | Khóa định danh duy nhất chống trùng lặp request (cửa sổ 24 giờ). |
+
+#### Parameters (Query)
+| Tên tham số | Kiểu dữ liệu | Mặc định | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `include_documents` | `boolean` | `false` | Không | Nếu `true`, trả về metadata chi tiết của các bài báo trong phiên. |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | Không | `null` | Tiêu đề của phiên. Nếu để trống, tự động sinh từ bài báo đầu tiên. Nếu truyền chuỗi khoảng trắng thì bị chặn `422`. |
+| `initial_document_ids` | `list[string (uuid)]` | Không | `[]` | Danh sách UUID của các bài báo nạp vào phiên ban đầu (tối đa 5 bài báo). Trùng lặp sẽ tự động được khử. |
+
+#### Responses
+* **`201 Created`** - Phiên nghiên cứu được khởi tạo thành công.  
+  *Headers:*
+  - `Location`: `/api/v1/sessions/{session_id}`
+  - `ETag`: `"v1"`
+  - `Content-Type`: `application/json`
+
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e7f68b8d-a238-423b-adb0-7f59e5ddcb63",
+      "title": "Nghiên cứu: Attention Is All You Need",
+      "document_ids": [
+        "e3771a46-74cc-4fb7-a238-fd7994cf6303"
+      ],
+      "active_document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303",
+      "viewport_state": {
+        "page": 1,
+        "zoom_ratio": 1.0,
+        "scroll_top": 0.0
+      },
+      "active_tab": "chat",
+      "is_archived": false,
+      "version": 1,
+      "documents": [
+        {
+          "id": "e3771a46-74cc-4fb7-a238-fd7994cf6303",
+          "title": "Attention Is All You Need",
+          "filename": "1706.03762v7.pdf",
+          "status": "completed",
+          "file_size_bytes": 2215244,
+          "added_at": "2026-09-16T17:58:37.483023Z",
+          "display_order": 0
+        }
+      ],
+      "warnings": [],
+      "created_at": "2026-09-16T17:58:37.483023Z",
+      "updated_at": "2026-09-16T17:58:37.483027Z"
+    },
+    "meta": {
+      "request_id": "req_f4b868e17f6c",
+      "timestamp": "2026-09-16T17:58:37.500206Z"
+    }
+  }
+  ```
+* **`200 OK` (Khi Idempotent Cache Hit)** - Phản hồi phiên đã tạo trước đó kèm header `X-Cache: Idempotent-Hit`.
+* **`400 Bad Request`** - Vượt quá dung lượng 5 bài báo trong một phiên nghiên cứu.  
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "SESSION_CAPACITY_EXCEEDED",
+      "message": "Phiên đọc tối đa chỉ chứa 5 bài báo. Vui lòng gỡ bớt bài báo trước khi nạp thêm.",
+      "action": "Reduce initial_document_ids to 5 or fewer documents."
+    }
+  }
+  ```
+* **`404 Not Found`** - Một hoặc nhiều tài liệu không tồn tại hoặc người dùng không có quyền truy cập.  
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Tài liệu không tồn tại hoặc bạn không có quyền truy cập.",
+      "action": "Ensure all document IDs exist and belong to current user."
+    }
+  }
+  ```
+* **`422 Unprocessable Entity`** - Tiêu đề không hợp lệ (chuỗi chỉ gồm khoảng trắng hoặc dài hơn 255 ký tự).
+---
+
+### [GET] `/api/v1/sessions`
+**Summary:** `# 46. Lấy lịch sử các phiên nghiên cứu (Sidebar History)`  
+**Operation ID:** `list_sessions_api_v1_sessions_get`
+
+#### Mô tả (Description)
+* **Mục đích:** Trả về danh sách các phiên nghiên cứu của người dùng hiện tại phục vụ hiển thị lịch sử trên thanh Sidebar, sắp xếp giảm dần theo thời gian cập nhật gần nhất (`updated_at DESC`).
+* **Phân trang chuẩn (Pagination Envelope):** Hỗ trợ `page`, `per_page` kèm theo `PaginationMeta` (total, page, per_page, total_pages) và `PaginationLinks` (first, prev, self, next, last).
+* **Lọc phiên lưu trữ (`include_archived`):** Mặc định `false` chỉ trả về các phiên hoạt động (active). Khi `true`, bao gồm cả các phiên đã quá hạn TTL (is_archived = true).
+* **Tìm kiếm theo tiêu đề (`q`):** Lọc mờ không phân biệt hoa thường theo từ khóa tiêu đề phiên.
+
+#### Parameters (Query)
+| Tên tham số | Kiểu dữ liệu | Mặc định | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `page` | `integer` | `1` | Không | Chỉ số trang (1-indexed, tối thiểu 1). |
+| `per_page` | `integer` | `20` | Không | Số lượng phiên trên mỗi trang (1 đến 100). |
+| `include_archived` | `boolean` | `false` | Không | Có bao gồm các phiên đã bị lưu trữ quá hạn TTL hay không. |
+| `q` | `string` | `null` | Không | Từ khóa tìm kiếm theo tiêu đề phiên nghiên cứu. |
+
+#### Responses
+* **`200 OK`** - Danh sách các phiên nghiên cứu phân trang thành công.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "e7f68b8d-a238-423b-adb0-7f59e5ddcb63",
+        "title": "Nghiên cứu Transformer & Attention",
+        "document_count": 2,
+        "message_count": 5,
+        "is_archived": false,
+        "created_at": "2026-09-16T17:58:37Z",
+        "updated_at": "2026-09-16T18:30:00Z"
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "page": 1,
+      "per_page": 20,
+      "total_pages": 1
+    },
+    "links": {
+      "first": "/api/v1/sessions?page=1&per_page=20",
+      "prev": null,
+      "self": "/api/v1/sessions?page=1&per_page=20",
+      "next": null,
+      "last": "/api/v1/sessions?page=1&per_page=20"
+    }
+  }
+  ```
+
+---
+
+### [GET] `/api/v1/sessions/{id}`
+**Summary:** `# 47. Khôi phục nguyên vẹn phiên (Snapshots, Tabs, Viewport)`  
+**Operation ID:** `get_session_api_v1_sessions__id__get`
+
+#### Mô tả (Description)
+* **Mục đích:** Khôi phục trạng thái nguyên vẹn của phiên nghiên cứu khi người dùng quay lại từ Sidebar hoặc reload trình duyệt.
+* **Chi tiết trạng thái khôi phục:** Trả về toàn bộ danh sách `document_ids`, tài liệu đang xem `active_document_id`, tọa độ cuộn trang và tỷ lệ thu phóng `viewport_state`, tab đang mở `active_tab`, và số lượng tin nhắn `message_count`.
+* **RFC 7232 ETag Header:** Trả về header `ETag: "v{version}"` tương ứng với số phiên bản hiện tại để phục vụ Optimistic Concurrency Control khi client gửi cập nhật.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID định danh duy nhất của phiên nghiên cứu. |
+
+#### Responses
+* **`200 OK`** - Trạng thái nguyên vẹn của phiên nghiên cứu được khôi phục thành công.  
+  *Headers:* `ETag: "v3"`  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": {
+      "id": "e7f68b8d-a238-423b-adb0-7f59e5ddcb63",
+      "title": "Nghiên cứu Transformer & Attention",
+      "document_ids": ["e3771a46-74cc-4fb7-a238-fd7994cf6303"],
+      "active_document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303",
+      "viewport_state": {
+        "page": 3,
+        "zoom_ratio": 1.25,
+        "scroll_top": 450.0
+      },
+      "active_tab": "chat",
+      "is_archived": false,
+      "version": 3,
+      "message_count": 12,
+      "created_at": "2026-09-16T17:58:37Z",
+      "updated_at": "2026-09-16T18:45:00Z"
+    },
+    "meta": {
+      "request_id": "req_8a9b1c2d3e4f",
+      "timestamp": "2026-09-16T18:45:01Z"
+    }
+  }
+  ```
+* **`404 Not Found`** - Phiên nghiên cứu không tồn tại hoặc người dùng không có quyền truy cập.
+
+---
+
+### [PATCH] `/api/v1/sessions/{id}`
+**Summary:** `# 48. Cập nhật tiêu đề / metadata phiên nghiên cứu (OCC If-Match)`  
+**Operation ID:** `update_session_metadata_api_v1_sessions__id__patch`
+
+#### Mô tả (Description)
+* **Mục đích:** Đổi tên tiêu đề hoặc cập nhật metadata của phiên nghiên cứu với cơ chế kiểm soát đồng thời lạc quan (OCC).
+* **Kiểm soát đồng thời (OCC):**
+  - Bắt buộc phải có header `If-Match: "v{version}"` (theo RFC 7232 / RFC 9110).
+  - Nếu thiếu header `If-Match`: Trả về `428 Precondition Required`.
+  - Nếu `If-Match` không khớp với phiên bản trong CSDL: Trả về `412 Precondition Failed` (`CONCURRENCY_CONFLICT`).
+  - Khi cập nhật thành công: Tự động tăng `version` lên 1 và trả về header `ETag` mới.
+
+#### Parameters (Path & Header)
+| Tên tham số | Vị trí | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` | `path` | `string (uuid)` | **Có** | UUID của phiên nghiên cứu cần cập nhật. |
+| `If-Match` | `header` | `string` | **Có** | Chuỗi ETag phiên bản hiện tại (ví dụ: `"v1"` hoặc `"v3"`). |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Ràng buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `title` | `string` | **Có** | `min_length=1, max_length=255` | Tiêu đề mới của phiên nghiên cứu (không được chỉ chứa khoảng trắng). |
+
+#### Responses
+* **`200 OK`** - Cập nhật tiêu đề thành công. Header `ETag` mang số phiên bản mới.  
+  *Headers:* `ETag: "v4"`  
+  *Content-Type:* `application/json`
+* **`412 Precondition Failed`** - Xung đột phiên bản đồng thời do trạng thái đã bị thay đổi bởi request khác (`CONCURRENCY_CONFLICT`).
+* **`428 Precondition Required`** - Yêu cầu thiếu header bắt buộc `If-Match`.
+* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc người dùng.
+
+---
+
+### [PATCH] `/api/v1/sessions/{id}/viewport`
+**Summary:** `# 49. Tự động lưu vị trí cuộn trang PDF và Tab đang mở (OCC)`  
+**Operation ID:** `update_session_viewport_api_v1_sessions__id__viewport_patch`
+
+#### Mô tả (Description)
+* **Mục đích:** Tự động lưu trữ vị trí đọc của người dùng (số trang `page`, tỷ lệ phóng to/thu nhỏ `zoom_ratio`, tọa độ cuộn `scroll_top`), tab đang thao tác `active_tab` và tài liệu đang chọn `active_document_id`.
+* **Kiểm soát đồng thời (OCC):** Sử dụng header `If-Match: "v{version}"` đảm bảo không ghi đè mất mát dữ liệu điều hướng của người dùng khi chuyển đổi thiết bị.
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `viewport_state` | `object` | **Có** | - | Trạng thái hiển thị canvas: `page` (int >= 1), `zoom_ratio` (float 0.25 - 5.0), `scroll_top` (float >= 0). |
+| `active_tab` | `string` | Không | `null` | Tab đang chọn: `chat`, `notes`, `highlights`, `mindmap`. |
+| `active_document_id` | `string (uuid)` | Không | `null` | UUID tài liệu đang hiển thị trên canvas (phải thuộc danh sách tài liệu của phiên). |
+
+#### Responses
+* **`200 OK`** - Cập nhật trạng thái viewport thành công kèm ETag mới.
+* **`412 Precondition Failed`** - Xung đột phiên bản đồng thời.
+* **`422 Unprocessable Entity`** - `active_document_id` không thuộc tài liệu của phiên hoặc tham số viewport không hợp lệ.
+
+---
+
+### [DELETE] `/api/v1/sessions/{id}`
+**Summary:** `# 50. Xóa phiên nghiên cứu`  
+**Operation ID:** `delete_session_api_v1_sessions__id__delete`
+
+#### Mô tả (Description)
+* **Mục đích:** Xóa hoàn toàn một phiên nghiên cứu và xóa xếp chồng (cascade) các liên kết bài báo và lượt hội thoại trong phiên đó.
+* **Bảo vệ tài liệu gốc:** Việc xóa phiên nghiên cứu **không** xóa tài liệu gốc trong kho thư viện chung của người dùng.
+
+#### Responses
+* **`204 No Content`** - Xóa phiên nghiên cứu thành công (không có body trả về).
+* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc người dùng.
+
+---
+
+### [POST] `/api/v1/sessions/{id}/documents`
+**Summary:** `# 51. Nạp bài vào phiên (Pure JSON: url hoặc document_id)`  
+**Operation ID:** `add_document_to_session_api_v1_sessions__id__documents_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Nạp thêm bài báo vào phiên nghiên cứu đang hoạt động bằng định dạng Pure JSON (không dùng multipart form).
+* **Hai nguồn nạp (`source_type`):**
+  - `document_id`: Nạp tài liệu có sẵn trong thư viện của người dùng vào phiên (trả về trạng thái `associated`).
+  - `url`: Nhận URL bài báo khoa học (arXiv, PubMed, DOI...), hệ thống đưa vào hàng đợi nạp nền (trả về trạng thái `queued`).
+* **Ràng buộc dung lượng trần 5 bài:** Nếu phiên đã chứa 5 bài báo, hệ thống từ chối nạp thêm và trả về `422 Unprocessable Content` (`SESSION_CAPACITY_EXCEEDED`).
+* **Chống trùng lặp:** Nếu bài báo đã có trong phiên, trả về `409 Conflict` (`DOCUMENT_ALREADY_IN_SESSION`).
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `source_type` | `string` | **Có** | Nguồn bài báo: `"document_id"` hoặc `"url"`. |
+| `document_id` | `string (uuid)` | Không | Bắt buộc khi `source_type == "document_id"`. |
+| `url` | `string` | Không | Bắt buộc khi `source_type == "url"` (URL định dạng hợp lệ). |
+| `title` | `string` | Không | Tiêu đề gợi nhớ tùy chọn khi nạp bài từ URL. |
+
+#### Responses
+* **`202 Accepted`** - Bài báo đã được liên kết hoặc đưa vào hàng đợi xử lý nền thành công.  
+  ```json
+  {
+    "success": true,
+    "data": {
+      "session_id": "e7f68b8d-a238-423b-adb0-7f59e5ddcb63",
+      "document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303",
+      "status": "associated",
+      "display_order": 1,
+      "message": "Bài báo đã được thêm vào phiên nghiên cứu thành công."
+    },
+    "meta": {
+      "request_id": "req_1a2b3c4d5e6f",
+      "timestamp": "2026-09-16T19:00:00Z"
+    }
+  }
+  ```
+* **`409 Conflict`** - Bài báo đã tồn tại trong phiên (`DOCUMENT_ALREADY_IN_SESSION`).
+* **`422 Unprocessable Content`** - Đã đạt giới hạn tối đa 5 bài báo trong một phiên.
+
+---
+
+### [POST] `/api/v1/sessions/{id}/messages`
+**Summary:** `# 52. Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)`  
+**Operation ID:** `post_session_message_api_v1_sessions__id__messages_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Gửi câu hỏi nghiên cứu đa bài báo và nhận luồng dữ liệu trả lời trực tiếp thời gian thực theo định dạng Server-Sent Events (`text/event-stream`).
+* **Cross-Document Namespacing:** Trích xuất ngữ cảnh kết hợp từ nhiều bài báo trong phiên, tiền tố hóa rõ ràng nguồn tài liệu `[Doc 1: {title}]`, `[Doc 2: {title}]`.
+* **Trích dẫn trực quan (Grounded Visual Citations):** Trả về sự kiện `citations` chứa danh sách trích dẫn chính xác kèm tọa độ bounding boxes `[ymin, xmin, ymax, xmax, page]` để frontend vẽ vùng highlight tương ứng trên PDF canvas.
+* **Client Disconnect Guard:** Tự động lắng nghe `request.is_disconnected()` khi client hủy kết nối hoặc đóng tab để dừng ngay vòng lặp sinh token, tiết kiệm tài nguyên GPU/LLM.
+* **Các loại sự kiện SSE chuẩn:**
+  - `event: start` - Bắt đầu sinh câu trả lời, trả về `turn_id`.
+  - `event: citations` - Danh sách các trích dẫn và bounding box định vị trang.
+  - `event: token` - Các token từ vựng được stream từng phần `{"delta": "..."}`.
+  - `event: done` - Hoàn tất sinh câu trả lời kèm số liệu thống kê `usage`, `prompt_tokens`, `completion_tokens`.
+  - `event: error` - Báo lỗi chi tiết nếu phiên bị khóa hoặc lỗi pipeline.
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `question` | `string` | **Có** | - | Câu hỏi của nhà nghiên cứu (1 đến 2000 ký tự). |
+| `stream` | `boolean` | Không | `true` | Yêu cầu stream dữ liệu SSE thời gian thực. |
+| `scope` | `string` | Không | `multi_paper` | Phạm vi truy vấn: `multi_paper` (toàn phiên) hoặc `active_paper` (chỉ bài đang chọn). |
+
+#### Responses
+* **`200 OK`** - Luồng SSE phản hồi câu hỏi trực tiếp.  
+  *Content-Type:* `text/event-stream`  
+  *Headers:* `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`
+
+  ```http
+  event: start
+  data: {"turn_id": "11111111-2222-3333-4444-555555555555"}
+
+  event: citations
+  data: {"citations": [{"citation_number": 1, "document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303", "document_title": "Attention Is All You Need", "page_number": 3, "bounding_box": [0.12, 0.35, 0.49, 0.91, 3], "snippet": "Multi-head attention allows the model to jointly attend to information..."}]}
+
+  event: token
+  data: {"delta": "Kiến"}
+
+  event: token
+  data: {"delta": " trúc"}
+
+  event: token
+  data: {"delta": " Transformer..."}
+
+  event: done
+  data: {"turn_id": "11111111-2222-3333-4444-555555555555", "finish_reason": "stop", "usage": {"prompt_tokens": 820, "completion_tokens": 145}}
+  ```
+* **`403 Forbidden`** - Phiên nghiên cứu đã bị lưu trữ quá hạn TTL (`SESSION_ARCHIVED`).
+* **`404 Not Found`** - Phiên nghiên cứu không tồn tại.
+
+---
+
+### [GET] `/api/v1/sessions/{id}/messages`
+**Summary:** `# 53. Lấy lịch sử hội thoại của phiên (phân trang)`  
+**Operation ID:** `get_session_messages_api_v1_sessions__id__messages_get`
+
+#### Mô tả (Description)
+* **Mục đích:** Lấy toàn bộ lịch sử các lượt hỏi đáp trong phiên theo trình tự thời gian tăng dần (`created_at ASC`), bao gồm câu hỏi, câu trả lời, trích dẫn bounding boxes và thông số hiệu năng latency/token usage.
+
+#### Parameters (Path & Query)
+| Tên tham số | Vị trí | Kiểu dữ liệu | Mặc định | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| `id` | `path` | `string (uuid)` | - | **Có** | UUID của phiên nghiên cứu. |
+| `page` | `query` | `integer` | `1` | Không | Trang số (tối thiểu 1). |
+| `per_page` | `query` | `integer` | `50` | Không | Số lượt hội thoại trên mỗi trang (1 đến 100). |
+
+#### Responses
+* **`200 OK`** - Danh sách các lượt hội thoại phân trang thành công.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "11111111-2222-3333-4444-555555555555",
+        "session_id": "e7f68b8d-a238-423b-adb0-7f59e5ddcb63",
+        "question": "Kiến trúc Transformer hoạt động như thế nào?",
+        "answer": "Kiến trúc Transformer dựa hoàn toàn trên cơ chế Attention...",
+        "citations": [
+          {
+            "citation_number": 1,
+            "document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303",
+            "document_title": "Attention Is All You Need",
+            "page_number": 3,
+            "bounding_box": [0.12, 0.35, 0.49, 0.91, 3],
+            "snippet": "Multi-head attention allows the model to jointly attend..."
+          }
+        ],
+        "prompt_tokens": 820,
+        "completion_tokens": 145,
+        "latency_ms": 620,
+        "finish_reason": "stop",
+        "created_at": "2026-09-16T19:10:00Z"
+      }
+    ],
+    "meta": {
+      "total": 1,
+      "page": 1,
+      "per_page": 50,
+      "total_pages": 1
+    },
+    "links": {
+      "first": "/api/v1/sessions/e7f68b8d-a238-423b-adb0-7f59e5ddcb63/messages?page=1&per_page=50",
+      "prev": null,
+      "self": "/api/v1/sessions/e7f68b8d-a238-423b-adb0-7f59e5ddcb63/messages?page=1&per_page=50",
+      "next": null,
+      "last": "/api/v1/sessions/e7f68b8d-a238-423b-adb0-7f59e5ddcb63/messages?page=1&per_page=50"
+    }
+  }
+  ```
+
+---
+
+### [DELETE] `/api/v1/sessions/{id}/messages`
+**Summary:** `# 54. Xóa lịch sử hội thoại của phiên (Idempotent 204)`  
+**Operation ID:** `delete_session_messages_api_v1_sessions__id__messages_delete`
+
+#### Mô tả (Description)
+* **Mục đích:** Xóa toàn bộ các lượt hỏi đáp trong phiên nghiên cứu để bắt đầu lại ngữ cảnh sạch, bảo đảm tính Idempotent (gọi nhiều lần vẫn trả về `204 No Content`).
+* **Bảo tồn tài liệu và viewport:** Các tài liệu đã nạp trong phiên và vị trí cuộn trang không bị ảnh hưởng.
+
+#### Responses
+* **`204 No Content`** - Đã xóa sạch lịch sử hội thoại của phiên.
+* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc người dùng.
+
+---
+
+### [POST] `/api/v1/sessions/{id}:restore-archived`
+**Summary:** `# 55. Tải lại file PDF gốc để kích hoạt lại phiên quá hạn TTL`  
+**Operation ID:** `restore_archived_session_api_v1_sessions__id__restore_archived_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Kích hoạt lại một phiên nghiên cứu đã bị lưu trữ tự động do quá hạn TTL (7 ngày không hoạt động).
+* **Quy trình tái kích hoạt:**
+  1. Người dùng tải lại tệp PDF gốc lên endpoint.
+  2. Hệ thống kiểm tra tính hợp lệ của tệp PDF (Magic bytes `%PDF-`).
+  3. Khôi phục cờ `is_archived = False`, xóa `archived_at`, tăng số phiên bản `version` lên 1.
+  4. Trả về chi tiết phiên đã được kích hoạt lại cùng header `ETag`.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của phiên nghiên cứu đã bị lưu trữ cần kích hoạt lại. |
+
+#### Request Body (`multipart/form-data`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `file` | `binary (file)` | **Có** | Tệp PDF gốc hợp lệ (application/pdf) dùng để kích hoạt lại phiên. |
+
+#### Responses
+* **`200 OK`** - Phiên nghiên cứu đã được kích hoạt lại thành công (`is_archived: false`).  
+  *Headers:* `ETag: "v5"`  
+  *Content-Type:* `application/json`
+* **`400 Bad Request`** - Tệp tải lên không phải là PDF hợp lệ (`INVALID_PDF_HEADER`).
+* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc người dùng.
+
+---
+
+## 4. Sổ Tay Nghiên Cứu & AI Tổng Hợp (Smart Notebook & Knowledge Digest)
+
+### [POST] `/api/v1/notes`
+**Summary:** `# 16. Lưu trích dẫn & ghi chú cá nhân (Add to Note)`  
+**Operation ID:** `create_note_api_v1_notes_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Lưu trữ đoạn trích dẫn được bôi đen trực tiếp từ văn bản học thuật kèm toạ độ không gian (bounding boxes) và ghi chú phân tích của nhà nghiên cứu. Nếu không truyền `document_id`, ghi chú được lưu dạng ý tưởng tự do (Free Note).
+* **Frozen Evidence Snapshot:** Nếu đính kèm `document_id`, hệ thống tự động trích xuất và sao chụp bất biến toàn bộ metadata tài liệu nguồn (tiêu đề, tác giả, năm xuất bản, DOI, arXiv ID, thông tin chunk) vào trường `frozen_snapshot`. Khi tài liệu nguồn bị xóa hoặc ngắt kết nối (`is_source_detached = true`), giá trị học thuật của ghi chú vẫn được bảo toàn nguyên vẹn.
+* **Headers phản hồi:**
+  - `Location: /api/v1/notes/{id}`
+  - `ETag: "v1"`
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `selected_text` | `string` | **Có** | - | Đoạn trích dẫn hoặc nội dung ghi chú (1 - 10,000 ký tự). |
+| `document_id` | `string (uuid)` | Không | `null` | UUID tài liệu nguồn đính kèm (nếu có). |
+| `chunk_id` | `string (uuid)` | Không | `null` | UUID của chunk tương ứng trong tài liệu. |
+| `bounding_boxes` | `array[array[float]]` | Không | `[]` | Tọa độ chuẩn hóa `[x0, y0, x1, y1, page]` phục vụ highlight trực tiếp trên PDF. |
+| `page_number` | `integer` | Không | `1` | Số trang chứa trích dẫn (>= 1). |
+| `user_note` | `string` | Không | `null` | Nhận xét, phân tích chuyên môn của người nghiên cứu. |
+| `tags` | `array[string]` | Không | `[]` | Danh sách nhãn dán phân loại (tự động loại bỏ trùng lặp và chuẩn hóa viết thường). |
+| `folder_id` | `string (uuid)` | Không | `null` | Thư mục lưu trữ sổ tay cá nhân. |
+
+#### Responses
+* **`201 Created`** - Tạo ghi chú nghiên cứu thành công.
+* **`404 Not Found`** - Tài liệu nguồn `document_id` không tồn tại (`DOCUMENT_NOT_FOUND`).
+* **`422 Unprocessable Entity`** - Dữ liệu trích dẫn rỗng hoặc không hợp lệ.
+
+---
+
+### [GET] `/api/v1/notes`
+**Summary:** `# 17. Danh sách ghi chú (lọc theo document_id, tag, folder_id)`  
+**Operation ID:** `list_notes_api_v1_notes_get`
+
+#### Mô tả (Description)
+* **Mục đích:** Truy vấn danh sách các ghi chú cá nhân với phân trang chuẩn RFC 8288. Hỗ trợ lọc theo tài liệu nguồn, thư mục, hoặc tìm kiếm nhãn dán thông qua chỉ mục PostgreSQL GIN.
+
+#### Parameters (Query)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `document_id` | `string (uuid)` | Không | `null` | Lọc theo tài liệu nguồn cụ thể. |
+| `tag` | `string` | Không | `null` | Lọc theo nhãn dán (hỗ trợ GIN containment search). |
+| `folder_id` | `string (uuid)` | Không | `null` | Lọc theo thư mục sổ tay. |
+| `page` | `integer` | Không | `1` | Số thứ tự trang (>= 1). |
+| `per_page` | `integer` | Không | `20` | Số lượng ghi chú mỗi trang (1 - 100). |
+
+#### Responses
+* **`200 OK`** - Danh sách ghi chú kèm siêu dữ liệu phân trang `meta` và điều hướng `links`.
+
+---
+
+### [GET] `/api/v1/notes/{id}`
+**Summary:** `# 18. Chi tiết ghi chú kèm Frozen Evidence Snapshot`  
+**Operation ID:** `get_note_detail_api_v1_notes__id__get`
+
+#### Mô tả (Description)
+* **Mục đích:** Khôi phục chi tiết một ghi chú, bao gồm toạ độ highlight không gian và ảnh chụp dẫn chứng bất biến `frozen_snapshot`.
+* **Headers:** Cung cấp `ETag: "v{version}"` phục vụ kiểm soát đồng thời lạc quan.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của ghi chú nghiên cứu cần truy vấn. |
+
+#### Responses
+* **`200 OK`** - Chi tiết ghi chú nghiên cứu.
+* **`404 Not Found`** - Không tìm thấy ghi chú hoặc không có quyền truy cập (`NOTE_NOT_FOUND`).
+
+---
+
+### [PATCH] `/api/v1/notes/{id}`
+**Summary:** `# 19. Sửa ghi chú / tag (Kiểm soát đồng thời OCC If-Match)`  
+**Operation ID:** `update_note_api_v1_notes__id__patch`
+
+#### Mô tả (Description)
+* **Mục đích:** Chỉnh sửa nhận xét cá nhân hoặc gắn lại nhãn dán.
+* **Giao thức OCC (RFC 7232):**
+  - Bắt buộc phải có header `If-Match: "v{version}"`.
+  - Nếu thiếu header: phản hồi `428 Precondition Required`.
+  - Nếu `version` trong cơ sở dữ liệu không khớp: phản hồi `412 Precondition Failed`.
+  - Nếu thành công: tự động tăng `version` lên 1 và trả về `ETag: "v{version+1}"`.
+
+#### Headers (Request)
+| Tên Header | Kiểu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `If-Match` | `string` | **Có** | ETag phiên bản hiện tại, ví dụ `"v1"`. |
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của ghi chú cần chỉnh sửa. |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `user_note` | `string` | Không | Nhận xét phân tích mới. |
+| `tags` | `array[string]` | Không | Danh sách nhãn dán mới (thay thế danh sách cũ). |
+| `folder_id` | `string (uuid)` | Không | Chuyển ghi chú sang thư mục mới. |
+
+#### Responses
+* **`200 OK`** - Cập nhật ghi chú thành công. Trả về `ETag: "v{version+1}"`.
+* **`412 Precondition Failed`** - Xung đột phiên bản dữ liệu (`CONCURRENCY_CONFLICT`).
+* **`428 Precondition Required`** - Thiếu header `If-Match` (`PRECONDITION_REQUIRED`).
+* **`404 Not Found`** - Không tìm thấy ghi chú.
+
+---
+
+### [DELETE] `/api/v1/notes/{id}`
+**Summary:** `# 20. Xóa ghi chú khỏi sổ tay`  
+**Operation ID:** `delete_note_api_v1_notes__id__delete`
+
+#### Mô tả (Description)
+* **Mục đích:** Xóa một ghi chú khỏi sổ tay nghiên cứu.
+* **Lũy đẳng (Idempotency):** Gọi nhiều lần với cùng ID đều phản hồi `204 No Content`.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của ghi chú cần xóa. |
+
+#### Responses
+* **`204 No Content`** - Xóa thành công (hoặc ghi chú đã được xóa trước đó).
+
+---
+
+### [POST] `/api/v1/notes:synthesize`
+**Summary:** `# 21. AI Tổng hợp ghi chú thành bài học (4 modes + Badges)`  
+**Operation ID:** `synthesize_notes_api_v1_notes_synthesize_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Sử dụng AI để đúc kết và tổng hợp tri thức từ tập hợp các trích dẫn trong sổ tay nghiên cứu thành văn bản hoàn chỉnh.
+* **4 Chế độ Tổng hợp (Synthesis Modes):**
+  1. `concept_lesson`: Bài học khái niệm sư phạm có giải thích logic từng bước.
+  2. `literature_review`: Điểm luận văn hiến tổng quan học thuật, đối chiếu và trích dẫn đa chiều.
+  3. `research_gap`: Xác định lỗ hổng nghiên cứu và định hướng các hướng đi tiếp theo.
+  4. `active_recall_quiz`: Đúc kết tri thức dạng bài tự kiểm tra thấu hiểu (3 - 5 câu hỏi/Flashcards kèm đáp án ẩn).
+* **Hệ thống Interactive Citation Badges:** Tự động neo các ký hiệu dẫn chứng `[^badge_1]`, `[^badge_2]` trong nội dung markdown trỏ trực tiếp đến `note_id`, `document_id`, số trang và bounding box.
+* **Cơ chế Lũy đẳng (Idempotency):** Hỗ trợ header `Idempotency-Key`. Khi nhận cùng khóa, hệ thống trả lại kết quả lưu trong cache kèm header `X-Cache: Idempotent-Hit`.
+
+#### Headers (Request)
+| Tên Header | Kiểu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Idempotency-Key` | `string` | Không | Chuỗi định danh thao tác chống trùng lặp. |
+
+#### Request Body (`application/json`)
+| Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
+| :--- | :--- | :--- | :--- | :--- |
+| `note_ids` | `array[string (uuid)]` | **Có** | - | Danh sách UUID của các ghi chú cần tổng hợp (tối thiểu 1, tối đa 50 ghi chú). |
+| `mode` | `string` | Không | `concept_lesson` | Chế độ tổng hợp: `concept_lesson`, `literature_review`, `research_gap`, `active_recall_quiz`. |
+| `language` | `string` | Không | `vi` | Ngôn ngữ bài học đầu ra (`vi`, `en`). |
+| `target_title` | `string` | Không | `null` | Tiêu đề tùy chỉnh cho bài học tổng hợp. |
+
+#### Responses
+* **`200 OK`** - Tổng hợp tri thức thành công.  
+  *Headers:* `X-Cache: Idempotent-Hit` (nếu trùng khóa lũy đẳng).
+* **`404 Not Found`** - Một hoặc nhiều ghi chú không tồn tại hoặc không thuộc quyền sở hữu (`NOTE_NOT_FOUND`).
+* **`422 Unprocessable Entity`** - Danh sách `note_ids` rỗng hoặc chế độ `mode` không hợp lệ.
+
+---
+
+### [POST] `/api/v1/sessions/{id}:export-bundle`
+**Summary:** `# 56. Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle .zip)`  
+**Operation ID:** `export_session_bundle_api_v1_sessions__id__export_bundle_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Đóng gói toàn bộ tài nguyên của một phiên nghiên cứu vào một tệp nén ZIP duy nhất để phục vụ nghiên cứu ngoại tuyến (Offline Research) khi không có Internet.
+* **Thành phần tệp ZIP (`application/zip`):**
+  1. `documents/`: Toàn bộ các tệp PDF gốc trong phiên đã được nhúng sẵn Native PDF Annotations (chuẩn ISO 32000-1) tại các vị trí đã highlight.
+  2. `master_lesson.md`: Bài học tổng hợp tri thức chuẩn Markdown tích hợp YAML frontmatter và các interactive badges.
+  3. `chat_transcript.html`: Bản ghi lịch sử hỏi đáp độc lập tự chứa CSS/JS (self-contained viewer) cho phép tra cứu câu hỏi và đối chiếu trích dẫn ngoại tuyến.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của phiên nghiên cứu cần đóng gói xuất bản. |
+
+#### Responses
+* **`200 OK`** - Luồng dữ liệu nhị phân tệp ZIP (`application/zip`).  
+  *Headers:* `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`
+* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc quyền sở hữu (`SESSION_NOT_FOUND`).
+
+---
+
+### [POST] `/api/v1/documents/{id}/summary:stream`
+**Summary:** `# 57. Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)`  
+**Operation ID:** `stream_document_summary_api_v1_documents__id__summary_stream_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Khắc phục độ trễ hiển thị tóm tắt, đưa Time-to-First-Token (TTFT) về dưới 1 giây. AI truyền luồng từng token theo giao thức Server-Sent Events (SSE) cho cả 3 mục: `problem_statement`, `contributions`, và `limitations` kèm các tọa độ Bounding Boxes tương ứng.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID tài liệu cần sinh tóm tắt theo luồng. |
+
+#### Responses
+* **`200 OK`** - Luồng sự kiện Server-Sent Events (`text/event-stream`).  
+  *Events:* `event: summary_start`, `event: summary_chunk`, `event: summary_box`, `event: summary_end`.
+* **`404 Not Found`** - Tài liệu không tồn tại.

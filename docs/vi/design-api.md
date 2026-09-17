@@ -123,6 +123,17 @@ Thống nhất với Pydantic schema [`ErrorResponse`](apps/api/src/api/schemas/
 | `RATE_LIMIT_EXCEEDED` | `429 Too Many Requests` | `null` | Vượt quá hạn ngạch gọi API ngoài hoặc Sandbox. Trả về kèm header `Retry-After`. |
 | `RESOURCE_NOT_FOUND` | `404 Not Found` | `id` | Không tìm thấy tài liệu, chunk, note, draft hoặc session tương ứng trên URI. |
 | `SHARE_LINK_REVOKED` | `410 Gone` | `token` | Liên kết chia sẻ công khai đã bị chủ sở hữu thu hồi hoặc xóa bỏ. |
+| `VALIDATION_ERROR` | `422 Unprocessable Content` | `<field_loc>` | Dữ liệu đầu vào không hợp lệ theo OpenAPI Schema. Chi tiết mảng lỗi chứa trong `meta.errors`. |
+| `INTERNAL_SERVER_ERROR` | `500 Internal Server Error` | `null` | Lỗi máy chủ ngoài dự kiến được bọc kín, không để lộ stack trace nội bộ (hành động: liên hệ hỗ trợ). |
+| `ENTITY_NOT_FOUND` | `404 Not Found` | `id` | Vi phạm bất biến thực thể cốt lõi (Domain Entity) không tồn tại. |
+| `INVARIANT_VIOLATION` | `422 Unprocessable Content` | `attribute` | Vi phạm quy tắc nghiệp vụ cốt lõi của miền (Domain Invariant Rule). |
+| `DOMAIN_ERROR` | `400 Bad Request` | `null` | Lỗi nghiệp vụ miền dữ liệu không thỏa điều kiện xử lý. |
+
+#### Endpoint Giám sát & Chẩn đoán Hạ tầng Hệ thống:
+| Endpoint | Method | Định dạng Phản hồi | Mục đích Giám sát |
+| :--- | :---: | :--- | :--- |
+| `/health` | `GET` | `{"status": "ok", "service": "verischolar-api", "version": "..."}` | Healthcheck IETF draft cho Docker/K8s liveness & readiness probe. |
+| `/events` | `GET` | SSE (`text/event-stream`) | Kiểm thử đường truyền mạng trực tiếp, TTFB < 50ms và không đọng buffer reverse proxy. |
 
 ---
 
@@ -840,6 +851,10 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
 
 ### 7.1. `POST /api/v1/sessions` (Khởi tạo phiên nghiên cứu mới)
 - **Method:** `POST`
+- **Request Headers:**
+  - `Idempotency-Key` / `X-Idempotency-Key` (string, tùy chọn): Khóa chống trùng lặp, bảo vệ race condition và double-click (cửa sổ 24 giờ). Khi kích hoạt lại với cùng key, trả về `X-Cache: Idempotent-Hit`.
+- **Query Parameters:**
+  - `include_documents` (boolean, mặc định: `false`): Nếu `true`, nhúng danh sách metadata chi tiết của các bài báo (`documents: [{id, title, filename, status, file_size_bytes, added_at, display_order}]`) giúp frontend render ngay các tab tài liệu mà không cần gọi thêm request phụ.
 - **Request Body (JSON):**
   ```json
   {
@@ -847,9 +862,13 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
     "initial_document_ids": ["c7a2e8c5-9231-419b-a0eb-4a1796d8e05c"]
   }
   ```
-- **Response (`201 Created`):**
-  - **Headers:** `Location: /api/v1/sessions/a1b2c3d4-e5f6-47a8-b9c0-1234567890de`, `ETag: "v1"`.
-  - **Body:** Trả về đối tượng `session` với `version: 1`.
+  - *Cơ chế Auto-naming Fallback*: Trường `title` là tùy chọn. Nếu không truyền hoặc truyền `null`, hệ thống tự động sinh tiêu đề:
+    - Nếu có nạp tài liệu: `"Nghiên cứu: {doc.title}"` (dựa trên tài liệu đầu tiên).
+    - Nếu phiên rỗng: `"Phiên nghiên cứu {DD/MM/YYYY HH:mm}"`.
+    - Nếu truyền chuỗi chỉ chứa khoảng trắng: Trả về `422 Unprocessable Entity`.
+- **Response (`201 Created` hoặc `200 OK` khi Idempotent-Hit):**
+  - **Headers:** `Location: /api/v1/sessions/{session_id}`, `ETag: "v1"`, tùy chọn `X-Cache: Idempotent-Hit`.
+  - **Body:** Trả về đối tượng `session` với `version: 1`, `warnings` (cảnh báo nếu tài liệu nạp vào chưa bóc tách xong), và `documents` (nếu `include_documents=true`).
 
 ### 7.2. `GET /api/v1/sessions` (Lấy lịch sử các phiên nghiên cứu - Sidebar History)
 - **Method:** `GET`

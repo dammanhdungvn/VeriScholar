@@ -82,10 +82,10 @@ class InMemoryAsyncSummaryGenerateSession:
             target_id = None
             target_user_id = None
             for k, v in params.items():
-                if "id" in k and isinstance(v, UUID):
-                    target_id = v
                 if "user_id" in k:
                     target_user_id = v
+                elif "id" in k and isinstance(v, UUID):
+                    target_id = v
 
             doc = None
             if target_id and target_id in self.documents:
@@ -534,3 +534,41 @@ async def test_generate_summary_invalid_uuid(
         json={"force": False},
     )
     assert response.status_code == 422
+
+
+# ==============================================================================
+# 57. POST /api/v1/documents/{id}/summary:stream
+# ==============================================================================
+@pytest.mark.asyncio
+async def test_stream_summary_success(
+    client: AsyncClient,
+    sample_document: DocumentModel,
+) -> None:
+    """Endpoint 57: Streams 3-point grounded summary via SSE with tokens and bounding boxes."""
+    response = await client.post(
+        f"/api/v1/documents/{sample_document.id}/summary:stream",
+    )
+    assert response.status_code == 200
+    assert "text/event-stream" in response.headers["content-type"]
+
+    body = response.text
+    assert "event: summary_start" in body
+    assert "event: summary_chunk" in body
+    assert "event: summary_box" in body
+    assert "event: summary_end" in body
+    assert "problem_statement" in body
+    assert "contributions" in body
+    assert "limitations" in body
+
+
+@pytest.mark.asyncio
+async def test_stream_summary_not_found(
+    client: AsyncClient,
+) -> None:
+    """Endpoint 57: Returns 404 when document does not exist."""
+    random_id = uuid4()
+    response = await client.post(
+        f"/api/v1/documents/{random_id}/summary:stream",
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"

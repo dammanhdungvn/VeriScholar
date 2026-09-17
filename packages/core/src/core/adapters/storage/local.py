@@ -23,8 +23,13 @@ DEFAULT_STORAGE_CHUNK_SIZE_BYTES: int = 64 * 1024  # 64 KB buffer chunk
 class LocalStorageAdapter(IBlobStoragePort):
     """Filesystem-backed Content-Addressable Storage adapter."""
 
-    def __init__(self, base_directory: Path | str = "storage/blobs") -> None:
-        self.base_dir = Path(base_directory).resolve()
+    def __init__(
+        self,
+        base_directory: Path | str = "storage/blobs",
+        base_dir: Path | str | None = None,
+    ) -> None:
+        effective_base = base_dir if base_dir is not None else base_directory
+        self.base_dir = Path(effective_base).resolve()
         self.base_dir.mkdir(parents=True, exist_ok=True)
 
     def _resolve_path(self, content_hash: str) -> Path:

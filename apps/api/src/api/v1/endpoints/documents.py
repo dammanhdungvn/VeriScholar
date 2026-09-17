@@ -4,6 +4,7 @@ import re
 from urllib.parse import quote
 from uuid import UUID
 
+from api.db.models.document import DocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_document_service, get_idempotency_port
@@ -25,10 +26,25 @@ from api.schemas.document import (
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
+from api.schemas.error import ErrorResponse
 from api.services.document_service import DocumentService
 from core.ports.idempotency import IIdempotencyPort
-from fastapi import APIRouter, Body, Depends, File, Form, Header, Path, Query, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Body,
+    Depends,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    status,
+)
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/documents", tags=["Module 1: Documents"])
@@ -1045,5 +1061,60 @@ async def export_annotated_pdf(
             "Content-Length": str(len(pdf_bytes)),
             "X-Annotation-Count": str(annotation_count),
             "Cache-Control": "private, no-transform",
+        },
+    )
+
+
+# ==============================================================================
+# 57. POST /api/v1/documents/{id}/summary:stream (Real-Time Grounded Summary Stream)
+# ==============================================================================
+@router.post(
+    "/{document_id}/summary:stream",
+    summary="Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)",
+    responses={
+        200: {
+            "content": {"text/event-stream": {}},
+            "description": "Luồng SSE truyền từng token của bản tóm tắt kèm toạ độ bounding box.",
+        },
+        404: {"model": ErrorResponse, "description": "Tài liệu không tồn tại."},
+    },
+)
+async def stream_document_summary(
+    document_id: UUID = Path(..., description="UUID của bài báo khoa học"),
+    request: Request = None,
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> StreamingResponse:
+    """Stream 3-point grounded summary tokens and spatial bounding boxes via SSE."""
+    doc_stmt = select(DocumentModel).where(
+        DocumentModel.id == document_id,
+        DocumentModel.user_id == current_user.id,
+    )
+    doc_res = await db.execute(doc_stmt)
+    if not doc_res.scalar_one_or_none():
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DOCUMENT_NOT_FOUND",
+                "message": f"Document '{document_id}' not found.",
+                "field": "id",
+                "action": "Ensure UUID exists and belongs to authenticated user.",
+            },
+        )
+
+    generator = service.stream_summary(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        is_disconnected=request.is_disconnected if request else None,
+    )
+    return StreamingResponse(
+        generator,
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
         },
     )

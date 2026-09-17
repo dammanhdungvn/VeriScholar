@@ -39,3 +39,43 @@ class InvalidContentHashError(InvariantViolationError):
 
 class InvalidDocumentStateTransitionError(DomainError):
     """Raised when a document status transition violates the document lifecycle."""
+
+
+class SessionCapacityExceededError(InvariantViolationError):
+    """Raised when a research session exceeds maximum capacity (max 5 documents)."""
+
+
+class SessionNotFoundError(EntityNotFoundError):
+    """Raised when a research session cannot be found or is not accessible."""
+
+
+class DocumentAlreadyInSessionError(InvariantViolationError):
+    """Raised when attempting to add a document that already exists in the session."""
+
+
+class ConcurrencyConflictError(DomainError):
+    """Raised when an OCC version precondition (If-Match / ETag) fails."""
+
+
+class PreconditionRequiredError(DomainError):
+    """Raised when a required precondition header (such as If-Match) is missing."""
+
+
+class ArchivedSessionForbiddenError(DomainError):
+    """Raised when attempting modification actions on an archived session."""
+
+
+class InvalidUrlSourceError(InvariantViolationError):
+    """Raised when a provided URL for document ingestion is malformed or invalid."""
+
+
+class NoteNotFoundError(EntityNotFoundError):
+    """Raised when a research note cannot be found or is not accessible."""
+
+
+class InvalidNoteDataError(InvariantViolationError):
+    """Raised when note data violates domain validation rules."""
+
+
+class NoteSynthesisError(DomainError):
+    """Raised when AI synthesis fails or input notes are invalid."""
