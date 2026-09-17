@@ -123,8 +123,19 @@ data: {"document_id": "6a6cbadb-517c-40db-bcdf-c57975cc016a", "finish_reason": "
 2. **Golden Paper Integration Matrix (`apps/api/tests/test_golden_papers_matrix.py`):**
    - `test_level_4_realtime_grounded_summary_stream`: Kiểm thử stream trực tiếp trên bài báo thật `Attention Is All You Need.pdf`.
 3. **OpenAPI & Swagger Documentation Verification:**
+   - Khai báo decorator chuẩn `response_class=StreamingResponse` để Swagger UI tự động chọn `text/event-stream` media type.
    - Swagger UI (`/docs`) hiển thị đầy đủ tiêu đề, mô tả và cấu trúc response mẫu.
    - File `docs/vi/swagger.md` đồng bộ 100% tài liệu kỹ thuật offline.
+
+4. **API Evaluation Snapshot & Autotest Harness Runner (`scripts/eval/runners/post_document_summary_stream.py`):**
+   - Triển khai runner độc lập theo chuẩn thiết kế `docs/vi/design-api-eval-snapshots.md`.
+   - **Kịch bản kiểm thử đa dạng:**
+     1. `01_stream_summary_success_completed`: Nạp bài báo hoàn tất -> Stream toàn bộ 4 sự kiện SSE (`summary_start`, `summary_chunk`, `summary_box`, `summary_end`), kiểm tra toạ độ Bounding Boxes chuẩn hóa `[x0, y0, x1, y2, page]`.
+     2. `02_stream_summary_409_processing_guard`: Tài liệu đang trong hàng đợi xử lý (`status == processing`, `chunk_count == 0`) -> Phải chặn trước bằng HTTP 409 Conflict thay vì mở stream rồi sập socket.
+     3. `03_stream_summary_422_failed_guard`: Tài liệu bị lỗi tiền xử lý (`status == failed`) -> Phải chặn trước bằng HTTP 422 Unprocessable Entity.
+     4. `04_stream_summary_404_not_found`: Truy vấn UUID không tồn tại -> HTTP 404 DOCUMENT_NOT_FOUND.
+     5. `05_stream_summary_multi_tenant_isolation`: Truy cập tài liệu của user khác -> HTTP 404 DOCUMENT_NOT_FOUND (không rò rỉ dữ liệu).
+   - Tự động sinh báo cáo Markdown tại `temp/output/test/post_document_summary_stream.md` kèm checksum SHA-256 raw JSON payloads lưu trong `tests/.artifacts/post_document_summary_stream/`.
 
 ---
 

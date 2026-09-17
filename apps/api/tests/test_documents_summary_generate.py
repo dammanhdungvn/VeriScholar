@@ -572,3 +572,56 @@ async def test_stream_summary_not_found(
     )
     assert response.status_code == 404
     assert response.json()["error"]["code"] == "DOCUMENT_NOT_FOUND"
+
+
+@pytest.mark.asyncio
+async def test_stream_summary_conflict_processing(
+    client: AsyncClient,
+    db_session: InMemoryAsyncSummaryGenerateSession,
+) -> None:
+    """Endpoint 57: Returns 409 DOCUMENT_PROCESSING when document is still processing."""
+    doc_id = uuid4()
+    now = datetime.now(UTC)
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=DEFAULT_DEV_USER_ID,
+        blob_id=None,
+        filename="inflight_stream.pdf",
+        status="processing",
+        chunk_count=0,
+        created_at=now,
+        updated_at=now,
+    )
+    db_session.add(doc)
+
+    response = await client.post(
+        f"/api/v1/documents/{doc_id}/summary:stream",
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "DOCUMENT_PROCESSING"
+
+
+@pytest.mark.asyncio
+async def test_stream_summary_failed_status(
+    client: AsyncClient,
+    db_session: InMemoryAsyncSummaryGenerateSession,
+) -> None:
+    """Endpoint 57: Returns 422 DOCUMENT_FAILED when document preprocessing failed."""
+    doc_id = uuid4()
+    now = datetime.now(UTC)
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=DEFAULT_DEV_USER_ID,
+        blob_id=None,
+        filename="failed_stream.pdf",
+        status="failed",
+        created_at=now,
+        updated_at=now,
+    )
+    db_session.add(doc)
+
+    response = await client.post(
+        f"/api/v1/documents/{doc_id}/summary:stream",
+    )
+    assert response.status_code == 422
+    assert response.json()["error"]["code"] == "DOCUMENT_FAILED"
