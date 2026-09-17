@@ -17,6 +17,7 @@ from scripts.eval.runners.post_documents_parse import ParseDocumentAPIRunner
 from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
 from scripts.eval.runners.post_documents_summary_generate import DocumentSummaryGenerateAPIRunner
 from scripts.eval.runners.post_documents_upload import UploadAPIRunner
+from scripts.eval.runners.post_sessions_chat import PostSessionsChatAPIRunner
 from scripts.eval.runners.post_sessions_create import CreateSessionAPIRunner
 from scripts.eval.runners.sessions_lifecycle_runner import SessionsLifecycleAPIRunner
 
@@ -53,8 +54,10 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
-    "sessions-chat": SessionsLifecycleAPIRunner,
-    "chat": SessionsLifecycleAPIRunner,
+    "sessions-chat": PostSessionsChatAPIRunner,
+    "chat": PostSessionsChatAPIRunner,
+    "post_sessions_chat": PostSessionsChatAPIRunner,
+    "sessions_chat": PostSessionsChatAPIRunner,
     "notes": NotesAndSynthesisAPIRunner,
     "notes_and_synthesis": NotesAndSynthesisAPIRunner,
     "notes-and-synthesis": NotesAndSynthesisAPIRunner,
@@ -97,6 +100,7 @@ MODULE_1_ORDER = [
     "delete_documents",
     "post_sessions_create",
     "sessions_lifecycle",
+    "post_sessions_chat",
     "notes_and_synthesis",
 ]
 
@@ -113,6 +117,7 @@ __all__ = [
     "DocumentSummaryAPIRunner",
     "DocumentSummaryGenerateAPIRunner",
     "ExtractReferencesAPIRunner",
+    "PostSessionsChatAPIRunner",
     "ListDocumentsAPIRunner",
     "MODULE_1_ORDER",
     "NotesAndSynthesisAPIRunner",

@@ -88,6 +88,198 @@ def parse_version_from_etag(etag: str | None) -> int:
         )
 
 
+CREATE_NOTE_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Lưu trữ đoạn trích dẫn được chọn trực tiếp từ bài báo khoa học kèm ghi chú cá nhân của nhà
+nghiên cứu.
+Dùng khi người dùng hoặc AI Agent muốn đánh dấu luận điểm quan trọng để ghi nhớ hoặc phục vụ
+tổng hợp bài học sau này.
+
+📥 **Tham số đầu vào (Request Body application/json):**
+- `selected_text` (string, Bắt buộc): Đoạn văn bản trích dẫn nguyên văn từ bài báo (tối
+  thiểu 1 ký tự, tối đa 10,000 ký tự).
+- `document_id` (UUID, Tùy chọn): ID của tài liệu nguồn gắn với trích dẫn. Nếu để trống, ghi
+  chú lưu dưới dạng ý tưởng tự do (Free Note).
+- `chunk_id` (UUID, Tùy chọn): ID của chunk chứa đoạn trích trong tài liệu.
+- `page_number` (int, Mặc định: 1): Số trang chứa đoạn văn bản (>= 1).
+- `bounding_boxes` (array[5-tuple], Tùy chọn): Danh sách toạ độ chuẩn hoá `[x0, y0, x1, y2,
+  page]` (tỷ lệ 0.0 - 1.0) để PDF canvas highlight trực quan.
+- `user_note` (string, Tùy chọn): Ghi chú, phân tích chuyên môn hoặc câu hỏi của người
+  nghiên cứu.
+- `tags` (list[str], Tùy chọn): Danh sách nhãn dán phân loại (tự động loại bỏ trùng lặp và
+  chuẩn hóa chữ thường).
+- `folder_id` (UUID, Tùy chọn): Thư mục sổ tay cá nhân lưu trữ ghi chú.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 201 Created`: Trả về `SingleResponseEnvelope[NoteResponse]` chứa dữ liệu ghi chú đã
+  lưu.
+- Headers phản hồi:
+  - `Location: /api/v1/notes/{id}`: Đường dẫn tài nguyên vừa tạo.
+  - `ETag: "v1"`: Khóa phiên bản khởi tạo phục vụ kiểm soát đồng thời lạc quan (OCC).
+
+🧊 **Cơ chế Frozen Evidence Snapshot (Bảo toàn bằng chứng bất biến):**
+Nếu có `document_id`, hệ thống tự động chụp lại và đóng băng vĩnh viễn metadata bài báo
+(tiêu đề, tác giả, năm, DOI, chunk) vào trường `frozen_snapshot`. Khi bài báo gốc bị sửa đổi
+hoặc xóa, trích dẫn học thuật vẫn được bảo toàn nguyên vẹn (`is_source_detached = True`).
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `400 INVALID_NOTE_DATA`: `selected_text` chỉ chứa khoảng trắng hoặc `page_number < 1`. ->
+  **Hành động:** Kiểm tra và chuẩn hoá dữ liệu trước khi gửi.
+- `404 DOCUMENT_NOT_FOUND`: `document_id` không tồn tại hoặc không thuộc quyền sở hữu của
+  user. -> **Hành động:** Gọi `GET /api/v1/documents` lấy danh sách UUID hợp lệ.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Khi duyệt văn bản phát hiện luận điểm then chốt, hãy gọi API này để tạo ghi chú dẫn chứng.
+Lưu lại `id` của ghi chú trả về để sử dụng cho endpoint tổng hợp bài học `POST
+/api/v1/notes:synthesize`."""
+
+LIST_NOTES_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Truy xuất danh sách ghi chú nghiên cứu trong sổ tay cá nhân phục vụ hiển thị Sidebar, xem
+lại kiến thức, hoặc lọc các ghi chú cần thiết để gửi cho AI tổng hợp bài học.
+
+📥 **Tham số đầu vào (Query Parameters):**
+- `document_id` (UUID, Tùy chọn): Lọc các ghi chú thuộc về một bài báo khoa học cụ thể.
+- `tag` (string, Tùy chọn): Lọc ghi chú theo thẻ học thuật (sử dụng chỉ mục PostgreSQL GIN).
+- `folder_id` (UUID, Tùy chọn): Lọc ghi chú theo thư mục sổ tay.
+- `page` (int, Mặc định: 1): Số thứ tự trang kết quả (1-indexed, tối thiểu 1).
+- `per_page` (int, Mặc định: 50, Tối đa: 100): Số lượng ghi chú trả về trên mỗi trang.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 200 OK`: `PaginatedResponseEnvelope[NoteListItemResponse]`.
+  - `data`: Danh sách các ghi chú tóm tắt (`id`, `selected_text`, `user_note`, `tags`,
+    `document_id`, `created_at`).
+  - `meta`: `PaginationMeta` chứa `total`, `page`, `per_page`, `total_pages`.
+  - `links`: `PaginationLinks` chuẩn RFC 8288 (`first`, `prev`, `self`, `next`, `last`).
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `422 VALIDATION_ERROR`: `page < 1` hoặc `per_page > 100`. -> **Hành động:** Điều chỉnh
+  tham số trong giới hạn cho phép.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Để chuẩn bị tổng hợp tri thức cho người dùng, AI Agent có thể gọi endpoint này với tham số
+`tag` hoặc `document_id` để thu thập danh sách các `id` ghi chú phù hợp."""
+
+GET_NOTE_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Lấy toàn bộ thông tin chi tiết của một ghi chú nghiên cứu, bao gồm nội dung trích dẫn, ghi
+chú cá nhân, danh sách toạ độ Bounding Boxes, và toàn bộ ảnh chụp bằng chứng đóng băng
+`frozen_snapshot`.
+
+📥 **Tham số đầu vào (Path Parameter):**
+- `id` (UUID, Bắt buộc): UUID định danh duy nhất của ghi chú nghiên cứu cần truy vấn.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 200 OK`: `SingleResponseEnvelope[NoteResponse]` chứa dữ liệu toàn vẹn của ghi chú.
+- Header phản hồi:
+  - `ETag: "v{version}"`: Mã phiên bản hiện tại của ghi chú (ví dụ: `"v1"`, `"v2"`).
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `404 NOTE_NOT_FOUND`: Ghi chú không tồn tại hoặc không thuộc quyền sở hữu của user. ->
+  **Hành động:** Gọi `GET /api/v1/notes` để xác minh lại danh sách ghi chú hiện có.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Nếu bạn có ý định cập nhật ghi chú này qua `PATCH /api/v1/notes/{id}`, bạn BẮT BUỘC phải
+trích xuất và lưu giữ giá trị của header `ETag` từ endpoint này để truyền vào header
+`If-Match`."""
+
+UPDATE_NOTE_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Chỉnh sửa nhận xét cá nhân (`user_note`), danh sách thẻ (`tags`), hoặc di chuyển ghi chú
+sang thư mục khác (`folder_id`) với cơ chế kiểm soát đồng thời lạc quan (OCC).
+
+📥 **Tham số đầu vào:**
+- `id` (UUID, Path, Bắt buộc): UUID của ghi chú cần chỉnh sửa.
+- `If-Match` (string, Header, Bắt buộc): Chuỗi ETag phiên bản hiện tại (theo RFC 7232, ví
+  dụ: `"v1"` hoặc `"v3"`).
+- Request Body (`application/json`):
+  - `user_note` (string, Tùy chọn): Nội dung nhận xét, phân tích mới.
+  - `tags` (list[str], Tùy chọn): Danh sách nhãn dán mới (thay thế toàn bộ danh sách cũ).
+  - `folder_id` (UUID, Tùy chọn): ID thư mục mới.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 200 OK`: `SingleResponseEnvelope[NoteResponse]` với dữ liệu đã cập nhật.
+- Header phản hồi:
+  - `ETag: "v{version+1}"`: Khóa phiên bản mới sau khi cập nhật thành công (ví dụ: `"v2"`).
+
+🔄 **Cơ chế Kiểm soát Đồng thời (Optimistic Concurrency Control - OCC):**
+- Hệ thống bảo vệ dữ liệu chống ghi đè race condition khi nhiều tab hoặc client cùng chỉnh
+  sửa.
+- Nếu thiếu header `If-Match`: Trả về lỗi `428 Precondition Required`.
+- Nếu giá trị `If-Match` không khớp với phiên bản trong cơ sở dữ liệu: Trả về lỗi `412
+  Precondition Failed` (`CONCURRENCY_CONFLICT`).
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `412 CONCURRENCY_CONFLICT`: Ghi chú đã bị sửa đổi bởi một yêu cầu khác trước đó. -> **Hành
+  động cho AI Agent:** Gọi ngay `GET /api/v1/notes/{id}` để đọc ETag và dữ liệu mới nhất,
+  hòa trộn thay đổi rồi gửi lại request với ETag mới.
+- `428 PRECONDITION_REQUIRED`: Thiếu header `If-Match`. -> **Hành động cho AI Agent:** Luôn
+  bổ sung header `If-Match: "v{version}"` lấy từ phản hồi GET/POST trước đó.
+- `404 NOTE_NOT_FOUND`: Ghi chú không tồn tại.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Tuyệt đối không bỏ qua header `If-Match`. Quy trình chuẩn: `GET /api/v1/notes/{id}` -> Lấy
+ETag -> `PATCH /api/v1/notes/{id}` với header `If-Match`."""
+
+DELETE_NOTE_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Xóa vĩnh viễn một ghi chú nghiên cứu khỏi sổ tay cá nhân của người dùng (Idempotent 204 No
+Content).
+
+📥 **Tham số đầu vào (Path Parameter):**
+- `id` (UUID, Bắt buộc): UUID của ghi chú nghiên cứu cần xóa.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 204 No Content`: Xóa thành công, không có body trả về.
+
+🛡️ **Bảo vệ toàn vẹn tài liệu gốc:**
+Thao tác xóa ghi chú hoàn toàn KHÔNG làm xóa hay thay đổi bài báo khoa học gốc, các chunk
+văn bản hay các ghi chú khác.
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `404 NOTE_NOT_FOUND`: Ghi chú không tồn tại hoặc đã bị xóa trước đó.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Thao tác xóa là vĩnh viễn (hard delete). AI Agent chỉ nên gọi endpoint này khi người dùng
+yêu cầu rõ ràng."""
+
+SYNTHESIZE_NOTES_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
+Kích hoạt mô hình AI tổng hợp tri thức từ một tập hợp các ghi chú đã chọn thành một bài học
+sư phạm, bài tổng quan tài liệu, hoặc phân tích khoảng trống nghiên cứu.
+Dùng khi người dùng hoàn thành việc đọc và muốn đúc kết kiến thức có cấu trúc kèm trích dẫn
+đối chiếu.
+
+📥 **Tham số đầu vào:**
+- `Idempotency-Key` (string, Header, Tùy chọn): Khóa chống gửi trùng lặp request (cửa sổ lưu
+  cache kết quả 24 giờ).
+- Request Body (`application/json`):
+  - `note_ids` (list[UUID], Bắt buộc): Danh sách từ 1 đến 50 UUID ghi chú cần đưa vào tổng
+    hợp.
+  - `mode` (string, Tùy chọn, Mặc định: `concept_lesson`): Chế độ tổng hợp tri thức:
+    - `concept_lesson`: Bài học khái niệm sư phạm (định nghĩa, cơ chế, ví dụ minh họa, lưu
+      ý).
+    - `literature_review`: Bài tổng quan tài liệu đối chiếu các luận điểm khoa học.
+    - `research_gap`: Phân tích khoảng trống nghiên cứu và các bài toán chưa giải quyết.
+  - `language` (string, Mặc định: `vi`): Ngôn ngữ bài học đầu ra (`vi`, `en`).
+  - `target_title` (string, Tùy chọn): Tiêu đề tùy chỉnh cho bài học tổng hợp.
+
+📤 **Đầu ra & Dữ liệu phản hồi:**
+- `HTTP 200 OK`: `SingleResponseEnvelope[NoteSynthesisResponse]` gồm:
+  - `markdown_content`: Nội dung bài học Markdown tích hợp các huy hiệu trích dẫn tương tác
+    `[^note_{id}]`.
+  - `quiz_items`: Danh sách câu hỏi kiểm tra độ hiểu bài (Active Recall Quiz) kèm đáp án
+    giải thích.
+  - `evidence_sources`: Mảng liên kết huy hiệu trích dẫn ngược về bài báo, số trang và toạ
+    độ Bounding Box gốc.
+- Headers phản hồi:
+  - `X-Cache: Idempotent-Hit` (nếu trùng khóa Idempotency-Key trong vòng 24 giờ).
+
+⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
+- `400 INVALID_REQUEST`: Danh sách `note_ids` rỗng hoặc vượt quá 50 ghi chú, hoặc `mode`
+  không hợp lệ. -> **Hành động:** Kiểm tra `note_ids` (1-50 mục) và chọn đúng `mode`.
+- `404 NOTE_NOT_FOUND`: Một hoặc nhiều ghi chú trong danh sách không tồn tại. -> **Hành
+  động:** Gọi `GET /api/v1/notes` để xác thực lại danh sách ID hợp lệ.
+
+🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
+Nên truyền kèm header `Idempotency-Key` (ví dụ UUIDv4 ngẫu nhiên cho mỗi tác vụ tổng hợp) để
+tránh sinh lại tốn token LLM khi mạng bị chập chờn."""
+
+
 # ==============================================================================
 # 16. POST /api/v1/notes (Lưu trích dẫn & ghi chú cá nhân)
 # ==============================================================================
@@ -95,7 +287,8 @@ def parse_version_from_etag(etag: str | None) -> int:
     "",
     status_code=status.HTTP_201_CREATED,
     response_model=SingleResponseEnvelope[NoteResponse],
-    summary="Lưu trích dẫn & ghi chú cá nhân (Add to Note)",
+    summary="# 16. Lưu trích dẫn & ghi chú cá nhân (Add to Note)",
+    description=CREATE_NOTE_DESCRIPTION,
     responses={
         201: {
             "description": "Ghi chú đã được lưu thành công kèm Frozen Evidence Snapshot.",
@@ -153,7 +346,8 @@ async def create_note(
 @router.get(
     "",
     response_model=PaginatedResponseEnvelope[NoteListItemResponse],
-    summary="Danh sách ghi chú (lọc theo document_id, tag, folder_id)",
+    summary="# 17. Danh sách ghi chú (lọc theo document_id, tag, folder_id)",
+    description=LIST_NOTES_DESCRIPTION,
     responses={
         200: {"description": "Danh sách ghi chú kèm phân trang RFC 8288."},
     },
@@ -208,7 +402,8 @@ async def list_notes(
 @router.get(
     "/{id}",
     response_model=SingleResponseEnvelope[NoteResponse],
-    summary="Chi tiết ghi chú kèm Frozen Evidence Snapshot",
+    summary="# 18. Chi tiết ghi chú kèm Frozen Evidence Snapshot",
+    description=GET_NOTE_DESCRIPTION,
     responses={
         200: {
             "description": "Chi tiết toàn vẹn của ghi chú kèm Frozen Evidence Snapshot.",
@@ -251,7 +446,8 @@ async def get_note(
 @router.patch(
     "/{id}",
     response_model=SingleResponseEnvelope[NoteResponse],
-    summary="Sửa ghi chú / tag (Kiểm soát đồng thời OCC If-Match)",
+    summary="# 19. Sửa ghi chú / tag (Kiểm soát đồng thời OCC If-Match)",
+    description=UPDATE_NOTE_DESCRIPTION,
     responses={
         200: {
             "description": "Cập nhật ghi chú thành công.",
@@ -332,7 +528,8 @@ async def update_note(
 @router.delete(
     "/{id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Xóa ghi chú khỏi sổ tay",
+    summary="# 20. Xóa ghi chú khỏi sổ tay",
+    description=DELETE_NOTE_DESCRIPTION,
     responses={
         204: {"description": "Ghi chú đã được xóa thành công khỏi sổ tay (Idempotent)."},
     },
@@ -353,7 +550,8 @@ async def delete_note(
 @router.post(
     ":synthesize",
     response_model=SingleResponseEnvelope[NoteSynthesisResponse],
-    summary="AI Tổng hợp ghi chú thành bài học (3 modes + Badges)",
+    summary="# 21. AI Tổng hợp ghi chú thành bài học (3 modes + Badges)",
+    description=SYNTHESIZE_NOTES_DESCRIPTION,
     responses={
         200: {
             "description": "Tổng hợp tri thức thành công với interactive citation badges.",

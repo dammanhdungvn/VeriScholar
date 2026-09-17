@@ -1065,18 +1065,74 @@ async def export_annotated_pdf(
     )
 
 
+STREAM_SUMMARY_DESCRIPTION = """🎯 **Mục đích:**
+Khắc phục độ trễ hiển thị tóm tắt, tối ưu hóa trải nghiệm người dùng với TTFT < 1s.
+AI truyền luồng từng token theo giao thức chuẩn W3C Server-Sent Events (SSE) cho cả 3 mục:
+`problem_statement`, `contributions`, và `limitations` kết hợp truyền Bounding Boxes
+chuẩn hoá `[x0, y0, x1, y2, page]` để Deep Reading Canvas đồng bộ highlight trực quan.
+
+📡 **Giao thức Luồng Sự Kiện SSE (`text/event-stream`):**
+Mỗi frame sự kiện tuân thủ format chuẩn `event: <name>\ndata: <json>\n\n`:
+1. `event: summary_start`: Báo hiệu bắt đầu stream.
+   `data: {"document_id": "...", "status": "streaming"}`
+2. `event: summary_chunk`: Truyền từng token từ vựng của section đang xử lý.
+   `data: {"section": "problem_statement", "token": "..."}`
+3. `event: summary_box`: Truyền toạ độ bằng chứng thực tế trên PDF ngay khi kết thúc section.
+   `data: {"section": "problem_statement", "bounding_boxes": [[0.1, 0.2, 0.8, 0.4, 1]]}`
+4. `event: summary_end`: Báo hiệu kết thúc toàn bộ luồng truyền tải.
+   `data: {"document_id": "...", "finish_reason": "completed"}`
+
+⚡ **Xử lý Ngắt Kết Nối & Tối Ưu Mạng:**
+- Lắng nghe `request.is_disconnected` để dừng tác vụ phía server ngay lập tức.
+- Headers điều khiển: `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`.
+
+⚠️ **Mã lỗi nghiệp vụ (RFC 7807):**
+- `404 DOCUMENT_NOT_FOUND`: Tài liệu không tồn tại hoặc không thuộc quyền sở hữu của user.
+- `409 DOCUMENT_PROCESSING`: Tài liệu đang trong quá trình tiền xử lý/OCR nền.
+- `422 DOCUMENT_FAILED`: Tài liệu thất bại trong khâu tiền xử lý hoặc UUID không hợp lệ.
+"""
+
+
 # ==============================================================================
 # 57. POST /api/v1/documents/{id}/summary:stream (Real-Time Grounded Summary Stream)
 # ==============================================================================
 @router.post(
     "/{document_id}/summary:stream",
-    summary="Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)",
+    summary="57. Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)",
+    description=STREAM_SUMMARY_DESCRIPTION,
     responses={
         200: {
-            "content": {"text/event-stream": {}},
+            "content": {
+                "text/event-stream": {
+                    "example": (
+                        "event: summary_start\n"
+                        'data: {"document_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",'
+                        ' "status": "streaming"}\n\n'
+                        "event: summary_chunk\n"
+                        'data: {"section": "problem_statement", "token": "Conventional "}\n\n'
+                        "event: summary_box\n"
+                        'data: {"section": "problem_statement", "bounding_boxes": '
+                        "[[0.1, 0.2, 0.8, 0.4, 1]]}\n\n"
+                        "event: summary_end\n"
+                        'data: {"document_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",'
+                        ' "finish_reason": "completed"}\n\n'
+                    )
+                }
+            },
             "description": "Luồng SSE truyền từng token của bản tóm tắt kèm toạ độ bounding box.",
         },
-        404: {"model": ErrorResponse, "description": "Tài liệu không tồn tại."},
+        404: {
+            "model": ErrorResponse,
+            "description": "Tài liệu không tồn tại hoặc không có quyền (DOCUMENT_NOT_FOUND).",
+        },
+        409: {
+            "model": ErrorResponse,
+            "description": "Tài liệu đang xử lý nền (DOCUMENT_PROCESSING).",
+        },
+        422: {
+            "model": ErrorResponse,
+            "description": "Tài liệu xử lý thất bại (DOCUMENT_FAILED) hoặc UUID không hợp lệ.",
+        },
     },
 )
 async def stream_document_summary(

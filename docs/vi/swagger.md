@@ -1266,6 +1266,195 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
 
 ---
 
+### [POST] `/api/v1/documents/{document_id}/summary:stream`
+**Summary:** `# 57. Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)`  
+**Operation ID:** `stream_document_summary_api_v1_documents__document_id__summary_stream_post`
+
+#### Mô tả (Description)
+* **Mục đích:** Tối ưu hóa trải nghiệm đọc sâu thời gian thực (Deep Reading Experience), giải quyết triệt để rào cản độ trễ (latency) khi chờ đợi mô hình AI tổng hợp toàn bộ bài báo. Bằng cách thiết lập luồng truyền Server-Sent Events (SSE), người dùng nhận được phản hồi ngay lập tức với **Time-to-First-Token (TTFT) < 1 giây**.
+* **Đặc tính truyền luồng sự kiện (SSE Event Protocol):** Luồng dữ liệu truyền theo định dạng `text/event-stream` với 4 sự kiện tuần tự:
+  1. `summary_start`: Báo hiệu bắt đầu luồng tóm tắt.
+     - Payload: `{"document_id": "<UUID>", "status": "streaming"}`
+  2. `summary_chunk`: Phát từng token văn bản của luận điểm đang xử lý.
+     - Payload: `{"section": "problem_statement" | "contributions" | "limitations", "token": "..."}`
+  3. `summary_box`: Ngay khi một luận điểm hoàn tất, server gửi ngay danh sách các toạ độ Bounding Boxes 5-tuples `[x0, y0, x1, y2, page]` trích xuất từ PDF gốc.
+     - Payload: `{"section": "problem_statement" | "contributions" | "limitations", "bounding_boxes": [[0.1, 0.2, 0.8, 0.4, 1]]}`
+  4. `summary_end`: Báo hiệu kết thúc toàn bộ luồng truyền tải dữ liệu.
+     - Payload: `{"document_id": "<UUID>", "finish_reason": "completed"}`
+* **Cơ chế Visual Grounding trực quan hóa Canvas:** Giao diện Deep Reading Canvas (PDF.js) lắng nghe sự kiện `summary_box` để lập tức cuộn trang và vẽ highlight vùng bằng chứng màu vàng/cam/tím tương ứng, đồng bộ hoàn hảo với dòng chữ đang được in ra.
+* **Xử lý ngắt kết nối (Client Disconnection Resilience):** Server liên tục kiểm tra tín hiệu ngắt kết nối qua `request.is_disconnected`. Nếu người dùng đóng trình duyệt hoặc chuyển trang, server lập tức hủy bỏ tác vụ sinh token và giải phóng tài nguyên CPU/GPU/RAM.
+* **Tối ưu hóa Proxy & Buffering Bypass:**
+  - Header `Cache-Control: no-cache`
+  - Header `Connection: keep-alive`
+  - Header `X-Accel-Buffering: no` (ngăn cản Nginx, Cloudflare hoặc Ingress Controller buffer dữ liệu SSE).
+* **Bảo vệ vòng đời tài liệu & Multi-tenant:**
+  - Trả về `404 DOCUMENT_NOT_FOUND` nếu tài liệu không tồn tại hoặc không thuộc quyền sở hữu của người dùng.
+  - Trả về `409 DOCUMENT_PROCESSING` nếu tài liệu đang trong quá trình bóc tách/OCR nền.
+  - Trả về `422 DOCUMENT_FAILED` nếu tài liệu thất bại trong quá trình tiền xử lý.
+
+#### Parameters (Path)
+| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `document_id` | `string (uuid)` | **Có** | UUID định danh duy nhất của bài báo khoa học (hỗ trợ alias path `{id}`). |
+
+#### Request Headers
+| Tên Header | Kiểu dữ liệu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Accept` | `string` | Không | Khuyến nghị `text/event-stream`. |
+| `Authorization` | `string` | **Có** | Bearer Token của người dùng đã xác thực. |
+
+#### Request Body
+*Không có (Endpoint singleton method thao tác trực tiếp trên document_id).*
+
+#### Responses
+* **`200 OK`** - Luồng sự kiện Server-Sent Events (`text/event-stream`).  
+  *Headers:*
+  - `Content-Type: text/event-stream; charset=utf-8`
+  - `Cache-Control: no-cache`
+  - `Connection: keep-alive`
+  - `X-Accel-Buffering: no`
+
+  ```text
+  event: summary_start
+  data: {"document_id": "6a6cbadb-517c-40db-bcdf-c57975cc016a", "status": "streaming"}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "Conventional "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "RAG "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "systems "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "struggle "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "with "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "structured "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "enterprise "}
+
+  event: summary_chunk
+  data: {"section": "problem_statement", "token": "data. "}
+
+  event: summary_box
+  data: {"section": "problem_statement", "bounding_boxes": [[0.1176, 0.3165, 0.2185, 0.3346, 1]]}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "The "}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "authors "}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "propose "}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "hybrid "}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "schema "}
+
+  event: summary_chunk
+  data: {"section": "contributions", "token": "linking. "}
+
+  event: summary_box
+  data: {"section": "contributions", "bounding_boxes": [[0.1176, 0.3509, 0.4919, 0.9121, 1]]}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "Evaluation "}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "is "}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "limited "}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "to "}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "internal "}
+
+  event: summary_chunk
+  data: {"section": "limitations", "token": "benchmarks. "}
+
+  event: summary_box
+  data: {"section": "limitations", "bounding_boxes": [[0.5081, 0.3199, 0.8824, 0.5047, 1]]}
+
+  event: summary_end
+  data: {"document_id": "6a6cbadb-517c-40db-bcdf-c57975cc016a", "finish_reason": "completed"}
+  ```
+
+* **`404 Not Found`** - Không tìm thấy tài liệu hoặc người dùng không có quyền truy cập.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_NOT_FOUND",
+      "message": "Document '6a6cbadb-517c-40db-bcdf-c57975cc016a' not found.",
+      "field": "id",
+      "action": "Ensure UUID exists and belongs to authenticated user."
+    },
+    "meta": {
+      "request_id": "c1f7a2d4-e69c-4b53-9118-2e63ad0ec2e9",
+      "timestamp": "2026-09-17T10:00:00Z"
+    }
+  }
+  ```
+
+* **`409 Conflict`** - Tài liệu đang trong quá trình bóc tách/OCR nền (`DOCUMENT_PROCESSING`).  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_PROCESSING",
+      "message": "Document is currently being processed by background worker.",
+      "field": "status",
+      "action": "Poll /api/v1/documents/{document_id}/status until status reaches 'completed'."
+    },
+    "meta": {
+      "request_id": "c1f7a2d4-e69c-4b53-9118-2e63ad0ec2e9",
+      "timestamp": "2026-09-17T10:00:00Z"
+    }
+  }
+  ```
+
+* **`422 Unprocessable Content`** - Tài liệu bị lỗi tiền xử lý hoặc định dạng UUID không hợp lệ.  
+  *Content-Type:* `application/json`
+  ```json
+  {
+    "success": false,
+    "error": {
+      "code": "DOCUMENT_FAILED",
+      "message": "Document processing failed permanently. Cannot synthesize summary.",
+      "field": "id",
+      "action": "Re-upload the document or inspect processing error message."
+    },
+    "meta": {
+      "request_id": "c1f7a2d4-e69c-4b53-9118-2e63ad0ec2e9",
+      "timestamp": "2026-09-17T10:00:00Z"
+    }
+  }
+  ```
+
+#### Ví dụ gọi lệnh cURL (Streaming without buffer)
+```bash
+curl -N -X POST "http://localhost:8000/api/v1/documents/6a6cbadb-517c-40db-bcdf-c57975cc016a/summary:stream" \
+  -H "Authorization: Bearer <YOUR_ACCESS_TOKEN>" \
+  -H "Accept: text/event-stream"
+```
+
+
+---
+
 ## 3. Nhóm API Phiên nghiên cứu đa bài (Research Sessions)
 
 ### [POST] `/api/v1/sessions`
@@ -1589,20 +1778,30 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
 ---
 
 ### [POST] `/api/v1/sessions/{id}/messages`
-**Summary:** `# 52. Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)`  
+**Summary:** `# 52. Gửi câu hỏi & Stream SSE (Cross-Document Namespacing & Resumption)`  
 **Operation ID:** `post_session_message_api_v1_sessions__id__messages_post`
 
 #### Mô tả (Description)
 * **Mục đích:** Gửi câu hỏi nghiên cứu đa bài báo và nhận luồng dữ liệu trả lời trực tiếp thời gian thực theo định dạng Server-Sent Events (`text/event-stream`).
 * **Cross-Document Namespacing:** Trích xuất ngữ cảnh kết hợp từ nhiều bài báo trong phiên, tiền tố hóa rõ ràng nguồn tài liệu `[Doc 1: {title}]`, `[Doc 2: {title}]`.
 * **Trích dẫn trực quan (Grounded Visual Citations):** Trả về sự kiện `citations` chứa danh sách trích dẫn chính xác kèm tọa độ bounding boxes `[ymin, xmin, ymax, xmax, page]` để frontend vẽ vùng highlight tương ứng trên PDF canvas.
+* **Stream Resumption (RFC 8895 & W3C EventSource):** Từng sự kiện SSE được định danh tuần tự bằng trường `id: <seq_id>`. Hỗ trợ header `Last-Event-ID` từ client để nối lại luồng stream mượt mà khi mạng bị ngắt quãng giữa chừng.
+* **Suy luận minh bạch (Reasoning Tokens Transparency):** Hỗ trợ sự kiện `event: reasoning` (CoT / Thinking Stream) truyền tải quá trình lập luận phản biện học thuật trước khi xuất tokens câu trả lời, cho phép UI hiển thị collapsible thought box.
+* **Phản hồi tương tác có cấu trúc (Structured Interactive Callback):** Hỗ trợ trường `interactive_response` trong Request Body (`{"persona_id": "persona_b", "quiz_answers": {...}}`), cho phép người dùng click 1 chạm trên UI thay vì gửi văn bản thô.
 * **Client Disconnect Guard:** Tự động lắng nghe `request.is_disconnected()` khi client hủy kết nối hoặc đóng tab để dừng ngay vòng lặp sinh token, tiết kiệm tài nguyên GPU/LLM.
 * **Các loại sự kiện SSE chuẩn:**
-  - `event: start` - Bắt đầu sinh câu trả lời, trả về `turn_id`.
-  - `event: citations` - Danh sách các trích dẫn và bounding box định vị trang.
-  - `event: token` - Các token từ vựng được stream từng phần `{"delta": "..."}`.
-  - `event: done` - Hoàn tất sinh câu trả lời kèm số liệu thống kê `usage`, `prompt_tokens`, `completion_tokens`.
+  - `id: 1` -> `event: start` - Bắt đầu sinh câu trả lời, trả về `turn_id` và `message_id`.
+  - `id: 2` -> `event: reasoning` - (Tùy chọn) Luồng suy luận logic CoT phản biện học thuật.
+  - `id: 3` -> `event: interactive_options` - (Tùy chọn) Phát sinh khi hệ thống phát hiện ý định mơ hồ hoặc cần chẩn đoán lộ trình học (AT-CoT Intent Elicitation). Trả về JSON chứa Personas (`Nhóm A/B/C`) và Micro-Quiz để Frontend render thẻ 1-click.
+  - `id: 4` -> `event: citations` - Danh sách các trích dẫn và bounding box định vị trang `[ymin, xmin, ymax, xmax, page]`.
+  - `id: 5...N` -> `event: token` - Các token từ vựng được stream từng phần `{"token": "..."}`.
+  - `id: N+1` -> `event: done` - Hoàn tất sinh câu trả lời kèm số liệu thống kê `finish_reason`, `latency_ms`, `intent`, `ambiguity_type`.
   - `event: error` - Báo lỗi chi tiết nếu phiên bị khóa hoặc lỗi pipeline.
+
+#### Request Headers
+| Tên Header | Kiểu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Last-Event-ID` | `string` | Không | ID sự kiện cuối cùng client đã nhận được, phục vụ cơ chế tự động nối lại luồng stream (RFC 8895). |
 
 #### Request Body (`application/json`)
 | Tên trường | Kiểu dữ liệu | Bắt buộc | Mặc định | Mô tả |
@@ -1610,6 +1809,7 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
 | `question` | `string` | **Có** | - | Câu hỏi của nhà nghiên cứu (1 đến 2000 ký tự). |
 | `stream` | `boolean` | Không | `true` | Yêu cầu stream dữ liệu SSE thời gian thực. |
 | `scope` | `string` | Không | `multi_paper` | Phạm vi truy vấn: `multi_paper` (toàn phiên) hoặc `active_paper` (chỉ bài đang chọn). |
+| `interactive_response` | `object` | Không | `null` | Dữ liệu phản hồi tùy chọn khi người dùng tương tác với thẻ chẩn đoán (`persona_id`, `quiz_answers`). |
 
 #### Responses
 * **`200 OK`** - Luồng SSE phản hồi câu hỏi trực tiếp.  
@@ -1617,23 +1817,33 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
   *Headers:* `Cache-Control: no-cache`, `Connection: keep-alive`, `X-Accel-Buffering: no`
 
   ```http
+  id: 1
   event: start
-  data: {"turn_id": "11111111-2222-3333-4444-555555555555"}
+  data: {"turn_id": "11111111-2222-3333-4444-555555555555", "message_id": "msg_11111111", "created_at": "2026-09-17T12:00:00Z"}
 
+  id: 2
+  event: reasoning
+  data: {"thought": "Xác định câu hỏi liên quan đến kiến trúc Multi-Head Attention tại Phần 3.2. Truy xuất tài liệu..."}
+
+  id: 3
   event: citations
-  data: {"citations": [{"citation_number": 1, "document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303", "document_title": "Attention Is All You Need", "page_number": 3, "bounding_box": [0.12, 0.35, 0.49, 0.91, 3], "snippet": "Multi-head attention allows the model to jointly attend to information..."}]}
+  data: {"citations": [{"citation_id": "cit_1", "document_id": "e3771a46-74cc-4fb7-a238-fd7994cf6303", "document_title": "Attention Is All You Need", "page_number": 3, "bounding_boxes": [[0.12, 0.35, 0.49, 0.91, 3]], "score": 0.88}]}
 
+  id: 4
   event: token
-  data: {"delta": "Kiến"}
+  data: {"token": "Kiến "}
 
+  id: 5
   event: token
-  data: {"delta": " trúc"}
+  data: {"token": "trúc "}
 
+  id: 6
   event: token
-  data: {"delta": " Transformer..."}
+  data: {"token": "Transformer..."}
 
+  id: 7
   event: done
-  data: {"turn_id": "11111111-2222-3333-4444-555555555555", "finish_reason": "stop", "usage": {"prompt_tokens": 820, "completion_tokens": 145}}
+  data: {"finish_reason": "stop", "prompt_tokens": 820, "completion_tokens": 145, "total_tokens": 965, "latency_ms": 320.0, "intent": "fact_extraction"}
   ```
 * **`403 Forbidden`** - Phiên nghiên cứu đã bị lưu trữ quá hạn TTL (`SESSION_ARCHIVED`).
 * **`404 Not Found`** - Phiên nghiên cứu không tồn tại.
@@ -1921,29 +2131,4 @@ Xuất file PDF gốc kèm các lớp Highlight trực quan (Native PDF Annotati
 
 #### Parameters (Path)
 | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
-| :--- | :--- | :--- | :--- |
-| `id` | `string (uuid)` | **Có** | UUID của phiên nghiên cứu cần đóng gói xuất bản. |
-
-#### Responses
-* **`200 OK`** - Luồng dữ liệu nhị phân tệp ZIP (`application/zip`).  
-  *Headers:* `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`
-* **`404 Not Found`** - Phiên không tồn tại hoặc không thuộc quyền sở hữu (`SESSION_NOT_FOUND`).
-
----
-
-### [POST] `/api/v1/documents/{id}/summary:stream`
-**Summary:** `# 57. Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)`  
-**Operation ID:** `stream_document_summary_api_v1_documents__id__summary_stream_post`
-
-#### Mô tả (Description)
-* **Mục đích:** Khắc phục độ trễ hiển thị tóm tắt, đưa Time-to-First-Token (TTFT) về dưới 1 giây. AI truyền luồng từng token theo giao thức Server-Sent Events (SSE) cho cả 3 mục: `problem_statement`, `contributions`, và `limitations` kèm các tọa độ Bounding Boxes tương ứng.
-
-#### Parameters (Path)
-| Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
-| :--- | :--- | :--- | :--- |
-| `id` | `string (uuid)` | **Có** | UUID tài liệu cần sinh tóm tắt theo luồng. |
-
-#### Responses
-* **`200 OK`** - Luồng sự kiện Server-Sent Events (`text/event-stream`).  
-  *Events:* `event: summary_start`, `event: summary_chunk`, `event: summary_box`, `event: summary_end`.
-* **`404 Not Found`** - Tài liệu không tồn tại.
+| :--- | :--- | :--- | :

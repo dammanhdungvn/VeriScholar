@@ -247,6 +247,59 @@ async def test_post_session_message_sse_streaming_success(
 
 
 @pytest.mark.asyncio
+async def test_post_session_message_stream_resumption_last_event_id(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Endpoint 52: Supports RFC 8895 stream resumption with Last-Event-ID header."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    payload = {
+        "question": "Giải thích kiến trúc Transformer",
+        "stream": True,
+    }
+    # Initial request receives all events
+    resp1 = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp1.status_code == 200
+    assert "id: 1" in resp1.text
+    assert "event: start" in resp1.text
+    assert "event: reasoning" in resp1.text
+
+    # Reconnection request with Last-Event-ID: 2 skips id 1 and 2
+    headers = {"Last-Event-ID": "2"}
+    resp2 = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload, headers=headers)
+    assert resp2.status_code == 200
+    assert "event: start" not in resp2.text
+    assert "event: reasoning" not in resp2.text
+    assert "event: token" in resp2.text
+    assert "event: done" in resp2.text
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_structured_interactive_callback(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Endpoint 52: Supports structured interactive callback payload (persona_id)."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    payload = {
+        "question": "Lộ trình học tập",
+        "stream": True,
+        "interactive_response": {"persona_id": "persona_b"},
+    }
+    resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp.status_code == 200
+    # Tailored roadmap directly without diagnostic quiz
+    assert "interactive_options" not in resp.text
+    assert "Nhóm B" in resp.text
+    assert len(chat_db.session_turns) == 1
+    assert "Lộ Trình 5 Giai Đoạn" in chat_db.session_turns[0].answer
+
+
+@pytest.mark.asyncio
 async def test_post_session_message_archived_session_forbidden(
     client: AsyncClient, chat_db: InMemoryAsyncChatStore
 ) -> None:
