@@ -81,6 +81,11 @@ Kế thừa tinh hoa từ các hệ thống trên, VeriScholar đưa ra kiến t
 * **Kiểm Soát Đồng Thời Lạc Quan Bất Biến (Strict OCC via RFC 9110 / RFC 7232):**
   - Mọi thao tác cập nhật tiêu đề (`PATCH /sessions/{id}`) và lưu vị trí cuộn trang (`PATCH /sessions/{id}/viewport`) bắt buộc truyền header `If-Match: "v{version}"`.
   - Nếu phiên bản bị lệch (do người dùng mở 2 tab trình duyệt cùng lúc), API trả về `412 Precondition Failed` với mã lỗi `CONCURRENCY_CONFLICT`, ngăn chặn hoàn toàn lỗi "ghi đè thầm lặng" (silent overwrite).
+* **Stream Resumption & Transparency Chuẩn SOTA (RFC 8895 & CoT Reasoning):**
+  - Định danh mọi gói tin SSE bằng `id: <seq_id>` tuần tự và lắng nghe `Last-Event-ID` để hỗ trợ resume stream mượt mà khi rớt mạng.
+  - Phân tách luồng suy luận `event: reasoning` (quá trình phản biện logic của AI) khỏi luồng câu trả lời `event: token` giúp UI render collapsible reasoning box minh bạch.
+  - Hỗ trợ `interactive_response` trong `SessionChatMessageRequest` để người dùng tương tác 1-click trực tiếp với thẻ chẩn đoán (Diagnostic Quiz / Persona).
+
 * **Đóng Gói Ngữ Cảnh Tầng Server (Cross-Document XML Namespacing):**
   - Khi hỏi đáp đa bài báo (`scope: "multi_paper"`), các đoạn trích từ 1 - 5 bài báo được bọc trong các thẻ XML tường minh:
     ```xml
@@ -163,7 +168,7 @@ Tuân thủ nguyên tắc Clean Architecture: **Không import bất kỳ thư vi
        - `update_title(title)`: Kiểm tra tiêu đề hợp lệ (1 - 255 ký tự).
        - `archive()` / `restore()`: Chuyển đổi cờ lưu trữ TTL.
    - `SessionTurn` (Value Object / Entity):
-     - `turn_id`, `session_id`, `question`, `answer`, `citations: list[CitationItem]`, `tokens: TokenUsage`, `finish_reason`.
+     - `id`, `session_id`, `question`, `answer`, `citations: list[CitationItem]`, `prompt_tokens`, `completion_tokens`, `latency_ms`, `finish_reason`.
    - `CitationItem`:
      - `citation_id`, `document_id`, `document_title`, `page_number`, `bounding_boxes: list[list[float]]`, `score`.
 
@@ -326,6 +331,10 @@ class SessionChatMessageRequest(BaseModel):
     scope: Literal["multi_paper", "single_paper"] = "multi_paper"
     focused_document_id: UUID | None = None
     enable_thinking: bool = False
+    interactive_response: dict[str, Any] | None = Field(
+        default=None,
+        description="Dữ liệu phản hồi tùy chọn khi người dùng chọn Persona hoặc Quiz (AT-CoT Callback)",
+    )
 ```
 
 ---

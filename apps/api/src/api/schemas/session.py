@@ -1,7 +1,7 @@
 """Pydantic schemas for research sessions (Module 1)."""
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from uuid import UUID
 
 from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
@@ -214,4 +214,8 @@ class SessionChatMessageRequest(BaseModel):
     )
     enable_thinking: bool = Field(
         False, description="Kích hoạt cơ chế suy luận phản biện chuyên sâu (Thinking Mode)"
+    )
+    interactive_response: dict[str, Any] | None = Field(
+        default=None,
+        description="Dữ liệu phản hồi tùy chọn (persona_id, quiz) khi chọn thẻ AT-CoT",
     )

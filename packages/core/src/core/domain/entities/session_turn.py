@@ -4,10 +4,11 @@ Represents an atomic Q&A turn in a multi-paper research session.
 """
 
 from datetime import UTC, datetime
-from typing import Literal
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from core.domain.value_objects.enums import SessionTurnFinishReason
 
 
 class CitationItem(BaseModel):
@@ -41,8 +42,8 @@ class SessionTurn(BaseModel):
     prompt_tokens: int = Field(default=0, ge=0)
     completion_tokens: int = Field(default=0, ge=0)
     latency_ms: int = Field(default=0, ge=0)
-    finish_reason: Literal["stop", "length", "content_filter", "abstention"] = Field(
-        default="stop", description="Generation completion reason"
+    finish_reason: SessionTurnFinishReason | str = Field(
+        default=SessionTurnFinishReason.STOP, description="Generation completion reason"
     )
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
