@@ -17,7 +17,8 @@ class EvaluationContext:
       and absolute immunity against stale out-of-process server cache.
       tracks all document and session IDs created during testing.
     - Cleans up tracked resources exclusively via the standard REST endpoint:
-      DELETE /api/v1/documents/{document_id} (unless keep_data is requested for manual inspection).
+      DELETE /api/v1/documents/{document_id} and DELETE /api/v1/sessions/{session_id}
+      (unless keep_data is requested for manual inspection).
     """
 
     def __init__(
@@ -81,13 +82,23 @@ class EvaluationContext:
             self.created_session_ids.append(session_id)
 
     async def cleanup(self) -> list[str]:
-        """Purge all tracked documents using the standard REST API, unless keep_data is True."""
+        """Purge all tracked resources using standard REST APIs, unless keep_data is True."""
         if self.keep_data:
             return []
-        cleaned = []
+        cleaned: list[str] = []
         if not self.client:
             return cleaned
 
+        # 1. Clean up tracked sessions
+        for sess_id in list(self.created_session_ids):
+            try:
+                res = await self.client.delete(f"/api/v1/sessions/{sess_id}")
+                if res.status_code in (200, 204, 404):
+                    cleaned.append(sess_id)
+            except Exception as e:
+                sys.stderr.write(f"[WARN] Failed to delete session {sess_id}: {e}\n")
+
+        # 2. Clean up tracked documents
         for doc_id in list(self.created_document_ids):
             try:
                 res = await self.client.delete(f"/api/v1/documents/{doc_id}")
