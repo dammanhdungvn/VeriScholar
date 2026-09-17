@@ -15,7 +15,7 @@ class EvaluationContext:
     - Connects directly via ASGITransport to the live FastAPI application, ensuring
       zero latency, direct connection to real PostgreSQL/Redis/Cloud services,
       and absolute immunity against stale out-of-process server cache.
-    - Tracks all document IDs created during testing.
+      tracks all document and session IDs created during testing.
     - Cleans up tracked resources exclusively via the standard REST endpoint:
       DELETE /api/v1/documents/{document_id} (unless keep_data is requested for manual inspection).
     """
@@ -37,6 +37,7 @@ class EvaluationContext:
             "x-session-id": self.session_tag,
         }
         self.created_document_ids: list[str] = []
+        self.created_session_ids: list[str] = []
         self.client: httpx.AsyncClient | None = None
         self._is_asgi_fallback = True
 
@@ -51,11 +52,13 @@ class EvaluationContext:
         else:
             import api.db.models  # noqa: F401
             from api import app
+            from api.db.init_db import ensure_database_schema
             from api.db.models.base import Base
             from api.db.session import engine
 
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                await ensure_database_schema(conn)
 
             self.client = httpx.AsyncClient(
                 transport=httpx.ASGITransport(app=app),
@@ -71,6 +74,11 @@ class EvaluationContext:
         """Register a document created during the evaluation for guaranteed cleanup."""
         if document_id and document_id not in self.created_document_ids:
             self.created_document_ids.append(document_id)
+
+    def track_session(self, session_id: str) -> None:
+        """Register a research session created during the evaluation for guaranteed cleanup."""
+        if session_id and session_id not in self.created_session_ids:
+            self.created_session_ids.append(session_id)
 
     async def cleanup(self) -> list[str]:
         """Purge all tracked documents using the standard REST API, unless keep_data is True."""
@@ -89,6 +97,7 @@ class EvaluationContext:
                 sys.stderr.write(f"[WARN] Failed to delete document {doc_id}: {e}\n")
 
         self.created_document_ids.clear()
+        self.created_session_ids.clear()
         return cleaned
 
     async def __aexit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:

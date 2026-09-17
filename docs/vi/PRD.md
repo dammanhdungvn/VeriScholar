@@ -22,6 +22,10 @@
 | **SAFE Fact-Checking** | Search-Augmented Factuality Evaluation | Thuật toán kiểm chứng sự thật tự động: Bóc tách từng câu viết của tác giả thành các khẳng định nhỏ, sau đó tự động tìm kiếm đối chiếu với tài liệu gốc để chấm điểm xem câu đó là Đúng, Sai hay Thiếu bằng chứng. |
 | **GraphRAG & 2-hop Graph** | 2-hop Citation Graph | Đồ thị mạng lưới trích dẫn: Trực quan hóa mạng lưới kết nối giữa các bài báo; "2-hop" nghĩa là xem được các bài trích dẫn trực tiếp bài đang đọc (1 bước) và các bài tiếp tục trích dẫn các bài đó (2 bước). |
 | **Crossref, S2, arXiv, PubMed** | Academic Discovery Databases | Các kho dữ liệu học thuật mở lớn nhất thế giới, cung cấp siêu dữ liệu bài báo khoa học chuẩn quốc tế thông qua API. |
+| **Socratic Mentor** | Socratic Pedagogical Mentorship & Presupposition Validation | Cơ chế sư phạm uốn nắn tư duy: Chủ động kiểm tra tiền đề câu hỏi của người dùng, phát hiện và uốn nắn các ngộ nhận khoa học thay vì a dua nịnh hót (Sycophancy). |
+| **Composite Bounding Box** | Multi-box / Polygon Coordinate List | Khung trích dẫn mở rộng hỗ trợ danh sách nhiều hộp con hoặc đa giác để ôm sát các công thức toán LaTeX nhiều dòng hoặc bảng biểu phức tạp. |
+| **Active Recall Quiz** | Active Recall Knowledge Digest | Chế độ tổng hợp tri thức tự động sinh câu hỏi tự vấn / Flashcards kèm đáp án ẩn từ các ghi chú để người dùng kiểm tra mức độ thấu hiểu. |
+| **Offline Research Bundle** | Full Offline Research Package (.zip) | Gói tài liệu nén trọn gói gồm PDF gốc nhúng highlight ISO 32000-1, master lesson và transcript HTML tự chứa để nghiên cứu ngoại tuyến không cần mạng. |
 
 ---
 
@@ -116,15 +120,21 @@ Sinh viên làm nghiên cứu khoa học, học viên cao học, nghiên cứu s
 
 * **Xử lý Bảng biểu & Công thức Toán học Phức tạp (Table Stitching Layer):**
   - **Tầng chắp nối bảng biểu (Table Stitching Layer):** Tự động phát hiện các bảng số liệu thực nghiệm kéo dài qua nhiều trang, tự động gắn kèm tiêu đề cột (Column Headers) vào các đoạn cắt rời ở trang sau (Headless Chunks) để bảo toàn ngữ nghĩa số liệu cho mô hình RAG.
-  - **Bảo toàn công thức toán học:** Công thức toán học (Math Equations) được trích xuất nguyên bản theo định dạng LaTeX kèm hộp bao tọa độ Bounding Box riêng biệt, không bị trộn lẫn hoặc làm biến dạng ký hiệu số học.
+  - **Bảo toàn công thức toán học & Khung trích dẫn đa dòng (Composite Bounding Boxes):** Công thức toán học (Math Equations) được trích xuất nguyên bản theo định dạng LaTeX kèm hộp bao tọa độ Bounding Box riêng biệt. Đối với các hệ phương trình hoặc công thức trải dài nhiều dòng, hệ thống hỗ trợ **Composite Bounding Boxes** (mảng danh sách các hộp con `[[x0, y0, x1, y1, page], ...]`) ôm sát từng dòng công thức, bảo đảm không cắt cụt chỉ số trên/dưới và không bị đè lên khoảng trống lân cận.
 
 * **Hỏi đáp Trực tiếp Song ngữ Học thuật (Cross-Lingual Grounded Q&A):** 
   - Người dùng có thể tải lên tài liệu gốc bằng tiếng Anh, đặt câu hỏi bằng tiếng Việt (hoặc tiếng Anh) và nhận câu trả lời giải thích bằng tiếng Việt chuẩn văn phong khoa học, giữ nguyên vẹn các thuật ngữ chuyên ngành học thuật quốc tế.
   - Hỗ trợ giải thích sâu: *"Phương pháp chính của bài này là gì?"*, *"Ý nghĩa toán học của công thức số (3)?"*, *"So sánh kết quả bảng 2 với các nghiên cứu trước?"*.
 
-* **Chặn Bẫy Gây Nhiễu bằng Ngưỡng Cắt & Từ Chối Chủ Động (Distractor Mitigation via Relevance Threshold & Abstention Prompting):**
+* **Chặn Bẫy Gây Nhiễu, Kiểm Tra Tiền Đề & Người Thầy Sư Phạm (Distractor Mitigation, Presupposition Validation & Socratic Mentor):**
   - Khắc phục hiện tượng *The Distracting Effect* (khi Reranker kéo về các đoạn văn bản có độ tương đồng ngữ nghĩa cao với câu hỏi nhưng không chứa câu trả lời thực tế, đánh lừa LLM đưa ra kết luận suy diễn sai).
   - Thiết lập **Ngưỡng điểm tin cậy tối thiểu sau Rerank (Relevance Score Cutoff >= 0.35)**. Nếu toàn bộ các đoạn văn bản trích xuất được đều có điểm dưới ngưỡng, hệ thống tự động kích hoạt cơ chế từ chối chủ động (Abstention Prompting), trả lời thẳng thắn: *"Thông tin này không xuất hiện trong bài báo"* thay vì để LLM suy diễn từ trọng số pre-train.
+  - **Cơ Chế Người Thầy Sư Phạm & Thẩm Định Tiền Đề Câu Hỏi (Socratic Pedagogical Mentorship & Presupposition Validation Protocol):**
+    - Ngăn chặn triệt để hiện tượng AI nịnh hót (Sycophancy) khi người dùng đặt câu hỏi dựa trên nhận thức sai lệch (ví dụ: *"Tác giả đặt cơ chế RNN ở tầng encoder thứ mấy để giữ vị trí từ?"*).
+    - Trước khi tổng hợp câu trả lời, LLM bắt buộc phải chạy bộ lọc **Presupposition Check**: Nếu câu hỏi chứa tiền đề mâu thuẫn với sự thật khoa học của bài báo, AI không được phép trả lời theo tiền đề sai, mà phải thực thi 3 bước chuẩn mực:
+      1. *Uốn nắn tiền đề:* Chỉ rõ điểm sai lệch của câu hỏi (Ví dụ: *"Bài báo Attention Is All You Need loại bỏ hoàn toàn kiến trúc đệ quy RNN..."*).
+      2. *Dẫn chứng giải pháp đúng:* Trình bày cơ chế thực tế tác giả sử dụng (Positional Encoding với hàm Sin/Cos).
+      3. *Định vị dẫn chứng:* Cung cấp Bounding Box chính xác đến Mục 3.5, Trang 6 để người dùng tự kiểm chứng trên PDF.
 
 * **Tóm tắt Nhanh 3 Ý Cốt Lõi (3-Point Grounded Summary):** 
   - Không cần đọc hết 20 trang, AI trích xuất ngay: (1) Bài này giải quyết vấn đề gì? (2) Đóng góp mới là gì? (3) Điểm yếu/hạn chế còn lại là gì? Mỗi ý tóm tắt đều kèm liên kết tọa độ dẫn chứng gốc.
@@ -138,18 +148,24 @@ Sinh viên làm nghiên cứu khoa học, học viên cao học, nghiên cứu s
     - *Từ Sổ tay sang PDF:* Nhấp vào một ghi chú ở panel Sổ tay bên phải → Trang PDF bên trái tự động cuộn đến đúng vị trí và chớp nháy highlight màu vàng quanh đoạn đó.
     - *Từ PDF sang Sổ tay:* Khi đang đọc lướt PDF, nhấp chuột vào bất kỳ đoạn nào đã được tô highlight → Panel Sổ tay bên phải tự động cuộn đến đúng thẻ ghi chú tương ứng để xem lại suy nghĩ cá nhân.
 
-* **Xuất File PDF Kèm Highlight Chuẩn Quốc Tế (Export PDF with Highlights):**
+* **Xuất File PDF Kèm Highlight Chuẩn Quốc Tế & Gói Ngoại Tuyến Trọn Gói (Export PDF & Offline Bundle):**
   - Khi tải về bài báo, cung cấp tùy chọn: `[✓] Xuất file PDF kèm toàn bộ các đoạn đã Highlight`.
-  - File PDF xuất ra được nhúng Native PDF Annotations theo tiêu chuẩn ISO quốc tế, tương thích hoàn toàn khi mở trên Adobe Acrobat, Foxit Reader, GoodNotes trên iPad/tablet hoặc in ấn vật lý.
+  - File PDF xuất ra được nhúng Native PDF Annotations theo tiêu chuẩn ISO 32000-1 quốc tế, tương thích hoàn toàn khi mở trên Adobe Acrobat, Foxit Reader, GoodNotes trên iPad/tablet hoặc in ấn vật lý.
+  - **Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle - `POST /api/v1/sessions/{id}:export-bundle`):**
+    - Cho phép người dùng tải một tệp nén `.zip` hoàn chỉnh phục vụ nghiên cứu trên máy bay, dự hội nghị hoặc thực địa không có mạng:
+      1. Toàn bộ các file PDF gốc trong phiên đã nhúng ISO Highlights.
+      2. File bài học tổng hợp tri thức `master_lesson.md` và `master_lesson.pdf`.
+      3. File `chat_transcript.html` tự chứa style (self-contained viewer) cho phép mở offline trên mọi trình duyệt để xem lại toàn bộ lịch sử hỏi đáp và trích dẫn.
 
 * **Sổ Tay Nghiên Cứu Thông Minh, AI Tổng Hợp & Bảo Toàn Bằng Chứng Trích Dẫn (Smart Notebook & Evidence Preservation):**
   - **Quản lý theo Thư mục & Thẻ học thuật (Folders & Academic Tags):** Phân loại ghi chú theo đề tài nghiên cứu riêng biệt và gắn thẻ ngữ nghĩa (`#methodology`, `#dataset`, `#benchmark`, `#limitation`).
   - **AI Tổng hợp thành Bản đúc kết kiến thức logic (Smart Lesson / Knowledge Digest):** 
     - Giúp giải quyết triệt để "nghĩa địa highlight". Khi đã lưu nhiều mẩu ghi chú rời rạc, bấm nút **"AI Tổng hợp"** để AI xâu chuỗi toàn bộ các ý thành một bài học/bản đúc kết tri thức mạch lạc, cô đọng và có cấu trúc logic.
-    - Hỗ trợ 3 chế độ tổng hợp chuyên biệt:
+    - Hỗ trợ 4 chế độ tổng hợp chuyên biệt:
       1. *Bài học khái niệm (Concept Lesson):* Giải thích công thức, lý thuyết trực quan, dễ hiểu.
       2. *Đoạn văn Tổng quan (Literature Review Snippet):* Viết theo văn phong học thuật trang trọng kèm trích dẫn tác giả - năm, sẵn sàng để copy vào bản thảo.
       3. *Phân tích khoảng trống nghiên cứu (Research Gap & Critique):* Nhấn mạnh điểm hạn chế, giả định chưa giải quyết để tìm hướng phát triển đề tài mới.
+      4. *Tự kiểm tra thấu hiểu & Thẻ ghi nhớ (Active Recall Quiz & Flashcards - `active_recall_quiz`):* Tự động đúc kết từ các ghi chú thành 3 - 5 câu hỏi đào sâu tư duy (Conceptual & Critical Thinking Flashcards) kèm đáp án giải thích ẩn và các huy hiệu trích dẫn tương tác, chuyển đổi việc học từ đọc thụ động sang kiểm tra chủ động để nắm vững bản chất kiến thức.
   - **Huy hiệu Trích dẫn Tương tác trong Bài học Tổng hợp (Interactive Lesson Citation Badges):**
     - Ở cuối mỗi luận điểm, công thức hoặc số liệu trong bài học tổng hợp, hệ thống tự động gắn kèm Huy hiệu Trích dẫn Tương tác theo định dạng: `[📄 Vaswani et al., 2017 • Tr. 6]`.
     - *Hành vi khi người dùng nhấp chuột (Click Behavior):*
@@ -337,6 +353,11 @@ Sinh viên làm nghiên cứu khoa học, học viên cao học, nghiên cứu s
     3. `viewport_state`: Trạng thái cuộn trang của PDF (số trang đang đọc dở, tỷ lệ phóng to zoom, vị trí cuộn cuộn mượt).
     4. `active_tab`: Phân hệ bên phải đang mở (`Chatbot` hay `Smart Notes`).
     5. `version`: Quản lý phiên bản khóa lạc quan (OCC) chống mất dữ liệu khi người dùng mở nhiều tab.
+* **Cơ Chế Chống Mất Bản Nháp Phía Trình Duyệt (Client-Side Autosave Resilience & IndexedDB OCC Sync):**
+  - Nhằm triệt tiêu rủi ro mất bản nháp ghi chú cá nhân hoặc đứt mạch suy nghĩ khi người dùng gặp sự cố rớt mạng đột ngột hoặc máy tính sập nguồn:
+    - Mọi thao tác soạn thảo ghi chú cá nhân và trạng thái UI (vị trí cuộn, tab đang mở) tự động được lưu vào bộ nhớ cục bộ trình duyệt (`IndexedDB`) mỗi 2 giây.
+    - Khi kết nối mạng phục hồi, client tự động gửi yêu cầu đối chiếu an toàn kèm `If-Match` ETag theo chuẩn RFC 7232; nếu phát hiện xung đột do tab khác đã chỉnh sửa, hệ thống hiển thị bảng so sánh (Diff View) để người dùng chủ động chọn giữ bản nào thay vì âm thầm ghi đè làm mất công sức.
+
 * **Trải Nghiệm Khôi Phục Nguyên Vẹn 100% Khi Mở Lại Lịch Sử (Instant Session Restoration):**
   - Khi người dùng nhấp vào một cuộc hội thoại trong thanh bên (Sidebar History):
     - Trình đọc PDF bên trái lập tức nạp lại đầy đủ danh sách các Tab bài báo tương ứng, mở đúng bài báo đang đọc dở và cuộn đến đúng số trang của phiên trước.

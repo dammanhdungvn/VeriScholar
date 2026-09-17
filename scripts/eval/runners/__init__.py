@@ -11,11 +11,14 @@ from scripts.eval.runners.get_documents_list import ListDocumentsAPIRunner
 from scripts.eval.runners.get_documents_status import DocumentStatusAPIRunner
 from scripts.eval.runners.get_documents_structure import DocumentStructureAPIRunner
 from scripts.eval.runners.get_documents_summary import DocumentSummaryAPIRunner
+from scripts.eval.runners.notes_and_synthesis_runner import NotesAndSynthesisAPIRunner
 from scripts.eval.runners.post_documents_extract_references import ExtractReferencesAPIRunner
 from scripts.eval.runners.post_documents_parse import ParseDocumentAPIRunner
 from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
 from scripts.eval.runners.post_documents_summary_generate import DocumentSummaryGenerateAPIRunner
 from scripts.eval.runners.post_documents_upload import UploadAPIRunner
+from scripts.eval.runners.post_sessions_create import CreateSessionAPIRunner
+from scripts.eval.runners.sessions_lifecycle_runner import SessionsLifecycleAPIRunner
 
 RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     # Friendly Short Aliases
@@ -42,6 +45,21 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "export_pdf": DocumentExportPdfAPIRunner,
     "export": DocumentExportPdfAPIRunner,
     "delete": DeleteDocumentAPIRunner,
+    "create-session": CreateSessionAPIRunner,
+    "create_session": CreateSessionAPIRunner,
+    "sessions-create": CreateSessionAPIRunner,
+    "post_sessions": CreateSessionAPIRunner,
+    "sessions": CreateSessionAPIRunner,
+    "sessions-lifecycle": SessionsLifecycleAPIRunner,
+    "sessions_lifecycle": SessionsLifecycleAPIRunner,
+    "lifecycle": SessionsLifecycleAPIRunner,
+    "sessions-chat": SessionsLifecycleAPIRunner,
+    "chat": SessionsLifecycleAPIRunner,
+    "notes": NotesAndSynthesisAPIRunner,
+    "notes_and_synthesis": NotesAndSynthesisAPIRunner,
+    "notes-and-synthesis": NotesAndSynthesisAPIRunner,
+    "note": NotesAndSynthesisAPIRunner,
+    "synthesize": NotesAndSynthesisAPIRunner,
     # Canonical Endpoint Identifiers (Matching File Names 1-to-1)
     "post_documents_upload": UploadAPIRunner,
     "get_documents_list": ListDocumentsAPIRunner,
@@ -58,6 +76,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "post_documents_summary_generate": DocumentSummaryGenerateAPIRunner,
     "get_documents_export_pdf": DocumentExportPdfAPIRunner,
     "delete_documents": DeleteDocumentAPIRunner,
+    "post_sessions_create": CreateSessionAPIRunner,
 }
 
 MODULE_1_ORDER = [
@@ -76,25 +95,31 @@ MODULE_1_ORDER = [
     "post_documents_summary_generate",
     "get_documents_export_pdf",
     "delete_documents",
+    "post_sessions_create",
+    "sessions_lifecycle",
+    "notes_and_synthesis",
 ]
 
 __all__ = [
     "BaseAPIRunner",
-    "RUNNERS_MAP",
-    "MODULE_1_ORDER",
-    "UploadAPIRunner",
-    "ListDocumentsAPIRunner",
-    "DocumentDetailAPIRunner",
-    "StreamFileAPIRunner",
-    "DocumentStatusAPIRunner",
-    "StarDocumentAPIRunner",
-    "ParseDocumentAPIRunner",
-    "ExtractReferencesAPIRunner",
-    "DocumentStructureAPIRunner",
-    "DocumentChunksAPIRunner",
+    "CreateSessionAPIRunner",
+    "DeleteDocumentAPIRunner",
     "DocumentChunkDetailAPIRunner",
+    "DocumentChunksAPIRunner",
+    "DocumentDetailAPIRunner",
+    "DocumentExportPdfAPIRunner",
+    "DocumentStatusAPIRunner",
+    "DocumentStructureAPIRunner",
     "DocumentSummaryAPIRunner",
     "DocumentSummaryGenerateAPIRunner",
-    "DocumentExportPdfAPIRunner",
-    "DeleteDocumentAPIRunner",
+    "ExtractReferencesAPIRunner",
+    "ListDocumentsAPIRunner",
+    "MODULE_1_ORDER",
+    "NotesAndSynthesisAPIRunner",
+    "ParseDocumentAPIRunner",
+    "RUNNERS_MAP",
+    "SessionsLifecycleAPIRunner",
+    "StarDocumentAPIRunner",
+    "StreamFileAPIRunner",
+    "UploadAPIRunner",
 ]

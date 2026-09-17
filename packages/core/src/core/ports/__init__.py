@@ -2,7 +2,9 @@
 
 from core.ports.chunk import IChunkExtractorPort
 from core.ports.idempotency import IIdempotencyPort
+from core.ports.note import INoteRepositoryPort, INoteSynthesisRepositoryPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
+from core.ports.session import ISessionRepositoryPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from core.ports.summary import IDocumentSummarizerPort
@@ -12,6 +14,9 @@ __all__ = [
     "IChunkExtractorPort",
     "IDocumentSummarizerPort",
     "IIdempotencyPort",
+    "INoteRepositoryPort",
+    "INoteSynthesisRepositoryPort",
     "IPdfAnnotatorPort",
+    "ISessionRepositoryPort",
     "IStructureExtractorPort",
 ]

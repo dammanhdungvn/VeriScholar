@@ -1,5 +1,7 @@
+"""FastAPI Main Application Factory with Lifespan and Structured Logging."""
+
 import asyncio
-from collections.abc import AsyncGenerator, AsyncIterable
+from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -14,19 +16,16 @@ from fastapi.sse import EventSourceResponse, ServerSentEvent
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from api.core.config import settings
-from api.core.logging import setup_logging
 from api.middleware.tracing import PureASGITracingMiddleware
 from api.schemas.error import ErrorDetail, ErrorResponse
 from api.v1.router import api_v1_router
 
-# 1. Setup logging system at module load time (strictly before FastAPI/Uvicorn startup)
-setup_logging()
 logger = structlog.get_logger("api.lifecycle")
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Application lifespan context manager for graceful startup and shutdown."""
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    """Application lifespan context manager handling startup and shutdown events."""
     logger.info(
         "application_startup",
         log_type="lifecycle",
@@ -37,11 +36,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     )
     # Ensure all declared database tables exist
     import api.db.models  # noqa: F401
+    from api.db.init_db import ensure_database_schema
     from api.db.models.base import Base
     from api.db.session import engine
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await ensure_database_schema(conn)
 
     yield
     logger.info("application_shutdown", log_type="lifecycle")
@@ -89,11 +90,15 @@ async def http_exception_handler(
     error_payload = ErrorResponse(
         success=False,
         error=error_detail,
+        meta={
+            "request_id": getattr(request.state, "request_id", None),
+            "trace_id": getattr(request.state, "trace_id", None),
+        },
     )
-    headers = getattr(exc, "headers", None)
+    headers = getattr(exc, "headers", None) or {}
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_payload.model_dump(),
+        content=error_payload.model_dump(mode="json"),
         headers=headers,
     )
 
@@ -129,10 +134,14 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
             message=str(exc),
             action=action,
         ),
+        meta={
+            "request_id": getattr(request.state, "request_id", None),
+            "trace_id": getattr(request.state, "trace_id", None),
+        },
     )
     return JSONResponse(
         status_code=status_code,
-        content=error_payload.model_dump(),
+        content=error_payload.model_dump(mode="json"),
     )
 
 
@@ -140,12 +149,12 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
 async def validation_exception_handler(
     request: Request, exc: RequestValidationError
 ) -> JSONResponse:
-    app_logger = structlog.get_logger("api.error")
+    app_logger = structlog.get_logger("api.validation")
     errors = exc.errors()
     first_error = errors[0] if errors else {}
     loc = first_error.get("loc", ())
     field_name = " -> ".join(str(x) for x in loc) if loc else None
-    msg = first_error.get("msg", "Validation error")
+    msg = first_error.get("msg", "Invalid input parameters")
 
     app_logger.warning(
         "validation_error",
@@ -154,6 +163,7 @@ async def validation_exception_handler(
         first_error_msg=msg,
         field=field_name,
     )
+
     clean_errors = []
     for err in errors:
         clean_err = dict(err)
@@ -167,20 +177,25 @@ async def validation_exception_handler(
         success=False,
         error=ErrorDetail(
             code="VALIDATION_ERROR",
-            message=msg,
+            message=f"Validation failed for {field_name}: {msg}" if field_name else msg,
             field=field_name,
-            action="Ensure request payload matches the OpenAPI schema specification.",
+            action="Provide the correct field type and values as specified in the schema.",
         ),
-        meta={"errors": clean_errors},
+        meta={
+            "errors": clean_errors,
+            "request_id": getattr(request.state, "request_id", None),
+            "trace_id": getattr(request.state, "trace_id", None),
+        },
     )
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-        content=error_payload.model_dump(),
+        content=error_payload.model_dump(mode="json"),
     )
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Traps unhandled exceptions, logs structured details, and returns RFC 7807 500 envelope."""
     app_logger = structlog.get_logger("api.error")
     app_logger.exception(
         "unhandled_server_exception",
@@ -195,14 +210,18 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             message="An unexpected internal server error occurred.",
             action="Please try again later or contact support if the issue persists.",
         ),
+        meta={
+            "request_id": getattr(request.state, "request_id", None),
+            "trace_id": getattr(request.state, "trace_id", None),
+        },
     )
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        content=error_payload.model_dump(),
+        content=error_payload.model_dump(mode="json"),
     )
 
 
-# 4. Mount API Routes
+# 4. Include Versioned API Routers
 app.include_router(api_v1_router)
 
 
@@ -267,7 +286,7 @@ def main() -> None:
         port=settings.PORT,
         reload=settings.DEBUG,
         reload_dirs=settings.RELOAD_DIRS,
-        log_config=None,  # Handled by setup_logging()
+        log_config=None,
     )
 
 
