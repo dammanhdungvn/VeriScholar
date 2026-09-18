@@ -523,7 +523,7 @@ class SessionService:
                 count=current_count,
             )
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "code": "SESSION_CAPACITY_EXCEEDED",
                     "message": (
@@ -538,7 +538,7 @@ class SessionService:
         if source_type == "document_id":
             if not document_id:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "code": "MISSING_DOCUMENT_ID",
                         "message": "Vui lòng truyền document_id khi source_type là 'document_id'.",
@@ -580,7 +580,7 @@ class SessionService:
         elif source_type == "url":
             if not url:
                 raise HTTPException(
-                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                     detail={
                         "code": "MISSING_URL",
                         "message": "Vui lòng truyền URL khi source_type là 'url'.",
@@ -603,7 +603,7 @@ class SessionService:
             await self.db.flush()
         else:
             raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "code": "INVALID_SOURCE_TYPE",
                     "message": "source_type chỉ chấp nhận 'document_id' hoặc 'url'.",
