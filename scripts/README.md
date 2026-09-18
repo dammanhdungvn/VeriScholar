@@ -1,12 +1,14 @@
 # 🧪 VeriScholar Evaluation Harness & Script Guide
 
-Tài liệu hướng dẫn sử dụng và vận hành bộ công cụ kiểm thử tự động (**Evaluation Harness / Autotest**) cho các API thuộc **Module 1 (Document Ingestion & Management)** theo đúng tiêu chuẩn thiết kế [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
+Tài liệu hướng dẫn sử dụng và vận hành bộ công cụ kiểm thử tự động (**Evaluation Harness / Autotest**) cho các API thuộc **Module 1 (Document Ingestion & Management)** và **Quản Lý Phiên Nghiên Cứu (Research Sessions & Dual-Pane Workspace)** theo đúng tiêu chuẩn thiết kế [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
 
 ---
 
 ## 📌 1. Danh Mục Các API Đã Hoàn Thiện Runner
 
 Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn bộ theo quy trình chuẩn hóa:
+
+### 1.1. Vòng Đời Bóc Tách & Quản Lý Tài Liệu (Document Lifecycle API)
 
 | STT | API Endpoint (Canonical) | Alias Ngắn | Lệnh Chạy Toàn Bộ Dataset | Lệnh Chạy Đơn Lẻ 1 Bài Báo |
 | :---: | :--- | :---: | :--- | :--- |
@@ -23,9 +25,27 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **11** | `GET /api/v1/documents/{id}/chunks/{chunk_id}` | `chunk_detail` | `uv run python scripts/eval_api.py --api chunk_detail --bless` | `uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless` |
 | **12** | `GET /api/v1/documents/{id}/summary` | `summary` | `uv run python scripts/eval_api.py --api summary --bless` | `uv run python scripts/eval_api.py --api summary --paper "Attention Is All You Need.pdf" --bless` |
 | **13** | `POST /api/v1/documents/{id}/summary:generate` | `summary-generate` | `uv run python scripts/eval_api.py --api summary-generate --bless` | `uv run python scripts/eval_api.py --api summary-generate --paper "Attention Is All You Need.pdf" --bless` |
-| **14** | `GET /api/v1/documents/{id}/export-pdf` | `export-pdf` | `uv run python scripts/eval_api.py --api export-pdf --bless` | `uv run python scripts/eval_api.py --api export-pdf --paper "Attention Is All You Need.pdf" --bless` |
-| **15** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
-| **16** | `POST /api/v1/sessions` | `create-session` | `uv run python scripts/eval_api.py --api create-session --bless` | `uv run python scripts/eval_api.py --api create-session --bless` |
+| **14** | `POST /api/v1/documents/{id}/summary:stream` | `summary-stream` | `uv run python scripts/eval_api.py --api summary-stream --bless` | `uv run python scripts/eval_api.py --api summary-stream --paper "Attention Is All You Need.pdf" --bless` |
+| **15** | `GET /api/v1/documents/{id}/export-pdf` | `export-pdf` | `uv run python scripts/eval_api.py --api export-pdf --bless` | `uv run python scripts/eval_api.py --api export-pdf --paper "Attention Is All You Need.pdf" --bless` |
+| **16** | `DELETE /api/v1/documents/{id}` | `delete` | `uv run python scripts/eval_api.py --api delete --bless` | `uv run python scripts/eval_api.py --api delete --paper "Attention Is All You Need.pdf" --bless` |
+
+### 1.2. Sổ Tay Nghiên Cứu & AI Đúc Kết (Smart Notebook #16 - #21)
+
+| STT | API Endpoint (Canonical) | Alias Ngắn | Lệnh Chạy Đánh Giá Kịch Bản |
+| :---: | :--- | :---: | :--- |
+| **17** | `MULTI /api/v1/notes/*` (#16 - #21) | `notes` | `uv run python scripts/eval_api.py --api notes --bless` |
+
+### 1.3. Quản Lý Phiên Nghiên Cứu & Dual-Pane Workspace (Session API #45 - #55)
+
+| STT | API Endpoint (Canonical) | Alias Ngắn | Lệnh Chạy Đánh Giá Kịch Bản |
+| :---: | :--- | :---: | :--- |
+| **18** | `POST /api/v1/sessions` (#45 Khởi tạo phiên) | `create-session` | `uv run python scripts/eval_api.py --api create-session --bless` |
+| **19** | `GET /api/v1/sessions` (#46 Sidebar History) | `list-sessions` | `uv run python scripts/eval_api.py --api list-sessions --bless` |
+| **20** | `GET /api/v1/sessions/{id}` (#47 Khôi phục phiên) | `session-detail` | `uv run python scripts/eval_api.py --api session-detail --bless` |
+| **21** | `PATCH /api/v1/sessions/{id}/viewport` (#49 Lưu Viewport & OCC) | `viewport` | `uv run python scripts/eval_api.py --api viewport --bless` |
+| **22** | `DELETE /api/v1/sessions/{id}` (#50 Xóa phiên) | `delete-session` | `uv run python scripts/eval_api.py --api delete-session --bless` |
+| **23** | `POST /api/v1/sessions/{id}/messages` (#48 SSE Multi-Paper Chat) | `chat` | `uv run python scripts/eval_api.py --api chat --bless` |
+| **24** | `MULTI /api/v1/sessions/*` (#48, #51 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
 
 ---
 
@@ -35,30 +55,63 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 Sử dụng cờ `--api <tên_endpoint_hoặc_alias>`:
 
 ```bash
-# Ví dụ 1: Đánh giá API Upload tài liệu
+# === Nhóm Tài Liệu (Document Lifecycle) ===
+# Đánh giá API Upload tài liệu
 uv run python scripts/eval_api.py --api upload --bless
 
-# Ví dụ 2: Đánh giá API Lấy chi tiết tài liệu với 1 bài báo chỉ định
+# Đánh giá API Lấy chi tiết tài liệu với 1 bài báo chỉ định
 uv run python scripts/eval_api.py --api detail --paper "Attention Is All You Need.pdf" --bless
 
-# Ví dụ 3: Đánh giá API Bóc tách danh mục tham khảo
+# Đánh giá API Bóc tách danh mục tham khảo
 uv run python scripts/eval_api.py --api extract-refs --paper "Attention Is All You Need.pdf" --bless
 
-# Ví dụ 4: Đánh giá API Bóc tách cấu trúc bài báo (TOC, Abstract, Sections)
+# Đánh giá API Bóc tách cấu trúc bài báo (TOC, Abstract, Sections)
 uv run python scripts/eval_api.py --api structure --paper "Attention Is All You Need.pdf" --bless
 
-# Ví dụ 5: Đánh giá API Danh sách Chunks (phân trang + bounding boxes)
+# Đánh giá API Danh sách Chunks (phân trang + bounding boxes)
 uv run python scripts/eval_api.py --api chunks --paper "Attention Is All You Need.pdf" --bless
 
-# Ví dụ 6: Đánh giá API Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)
+# Đánh giá API Chi tiết 1 đoạn bằng chứng (Chunk Detail + Nav Links)
 uv run python scripts/eval_api.py --api chunk_detail --paper "Attention Is All You Need.pdf" --bless
 
-# Ví dụ 7: Đánh giá API Sinh mới tóm tắt 3 ý (Custom Method AIP-136)
+# Đánh giá API Sinh mới tóm tắt 3 ý (Custom Method AIP-136)
 uv run python scripts/eval_api.py --api summary-generate --paper "Attention Is All You Need.pdf" --bless
+
+# Đánh giá API Stream SSE Tóm tắt thời gian thực
+uv run python scripts/eval_api.py --api summary-stream --paper "Attention Is All You Need.pdf" --bless
+
+# Đánh giá API Xuất bản PDF có Native Annotations
+uv run python scripts/eval_api.py --api export-pdf --paper "Attention Is All You Need.pdf" --bless
+
+# === Nhóm Sổ Tay (Smart Notebook) ===
+# Đánh giá API Sổ tay & AI Đúc kết (#16 - #21)
+uv run python scripts/eval_api.py --api notes --bless
+
+# === Nhóm Phiên Nghiên Cứu (Research Sessions) ===
+# Đánh giá API Khởi tạo phiên làm việc (#45)
+uv run python scripts/eval_api.py --api create-session --bless
+
+# Đánh giá API Lấy danh sách lịch sử phiên Sidebar (#46)
+uv run python scripts/eval_api.py --api list-sessions --bless
+
+# Đánh giá API Khôi phục toàn vẹn phiên làm việc (#47)
+uv run python scripts/eval_api.py --api session-detail --bless
+
+# Đánh giá API Lưu vị trí cuộn trang PDF và Tab đang mở với OCC (#49)
+uv run python scripts/eval_api.py --api viewport --bless
+
+# Đánh giá API Xóa phiên làm việc & Zero Retention (#50)
+uv run python scripts/eval_api.py --api delete-session --bless
+
+# Đánh giá API Đối thoại đa bài báo & Stream SSE (#48)
+uv run python scripts/eval_api.py --api chat --bless
+
+# Đánh giá Bộ vòng đời phiên đa tài liệu (#48, #51 - #55)
+uv run python scripts/eval_api.py --api lifecycle --bless
 ```
 
 ### 2.2. Chạy Toàn Bộ Suite Module 1 (All Endpoints)
-Chạy tuần tự toàn bộ 14 API theo đúng thứ tự vòng đời tài liệu:
+Chạy tuần tự toàn bộ danh mục API theo đúng thứ tự vòng đời nghiệp vụ:
 
 ```bash
 uv run python scripts/eval_api.py --all --bless
@@ -91,12 +144,12 @@ sequenceDiagram
     CLI->>Report: Làm mới tệp temp/output/test/<endpoint>.md
     CLI->>API: 1. Nạp tệp mẫu (POST /api/v1/documents) để tạo dữ liệu thật
     API->>DB: Lưu trữ bản ghi & tệp PDF
-    CLI->>API: 2. Gọi API cần kiểm thử (GET, POST parse, v.v.)
+    CLI->>API: 2. Gọi API cần kiểm thử (GET, POST parse, PATCH viewport, DELETE, v.v.)
     API-->>CLI: Trả về Response + Headers + Đo độ trễ
     CLI->>Report: Ghi full Raw JSON vào tests/.artifacts/
     CLI->>CLI: Hiển thị Box trực quan trên Terminal
     alt Không có cờ --keep-data
-        CLI->>API: 3. Dọn dẹp khép kín (DELETE /api/v1/documents/{id})
+        CLI->>API: 3. Dọn dẹp khép kín (DELETE /api/v1/documents/{id} / sessions/{id})
         API->>DB: Xóa bản ghi (Zero-Retention)
     else Có cờ --keep-data
         Note over CLI,DB: Giữ lại bản ghi để dev soi chiếu thủ công
@@ -109,7 +162,10 @@ sequenceDiagram
 
 - **Báo cáo định dạng Markdown (Dành cho người đọc):**
   - Nằm tại thư mục: `temp/output/test/`
-  - Ví dụ: `post_documents_upload.md`, `get_documents_list.md`, `get_documents_detail.md`, `get_documents_file_stream.md`, `get_documents_status.md`, `post_documents_star.md`, `post_documents_parse.md`, `post_documents_extract_references.md`, `get_documents_structure.md`, `get_documents_chunks.md`, `get_documents_chunk_detail.md`, `delete_documents.md`.
+  - Ví dụ:
+    * Tài liệu: `post_documents_upload.md`, `get_documents_list.md`, `get_documents_detail.md`, `get_documents_file_stream.md`, `get_documents_status.md`, `post_documents_star.md`, `post_documents_parse.md`, `post_documents_extract_references.md`, `get_documents_structure.md`, `get_documents_chunks.md`, `get_documents_chunk_detail.md`, `get_documents_summary.md`, `post_documents_summary_generate.md`, `post_document_summary_stream.md`, `get_documents_export_pdf.md`, `delete_documents.md`.
+    * Sổ tay: `notes_and_synthesis.md`.
+    * Phiên làm việc: `post_sessions_create.md`, `get_sessions_list.md`, `get_session_detail.md`, `patch_session_viewport.md`, `delete_session.md`, `post_sessions_chat.md`, `sessions_lifecycle.md`.
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).
