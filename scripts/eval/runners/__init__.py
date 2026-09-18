@@ -22,6 +22,7 @@ from scripts.eval.runners.post_documents_parse import ParseDocumentAPIRunner
 from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
 from scripts.eval.runners.post_documents_summary_generate import DocumentSummaryGenerateAPIRunner
 from scripts.eval.runners.post_documents_upload import UploadAPIRunner
+from scripts.eval.runners.post_session_documents import PostSessionDocumentsAPIRunner
 from scripts.eval.runners.post_sessions_chat import PostSessionsChatAPIRunner
 from scripts.eval.runners.post_sessions_create import CreateSessionAPIRunner
 from scripts.eval.runners.sessions_lifecycle_runner import SessionsLifecycleAPIRunner
@@ -83,6 +84,13 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "update_session_viewport": PatchSessionViewportAPIRunner,
     "update-session-viewport": PatchSessionViewportAPIRunner,
     "viewport": PatchSessionViewportAPIRunner,
+    "post_session_documents": PostSessionDocumentsAPIRunner,
+    "post-session-documents": PostSessionDocumentsAPIRunner,
+    "session_documents": PostSessionDocumentsAPIRunner,
+    "session-documents": PostSessionDocumentsAPIRunner,
+    "session-add-document": PostSessionDocumentsAPIRunner,
+    "add-document-to-session": PostSessionDocumentsAPIRunner,
+    "add_document_to_session": PostSessionDocumentsAPIRunner,
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
@@ -136,6 +144,7 @@ MODULE_1_ORDER = [
     "get_session_detail",
     "delete_session",
     "patch_session_viewport",
+    "post_session_documents",
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
@@ -163,6 +172,7 @@ __all__ = [
     "NotesAndSynthesisAPIRunner",
     "PatchSessionViewportAPIRunner",
     "ParseDocumentAPIRunner",
+    "PostSessionDocumentsAPIRunner",
     "PostSessionsChatAPIRunner",
     "RUNNERS_MAP",
     "SessionsLifecycleAPIRunner",

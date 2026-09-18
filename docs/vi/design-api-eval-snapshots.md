@@ -373,7 +373,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  17  │ GET    │ /api/v1/sessions/{id}               │ Chi tiết phiên (#47)   │
 │  18  │ DELETE │ /api/v1/sessions/{id}               │ Xóa phiên (#50)        │
 │  19  │ PATCH  │ /api/v1/sessions/{id}/viewport      │ Cập nhật Viewport (#49)│
-│  20  │ MULTI  │ /api/v1/sessions/* (#48, #51 - #55) │ Lifecycle & Chat Stream│
+│  20  │ POST   │ /api/v1/sessions/{id}/documents     │ Nạp bài vào phiên (#51)│
+│  21  │ MULTI  │ /api/v1/sessions/* (#48, #52 - #55) │ Lifecycle & Chat Stream│
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -628,6 +629,49 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Lost Update Protection**: Chặn đứng việc ghi đè trạng thái cũ bằng mã `412 Precondition Failed` (`CONCURRENCY_CONFLICT`).
 - **Document Boundary Invariant**: Chỉ chấp nhận `active_document_id` đã được gắn kết vào phiên; truyền tài liệu lạ trả về `400 Bad Request`.
 - **Hermetic Teardown**: Dọn dẹp phiên và tài liệu thử nghiệm khép kín.
+````
+
+---
+
+### 7.7. Snapshot Mẫu: POST /api/v1/sessions/{id}/documents (#51 Nạp bài vào phiên - Pure JSON AIP Pattern)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/post_session_documents.md`:
+
+````markdown
+# API Evaluation Snapshot: POST /api/v1/sessions/{id}/documents
+
+> **Audit Header**: Session Tag: `test_eval_a1b2c3d4` | Target: `#51 Nạp bài vào phiên (Pure JSON AIP Pattern)`  
+> **Target Output**: `temp/output/test/post_session_documents.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_add_existing_document_success.json`: `c3fafd97909eb0e8b6244707038446616134aa6fcabd1d2321ef18681b710851`  
+> - `02_add_document_via_url_success.json`: `4a34e3647a5ee794d75cd87af0694f5aebe494f30063ca6943bbc9e9981fd5df`  
+> - `03_duplicate_document_conflict_guard.json`: `59a3bee24c1a9c5a79ed793ece5daa324bd3234e77e8f712af3c4f520c02d57a`  
+> - `04_capacity_cap_guard.json`: `085aea870246d164f684dbf634bbf39cc9c59cc84a6a73456c52d0e2bce4ccd9`  
+> - `05_multi_tenant_isolation.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`  
+> - `06_validation_error_guard.json`: `76677cf2c682b20617627017b51d342f035e929274684b9c4491427eb92ab173`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Add Existing Document via ID | `202` | `202` | 9.2ms | PASS | Document associated; status=associated, version incremented |
+| Add Document via Online URL | `202` | `202` | 14.5ms | PASS | Background ingestion queued; status=queued, version incremented |
+| Duplicate Document Attachment Guard | `409` | `409` | 3.8ms | PASS | Duplicate attachment rejected with DOCUMENT_ALREADY_IN_SESSION |
+| Max Capacity Cap Guard (Limit 5 Papers) | `422` | `422` | 4.1ms | PASS | Exceeding 5 papers rejected with SESSION_CAPACITY_EXCEEDED |
+| Multi-Tenant User Isolation Guard | `404` | `404` | 3.5ms | PASS | Alien user cannot attach document to private session (404) |
+| URL Scheme & Validation Bounds Guard | `422` | `422` | 2.8ms | PASS | Invalid URL scheme rejected with HTTP 422 VALIDATION_ERROR |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **202 Accepted Asynchronous Invariant**: Nạp tài liệu qua Pure JSON phản hồi mã HTTP 202 Accepted và cập nhật version của phiên.
+- **Session Capacity Invariant**: Ngưỡng trần tối đa 5 tài liệu/phiên được cưỡng chế tuyệt đối; cố nạp bài thứ 6 bị chặn với mã 422.
+- **Duplicate Document Guard**: Ngăn chặn tình trạng gắn trùng 1 tài liệu nhiều lần trong cùng phiên làm việc (HTTP 409).
+- **Tenant Privacy Invariant**: Cách ly dữ liệu hoàn toàn giữa các người dùng (Zero Leakage).
+- **Hermetic Teardown**: Dọn dẹp khép kín toàn bộ phiên và tài liệu thử nghiệm.
 ````
 
 ---

@@ -44,8 +44,9 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **20** | `GET /api/v1/sessions/{id}` (#47 Khôi phục phiên) | `session-detail` | `uv run python scripts/eval_api.py --api session-detail --bless` |
 | **21** | `PATCH /api/v1/sessions/{id}/viewport` (#49 Lưu Viewport & OCC) | `viewport` | `uv run python scripts/eval_api.py --api viewport --bless` |
 | **22** | `DELETE /api/v1/sessions/{id}` (#50 Xóa phiên) | `delete-session` | `uv run python scripts/eval_api.py --api delete-session --bless` |
-| **23** | `POST /api/v1/sessions/{id}/messages` (#48 SSE Multi-Paper Chat) | `chat` | `uv run python scripts/eval_api.py --api chat --bless` |
-| **24** | `MULTI /api/v1/sessions/*` (#48, #51 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
+| **23** | `POST /api/v1/sessions/{id}/documents` (#51 Nạp bài vào phiên) | `post_session_documents` | `uv run python scripts/eval_api.py --api post_session_documents --bless` |
+| **24** | `POST /api/v1/sessions/{id}/messages` (#48 SSE Multi-Paper Chat) | `chat` | `uv run python scripts/eval_api.py --api chat --bless` |
+| **25** | `MULTI /api/v1/sessions/*` (#48, #52 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
 
 ---
 
@@ -102,6 +103,9 @@ uv run python scripts/eval_api.py --api viewport --bless
 
 # Đánh giá API Xóa phiên làm việc & Zero Retention (#50)
 uv run python scripts/eval_api.py --api delete-session --bless
+
+# Đánh giá API Nạp bài vào phiên làm việc (Pure JSON: url hoặc document_id) (#51)
+uv run python scripts/eval_api.py --api post_session_documents --bless
 
 # Đánh giá API Đối thoại đa bài báo & Stream SSE (#48)
 uv run python scripts/eval_api.py --api chat --bless
@@ -165,7 +169,7 @@ sequenceDiagram
   - Ví dụ:
     * Tài liệu: `post_documents_upload.md`, `get_documents_list.md`, `get_documents_detail.md`, `get_documents_file_stream.md`, `get_documents_status.md`, `post_documents_star.md`, `post_documents_parse.md`, `post_documents_extract_references.md`, `get_documents_structure.md`, `get_documents_chunks.md`, `get_documents_chunk_detail.md`, `get_documents_summary.md`, `post_documents_summary_generate.md`, `post_document_summary_stream.md`, `get_documents_export_pdf.md`, `delete_documents.md`.
     * Sổ tay: `notes_and_synthesis.md`.
-    * Phiên làm việc: `post_sessions_create.md`, `get_sessions_list.md`, `get_session_detail.md`, `patch_session_viewport.md`, `delete_session.md`, `post_sessions_chat.md`, `sessions_lifecycle.md`.
+    * Phiên làm việc: `post_sessions_create.md`, `get_sessions_list.md`, `get_session_detail.md`, `patch_session_viewport.md`, `delete_session.md`, `post_session_documents.md`, `post_sessions_chat.md`, `sessions_lifecycle.md`.
 - **Dữ liệu thô gốc (Raw JSON Artifacts & Checksums):**
   - Nằm tại thư mục: `tests/.artifacts/<tên_endpoint>/`
   - Chứa 100% dữ liệu gốc không bị cắt xén (untruncated JSON payload) phục vụ kiểm chứng tính toàn vẹn (SHA-256).
