@@ -2,6 +2,7 @@
 
 from scripts.eval.runners.base import BaseAPIRunner
 from scripts.eval.runners.delete_documents import DeleteDocumentAPIRunner
+from scripts.eval.runners.delete_session import DeleteSessionAPIRunner
 from scripts.eval.runners.get_documents_chunk_detail import DocumentChunkDetailAPIRunner
 from scripts.eval.runners.get_documents_chunks import DocumentChunksAPIRunner
 from scripts.eval.runners.get_documents_detail import DocumentDetailAPIRunner
@@ -70,6 +71,10 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "get-session-detail": GetSessionDetailAPIRunner,
     "session_detail": GetSessionDetailAPIRunner,
     "session-detail": GetSessionDetailAPIRunner,
+    "delete-session": DeleteSessionAPIRunner,
+    "delete_session": DeleteSessionAPIRunner,
+    "delete_sessions": DeleteSessionAPIRunner,
+    "delete-sessions": DeleteSessionAPIRunner,
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
@@ -121,6 +126,7 @@ MODULE_1_ORDER = [
     "post_sessions_create",
     "get_sessions_list",
     "get_session_detail",
+    "delete_session",
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
@@ -130,6 +136,7 @@ __all__ = [
     "BaseAPIRunner",
     "CreateSessionAPIRunner",
     "DeleteDocumentAPIRunner",
+    "DeleteSessionAPIRunner",
     "DocumentChunkDetailAPIRunner",
     "DocumentChunksAPIRunner",
     "DocumentDetailAPIRunner",

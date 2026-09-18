@@ -371,7 +371,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  15  │ POST   │ /api/v1/sessions                    │ Khởi tạo phiên (#45)   │
 │  16  │ GET    │ /api/v1/sessions                    │ Lịch sử Sidebar (#46)  │
 │  17  │ GET    │ /api/v1/sessions/{id}               │ Chi tiết phiên (#47)   │
-│  18  │ MULTI  │ /api/v1/sessions/* (#48 - #55)      │ Lifecycle & Chat Stream│
+│  18  │ DELETE │ /api/v1/sessions/{id}               │ Xóa phiên (#50)        │
+│  19  │ MULTI  │ /api/v1/sessions/* (#48 - #55)      │ Lifecycle & Chat Stream│
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -540,6 +541,49 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Complete State Invariant**: Khôi phục đầy đủ `viewport_state` (`page`, `zoom_ratio`, `scroll_top`), `active_tab`, và `documents`.
 - **Multi-Tenant Shielding**: Không rò rỉ phiên sang user khác; trả về `404 Not Found` để chống dò quét tài nguyên.
 - **Hermetic REST Cleanup**: Dọn sạch session và document sau khi hoàn tất bài đánh giá.
+````
+
+---
+
+### 7.5. Snapshot Mẫu: DELETE /api/v1/sessions/{id} (#50 Xóa phiên nghiên cứu)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/delete_session.md`:
+
+````markdown
+# API Evaluation Snapshot: DELETE /api/v1/sessions/{id}
+
+> **Audit Header**: Session Tag: `test_eval_e7b9218c` | Target: `#50 Xóa phiên nghiên cứu & Cascade Associations`  
+> **Target Output**: `temp/output/test/delete_session.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_delete_session_success.json`: `a2b3c4d5e6f7890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `02_underlying_document_preserved.json`: `b3c4d5e6f7a2890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `03_cascade_associations_removed.json`: `c4d5e6f7a2b3890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `04_multi_tenant_isolation.json`: `d5e6f7a2b3c4890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `05_idempotent_repeat_delete_guard.json`: `e6f7a2b3c4d5890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `06_validation_bounds_guard.json`: `f7a2b3c4d5e6890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Clean Session Deletion (HTTP 204 No Content) | `204` | `204` | 6.2ms | PASS | Session deleted cleanly with empty response body |
+| Underlying Document Preservation | `200` | `200` | 4.5ms | PASS | Document still intact and accessible in user library after session deletion |
+| Cascade Associations Removal Verification | `404` | `404` | 3.8ms | PASS | GET /api/v1/sessions/{id} returns 404 SESSION_NOT_FOUND |
+| Multi-Tenant User Isolation Guard (Alien User) | `404` | `404` | 4.1ms | PASS | Alien user cannot delete current user's session (Zero Data Leakage) |
+| Idempotent Repeat Delete Guard | `404` | `404` | 3.4ms | PASS | Second DELETE on already purged session returns 404 SESSION_NOT_FOUND |
+| Path UUID Format Validation Guard | `422` | `422` | 2.6ms | PASS | Malformed UUID path parameter rejected with HTTP 422 VALIDATION_ERROR |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **Clean HTTP 204 Invariant**: Trả về đúng `HTTP 204 No Content` với thân phản hồi rỗng khi xóa thành công.
+- **Underlying Document Preservation**: Tuyệt đối không xóa tài liệu gốc trong thư viện người dùng khi xóa phiên.
+- **Cascade Removal Invariant**: Xóa xếp chồng sạch sẽ bản ghi phiên trong `research_sessions`, `session_documents`, `session_turns`.
+- **Multi-Tenant Shielding**: Trả về `404 SESSION_NOT_FOUND` khi người dùng khác truy cập/xóa phiên trái phép.
+- **Hermetic Teardown**: Toàn bộ tài nguyên phục vụ kiểm thử được dọn dẹp khép kín.
 ````
 
 ---
