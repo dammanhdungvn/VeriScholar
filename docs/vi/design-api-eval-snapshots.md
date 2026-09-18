@@ -372,7 +372,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  16  │ GET    │ /api/v1/sessions                    │ Lịch sử Sidebar (#46)  │
 │  17  │ GET    │ /api/v1/sessions/{id}               │ Chi tiết phiên (#47)   │
 │  18  │ DELETE │ /api/v1/sessions/{id}               │ Xóa phiên (#50)        │
-│  19  │ MULTI  │ /api/v1/sessions/* (#48 - #55)      │ Lifecycle & Chat Stream│
+│  19  │ PATCH  │ /api/v1/sessions/{id}/viewport      │ Cập nhật Viewport (#49)│
+│  20  │ MULTI  │ /api/v1/sessions/* (#48, #51 - #55) │ Lifecycle & Chat Stream│
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -584,6 +585,49 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Cascade Removal Invariant**: Xóa xếp chồng sạch sẽ bản ghi phiên trong `research_sessions`, `session_documents`, `session_turns`.
 - **Multi-Tenant Shielding**: Trả về `404 SESSION_NOT_FOUND` khi người dùng khác truy cập/xóa phiên trái phép.
 - **Hermetic Teardown**: Toàn bộ tài nguyên phục vụ kiểm thử được dọn dẹp khép kín.
+````
+
+---
+
+### 7.6. Snapshot Mẫu: PATCH /api/v1/sessions/{id}/viewport (#49 Tự động lưu vị trí cuộn trang PDF và Tab đang mở với OCC)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/patch_session_viewport.md`:
+
+````markdown
+# API Evaluation Snapshot: PATCH /api/v1/sessions/{id}/viewport
+
+> **Audit Header**: Session Tag: `test_eval_f3e82a91` | Target: `#49 Tự động lưu vị trí cuộn trang PDF và Tab đang mở (OCC)`  
+> **Target Output**: `temp/output/test/patch_session_viewport.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_viewport_update_success.json`: `a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `02_concurrency_conflict_guard.json`: `b2c3d4e5f6a17890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `03_precondition_required_guard.json`: `c3d4e5f6a1b27890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `04_invalid_active_document_guard.json`: `d4e5f6a1b2c37890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `05_multi_tenant_isolation.json`: `e5f6a1b2c3d47890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `06_validation_bounds_guard.json`: `f6a1b2c3d4e57890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Valid Viewport Update with OCC (If-Match: "v1") | `200` | `200` | 8.4ms | PASS | Viewport updated: page=3, zoom=1.25, ETag="v2", version=2 |
+| Stale Version Concurrency Conflict Guard | `412` | `412` | 3.2ms | PASS | Stale If-Match "v1" rejected with CONCURRENCY_CONFLICT |
+| Missing Precondition Header Guard | `428` | `428` | 2.1ms | PASS | Missing If-Match rejected with PRECONDITION_REQUIRED |
+| Unassociated Document Attachment Guard | `400` | `400` | 3.5ms | PASS | Unlinked document_id rejected with INVALID_ACTIVE_DOCUMENT |
+| Multi-Tenant User Isolation Guard | `404` | `404` | 3.6ms | PASS | Alien user cannot update session (404 SESSION_NOT_FOUND) |
+| Path UUID Format Validation Guard | `422` | `422` | 2.5ms | PASS | Malformed UUID path parameter rejected with HTTP 422 VALIDATION_ERROR |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **OCC Version Increment Invariant**: Phiên bản tự động tăng `+1`, response header `ETag: "v{version+1}"` đồng nhất hoàn toàn với `data.version`.
+- **Precondition Required Invariant**: Bắt buộc client gửi `If-Match` theo chuẩn RFC 7232; thiếu header trả về `428 Precondition Required`.
+- **Lost Update Protection**: Chặn đứng việc ghi đè trạng thái cũ bằng mã `412 Precondition Failed` (`CONCURRENCY_CONFLICT`).
+- **Document Boundary Invariant**: Chỉ chấp nhận `active_document_id` đã được gắn kết vào phiên; truyền tài liệu lạ trả về `400 Bad Request`.
+- **Hermetic Teardown**: Dọn dẹp phiên và tài liệu thử nghiệm khép kín.
 ````
 
 ---
