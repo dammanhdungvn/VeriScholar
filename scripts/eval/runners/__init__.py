@@ -11,6 +11,7 @@ from scripts.eval.runners.get_documents_list import ListDocumentsAPIRunner
 from scripts.eval.runners.get_documents_status import DocumentStatusAPIRunner
 from scripts.eval.runners.get_documents_structure import DocumentStructureAPIRunner
 from scripts.eval.runners.get_documents_summary import DocumentSummaryAPIRunner
+from scripts.eval.runners.get_sessions_list import ListSessionsAPIRunner
 from scripts.eval.runners.notes_and_synthesis_runner import NotesAndSynthesisAPIRunner
 from scripts.eval.runners.post_document_summary_stream import DocumentSummaryStreamAPIRunner
 from scripts.eval.runners.post_documents_extract_references import ExtractReferencesAPIRunner
@@ -57,6 +58,12 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "sessions-create": CreateSessionAPIRunner,
     "post_sessions": CreateSessionAPIRunner,
     "sessions": CreateSessionAPIRunner,
+    "get-sessions": ListSessionsAPIRunner,
+    "get_sessions": ListSessionsAPIRunner,
+    "get_sessions_list": ListSessionsAPIRunner,
+    "sessions_list": ListSessionsAPIRunner,
+    "list_sessions": ListSessionsAPIRunner,
+    "list-sessions": ListSessionsAPIRunner,
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
@@ -105,6 +112,7 @@ MODULE_1_ORDER = [
     "get_documents_export_pdf",
     "delete_documents",
     "post_sessions_create",
+    "get_sessions_list",
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
@@ -122,12 +130,14 @@ __all__ = [
     "DocumentStructureAPIRunner",
     "DocumentSummaryAPIRunner",
     "DocumentSummaryGenerateAPIRunner",
+    "DocumentSummaryStreamAPIRunner",
     "ExtractReferencesAPIRunner",
-    "PostSessionsChatAPIRunner",
     "ListDocumentsAPIRunner",
+    "ListSessionsAPIRunner",
     "MODULE_1_ORDER",
     "NotesAndSynthesisAPIRunner",
     "ParseDocumentAPIRunner",
+    "PostSessionsChatAPIRunner",
     "RUNNERS_MAP",
     "SessionsLifecycleAPIRunner",
     "StarDocumentAPIRunner",

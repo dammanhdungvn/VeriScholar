@@ -49,7 +49,7 @@ Rủi ro AI Agent "gian lận" khi được giao nhiệm vụ phải đạt "Pas
 │    (Chống sửa đối chứng) │ Chỉ khi có cờ --bless mới cho phép cập nhật.     │
 ├──────────────────────────┼──────────────────────────────────────────────────┤
 │ 2. SHA-256 Checksums     │ Mã băm SHA-256 của Raw Payload nhúng trực tiếp   │
-│    (Chống Fake Report)   │ vào Audit Header; CI đối soát với file đĩa.     │
+│    (Chống Fake Report)   │ vào Audit Header; CI đối soát với file đĩa.      │
 ├──────────────────────────┼──────────────────────────────────────────────────┤
 │ 3. Code-as-a-Judge Gate  │ Không tin markdown; CI chấm trực tiếp bằng code  │
 │    (Chống ảo giác số học)│ Python và file JSON; Recall < 0.90 -> Exit 1.    │
@@ -150,192 +150,189 @@ Rủi ro AI Agent "gian lận" khi được giao nhiệm vụ phải đạt "Pas
 
 
     def is_reference_match(
-        extracted: dict[str, Any], expected: dict[str, Any]
+        ext: dict[str, Any], exp: dict[str, Any], jaccard_threshold: float = 0.85
     ) -> bool:
-        # Tầng 1: Khớp định danh duy nhất (DOI / arXiv ID)
-        if extracted.get("doi") and expected.get("doi"):
-            return extracted["doi"].strip().lower() == expected["doi"].strip().lower()
-        if extracted.get("arxiv_id") and expected.get("arxiv_id"):
-            return (
-                extracted["arxiv_id"].strip().lower()
-                == expected["arxiv_id"].strip().lower()
-            )
+        # Tầng 1: Khớp định danh vĩnh viễn (Deterministic ID Match)
+        if ext.get("doi") and exp.get("doi"):
+            if ext["doi"].lower().strip() == exp["doi"].lower().strip():
+                return True
+        if ext.get("arxiv_id") and exp.get("arxiv_id"):
+            if ext["arxiv_id"].lower().strip() == exp["arxiv_id"].lower().strip():
+                return True
 
-        # Tầng 2: Khớp tiêu đề mờ theo Token Jaccard
-        title_ext = extracted.get("title", "")
-        title_exp = expected.get("title", "")
-        similarity = token_jaccard_similarity(title_ext, title_exp)
-
-        if similarity >= 0.85:
-            # Kiểm tra từ định danh phiên bản/phần (part 1, part 2, v1, v2) nếu có
-            for tag in ["part 1", "part 2", "part i", "part ii", "v1", "v2"]:
-                if (tag in title_ext.lower()) != (tag in title_exp.lower()):
-                    return False
-            # Kiểm tra năm xuất bản nếu cả 2 bên đều có
-            year_ext = str(extracted.get("year", ""))
-            year_exp = str(expected.get("year", ""))
-            if year_ext and year_exp and year_ext != year_exp:
+        # Tầng 2: Khớp ngữ nghĩa tập từ vựng kèm rào chắn năm (Semantic Jaccard + Year Guard)
+        title_sim = token_jaccard_similarity(
+            ext.get("title", ""), exp.get("title", "")
+        )
+        if title_sim >= jaccard_threshold:
+            # Nếu cả 2 đều có năm xuất bản, năm phải trùng nhau
+            ext_year = ext.get("year")
+            exp_year = exp.get("year")
+            if ext_year and exp_year and str(ext_year) != str(exp_year):
                 return False
             return True
 
         return False
-    ```
+```
 
 ---
 
 ### 4.2. Kiểm Toán Hình Học Không Gian Bounding Box (Spatial IoU Gate)
 
-- **Nguy cơ tiềm ẩn:** Parser trả về text chính xác nhưng tọa độ `bounding_box` bị sai (ví dụ: tọa độ âm, tọa độ vượt kích thước trang, hoặc `x1 < x0`), khiến tính năng highlight trên UI của VeriScholar hiển thị lệch vị trí.
-- **Giải pháp chuẩn hóa:**
-  - **Công thức IoU hình chữ nhật:**
-    $$IoU = \frac{\text{Area}(B_{pred} \cap B_{gt})}{\text{Area}(B_{pred} \cup B_{gt})}$$
-  - **Quy chuẩn đo lường:**
-    - Mỗi khối trích xuất (section/chunk/reference) có bounding box phải thỏa mãn:
-      - `0 <= x0 < x1 <= page_width`
-      - `0 <= y0 < y1 <= page_height`
-    - Đối chiếu với Ground Truth hình học: Trung bình cộng `Spatial IoU >= 0.70`.
-    - Bất kỳ khối nào có `IoU == 0` (hoàn toàn lệch trang hoặc lệch vị trí) bị ghi nhận là một vi phạm chất lượng nghiêm trọng (*Spatial Misalignment Warning*).
+- **Mục đích:** Đảm bảo khi người dùng bấm vào một citation trong báo cáo nghiên cứu, tài liệu PDF phía bên trái phải tự động cuộn và highlight **chính xác 100%** vào đúng khối văn bản gốc.
+- **Thuật toán IoU (Intersection over Union) 2D:**
+  $$\text{IoU} = \frac{\text{Area}(\text{Box}_{\text{pred}} \cap \text{Box}_{\text{gt}})}{\text{Area}(\text{Box}_{\text{pred}} \cup \text{Box}_{\text{gt}})}$$
+- **Rào chắn chất lượng (Quality Gate):**
+  - Khớp hình học đạt chuẩn nếu $\text{IoU} \ge 0.70$ và cùng số trang `page_number`.
+  - Nếu $\text{IoU} < 0.70$, cảnh báo `LINTER_WARNING_MISALIGNED_BBOX` được ghi nhận vào báo cáo Markdown và làm giảm điểm Visual Grounding Score.
 
 ---
 
 ### 4.3. Quản Lý Vòng Đời Dữ Liệu Khép Kín (Hermetic REST Cleanup vs Seed Data Mode)
 
-Hệ thống hỗ trợ 2 chế độ vận hành dọn dẹp dữ liệu:
-
-1. **Chế độ Mặc định (Hermetic Zero-Retention Mode):**
-   - Toàn bộ tài liệu được tạo trong phiên kiểm thử đều được theo dõi (`ctx.track_document(doc_id)`).
-   - Khi khối lệnh thoát (`__aexit__`), runner tự động gọi `DELETE /api/v1/documents/{doc_id}` đối với từng tài liệu.
-   - Sau khi chạy xong, cơ sở dữ liệu và vùng lưu trữ vật lý hoàn toàn sạch sẽ, không để lại dữ liệu rác hay làm sai lệch chỉ số phân trang.
-
-2. **Chế độ Giữ Dữ Liệu (Seed Data Mode via `--keep-data` / `-k`):**
-   - Khi lập trình viên muốn nạp nhanh tài liệu mẫu vào cơ sở dữ liệu để mở Swagger UI (`/docs`) hoặc trình duyệt kiểm thử thủ công, thêm cờ `--keep-data` (hoặc `-k`):
-     ```bash
-     uv run python scripts/eval_api.py --api upload --paper "Attention Is All You Need.pdf" --keep-data --bless
-     ```
-   - Runner sẽ bỏ qua bước gọi lệnh `DELETE`, bảo tồn nguyên vẹn bản ghi trong PostgreSQL và tệp PDF vật lý trong `storage/`.
-   - Có thể kết hợp với cờ **`--user-id <tenant_id>`** để gán tài liệu vào một tài khoản/phiên làm việc cụ thể.
+- **Mặc định:** Mọi tài liệu PDF tải lên trong quá trình chạy snapshot runner đều được theo dõi danh sách `created_document_ids` và được dọn dẹp triệt để thông qua lệnh gọi `DELETE /api/v1/documents/{document_id}` ở khối `finally`.
+- **Cờ `--keep-data`:** Cho phép kỹ sư giữ lại dữ liệu tài liệu trên môi trường phát triển cục bộ để trực tiếp mở trình duyệt (Swagger UI hoặc Frontend React) nhằm quan sát giao diện người dùng thực tế sau khi runner kết thúc.
+- **Rào chắn bảo vệ dữ liệu Seed chuẩn (Seed Data Protection Invariant):**
+  - Khi runner chạy ở chế độ sử dụng tài liệu gốc mẫu (`--paper 1706.03762v7.pdf`), hệ thống **tuyệt đối không xóa** dữ liệu gốc nếu tài liệu đó đã được đánh dấu là Seed Data của dự án.
+  - Runner tự động kiểm tra `is_seed_paper` để chỉ dọn dẹp các tài liệu tạm (ephemeral test documents) sinh ra trong phiên kiểm thử hiện tại.
 
 ---
 
 ### 4.4. Mô Hình Kiểm Thử Không Tốn Chi Phí (Zero-Cost VCR Cloud Replay)
 
-- Sử dụng thư viện `vcrpy` để ghi lại (record) và phát lại (replay) toàn bộ các phản hồi từ API đám mây bên ngoài (Azure Document Intelligence OCR, OpenAI Embedding API, Crossref API).
-- Các bản ghi cassette được lưu tại `tests/fixtures/vcr_cassettes/`.
-- **Mặc định (CI Gate & Local Dev):** Sử dụng mock cassette, tiêu tốn **0 token và 0 request đám mây**.
-- **Chế độ kiểm toán trực tiếp (`--live-cloud`):** Chỉ kích hoạt khi có lệnh kiểm toán phát hành chính thức.
+- **Vấn đề:** Việc gọi trực tiếp Azure Form Recognizer, MathPix OCR và OpenAI Text Embedding mỗi khi chạy snapshot runner sẽ làm tăng chi phí API và gây chậm trễ đường ống CI/CD (mỗi lượt chạy có thể tốn từ \$0.10 đến \$0.50).
+- **Giải pháp VCR Replay:**
+  - Mọi phản hồi mạng bên ngoài (Outbound HTTP Requests) đối với các bài báo chuẩn trong `data/papers/` đều được ghi hình cassette nhị phân tại `tests/fixtures/vcr_cassettes/`.
+  - Khi chạy mặc định `python scripts/eval_api.py`, mạng bên ngoài bị vô hiệu hóa hoàn toàn, hệ thống phát lại dữ liệu từ Cassette với thời gian thực thi $< 500\text{ms}$ và chi phí \$0.
+  - Khi cần cập nhật mô hình mới hoặc chạy kiểm tra thực tế, kỹ sư kích hoạt cờ `--live-cloud` để kết nối API trực tiếp và cập nhật lại Cassette.
 
 ---
 
 ### 4.5. Cơ Chế Cập Nhật Baseline Tự Động (Snapshot Blessing Pattern)
 
-- **Nguy cơ tiềm ẩn:** Khi kỹ sư cải tiến thuật toán bóc tách giúp tìm thấy nhiều tài liệu tham khảo chính xác hơn dữ liệu cũ, toàn bộ test suite sẽ báo fail do lệch với `.expected.json`. Nếu phải cập nhật thủ công hàng trăm trường JSON bằng tay thì chi phí bảo trì sẽ rất lớn.
-- **Giải pháp chuẩn hóa:**
-  - Bổ sung cờ **`--bless`** (tương tự như Jest / Pytest-Snapshot):
-    ```bash
-    uv run python scripts/eval_api.py --api extract-references --bless
-    ```
-  - Khi kỹ sư đã xem xét báo cáo Markdown và xác nhận kết quả mới là chính xác, lệnh trên sẽ tự động đồng bộ output mới vào tệp `.expected.json`.
-  - Cờ `--bless` là cơ chế duy nhất cho phép bypass rào chắn kiểm tra toàn vẹn Git của Ground Truth.
+- **Nguyên lý:** Khi thuật toán trích xuất thực thể hoặc visual grounding được tối ưu hóa vượt bậc (ví dụ: bóc tách được thêm 3 tài liệu tham khảo chuẩn mà trước đây bị sót), các chỉ số kiểm thử có thể tạm thời báo lệch so với `expected.json` cũ.
+- **Quy trình chuẩn hóa:**
+  1. Kỹ sư chạy runner với cờ `--bless`:
+     ```bash
+     uv run python scripts/eval_api.py --api extract_refs --bless
+     ```
+  2. Runner kiểm tra xem các cải tiến có thực sự hợp lệ hay không (không làm giảm độ chính xác tổng thể).
+  3. Nếu hợp lệ, runner tự động cập nhật lại tệp `data/papers/<paper_id>.expected.json` với dữ liệu mới và in ra thông báo tóm tắt các điểm khác biệt (Diff summary).
+  4. Mọi thao tác cập nhật bằng `--bless` đều phải được review qua Git Diff trước khi commit vào kho mã nguồn chung.
 
 ---
 
 ### 4.6. Rào Chặn Đồng Bộ Trạng Thái Cho Endpoint Bất Đồng Bộ `202 Accepted` (Deterministic Polling Barrier)
 
-- Gửi lệnh `POST :parse` và nhận mã `202 Accepted`.
-- Tự động chuyển sang vòng lặp polling `GET /documents/{id}/status` với Exponential Backoff (chu kỳ 500ms đến 2s, timeout cứng 30 giây).
-- Chỉ khi `status == "completed"`, runner mới gọi `GET /documents/{id}` để nạp payload thực tế vào bộ linter ngữ nghĩa.
+- **Vấn đề:** Các endpoint xử lý nặng như bóc tách tài liệu (`POST /api/v1/documents/{document_id}:parse`) trả về ngay lập tức mã `HTTP 202 Accepted` kèm tác vụ chạy ngầm Celery/Redis. Nếu runner vội vàng gọi ngay endpoint kết quả sẽ nhận về `404` hoặc dữ liệu rỗng (Race Condition).
+- **Giải pháp chuẩn hóa:**
+  - Bổ sung cơ chế thăm dò đồng bộ xác định (**Deterministic Polling Barrier**):
+  - Runner tự động lắng nghe `GET /api/v1/documents/{document_id}/status` theo chu kỳ $200\text{ms}$ với cơ chế timeout lũy kế ($T_{\text{max}} = 60\text{s}$).
+  - Chỉ khi trạng thái chuyển sang `completed`, runner mới tiến hành đánh giá chất lượng; nếu trạng thái chuyển sang `failed`, runner lập tức trích xuất thông báo lỗi chi tiết và báo cáo thất bại với nguyên nhân rõ ràng.
 
 ---
 
 ### 4.7. Rào Chặn Tín Hiệu Ngắt An Toàn (Signal-Safe Cancellation)
 
-- Thay vì dùng `sys.exit(1)` trong signal handler làm dừng Event Loop đột ngột, runner kích hoạt `current_task.cancel()`.
-- Ngoại lệ `asyncio.CancelledError` kích hoạt phương thức `__aexit__` của `EvaluationContext`, gọi `DELETE /api/v1/documents/{doc_id}` để dọn sạch toàn bộ tài liệu kiểm thử trước khi tiến trình kết thúc.
+- **Vấn đề:** Khi kỹ sư nhấn `Ctrl+C` (SIGINT) hoặc hệ thống CI/CD gửi tín hiệu kết thúc (SIGTERM), tiến trình Python có thể bị ngắt đột ngột giữa chừng, để lại các tài liệu rác mồ côi trong cơ sở dữ liệu và ổ cứng (Database & Storage Leaks).
+- **Giải pháp chuẩn hóa:**
+  - Script runner đăng ký bộ đón nhận tín hiệu `signal.signal(signal.SIGINT, ...)` và `signal.SIGTERM`.
+  - Khi nhận tín hiệu dừng, tiến trình không thoát ngay lập tức mà kích hoạt cơ chế dọn dẹp khẩn cấp (**Graceful REST Evacuation**), thực hiện gọi `DELETE` toàn bộ các tài liệu đã tạo trước khi chính thức trả quyền điều khiển về hệ điều hành.
 
 ---
 
 ### 4.8. Kiến Trúc Dual-Output & Quality Budget Cho Đường Ống CI/CD
 
-- **Mô hình Dual-Output:**
-  1. **Tệp Markdown Báo Cáo:** Tinh gọn (< 50 KB), chứa Executive Summary, Spatial IoU, Precision/Recall, Linter Warnings và các mẫu lỗi đại diện cho người và AI Agent review. Chứa Audit Header có mã băm SHA-256 của các tệp payload tương ứng.
-  2. **Tệp JSON Chỉ Số Máy Đọc (`tests/.artifacts/eval_metrics.json`):** Chứa các thông số định lượng phục vụ máy chủ CI.
-- **Quality Budget Gate:**
-  - Cấu hình ngưỡng chất lượng tối thiểu: `min_recall = 0.90`, `min_precision = 0.95`, `min_spatial_iou = 0.70`.
-  - Nếu bất kỳ chỉ số cốt lõi nào tụt dưới ngưỡng, runner tự động thoát với **`exit code 1`** để ngắt đường ống CI ngay lập tức.
-- **Khai báo `.gitignore`:** Thư mục `tests/.artifacts/` được bỏ qua không commit vào Git repo.
+Để phục vụ song song cả hai đối tượng: **Kỹ sư/AI Agent** (cần báo cáo trực quan, dễ đọc) và **Hệ thống CI/CD Automation** (cần kiểm tra điều kiện cứng để quyết định cho phép merge code), hệ thống snapshot tạo ra đồng thời hai định dạng đầu ra:
+1. **Báo cáo Markdown Trực Quan (`temp/output/test/<api_name>.md`):**
+   - Dung lượng luôn $< 50\text{ KB}$.
+   - Chứa bảng tóm tắt chỉ số, các vi phạm linter và các trường hợp biên quan trọng.
+   - Được cập nhật liên tục để kỹ sư đối soát nhanh mà không làm tràn Context Window của LLM.
+2. **Tệp Định Lượng Máy Đọc (`tests/.artifacts/eval_metrics.json`):**
+   - Lưu trữ các chỉ số thô: `recall`, `precision`, `spatial_iou`, `p95_latency_ms`, `error_count`.
+   - Đường ống CI/CD sử dụng một bước kiểm tra chuẩn (Quality Budget Assertion):
+     ```bash
+     uv run pytest tests/evals/test_eval_metrics.py
+     ```
+   - Nếu bất kỳ chỉ số nào thấp hơn ngưỡng tối thiểu (`min_recall = 0.90`, `min_precision = 0.95`, `min_spatial_iou = 0.70`), build pipeline sẽ bị đánh trượt ngay lập tức (Exit Code 1).
 
 ---
 
 ### 4.9. Phân Tách Môi Trường & Kiểm Soát Log Truy Vấn (Environment Isolation & Query Log Hygiene)
 
-- **Nguy cơ tiềm ẩn:**
-  - Khi `DEBUG=True`, SQLAlchemy Engine tự động in ra toàn bộ câu lệnh SQL thô (`SELECT`, `INSERT`, `UPDATE`, `DELETE`, transaction `BEGIN`/`COMMIT`), gây ngập lụt màn hình terminal (terminal flooding) với hàng trăm dòng log kỹ thuật, che khuất ma trận kết quả benchmark và cảnh báo nghiệp vụ.
-  - Chạy bài kiểm thử tự động trên cùng một cơ sở dữ liệu đang dùng để phát triển cục bộ dễ gây xung đột dữ liệu và làm sai lệch chỉ số phân trang.
+- **Vấn đề:** Khi chạy script đánh giá chất lượng tự động, SQLAlchemy và HTTP client có thể in ra hàng nghìn dòng log truy vấn SQL thô (`SQL_ECHO=true`) và log HTTP request làm tràn ngập màn hình Terminal, che khuất bảng tóm tắt kết quả kiểm thử và làm nhiễu thông tin mà AI Agent cần quan sát.
 - **Giải pháp chuẩn hóa:**
-  - **Phân tách biến cấu hình `SQL_ECHO`:** Tách riêng tính năng in log SQL ra khỏi cờ `DEBUG`. Khai báo `SQL_ECHO: bool = False` trong `config.py` và `.env.example`. Mặc định tắt log SQL thô trong môi trường phát triển và kiểm thử.
-  - **Kiểm soát log trong Script Runner:** Script `eval_api.py` tự động cấu hình logger `sqlalchemy.engine` ở mức `WARNING`. Khi kỹ sư muốn điều tra chuyên sâu câu lệnh SQL và kế hoạch truy vấn ORM, cung cấp cờ `--debug-sql` để bật lại chế độ echo chi tiết.
-  - **Mô hình kiến trúc 3 tầng Database chuẩn Production:**
-    1. *Local Dev Database (`verischolar`)*: Phục vụ chạy ứng dụng cục bộ, giao diện Swagger UI và kiểm thử thủ công của lập trình viên.
-    2. *Isolated Test Database (`verischolar_test`)*: Phục vụ `pytest` và kiểm thử tự động CI/CD hoàn toàn khép kín.
-    3. *Production Synthetic Canary*: Môi trường sản xuất thực tế chỉ chạy kiểm thử tổng hợp (Canary) định kỳ với tenant giám sát riêng (`usr_canary_monitor`), tuyệt đối không đụng chạm đến dữ liệu người dùng thật.
+  - Mặc định thiết lập mức độ log sạch sẽ (**Log Hygiene**): tắt `SQL_ECHO`, đặt logger của SQLAlchemy engine và httpx ở mức `WARNING`.
+  - Hỗ trợ tham số `--verbose` hoặc `--debug-sql` để chỉ bật log truy vấn chi tiết khi kỹ sư cần điều tra sâu nguyên nhân tắc nghẽn hiệu năng hoặc lỗi ràng buộc cơ sở dữ liệu.
+  - Tách biệt hoàn toàn cơ sở dữ liệu kiểm thử (sử dụng schema hoặc tên database riêng biệt) để không ảnh hưởng đến dữ liệu đang phát triển trên môi trường cục bộ.
 
 ---
 
 ### 4.10. Quản Lý Thư Mục Báo Cáo Đầu Ra `temp/output/test/` & Cơ Chế Làm Mới Tệp (File Clean Refresh)
 
-- **Vị trí lưu trữ chuyên biệt:**
-  - Mọi tệp báo cáo đánh giá tự động dạng Markdown được lưu tại thư mục: **`temp/output/test/`**.
-  - Thư mục này nằm trong quy tắc `.gitignore`, đảm bảo không gây bẩn Git repository nhưng vẫn bền vững trên đĩa để lập trình viên và AI mở xem ngay khi cần.
-- **Quy ước đặt tên tệp cố định (Deterministic Filenames):**
-  - Mỗi API endpoint có một tên tệp báo cáo duy nhất và cố định:
-    - `temp/output/test/post_documents_upload.md`
-    - `temp/output/test/get_documents_list.md`
-    - `temp/output/test/get_documents_detail.md`
-    - `temp/output/test/get_documents_file_stream.md`
-    - `temp/output/test/get_documents_status.md`
-    - `temp/output/test/post_documents_star.md`
-    - `temp/output/test/post_documents_parse.md`
-    - `temp/output/test/post_documents_extract_references.md`
-    - `temp/output/test/get_documents_structure.md`
-    - `temp/output/test/get_documents_chunks.md`
-    - `temp/output/test/get_documents_chunk_detail.md`
-    - `temp/output/test/get_documents_summary.md`
-    - `temp/output/test/post_documents_summary_generate.md`
-    - `temp/output/test/get_documents_export_pdf.md`
-    - `temp/output/test/delete_documents.md`
-- **Cơ chế kiểm tra tệp tồn tại & Làm mới (Clean Refresh):**
-  - Trước khi ghi báo cáo mới, runner gọi hàm `check_and_prepare_output_file(target_file)`.
-  - Nếu tệp đã tồn tại từ lần chạy trước:
-    - *Chế độ Mặc định (Tự động / CI / Non-interactive):* Thông báo ngắn gọn và ghi đè sạch (Clean Refresh), đảm bảo báo cáo luôn phản ánh trung thực kết quả chạy mới nhất mà không bị lẫn dữ liệu cũ.
-    - *Chế độ Tương tác (`--confirm-overwrite` / `-i`):* Dừng lại hỏi lập trình viên `(y/n)` trước khi xóa/ghi đè.
+- **Vấn đề:** Việc lưu tệp báo cáo rải rác hoặc ghi đè không kiểm soát dễ dẫn đến việc báo cáo cũ bị đọc nhầm thành kết quả kiểm thử mới, gây hiểu lầm nghiêm trọng trong quá trình đánh giá chất lượng của AI Agent và kỹ sư.
+- **Giải pháp chuẩn hóa:**
+  - **Quy hoạch thư mục thống nhất:** Toàn bộ các tệp báo cáo đánh giá tự động (`.md`) bắt buộc phải được xuất vào thư mục cố định:
+    ```
+    temp/output/test/
+    ├── post_documents_upload.md
+    ├── get_documents_list.md
+    ├── get_documents_detail.md
+    ├── get_documents_file_stream.md
+    ├── get_documents_status.md
+    ├── post_documents_star.md
+    ├── post_documents_parse.md
+    ├── post_documents_extract_references.md
+    ├── get_documents_structure.md
+    ├── get_documents_chunks.md
+    ├── get_documents_chunk_detail.md
+    ├── get_documents_summary.md
+    ├── post_documents_summary_generate.md
+    ├── get_documents_export_pdf.md
+    └── delete_documents.md
+    ```
+  - **Cơ chế Kiểm Tra & Làm Mới Tệp Sạch Sẽ (File Clean Refresh):**
+    - Trước khi thực thi bất kỳ runner nào, script sẽ kiểm tra sự tồn tại của tệp báo cáo tương ứng trong `temp/output/test/`.
+    - Nếu tệp đã tồn tại, script thực hiện **xóa sạch hoàn toàn** tệp cũ và khởi tạo tệp mới trống rỗng (tránh hiện tượng ghi chắp vá hoặc giữ lại các bảng kết quả của lượt chạy trước).
+    - Đảm bảo thư mục `temp/output/test/` tự động được khởi tạo nếu chưa tồn tại (`Path.mkdir(parents=True, exist_ok=True)`).
+    - Thư mục `temp/` được cấu hình trong `.gitignore` để tránh commit nhầm các tệp báo cáo thử nghiệm tạm thời vào Git repo chính.
 
 ---
 
 ### 4.11. Hiển Thị Trực Quan Đóng Khung Trên Terminal & Xử Lý Payload Lớn (In-Terminal HTTP Exchange & Smart Payload Folding)
 
-- **Vấn đề cốt lõi:**
-  - Nếu terminal chỉ in `[PASS]`, lập trình viên và AI rơi vào trạng thái "hộp đen", không biết Request Input gửi gì và Response Output trả về cấu trúc ra sao.
-  - Ngược lại, nếu in toàn bộ dữ liệu thô:
-    - **Binary stream (`/file`)**: In byte nhị phân thô làm đơ/treo terminal.
-    - **Vector Embeddings**: Mảng số thực 1,536 chiều làm trôi toàn bộ màn hình.
-    - **Danh sách phân trang lớn (`per_page=20`, nhiều chunks/references)**: Chiếm hàng nghìn dòng.
-- **Quy chuẩn thiết kế "Dual-View & Smart Payload Folding":**
-  - **Tại Terminal:** Hiển thị 3 khối đóng khung trực quan (`HTTP Exchange Box`):
-    1. `┌── [REQUEST INPUT]`: Hiển thị Method, Path, Headers cốt lõi và Form-Data/Body preview.
-    2. `┌── [RESPONSE OUTPUT]`: Hiển thị Status, Latency (ms), Headers và JSON Body đã qua bộ lọc rút gọn thông minh (**Smart Folding**):
-       - *Dữ liệu nhị phân (Binary)*: Không in bytes; in tóm tắt: `[Binary stream: 2,215,244 bytes (application/pdf) | Content-Range ...]`.
-       - *Danh sách dài (List > 2 items)*: Áp dụng quy tắc **Head-Tail Folding** (hiển thị item 1, item 2, sau đó in `"... [N items folded - xem toàn bộ tại temp/output/test/...] ..."` và item cuối).
-       - *Vector nhiều chiều (Embeddings)*: Rút gọn thành `[float vector x 1536 dims: 0.012, -0.045, ... 0.891]`.
-       - *Chuỗi văn bản dài (> 200 ký tự)*: Hiển thị đoạn đầu và ghi chú `"... [X ký tự tiếp theo]"`.
-       - *Chuỗi Base64*: Rút gọn thành `[base64 image/png: 48,230 bytes]`.
-    3. `┌── [KIỂM CHỨNG CHẤT LƯỢNG NGHIỆP VỤ]`: Hiển thị thẻ tóm tắt các chỉ số nghiệp vụ trọng tâm (Document ID, CAS Content Hash, Trạng thái deduplication, Chunk count, Bounding Box IoU).
-  - **Tại Tệp Báo Cáo Markdown (`temp/output/test/*.md`):** Lưu trữ **100% đầy đủ nguyên vẹn (Full Raw Payloads)** cả Request Input và Response Output, không bị rút gọn, đi kèm mã băm SHA-256 đối soát.
+- **Vấn đề:** Khi kỹ sư hoặc AI Agent thực thi lệnh `python scripts/eval_api.py`, nếu terminal chỉ hiển thị thanh tiến trình đơn điệu hoặc ngược lại, tuôn ra hàng nghìn dòng JSON thô không định dạng, người dùng sẽ không nắm bắt được dữ liệu trao đổi HTTP thực tế giữa client và server. Đặc biệt với các API trả về file nhị phân (như stream PDF) hoặc vector nhúng 1536 chiều, việc in toàn bộ ra terminal sẽ làm đơ (freeze) cửa sổ dòng lệnh.
+- **Giải pháp chuẩn hóa (In-Terminal HTTP Exchange Box):**
+  - Đối với mỗi API được kiểm thử, script runner in ra trực tiếp một **Khung Trực Quan Đóng Hộp (Formatted Terminal Box)** hiển thị đầy đủ ngữ cảnh HTTP:
+    ```text
+    ┌─────────────────────────────────────────────────────────────────────────────┐
+    │ HTTP REQUEST: POST /api/v1/documents/:extract-references                     │
+    ├─────────────────────────────────────────────────────────────────────────────┤
+    │ Headers: Content-Type: application/json | x-user-id: test_eval_3229942d      │
+    │ Body: {"paper": "1706.03762v7.pdf", "min_confidence": 0.85}                │
+    ├─────────────────────────────────────────────────────────────────────────────┤
+    │ HTTP RESPONSE: 200 OK (Latency: 169.2 ms)                                   │
+    ├─────────────────────────────────────────────────────────────────────────────┤
+    │ Headers: content-type: application/json; charset=utf-8 | x-request-id: ...  │
+    │ Body: {                                                                     │
+    │   "success": true,                                                          │
+    │   "data": {                                                                 │
+    │     "references_count": 40,                                                 │
+    │     "items": [ ... 40 items folded ... ]                                    │
+    │   }                                                                         │
+    │ }                                                                           │
+    └─────────────────────────────────────────────────────────────────────────────┘
+    ```
+  - **Thuật toán Thu Gọn Thông Minh (Smart Payload Folding):**
+    - **Dữ liệu nhị phân (Binary Stream):** Tự động phát hiện `Content-Type: application/pdf` hoặc `application/octet-stream` và thay thế nội dung hiển thị bằng tóm tắt kích thước: `[Binary Stream: 2,458,120 bytes, MIME: application/pdf]`.
+    - **Mảng vector / danh sách dài:** Nếu mảng JSON chứa hơn 3 phần tử, chỉ hiển thị 2 phần tử đầu và 1 phần tử cuối, phần giữa được thu gọn thành `[... 37 items folded ...]`.
+    - **Đảm bảo tính vẹn toàn:** Việc thu gọn chỉ áp dụng cho hiển thị tại Terminal để bảo vệ trải nghiệm người dùng; trong tệp JSON lưu trữ tại `tests/.artifacts/`, dữ liệu phản hồi luôn được giữ trọn vẹn 100% không bị cắt xén.
 
 ---
 
 ## 5. Chiến Lược Tập Dữ Liệu Chuẩn (Golden Papers Dataset)
 
-Bộ tài liệu kiểm thử được đặt tại thư mục `data/papers/`, gồm 7 nhóm tài liệu (4 Happy Path kèm Ground Truth + 3 Chaos Negative):
+Tập dữ liệu đối chứng được tổ chức tại thư mục `data/papers/` với các bài báo khoa học chuẩn đại diện cho đầy đủ các thách thức thực tế:
 
 | Nhóm Tài Liệu | Tệp PDF & Expected JSON | Đặc Điểm Thử Nghiệm | Mục Tiêu Đánh Giá |
 | :--- | :--- | :--- | :--- |
@@ -371,7 +368,9 @@ Bộ tài liệu kiểm thử được đặt tại thư mục `data/papers/`, g
 │  12  │ POST   │ /api/v1/documents/{id}/summary:str  │ Real-Time SSE Token Str│
 │  13  │ GET    │ /api/v1/documents/{id}/export-pdf   │ ISO 32000 PDF Annotate │
 │  14  │ MULTI  │ /api/v1/notes/* (#16 - #21)         │ Sổ tay & AI Tổng hợp   │
-│  15  │ MULTI  │ /api/v1/sessions/* (#45 - #55)      │ Phiên đọc & Chat Stream│
+│  15  │ POST   │ /api/v1/sessions                    │ Khởi tạo phiên (#45)   │
+│  16  │ GET    │ /api/v1/sessions                    │ Lịch sử Sidebar (#46)  │
+│  17  │ MULTI  │ /api/v1/sessions/* (#47 - #55)      │ Lifecycle & Chat Stream│
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -456,6 +455,48 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Active Document Invariant**: Tự động gán tài liệu đầu tiên nạp vào làm active document.
 - **Capacity Guard Invariant**: Giới hạn tối đa 5 tài liệu/phiên, vượt quá trả về 400 `SESSION_CAPACITY_EXCEEDED`.
 - **Hermetic Lifecycle**: Cascade purge sạch tài liệu qua REST API chuẩn sau khi đánh giá.
+````
+
+---
+
+### 7.3. Snapshot Mẫu: GET /api/v1/sessions (#46 Lấy lịch sử các phiên nghiên cứu)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/get_sessions_list.md`:
+
+````markdown
+# API Evaluation Snapshot: GET /api/v1/sessions
+
+> **Audit Header**: Session Tag: `test_eval_a3f8019b` | Target: `#46 Lấy lịch sử các phiên nghiên cứu (Sidebar History)`  
+> **Target Output**: `temp/output/test/get_sessions_list.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_default_pagination.json`: `a4f9018e9bcb3a78c2a870f659098b69132de8798ac445ea170db68bdaf9c274`  
+> - `02_strict_page_slicing.json`: `b5c127f717e658ef0d1de565660e22ae7c5b838a3d0a8c057b1f932bd1ab1a88`  
+> - `03_search_title_keyword.json`: `c6d8336f18ad41f18c5688fb4e2ff028627ab09a0165efba4db6e8fae150053aab`  
+> - `04_archive_status_filter.json`: `d7e219a29654faed1757edc850a8015e4ebb085b211decc4ff6e883bd11e4a64a2`  
+> - `05_multi_tenant_isolation.json`: `e8f560eb72f3ba54314195e91714ee8e968f8e21212a932c2939c6f50effa10a`  
+> - `06_validation_bounds_guard.json`: `f9a78e23a639dad1abc621fcc9bc908cf3dd78ff985259b4161362eafc722fd1b`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Default Paginated Listing (page=1, per_page=20) | `200` | `200` | 8.2ms | PASS | SessionHistoryEnvelope returned with valid meta, links, and updated_at DESC order |
+| Strict Page Slicing & Boundary Links (page=1..2, per_page=2) | `200` | `200` | 7.5ms | PASS | Exact page slicing with disjoint ID sets and valid RFC 8288 next/prev navigation |
+| Case-Insensitive Title Keyword Search (q=...) | `200` | `200` | 6.8ms | PASS | Substring search returned only matching session titles |
+| Archive Status Segregation (include_archived=false/true) | `200` | `200` | 7.1ms | PASS | Archived sessions omitted by default and included when flag is active |
+| Multi-Tenant User Isolation Guard | `200` | `200` | 5.9ms | PASS | Strictly zero data leakage across distinct authenticated user sessions |
+| Query Validation Bounds Guard (page=0, per_page=101) | `422` | `422` | 3.2ms | PASS | Pydantic query validator rejected out-of-bounds parameters |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **RFC 8288 Pagination Invariant**: Header/body `links` (`first`, `prev`, `self`, `next`, `last`) tuân thủ chuẩn Web Linking.
+- **Chronological Sorting**: Luôn sắp xếp `updated_at DESC` để phiên mới nhất nổi lên đầu danh sách Sidebar.
+- **Tenant Data Shielding**: Dữ liệu phiên được phân lập tuyệt đối theo `user_id`.
+- **Hermetic REST Cleanup**: Dọn sạch phiên và tài liệu thử nghiệm khi thoát runner.
 ````
 
 ---
