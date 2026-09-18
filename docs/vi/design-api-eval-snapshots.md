@@ -349,24 +349,30 @@ Bộ tài liệu kiểm thử được đặt tại thư mục `data/papers/`, g
 
 ---
 
-## 6. Danh Mục 9 Endpoints API Kiểm Thử (Module 1: Ingestion & Deep Read)
+## 6. Danh Mục 12 Endpoints API Kiểm Thử (Module 1: Ingestion & Deep Read)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                 MODULE 1: INGESTION & DEEP READ - 9 ENDPOINTS               │
-├─────┬────────┬─────────────────────────────────────┬────────────────────────┤
-│ STT │ Method │ Đường dẫn Endpoint REST             │ Nhiệm Vụ & Quality Gate│
-├─────┼────────┼─────────────────────────────────────┼────────────────────────┤
-│  1  │ POST   │ /api/v1/documents                   │ Upload PDF & CAS Dedupl│
-│  2  │ GET    │ /api/v1/documents                   │ Danh sách phân trang   │
-│  3  │ GET    │ /api/v1/documents/{document_id}     │ Chi tiết & Bounding Box│
-│  4  │ GET    │ /api/v1/documents/{document_id}/file│ Stream nhị phân chunked│
-│  5  │ GET    │ /api/v1/documents/{document_id}/stat│ Tiến độ Pipeline (0-100│
-│  6  │ POST   │ /api/v1/documents/{document_id}:star│ Đánh dấu tài liệu sao  │
-│  7  │ POST   │ /api/v1/documents/{document_id}:pars│ Trigger bóc tách & RAG │
-│  8  │ POST   │ /api/v1/documents/{id}:extract-refs │ Bóc tách tham khảo & F1│
-│  9  │ DELETE │ /api/v1/documents/{document_id}     │ Xóa sạch & Zero Leakage│
-└─────┴────────┴─────────────────────────────────────┴────────────────────────┘
+│                 MODULE 1: INGESTION & DEEP READ - ENDPOINTS MATRIX          │
+├──────┬────────┬─────────────────────────────────────┬───────────────────────┤
+│ STT  │ Method │ Đường dẫn Endpoint REST             │ Nhiệm Vụ & Quality Gate│
+├──────┼────────┼─────────────────────────────────────┼───────────────────────┤
+│  1   │ POST   │ /api/v1/documents                   │ Upload PDF & CAS Dedupl│
+│  2   │ GET    │ /api/v1/documents                   │ Danh sách phân trang   │
+│  3   │ GET    │ /api/v1/documents/{document_id}     │ Chi tiết & Bounding Box│
+│  4   │ GET    │ /api/v1/documents/{document_id}/file│ Stream nhị phân chunked│
+│  5   │ GET    │ /api/v1/documents/{document_id}/stat│ Tiến độ Pipeline (0-100│
+│  6   │ POST   │ /api/v1/documents/{document_id}:star│ Đánh dấu tài liệu sao  │
+│  7   │ POST   │ /api/v1/documents/{document_id}:pars│ Trigger bóc tách & RAG │
+│  8   │ POST   │ /api/v1/documents/{id}:extract-refs │ Bóc tách tham khảo & F1│
+│  9   │ DELETE │ /api/v1/documents/{document_id}     │ Xóa sạch & Zero Leakage│
+│  10  │ GET    │ /api/v1/documents/{id}/summary      │ Grounded Summary (<10ms)│
+│  11  │ POST   │ /api/v1/documents/{id}/summary:gen  │ Custom Method Generate │
+│  12  │ POST   │ /api/v1/documents/{id}/summary:str  │ Real-Time SSE Token Str│
+│  13  │ GET    │ /api/v1/documents/{id}/export-pdf   │ ISO 32000 PDF Annotate │
+│  14  │ MULTI  │ /api/v1/notes/* (#16 - #21)         │ Sổ tay & AI Tổng hợp   │
+│  15  │ MULTI  │ /api/v1/sessions/* (#45 - #55)      │ Phiên đọc & Chat Stream│
+└──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
 ---

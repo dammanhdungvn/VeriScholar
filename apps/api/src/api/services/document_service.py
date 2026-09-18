@@ -2162,52 +2162,57 @@ class DocumentService:
         is_disconnected: Any = None,
     ) -> AsyncIterator[str]:
         """Stream 3-point grounded summary tokens and spatial bounding boxes via SSE."""
-        envelope, _ = await self.generate_document_summary(
-            document_id=document_id,
-            user_id=user_id,
-            force=False,
-            db=db,
-        )
-        data = envelope.data
+        try:
+            envelope, _ = await self.generate_document_summary(
+                document_id=document_id,
+                user_id=user_id,
+                force=False,
+                db=db,
+            )
+            data = envelope.data
 
-        start_dict = {"document_id": str(document_id), "status": "streaming"}
-        start_payload = json.dumps(start_dict, ensure_ascii=False)
-        yield f"event: summary_start\ndata: {start_payload}\n\n"
+            start_dict = {"document_id": str(document_id), "status": "streaming"}
+            start_payload = json.dumps(start_dict, ensure_ascii=False)
+            yield f"event: summary_start\ndata: {start_payload}\n\n"
 
-        sections = [
-            (
-                "problem_statement",
-                data.problem_statement.text if data.problem_statement else "",
-                data.problem_statement.bounding_boxes if data.problem_statement else [],
-            ),
-            (
-                "contributions",
-                data.contributions.text if data.contributions else "",
-                data.contributions.bounding_boxes if data.contributions else [],
-            ),
-            (
-                "limitations",
-                data.limitations.text if data.limitations else "",
-                data.limitations.bounding_boxes if data.limitations else [],
-            ),
-        ]
+            sections = [
+                (
+                    "problem_statement",
+                    data.problem_statement.text if data.problem_statement else "",
+                    data.problem_statement.bounding_boxes if data.problem_statement else [],
+                ),
+                (
+                    "contributions",
+                    data.contributions.text if data.contributions else "",
+                    data.contributions.bounding_boxes if data.contributions else [],
+                ),
+                (
+                    "limitations",
+                    data.limitations.text if data.limitations else "",
+                    data.limitations.bounding_boxes if data.limitations else [],
+                ),
+            ]
 
-        for section_name, text, citations in sections:
-            tokens = (text or "").split(" ")
-            for t in tokens:
-                if is_disconnected and await is_disconnected():
-                    break
-                tok_str = t + " "
-                ch_dict = {"section": section_name, "token": tok_str}
-                chunk_payload = json.dumps(ch_dict, ensure_ascii=False)
-                yield f"event: summary_chunk\ndata: {chunk_payload}\n\n"
-                await asyncio.sleep(0.01)
+            for section_name, text, citations in sections:
+                tokens = (text or "").split(" ")
+                for t in tokens:
+                    if is_disconnected and await is_disconnected():
+                        return
+                    tok_str = t + " "
+                    ch_dict = {"section": section_name, "token": tok_str}
+                    chunk_payload = json.dumps(ch_dict, ensure_ascii=False)
+                    yield f"event: summary_chunk\ndata: {chunk_payload}\n\n"
+                    await asyncio.sleep(0.01)
 
-            boxes = [c.model_dump() if hasattr(c, "model_dump") else c for c in citations or []]
-            bx_dict = {"section": section_name, "bounding_boxes": boxes}
-            box_payload = json.dumps(bx_dict, ensure_ascii=False)
-            yield f"event: summary_box\ndata: {box_payload}\n\n"
+                boxes = [c.model_dump() if hasattr(c, "model_dump") else c for c in citations or []]
+                bx_dict = {"section": section_name, "bounding_boxes": boxes}
+                box_payload = json.dumps(bx_dict, ensure_ascii=False)
+                yield f"event: summary_box\ndata: {box_payload}\n\n"
 
-        end_dict = {"document_id": str(document_id), "finish_reason": "completed"}
-        end_payload = json.dumps(end_dict, ensure_ascii=False)
-        yield f"event: summary_end\ndata: {end_payload}\n\n"
+            end_dict = {"document_id": str(document_id), "finish_reason": "completed"}
+            end_payload = json.dumps(end_dict, ensure_ascii=False)
+            yield f"event: summary_end\ndata: {end_payload}\n\n"
+        except Exception as exc:
+            err_dict = {"code": "STREAM_RUNTIME_ERROR", "message": str(exc)}
+            err_payload = json.dumps(err_dict, ensure_ascii=False)
+            yield f"event: error\ndata: {err_payload}\n\n"

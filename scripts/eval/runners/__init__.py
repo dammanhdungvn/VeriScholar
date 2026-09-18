@@ -12,6 +12,7 @@ from scripts.eval.runners.get_documents_status import DocumentStatusAPIRunner
 from scripts.eval.runners.get_documents_structure import DocumentStructureAPIRunner
 from scripts.eval.runners.get_documents_summary import DocumentSummaryAPIRunner
 from scripts.eval.runners.notes_and_synthesis_runner import NotesAndSynthesisAPIRunner
+from scripts.eval.runners.post_document_summary_stream import DocumentSummaryStreamAPIRunner
 from scripts.eval.runners.post_documents_extract_references import ExtractReferencesAPIRunner
 from scripts.eval.runners.post_documents_parse import ParseDocumentAPIRunner
 from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
@@ -42,6 +43,11 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "summary-generate": DocumentSummaryGenerateAPIRunner,
     "summary_generate": DocumentSummaryGenerateAPIRunner,
     "generate-summary": DocumentSummaryGenerateAPIRunner,
+    "summary-stream": DocumentSummaryStreamAPIRunner,
+    "summary_stream": DocumentSummaryStreamAPIRunner,
+    "post_document_summary_stream": DocumentSummaryStreamAPIRunner,
+    "post_documents_summary_stream": DocumentSummaryStreamAPIRunner,
+    "document_summary_stream": DocumentSummaryStreamAPIRunner,
     "export-pdf": DocumentExportPdfAPIRunner,
     "export_pdf": DocumentExportPdfAPIRunner,
     "export": DocumentExportPdfAPIRunner,

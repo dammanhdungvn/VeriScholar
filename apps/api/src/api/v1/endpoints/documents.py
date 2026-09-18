@@ -28,6 +28,7 @@ from api.schemas.document import (
 from api.schemas.envelope import ResponseMeta
 from api.schemas.error import ErrorResponse
 from api.services.document_service import DocumentService
+from core.domain.entities.document import DocumentStage, DocumentStatus
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
@@ -1098,6 +1099,7 @@ Mỗi frame sự kiện tuân thủ format chuẩn `event: <name>\ndata: <json>\
 # ==============================================================================
 @router.post(
     "/{document_id}/summary:stream",
+    response_class=StreamingResponse,
     summary="57. Tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)",
     description=STREAM_SUMMARY_DESCRIPTION,
     responses={
@@ -1148,7 +1150,8 @@ async def stream_document_summary(
         DocumentModel.user_id == current_user.id,
     )
     doc_res = await db.execute(doc_stmt)
-    if not doc_res.scalar_one_or_none():
+    doc = doc_res.scalar_one_or_none()
+    if not doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
@@ -1156,6 +1159,44 @@ async def stream_document_summary(
                 "message": f"Document '{document_id}' not found.",
                 "field": "id",
                 "action": "Ensure UUID exists and belongs to authenticated user.",
+            },
+        )
+
+    # 1. Pre-stream Lifecycle Status Guards (Return deterministic HTTP Error before opening stream)
+    pending_states = (
+        DocumentStatus.PENDING.value,
+        DocumentStatus.PROCESSING.value,
+        "pending",
+        "processing",
+    )
+    if (doc.chunk_count and doc.chunk_count > 0) and doc.status in pending_states:
+        doc.status = DocumentStatus.COMPLETED.value
+        doc.stage = DocumentStage.COMPLETED.value
+        await db.flush()
+
+    if doc.status in pending_states:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "DOCUMENT_PROCESSING",
+                "message": (
+                    f"Document '{document_id}' is currently processing. "
+                    "Summary streaming requires completed parsing."
+                ),
+                "field": "status",
+                "action": "Poll GET /api/v1/documents/{id}/status until status is 'completed'.",
+            },
+        )
+
+    failed_states = (DocumentStatus.FAILED.value, "failed")
+    if doc.status in failed_states:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "code": "DOCUMENT_FAILED",
+                "message": f"Document '{document_id}' processing has failed.",
+                "field": "status",
+                "action": "Re-upload document or re-trigger parsing.",
             },
         )
 
