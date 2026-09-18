@@ -3,6 +3,7 @@
 from scripts.eval.runners.base import BaseAPIRunner
 from scripts.eval.runners.delete_documents import DeleteDocumentAPIRunner
 from scripts.eval.runners.delete_session import DeleteSessionAPIRunner
+from scripts.eval.runners.delete_session_messages import DeleteSessionMessagesAPIRunner
 from scripts.eval.runners.get_documents_chunk_detail import DocumentChunkDetailAPIRunner
 from scripts.eval.runners.get_documents_chunks import DocumentChunksAPIRunner
 from scripts.eval.runners.get_documents_detail import DocumentDetailAPIRunner
@@ -96,6 +97,12 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
+    "delete_session_messages": DeleteSessionMessagesAPIRunner,
+    "delete-session-messages": DeleteSessionMessagesAPIRunner,
+    "clear_messages": DeleteSessionMessagesAPIRunner,
+    "clear-messages": DeleteSessionMessagesAPIRunner,
+    "clear_chat": DeleteSessionMessagesAPIRunner,
+    "clear-chat": DeleteSessionMessagesAPIRunner,
     "get_session_messages": GetSessionMessagesAPIRunner,
     "get-session-messages": GetSessionMessagesAPIRunner,
     "session_messages_history": GetSessionMessagesAPIRunner,
@@ -160,6 +167,7 @@ MODULE_1_ORDER = [
     "post_session_documents",
     "post_session_messages",
     "get_session_messages",
+    "delete_session_messages",
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
@@ -182,6 +190,7 @@ __all__ = [
     "ExtractReferencesAPIRunner",
     "ListDocumentsAPIRunner",
     "GetSessionDetailAPIRunner",
+    "DeleteSessionMessagesAPIRunner",
     "GetSessionMessagesAPIRunner",
     "ListSessionsAPIRunner",
     "MODULE_1_ORDER",
