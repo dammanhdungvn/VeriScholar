@@ -11,6 +11,7 @@ from scripts.eval.runners.get_documents_list import ListDocumentsAPIRunner
 from scripts.eval.runners.get_documents_status import DocumentStatusAPIRunner
 from scripts.eval.runners.get_documents_structure import DocumentStructureAPIRunner
 from scripts.eval.runners.get_documents_summary import DocumentSummaryAPIRunner
+from scripts.eval.runners.get_session_detail import GetSessionDetailAPIRunner
 from scripts.eval.runners.get_sessions_list import ListSessionsAPIRunner
 from scripts.eval.runners.notes_and_synthesis_runner import NotesAndSynthesisAPIRunner
 from scripts.eval.runners.post_document_summary_stream import DocumentSummaryStreamAPIRunner
@@ -64,6 +65,11 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "sessions_list": ListSessionsAPIRunner,
     "list_sessions": ListSessionsAPIRunner,
     "list-sessions": ListSessionsAPIRunner,
+    "get-session": GetSessionDetailAPIRunner,
+    "get_session": GetSessionDetailAPIRunner,
+    "get-session-detail": GetSessionDetailAPIRunner,
+    "session_detail": GetSessionDetailAPIRunner,
+    "session-detail": GetSessionDetailAPIRunner,
     "sessions-lifecycle": SessionsLifecycleAPIRunner,
     "sessions_lifecycle": SessionsLifecycleAPIRunner,
     "lifecycle": SessionsLifecycleAPIRunner,
@@ -93,6 +99,7 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "get_documents_export_pdf": DocumentExportPdfAPIRunner,
     "delete_documents": DeleteDocumentAPIRunner,
     "post_sessions_create": CreateSessionAPIRunner,
+    "get_session_detail": GetSessionDetailAPIRunner,
 }
 
 MODULE_1_ORDER = [
@@ -113,6 +120,7 @@ MODULE_1_ORDER = [
     "delete_documents",
     "post_sessions_create",
     "get_sessions_list",
+    "get_session_detail",
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
@@ -133,6 +141,7 @@ __all__ = [
     "DocumentSummaryStreamAPIRunner",
     "ExtractReferencesAPIRunner",
     "ListDocumentsAPIRunner",
+    "GetSessionDetailAPIRunner",
     "ListSessionsAPIRunner",
     "MODULE_1_ORDER",
     "NotesAndSynthesisAPIRunner",

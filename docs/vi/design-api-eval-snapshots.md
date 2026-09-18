@@ -370,7 +370,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  14  │ MULTI  │ /api/v1/notes/* (#16 - #21)         │ Sổ tay & AI Tổng hợp   │
 │  15  │ POST   │ /api/v1/sessions                    │ Khởi tạo phiên (#45)   │
 │  16  │ GET    │ /api/v1/sessions                    │ Lịch sử Sidebar (#46)  │
-│  17  │ MULTI  │ /api/v1/sessions/* (#47 - #55)      │ Lifecycle & Chat Stream│
+│  17  │ GET    │ /api/v1/sessions/{id}               │ Chi tiết phiên (#47)   │
+│  18  │ MULTI  │ /api/v1/sessions/* (#48 - #55)      │ Lifecycle & Chat Stream│
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -497,6 +498,48 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Chronological Sorting**: Luôn sắp xếp `updated_at DESC` để phiên mới nhất nổi lên đầu danh sách Sidebar.
 - **Tenant Data Shielding**: Dữ liệu phiên được phân lập tuyệt đối theo `user_id`.
 - **Hermetic REST Cleanup**: Dọn sạch phiên và tài liệu thử nghiệm khi thoát runner.
+````
+
+---
+
+### 7.4. Snapshot Mẫu: GET /api/v1/sessions/{id} (#47 Khôi phục nguyên vẹn phiên)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/get_session_detail.md`:
+
+````markdown
+# API Evaluation Snapshot: GET /api/v1/sessions/{id}
+
+> **Audit Header**: Session Tag: `test_eval_b4a10e72` | Target: `#47 Khôi phục nguyên vẹn phiên (Snapshots, Tabs, Viewport)`  
+> **Target Output**: `temp/output/test/get_session_detail.md`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_full_session_restoration.json`: `a1b2c3d4e5f67890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `02_etag_header_conformance.json`: `b2c3d4e5f6a17890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `03_empty_session_restoration.json`: `c3d4e5f6a1b27890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `04_multi_tenant_isolation.json`: `d4e5f6a1b2c37890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `05_not_found_guard.json`: `e5f6a1b2c3d47890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> - `06_validation_bounds_guard.json`: `f6a1b2c3d4e57890123456789abcdef0123456789abcdef0123456789abcdef0`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| Full Session Restoration (Snapshots, Tabs, Viewport) | `200` | `200` | 6.5ms | PASS | Complete session restored with viewport_state, documents, and active_tab |
+| ETag Header Conformance & OCC Version Lock | `200` | `200` | 4.8ms | PASS | ETag header matches \"v{version}\" and coincides with data.version |
+| Empty Session Restoration (No documents attached) | `200` | `200` | 5.2ms | PASS | Empty session schema valid with documents=[] and message_count=0 |
+| Multi-Tenant User Isolation Guard (Alien User) | `404` | `404` | 4.1ms | PASS | Alien user rejected with SESSION_NOT_FOUND (Zero Data Leakage) |
+| Non-existent Session UUID Guard | `404` | `404` | 3.9ms | PASS | Random UUID returns 404 SESSION_NOT_FOUND |
+| Path UUID Format Validation Guard | `422` | `422` | 2.5ms | PASS | Malformed UUID path parameter rejected with HTTP 422 |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **OCC ETag Invariant**: Header `ETag` tuân thủ RFC 9110/7232, bọc chuỗi `\"v{version}\"`, sẵn sàng cho thao tác `If-Match`.
+- **Complete State Invariant**: Khôi phục đầy đủ `viewport_state` (`page`, `zoom_ratio`, `scroll_top`), `active_tab`, và `documents`.
+- **Multi-Tenant Shielding**: Không rò rỉ phiên sang user khác; trả về `404 Not Found` để chống dò quét tài nguyên.
+- **Hermetic REST Cleanup**: Dọn sạch session và document sau khi hoàn tất bài đánh giá.
 ````
 
 ---
