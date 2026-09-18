@@ -46,7 +46,8 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **22** | `DELETE /api/v1/sessions/{id}` (#50 Xóa phiên) | `delete-session` | `uv run python scripts/eval_api.py --api delete-session --bless` |
 | **23** | `POST /api/v1/sessions/{id}/documents` (#51 Nạp bài vào phiên) | `post_session_documents` | `uv run python scripts/eval_api.py --api post_session_documents --bless` |
 | **24** | `POST /api/v1/sessions/{id}/messages` (#52 Gửi câu hỏi & Stream SSE) | `post_session_messages` / `chat` | `uv run python scripts/eval_api.py --api post_session_messages --bless` |
-| **25** | `MULTI /api/v1/sessions/*` (#48, #52 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
+| **25** | `GET /api/v1/sessions/{id}/messages` (#53 Lịch sử Q&A phân trang) | `get_session_messages` / `chat_history` | `uv run python scripts/eval_api.py --api get_session_messages --bless` |
+| **26** | `MULTI /api/v1/sessions/*` (#48, #54 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
 
 ---
 

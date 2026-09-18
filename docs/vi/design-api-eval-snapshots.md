@@ -375,7 +375,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  19  │ PATCH  │ /api/v1/sessions/{id}/viewport      │ Cập nhật Viewport (#49)│
 │  20  │ POST   │ /api/v1/sessions/{id}/documents     │ Nạp bài vào phiên (#51)│
 │  21  │ POST   │ /api/v1/sessions/{id}/messages      │ Stream SSE & Q&A (#52) │
-│  22  │ MULTI  │ /api/v1/sessions/* (#48, #53 - #55) │ Lifecycle & Sessions   │
+│  22  │ GET    │ /api/v1/sessions/{id}/messages      │ Lịch sử Q&A (#53)      │
+│  23  │ MULTI  │ /api/v1/sessions/* (#48, #54 - #55) │ Lifecycle & Sessions   │
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -728,6 +729,49 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Stream Resumption (RFC 8895)**: Bỏ qua các sự kiện đã gửi dựa trên header `Last-Event-ID`.
 - **Archived Session Message Guard**: Chặn tin nhắn trên phiên đã archive và phát sự kiện `error` (`SESSION_ARCHIVED`).
 - **Hermetic REST Lifecycle & Clean Up**: Tự động thu hồi và xóa sạch tài nguyên sau autotest (Zero Retention).
+````
+
+### 7.9. Snapshot Mẫu cho API #53: `GET /api/v1/sessions/{id}/messages`
+
+Báo cáo autotest được kết xuất tự động tại: `temp/output/test/get_session_messages.md`
+
+````markdown
+# API Evaluation Snapshot: GET /api/v1/sessions/{id}/messages
+
+> **Audit Header**: Session Tag: `test_eval_3c604849` | Target: `#53 Lấy lịch sử hội thoại của phiên (phân trang)`  
+> **Target Output**: `temp/output/test/get_session_messages.md`  
+> **Raw Artifacts**: `tests/.artifacts/get_session_messages/`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_default_pagination_chronological.json`: `335f078265a35fe331f88af387c4ead4be6e2de0c6a0695cfb4fdabe80ee87f6`
+> - `02_strict_page_slicing_and_links.json`: `305f50748debf37fcbea0007dbc54865a0ab599c6ee59410407ba81a73e43fc3`
+> - `03_turn_schema_contract_adherence.json`: `05a3eccaf30a132525c39a3b8ee76909f6decc13ac69f44aa2e32f1d31c29a32`
+> - `04_empty_session_conversation.json`: `847fc71b98a70fe2ff4cb4ad413687472f698bc45a3c73b20c7586351dc316d9`
+> - `05_multi_tenant_isolation_guard.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
+> - `06_validation_bounds_guard.json`: `8231a893d3997a57b4e94e6e1cf1b5843f1c068eda306fa89e66ed02aa2d680e`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| 1. Default Chronological History (page=1, per_page=50) | `200` | `200` | 8.0ms | PASS | Returned 4 turns (total=4) | Chronological ASC: True | prev is null |
+| 2. Strict Page Slicing & Boundary Links (per_page=2, page=1..2) | `200` | `200` | 9.1ms | PASS | Page 1 len=2, Page 2 len=2 | Disjoint sets: True | RFC 8288 links verified |
+| 3. Turn Schema & Citation Spatial Integrity | `200` | `200` | 4.6ms | PASS | Full schema verified: True | Spatial citations present: True |
+| 4. Empty Session Conversation Guard (data: [], total: 0) | `200` | `200` | 4.1ms | PASS | Graceful empty handling: total=0, data=[] |
+| 5. Multi-Tenant User Isolation Guard (Expect 404) | `404` | `404` | 8.3ms | PASS | Alien user rejected with HTTP 404 (SESSION_NOT_FOUND) | Zero leakage verified |
+| 6. Query Parameter Validation Guard (page=0, per_page=101) | `422` | `422` | 5.9ms | PASS | page=0 -> 422, per_page=101 -> 422 (Pydantic validation rejected bounds violation) |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **Chronological Sorting Invariant**: Lịch sử hội thoại luôn được sắp xếp tăng dần theo thời gian tạo (`created_at ASC`), đảm bảo đọc đúng trình tự đối thoại.
+- **RFC 8288 & AIP-158 Pagination**: Hỗ trợ phân trang chuẩn (`meta`: `total`, `page`, `per_page`, `total_pages`) và liên kết điều hướng (`links`: `first`, `prev`, `self`, `next`, `last`).
+- **Turn Schema & Citation Integrity**: Mỗi lượt trao đổi bảo toàn đầy đủ câu hỏi, câu trả lời, `total_tokens`, `finish_reason` và mảng trích dẫn không gian `bounding_boxes`.
+- **Empty History Graceful Handling**: Phiên chưa có tin nhắn trả về `HTTP 200 OK` với mảng rỗng `data: []`, `total: 0`, `total_pages: 0`.
+- **Multi-Tenant User Isolation**: Người dùng lạ truy vấn vào phiên riêng tư bị từ chối với `HTTP 404 Not Found` (`SESSION_NOT_FOUND`), tuyệt đối không rò rỉ dữ liệu.
+- **Hermetic REST Teardown**: Toàn bộ phiên và tài liệu thử nghiệm được dọn dẹp sạch sẽ khép kín sau khi runner hoàn tất (Zero Retention).
 ````
 
 ---
