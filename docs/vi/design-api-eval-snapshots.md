@@ -374,7 +374,8 @@ Tập dữ liệu đối chứng được tổ chức tại thư mục `data/pap
 │  18  │ DELETE │ /api/v1/sessions/{id}               │ Xóa phiên (#50)        │
 │  19  │ PATCH  │ /api/v1/sessions/{id}/viewport      │ Cập nhật Viewport (#49)│
 │  20  │ POST   │ /api/v1/sessions/{id}/documents     │ Nạp bài vào phiên (#51)│
-│  21  │ MULTI  │ /api/v1/sessions/* (#48, #52 - #55) │ Lifecycle & Chat Stream│
+│  21  │ POST   │ /api/v1/sessions/{id}/messages      │ Stream SSE & Q&A (#52) │
+│  22  │ MULTI  │ /api/v1/sessions/* (#48, #53 - #55) │ Lifecycle & Sessions   │
 └──────┴────────┴─────────────────────────────────────┴───────────────────────┘
 ```
 
@@ -672,6 +673,61 @@ Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/t
 - **Duplicate Document Guard**: Ngăn chặn tình trạng gắn trùng 1 tài liệu nhiều lần trong cùng phiên làm việc (HTTP 409).
 - **Tenant Privacy Invariant**: Cách ly dữ liệu hoàn toàn giữa các người dùng (Zero Leakage).
 - **Hermetic Teardown**: Dọn dẹp khép kín toàn bộ phiên và tài liệu thử nghiệm.
+````
+
+---
+
+### 7.8. Snapshot Mẫu: POST /api/v1/sessions/{id}/messages (#52 Gửi câu hỏi & Stream SSE - Cross-Document Namespacing)
+
+Dưới đây là cấu trúc tệp báo cáo mẫu sinh ra tại `temp/output/test/post_session_messages.md`:
+
+````markdown
+# API Evaluation Snapshot: POST /api/v1/sessions/{id}/messages
+
+> **Audit Header**: Session Tag: `test_eval_6c6ba19f` | Target: `#52 Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)`  
+> **Target Output**: `temp/output/test/post_session_messages.md`  
+> **Raw Artifacts**: `tests/.artifacts/post_session_messages/`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_ambiguous_roadmap_options_200.json`: `7710f3dd33a1b884b507f79135c6955c93063bd98e8c9c1f582408b2396b151e`  
+> - `02_tailored_roadmap_tokens_200.json`: `fe911648209d48dbbadd57272059ff0dc4f0ea1e84853e4ee493c7ef357cb369`  
+> - `03_table1_complexity_grounding_200.json`: `7b5c257bbbbe1e7771598cd48442ed79831f320bee0c494294e20cafd32feb27`  
+> - `04_presupposition_refutation_200.json`: `aa1f0799c7d5cfaa35ad9bbb465e9cf348c44fbf292231ddcdc2732631edb2d3`  
+> - `05_out_of_domain_mitigation_200.json`: `94eab0d2907fd4066d052bacd88075e590f4104a9f0a87c62cedabbe2500ec73`  
+> - `06_metric_trap_mitigation_200.json`: `cd2f5c6065fdbf2821f8adbc063e2fccb4bf8641cd1cdf6dcc2382e9150ee0ec`  
+> - `07_get_chat_history_200.json`: `390e76d23537d8917d113ed4b538f4d113a2a964f90a83b36a730f7450a8995a`  
+> - `08_stream_resumption_and_callback.json`: `96ed6ede9c8037b6208b086b63ef97ea229d3bf3fd0964df1035befe3662d1b0`  
+> - `08_clear_chat_history_204.json`: `7be6258065b766cb7ee1a25ea0f35ace54aee0ce59499caddd383df8a74be293`  
+> - `09_archived_session_error_200.json`: `a20114cb3d493eace1c1e54c065f785d0e43c8a1009530093f7aa74ee45a086e`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| 1. Ambiguous Query Clarification (event: interactive_options) | `200` | `200` | 1454.1ms | PASS | Emitted 3 Personas and 3 Diagnostic Micro-Quiz questions for zero-knowledge prompt |
+| 2. Multi-turn Tailored Roadmap (Persona B 5-Stage Path) | `200` | `200` | 1672.9ms | PASS | Streamed 5-stage personalized roadmap anchored to Figure 1 and Table 1 |
+| 3. Table 1 Complexity Math & Spatial Grounding (Page 6) | `200` | `200` | 1142.3ms | PASS | Compared O(n^2 · d) vs O(n · d^2) and accurately anchored citation to Page 6 |
+| 4. Socratic False Presupposition Refutation (RNN Trap) | `200` | `200` | 813.3ms | PASS | Rebutted false RNN premise, directed user to Positional Encoding at Section 3.5 Page 6 |
+| 5. Out-of-Domain Distractor Mitigation (GSM8K / GPT-4) | `200` | `200` | 1031.7ms | PASS | Rejected modern benchmark/model hallucination, citing 2017 paper publication date |
+| 6. Experimental Metric Trap Mitigation (BLEU 45.0 -> 28.4) | `200` | `200` | 999.8ms | PASS | Rebutted 45.0 BLEU trap, confirmed actual 28.4 EN-DE at Table 2 Page 8 |
+| 7. GET /api/v1/sessions/{id}/messages (History Pagination) | `200` | `200` | 8.0ms | PASS | Retrieved 6 turns (total: 6) with full question/answer contracts |
+| 8. Stream Resumption (RFC 8895) & Structured Callback | `200` | `200` | 2218.1ms | PASS | Successfully skipped events <= Last-Event-ID: 2 and accepted structured callback |
+| 9. DELETE /api/v1/sessions/{id}/messages (Idempotent 204) | `204` | `204` | 9.6ms | PASS | Cleared all conversation turns; subsequent fetch returned total=0 |
+| 10. Archived Session Message Guard (Expect event: error) | `200` | `200` | 3.8ms | PASS | Emitted event: error with code SESSION_ARCHIVED on archived session |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **RFC 8895 Server-Sent Events (SSE) Streaming**: Tuân thủ chuẩn `text/event-stream`, phát chuỗi sự kiện `start`, `reasoning`, `citations`, `token`, `interactive_options`, `done`.
+- **AT-CoT Ambiguity Resolution**: Tự động nhận diện truy vấn mơ hồ, phát sự kiện SSE `interactive_options` với 3 Personas và 3 câu hỏi Diagnostic Micro-Quiz.
+- **Table 1 Mathematical Precision**: So sánh chuẩn xác độ phức tạp $\mathcal{O}(n^2 \cdot d)$ vs $\mathcal{O}(n \cdot d^2)$, đính kèm trích dẫn không gian Trang 6.
+- **Socratic Presupposition Refutation**: Bác bỏ tiền đề sai lệch gán ghép RNN vào Encoder Transformer, điều hướng tới Positional Encoding (Mục 3.5, Trang 6).
+- **Anti-Hallucination Scope & Metric Guards**: Từ chối các truy vấn ngoài miền (GSM8K/GPT-4 trên bài báo 2017) và bác bỏ bẫy điểm BLEU 45.0.
+- **Stream Resumption (RFC 8895)**: Bỏ qua các sự kiện đã gửi dựa trên header `Last-Event-ID`.
+- **Archived Session Message Guard**: Chặn tin nhắn trên phiên đã archive và phát sự kiện `error` (`SESSION_ARCHIVED`).
+- **Hermetic REST Lifecycle & Clean Up**: Tự động thu hồi và xóa sạch tài nguyên sau autotest (Zero Retention).
 ````
 
 ---
