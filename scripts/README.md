@@ -45,7 +45,7 @@ Bộ kiểm thử hỗ trợ chạy độc lập từng API hoặc chạy toàn 
 | **21** | `PATCH /api/v1/sessions/{id}/viewport` (#49 Lưu Viewport & OCC) | `viewport` | `uv run python scripts/eval_api.py --api viewport --bless` |
 | **22** | `DELETE /api/v1/sessions/{id}` (#50 Xóa phiên) | `delete-session` | `uv run python scripts/eval_api.py --api delete-session --bless` |
 | **23** | `POST /api/v1/sessions/{id}/documents` (#51 Nạp bài vào phiên) | `post_session_documents` | `uv run python scripts/eval_api.py --api post_session_documents --bless` |
-| **24** | `POST /api/v1/sessions/{id}/messages` (#48 SSE Multi-Paper Chat) | `chat` | `uv run python scripts/eval_api.py --api chat --bless` |
+| **24** | `POST /api/v1/sessions/{id}/messages` (#52 Gửi câu hỏi & Stream SSE) | `post_session_messages` / `chat` | `uv run python scripts/eval_api.py --api post_session_messages --bless` |
 | **25** | `MULTI /api/v1/sessions/*` (#48, #52 - #55 Lifecycle Suite) | `lifecycle` | `uv run python scripts/eval_api.py --api lifecycle --bless` |
 
 ---
@@ -107,8 +107,8 @@ uv run python scripts/eval_api.py --api delete-session --bless
 # Đánh giá API Nạp bài vào phiên làm việc (Pure JSON: url hoặc document_id) (#51)
 uv run python scripts/eval_api.py --api post_session_documents --bless
 
-# Đánh giá API Đối thoại đa bài báo & Stream SSE (#48)
-uv run python scripts/eval_api.py --api chat --bless
+# Đánh giá API Gửi câu hỏi & Stream SSE đa bài báo (#52)
+uv run python scripts/eval_api.py --api post_session_messages --bless
 
 # Đánh giá Bộ vòng đời phiên đa tài liệu (#48, #51 - #55)
 uv run python scripts/eval_api.py --api lifecycle --bless
