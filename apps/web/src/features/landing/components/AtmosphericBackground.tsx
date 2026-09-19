@@ -197,18 +197,10 @@ export function AtmosphericBackground() {
           ctx.fill();
           ctx.shadowBlur = 0;
         } else {
-          // Light Mode Node: Doubled x2 size as requested, with crisp core + soft halo
-          const nodeRadius = Math.max(4.5, p1.radius * 2.6);
-          // Soft outer halo ring
+          // Light Mode Node: Sleek, compact and delicate neural node
           ctx.beginPath();
-          ctx.arc(p1.x, p1.y, nodeRadius + 4.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(217, 119, 87, 0.16)`;
-          ctx.fill();
-
-          // Crisp inner core (x2 size)
-          ctx.beginPath();
-          ctx.arc(p1.x, p1.y, nodeRadius, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(184, 75, 42, ${Math.min(0.95, p1.opacity * 1.45)})`;
+          ctx.arc(p1.x, p1.y, p1.radius * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(184, 75, 42, ${Math.min(0.85, p1.opacity * 1.3)})`;
           ctx.fill();
         }
 
@@ -230,9 +222,9 @@ export function AtmosphericBackground() {
               ctx.lineWidth = 0.8;
             } else {
               // Light Mode: Clearly visible terracotta & amber synapse line
-              const lineAlpha = Math.pow(1 - dist / maxDist, 1.1) * 0.46;
+              const lineAlpha = Math.pow(1 - dist / maxDist, 1.1) * 0.38;
               ctx.strokeStyle = `rgba(184, 80, 48, ${lineAlpha})`;
-              ctx.lineWidth = 1.15;
+              ctx.lineWidth = 0.95;
             }
             ctx.stroke();
           }
@@ -254,16 +246,16 @@ export function AtmosphericBackground() {
               ctx.lineWidth = 1.1;
             } else {
               // Light Mode: Clear interactive query beam
-              const mAlpha = (1 - mDist / 175) * 0.65;
+              const mAlpha = (1 - mDist / 175) * 0.55;
               ctx.strokeStyle = `rgba(195, 75, 35, ${mAlpha})`;
-              ctx.lineWidth = 1.35;
+              ctx.lineWidth = 1.1;
             }
             ctx.stroke();
           }
         }
       }
 
-      // 3. Light Mode Synaptic Pulse Packets along active lines (x2 size)
+      // 3. Light Mode Synaptic Pulse Packets along active lines
       if (!currentIsDark) {
         for (let k = synapticPulses.length - 1; k >= 0; k--) {
           const pulse = synapticPulses[k];
@@ -283,10 +275,10 @@ export function AtmosphericBackground() {
           const pulseAlpha = Math.sin(pulse.progress * Math.PI) * 0.85;
 
           ctx.beginPath();
-          ctx.arc(curX, curY, 5.0, 0, Math.PI * 2);
+          ctx.arc(curX, curY, 2.2, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(204, 80, 35, ${pulseAlpha})`;
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(217, 105, 55, 0.45)";
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = "rgba(217, 105, 55, 0.4)";
           ctx.fill();
           ctx.shadowBlur = 0;
         }
