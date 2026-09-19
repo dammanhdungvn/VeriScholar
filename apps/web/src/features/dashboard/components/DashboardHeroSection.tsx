@@ -27,7 +27,7 @@ export function DashboardHeroSection({
     : "Nhà nghiên cứu";
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 select-text overflow-y-auto w-full custom-scrollbar">
+    <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 select-text overflow-y-auto w-full custom-scrollbar relative z-10">
       {/* 1. Academic Header */}
       <div className="flex flex-col items-center text-center mb-6 select-none">
         <div className="flex items-center gap-3 justify-center">

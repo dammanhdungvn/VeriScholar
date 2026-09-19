@@ -3,6 +3,7 @@ import { DashboardHeader } from "./DashboardHeader";
 import { DashboardHeroSection } from "./DashboardHeroSection";
 import { DashboardChatStreamView } from "./DashboardChatStreamView";
 import { DashboardCoworkView } from "./DashboardCoworkView";
+import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useDashboardSessions } from "../hooks/useDashboardSessions";
 import { useStreamingChat } from "../hooks/useStreamingChat";
@@ -60,6 +61,9 @@ export function DashboardContainer() {
 
       {/* 2. Center Canvas Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Dynamic Academic Ambient Background */}
+        <DashboardAmbientBackground isHero={appMode !== "cowork" && messages.length === 0} />
+
         {/* Minimal Header */}
         <DashboardHeader sessionTitle={activeSession?.title} />
 
