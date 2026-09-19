@@ -1,15 +1,13 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { LandingNavbar } from "./LandingNavbar";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
-import { useLandingStore } from "../stores/useLandingStore";
 
 describe("LandingNavbar component", () => {
   beforeEach(() => {
     localStorage.clear();
     useAuthStore.getState().logout();
-    useLandingStore.getState().setUploadModalOpen(false);
   });
 
   it("renders streamlined unauthenticated action cluster: 'Dùng thử ngay' links to /login", () => {
@@ -29,7 +27,7 @@ describe("LandingNavbar component", () => {
     expect(screen.queryByTestId("nav-login-link")).not.toBeInTheDocument();
   });
 
-  it("renders user profile chip and triggers upload modal when authenticated", () => {
+  it("renders streamlined 'Dashboard' link to /dashboard when authenticated", () => {
     useAuthStore.getState().login({
       user: {
         id: "demo-user-1",
@@ -53,20 +51,14 @@ describe("LandingNavbar component", () => {
       </MemoryRouter>
     );
 
-    // Profile chip visible
-    expect(screen.getByText("GS.TS. Nguyễn Văn Scholar")).toBeInTheDocument();
+    // Profile chip and logout button are removed for sleek minimalist header
+    expect(screen.queryByText("GS.TS. Nguyễn Văn Scholar")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Đăng xuất")).not.toBeInTheDocument();
 
-    // Logout button visible
-    const logoutBtn = screen.getByLabelText("Đăng xuất");
-    expect(logoutBtn).toBeInTheDocument();
-
-    // In authenticated state, clicking 'Dùng thử ngay' opens QuickUploadModal
-    const tryBtn = screen.getByTestId("nav-try-btn");
-    fireEvent.click(tryBtn);
-    expect(useLandingStore.getState().isUploadModalOpen).toBe(true);
-
-    // Clicking logout returns to unauthenticated state
-    fireEvent.click(logoutBtn);
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    // Primary CTA switches to 'Dashboard' navigating to /dashboard
+    const dashboardBtn = screen.getByTestId("nav-try-btn");
+    expect(dashboardBtn).toBeInTheDocument();
+    expect(dashboardBtn).toHaveTextContent("Dashboard");
+    expect(dashboardBtn.closest("a")).toHaveAttribute("href", "/dashboard");
   });
 });

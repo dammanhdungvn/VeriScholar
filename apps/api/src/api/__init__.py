@@ -14,6 +14,7 @@ from fastapi.openapi.utils import get_openapi
 from fastapi.responses import JSONResponse
 from fastapi.sse import EventSourceResponse, ServerSentEvent
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.cors import CORSMiddleware
 
 from api.core.config import settings
 from api.middleware.tracing import PureASGITracingMiddleware
@@ -55,8 +56,16 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# 2. Add Pure ASGI Tracing Middleware (must be outermost middleware)
+# 2. Add Pure ASGI Tracing Middleware and CORS Middleware
 app.add_middleware(PureASGITracingMiddleware)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["ETag", "Location", "X-Request-ID", "Content-Disposition"],
+)
 
 
 # 3. Global Exception Handlers for Structured Error Envelopes
