@@ -1,60 +1,26 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
-  <style>
-    .bg { fill: #FAF9F5; }
-    .frame { stroke: #CC785C; }
-    .spark { fill: #CC785C; }
-    .v { fill: url(#coralLight); }
-    .arm { fill: #252320; }
-    @media (prefers-color-scheme: dark) {
-      .bg { fill: #181715; }
-      .frame { stroke: #E39A7C; }
-      .spark { fill: #E39A7C; }
-      .v { fill: url(#coralDark); }
-      .arm { fill: #FAF9F5; }
-    }
-  </style>
-
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
   <defs>
-    <linearGradient id="coralLight" x1="320" y1="300" x2="620" y2="820" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#D98A6B"/>
-      <stop offset="1" stop-color="#B96549"/>
+    <linearGradient id="coralL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E27855"/>
+      <stop offset="100%" stop-color="#BA5332"/>
     </linearGradient>
-    <linearGradient id="coralDark" x1="320" y1="300" x2="620" y2="820" gradientUnits="userSpaceOnUse">
-      <stop stop-color="#E39A7C"/>
-      <stop offset="1" stop-color="#CC785C"/>
+    <linearGradient id="coralD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F29472"/>
+      <stop offset="100%" stop-color="#D96E4C"/>
     </linearGradient>
   </defs>
-
-  <!-- Subtle tab background; the geometry below is taken directly from the current main logo. -->
-  <rect class="bg" x="0" y="0" width="64" height="64" rx="14"/>
-
-  <!-- Same horizontal proportion as the current main logo, then cropped to its core mark. -->
-  <g transform="translate(32 32) scale(0.078) translate(-512 -512)">
-    <g transform="translate(512 0) scale(1.168 1) translate(-512 0)">
-
-      <!-- Exact current bounding-box geometry -->
-      <g class="frame" stroke-width="28" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M250 180H365"/>
-        <path d="M250 180V295"/>
-        <path d="M774 180H659"/>
-        <path d="M774 180V295"/>
-        <path d="M250 700V585"/>
-        <path d="M250 700H365"/>
-        <path d="M774 700V585"/>
-        <path d="M774 700H659"/>
-      </g>
-
-      <!-- Exact current AI/discovery sparkle -->
-      <path class="spark" d="M512 245 C520 285 535 300 575 308 C535 316 520 331 512 371
-               C504 331 489 316 449 308 C489 300 504 285 512 245Z"/>
-
-      <!-- Exact current Central V -->
-      <path class="v" d="M306 335 L423 360 L512 650 L602 360 L719 335 L590 718
-               C574 765 552 800 512 827 C472 800 450 765 434 718Z"/>
-
-      <!-- Exact current verification arm -->
-      <path class="arm" d="M512 650 L602 360 L719 335 L590 718
-               C574 765 552 800 512 827 C545 786 558 744 550 704Z"/>
-    </g>
+  <style>
+    .coral-wing { fill: url(#coralL); }
+    .veri-arm { fill: #1E1B18; }
+    @media (prefers-color-scheme: dark) {
+      .coral-wing { fill: url(#coralD); }
+      .veri-arm { fill: #FFFFFF; }
+    }
+  </style>
+  <g transform="translate(16, 16) scale(0.061) translate(-512.5, -581)">
+    <!-- Left Wing: Scholar Coral -->
+    <path class="coral-wing" d="M306 335 L423 360 L512 650 L512 827 C472 800 450 765 434 718 Z"/>
+    <!-- Right Wing: Verification Checkmark Arm -->
+    <path class="veri-arm" d="M512 650 L602 360 L719 335 L590 718 C574 765 552 800 512 827 Z"/>
   </g>
 </svg>
