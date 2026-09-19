@@ -139,6 +139,14 @@ async function runVisualAudit() {
     console.log(`Dialog closed after Escape: ${!dialogClosed}`);
   }
 
+  // Capture Light Mode Demo section screenshot
+  const demoSectionLight = await page.$("#interactive-demo");
+  if (demoSectionLight) {
+    const demoLightPath = `${ARTIFACT_DIR}/demo_option_a_light.png`;
+    await demoSectionLight.screenshot({ path: demoLightPath });
+    console.log(`Demo Light Mode screenshot saved: ${demoLightPath}`);
+  }
+
   // 7. Light / Dark Mode Toggle Verification
   console.log("Testing Light / Dark Mode Toggle...");
   const themeToggleBtn = await page.$('[data-testid="theme-toggle-btn"]');
@@ -148,13 +156,21 @@ async function runVisualAudit() {
 
     // Click to switch to dark mode
     await themeToggleBtn.click();
-    await new Promise((r) => setTimeout(r, 300));
+    await new Promise((r) => setTimeout(r, 400));
     const isDarkAfterToggle = await page.evaluate(() => document.documentElement.classList.contains("dark"));
     console.log(`Theme dark state after click: ${isDarkAfterToggle} (Expected: true)`);
 
     const darkScreenshotPath = `${ARTIFACT_DIR}/landing_page_dark.png`;
-    await page.screenshot({ path: darkScreenshotPath, fullPage: false });
-    console.log(`Dark mode viewport screenshot saved: ${darkScreenshotPath}`);
+    await page.screenshot({ path: darkScreenshotPath, fullPage: true });
+    console.log(`Dark mode fullpage screenshot saved: ${darkScreenshotPath}`);
+
+    // Capture Dark Mode Demo section screenshot
+    const demoSectionDark = await page.$("#interactive-demo");
+    if (demoSectionDark) {
+      const demoDarkPath = `${ARTIFACT_DIR}/demo_option_a_dark.png`;
+      await demoSectionDark.screenshot({ path: demoDarkPath });
+      console.log(`Demo Dark Mode screenshot saved: ${demoDarkPath}`);
+    }
 
     // Click again to switch back to light mode
     await themeToggleBtn.click();

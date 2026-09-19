@@ -10,10 +10,10 @@ export function InteractiveDemo() {
   return (
     <section id="interactive-demo" className="relative pb-16 sm:pb-24 overflow-hidden scroll-mt-20">
       <div className="max-w-7xl xl:max-w-[1380px] mx-auto px-4 sm:px-6 relative z-10">
-        {/* Mac Studio Window Wrapper - Warm Anthracite Tone */}
-        <div className="rounded-2xl border border-[#36322b] bg-[#1c1b18] shadow-2xl overflow-hidden">
+        {/* Mac Studio Window Wrapper - Adaptive Hardware Frame (Silver in Light Mode, Space Black in Dark Mode) */}
+        <div className="rounded-2xl border border-[#d8d4cb] dark:border-[#36322b] bg-[#edeae3] dark:bg-[#1c1b18] shadow-2xl transition-colors duration-300 overflow-hidden">
           {/* Mac Studio Window Top Bar - Clean & Dignified */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#22201d] border-b border-[#2d2a25]">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-[#e4dfd6] dark:bg-[#22201d] border-b border-[#d8d3c7] dark:border-[#2d2a25] transition-colors duration-300">
             {/* macOS Window Control Dots */}
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]" />
@@ -22,7 +22,7 @@ export function InteractiveDemo() {
             </div>
 
             {/* Dynamic Document Name Pill */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#181715] border border-[#2d2a25] text-xs font-mono text-zinc-300">
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#f6f3ed] dark:bg-[#181715] border border-[#dcd7cc] dark:border-[#2d2a25] text-xs font-mono text-[#3d3a35] dark:text-zinc-300 transition-colors duration-300">
               <span className="w-1.5 h-1.5 rounded-full bg-[#d97757]" />
               <span>{activePaper.title}</span>
             </div>
@@ -31,7 +31,7 @@ export function InteractiveDemo() {
           </div>
 
           {/* Dual-Pane Studio Body: Expansive 50/50 Split with Ample Space */}
-          <div className="p-3 sm:p-4 lg:p-5 bg-[#181715]">
+          <div className="p-3 sm:p-4 lg:p-5 bg-[#dfdad0] dark:bg-[#181715] transition-colors duration-300">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 min-h-[640px] lg:h-[760px]">
               {/* Left Column: PDF Paper Canvas Viewer */}
               <div className="h-[540px] lg:h-full min-h-0">

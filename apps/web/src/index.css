@@ -79,6 +79,10 @@
   --color-surface-dark-soft: #141311;
 }
 
+.dark .katex {
+  color: #f7f5f0;
+}
+
 body {
   margin: 0;
   padding: 0;
