@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="coralL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E27855"/>
+      <stop offset="100%" stop-color="#BA5332"/>
+    </linearGradient>
+    <linearGradient id="coralD" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F29472"/>
+      <stop offset="100%" stop-color="#D96E4C"/>
+    </linearGradient>
+  </defs>
+  <style>
+    .coral-wing { fill: url(#coralL); }
+    .veri-arm { fill: #1E1B18; }
+    @media (prefers-color-scheme: dark) {
+      .coral-wing { fill: url(#coralD); }
+      .veri-arm { fill: #FFFFFF; }
+    }
+  </style>
+  <g transform="translate(16, 16) scale(0.061) translate(-512.5, -581)">
+    <path class="coral-wing" d="M306 335 L423 360 L512 650 L512 827 C472 800 450 765 434 718 Z"/>
+    <path class="veri-arm" d="M512 650 L602 360 L719 335 L590 718 C574 765 552 800 512 827 Z"/>
+  </g>
+</svg>

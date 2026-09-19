@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json.schemastore.org/mcp-config.json",
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "chrome-devtools-mcp@latest",
+        "--headless",
+        "--viewport=1440x900"
+      ],
+      "description": "Google Chrome DevTools official MCP server for headless browser inspection, console error logging, DOM evaluation, network request analysis, and visual UI screenshots."
+    },
+    "puppeteer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer@latest"
+      ],
+      "description": "Model Context Protocol official Puppeteer server for automated UI component testing, user interaction simulation, and layout regression checks."
+    },
+    "context7-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@latest"
+      ],
+      "description": "Upstash Context7 official MCP server for retrieving up-to-date documentation and code examples for modern frontend libraries (React 19, Tailwind CSS v4, Vite 8, Radix UI, TanStack Query v5, Zustand, KaTeX)."
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking@latest"
+      ],
+      "description": "Model Context Protocol official Sequential Thinking server for structured architectural reasoning, state synchronization planning, and complex frontend bug resolution."
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem@latest",
+        "/home/dammanhdungvn/Downloads/Workspace/VeriScholar"
+      ],
+      "description": "Model Context Protocol official Filesystem server scoped strictly to the VeriScholar workspace for safe file discovery and content inspection."
+    },
+    "fetch": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "description": "Model Context Protocol official Fetch server for reading remote technical documentation, RFCs, and API specifications converted into clean Markdown."
+    },
+    "git": {
+      "command": "uvx",
+      "args": [
+        "mcp-server-git",
+        "--repository",
+        "/home/dammanhdungvn/Downloads/Workspace/VeriScholar"
+      ],
+      "description": "Model Context Protocol official Git server for querying repo status, inspection of uncommitted diffs, commit history, and branch tracking."
+    }
+  }
+}

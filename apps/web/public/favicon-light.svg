@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <linearGradient id="coralL" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E27855"/>
+      <stop offset="100%" stop-color="#BA5332"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(16, 16) scale(0.061) translate(-512.5, -581)">
+    <!-- Left Wing: Deep Scholar Coral for light tabs -->
+    <path fill="url(#coralL)" d="M306 335 L423 360 L512 650 L512 827 C472 800 450 765 434 718 Z"/>
+    <!-- Right Wing: Deep Ink Verification Checkmark Arm for light tabs -->
+    <path fill="#1E1B18" d="M512 650 L602 360 L719 335 L590 718 C574 765 552 800 512 827 Z"/>
+  </g>
+</svg>
