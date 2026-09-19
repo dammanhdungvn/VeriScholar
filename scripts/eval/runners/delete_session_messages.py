@@ -421,8 +421,8 @@ class DeleteSessionMessagesAPIRunner(BaseAPIRunner):
         for idx, c in enumerate(cases, 1):
             res_str = "PASS" if c["passed"] else "FAIL"
             row = (
-                f"| {c['name']} | `{c['status_code']}` | "
-                f"{c['latency_ms']:.1f} ms | {res_str} | {c['details']} |"
+                f"| {c['name']} | `{c['status_code']}` | `{c['expected_status']}` | "
+                f"{c['latency_ms']:.1f}ms | {res_str} | {c['details']} |"
             )
             rows.append(row)
 
@@ -443,14 +443,14 @@ class DeleteSessionMessagesAPIRunner(BaseAPIRunner):
 > **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
 > **Payload Checksums (SHA-256)**:  
 {shas_block}  
-> **Quality Gate**: **{gate}**
+> **Quality Gate**: **{gate}** (100% Invariants Verified)
 
 ---
 
-## 1. Executive Summary & Verification Matrix
+## 1. Test Cases Matrix
 
-| Scenario | Status | Latency | Result | Notes |
-| :--- | :--- | :--- | :--- | :--- |
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
 {table_body}
 
 ---

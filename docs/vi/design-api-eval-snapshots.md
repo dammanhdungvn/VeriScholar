@@ -962,6 +962,49 @@ Báo cáo autotest được kết xuất tự động tại: `temp/output/test/d
 ```
 ````
 
+### 7.10. Snapshot Mẫu cho API #54: `DELETE /api/v1/sessions/{id}/messages`
+
+Báo cáo autotest được kết xuất tự động tại: `temp/output/test/delete_session_messages.md`
+
+````markdown
+# API Evaluation Snapshot: DELETE /api/v1/sessions/{id}/messages
+
+> **Audit Header**: Session Tag: `test_eval_22055739` | Target: `#54 Xóa lịch sử hội thoại của phiên (Idempotent 204)`  
+> **Target Output**: `temp/output/test/delete_session_messages.md`  
+> **Raw Artifacts**: `tests/.artifacts/delete_session_messages/`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_active_history_purge_204.json`: `f43f6b7fff804b6600a00a5059983436edcdc515f329ca0548f0b03b5b222d71`
+> - `02_idempotency_verification_204.json`: `d2a3e36e27aea0e0ff0838d1c40f2dba0d4a59d0bbba5417d479d566afe3da00`
+> - `03_parent_session_preservation_200.json`: `c729ea0b1dce4f304cd133e53af5589d6f478c9878aeaa5ffcdcd7b8d76c7e06`
+> - `04_multi_tenant_isolation_404.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
+> - `05_non_existent_session_404.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
+> - `06_uuid_validation_bounds_422.json`: `45db4f2ba26c72c9bda2bc43cfa1dac847f67e05adfdd6e15aaac996af6b1089`  
+> **Quality Gate**: **PASSED** (100% Invariants Verified)
+
+---
+
+## 1. Test Cases Matrix
+
+| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
+|:---|:---:|:---:|:---:|:---:|:---|
+| 1. Active History Purge & State Transition (Expect 204) | `204` | `204` | 9.3ms | PASS | HTTP 204 No Content | Pre-total: 3 -> Post-total: 0 | Verified data: [] |
+| 2. Idempotency Invariant Verification (Consecutive 204) | `204` | `204` | 4.0ms | PASS | Second consecutive DELETE returned HTTP 204 with empty body (RFC 9110 Idempotent) |
+| 3. Parent Session Preservation Guard (Zero Side-Effects) | `200` | `200` | 9.3ms | PASS | Parent session 'Phiên Đánh Giá Xóa Lịch Sử Hội Thoại (Idempotent 204)' intact | Document count: 1 | is_archived: False |
+| 4. Multi-Tenant Tampering Prevention Guard (Expect 404) | `404` | `404` | 11.1ms | PASS | Alien tenant DELETE rejected with HTTP 404 (SESSION_NOT_FOUND) | Zero tampering allowed |
+| 5. Non-Existent Session Guard (Expect 404) | `404` | `404` | 3.9ms | PASS | Random UUID rejected with HTTP 404 (SESSION_NOT_FOUND) |
+| 6. UUID Format Validation Guard (Expect 422) | `422` | `422` | 3.4ms | PASS | Malformed UUID rejected with HTTP 422 (Pydantic path parameter validation) |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **RFC 9110 Idempotent 204 Invariant**: Phản hồi `HTTP 204 No Content` với thân rỗng; thực thi liên tiếp nhiều lần trả về kết quả 204 nhất quán.
+- **State Transition Emptiness**: Sau khi xóa, truy vấn `GET /api/v1/sessions/{id}/messages` trả về `data: []` và `meta.total == 0`.
+- **Parent Session Preservation**: Không làm thay đổi hay suy giảm phiên cha `research_sessions` (`title`, `viewport_state`, `active_tab` nguyên vẹn).
+- **Multi-Tenant Protection**: Người dùng khác không thể xóa tin nhắn của phiên không thuộc quyền sở hữu, bị từ chối với `HTTP 404 Not Found` (`SESSION_NOT_FOUND`).
+- **UUID Schema Validation**: Đường dẫn chứa UUID sai định dạng bị chặn tại tầng schema với `HTTP 422 Unprocessable Content`.
+- **Hermetic REST Teardown**: Dọn sạch tài liệu và phiên nghiên cứu sau kiểm thử theo nguyên tắc Zero Retention.
+````
+
 ---
 
 ## 8. Thiết Kế Kiến Trúc Script Runner (`scripts/eval_api.py`)
