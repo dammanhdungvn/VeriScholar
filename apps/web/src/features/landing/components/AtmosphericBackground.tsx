@@ -110,21 +110,21 @@ export function AtmosphericBackground() {
     const spawnSynapticPulse = () => {
       // Pulses are specifically crafted for the Light Mode Silk Attention Mesh
       if (isDarkRef.current) return;
-      if (synapticPulses.length >= 5) return;
-      const lightNodeCount = 38;
-      for (let attempt = 0; attempt < 8; attempt++) {
+      if (synapticPulses.length >= 8) return;
+      const lightNodeCount = 52;
+      for (let attempt = 0; attempt < 10; attempt++) {
         const i = Math.floor(Math.random() * lightNodeCount);
         for (let j = 0; j < lightNodeCount; j++) {
           if (i === j) continue;
           const dx = particles[i].x - particles[j].x;
           const dy = particles[i].y - particles[j].y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist > 35 && dist < 120) {
+          if (dist > 30 && dist < 140) {
             synapticPulses.push({
               fromIdx: i,
               toIdx: j,
               progress: 0,
-              speed: Math.random() * 0.012 + 0.007,
+              speed: Math.random() * 0.014 + 0.009,
             });
             return;
           }
@@ -132,7 +132,7 @@ export function AtmosphericBackground() {
       }
     };
 
-    const pulseInterval = setInterval(spawnSynapticPulse, 1800);
+    const pulseInterval = setInterval(spawnSynapticPulse, 900);
 
     const render = () => {
       ctx.clearRect(0, 0, width, height);
@@ -175,10 +175,10 @@ export function AtmosphericBackground() {
       }
 
       // 2. Neural Nodes & Synapses
-      // In Light Mode: use 38 nodes with 0.55x speed for peaceful reading & zero shadow blur
+      // In Light Mode: use 52 nodes with visible contrast, rich terracotta tone and distinct synapses
       // In Dark Mode: use full 65 nodes with cosmic glowing bloom
-      const activeCount = currentIsDark ? totalParticleCount : 38;
-      const speedScale = currentIsDark ? 1.0 : 0.55;
+      const activeCount = currentIsDark ? totalParticleCount : 52;
+      const speedScale = currentIsDark ? 1.0 : 0.7;
 
       for (let i = 0; i < activeCount; i++) {
         const p1 = particles[i];
@@ -188,8 +188,8 @@ export function AtmosphericBackground() {
         if (p1.x < 0 || p1.x > width) p1.vx *= -1;
         if (p1.y < 0 || p1.y > height) p1.vy *= -1;
 
-        ctx.beginPath();
         if (currentIsDark) {
+          ctx.beginPath();
           ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(232, 155, 130, ${p1.opacity})`;
           ctx.shadowBlur = 8;
@@ -197,14 +197,23 @@ export function AtmosphericBackground() {
           ctx.fill();
           ctx.shadowBlur = 0;
         } else {
-          // Light Mode Silk Node: delicate, sharp, zero shadow blur (pure organic ink)
-          ctx.arc(p1.x, p1.y, Math.max(1.0, p1.radius * 0.8), 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(195, 95, 60, ${Math.min(0.8, p1.opacity * 0.95)})`;
+          // Light Mode Node: Clearly visible double-ring terracotta node (core + delicate halo)
+          const nodeRadius = Math.max(2.2, p1.radius * 1.3);
+          // Soft outer ring
+          ctx.beginPath();
+          ctx.arc(p1.x, p1.y, nodeRadius + 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(217, 119, 87, 0.18)`;
+          ctx.fill();
+
+          // Crisp inner core
+          ctx.beginPath();
+          ctx.arc(p1.x, p1.y, nodeRadius, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(184, 75, 42, ${Math.min(0.95, p1.opacity * 1.45)})`;
           ctx.fill();
         }
 
         // Synaptic connection lines between nodes
-        const maxDist = currentIsDark ? 120 : 110;
+        const maxDist = currentIsDark ? 120 : 135;
         for (let j = i + 1; j < activeCount; j++) {
           const p2 = particles[j];
           const dx = p1.x - p2.x;
@@ -220,10 +229,10 @@ export function AtmosphericBackground() {
               ctx.strokeStyle = `rgba(217, 119, 87, ${lineAlpha})`;
               ctx.lineWidth = 0.8;
             } else {
-              // Light Mode: Silk thread in brand coral-amber (18% - 22% opacity)
-              const lineAlpha = (1 - dist / maxDist) * 0.22;
-              ctx.strokeStyle = `rgba(204, 110, 75, ${lineAlpha})`;
-              ctx.lineWidth = 0.7;
+              // Light Mode: Clearly visible terracotta & amber synapse line
+              const lineAlpha = Math.pow(1 - dist / maxDist, 1.1) * 0.46;
+              ctx.strokeStyle = `rgba(184, 80, 48, ${lineAlpha})`;
+              ctx.lineWidth = 1.15;
             }
             ctx.stroke();
           }
@@ -235,19 +244,19 @@ export function AtmosphericBackground() {
           const mDy = p1.y - m.y;
           const mDist = Math.sqrt(mDx * mDx + mDy * mDy);
 
-          if (mDist < 160) {
+          if (mDist < 175) {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(m.x, m.y);
             if (currentIsDark) {
-              const mAlpha = (1 - mDist / 160) * 0.45;
+              const mAlpha = (1 - mDist / 175) * 0.45;
               ctx.strokeStyle = `rgba(240, 180, 160, ${mAlpha})`;
               ctx.lineWidth = 1.1;
             } else {
-              // Light Mode: Gentle amber query ray with soft falloff
-              const mAlpha = (1 - mDist / 160) * 0.30;
-              ctx.strokeStyle = `rgba(204, 110, 75, ${mAlpha})`;
-              ctx.lineWidth = 0.85;
+              // Light Mode: Clear interactive query beam
+              const mAlpha = (1 - mDist / 175) * 0.65;
+              ctx.strokeStyle = `rgba(195, 75, 35, ${mAlpha})`;
+              ctx.lineWidth = 1.35;
             }
             ctx.stroke();
           }
@@ -271,12 +280,15 @@ export function AtmosphericBackground() {
           }
           const curX = pFrom.x + (pTo.x - pFrom.x) * pulse.progress;
           const curY = pFrom.y + (pTo.y - pFrom.y) * pulse.progress;
-          const pulseAlpha = Math.sin(pulse.progress * Math.PI) * 0.55;
+          const pulseAlpha = Math.sin(pulse.progress * Math.PI) * 0.85;
 
           ctx.beginPath();
-          ctx.arc(curX, curY, 1.6, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(204, 110, 65, ${pulseAlpha})`;
+          ctx.arc(curX, curY, 2.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(204, 80, 35, ${pulseAlpha})`;
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = "rgba(217, 105, 55, 0.45)";
           ctx.fill();
+          ctx.shadowBlur = 0;
         }
       }
 
@@ -298,13 +310,13 @@ export function AtmosphericBackground() {
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
       {/* Perspective Grid Background - Subtle drafting watermark in light mode, starlight grid in dark mode */}
       <div
-        className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-20"}`}
+        className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-35"}`}
         style={{
           backgroundImage: isDark
             ? `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`
-            : `linear-gradient(to right, rgba(165, 125, 90, 0.08) 1px, transparent 1px),
-               linear-gradient(to bottom, rgba(165, 125, 90, 0.08) 1px, transparent 1px)`,
+            : `linear-gradient(to right, rgba(165, 120, 85, 0.16) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(165, 120, 85, 0.16) 1px, transparent 1px)`,
           backgroundSize: "48px 48px",
           maskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
           WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
@@ -317,7 +329,7 @@ export function AtmosphericBackground() {
         style={{
           background: isDark
             ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(217, 119, 87, 0.12), transparent 60%)`
-            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.06), transparent 60%)`,
+            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.10), transparent 60%)`,
         }}
       />
 
@@ -326,17 +338,17 @@ export function AtmosphericBackground() {
         className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] blur-3xl rounded-full pointer-events-none animate-pulse duration-10000 ${
           isDark
             ? "bg-gradient-to-b from-[#d97757]/18 via-[#e89b82]/6 to-transparent"
-            : "bg-gradient-to-b from-[#d97757]/6 via-transparent to-transparent"
+            : "bg-gradient-to-b from-[#d97757]/14 via-[#e89b82]/5 to-transparent"
         }`}
       />
       <div
         className={`absolute top-1/4 -left-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
-          isDark ? "bg-[#d97757]/10" : "bg-[#d97757]/4"
+          isDark ? "bg-[#d97757]/10" : "bg-[#d97757]/6"
         }`}
       />
       <div
         className={`absolute bottom-1/3 -right-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
-          isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/4"
+          isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/6"
         }`}
       />
 

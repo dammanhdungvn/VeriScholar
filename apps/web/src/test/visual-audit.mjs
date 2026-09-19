@@ -158,6 +158,7 @@ async function runVisualAudit() {
     await themeToggleBtn.click();
     await new Promise((r) => setTimeout(r, 400));
     const isDarkAfterToggle = await page.evaluate(() => document.documentElement.classList.contains("dark"));
+    console.log(`Theme dark state after click: ${isDarkAfterToggle} (Expected: true)`);
     // Scroll to top before capturing dark mode full page screenshot
     await page.evaluate(() => window.scrollTo(0, 0));
     await new Promise((r) => setTimeout(r, 400));
