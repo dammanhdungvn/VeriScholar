@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import { useTheme } from "@/hooks/useTheme";
 
 export function AtmosphericBackground() {
+  const { theme } = useTheme();
+  const isDark = theme === "dark";
+  const isDarkRef = useRef(isDark);
+
+  useEffect(() => {
+    isDarkRef.current = isDark;
+  }, [isDark]);
+
   const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const mousePosRef = useRef({ x: -1000, y: -1000 });
@@ -91,6 +100,7 @@ export function AtmosphericBackground() {
     const render = () => {
       ctx.clearRect(0, 0, width, height);
       const m = mousePosRef.current;
+      const currentIsDark = isDarkRef.current;
 
       // Render Meteors
       for (let i = meteors.length - 1; i >= 0; i--) {
@@ -99,20 +109,29 @@ export function AtmosphericBackground() {
         const tailY = star.y - Math.sin(star.angle) * star.length;
 
         const grad = ctx.createLinearGradient(star.x, star.y, tailX, tailY);
-        grad.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
-        grad.addColorStop(0.2, `rgba(245, 230, 220, ${star.opacity * 0.85})`);
-        grad.addColorStop(0.65, `rgba(217, 119, 87, ${star.opacity * 0.3})`);
-        grad.addColorStop(1, "rgba(217, 119, 87, 0)");
+        if (currentIsDark) {
+          grad.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
+          grad.addColorStop(0.2, `rgba(255, 220, 190, ${star.opacity * 0.85})`);
+          grad.addColorStop(0.65, `rgba(217, 119, 87, ${star.opacity * 0.35})`);
+          grad.addColorStop(1, "rgba(217, 119, 87, 0)");
+          ctx.shadowBlur = 16;
+          ctx.shadowColor = "#e89b82";
+        } else {
+          // Light mode: warm terracotta core & glowing amber trail visible on ivory
+          grad.addColorStop(0, `rgba(184, 75, 40, ${star.opacity})`);
+          grad.addColorStop(0.25, `rgba(217, 105, 55, ${star.opacity * 0.85})`);
+          grad.addColorStop(0.7, `rgba(235, 145, 75, ${star.opacity * 0.4})`);
+          grad.addColorStop(1, "rgba(235, 145, 75, 0)");
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(184, 75, 40, 0.4)";
+        }
 
         ctx.beginPath();
         ctx.moveTo(star.x, star.y);
         ctx.lineTo(tailX, tailY);
-        ctx.lineWidth = star.width;
+        ctx.lineWidth = currentIsDark ? star.width : star.width * 1.1;
         ctx.strokeStyle = grad;
         ctx.lineCap = "round";
-
-        ctx.shadowBlur = 16;
-        ctx.shadowColor = "#e89b82";
         ctx.stroke();
         ctx.shadowBlur = 0;
 
@@ -136,11 +155,20 @@ export function AtmosphericBackground() {
 
         ctx.beginPath();
         ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(232, 155, 130, ${p1.opacity})`;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = "#d97757";
-        ctx.fill();
-        ctx.shadowBlur = 0;
+        if (currentIsDark) {
+          ctx.fillStyle = `rgba(232, 155, 130, ${p1.opacity})`;
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "#d97757";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        } else {
+          // Crisp copper ink dot in Light mode
+          ctx.fillStyle = `rgba(180, 80, 48, ${Math.min(1, p1.opacity * 1.35)})`;
+          ctx.shadowBlur = 4;
+          ctx.shadowColor = "rgba(180, 80, 48, 0.35)";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+        }
 
         for (let j = i + 1; j < particleCount; j++) {
           const p2 = particles[j];
@@ -152,9 +180,16 @@ export function AtmosphericBackground() {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
-            const lineAlpha = (1 - dist / 120) * 0.25;
-            ctx.strokeStyle = `rgba(217, 119, 87, ${lineAlpha})`;
-            ctx.lineWidth = 0.8;
+            if (currentIsDark) {
+              const lineAlpha = (1 - dist / 120) * 0.25;
+              ctx.strokeStyle = `rgba(217, 119, 87, ${lineAlpha})`;
+              ctx.lineWidth = 0.8;
+            } else {
+              // Visible drafting line in Light Mode
+              const lineAlpha = (1 - dist / 120) * 0.38;
+              ctx.strokeStyle = `rgba(180, 85, 52, ${lineAlpha})`;
+              ctx.lineWidth = 0.95;
+            }
             ctx.stroke();
           }
         }
@@ -168,9 +203,15 @@ export function AtmosphericBackground() {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(m.x, m.y);
-            const mAlpha = (1 - mDist / 160) * 0.45;
-            ctx.strokeStyle = `rgba(240, 180, 160, ${mAlpha})`;
-            ctx.lineWidth = 1.1;
+            if (currentIsDark) {
+              const mAlpha = (1 - mDist / 160) * 0.45;
+              ctx.strokeStyle = `rgba(240, 180, 160, ${mAlpha})`;
+              ctx.lineWidth = 1.1;
+            } else {
+              const mAlpha = (1 - mDist / 160) * 0.5;
+              ctx.strokeStyle = `rgba(195, 75, 35, ${mAlpha})`;
+              ctx.lineWidth = 1.15;
+            }
             ctx.stroke();
           }
         }
@@ -191,14 +232,15 @@ export function AtmosphericBackground() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* Perspective Grid Background */}
+      {/* Perspective Grid Background - Subtle drafting grid in light mode, starlight grid in dark mode */}
       <div
-        className="absolute inset-0 opacity-15"
+        className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-25"}`}
         style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-          `,
+          backgroundImage: isDark
+            ? `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`
+            : `linear-gradient(to right, rgba(165, 125, 90, 0.12) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(165, 125, 90, 0.12) 1px, transparent 1px)`,
           backgroundSize: "48px 48px",
           maskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
           WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
@@ -209,14 +251,30 @@ export function AtmosphericBackground() {
       <div
         className="absolute inset-0 transition-opacity duration-300"
         style={{
-          background: `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(217, 119, 87, 0.12), transparent 60%)`,
+          background: isDark
+            ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(217, 119, 87, 0.12), transparent 60%)`
+            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.10), transparent 60%)`,
         }}
       />
 
       {/* Ambient Rotating Glow Orbs */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-[#d97757]/18 via-[#e89b82]/6 to-transparent blur-3xl rounded-full pointer-events-none animate-pulse duration-10000" />
-      <div className="absolute top-1/4 -left-40 w-80 h-80 bg-[#d97757]/10 blur-3xl rounded-full pointer-events-none" />
-      <div className="absolute bottom-1/3 -right-40 w-80 h-80 bg-[#e8a55a]/10 blur-3xl rounded-full pointer-events-none" />
+      <div
+        className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] blur-3xl rounded-full pointer-events-none animate-pulse duration-10000 ${
+          isDark
+            ? "bg-gradient-to-b from-[#d97757]/18 via-[#e89b82]/6 to-transparent"
+            : "bg-gradient-to-b from-[#d97757]/12 via-[#e89b82]/5 to-transparent"
+        }`}
+      />
+      <div
+        className={`absolute top-1/4 -left-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
+          isDark ? "bg-[#d97757]/10" : "bg-[#d97757]/8"
+        }`}
+      />
+      <div
+        className={`absolute bottom-1/3 -right-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
+          isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/8"
+        }`}
+      />
 
       {/* Interactive Canvas */}
       <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-10" />
