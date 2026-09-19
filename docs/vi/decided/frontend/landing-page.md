@@ -100,7 +100,7 @@ Toàn bộ Landing Page được xây dựng trên nền tảng **Tailwind CSS v
        * Logo Academic (bấm vào quay về trang chủ `/`).
        * Nút GitHub Repository (icon SVG với hiệu ứng hover scale 110%).
        * Nút chính duy nhất **"Dùng thử ngay"** (`data-testid="nav-try-btn"`): Nút màu San hô Coral nổi bật với icon Sparkles + ArrowUpRight. Khi click, điều hướng trực tiếp sang `/login`.
-       * Tại trang `/login`, người dùng hiện hữu đăng nhập bằng Email học thuật / Google / ORCID / Tài khoản demo điền nhanh; người dùng mới chưa có tài khoản bấm liên kết *"Chưa có tài khoản nghiên cứu? Đăng ký miễn phí ngay"* để chuyển sang `/register`.
+       * Tại trang `/login`, người dùng hiện hữu đăng nhập bằng Email / Google / ORCID / Tài khoản demo 1-click; người dùng mới chưa có tài khoản bấm liên kết *"Đăng ký tài khoản"* để chuyển sang `/register`. Đăng nhập/đăng ký thành công đều chuyển thẳng sang `/dashboard`.
     2. **Khi Đã Đăng Nhập (Authenticated Mode):**
        * Logo Academic.
        * Nút GitHub Repository.

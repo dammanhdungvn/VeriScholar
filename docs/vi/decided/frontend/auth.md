@@ -2,7 +2,7 @@
 
 > **Vị trí lưu trữ chính thức:** `docs/vi/decided/frontend/auth.md`  
 > **Mã nguồn tính năng:** [`apps/web/src/features/auth/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/auth/)  
-> **Trạng thái:** Production Decided (Đã hoàn thiện, kiểm chuẩn & sẵn sàng merge vào `main`)  
+> **Trạng thái:** Production Decided (Đã hoàn thiện, kiểm chuẩn & tạo Pull Request [#38](https://github.com/dammanhdungvn/VeriScholar/pull/38))  
 > **Git Branch:** `feat/fe-auth`  
 > **Mục đích tài liệu:** Lưu trữ toàn diện triết lý thiết kế, Design System Tokens, các quyết định kiến trúc, lịch sử tối ưu hóa giao diện và các bất biến (invariants) của phân hệ Đăng nhập/Đăng ký để các AI Agent và kỹ sư đời sau nắm rõ bối cảnh, lý do lựa chọn và cách bảo trì an toàn.
 
@@ -114,8 +114,60 @@ Giao diện Auth tuân thủ tuyệt đối bộ token ngữ nghĩa định ngh�
   4. **Tối ưu hóa Password Strength Meter:**
      - Thay thế checklist 4 dòng cồng kềnh bằng một thanh vạch phân đoạn siêu mỏng 2px (`h-1.5 rounded-full`) với 4 mức màu: Yếu (Đỏ), Trung bình (Cam Hổ phách), Khá (Xanh lá), Rất mạnh (Xanh ngọc).
      - Kèm nhãn chữ ngắn gọn bên cạnh, triệt tiêu hoàn toàn hiện tượng đẩy giật chiều cao form (CLS = 0).
-  5. **Nhận diện tự động email học thuật (Inline Academic Domain Detector):**
-     - Khi người dùng gõ email có đuôi giáo dục (`.edu`, `.edu.vn`, `.ac.uk`, `.org`), một badge nhỏ viền ngọc bích `Accent Teal` xuất hiện ngay phía trên ô mật khẩu: *"✓ Đã nhận diện tổ chức học thuật hợp lệ"*.
+   5. **Nhận diện tự động email học thuật (Inline Academic Domain Detector):**
+      - Khi người dùng gõ email có đuôi giáo dục (`.edu`, `.edu.vn`, `.ac.uk`, `.org`), một badge nhỏ viền ngọc bích `Accent Teal` xuất hiện ngay phía trên ô mật khẩu: *"✓ Đã nhận diện tổ chức học thuật hợp lệ"*.
+
+---
+
+### 3.4. Quyết định 4: Loại Bỏ Hoàn Toàn Text Phụ & Huy Hiệu Rườm Rà (Zero Cognitive Clutter)
+
+* **Vấn đề tồn đọng:**
+  1. Dưới tiêu đề chính vẫn còn câu phụ `"Truy cập tài liệu và trợ lý nghiên cứu."` (`/login`) và `"Khởi tạo không gian nghiên cứu."` (`/register`). Các câu này không mang lại giá trị gia tăng mà làm loãng tiêu điểm thị giác của người dùng.
+  2. Cạnh nhãn Email có gắn thêm huy hiệu icon mũ cử nhân `"Email Học thuật"`. Việc này tạo cảm giác cưỡng ép thị giác không cần thiết đối với người dùng phổ thông hoặc nghiên cứu độc lập.
+* **Quyết định cải tiến:**
+  1. **Triệt tiêu toàn bộ dòng mô tả phụ:** Chỉ giữ lại tiêu đề chính H1 Serif uy nghiêm, dứt khoát: `"Đăng nhập"` và `"Đăng ký"`.
+  2. **Tối giản nhãn trường Email:** Xóa bỏ hoàn toàn huy hiệu cử nhân; nhãn input chỉ hiển thị duy nhất từ `Email` chuẩn mực, thanh lịch.
+
+---
+
+### 3.5. Quyết định 5: Chuẩn Hóa Placeholder Đầu Vào Chuyên Nghiệp (Clean Professional Placeholders)
+
+* **Vấn đề tồn đọng:**
+  - Các placeholder cũ quá dài dòng hoặc thiếu tính quốc tế, ví dụ: `GS.TS. Nguyễn Văn A hoặc TS. Elena Rostova`, `ten.nghiencuu@vienkhoahoc.vn`. Khi hiển thị trên thiết bị di động, văn bản bị tràn hoặc tạo cảm giác vụng về.
+* **Quyết định cải tiến chuẩn SaaS quốc tế:**
+  - **Họ và tên:** `placeholder="Nguyễn Văn A"` (ngắn gọn, tự nhiên).
+  - **Email:** `placeholder="name@university.edu"` (chuẩn định dạng quốc tế ngắn gọn, định hướng rõ tên miền tổ chức).
+  - **Mật khẩu (Login):** `placeholder="••••••••"` (ký tự chấm tròn bảo mật tối giản).
+  - **Mật khẩu (Register):** `placeholder="Tối thiểu 8 ký tự"` (hướng dẫn xúc tích, loại bỏ câu từ thừa).
+
+---
+
+### 3.6. Quyết định 6: Khắc Phục Khớp Mật Khẩu Demo & Đăng Nhập 1-Click Tức Thì
+
+* **Vấn đề tồn đọng:**
+  - Trong mock engine (`mock-users.ts`), mật khẩu mã hóa là `"VeriScholar2026!"`, trong khi component `LoginForm.tsx` điền nhầm `"VeriScholar@2026"`. Điều này khiến người dùng bấm vào nút `"Tài khoản demo"` bị trả về lỗi: *"Mật khẩu không chính xác. Vui lòng thử lại hoặc chọn 'Quên mật khẩu'"*.
+* **Quyết định cải tiến:**
+  1. **Đồng bộ hóa Credential:** Đồng nhất mật khẩu demo là `"VeriScholar2026!"` cho tài khoản `scholar@verischolar.ai`.
+  2. **Backward-compatible trong Mock Service:** `mock-auth.ts` chấp nhận linh hoạt cả hai chuỗi mật khẩu nhằm đảm bảo khả năng tương thích tuyệt đối cho các test suite và môi trường dev.
+  3. **Tự động đăng nhập 1-click:** Khi bấm nút `✦ Tài khoản Demo`, hàm tự động điền form và gọi trực tiếp `executeLogin()`, đưa người dùng vào hệ thống mà không cần thao tác bấm submit thêm lần thứ hai.
+
+---
+
+### 3.7. Quyết định 7: Bổ Sung Phân Tuyến `/dashboard` Sau Khi Xác Thực
+
+* **Bối cảnh & Yêu cầu:**
+  - Trước đây sau khi đăng nhập thành công, hệ thống chỉ lưu token vào Zustand/LocalStorage rồi giữ nguyên tại màn hình hiện tại hoặc về landing page.
+  - Cần một đích đến rõ ràng khẳng định trạng thái đã xác thực trước khi bước vào các tính năng chuyên sâu của Module 1.
+* **Giải pháp triển khai:**
+  1. **Kiến tạo trang [`DashboardPage.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.tsx):**
+     - Đặt tại `apps/web/src/features/dashboard/`.
+     - Kế thừa `AtmosphericBackground` và thanh điều hướng thương hiệu `AcademicLogo`.
+     - Hiển thị tiêu đề **Dashboard** lớn chuẩn editorial, thông tin học giả (`user.full_name`, `user.email`, `user.institution`, `user.role`).
+     - Tích hợp nút **"Trang chủ"** và nút **"Đăng xuất"** (xóa session và đưa về trạng thái khách).
+  2. **Định tuyến toàn diện:** Mọi luồng đăng nhập (Form thường, 1-click Demo, Google SSO, ORCID SSO) và đăng ký tài khoản mới đều tự động điều hướng sang `/dashboard`.
+  3. **Hành vi nút "Dùng thử ngay" tại Landing Navbar:**
+     - Khi chưa đăng nhập: Điều hướng người dùng sang `/login`.
+     - Khi đã đăng nhập: Kích hoạt modal tải lên bài báo nghiên cứu (`QuickUploadModal`).
 
 ---
 
@@ -161,8 +213,13 @@ apps/web/src/
 │   └── types/                              # TypeScript Contracts
 │       └── auth.ts                         # Schemas User, Credentials, Payload, AuthTokens
 │
+├── features/dashboard/                     # Phân hệ Không gian Nghiên cứu (Sau khi xác thực)
+│   └── components/
+│       ├── DashboardPage.tsx               # Màn hình đích sau khi đăng nhập thành công
+│       └── DashboardPage.test.tsx          # Unit test màn hình dashboard
+│
 └── app/
-    └── routes.tsx                          # Khai báo tuyến đường /login, /register lồng trong AuthLayout
+    └── routes.tsx                          # Khai báo tuyến đường /login, /register, /dashboard
 ```
 
 ---
@@ -272,6 +329,10 @@ export const router = createBrowserRouter([
     element: <LandingPageContainer />,
   },
   {
+    path: "/dashboard",
+    element: <DashboardPage />,
+  },
+  {
     element: <AuthLayout />,
     children: [
       {
@@ -295,11 +356,10 @@ export const router = createBrowserRouter([
 
 Cập nhật tại [`LandingNavbar.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/components/LandingNavbar.tsx):
 - **Khi Chưa Đăng Nhập (`isAuthenticated = false`):**
-  - Nút "Đăng nhập" $\rightarrow$ Dẫn về `/login`.
-  - Nút "Dùng thử ngay" (San hô Coral) $\rightarrow$ Dẫn về `/login`. Nếu chưa có tài khoản, trang login có sẵn liên kết chuyển sang `/register`.
+  - Nút "Dùng thử ngay" (San hô Coral) $\rightarrow$ Dẫn trực tiếp về `/login` (chuẩn unified auth gateway). Nếu chưa có tài khoản, trang login có sẵn liên kết chuyển sang `/register`.
 - **Khi Đã Đăng Nhập (`isAuthenticated = true`):**
-  - Tự động ẩn các nút "Đăng nhập" và "Dùng thử ngay".
-  - Hiển thị avatar tròn của người dùng cùng nút hành động chính: **"Vào không gian nghiên cứu"** (`/dashboard`).
+  - Hiển thị chip nhận diện học giả (`user.full_name`) với icon User và nút **Đăng xuất** (`LogOut`).
+  - Nút "Dùng thử ngay" kích hoạt mở trực tiếp `QuickUploadModal` để nạp và phân tích bài báo PDF.
 
 ---
 
@@ -309,10 +369,10 @@ Mọi tiêu chuẩn chất lượng theo [`AGENTS.md`](file:///home/dammanhdungv
 
 | Tiêu chuẩn Kiểm tra | Công cụ thực hiện | Kết quả thực tế |
 | :--- | :--- | :--- |
-| **Unit & Integration Testing** | Vitest + React Testing Library | **12/12 Test Suites PASSED** (**39/39 tests passed**, 100% in-memory) |
-| **Linter & Static Analysis** | Oxlint | **0 errors, 0 warnings** trên 63 tệp nguồn |
+| **Unit & Integration Testing** | Vitest + React Testing Library | **13/13 Test Suites PASSED** (**41/41 tests passed**, 100% in-memory) |
+| **Linter & Static Analysis** | Oxlint | **0 errors, 0 warnings** trên 65 tệp nguồn |
 | **TypeScript Typecheck** | `tsc -b` | **Clean exit** (Strict mode, zero `any`) |
-| **Production Build** | Vite Build | **Passed in 1.30s** (`735.48 kB` JS, `91.63 kB` CSS) |
+| **Production Build** | Vite Build | **Passed in 893ms** (`738.21 kB` JS, `92.61 kB` CSS) |
 | **Trải nghiệm tiếp cận (A11y)** | WAI-ARIA & Keyboard Navigation | `Tab` navigation đầy đủ, `aria-invalid`, `htmlFor` label mapping |
 | **Visual Audit (Light & Dark)** | Puppeteer Headless Browser | Độ tương phản WCAG AA đạt chuẩn trên cả Desktop và Mobile |
 
@@ -321,6 +381,8 @@ Mọi tiêu chuẩn chất lượng theo [`AGENTS.md`](file:///home/dammanhdungv
 - `auth_login_centered_dark.png`: Form đăng nhập căn giữa chế độ tối với hạt sao Atmospheric canvas.
 - `auth_register_centered_light.png`: Form đăng ký tinh gọn 3 trường và thanh phân đoạn mật khẩu.
 - `auth_register_centered_dark.png`: Form đăng ký chế độ tối.
+- `dashboard_light.png`: Màn hình Dashboard chế độ sáng sau khi đăng nhập thành công.
+- `dashboard_dark.png`: Màn hình Dashboard chế độ tối sau khi đăng nhập thành công.
 - `auth_login_mobile_light.png`: Giao diện di động (iPhone SE 375px) hiển thị sắc nét.
 - `auth_login_mobile_dark.png`: Giao diện di động chế độ tối.
 
