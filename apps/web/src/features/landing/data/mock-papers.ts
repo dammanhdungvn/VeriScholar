@@ -12,12 +12,11 @@ export const MOCK_DEMO_PAPERS: DemoPaper[] = [
     sample_turns: [
       {
         id: "turn-1",
-        user_query: "Tác giả đặt cơ chế RNN ở tầng encoder thứ mấy để duy trì thông tin vị trí từ?",
-        ai_thought:
-          "Thẩm định tiền đề câu hỏi (Presupposition Validation): Người dùng giả định mô hình Transformer sử dụng RNN trong encoder để mã hóa thứ tự từ. Tuy nhiên, theo Mục 3.5 (Trang 6), Transformer loại bỏ hoàn toàn đệ quy RNN và tích chập CNN, thay bằng Positional Encoding dùng hàm Sin/Cos.",
-        presupposition_corrected: true,
+        user_query: "Làm thế nào Transformer xử lý được thứ tự từ trong câu khi loại bỏ hoàn toàn mạng đệ quy (RNN)?",
+        ai_thought: "",
+        presupposition_corrected: false,
         ai_answer_markdown:
-          "**Phát hiện sai lệch tiền đề:** Kiến trúc Transformer trong bài báo **không sử dụng bất kỳ tầng RNN nào**. Thay vào đó, để mô hình nhận biết được thứ tự các từ trong câu mà không cần cơ chế đệ quy tuần tự, nhóm tác giả đề xuất kỹ thuật **Positional Encoding** (Mã hóa Vị trí) dựa trên hàm Sin và Cosin ở các tần số khác nhau được cộng trực tiếp vào vector nhúng đầu vào:\n\n$$\\text{PE}_{(\\text{pos}, 2i)} = \\sin\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right)$$\n\n$$\\text{PE}_{(\\text{pos}, 2i+1)} = \\cos\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right)$$",
+          "Trong các mô hình trước đây, mạng đệ quy (RNN) xử lý chuỗi tuần tự từng bước nên tự động nắm bắt thứ tự từ, nhưng lại tạo điểm nghẽn nghiêm trọng cho tính toán song song. Để khắc phục triệt để, kiến trúc **Transformer** loại bỏ hoàn toàn đệ quy (RNN) lẫn tích chập (CNN), và giải quyết bài toán thứ tự từ thông qua kỹ thuật **Positional Encoding (Mã hóa Vị trí)** (theo Mục 3.5, Trang 6):\n\n1. **Cộng trực tiếp vector vị trí vào Embedding:** Do Self-Attention xử lý song song toàn cục không mang tính tuần tự, mô hình tiêm thông tin thứ tự bằng cách cộng trực tiếp một vector Positional Encoding ($\\text{PE}$) cùng số chiều $d_{\\text{model}} = 512$ vào vector nhúng đầu vào ở đáy của cả Encoder và Decoder stacks.\n\n2. **Hàm sóng Sin và Cosin đa tần số:** Gán tọa độ theo các bước sóng lượng giác từ $2\\pi$ đến $10000 \\cdot 2\\pi$, sinh ra chữ ký tọa độ nhị phân riêng biệt cho từng vị trí token:\n\n$$\\begin{aligned}\n\\text{PE}_{(\\text{pos}, 2i)} &= \\sin\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right) \\\\[4pt]\n\\text{PE}_{(\\text{pos}, 2i+1)} &= \\cos\\left(\\frac{\\text{pos}}{10000^{2i/d_{\\text{model}}}}\\right)\n\\end{aligned}$$\n\n3. **Học khoảng cách vị trí tương đối:** Nhờ tính chất lượng giác, với bất kỳ độ lệch cố định $k$ nào, $\\text{PE}_{\\text{pos}+k}$ luôn biểu diễn được dưới dạng một biến đổi tuyến tính của $\\text{PE}_{\\text{pos}}$, giúp mô hình học chú ý theo vị trí tương đối và ngoại suy hiệu quả cho các chuỗi dài hơn tập huấn luyện.",
         citations: [
           {
             id: "cite-pos-enc",

@@ -46,7 +46,7 @@ export function DemoPaperViewer() {
       </div>
 
       {/* Realistic Academic Paper Sheet Canvas (NeurIPS Paper Layout) */}
-      <div className="relative flex-1 p-5 sm:p-7 overflow-y-auto bg-[#faf8f4] text-[#1a1917] select-text">
+      <div className="relative flex-1 p-5 sm:p-7 overflow-y-auto overflow-x-hidden scrollbar-none bg-[#faf8f4] text-[#1a1917] select-text">
         {/* Academic Paper Header - Title & 8 Authors */}
         <div className="text-center pb-3 border-b border-[#e5e1d8] mb-4">
           <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#11100f] tracking-tight leading-snug">

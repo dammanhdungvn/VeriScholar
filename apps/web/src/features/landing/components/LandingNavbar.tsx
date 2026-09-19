@@ -1,20 +1,23 @@
-import { ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowUpRight, Sparkles, Sun, Moon } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { Button } from "@/components/ui/button";
 import { useLandingStore } from "../stores/useLandingStore";
+import { useTheme } from "@/hooks/useTheme";
 
 export function LandingNavbar() {
   const setUploadModalOpen = useLandingStore((s) => s.setUploadModalOpen);
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
 
   return (
-    <header className="sticky top-0 z-40 w-full h-18 sm:h-20 bg-[#faf9f5]/85 backdrop-blur-md border-b border-hairline/80 transition-all">
+    <header className="sticky top-0 z-40 w-full h-18 sm:h-20 bg-canvas/85 backdrop-blur-md border-b border-hairline/80 transition-colors">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
         {/* Logo - Wider & Clearly Visible */}
         <a href="#" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm py-1">
-          <AcademicLogo size="xl" />
+          <AcademicLogo size="xl" inverted={isDark} />
         </a>
 
-        {/* Action Cluster - GitHub & "Dùng thử ngay" */}
+        {/* Action Cluster - GitHub, "Dùng thử ngay", & Theme Toggle */}
         <div className="flex items-center gap-2.5 sm:gap-3">
           <a
             href="https://github.com/dammanhdungvn/VeriScholar"
@@ -41,6 +44,22 @@ export function LandingNavbar() {
             <span>Dùng thử ngay</span>
             <ArrowUpRight className="w-3 h-3 text-on-primary/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Button>
+
+          {/* Theme Toggle Button (Light/Dark Mode) — Strictly positioned to the right of "Dùng thử ngay" */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            data-testid="theme-toggle-btn"
+            aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+            title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md border border-hairline bg-canvas hover:bg-surface-soft text-body hover:text-ink transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+          >
+            {isDark ? (
+              <Sun className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 transition-transform hover:rotate-45" />
+            ) : (
+              <Moon className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-zinc-600 transition-transform hover:-rotate-12" />
+            )}
+          </button>
         </div>
       </div>
     </header>
