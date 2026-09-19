@@ -18,9 +18,7 @@
     }
   </style>
   <g transform="translate(16, 16) scale(0.061) translate(-512.5, -581)">
-    <!-- Left Wing: Scholar Coral -->
     <path class="coral-wing" d="M306 335 L423 360 L512 650 L512 827 C472 800 450 765 434 718 Z"/>
-    <!-- Right Wing: Verification Checkmark Arm -->
     <path class="veri-arm" d="M512 650 L602 360 L719 335 L590 718 C574 765 552 800 512 827 Z"/>
   </g>
 </svg>
