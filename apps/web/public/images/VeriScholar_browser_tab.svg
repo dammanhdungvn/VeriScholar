@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#FAF9F5"/>
+
+  <!-- Bounding-box frame -->
+  <path d="M10 23V13H20M44 13H54V23M10 41V51H20M54 41V51H44"
+        stroke="#CC785C" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Simplified VeriScholar V / verification mark -->
+  <path d="M17 21L30 43L48 17"
+        stroke="#CC785C" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Verification edge -->
+  <path d="M30 43L48 17"
+        stroke="#141413" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Small scholarly/AI accent -->
+  <path d="M48 9L49.8 14.2L55 16L49.8 17.8L48 23L46.2 17.8L41 16L46.2 14.2L48 9Z"
+        fill="#D99068"/>
+</svg>
