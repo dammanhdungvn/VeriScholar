@@ -197,15 +197,15 @@ export function AtmosphericBackground() {
           ctx.fill();
           ctx.shadowBlur = 0;
         } else {
-          // Light Mode Node: Clearly visible double-ring terracotta node (core + delicate halo)
-          const nodeRadius = Math.max(2.2, p1.radius * 1.3);
-          // Soft outer ring
+          // Light Mode Node: Doubled x2 size as requested, with crisp core + soft halo
+          const nodeRadius = Math.max(4.5, p1.radius * 2.6);
+          // Soft outer halo ring
           ctx.beginPath();
-          ctx.arc(p1.x, p1.y, nodeRadius + 2.5, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(217, 119, 87, 0.18)`;
+          ctx.arc(p1.x, p1.y, nodeRadius + 4.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(217, 119, 87, 0.16)`;
           ctx.fill();
 
-          // Crisp inner core
+          // Crisp inner core (x2 size)
           ctx.beginPath();
           ctx.arc(p1.x, p1.y, nodeRadius, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(184, 75, 42, ${Math.min(0.95, p1.opacity * 1.45)})`;
@@ -263,7 +263,7 @@ export function AtmosphericBackground() {
         }
       }
 
-      // 3. Light Mode Synaptic Pulse Packets along active lines
+      // 3. Light Mode Synaptic Pulse Packets along active lines (x2 size)
       if (!currentIsDark) {
         for (let k = synapticPulses.length - 1; k >= 0; k--) {
           const pulse = synapticPulses[k];
@@ -283,9 +283,9 @@ export function AtmosphericBackground() {
           const pulseAlpha = Math.sin(pulse.progress * Math.PI) * 0.85;
 
           ctx.beginPath();
-          ctx.arc(curX, curY, 2.6, 0, Math.PI * 2);
+          ctx.arc(curX, curY, 5.0, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(204, 80, 35, ${pulseAlpha})`;
-          ctx.shadowBlur = 6;
+          ctx.shadowBlur = 8;
           ctx.shadowColor = "rgba(217, 105, 55, 0.45)";
           ctx.fill();
           ctx.shadowBlur = 0;
