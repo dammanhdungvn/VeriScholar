@@ -101,12 +101,11 @@ Toàn bộ Landing Page được xây dựng trên nền tảng **Tailwind CSS v
        * Nút GitHub Repository (icon SVG với hiệu ứng hover scale 110%).
        * Nút chính duy nhất **"Dùng thử ngay"** (`data-testid="nav-try-btn"`): Nút màu San hô Coral nổi bật với icon Sparkles + ArrowUpRight. Khi click, điều hướng trực tiếp sang `/login`.
        * Tại trang `/login`, người dùng hiện hữu đăng nhập bằng Email / Google / ORCID / Tài khoản demo 1-click; người dùng mới chưa có tài khoản bấm liên kết *"Đăng ký tài khoản"* để chuyển sang `/register`. Đăng nhập/đăng ký thành công đều chuyển thẳng sang `/dashboard`.
-    2. **Khi Đã Đăng Nhập (Authenticated Mode):**
-       * Logo Academic.
-       * Nút GitHub Repository.
-       * **Huy hiệu Nhà Nghiên Cứu:** Chip thông tin cá nhân (`GS.TS. Nguyễn Văn Scholar`) với icon User.
-       * **Nút Đăng xuất (`LogOut`):** Xóa sạch session và đưa thanh điều hướng về trạng thái Guest.
-       * **Nút "Dùng thử ngay":** Lúc này kích hoạt mở trực tiếp `QuickUploadModal` để người dùng tải bài báo PDF lên phân tích.
+    2. **Khi Đã Đăng Nhập (Authenticated Mode — Cải tiến tinh giản theo yêu cầu):**
+        * Logo Academic (dẫn về `/`).
+        * Nút GitHub Repository.
+        * **Nút chính "Dashboard" (`data-testid="nav-dashboard-btn"`):** Thay thế nút "Dùng thử ngay", điều hướng thẳng vào `/dashboard` để tiếp tục phiên nghiên cứu.
+        * **Triệt tiêu Visual Clutter:** Ẩn hoàn toàn nhãn tên user và nút `LogOut` trên Navbar của Landing Page nhằm bảo đảm tính liền mạch, thanh thoát tối đa của trang giới thiệu sản phẩm. (Việc quản lý tài khoản và Đăng xuất được thực hiện tại góc dưới thanh Taskbar của `/dashboard`).
     3. **Nút Chuyển đổi Giao diện Sáng/Tối (Theme Toggle):** Luôn cố định ở vị trí ngoài cùng bên phải, chuyển đổi mượt mà giữa Dark và Light mode.
 
 ---

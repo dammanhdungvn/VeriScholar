@@ -322,6 +322,8 @@ apps/web/src/features/dashboard/
 - [NEW] `apps/web/src/features/dashboard/components/PresuppositionBanner.tsx`
 - [NEW] `apps/web/src/features/dashboard/components/ModelSelectorModal.tsx`
 - [NEW] `apps/web/src/features/dashboard/components/QuickUploadDocModal.tsx`
+- [NEW] `apps/web/src/features/dashboard/components/DashboardAmbientBackground.tsx`
+- [NEW] `apps/web/src/features/dashboard/components/DashboardAmbientBackground.test.tsx`
 - [MODIFY] `apps/web/src/lib/api-client.ts` (JWT injection, 204 No Content, ETag)
 - [MODIFY] `apps/api/src/api/__init__.py` (CORSMiddleware cho frontend-backend integration)
 - [MODIFY] `apps/web/src/features/dashboard/components/DashboardPage.tsx` (Tích hợp `DashboardContainer`)
@@ -362,10 +364,54 @@ apps/web/src/features/dashboard/
 
 | Tiêu chí chất lượng | Công cụ kiểm chuẩn | Kết quả đạt được | Trạng thái |
 | :--- | :--- | :--- | :--- |
-| **Frontend Unit Tests** | Vitest (In-memory, TanStack Query & OCC) | **20/20 test suites, 67/67 tests passed** (100%) |  PASS |
+| **Frontend Unit Tests** | Vitest (In-memory, TanStack Query & OCC) | **21/21 test suites, 70/70 tests passed** (100%) |  PASS |
 | **Backend Integration Tests** | Pytest (`pytest apps/api/tests packages/core/tests`) | **269 passed, 10 skipped, 0 failures** |  PASS |
-| **Code Style & Linting** | Oxlint (`pnpm lint`) | **0 warnings, 0 errors** trên 92 tệp nguồn |  PASS |
+| **Code Style & Linting** | Oxlint (`pnpm lint`) | **0 warnings, 0 errors** trên 94 tệp nguồn |  PASS |
 | **Python Formatting & Lint** | Ruff (`uv run ruff check . && uv run ruff format --check .`) | **All checks passed**, 171 tệp chuẩn PEP 8 |  PASS |
 | **TypeScript Type Checking** | TypeScript Compiler (`tsc -b`) | **0 errors, strict typing** |  PASS |
 | **Production Bundle Build** | Vite v8.2.2 (`pnpm build`) | **Bundle thành công trong 1.12s**, KaTeX fonts nhúng chuẩn |  PASS |
-| **Visual Audit & Console Verification** | Puppeteer Chrome Headless (1440x900) | **0 console errors**, network calls reach backend API |  PASS |
+| **Visual Audit & Console Verification** | Puppeteer & Chrome DevTools Protocol (1600x900) | **0 console errors**, visual audit đã lưu ảnh kiểm chứng |  PASS |
+
+---
+
+## 7. CÁC QUYẾT ĐỊNH THIẾT KẾ MỞ RỘNG (EXPANDED DESIGN DECISIONS)
+
+### 7.1. Quyết Định 8: Tinh Gọn Taskbar & Triệt Tiêu Visual Clutter
+* **Bối cảnh:** Taskbar ban đầu chứa các nhãn và icon trùng lặp, phím tắt `⌘N` rườm rà và nút `Trang chủ` không cần thiết đối với một không gian làm việc chuyên dụng. Ngoài ra có hiện tượng viền trắng lóe sáng khi đóng/mở.
+* **Quyết định triển khai:**
+  1. Đổi tên nút hành động chính từ `Phiên mới` thành `Đoạn chat mới`.
+  2. Bổ sung 2 nút điều hướng học thuật: `Thư viện` (icon `Library`) và `Dự án` (icon `FolderKanban`).
+  3. Xóa bỏ nút `Trang chủ` trên Taskbar để tập trung 100% vào ngữ cảnh nghiên cứu hiện tại.
+  4. Xóa bỏ badge phím tắt `⌘N` bên cạnh nút tạo chat để giao diện thanh thoát tối đa.
+  5. Thêm đường gạch phân cách (`border-t border-[#ece8df] dark:border-[#2a2824]`) giữa nhóm nút tác vụ cố định và danh sách phiên chat gần đây.
+  6. **Hiệu ứng Logo Toggle Hover:** Khi thu gọn taskbar, icon chuyển sang `AcademicLogo` tĩnh trang nhã. Chỉ khi người dùng rê chuột (hover) vào thì mới hiển thị icon `PanelLeft` để mở taskbar ra.
+  7. Loại bỏ hiện tượng viền trắng lóe sáng khi đóng/mở taskbar bằng cách gỡ bỏ `focus:ring` dư thừa.
+
+### 7.2. Quyết Định 9: Chuẩn Hóa Điều Hướng Landing Page Khi Đã Xác Thực
+* **Bối cảnh:** Khi người dùng đã đăng nhập thành công và quay lại trang Landing page (`/`), thanh navbar trên cùng hiển thị nút `Logout` và tên user, kèm nút `Dùng thử ngay`, gây mâu thuẫn về trải nghiệm người dùng (UX).
+* **Quyết định triển khai:**
+  1. Ẩn nút `Logout` và tên user khỏi thanh Navbar của Landing Page để giữ sự tối giản thanh lịch của trang giới thiệu.
+  2. Chuyển đổi nút CTA từ `Dùng thử ngay` thành `Dashboard` (dẫn thẳng vào `/dashboard`) khi trạng thái `isAuthenticated === true`.
+
+### 7.3. Quyết Định 10: Thiết Kế Nền Sống Động Học Thuật — "Ánh Nắng (Light) & Ánh Trăng (Dark)"
+* **Bối cảnh:** Màn hình Hero khi chưa chat cần mang lại cảm xúc sáng tạo, thư thái, truyền cảm hứng nghiên cứu, nhưng tuyệt đối không được gây mỏi mắt hay phân tâm khi bước vào đọc tài liệu và kiểm chứng công thức.
+* **Quyết định triển khai (Ý tưởng 3: "Scholarly Sunlight & Moonlight"):**
+  1. **Chế độ Sáng (Light Mode) — "Ánh Nắng Ban Mai Thư Viện Oxford":**
+     - Vệt nắng vàng ấm áp rọi từ góc trên bên phải (`@keyframes celestialBeamDrift 18s`) với dải màu hổ phách, mật ong (`#fde047`, `#fbbf24`, `#f59e0b`).
+     - Hai dải lụa cực quang nắng mềm mại (`@keyframes auroraDriftOne 14s`, `@keyframes auroraDriftTwo 19s`) lan tỏa quanh trung tâm.
+     - 6 hạt bụi nắng vàng vi mô lơ lửng chậm rãi (`@keyframes floatMote 10s–15s`), không chớp giật.
+  2. **Chế độ Tối (Dark Mode) — "Ánh Trăng Huyền Ảo Nghiên Cứu Đêm":**
+     - Vệt trăng rằm bàng bạc thanh khiết rọi xiên (`rgba(186, 230, 253, 0.24)`), hồ sáng trăng dịu mát kết hợp bụi trăng vi mô như ánh sao xa, bảo vệ mắt khi nghiên cứu đêm khuya.
+  3. **Bất Biến Chuyển Cảnh (State-Aware Dissolve Invariant):**
+     - Khi người dùng gửi câu hỏi hoặc chuyển sang chế độ Cowork (`messages.length > 0` hoặc `appMode === 'cowork'`), toàn bộ dải nắng/trăng và bụi lơ lửng **tự động dissolve mượt mà trong 700ms về `opacity: 0%`**.
+     - Nền trở về trạng thái tĩnh hoàn toàn, đảm bảo tối đa sự tập trung cho việc đọc bài báo, bảng biểu và công thức toán LaTeX.
+  4. Hỗ trợ chuẩn mực khả năng tiếp cận `prefers-reduced-motion: reduce`.
+
+### 7.4. Quyết Định 11: Chuẩn Hóa Câu Nhắc Placeholder Ô Nhập Liệu Tự Nhiên
+* **Bối cảnh:** Placeholder ban đầu *"Tìm kiếm tài liệu, kiểm chứng giả thuyết hoặc phân tích phương pháp..."* quá dài và mang tính kỹ thuật.
+* **Quyết định triển khai:**
+  - Thay thế bằng câu chào hỏi chuẩn mực, thân thiện và tinh tế:
+    - Tiếng Anh: *"How can I help you today?"*
+    - Bản dịch tiếng Việt tự nhiên: **"Tôi có thể giúp gì cho bạn hôm nay?"**
+  - Đồng bộ trên toàn bộ component và test suites ([`DashboardChatInputBox.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.tsx#L61), [`DashboardChatInputBox.test.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.test.tsx), [`DashboardPage.test.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.test.tsx)).
+
