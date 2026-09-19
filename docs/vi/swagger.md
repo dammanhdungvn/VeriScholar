@@ -221,6 +221,33 @@ TAG: Module 1: Documents
 #### Parameters (Path)
 | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
 | :--- | :--- | :--- | :--- |
+| `id` | `UUID` | Có | Định danh phiên nghiên cứu mục tiêu (`session_id`) |
+
+#### Request Headers
+| Header | Kiểu | Bắt buộc | Mô tả |
+| :--- | :--- | :--- | :--- |
+| `Authorization` | `string` | Có | Bearer JWT Token xác thực người dùng sở hữu phiên |
+
+#### Responses
+* **`200 OK`** (`application/zip`)
+  * **Headers:**
+    * `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`
+    * `Content-Length: <kích thước tệp byte>`
+  * **Mô tả:** Luồng nhị phân tệp nén ZIP hoàn chỉnh (`application/zip`) đóng gói toàn bộ tài liệu nghiên cứu phục vụ tra cứu ngoại tuyến.
+  * **Cấu trúc bên trong tệp ZIP:**
+    1. `documents/`: Thư mục chứa toàn bộ PDF gốc trong phiên đã nhúng Native Annotations.
+    2. `master_lesson.md`: Bài học tổng hợp tri thức với cấu trúc Markdown chuẩn, YAML frontmatter, danh mục tài liệu và các luận điểm.
+    3. `chat_transcript.html`: Trình xem lịch sử đối thoại độc lập (self-contained HTML card viewer) không cần internet.
+* **`404 Not Found`** - Phiên nghiên cứu không tồn tại hoặc không thuộc quyền sở hữu của người dùng (`SESSION_NOT_FOUND`).
+* **`422 Unprocessable Entity`** - Tham số UUID không đúng định dạng chuẩn RFC 4122 (`VALIDATION_ERROR`).
+
+#### Ví dụ cURL (Tải Gói Ngoại Tuyến)
+```bash
+curl -X POST "http://localhost:8000/api/v1/sessions/8b5cdbd2-afe6-44b5-8666-a64d6fbfa465:export-bundle" \
+  -H "Authorization: Bearer $AUTH_TOKEN" \
+  --output "verischolar_session.zip"
+```
+--- |
 | `document_id` | `string (uuid)` | **Có** | Định danh UUID duy nhất của bài báo khoa học |
 
 #### Responses

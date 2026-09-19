@@ -218,10 +218,11 @@ POST   /api/v1/sessions/{id}/messages             # 52. Gửi câu hỏi & Strea
 GET    /api/v1/sessions/{id}/messages             # 53. Lấy lịch sử hội thoại của phiên (phân trang)
 DELETE /api/v1/sessions/{id}/messages             # 54. Xóa lịch sử hội thoại của phiên (Idempotent 204)
 POST   /api/v1/sessions/{id}:restore-archived     # 55. Tải lại file PDF gốc để kích hoạt lại phiên quá hạn TTL
-POST   /api/v1/shares                             # 56. Tạo liên kết chia sẻ công khai (Note, Draft, Collection)
-GET    /api/v1/shares/{token}                     # 57. Xem tài nguyên chia sẻ (Public Read-only, No Auth)
-GET    /api/v1/shares/{token}/file                # 58. Stream PDF cho khách xem chia sẻ (No Auth, HTTP 206)
-DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tức thời (Instant Revocation -> 410 Gone)
+POST   /api/v1/sessions/{id}:export-bundle        # 56. Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle .zip)
+POST   /api/v1/shares                             # 57. Tạo liên kết chia sẻ công khai (Note, Draft, Collection)
+GET    /api/v1/shares/{token}                     # 58. Xem tài nguyên chia sẻ (Public Read-only, No Auth)
+GET    /api/v1/shares/{token}/file                # 59. Stream PDF cho khách xem chia sẻ (No Auth, HTTP 206)
+DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tức thời (Instant Revocation -> 410 Gone)
 ```
 
 ---
@@ -1044,9 +1045,26 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
 - **URI:** `/api/v1/sessions/{id}:restore-archived`
 - **Content-Type:** `multipart/form-data`
 - **Body:** `file`: Binary PDF gốc của bài báo cần phục hồi.
-- **Response (`200 OK`):** Tự động bóc tách lại và khôi phục trạng thái hoạt động của phiên.
+- **Response (`200 OK`):** Tự động bóc tách lại và khôi phục trạng thái hoạt động của phiên (kèm ETag OCC mới).
+- **Error Responses:**
+  - `400 Bad Request` (`INVALID_PDF_HEADER`): Tệp tải lên không phải là định dạng PDF hợp lệ (%PDF).
+  - `404 Not Found` (`SESSION_NOT_FOUND`): Phiên nghiên cứu không tồn tại hoặc không thuộc quyền sở hữu.
+  - `422 Unprocessable Content` (`VALIDATION_ERROR`): Định danh UUID không đúng chuẩn.
 
-### 7.12. `POST /api/v1/shares` (Tạo Liên Kết Chia Sẻ Công Khai)
+### 7.12. `POST /api/v1/sessions/{id}:export-bundle` (Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói Full Bundle .zip)
+- **Method:** `POST`
+- **URI:** `/api/v1/sessions/{id}:export-bundle`
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (`200 OK`):** Luồng nhị phân MIME `application/zip` kèm header `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`.
+  - **Cấu trúc tệp ZIP (`application/zip`):**
+    1. `documents/`: Toàn bộ các tệp PDF gốc trong phiên đã được nhúng sẵn Native PDF Annotations (chuẩn ISO 32000-1) tại các vị trí highlight.
+    2. `master_lesson.md`: Bài học tổng hợp tri thức chuẩn Markdown tích hợp YAML frontmatter, danh mục tài liệu và các luận điểm nghiên cứu.
+    3. `chat_transcript.html`: Bản ghi lịch sử hỏi đáp độc lập tự chứa CSS/JS (self-contained viewer) cho phép tra cứu câu hỏi và đối chiếu trích dẫn ngoại tuyến.
+- **Error Responses:**
+  - `404 Not Found` (`SESSION_NOT_FOUND`): Phiên nghiên cứu không tồn tại hoặc không thuộc quyền sở hữu.
+  - `422 Unprocessable Content` (`VALIDATION_ERROR`): Định danh UUID không đúng chuẩn.
+
+### 7.13. `POST /api/v1/shares` (Tạo Liên Kết Chia Sẻ Công Khai)
 - **Method:** `POST`
 - **Request Body (JSON):**
   ```json
@@ -1070,7 +1088,7 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
   }
   ```
 
-### 7.13. `GET /api/v1/shares/{token}` (Xem Tài Nguyên Chia Sẻ Công Khai - No Auth)
+### 7.14. `GET /api/v1/shares/{token}` (Xem Tài Nguyên Chia Sẻ Công Khai - No Auth)
 - **Method:** `GET`
 - **Headers:** Không yêu cầu `Authorization` Header (công khai).
 - **Phản hồi:**
@@ -1113,7 +1131,7 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
     }
     ```
 
-### 7.14. `GET /api/v1/shares/{token}/file` (Stream PDF cho Khách Xem Chia Sẻ - No Auth)
+### 7.15. `GET /api/v1/shares/{token}/file` (Stream PDF cho Khách Xem Chia Sẻ - No Auth)
 - **Method:** `GET`
 - **Headers Hỗ trợ:** `Range: bytes=0-1024` (HTTP 206 Partial Content).
 - **Bảo mật:** Xác thực quyền đọc dựa trên `share_token` hợp lệ (không đòi hỏi Bearer Token).
@@ -1121,7 +1139,7 @@ DELETE /api/v1/shares/{token}                     # 59. Thu hồi chia sẻ tứ
   - `200 OK` hoặc `206 Partial Content`: Stream nhị phân PDF phục vụ PDF.js Canvas trên màn hình người nhận chia sẻ để vẽ khung highlight viền vàng khớp chính xác tuyệt đối.
   - `410 Gone`: Nếu liên kết chia sẻ đã bị chủ sở hữu thu hồi.
 
-### 7.15. `DELETE /api/v1/shares/{token}` (Thu Hồi Quyền Chia Sẻ Tức Thời - Instant Revocation)
+### 7.16. `DELETE /api/v1/shares/{token}` (Thu Hồi Quyền Chia Sẻ Tức Thời - Instant Revocation)
 - **Method:** `DELETE`
 - **Response (`204 No Content`):** Vô hiệu hóa ngay lập tức. Mọi truy cập sau đó vào `GET /api/v1/shares/{token}` và `GET /api/v1/shares/{token}/file` lập tức trả về `410 Gone`.
 

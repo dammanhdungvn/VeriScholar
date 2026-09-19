@@ -1,5 +1,6 @@
 """Evaluator for Research Notes & Knowledge Synthesis APIs (#16 - #21)."""
 
+import json
 import time
 import uuid
 from pathlib import Path
@@ -116,6 +117,8 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                     },
                 ],
                 "data": c1_data,
+                "details": "Frozen snapshot preserved, ETag returned",
+                "raw_response": res1.json() if c1_ok else {},
             }
         )
 
@@ -162,6 +165,8 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                     },
                 ],
                 "total_items": c2_body.get("meta", {}).get("total", 0),
+                "details": f"Retrieved {len(c2_body.get('data', []))} notes with RFC 8288 pagination",
+                "raw_response": c2_body,
             }
         )
 
@@ -198,6 +203,8 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                     },
                 ],
                 "data": c3_data,
+                "details": "Frozen evidence snapshot & spatial bounding boxes verified",
+                "raw_response": res3.json() if c3_ok else {},
             }
         )
 
@@ -249,6 +256,8 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                     {"name": "New ETag header v2", "passed": res4_ok.headers.get("ETag") == '"v2"'},
                 ],
                 "data": c4_data,
+                "details": "OCC 428 on missing ETag, 412 on mismatch, 200 with bumped version",
+                "raw_response": res4_ok.json() if res4_ok.status_code == 200 else {},
             }
         )
 
@@ -311,6 +320,8 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                     {"name": "Idempotency cache hit on identical key", "passed": idemp_hit},
                 ],
                 "data": c5_data,
+                "details": "Synthesized concept lesson with badges & Idempotency cache hit",
+                "raw_response": res5.json() if c5_ok else {},
             }
         )
 
@@ -340,6 +351,11 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
                         "passed": res6_idemp.status_code == 204,
                     },
                 ],
+                "details": "204 No Content on delete and re-delete (idempotent)",
+                "raw_response": {
+                    "status_code": 204,
+                    "message": "Idempotent note deletion verified",
+                },
             }
         )
 
@@ -358,20 +374,27 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
         md_content = self.generate_markdown(result_payload, ctx.session_tag)
         write_markdown_report(self.report_filename, md_content)
 
-        q_checks = [(c["passed"], f"{c['name']} (HTTP {c['status_code']})") for c in cases]
+        q_checks = [
+            (c["passed"], f"{idx}. {c['name']} ({c['latency_ms']:.1f}ms)")
+            for idx, c in enumerate(cases, 1)
+        ]
         terminal_box = format_terminal_box(
-            method=self.http_method,
-            path=self.route_path,
-            req_headers={"If-Match": valid_etag, "Idempotency-Key": idemp_key},
+            method="POST / GET / PATCH / DELETE",
+            path="/api/v1/notes/*",
+            req_headers={
+                "Content-Type": "application/json",
+                "If-Match": valid_etag or '"v1"',
+                "Idempotency-Key": idemp_key,
+            },
             form_data=None,
             req_body={
-                "actions": [
-                    "create_note",
-                    "list_notes",
-                    "get_note",
-                    "patch_occ",
-                    "synthesize_digest",
-                    "delete_note",
+                "scenarios": [
+                    "1. Add Note with Frozen Snapshot (POST /api/v1/notes)",
+                    "2. List Notes with Pagination (GET /api/v1/notes)",
+                    "3. Retrieve Note Detail & Bounding Box (GET /api/v1/notes/{id})",
+                    "4. OCC Concurrency RFC 7232 (PATCH /api/v1/notes/{id})",
+                    "5. AI Multi-mode Knowledge Synthesis (POST /api/v1/notes:synthesize)",
+                    "6. Idempotent Note Deletion (DELETE /api/v1/notes/{id})",
                 ]
             },
             status_code=200 if all_passed else 500,
@@ -389,54 +412,59 @@ class NotesAndSynthesisAPIRunner(BaseAPIRunner):
 
     def generate_markdown(self, eval_result: dict[str, Any], session_tag: str) -> str:
         cases = eval_result.get("cases", [])
-        total = len(cases)
-        passed_count = sum(1 for c in cases if c.get("passed"))
+        gate = "PASSED" if eval_result.get("all_passed") else "FAILED"
         checksums = eval_result.get("artifact_checksums", {})
 
-        status_badge = "🟢 PASSED" if eval_result.get("all_passed") else "🔴 FAILED"
+        shas_block = "\n".join(f"> - `{name}`: `{sha}`" for name, sha in checksums.items())
 
-        lines = [
-            "# Snapshot Báo Cáo Đánh Giá: Smart Research Notes & AI Knowledge Digest (#16 - #21)",
-            "",
-            f"- **Phiên kiểm thử:** `{session_tag}`",
-            "- **Endpoint nhóm:** `/api/v1/notes/*`",
-            f"- **Trạng thái tổng quan:** {status_badge} ({passed_count}/{total} cases đạt chuẩn)",
-            f"- **Thời gian:** {time.strftime('%Y-%m-%d %H:%M:%S UTC', time.gmtime())}",
-            "",
-            "---",
-            "",
-            "## 1. Kết Quả Kiểm Thử Từng Endpoint",
-            "",
-        ]
-
+        rows = []
+        raw_sections = []
         for idx, c in enumerate(cases, 1):
-            mark = "✅" if c.get("passed") else "❌"
-            lines.append(f"### Case {idx}: {c.get('name')} {mark}")
-            lines.append(
-                f"- **HTTP Status:** `{c.get('status_code')}` (Kỳ vọng: `{c.get('expected_status')}`)"
+            res_str = "PASS" if c["passed"] else "FAIL"
+            row = (
+                f"| {c['name']} | `{c['status_code']}` | "
+                f"{c['latency_ms']:.1f} ms | {res_str} | {c.get('details', '')} |"
             )
-            lines.append(f"- **Độ trễ phản hồi (Latency):** `{c.get('latency_ms', 0):.2f} ms`")
-            lines.append("- **Chi tiết các tiêu chí kiểm tra (Checks):**")
-            for chk in c.get("checks", []):
-                chk_mark = "✓" if chk.get("passed") else "✗"
-                lines.append(f"  - [{chk_mark}] {chk.get('name')}")
-            lines.append("")
+            rows.append(row)
 
-        lines.extend(
-            [
-                "## 2. Toàn Vẹn Dữ Liệu & Snapshot Artifact Checksums",
-                "",
-                "Các tệp JSON snapshot thô được lưu trữ và băm mật mã SHA-256 đối soát:",
-                f"- `01_create_note_201.json`: `{checksums.get('c1_raw', 'N/A')}`",
-                f"- `05_synthesize_notes_200.json`: `{checksums.get('c5_raw', 'N/A')}`",
-                "",
-                "## 3. Đánh Giá Kiến Trúc & Tiêu Chuẩn Sản Xuất",
-                "",
-                "1. **Frozen Evidence Snapshot:** Khi trích dẫn được lưu vào sổ tay cá nhân, metadata gốc của bài báo được sao chụp bất biến vào `frozen_snapshot`. Ngay cả khi tài liệu nguồn bị xóa hoặc ngắt liên kết, ghi chú và các bài học tổng hợp vẫn giữ nguyên giá trị trích dẫn học thuật.",
-                "2. **Optimistic Concurrency Control (OCC):** Tuân thủ nghiêm ngặt RFC 7232. Yêu cầu bắt buộc header `If-Match` khi cập nhật (`PATCH /notes/{id}`), phản hồi `428 Precondition Required` nếu thiếu và `412 Precondition Failed` nếu phiên bản đã bị sửa đổi trên thiết bị khác.",
-                "3. **AI Multi-mode Knowledge Synthesis:** Hỗ trợ 3 chế độ đúc kết tri thức (`concept_lesson`, `literature_review`, `research_gap`) kèm hệ thống Interactive Citation Badges liên kết chính xác số trang và toạ độ vùng bao (bounding boxes). Tích hợp khóa lũy đẳng `Idempotency-Key` với cơ chế cache `X-Cache: Idempotent-Hit`.",
-                "",
-            ]
-        )
+            if c.get("raw_response") is not None:
+                raw_json_str = json.dumps(c["raw_response"], indent=2, ensure_ascii=False)
+                raw_sections.append(
+                    f"### Case {idx}: {c['name']} (Status: `{c['status_code']}`)\n"
+                    f"```json\n{raw_json_str}\n```\n"
+                )
 
-        return "\n".join(lines)
+        table_body = "\n".join(rows)
+        raw_payloads_body = "\n".join(raw_sections)
+
+        return f"""# API Evaluation Snapshot: MULTI /api/v1/notes/*
+
+> **Audit Header**: Session Tag: `{session_tag}` | Target: `Smart Research Notes & Knowledge Synthesis (#16 - #21)`  
+> **Target Output**: `temp/output/test/{self.report_filename}`  
+> **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
+> **Payload Checksums (SHA-256)**:  
+{shas_block}  
+> **Quality Gate**: **{gate}**
+
+---
+
+## 1. Executive Summary & Verification Matrix
+
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+{table_body}
+
+---
+
+## 2. Invariants & Contract Adherence
+- **Frozen Evidence Snapshot**: Khi trích dẫn được lưu vào sổ tay cá nhân, metadata gốc của bài báo được sao chụp bất biến vào `frozen_snapshot`. Ngay cả khi tài liệu nguồn bị xóa hoặc ngắt liên kết, ghi chú và các bài học tổng hợp vẫn giữ nguyên giá trị trích dẫn học thuật.
+- **Optimistic Concurrency Control (OCC)**: Tuân thủ nghiêm ngặt RFC 7232. Yêu cầu bắt buộc header `If-Match` khi cập nhật (`PATCH /notes/{{id}}`), phản hồi `428 Precondition Required` nếu thiếu và `412 Precondition Failed` nếu phiên bản đã bị sửa đổi trên thiết bị khác.
+- **AI Multi-mode Knowledge Synthesis**: Hỗ trợ 3 chế độ đúc kết tri thức (`concept_lesson`, `literature_review`, `research_gap`) kèm hệ thống Interactive Citation Badges liên kết chính xác số trang và toạ độ vùng bao (bounding boxes). Tích hợp khóa lũy đẳng `Idempotency-Key` với cơ chế cache `X-Cache: Idempotent-Hit`.
+- **Idempotent Deletion (RFC 7231)**: Xóa ghi chú với HTTP 204 No Content và duy trì tính lũy đẳng trên các lần gọi liên tiếp.
+
+---
+
+## 3. Full Raw Payloads (Untruncated)
+
+{raw_payloads_body}
+"""

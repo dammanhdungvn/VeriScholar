@@ -5,6 +5,7 @@ turn schema and spatial citation validation, empty session handling,
 multi-tenant isolation (404 SESSION_NOT_FOUND), and boundary parameter guards (422).
 """
 
+import json
 import time
 import uuid
 from datetime import UTC, datetime, timedelta
@@ -492,14 +493,24 @@ class GetSessionMessagesAPIRunner(BaseAPIRunner):
         shas_block = "\n".join(f"> - `{name}`: `{sha}`" for name, sha in checksums.items())
 
         rows = []
-        for c in cases:
+        raw_sections = []
+        for idx, c in enumerate(cases, 1):
             res_str = "PASS" if c["passed"] else "FAIL"
             row = (
-                f"| {c['name']} | `{c['status_code']}` | `{c['expected_status']}` | "
-                f"{c['latency_ms']:.1f}ms | {res_str} | {c['details']} |"
+                f"| {c['name']} | `{c['status_code']}` | "
+                f"{c['latency_ms']:.1f} ms | {res_str} | {c['details']} |"
             )
             rows.append(row)
+
+            if c.get("raw_response") is not None:
+                raw_json_str = json.dumps(c["raw_response"], indent=2, ensure_ascii=False)
+                raw_sections.append(
+                    f"### Case {idx}: {c['name']} (Status: `{c['status_code']}`)\n"
+                    f"```json\n{raw_json_str}\n```\n"
+                )
+
         table_body = "\n".join(rows)
+        raw_payloads_body = "\n".join(raw_sections)
 
         return f"""# API Evaluation Snapshot: GET /api/v1/sessions/{{id}}/messages
 
@@ -508,14 +519,14 @@ class GetSessionMessagesAPIRunner(BaseAPIRunner):
 > **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
 > **Payload Checksums (SHA-256)**:  
 {shas_block}  
-> **Quality Gate**: **{gate}** (100% Invariants Verified)
+> **Quality Gate**: **{gate}**
 
 ---
 
-## 1. Test Cases Matrix
+## 1. Executive Summary & Verification Matrix
 
-| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
-|:---|:---:|:---:|:---:|:---:|:---|
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
 {table_body}
 
 ---
@@ -527,4 +538,10 @@ class GetSessionMessagesAPIRunner(BaseAPIRunner):
 - **Empty History Graceful Handling**: Phiên chưa có tin nhắn trả về `HTTP 200 OK` với mảng rỗng `data: []`, `total: 0`, `total_pages: 0`.
 - **Multi-Tenant User Isolation**: Người dùng lạ truy vấn vào phiên riêng tư bị từ chối với `HTTP 404 Not Found` (`SESSION_NOT_FOUND`), tuyệt đối không rò rỉ dữ liệu.
 - **Hermetic REST Teardown**: Toàn bộ phiên và tài liệu thử nghiệm được dọn dẹp sạch sẽ khép kín sau khi runner hoàn tất (Zero Retention).
+
+---
+
+## 3. Raw Response Snapshots
+
+{raw_payloads_body}
 """
