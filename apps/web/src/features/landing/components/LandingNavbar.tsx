@@ -10,21 +10,21 @@ export function LandingNavbar() {
   const isDark = theme === "dark";
 
   return (
-    <header className="sticky top-0 z-40 w-full h-18 sm:h-20 bg-canvas/80 dark:bg-[#181715]/75 backdrop-blur-xl border-b border-hairline/80 dark:border-[#2e2a24]/60 transition-all">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
+    <header className="sticky top-2.5 sm:top-4 z-40 w-full px-4 sm:px-6 pointer-events-none transition-all duration-300">
+      <div className="max-w-5xl mx-auto h-15 sm:h-16 px-4 sm:px-5 rounded-2xl bg-canvas/80 dark:bg-[#22201c]/80 backdrop-blur-2xl border border-hairline/90 dark:border-[#3a342b]/70 shadow-sm dark:shadow-[0_8px_32px_rgba(0,0,0,0.32)] flex items-center justify-between pointer-events-auto transition-all">
         {/* Logo - Wider & Clearly Visible */}
-        <a href="#" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm py-1">
+        <a href="#" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1">
           <AcademicLogo size="xl" inverted={isDark} />
         </a>
 
         {/* Action Cluster - GitHub, "Dùng thử ngay", & Theme Toggle */}
-        <div className="flex items-center gap-2.5 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           <a
             href="https://github.com/dammanhdungvn/VeriScholar"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="nav-github-link"
-            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md border border-hairline dark:border-[#332f28] bg-canvas dark:bg-[#201e1b] hover:bg-surface-soft dark:hover:bg-[#282521] text-body hover:text-ink dark:text-zinc-300 dark:hover:text-zinc-100 transition-colors shadow-2xs group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="GitHub Repository"
             title="GitHub Repository"
           >
@@ -38,7 +38,7 @@ export function LandingNavbar() {
             size="sm"
             onClick={() => setUploadModalOpen(true)}
             data-testid="nav-try-btn"
-            className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0"
+            className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
           >
             <Sparkles className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
             <span>Dùng thử ngay</span>
@@ -52,7 +52,7 @@ export function LandingNavbar() {
             data-testid="theme-toggle-btn"
             aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
             title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md border border-hairline dark:border-[#332f28] bg-canvas dark:bg-[#201e1b] hover:bg-surface-soft dark:hover:bg-[#282521] text-body hover:text-ink dark:text-zinc-300 dark:hover:text-zinc-100 transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
           >
             {isDark ? (
               <Sun className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 transition-transform hover:rotate-45" />

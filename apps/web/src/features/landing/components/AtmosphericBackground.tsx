@@ -42,8 +42,8 @@ export function AtmosphericBackground() {
     };
     window.addEventListener("resize", handleResize);
 
-    // Effect 1: Constellation Particles
-    const particleCount = 65;
+    // Effect 1: Neural Nodes (65 in Dark Mode for Cosmic Constellation, 38 in Light Mode for Silk Attention Mesh)
+    const totalParticleCount = 65;
     const particles: Array<{
       x: number;
       y: number;
@@ -53,18 +53,18 @@ export function AtmosphericBackground() {
       opacity: number;
     }> = [];
 
-    for (let i = 0; i < particleCount; i++) {
+    for (let i = 0; i < totalParticleCount; i++) {
       particles.push({
         x: Math.random() * width,
         y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.6,
-        vy: (Math.random() - 0.5) * 0.6,
+        vx: (Math.random() - 0.5) * 0.55,
+        vy: (Math.random() - 0.5) * 0.55,
         radius: Math.random() * 1.6 + 0.8,
         opacity: Math.random() * 0.4 + 0.3,
       });
     }
 
-    // Effect 2: 6s Periodic Meteors
+    // Effect 2: Dark Mode 6s Periodic Meteors (ONLY active in Dark Mode)
     const meteors: Array<{
       x: number;
       y: number;
@@ -76,6 +76,8 @@ export function AtmosphericBackground() {
     }> = [];
 
     const spawnMeteorShowerWave = () => {
+      // Do NOT spawn meteors in Light Mode
+      if (!isDarkRef.current) return;
       const count = Math.floor(Math.random() * 2) + 2;
       for (let mIdx = 0; mIdx < count; mIdx++) {
         const angle = Math.random() * 0.85 + 0.35;
@@ -97,103 +99,137 @@ export function AtmosphericBackground() {
     const meteorInterval = setInterval(spawnMeteorShowerWave, 6000);
     const initialTimeout = setTimeout(spawnMeteorShowerWave, 1200);
 
+    // Effect 3: Light Mode Synaptic Pulse Packets (ONLY active in Light Mode)
+    const synapticPulses: Array<{
+      fromIdx: number;
+      toIdx: number;
+      progress: number;
+      speed: number;
+    }> = [];
+
+    const spawnSynapticPulse = () => {
+      // Pulses are specifically crafted for the Light Mode Silk Attention Mesh
+      if (isDarkRef.current) return;
+      if (synapticPulses.length >= 5) return;
+      const lightNodeCount = 38;
+      for (let attempt = 0; attempt < 8; attempt++) {
+        const i = Math.floor(Math.random() * lightNodeCount);
+        for (let j = 0; j < lightNodeCount; j++) {
+          if (i === j) continue;
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist > 35 && dist < 120) {
+            synapticPulses.push({
+              fromIdx: i,
+              toIdx: j,
+              progress: 0,
+              speed: Math.random() * 0.012 + 0.007,
+            });
+            return;
+          }
+        }
+      }
+    };
+
+    const pulseInterval = setInterval(spawnSynapticPulse, 1800);
+
     const render = () => {
       ctx.clearRect(0, 0, width, height);
       const m = mousePosRef.current;
       const currentIsDark = isDarkRef.current;
 
-      // Render Meteors
-      for (let i = meteors.length - 1; i >= 0; i--) {
-        const star = meteors[i];
-        const tailX = star.x - Math.cos(star.angle) * star.length;
-        const tailY = star.y - Math.sin(star.angle) * star.length;
+      // 1. Dark Mode Meteors Rendering (Preserved 100% as requested)
+      if (currentIsDark) {
+        for (let i = meteors.length - 1; i >= 0; i--) {
+          const star = meteors[i];
+          const tailX = star.x - Math.cos(star.angle) * star.length;
+          const tailY = star.y - Math.sin(star.angle) * star.length;
 
-        const grad = ctx.createLinearGradient(star.x, star.y, tailX, tailY);
-        if (currentIsDark) {
+          const grad = ctx.createLinearGradient(star.x, star.y, tailX, tailY);
           grad.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
           grad.addColorStop(0.2, `rgba(255, 220, 190, ${star.opacity * 0.85})`);
           grad.addColorStop(0.65, `rgba(217, 119, 87, ${star.opacity * 0.35})`);
           grad.addColorStop(1, "rgba(217, 119, 87, 0)");
+
+          ctx.beginPath();
+          ctx.moveTo(star.x, star.y);
+          ctx.lineTo(tailX, tailY);
+          ctx.lineWidth = star.width;
+          ctx.strokeStyle = grad;
+          ctx.lineCap = "round";
+
           ctx.shadowBlur = 16;
           ctx.shadowColor = "#e89b82";
-        } else {
-          // Light mode: warm terracotta core & glowing amber trail visible on ivory
-          grad.addColorStop(0, `rgba(184, 75, 40, ${star.opacity})`);
-          grad.addColorStop(0.25, `rgba(217, 105, 55, ${star.opacity * 0.85})`);
-          grad.addColorStop(0.7, `rgba(235, 145, 75, ${star.opacity * 0.4})`);
-          grad.addColorStop(1, "rgba(235, 145, 75, 0)");
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(184, 75, 40, 0.4)";
-        }
+          ctx.stroke();
+          ctx.shadowBlur = 0;
 
-        ctx.beginPath();
-        ctx.moveTo(star.x, star.y);
-        ctx.lineTo(tailX, tailY);
-        ctx.lineWidth = currentIsDark ? star.width : star.width * 1.1;
-        ctx.strokeStyle = grad;
-        ctx.lineCap = "round";
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+          star.x += Math.cos(star.angle) * star.speed;
+          star.y += Math.sin(star.angle) * star.speed;
+          star.opacity -= 0.0035;
 
-        star.x += Math.cos(star.angle) * star.speed;
-        star.y += Math.sin(star.angle) * star.speed;
-        star.opacity -= 0.0035;
-
-        if (star.opacity <= 0 || star.y > height + 250 || star.x > width + 250) {
-          meteors.splice(i, 1);
+          if (star.opacity <= 0 || star.y > height + 250 || star.x > width + 250) {
+            meteors.splice(i, 1);
+          }
         }
       }
 
-      // Render Constellation Particles
-      for (let i = 0; i < particleCount; i++) {
+      // 2. Neural Nodes & Synapses
+      // In Light Mode: use 38 nodes with 0.55x speed for peaceful reading & zero shadow blur
+      // In Dark Mode: use full 65 nodes with cosmic glowing bloom
+      const activeCount = currentIsDark ? totalParticleCount : 38;
+      const speedScale = currentIsDark ? 1.0 : 0.55;
+
+      for (let i = 0; i < activeCount; i++) {
         const p1 = particles[i];
-        p1.x += p1.vx;
-        p1.y += p1.vy;
+        p1.x += p1.vx * speedScale;
+        p1.y += p1.vy * speedScale;
 
         if (p1.x < 0 || p1.x > width) p1.vx *= -1;
         if (p1.y < 0 || p1.y > height) p1.vy *= -1;
 
         ctx.beginPath();
-        ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
         if (currentIsDark) {
+          ctx.arc(p1.x, p1.y, p1.radius, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(232, 155, 130, ${p1.opacity})`;
           ctx.shadowBlur = 8;
           ctx.shadowColor = "#d97757";
           ctx.fill();
           ctx.shadowBlur = 0;
         } else {
-          // Crisp copper ink dot in Light mode
-          ctx.fillStyle = `rgba(180, 80, 48, ${Math.min(1, p1.opacity * 1.35)})`;
-          ctx.shadowBlur = 4;
-          ctx.shadowColor = "rgba(180, 80, 48, 0.35)";
+          // Light Mode Silk Node: delicate, sharp, zero shadow blur (pure organic ink)
+          ctx.arc(p1.x, p1.y, Math.max(1.0, p1.radius * 0.8), 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(195, 95, 60, ${Math.min(0.8, p1.opacity * 0.95)})`;
           ctx.fill();
-          ctx.shadowBlur = 0;
         }
 
-        for (let j = i + 1; j < particleCount; j++) {
+        // Synaptic connection lines between nodes
+        const maxDist = currentIsDark ? 120 : 110;
+        for (let j = i + 1; j < activeCount; j++) {
           const p2 = particles[j];
           const dx = p1.x - p2.x;
           const dy = p1.y - p2.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
 
-          if (dist < 120) {
+          if (dist < maxDist) {
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
             ctx.lineTo(p2.x, p2.y);
             if (currentIsDark) {
-              const lineAlpha = (1 - dist / 120) * 0.25;
+              const lineAlpha = (1 - dist / maxDist) * 0.25;
               ctx.strokeStyle = `rgba(217, 119, 87, ${lineAlpha})`;
               ctx.lineWidth = 0.8;
             } else {
-              // Visible drafting line in Light Mode
-              const lineAlpha = (1 - dist / 120) * 0.38;
-              ctx.strokeStyle = `rgba(180, 85, 52, ${lineAlpha})`;
-              ctx.lineWidth = 0.95;
+              // Light Mode: Silk thread in brand coral-amber (18% - 22% opacity)
+              const lineAlpha = (1 - dist / maxDist) * 0.22;
+              ctx.strokeStyle = `rgba(204, 110, 75, ${lineAlpha})`;
+              ctx.lineWidth = 0.7;
             }
             ctx.stroke();
           }
         }
 
+        // Mouse Query Attention Interaction
         if (m.x > 0 && m.y > 0) {
           const mDx = p1.x - m.x;
           const mDy = p1.y - m.y;
@@ -208,12 +244,39 @@ export function AtmosphericBackground() {
               ctx.strokeStyle = `rgba(240, 180, 160, ${mAlpha})`;
               ctx.lineWidth = 1.1;
             } else {
-              const mAlpha = (1 - mDist / 160) * 0.5;
-              ctx.strokeStyle = `rgba(195, 75, 35, ${mAlpha})`;
-              ctx.lineWidth = 1.15;
+              // Light Mode: Gentle amber query ray with soft falloff
+              const mAlpha = (1 - mDist / 160) * 0.30;
+              ctx.strokeStyle = `rgba(204, 110, 75, ${mAlpha})`;
+              ctx.lineWidth = 0.85;
             }
             ctx.stroke();
           }
+        }
+      }
+
+      // 3. Light Mode Synaptic Pulse Packets along active lines
+      if (!currentIsDark) {
+        for (let k = synapticPulses.length - 1; k >= 0; k--) {
+          const pulse = synapticPulses[k];
+          pulse.progress += pulse.speed;
+          if (pulse.progress >= 1) {
+            synapticPulses.splice(k, 1);
+            continue;
+          }
+          const pFrom = particles[pulse.fromIdx];
+          const pTo = particles[pulse.toIdx];
+          if (!pFrom || !pTo) {
+            synapticPulses.splice(k, 1);
+            continue;
+          }
+          const curX = pFrom.x + (pTo.x - pFrom.x) * pulse.progress;
+          const curY = pFrom.y + (pTo.y - pFrom.y) * pulse.progress;
+          const pulseAlpha = Math.sin(pulse.progress * Math.PI) * 0.55;
+
+          ctx.beginPath();
+          ctx.arc(curX, curY, 1.6, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(204, 110, 65, ${pulseAlpha})`;
+          ctx.fill();
         }
       }
 
@@ -225,6 +288,7 @@ export function AtmosphericBackground() {
     return () => {
       window.removeEventListener("resize", handleResize);
       clearInterval(meteorInterval);
+      clearInterval(pulseInterval);
       clearTimeout(initialTimeout);
       cancelAnimationFrame(animationFrameId);
     };
@@ -232,15 +296,15 @@ export function AtmosphericBackground() {
 
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* Perspective Grid Background - Subtle drafting grid in light mode, starlight grid in dark mode */}
+      {/* Perspective Grid Background - Subtle drafting watermark in light mode, starlight grid in dark mode */}
       <div
-        className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-25"}`}
+        className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-20"}`}
         style={{
           backgroundImage: isDark
             ? `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
                linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`
-            : `linear-gradient(to right, rgba(165, 125, 90, 0.12) 1px, transparent 1px),
-               linear-gradient(to bottom, rgba(165, 125, 90, 0.12) 1px, transparent 1px)`,
+            : `linear-gradient(to right, rgba(165, 125, 90, 0.08) 1px, transparent 1px),
+               linear-gradient(to bottom, rgba(165, 125, 90, 0.08) 1px, transparent 1px)`,
           backgroundSize: "48px 48px",
           maskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
           WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
@@ -253,7 +317,7 @@ export function AtmosphericBackground() {
         style={{
           background: isDark
             ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(217, 119, 87, 0.12), transparent 60%)`
-            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.10), transparent 60%)`,
+            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.06), transparent 60%)`,
         }}
       />
 
@@ -262,17 +326,17 @@ export function AtmosphericBackground() {
         className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] blur-3xl rounded-full pointer-events-none animate-pulse duration-10000 ${
           isDark
             ? "bg-gradient-to-b from-[#d97757]/18 via-[#e89b82]/6 to-transparent"
-            : "bg-gradient-to-b from-[#d97757]/12 via-[#e89b82]/5 to-transparent"
+            : "bg-gradient-to-b from-[#d97757]/6 via-transparent to-transparent"
         }`}
       />
       <div
         className={`absolute top-1/4 -left-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
-          isDark ? "bg-[#d97757]/10" : "bg-[#d97757]/8"
+          isDark ? "bg-[#d97757]/10" : "bg-[#d97757]/4"
         }`}
       />
       <div
         className={`absolute bottom-1/3 -right-40 w-80 h-80 blur-3xl rounded-full pointer-events-none ${
-          isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/8"
+          isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/4"
         }`}
       />
 
