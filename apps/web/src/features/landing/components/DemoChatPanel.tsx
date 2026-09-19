@@ -63,7 +63,7 @@ function renderContentWithKaTeX(text: string, onCiteClick?: () => void) {
         {renderParagraphs(beforeText, false, undefined)}
 
         {mathFormula && (
-          <div className="my-2 p-2.5 rounded-lg bg-[#f2ece2] dark:bg-[#141311] border border-[#ded5c5] dark:border-[#2b2721] text-center overflow-hidden text-[#c25e3e] dark:text-[#e8a55a] shadow-inner transition-colors duration-300">
+          <div className="my-2 p-2.5 rounded-lg bg-[#f2ece2] dark:bg-[#1c1a17] border border-[#ded5c5] dark:border-[#332f27] text-center overflow-hidden text-[#c25e3e] dark:text-[#e8a55a] shadow-inner transition-colors duration-300">
             <MathRenderer math={mathFormula.trim()} block />
           </div>
         )}
@@ -221,10 +221,10 @@ export function DemoChatPanel() {
     <div
       data-testid="demo-chat-panel"
       data-streaming={isStreaming ? "true" : "false"}
-      className="flex flex-col h-full bg-[#ffffff] dark:bg-[#1c1b18] rounded-xl border border-[#d8d3c7] dark:border-[#33302b] overflow-hidden text-zinc-900 dark:text-zinc-200 shadow-sm dark:shadow-xl transition-colors duration-300"
+      className="flex flex-col h-full bg-[#ffffff] dark:bg-[#211f1c] rounded-xl border border-[#d8d3c7] dark:border-[#3a352c] overflow-hidden text-zinc-900 dark:text-zinc-200 shadow-sm dark:shadow-md transition-colors duration-300"
     >
       {/* Editorial Header with Clean Title & Replay Button */}
-      <div className="px-4 py-3 bg-[#f8f5ee] dark:bg-[#201e1a] border-b border-[#e5dfd2] dark:border-[#2d2923] flex items-center justify-between select-none shrink-0 transition-colors duration-300">
+      <div className="px-4 py-3 bg-[#f8f5ee] dark:bg-[#26231f] border-b border-[#e5dfd2] dark:border-[#332e26] flex items-center justify-between select-none shrink-0 transition-colors duration-300">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-[#d97757]/15 border border-[#d97757]/30 flex items-center justify-center">
             <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
@@ -238,7 +238,7 @@ export function DemoChatPanel() {
         <button
           type="button"
           onClick={runSimulation}
-          className="p-1.5 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-[#ede7db] dark:hover:bg-[#2c2822] border border-transparent hover:border-[#dcd5c7] dark:hover:border-[#3d3830] transition-all cursor-pointer"
+          className="p-1.5 rounded-md text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-[#ede7db] dark:hover:bg-[#2f2b25] border border-transparent hover:border-[#dcd5c7] dark:hover:border-[#3d372e] transition-all cursor-pointer"
           title="Xem lại demo tự động"
           aria-label="Xem lại demo tự động"
         >
@@ -249,7 +249,7 @@ export function DemoChatPanel() {
       {/* Messages Flow: Generous Horizontal Alignment without awkward scrollbars */}
       <div
         ref={chatScrollRef}
-        className="flex-1 p-3.5 sm:p-4.5 overflow-y-auto overflow-x-hidden scrollbar-none space-y-3.5 text-xs sm:text-[12.5px] bg-[#ffffff] dark:bg-[#1c1b18] transition-colors duration-300"
+        className="flex-1 p-3.5 sm:p-4.5 overflow-y-auto overflow-x-hidden scrollbar-none space-y-3.5 text-xs sm:text-[12.5px] bg-[#ffffff] dark:bg-[#211f1c] transition-colors duration-300"
       >
         {/* 1. USER PROMPT: Horizontal Layout with [Text Bubble] [User Avatar] */}
         {userMessage && (
@@ -272,7 +272,7 @@ export function DemoChatPanel() {
             <div className="w-7 h-7 rounded-full bg-[#d97757]/15 border border-[#d97757]/30 flex items-center justify-center shrink-0 text-[#d97757] mt-0.5">
               <Sparkles className="w-3.5 h-3.5 animate-spin" />
             </div>
-            <div className="p-3 rounded-2xl rounded-tl-xs bg-[#faf7f0] dark:bg-[#1f1d19] border border-[#e8e0d0] dark:border-[#302c25] text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-2 transition-colors duration-300">
+            <div className="p-3 rounded-2xl rounded-tl-xs bg-[#faf7f0] dark:bg-[#25221d] border border-[#e8e0d0] dark:border-[#363129] text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-2 transition-colors duration-300">
               <div className="w-3.5 h-3.5 rounded-full border-2 border-[#d97757] border-t-transparent animate-spin shrink-0" />
               <span>Đang đối soát nội dung với bài báo Attention Is All You Need...</span>
             </div>
@@ -286,7 +286,7 @@ export function DemoChatPanel() {
               <Sparkles className="w-3.5 h-3.5" />
             </div>
 
-            <div className="flex-1 p-3.5 sm:p-4 rounded-2xl rounded-tl-xs bg-[#faf7f0] dark:bg-[#1e1c18] border border-[#e8e0d0] dark:border-[#332f27] space-y-2.5 shadow-2xs text-zinc-800 dark:text-zinc-200 transition-colors duration-300">
+            <div className="flex-1 p-3.5 sm:p-4 rounded-2xl rounded-tl-xs bg-[#faf7f0] dark:bg-[#25221d] border border-[#e8e0d0] dark:border-[#363129] space-y-2.5 shadow-2xs text-zinc-800 dark:text-zinc-200 transition-colors duration-300">
               {/* Formatted Answer with KaTeX Typesetting & Inline Footnote [1] */}
               <div className="font-sans text-xs sm:text-[13px] text-zinc-800 dark:text-zinc-200 leading-[1.6]">
                 {renderContentWithKaTeX(
@@ -306,13 +306,13 @@ export function DemoChatPanel() {
       </div>
 
       {/* Docked Chat Input Bar: Strictly Display/Simulation Mode (No manual input/enter allowed) */}
-      <div className="p-2.5 sm:p-3 bg-[#f4efe4] dark:bg-[#181715] border-t border-[#e2dcce] dark:border-[#2d2923] shrink-0 transition-colors duration-300">
+      <div className="p-2.5 sm:p-3 bg-[#f4efe4] dark:bg-[#1d1b18] border-t border-[#e2dcce] dark:border-[#332e26] shrink-0 transition-colors duration-300">
         <div className="relative">
           <div
-            className={`flex items-center gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-[#ffffff] dark:bg-[#211f1b] border transition-all duration-300 shadow-2xs dark:shadow-inner select-none cursor-default ${
+            className={`flex items-center gap-2 px-2.5 sm:px-3 py-2 sm:py-2.5 rounded-xl bg-[#ffffff] dark:bg-[#26231f] border transition-all duration-300 shadow-2xs dark:shadow-inner select-none cursor-default ${
               isTyping
                 ? "border-[#d97757]/70 shadow-[0_0_14px_rgba(217,119,87,0.22)] ring-1 ring-[#d97757]/30"
-                : "border-[#d8d2c4] dark:border-[#38342c]"
+                : "border-[#d8d2c4] dark:border-[#3d372e]"
             }`}
           >
             {/* Left Icon: Plus (+) */}

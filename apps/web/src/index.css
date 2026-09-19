@@ -60,10 +60,10 @@
 .dark {
   color-scheme: dark;
 
-  --color-canvas: #12110f;
-  --color-surface-soft: #1a1916;
-  --color-surface-card: #22201c;
-  --color-surface-cream-strong: #2c2924;
+  --color-canvas: #181715;
+  --color-surface-soft: #201e1b;
+  --color-surface-card: #262420;
+  --color-surface-cream-strong: #2e2a24;
 
   --color-ink: #f5f3ed;
   --color-body-strong: #ebe7de;
@@ -71,12 +71,12 @@
   --color-muted: #9c988f;
   --color-muted-soft: #706c64;
 
-  --color-hairline: #2d2a24;
-  --color-hairline-soft: #24221c;
+  --color-hairline: #332f28;
+  --color-hairline-soft: #292620;
 
-  --color-surface-dark: #0d0c0a;
-  --color-surface-dark-elevated: #1a1916;
-  --color-surface-dark-soft: #141311;
+  --color-surface-dark: #141311;
+  --color-surface-dark-elevated: #23211e;
+  --color-surface-dark-soft: #1c1b18;
 }
 
 .dark .katex {
