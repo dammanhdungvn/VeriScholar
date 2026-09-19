@@ -58,7 +58,7 @@ describe("DashboardPage component", () => {
 
     // Input textarea exists
     expect(
-      screen.getByPlaceholderText(/Tìm kiếm tài liệu/i)
+      screen.getByPlaceholderText(/Tôi có thể giúp gì/i)
     ).toBeInTheDocument();
 
     // New session control exists

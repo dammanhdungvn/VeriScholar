@@ -20,7 +20,7 @@ describe("DashboardChatInputBox component", () => {
       />
     );
 
-    const textarea = screen.getByPlaceholderText(/Tìm kiếm tài liệu/i);
+    const textarea = screen.getByPlaceholderText(/Tôi có thể giúp gì/i);
     expect(textarea).toHaveValue("Giải thích cơ chế Attention");
 
     // Enter without Shift submits
@@ -39,7 +39,7 @@ describe("DashboardChatInputBox component", () => {
       />
     );
 
-    const textarea = screen.getByPlaceholderText(/Tìm kiếm tài liệu/i);
+    const textarea = screen.getByPlaceholderText(/Tôi có thể giúp gì/i);
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: true });
     expect(handleSend).not.toHaveBeenCalled();
   });

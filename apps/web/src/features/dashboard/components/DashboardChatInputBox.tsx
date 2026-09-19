@@ -58,7 +58,7 @@ export function DashboardChatInputBox({
             value={inputText}
             onChange={(e) => onChangeText(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Tìm kiếm tài liệu, kiểm chứng giả thuyết hoặc phân tích phương pháp..."
+            placeholder="Tôi có thể giúp gì cho bạn hôm nay?"
             rows={2}
             className="w-full bg-transparent text-ink dark:text-[#f5f3ed] placeholder-muted/80 dark:placeholder-zinc-500 text-sm sm:text-base focus:outline-none resize-none min-h-[52px] max-h-[240px] leading-relaxed font-sans"
           />
