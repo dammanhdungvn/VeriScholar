@@ -1,126 +1,48 @@
-import { Menu, X, ArrowUpRight, Sparkles } from "lucide-react";
+import { ArrowUpRight, Sparkles } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { Button } from "@/components/ui/button";
 import { useLandingStore } from "../stores/useLandingStore";
 
 export function LandingNavbar() {
-  const isMobileMenuOpen = useLandingStore((s) => s.isMobileMenuOpen);
-  const setMobileMenuOpen = useLandingStore((s) => s.setMobileMenuOpen);
   const setUploadModalOpen = useLandingStore((s) => s.setUploadModalOpen);
 
-  const navLinks = [
-    { label: "Tính năng", href: "#features" },
-    { label: "Trình diễn", href: "#interactive-demo" },
-    { label: "Đối sánh", href: "#comparison" },
-    { label: "Quy trình", href: "#workflow" },
-  ];
-
   return (
-    <header className="sticky top-0 z-40 w-full h-16 bg-[#faf9f5]/85 backdrop-blur-md border-b border-hairline/80 transition-all">
+    <header className="sticky top-0 z-40 w-full h-18 sm:h-20 bg-[#faf9f5]/85 backdrop-blur-md border-b border-hairline/80 transition-all">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-full flex items-center justify-between">
-        {/* Logo */}
-        <a href="#" className="flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm">
-          <AcademicLogo size="md" />
+        {/* Logo - Wider & Clearly Visible */}
+        <a href="#" className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-sm py-1">
+          <AcademicLogo size="xl" />
         </a>
 
-        {/* Desktop Navigation Links */}
-        <nav className="hidden md:flex items-center gap-7" aria-label="Điều hướng chính">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              className="text-xs font-sans font-medium text-muted hover:text-ink transition-colors cursor-pointer"
-            >
-              {link.label}
-            </a>
-          ))}
-        </nav>
-
-        {/* Right CTA Cluster */}
-        <div className="hidden sm:flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setUploadModalOpen(true)}
-            className="text-xs text-muted hover:text-ink cursor-pointer"
+        {/* Action Cluster - GitHub & "Dùng thử ngay" */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          <a
+            href="https://github.com/dammanhdungvn/VeriScholar"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="nav-github-link"
+            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-md border border-hairline bg-canvas hover:bg-surface-soft text-body hover:text-ink transition-colors shadow-2xs group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            aria-label="GitHub Repository"
+            title="GitHub Repository"
           >
-            Đăng nhập
-          </Button>
+            <svg className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current transition-transform group-hover:scale-110" viewBox="0 0 24 24" aria-hidden="true">
+              <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" />
+            </svg>
+          </a>
 
           <Button
             variant="primary"
             size="sm"
             onClick={() => setUploadModalOpen(true)}
             data-testid="nav-try-btn"
-            className="group text-xs cursor-pointer shadow-xs"
+            className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0"
           >
             <Sparkles className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
             <span>Dùng thử ngay</span>
             <ArrowUpRight className="w-3 h-3 text-on-primary/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
           </Button>
         </div>
-
-        {/* Mobile Hamburger Toggle */}
-        <div className="flex md:hidden items-center gap-2">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setUploadModalOpen(true)}
-            className="text-xs px-3"
-          >
-            Dùng thử
-          </Button>
-          <button
-            type="button"
-            onClick={() => setMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 text-ink rounded-md hover:bg-surface-soft focus:outline-none focus-visible:ring-2 focus-visible:ring-primary cursor-pointer"
-            aria-expanded={isMobileMenuOpen}
-            aria-label="Mở danh mục điều hướng"
-          >
-            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
       </div>
-
-      {/* Mobile Menu Sheet */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden border-b border-hairline bg-[#faf9f5] px-4 pt-2 pb-6 space-y-3 shadow-md animate-in fade-in slide-in-from-top-2">
-          {navLinks.map((link) => (
-            <a
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-sm font-sans font-medium text-ink hover:text-primary transition-colors"
-            >
-              {link.label}
-            </a>
-          ))}
-          <div className="pt-3 border-t border-hairline flex flex-col gap-2">
-            <Button
-              variant="secondary"
-              size="md"
-              className="w-full justify-center text-xs"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setUploadModalOpen(true);
-              }}
-            >
-              Đăng nhập
-            </Button>
-            <Button
-              variant="primary"
-              size="md"
-              className="w-full justify-center text-xs"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setUploadModalOpen(true);
-              }}
-            >
-              Bắt đầu Nghiên cứu — Miễn phí
-            </Button>
-          </div>
-        </div>
-      )}
     </header>
   );
 }

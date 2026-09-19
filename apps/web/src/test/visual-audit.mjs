@@ -46,7 +46,8 @@ async function runVisualAudit() {
   });
 
   console.log(`Navigating to ${URL}...`);
-  const response = await page.goto(URL, { waitUntil: "networkidle0", timeout: 15000 });
+  const response = await page.goto(URL, { waitUntil: "networkidle2", timeout: 15000 });
+  await page.waitForSelector("h1");
 
   const httpStatus = response?.status();
   console.log(`HTTP Status: ${httpStatus}`);
@@ -63,50 +64,55 @@ async function runVisualAudit() {
   const bodyBg = await page.$eval("body", (el) => window.getComputedStyle(el).backgroundColor);
   console.log(`Body Background: ${bodyBg} (Expected rgb(250, 249, 245) for #faf9f5)`);
 
-  const primaryBtn = await page.$('[data-testid="hero-quick-upload-btn"]');
+  const primaryBtn = (await page.$('[data-testid="hero-quick-upload-btn"]')) || (await page.$('[data-testid="nav-try-btn"]'));
   const btnBg = await page.evaluate((el) => el ? window.getComputedStyle(el).backgroundColor : null, primaryBtn);
   console.log(`Primary CTA Background: ${btnBg} (Expected rgb(204, 120, 92) for #cc785c)`);
 
-  // 4. Interactive Demo Test
-  console.log("Testing Interactive In-Place Demo...");
-  const citationBadge = await page.$('[data-testid="demo-citation-badge"]');
-  if (citationBadge) {
-    await citationBadge.click();
-    await new Promise((r) => setTimeout(r, 400));
-    const activeBbox = await page.$('[data-testid="demo-bbox-highlight"][data-active="true"]');
-    console.log(`Active Bounding Box detected: ${activeBbox !== null ? "YES (PASSED)" : "NO (FAILED)"}`);
-  }
-
-  // 5. Quick Upload Modal Test
-  console.log("Testing Quick Upload Dialog Focus Trap & ESC...");
-  if (primaryBtn) {
-    await primaryBtn.click();
-    await new Promise((r) => setTimeout(r, 400));
-    const dialogVisible = await page.$eval('[role="dialog"]', (el) => el !== null).catch(() => false);
-    console.log(`Dialog open state: ${dialogVisible}`);
-
-    await page.keyboard.press("Escape");
-    await new Promise((r) => setTimeout(r, 400));
-    const dialogClosed = await page.$eval('[role="dialog"]', (el) => el !== null).catch(() => false);
-    console.log(`Dialog closed after Escape: ${!dialogClosed}`);
-  }
-
-  // 6. Capture Desktop Screenshot
+  // 4. Capture Desktop Screenshot
   if (!fs.existsSync(ARTIFACT_DIR)) {
     fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
   }
 
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await new Promise((r) => setTimeout(r, 400));
   const desktopScreenshotPath = `${ARTIFACT_DIR}/landing_page_desktop.png`;
   await page.screenshot({ path: desktopScreenshotPath, fullPage: true });
   console.log(`Desktop fullpage screenshot saved: ${desktopScreenshotPath}`);
 
-  // 7. Mobile Viewport & Screenshot (Viewport only, realistic mobile view)
-  await page.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true });
-  await page.evaluate(() => window.scrollTo(0, 0));
+  // 5. Interactive Demo Test
+  console.log("Testing Interactive In-Place Demo...");
+  const citationBadge = await page.$('[data-testid="demo-citation-badge"]');
+  if (citationBadge) {
+    await citationBadge.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const activeBbox = await page.$('[data-testid="demo-bbox-highlight"][data-active="true"]');
+    console.log(`Active Bounding Box detected: ${activeBbox !== null ? "YES (PASSED)" : "NO (FAILED)"}`);
+  }
+
+  // 6. Quick Upload Modal Test
+  console.log("Testing Quick Upload Dialog Focus Trap & ESC...");
+  if (primaryBtn) {
+    await primaryBtn.click();
+    await new Promise((r) => setTimeout(r, 300));
+    const dialogVisible = await page.$eval('[role="dialog"]', (el) => el !== null).catch(() => false);
+    console.log(`Dialog open state: ${dialogVisible}`);
+
+    await page.keyboard.press("Escape");
+    await new Promise((r) => setTimeout(r, 300));
+    const dialogClosed = await page.$eval('[role="dialog"]', (el) => el !== null).catch(() => false);
+    console.log(`Dialog closed after Escape: ${!dialogClosed}`);
+  }
+
+  // 7. Mobile Viewport & Screenshot (Fresh navigation for pristine mobile view)
+  const mobilePage = await browser.newPage();
+  await mobilePage.setViewport({ width: 375, height: 812, deviceScaleFactor: 2, isMobile: true });
+  await mobilePage.goto(URL, { waitUntil: "networkidle2", timeout: 15000 });
+  await mobilePage.waitForSelector("h1");
   await new Promise((r) => setTimeout(r, 400));
   const mobileScreenshotPath = `${ARTIFACT_DIR}/landing_page_mobile.png`;
-  await page.screenshot({ path: mobileScreenshotPath, fullPage: false });
+  await mobilePage.screenshot({ path: mobileScreenshotPath, fullPage: false });
   console.log(`Mobile viewport screenshot saved: ${mobileScreenshotPath}`);
+  await mobilePage.close();
 
   await browser.close();
 
