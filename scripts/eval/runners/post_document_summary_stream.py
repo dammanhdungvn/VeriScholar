@@ -392,33 +392,19 @@ class DocumentSummaryStreamAPIRunner(BaseAPIRunner):
             "session_tag": ctx.session_tag,
         }
 
-        # 4. In-Terminal Box
+        # 4. In-Terminal Box (Standardized Summary Format)
         terminal_box = format_terminal_box(
             method=self.http_method,
-            path=f"/api/v1/documents/{seeded_doc_id}/summary:stream",
+            path=self.route_path,
             req_headers={"accept": "text/event-stream"},
-            form_data=None,
-            req_body=None,
-            status_code=resp1.status_code,
-            latency_ms=latency1,
-            res_headers=dict(resp1.headers),
+            req_body={"scenarios": [c["name"] for c in cases]},
+            status_code=200 if all_passed else 500,
+            latency_ms=sum(c["latency_ms"] for c in cases),
             res_body={
-                "event_count": parsed1["event_count"],
-                "start": parsed1["start"],
-                "end": parsed1["end"],
-                "sections": list(parsed1["sections_text"].keys()),
-                "total_bounding_boxes": sum(len(b) for b in parsed1["sections_boxes"].values()),
+                "total_scenarios": len(cases),
+                "passed": sum(1 for c in cases if c["passed"]),
             },
-            quality_checks=[
-                (p1_ok, "Scenario 1: SSE Stream completed with 4 events & valid bounding boxes"),
-                (
-                    p2_ok,
-                    "Scenario 2: Pre-flight status guard prevents broken connection (409 Conflict)",
-                ),
-                (p3_ok, "Scenario 3: Non-existent document returns 404 DOCUMENT_NOT_FOUND"),
-                (p4_ok, "Scenario 4: Malformed UUID returns 422 Unprocessable Entity"),
-                (p5_ok, "Scenario 5: SSE buffering bypass (no-cache, keep-alive, no buffering)"),
-            ],
+            quality_checks=[(c["passed"], f"{c['name']} ({c['latency_ms']:.1f}ms)") for c in cases],
         )
         print("\n" + terminal_box)
 
@@ -484,5 +470,15 @@ class DocumentSummaryStreamAPIRunner(BaseAPIRunner):
         md.append(
             "- **Zero Network Buffering:** Headers `Cache-Control: no-cache` and `X-Accel-Buffering: no` enforce low-latency TTFT."
         )
+
+        md.append("\n---\n")
+        md.append("## 3. Full Raw Payloads & Audit Artifacts (Untruncated)\n")
+        for idx, c in enumerate(cases, 1):
+            md.append(f"### Case {idx}: {c['name']} (Status: `{c['status_code']}`)\n")
+            md.append(
+                "```json\n"
+                + json.dumps(c.get("details", {}), indent=2, ensure_ascii=False)
+                + "\n```\n"
+            )
 
         return "\n".join(md)

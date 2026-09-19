@@ -699,8 +699,8 @@ class PostSessionsChatAPIRunner(BaseAPIRunner):
 
         # In-Terminal Box Rendering (Section 4.11)
         term_box = format_terminal_box(
-            method="POST / GET / DELETE",
-            path="/api/v1/sessions/{id}/messages",
+            method=self.http_method,
+            path=self.route_path,
             req_headers={"Content-Type": "application/json", "Accept": "text/event-stream"},
             req_body={"scenarios": [c["name"] for c in cases]},
             status_code=200 if all_passed else 500,
@@ -723,29 +723,40 @@ class PostSessionsChatAPIRunner(BaseAPIRunner):
         shas_block = "\n".join(f"> - `{name}`: `{sha}`" for name, sha in checksums.items())
 
         rows = []
-        for c in cases:
+        raw_sections = []
+        for idx, c in enumerate(cases, 1):
             res_str = "PASS" if c["passed"] else "FAIL"
             row = (
-                f"| {c['name']} | `{c['status_code']}` | `{c['expected_status']}` | "
-                f"{c['latency_ms']:.1f}ms | {res_str} | {c['details']} |"
+                f"| {c['name']} | `{c['status_code']}` | "
+                f"{c['latency_ms']:.1f} ms | {res_str} | {c['details']} |"
             )
             rows.append(row)
-        table_body = "\n".join(rows)
 
-        return f"""# API Evaluation Snapshot: POST /api/v1/sessions/{{session_id}}/messages
+            if c.get("raw_response") is not None:
+                raw_json_str = json.dumps(c["raw_response"], indent=2, ensure_ascii=False)
+                raw_sections.append(
+                    f"### Case {idx}: {c['name']} (Status: `{c['status_code']}`)\n"
+                    f"```json\n{raw_json_str}\n```\n"
+                )
+
+        table_body = "\n".join(rows)
+        raw_payloads_body = "\n".join(raw_sections)
+
+        return f"""# API Evaluation Snapshot: {self.http_method} {self.route_path}
 
 > **Audit Header**: Session Tag: `{session_tag}` | Target: `#52-#54 Cross-Document Q&A & Ambiguity Resolution`  
 > **Target Output**: `temp/output/test/{self.report_filename}`  
+> **Raw Artifacts**: `tests/.artifacts/{self.endpoint_name}/`  
 > **Payload Checksums (SHA-256)**:  
 {shas_block}  
 > **Quality Gate**: **{gate}** (100% Invariants Verified)
 
 ---
 
-## 1. Test Cases Matrix
+## 1. Executive Summary & Verification Matrix
 
-| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
-|:---|:---:|:---:|:---:|:---:|:---|
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
 {table_body}
 
 ---
@@ -753,10 +764,16 @@ class PostSessionsChatAPIRunner(BaseAPIRunner):
 ## 2. Invariants & Contract Adherence
 - **AT-CoT Ambiguity Resolution**: Tự động nhận diện truy vấn mơ hồ ('từ con số 0'), phát sự kiện SSE `interactive_options` với 3 Personas và 3 câu hỏi Diagnostic Micro-Quiz định hình đối tượng học.
 - **Multi-turn Context Grounding**: Phản hồi may đo theo phản hồi lựa chọn Nhóm B với lộ trình 5 chặng neo chính xác vào Figure 1 và Table 1.
-- **Table 1 Mathematical Precision**: So sánh chuẩn xác độ phức tạp $\\mathcal{{O}}(n^2 \\cdot d)$ vs $\\mathcal{{O}}(n \\cdot d^2)$, đính kèm trích dẫn không gian Trang 6 với Bounding Box IoU.
+- **Table 1 Mathematical Precision**: So sánh chuẩn xác độ phức tạp O(n^2 * d) vs O(n * d^2)$, đính kèm trích dẫn không gian Trang 6 với Bounding Box IoU.
 - **Socratic Presupposition Refutation**: Bác bỏ tiền đề sai lệch gán ghép RNN vào Encoder Transformer, điều hướng người học đến Positional Encoding tại Mục 3.5 Trang 6.
 - **Anti-Hallucination Scope & Metric Guards**:
   - Từ chối các truy vấn ngoài phạm vi thời gian/nghiệp vụ (ResNet, YOLO, GSM8K, GPT-4) trên bài báo 2017.
   - Bác bỏ bẫy sai số thực nghiệm 45.0 BLEU, xác nhận chính xác điểm kỷ lục 28.4 EN-DE tại Table 2 Trang 8.
 - **Hermetic REST Lifecycle & Clean Up**: Tự động dọn sạch tài nguyên và bảng phụ thuộc qua REST API chuẩn (`DELETE /api/v1/documents/{{id}}`) khi kết thúc tiến trình.
+
+---
+
+## 3. Raw Response Snapshots
+
+{raw_payloads_body}
 """

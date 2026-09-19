@@ -25,7 +25,9 @@ from scripts.eval.runners.post_documents_star import StarDocumentAPIRunner
 from scripts.eval.runners.post_documents_summary_generate import DocumentSummaryGenerateAPIRunner
 from scripts.eval.runners.post_documents_upload import UploadAPIRunner
 from scripts.eval.runners.post_session_documents import PostSessionDocumentsAPIRunner
+from scripts.eval.runners.post_session_export_bundle import PostSessionExportBundleAPIRunner
 from scripts.eval.runners.post_session_messages import PostSessionMessagesAPIRunner
+from scripts.eval.runners.post_session_restore_archived import PostSessionRestoreArchivedAPIRunner
 from scripts.eval.runners.post_sessions_chat import PostSessionsChatAPIRunner
 from scripts.eval.runners.post_sessions_create import CreateSessionAPIRunner
 from scripts.eval.runners.sessions_lifecycle_runner import SessionsLifecycleAPIRunner
@@ -123,6 +125,15 @@ RUNNERS_MAP: dict[str, type[BaseAPIRunner]] = {
     "notes-and-synthesis": NotesAndSynthesisAPIRunner,
     "note": NotesAndSynthesisAPIRunner,
     "synthesize": NotesAndSynthesisAPIRunner,
+    "post_session_restore_archived": PostSessionRestoreArchivedAPIRunner,
+    "restore_archived": PostSessionRestoreArchivedAPIRunner,
+    "restore-archived": PostSessionRestoreArchivedAPIRunner,
+    "post-session-restore-archived": PostSessionRestoreArchivedAPIRunner,
+    "post_session_export_bundle": PostSessionExportBundleAPIRunner,
+    "export_bundle": PostSessionExportBundleAPIRunner,
+    "export-bundle": PostSessionExportBundleAPIRunner,
+    "post-session-export-bundle": PostSessionExportBundleAPIRunner,
+    "bundle": PostSessionExportBundleAPIRunner,
     # Canonical Endpoint Identifiers (Matching File Names 1-to-1)
     "post_documents_upload": UploadAPIRunner,
     "get_documents_list": ListDocumentsAPIRunner,
@@ -171,10 +182,14 @@ MODULE_1_ORDER = [
     "sessions_lifecycle",
     "post_sessions_chat",
     "notes_and_synthesis",
+    "post_session_restore_archived",
+    "post_session_export_bundle",
 ]
 
 __all__ = [
     "BaseAPIRunner",
+    "PostSessionRestoreArchivedAPIRunner",
+    "PostSessionExportBundleAPIRunner",
     "CreateSessionAPIRunner",
     "DeleteDocumentAPIRunner",
     "DeleteSessionAPIRunner",

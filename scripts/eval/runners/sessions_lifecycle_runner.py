@@ -423,32 +423,40 @@ class SessionsLifecycleAPIRunner(BaseAPIRunner):
         )
 
         # Primary terminal display
-        checks = [
-            (p_list, "46. List Sessions / Sidebar History 200"),
-            (p_get, "47. Get Session Snapshot & ETag 200"),
-            (p_patch, "48. OCC If-Match Title Update 200"),
-            (p_vp, "49. OCC Viewport & Tab Save 200"),
-            (p_doc, "51. Add Document via URL 202"),
-            (p_sse, "52. SSE Stream Messages 200"),
-            (p_hist, "53. Get Chat History 200"),
-            (p_clr, "54. Clear Chat History 204"),
-            (p_res, "55. Restore Archived Session 200"),
-            (p_del, "50. Delete Session 204"),
+        q_checks = [
+            (c["passed"], f"{idx}. {c['name']} ({c['latency_ms']:.1f}ms)")
+            for idx, c in enumerate(cases, 1)
         ]
         tbox = format_terminal_box(
-            method=self.http_method,
-            path=self.route_path,
-            req_headers={"If-Match": f'"v{current_version}"'},
+            method="MULTI",
+            path="/api/v1/sessions/*",
+            req_headers={
+                "Content-Type": "application/json",
+                "If-Match": f'"v{current_version}"',
+            },
             form_data=None,
-            req_body={"action": "full_lifecycle_and_chat_eval"},
-            status_code=200 if all(c[0] for c in checks) else 500,
+            req_body={
+                "scenarios": [
+                    "1. List Sessions / Sidebar History (GET /api/v1/sessions)",
+                    "2. Get Session Snapshot & ETag (GET /api/v1/sessions/{id})",
+                    "3. OCC If-Match Title Update (PATCH /api/v1/sessions/{id})",
+                    "4. OCC Viewport & Tab Save (PATCH /api/v1/sessions/{id}/viewport)",
+                    "5. Add Document via URL (POST /api/v1/sessions/{id}/documents)",
+                    "6. SSE Stream Messages (POST /api/v1/sessions/{id}/messages)",
+                    "7. Get Chat History (GET /api/v1/sessions/{id}/messages)",
+                    "8. Clear Chat History (DELETE /api/v1/sessions/{id}/messages)",
+                    "9. Restore Archived Session (POST /api/v1/sessions/{id}:restore-archived)",
+                    "10. Delete Session (DELETE /api/v1/sessions/{id})",
+                ]
+            },
+            status_code=200 if all(c["passed"] for c in cases) else 500,
             latency_ms=sum(c["latency_ms"] for c in cases),
             res_headers={},
             res_body={
                 "total_scenarios": len(cases),
                 "passed": sum(1 for c in cases if c["passed"]),
             },
-            quality_checks=checks,
+            quality_checks=q_checks,
         )
         print("\n" + tbox)
 
@@ -472,53 +480,54 @@ class SessionsLifecycleAPIRunner(BaseAPIRunner):
         gate = "PASSED" if eval_result.get("all_passed") else "FAILED"
         checksums = eval_result.get("artifact_checksums", {})
 
+        shas_block = "\n".join(f"> - `{name}`: `{sha}`" for name, sha in checksums.items())
+
         rows = []
         raw_sections = []
         for idx, c in enumerate(cases, 1):
-            mark = "✅ PASSED" if c["passed"] else "❌ FAILED"
+            res_str = "PASS" if c["passed"] else "FAIL"
             rows.append(
-                f"| {idx} | {c['name']} | `{c['status_code']}` | `{c['expected_status']}` | "
-                f"{c['latency_ms']:.1f}ms | {mark} | {c['details']} |"
+                f"| {c['name']} | `{c['status_code']}` | "
+                f"{c['latency_ms']:.1f} ms | {res_str} | {c.get('details', '')} |"
             )
             raw_sections.append(
-                f"### {idx}. {c['name']}\n\n```json\n"
-                f"{json.dumps(c.get('raw_response', {}), indent=2, ensure_ascii=False)}\n```\n"
+                f"### Case {idx}: {c['name']} (Status: `{c['status_code']}`)\n\n"
+                f"```json\n"
+                f"{json.dumps(c.get('raw_response', {}), indent=2, ensure_ascii=False)}\n"
+                f"```\n"
             )
 
         table_md = "\n".join(rows)
         raw_md = "\n".join(raw_sections)
 
-        chk_rows = [f"| `{k}` | `{v}` |" for k, v in checksums.items()]
-        chk_table = (
-            "| Artifact Name | SHA-256 Checksum |\n|---|---|\n" + "\n".join(chk_rows)
-            if chk_rows
-            else "_Không có artifact nào được lưu trữ._"
-        )
+        chk_table = shas_block if shas_block else "> - _Không có artifact nào được lưu trữ._"
 
-        return f"""# Báo Cáo Đánh Giá Tự Động: Vòng Đời Phiên Nghiên Cứu & Trò Chuyện (#46 - #55)
+        return f"""# API Evaluation Snapshot: MULTI /api/v1/sessions/*
 
-- **Session Tag**: `{session_tag}`
-- **Thời gian**: `{time.strftime("%Y-%m-%d %H:%M:%S UTC", time.gmtime())}`
-- **Chất lượng kiểm duyệt**: **{gate}**
-- **Phương thức & Đường dẫn**: `MULTI /api/v1/sessions/*`
+> **Audit Header**: Session Tag: `{session_tag}` | Target: `Research Session Lifecycle (#46 - #55)`  
+> **Target Output**: `temp/output/test/{self.report_filename}`  
+> **Payload Checksums (SHA-256)**:  
+{chk_table}  
+> **Quality Gate**: **{gate}**
 
 ---
 
-## 1. Kết Quả Các Kịch Bản Kiểm Thử
+## 1. Executive Summary & Verification Matrix
 
-| STT | Kịch Bản Kiểm Thử | Mã HTTP | Kỳ Vọng | Độ Trễ | Trạng Thái | Chi Tiết Kỹ Thuật |
-|---|---|---|---|---|---|---|
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
 {table_md}
 
 ---
 
-## 2. Checksum Snapshots (SHA-256)
-
-{chk_table}
+## 2. Invariants & Storage Integrity
+- **Optimistic Concurrency Control (OCC)**: Tuân thủ nghiêm ngặt RFC 7232. Toàn bộ các thao tác chỉnh sửa phiên (Title, Viewport, Tab) đều được kiểm soát qua `If-Match: "v{{version}}"`, chống ghi đè dữ liệu tương tranh.
+- **Session Cascade Integrity**: Xóa phiên xóa bỏ sạch các liên kết tài liệu và tin nhắn trong phiên mà không làm ảnh hưởng tới tài liệu gốc trong kho.
+- **Hermetic Zero-Retention Test Safety**: Dữ liệu phiên thử nghiệm được dọn dẹp sạch sẽ sau khi hoàn tất chu trình kiểm định.
 
 ---
 
-## 3. Dữ Liệu Phản Hồi Chi Tiết (Raw JSON Snapshots)
+## 3. Full Raw Payloads (Untruncated)
 
 {raw_md}
 """

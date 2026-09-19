@@ -739,30 +739,30 @@ Báo cáo autotest được kết xuất tự động tại: `temp/output/test/g
 ````markdown
 # API Evaluation Snapshot: GET /api/v1/sessions/{id}/messages
 
-> **Audit Header**: Session Tag: `test_eval_3c604849` | Target: `#53 Lấy lịch sử hội thoại của phiên (phân trang)`  
+> **Audit Header**: Session Tag: `test_eval_4ee81114` | Target: `#53 Lấy lịch sử hội thoại của phiên (phân trang)`  
 > **Target Output**: `temp/output/test/get_session_messages.md`  
 > **Raw Artifacts**: `tests/.artifacts/get_session_messages/`  
 > **Payload Checksums (SHA-256)**:  
-> - `01_default_pagination_chronological.json`: `335f078265a35fe331f88af387c4ead4be6e2de0c6a0695cfb4fdabe80ee87f6`
-> - `02_strict_page_slicing_and_links.json`: `305f50748debf37fcbea0007dbc54865a0ab599c6ee59410407ba81a73e43fc3`
-> - `03_turn_schema_contract_adherence.json`: `05a3eccaf30a132525c39a3b8ee76909f6decc13ac69f44aa2e32f1d31c29a32`
-> - `04_empty_session_conversation.json`: `847fc71b98a70fe2ff4cb4ad413687472f698bc45a3c73b20c7586351dc316d9`
+> - `01_default_pagination_chronological.json`: `18b373452ace911d539be738233238d9eb355a4b8cfc25d78a0860c4b2757c35`
+> - `02_strict_page_slicing_and_links.json`: `e4066335a828ba9d7c3ab0a2e1a81c9c085799b578406446b3ba18f1d64c8e15`
+> - `03_turn_schema_contract_adherence.json`: `73c3296b652fabd3ea912389a9486ecc8b182c1e70ca2e4d2c7343f191dda4cc`
+> - `04_empty_session_conversation.json`: `4afb39fba3697b4b23be8497ac7236b3f3d1f14099fb2ff4e3029e758224b838`
 > - `05_multi_tenant_isolation_guard.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
 > - `06_validation_bounds_guard.json`: `8231a893d3997a57b4e94e6e1cf1b5843f1c068eda306fa89e66ed02aa2d680e`  
-> **Quality Gate**: **PASSED** (100% Invariants Verified)
+> **Quality Gate**: **PASSED**
 
 ---
 
-## 1. Test Cases Matrix
+## 1. Executive Summary & Verification Matrix
 
-| Test Scenario | Actual HTTP | Expected HTTP | Latency | Result | Verification Notes |
-|:---|:---:|:---:|:---:|:---:|:---|
-| 1. Default Chronological History (page=1, per_page=50) | `200` | `200` | 8.0ms | PASS | Returned 4 turns (total=4) | Chronological ASC: True | prev is null |
-| 2. Strict Page Slicing & Boundary Links (per_page=2, page=1..2) | `200` | `200` | 9.1ms | PASS | Page 1 len=2, Page 2 len=2 | Disjoint sets: True | RFC 8288 links verified |
-| 3. Turn Schema & Citation Spatial Integrity | `200` | `200` | 4.6ms | PASS | Full schema verified: True | Spatial citations present: True |
-| 4. Empty Session Conversation Guard (data: [], total: 0) | `200` | `200` | 4.1ms | PASS | Graceful empty handling: total=0, data=[] |
-| 5. Multi-Tenant User Isolation Guard (Expect 404) | `404` | `404` | 8.3ms | PASS | Alien user rejected with HTTP 404 (SESSION_NOT_FOUND) | Zero leakage verified |
-| 6. Query Parameter Validation Guard (page=0, per_page=101) | `422` | `422` | 5.9ms | PASS | page=0 -> 422, per_page=101 -> 422 (Pydantic validation rejected bounds violation) |
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| 1. Default Chronological History (page=1, per_page=50) | `200` | 8.6 ms | PASS | Returned 4 turns (total=4) | Chronological ASC: True | prev is null |
+| 2. Strict Page Slicing & Boundary Links (per_page=2, page=1..2) | `200` | 7.8 ms | PASS | Page 1 len=2, Page 2 len=2 | Disjoint sets: True | RFC 8288 links verified |
+| 3. Turn Schema & Citation Spatial Integrity | `200` | 3.9 ms | PASS | Full schema verified: True | Spatial citations present: True |
+| 4. Empty Session Conversation Guard (data: [], total: 0) | `200` | 4.6 ms | PASS | Graceful empty handling: total=0, data=[] |
+| 5. Multi-Tenant User Isolation Guard (Expect 404) | `404` | 8.1 ms | PASS | Alien user rejected with HTTP 404 (SESSION_NOT_FOUND) | Zero leakage verified |
+| 6. Query Parameter Validation Guard (page=0, per_page=101) | `422` | 5.3 ms | PASS | page=0 -> 422, per_page=101 -> 422 (Pydantic validation rejected bounds violation) |
 
 ---
 
@@ -773,6 +773,193 @@ Báo cáo autotest được kết xuất tự động tại: `temp/output/test/g
 - **Empty History Graceful Handling**: Phiên chưa có tin nhắn trả về `HTTP 200 OK` với mảng rỗng `data: []`, `total: 0`, `total_pages: 0`.
 - **Multi-Tenant User Isolation**: Người dùng lạ truy vấn vào phiên riêng tư bị từ chối với `HTTP 404 Not Found` (`SESSION_NOT_FOUND`), tuyệt đối không rò rỉ dữ liệu.
 - **Hermetic REST Teardown**: Toàn bộ phiên và tài liệu thử nghiệm được dọn dẹp sạch sẽ khép kín sau khi runner hoàn tất (Zero Retention).
+
+---
+
+## 3. Raw Response Snapshots
+
+### Case 1: 1. Default Chronological History (page=1, per_page=50) (Status: `200`)
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "e16495f3-4860-458f-ba4c-01725a8136e4",
+      "session_id": "9f8e8f8c-b6b8-4461-849b-00054dc68f35",
+      "question": "Kiến trúc Transformer trong bài báo Attention Is All You Need hoạt động ra sao?",
+      "answer": "Transformer dựa hoàn toàn vào cơ chế Self-Attention mà không sử dụng mạng nơ-ron đệ quy (RNN)...",
+      "citations": [
+        {
+          "citation_id": "cit_1",
+          "document_title": "Attention Is All You Need",
+          "page_number": 1,
+          "bounding_boxes": [[0.1, 0.2, 0.8, 0.35, 1.0]],
+          "score": 1.0
+        }
+      ],
+      "prompt_tokens": 80,
+      "completion_tokens": 62,
+      "total_tokens": 142,
+      "finish_reason": "stop"
+    }
+  ],
+  "meta": {
+    "total": 4,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 1
+  },
+  "links": {
+    "first": "/api/v1/sessions/9f8e8f8c-b6b8-4461-849b-00054dc68f35/messages?page=1&per_page=50",
+    "prev": null,
+    "self": "/api/v1/sessions/9f8e8f8c-b6b8-4461-849b-00054dc68f35/messages?page=1&per_page=50",
+    "next": null,
+    "last": "/api/v1/sessions/9f8e8f8c-b6b8-4461-849b-00054dc68f35/messages?page=1&per_page=50"
+  }
+}
+```
+
+### Case 4: 4. Empty Session Conversation Guard (Status: `200`)
+```json
+{
+  "success": true,
+  "data": [],
+  "meta": {
+    "total": 0,
+    "page": 1,
+    "per_page": 50,
+    "total_pages": 0
+  },
+  "links": {
+    "first": null,
+    "prev": null,
+    "self": "/api/v1/sessions/4e0cc138-f242-40e5-afa8-3b670d4c8193/messages?page=1&per_page=50",
+    "next": null,
+    "last": null
+  }
+}
+```
+
+### Case 5: 5. Multi-Tenant User Isolation Guard (Status: `404`)
+```json
+{
+  "success": false,
+  "error": {
+    "code": "SESSION_NOT_FOUND",
+    "message": "Phiên nghiên cứu không tồn tại hoặc bạn không có quyền truy cập.",
+    "field": null,
+    "action": "Verify session ID."
+  },
+  "meta": {
+    "request_id": null,
+    "trace_id": null
+  }
+}
+```
+````
+
+### 7.10. Snapshot Mẫu cho API #54: `DELETE /api/v1/sessions/{id}/messages`
+
+Báo cáo autotest được kết xuất tự động tại: `temp/output/test/delete_session_messages.md`
+
+````markdown
+# API Evaluation Snapshot: DELETE /api/v1/sessions/{id}/messages
+
+> **Audit Header**: Session Tag: `test_eval_836af3ac` | Target: `#54 Xóa lịch sử hội thoại của phiên (Idempotent 204)`  
+> **Target Output**: `temp/output/test/delete_session_messages.md`  
+> **Raw Artifacts**: `tests/.artifacts/delete_session_messages/`  
+> **Payload Checksums (SHA-256)**:  
+> - `01_active_history_purge_204.json`: `f43f6b7fff804b6600a00a5059983436edcdc515f329ca0548f0b03b5b222d71`
+> - `02_idempotency_verification_204.json`: `d2a3e36e27aea0e0ff0838d1c40f2dba0d4a59d0bbba5417d479d566afe3da00`
+> - `03_parent_session_preservation_200.json`: `c729ea0b1dce4f304cd133e53af5589d6f478c9878aeaa5ffcdcd7b8d76c7e06`
+> - `04_multi_tenant_isolation_404.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
+> - `05_non_existent_session_404.json`: `13e714039a03134a0aae8b1f35bf2393445c4e74fb08349bcd72565f09416c57`
+> - `06_uuid_validation_bounds_422.json`: `45db4f2ba26c72c9bda2bc43cfa1dac847f67e05adfdd6e15aaac996af6b1089`  
+> **Quality Gate**: **PASSED**
+
+---
+
+## 1. Executive Summary & Verification Matrix
+
+| Scenario | Status | Latency | Result | Notes |
+| :--- | :--- | :--- | :--- | :--- |
+| 1. Active History Purge & State Transition (Expect 204) | `204` | 7.7 ms | PASS | HTTP 204 No Content | Pre-total: 3 -> Post-total: 0 | Verified data: [] |
+| 2. Idempotency Invariant Verification (Consecutive 204) | `204` | 3.4 ms | PASS | Second consecutive DELETE returned HTTP 204 with empty body (RFC 9110 Idempotent) |
+| 3. Parent Session Preservation Guard (Zero Side-Effects) | `200` | 6.9 ms | PASS | Parent session 'Phiên Đánh Giá Xóa Lịch Sử Hội Thoại (Idempotent 204)' intact | Document count: 1 | is_archived: False |
+| 4. Multi-Tenant Tampering Prevention Guard (Expect 404) | `404` | 9.3 ms | PASS | Alien tenant DELETE rejected with HTTP 404 (SESSION_NOT_FOUND) | Zero tampering allowed |
+| 5. Non-Existent Session Guard (Expect 404) | `404` | 3.3 ms | PASS | Random UUID rejected with HTTP 404 (SESSION_NOT_FOUND) |
+| 6. UUID Format Validation Guard (Expect 422) | `422` | 3.1 ms | PASS | Malformed UUID rejected with HTTP 422 (Pydantic path parameter validation) |
+
+---
+
+## 2. Invariants & Contract Adherence
+- **RFC 9110 Idempotent 204 Invariant**: Phản hồi `HTTP 204 No Content` với thân rỗng; thực thi liên tiếp nhiều lần trả về kết quả 204 nhất quán.
+- **State Transition Emptiness**: Sau khi xóa, truy vấn `GET /api/v1/sessions/{id}/messages` trả về `data: []` và `meta.total == 0`.
+- **Parent Session Preservation**: Không làm thay đổi hay suy giảm phiên cha `research_sessions` (`title`, `viewport_state`, `active_tab` nguyên vẹn).
+- **Multi-Tenant Protection**: Người dùng khác không thể xóa tin nhắn của phiên không thuộc quyền sở hữu, bị từ chối với `HTTP 404 Not Found` (`SESSION_NOT_FOUND`).
+- **UUID Schema Validation**: Đường dẫn chứa UUID sai định dạng bị chặn tại tầng schema với `HTTP 422 Unprocessable Content`.
+- **Hermetic REST Teardown**: Dọn sạch tài liệu và phiên nghiên cứu sau kiểm thử theo nguyên tắc Zero Retention.
+
+---
+
+## 3. Raw Response Snapshots
+
+### Case 1: 1. Active History Purge & State Transition (Expect 204) (Status: `204`)
+```json
+{
+  "status_code": 204,
+  "pre_delete_total": 3,
+  "post_delete_total": 0,
+  "post_delete_data": []
+}
+```
+
+### Case 2: 2. Idempotency Invariant Verification (Consecutive 204) (Status: `204`)
+```json
+{
+  "consecutive_delete_status": 204,
+  "consecutive_delete_body_len": 0
+}
+```
+
+### Case 3: 3. Parent Session Preservation Guard (Zero Side-Effects) (Status: `200`)
+```json
+{
+  "success": true,
+  "data": {
+    "id": "f0d57295-01e9-4bbc-afb2-b396c074eb56",
+    "title": "Phiên Đánh Giá Xóa Lịch Sử Hội Thoại (Idempotent 204)",
+    "document_ids": [
+      "1198e8cd-6df6-46be-bb23-381511d28537"
+    ],
+    "active_document_id": "1198e8cd-6df6-46be-bb23-381511d28537",
+    "viewport_state": {
+      "page": 1,
+      "zoom_ratio": 1.0,
+      "scroll_top": 0.0
+    },
+    "active_tab": "chat",
+    "is_archived": false,
+    "version": 1,
+    "message_count": 0,
+    "documents": [
+      {
+        "id": "1198e8cd-6df6-46be-bb23-381511d28537",
+        "title": null,
+        "filename": "seed_Advancing Retrieval-Augmented Generation for Structured Enterprise and Internal Data.pdf",
+        "status": "uploaded",
+        "file_size_bytes": 431256,
+        "added_at": "2026-09-18T16:17:25.054250Z",
+        "display_order": 0
+      }
+    ]
+  },
+  "meta": {
+    "request_id": "req_622b97d0c95b",
+    "timestamp": "2026-09-18T16:17:25.099552Z"
+  }
+}
+```
 ````
 
 ### 7.10. Snapshot Mẫu cho API #54: `DELETE /api/v1/sessions/{id}/messages`
