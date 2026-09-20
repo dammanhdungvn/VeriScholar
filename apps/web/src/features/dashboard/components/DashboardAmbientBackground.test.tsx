@@ -24,6 +24,10 @@ describe("DashboardAmbientBackground - Idea 3: Sunlight (Light Mode) & Moonlight
 
     const motes = screen.getByTestId("dashboard-celestial-motes");
     expect(motes).toHaveClass("opacity-100");
+
+    const motifs = screen.getByTestId("dashboard-scholar-motifs");
+    expect(motifs).toBeInTheDocument();
+    expect(motifs).toHaveClass("opacity-100");
   });
 
   it("smoothly dissolves all celestial elements to 0% opacity when leaving hero mode for reading focus", () => {
@@ -43,5 +47,8 @@ describe("DashboardAmbientBackground - Idea 3: Sunlight (Light Mode) & Moonlight
 
     const motes = screen.getByTestId("dashboard-celestial-motes");
     expect(motes).toHaveClass("opacity-0");
+
+    const motifs = screen.getByTestId("dashboard-scholar-motifs");
+    expect(motifs).toHaveClass("opacity-0");
   });
 });

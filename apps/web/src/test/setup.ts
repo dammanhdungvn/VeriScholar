@@ -14,3 +14,7 @@ Object.defineProperty(window, "matchMedia", {
     dispatchEvent: () => false,
   }),
 });
+
+// Mock scrollIntoView for jsdom
+window.HTMLElement.prototype.scrollIntoView = function () {};
+

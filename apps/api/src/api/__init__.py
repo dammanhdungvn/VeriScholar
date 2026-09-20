@@ -7,7 +7,12 @@ from typing import Any
 
 import structlog
 import uvicorn
-from core.domain.exceptions import DomainError, EntityNotFoundError, InvariantViolationError
+from core.domain.exceptions import (
+    DomainError,
+    DomainValidationError,
+    EntityNotFoundError,
+    InvariantViolationError,
+)
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
@@ -126,14 +131,22 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
     if isinstance(exc, EntityNotFoundError):
         status_code = status.HTTP_404_NOT_FOUND
         code = "ENTITY_NOT_FOUND"
+        field = None
         action = "Check the entity identifier or verify that the resource exists."
+    elif isinstance(exc, DomainValidationError):
+        status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        code = exc.code
+        field = exc.field
+        action = "Please upload a valid scholarly research paper with an extractable text layer."
     elif isinstance(exc, InvariantViolationError):
         status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         code = "INVARIANT_VIOLATION"
+        field = None
         action = "Ensure domain attributes and invariants satisfy business constraints."
     else:
         status_code = status.HTTP_400_BAD_REQUEST
         code = "DOMAIN_ERROR"
+        field = None
         action = "Verify that the request conforms to domain business logic."
 
     error_payload = ErrorResponse(
@@ -141,6 +154,7 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
         error=ErrorDetail(
             code=code,
             message=str(exc),
+            field=field,
             action=action,
         ),
         meta={

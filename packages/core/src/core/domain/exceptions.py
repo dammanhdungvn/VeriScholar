@@ -79,3 +79,12 @@ class InvalidNoteDataError(InvariantViolationError):
 
 class NoteSynthesisError(DomainError):
     """Raised when AI synthesis fails or input notes are invalid."""
+
+
+class DomainValidationError(InvariantViolationError):
+    """Raised when a document fails domain academic validation gates."""
+
+    def __init__(self, code: str, message: str, field: str = "file") -> None:
+        super().__init__(message)
+        self.code = code
+        self.field = field
