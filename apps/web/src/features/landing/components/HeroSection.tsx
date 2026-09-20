@@ -3,19 +3,19 @@ import { useState, useRef, type MouseEvent } from "react";
 export function HeroSection() {
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
   const [sheen, setSheen] = useState({ x: 50, y: 50, active: false });
-  const plaqueRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
-    if (!plaqueRef.current) return;
-    const rect = plaqueRef.current.getBoundingClientRect();
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
     const mouseX = e.clientX - centerX;
     const mouseY = e.clientY - centerY;
 
-    // Subtle, prestigious tilt angles
-    const rotateY = Math.max(-6, Math.min(6, (mouseX / (rect.width / 2)) * 6));
-    const rotateX = Math.max(-5, Math.min(5, -(mouseY / (rect.height / 2)) * 5));
+    // Majestic, subtle typographic tilt (free of boxy card constraints)
+    const rotateY = Math.max(-5, Math.min(5, (mouseX / (rect.width / 2)) * 5));
+    const rotateX = Math.max(-4, Math.min(4, -(mouseY / (rect.height / 2)) * 4));
 
     const sheenX = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
     const sheenY = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
@@ -30,72 +30,68 @@ export function HeroSection() {
   };
 
   return (
-    <section className="relative pt-12 pb-8 sm:pt-20 sm:pb-12 overflow-hidden select-none">
+    <section className="relative pt-10 pb-8 sm:pt-18 sm:pb-14 overflow-hidden select-none">
       <div
-        className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10"
+        className="max-w-5xl mx-auto px-4 sm:px-6 text-center relative z-10"
         style={{ perspective: 1200 }}
       >
-        {/* 3D Floating Scholarly Monolith Plaque */}
+        {/* 3D Typographical Scholarly Inscription (Dignified & Cardless) */}
         <div
-          ref={plaqueRef}
+          ref={containerRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
           style={{
-            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg) scale(${sheen.active ? 1.015 : 1})`,
+            transform: `rotateX(${tilt.x}deg) rotateY(${tilt.y}deg)`,
             transformStyle: "preserve-3d",
             transition: sheen.active
-              ? "transform 0.12s ease-out, box-shadow 0.2s ease-out"
-              : "transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.5s ease-out",
-            boxShadow: sheen.active
-              ? `${-tilt.y * 2.5}px ${tilt.x * 2.5 + 24}px 48px rgba(0,0,0,0.08), 0 0 35px rgba(204,120,92,0.12)`
-              : undefined,
+              ? "transform 0.12s ease-out"
+              : "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
           }}
-          className="relative inline-block px-7 py-7 sm:px-16 sm:py-12 rounded-3xl border border-[#cc785c]/30 dark:border-[#cc785c]/25 bg-white/65 dark:bg-[#1c1a17]/65 backdrop-blur-xl shadow-lg dark:shadow-[0_25px_60px_rgba(0,0,0,0.5)] cursor-default overflow-hidden"
+          className="relative inline-flex flex-col items-center justify-center cursor-default max-w-4xl py-4 sm:py-6"
         >
-          {/* Dynamic Specular Sheen Layer (Glides with cursor) */}
+          {/* Ambient Warm Scholarly Light Aura following cursor */}
           <div
-            className="absolute inset-0 rounded-3xl pointer-events-none transition-opacity duration-300"
+            className="absolute -inset-10 sm:-inset-16 rounded-full pointer-events-none transition-opacity duration-500 blur-3xl -z-10"
             style={{
-              opacity: sheen.active ? 1 : 0,
-              background: `radial-gradient(circle 380px at ${sheen.x}% ${sheen.y}%, rgba(204,120,92,0.14), transparent 75%)`,
+              opacity: sheen.active ? 1 : 0.45,
+              background: `radial-gradient(circle 480px at ${sheen.x}% ${sheen.y}%, rgba(204,120,92,0.18), transparent 70%)`,
             }}
           />
 
-          {/* 4 Architectural Precision Coordinate Brackets with 3D Parallax Depth */}
-          <span
-            className="absolute top-3 left-3 w-4 h-4 border-t-2 border-l-2 border-[#cc785c] pointer-events-none"
-            style={{ transform: "translateZ(22px)" }}
-          />
-          <span
-            className="absolute top-3 right-3 w-4 h-4 border-t-2 border-r-2 border-[#cc785c] pointer-events-none"
-            style={{ transform: "translateZ(22px)" }}
-          />
-          <span
-            className="absolute bottom-3 left-3 w-4 h-4 border-b-2 border-l-2 border-[#cc785c] pointer-events-none"
-            style={{ transform: "translateZ(22px)" }}
-          />
-          <span
-            className="absolute bottom-3 right-3 w-4 h-4 border-b-2 border-r-2 border-[#cc785c] pointer-events-none"
-            style={{ transform: "translateZ(22px)" }}
-          />
-
-          {/* Slogan Quote with 2-Tone Logo Color Harmony (Veri Ink & Scholar Coral) */}
-          <blockquote
-            className="space-y-4 sm:space-y-5 relative z-10"
-            style={{ transform: "translateZ(14px)" }}
+          {/* Academic Epigraph Seal Badge */}
+          <div
+            className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-[#cc785c]/30 dark:border-[#cc785c]/25 bg-[#cc785c]/6 dark:bg-[#cc785c]/10 text-[10.5px] sm:text-[11px] font-mono uppercase tracking-[0.24em] text-[#b85532] dark:text-[#e89b82] mb-5 sm:mb-7 shadow-2xs"
+            style={{ transform: "translateZ(18px)" }}
           >
-            <h1 className="font-quote text-3xl sm:text-5xl md:text-6xl font-normal leading-[1.15] text-ink tracking-tight">
-              <span className="block text-ink dark:text-zinc-100">“What I cannot create,</span>{" "}
-              <span className="block mt-1 sm:mt-2 italic bg-gradient-to-r from-[#cc785c] via-[#d97757] to-[#e8a55a] bg-clip-text text-transparent">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#cc785c] animate-pulse" />
+            <span>Nguyên lý kiểm chứng nền tảng</span>
+          </div>
+
+          {/* Slogan Quote with Unconfined, Monumental Academic Typography */}
+          <blockquote
+            className="space-y-4 sm:space-y-6 relative"
+            style={{ transform: "translateZ(24px)" }}
+          >
+            {/* Monumental Headline */}
+            <h1 className="font-quote text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-normal leading-[1.12] text-ink tracking-tight">
+              <span className="block text-ink dark:text-[#f4f2eb] drop-shadow-2xs">
+                “What I cannot create,
+              </span>{" "}
+              <span className="block mt-2 sm:mt-3.5 italic font-serif bg-gradient-to-r from-[#b85d3b] via-[#cc785c] to-[#e89b52] dark:from-[#f09f85] dark:via-[#e58a69] dark:to-[#f5c796] bg-clip-text text-transparent">
                 I do not understand.”
               </span>
             </h1>
 
-            {/* Author Attribution with Academic Hairline Dividers */}
-            <footer className="flex items-center justify-center gap-3 pt-2 text-xs sm:text-sm font-mono text-muted dark:text-zinc-400 uppercase tracking-[0.2em] font-medium">
-              <span className="w-6 sm:w-10 h-[1px] bg-primary/40 dark:bg-zinc-700" />
-              <span>Richard Feynman</span>
-              <span className="w-6 sm:w-10 h-[1px] bg-primary/40 dark:bg-zinc-700" />
+            {/* Author Attribution with Engraved Hairline Rules & Caltech Historical Inscription */}
+            <footer className="flex flex-col items-center justify-center gap-2.5 pt-3 sm:pt-4">
+              <div className="flex items-center justify-center gap-3.5 text-xs sm:text-sm font-mono text-[#4a453c] dark:text-[#c4bdb2] uppercase tracking-[0.25em] font-medium">
+                <span className="w-8 sm:w-16 h-[1px] bg-gradient-to-r from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50" />
+                <span className="font-semibold text-[#322e28] dark:text-[#eae6de]">Richard Feynman</span>
+                <span className="w-8 sm:w-16 h-[1px] bg-gradient-to-l from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50" />
+              </div>
+              <span className="text-[10px] sm:text-[11px] font-mono text-muted/80 dark:text-zinc-400 uppercase tracking-[0.2em]">
+                Caltech, 1988 • Di bút trên bảng đen
+              </span>
             </footer>
           </blockquote>
         </div>
