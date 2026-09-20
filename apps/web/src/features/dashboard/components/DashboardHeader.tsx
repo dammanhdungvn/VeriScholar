@@ -12,7 +12,7 @@ export function DashboardHeader({ sessionTitle }: DashboardHeaderProps) {
   return (
     <header className="h-11 w-full px-4 border-b border-hairline/80 dark:border-[#282622] flex items-center justify-between bg-canvas/80 dark:bg-[#181715]/80 backdrop-blur-md shrink-0 select-none z-10">
       {/* Left: Active Session Title */}
-      <div className="flex items-center gap-2 text-xs font-sans">
+      <div className="flex items-center gap-2 text-xs font-anthropic-serif">
         {sessionTitle && (
           <span className="text-muted dark:text-zinc-400 font-medium truncate max-w-xs sm:max-w-md">
             {sessionTitle}

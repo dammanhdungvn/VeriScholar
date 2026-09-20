@@ -60,7 +60,7 @@ export function DashboardChatInputBox({
             onKeyDown={handleKeyDown}
             placeholder="Tôi có thể giúp gì cho bạn hôm nay?"
             rows={2}
-            className="w-full bg-transparent text-ink dark:text-[#f5f3ed] placeholder-muted/80 dark:placeholder-zinc-500 text-sm sm:text-base focus:outline-none resize-none min-h-[52px] max-h-[240px] leading-relaxed font-sans"
+            className="w-full bg-transparent text-ink dark:text-[#f5f3ed] placeholder-muted/80 dark:placeholder-zinc-500 text-sm sm:text-base focus:outline-none resize-none min-h-[52px] max-h-[240px] leading-relaxed font-anthropic-sans"
           />
 
           {/* 2. Controls Toolbar Strip */}

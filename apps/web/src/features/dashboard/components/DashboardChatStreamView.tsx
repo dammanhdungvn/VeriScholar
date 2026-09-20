@@ -73,7 +73,7 @@ function FormattedAssistantMessage({ content }: { content: string }) {
     });
   }, [content]);
 
-  return <div className="space-y-3 font-sans leading-relaxed">{renderedContent}</div>;
+  return <div className="space-y-3 font-anthropic-sans leading-relaxed">{renderedContent}</div>;
 }
 
 export function DashboardChatStreamView({
@@ -114,7 +114,7 @@ export function DashboardChatStreamView({
           if (isUser) {
             return (
               <div key={message.id} className="flex justify-end">
-                <div className="max-w-2xl px-4 sm:px-5 py-3 rounded-2xl rounded-tr-xs bg-white dark:bg-[#252320] border border-[#e8e4dc] dark:border-[#38332c] text-ink dark:text-zinc-100 text-xs sm:text-sm font-sans shadow-xs">
+                <div className="max-w-2xl px-4 sm:px-5 py-3 rounded-2xl rounded-tr-xs bg-white dark:bg-[#252320] border border-[#e8e4dc] dark:border-[#38332c] text-ink dark:text-zinc-100 text-xs sm:text-sm font-anthropic-sans shadow-xs">
                   <div className="flex items-center gap-1.5 text-3xs font-mono text-muted dark:text-zinc-400 mb-1.5">
                     <User className="w-3 h-3 text-coral-600 dark:text-coral-400" />
                     <span className="font-medium">Học giả</span>
@@ -135,7 +135,7 @@ export function DashboardChatStreamView({
               {/* Assistant Message Body */}
               <div className="flex-1 space-y-3 min-w-0">
                 <div className="text-3xs font-mono font-medium text-muted dark:text-zinc-500 flex items-center gap-2">
-                  <span className="font-semibold text-ink dark:text-zinc-300 font-sans">Socratic</span>
+                  <span className="font-semibold text-ink dark:text-zinc-300 font-anthropic-sans">Socratic</span>
                   {message.is_streaming && (
                     <span className="inline-flex items-center gap-1 text-coral-600 dark:text-coral-400 animate-pulse">
                       <span className="w-1.5 h-1.5 rounded-full bg-coral-500" />

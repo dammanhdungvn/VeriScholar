@@ -105,15 +105,15 @@ export function DashboardTaskbar({
             type="button"
             onClick={onNewSession}
             title="Đoạn chat mới"
-            className={`h-9 flex items-center rounded-xl text-xs font-sans font-medium transition-colors shadow-xs cursor-pointer overflow-hidden focus:outline-none ${
+            className={`h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold transition-colors shadow-xs cursor-pointer overflow-hidden focus:outline-none ${
               isExpanded
                 ? "w-full px-3 text-white bg-coral-500 hover:bg-coral-600 gap-2"
                 : "w-9 mx-auto p-0 justify-center text-white bg-coral-500 hover:bg-coral-600"
             }`}
           >
-            <Plus className="w-4 h-4 shrink-0" />
+            <Plus className="w-4 h-4 shrink-0 stroke-[2.2]" />
             {isExpanded && (
-              <span className="font-medium whitespace-nowrap truncate">
+              <span className="font-semibold whitespace-nowrap truncate font-anthropic-serif">
                 Đoạn chat mới
               </span>
             )}
@@ -124,13 +124,13 @@ export function DashboardTaskbar({
             type="button"
             onClick={onOpenLibrary}
             title="Thư viện tài liệu nghiên cứu"
-            className={`h-9 flex items-center rounded-xl text-xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-colors cursor-pointer overflow-hidden focus:outline-none ${
+            className={`h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-colors cursor-pointer overflow-hidden focus:outline-none ${
               isExpanded ? "w-full px-3 gap-2" : "w-9 mx-auto p-0 justify-center"
             }`}
           >
-            <Library className="w-4 h-4 shrink-0 text-coral-600 dark:text-coral-400" />
+            <Library className="w-4 h-4 shrink-0 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
             {isExpanded && (
-              <span className="truncate whitespace-nowrap">Thư viện</span>
+              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">Thư viện</span>
             )}
           </button>
 
@@ -139,13 +139,13 @@ export function DashboardTaskbar({
             type="button"
             onClick={onOpenProjects}
             title="Dự án nghiên cứu"
-            className={`h-9 flex items-center rounded-xl text-xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-colors cursor-pointer overflow-hidden focus:outline-none ${
+            className={`h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-colors cursor-pointer overflow-hidden focus:outline-none ${
               isExpanded ? "w-full px-3 gap-2" : "w-9 mx-auto p-0 justify-center"
             }`}
           >
-            <FolderKanban className="w-4 h-4 shrink-0 text-coral-600 dark:text-coral-400" />
+            <FolderKanban className="w-4 h-4 shrink-0 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
             {isExpanded && (
-              <span className="truncate whitespace-nowrap">Dự án</span>
+              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">Dự án</span>
             )}
           </button>
         </div>
@@ -166,9 +166,9 @@ export function DashboardTaskbar({
                   type="button"
                   onClick={() => onSelectSession(session.id)}
                   title={session.title}
-                  className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
+                  className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
                     isActive
-                      ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 font-medium shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
+                      ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
                       : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
                   }`}
                 >
@@ -180,7 +180,7 @@ export function DashboardTaskbar({
                       isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
                     }`}
                   />
-                  <span className="truncate flex-1 whitespace-nowrap">{session.title}</span>
+                  <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">{session.title}</span>
                 </button>
               );
             })}
@@ -217,11 +217,11 @@ export function DashboardTaskbar({
         {isExpanded ? (
           <div className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-[#23211e] border border-[#e8e4dc] dark:border-[#38332c] shadow-2xs">
             <div className="flex items-center gap-2.5 truncate pr-1">
-              <div className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-sans font-semibold text-xs shrink-0">
+              <div className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0">
                 {userInitial}
               </div>
               <div className="flex flex-col truncate">
-                <span className="text-xs font-medium text-ink dark:text-zinc-100 truncate">
+                <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-anthropic-serif">
                   {user?.full_name ?? "Nhà nghiên cứu"}
                 </span>
               </div>
@@ -239,7 +239,7 @@ export function DashboardTaskbar({
           <div className="flex flex-col items-center gap-1.5">
             <div
               title={user?.full_name ?? "Nhà nghiên cứu"}
-              className="w-8 h-8 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-sans font-semibold text-xs cursor-pointer shadow-2xs"
+              className="w-8 h-8 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs cursor-pointer shadow-2xs"
             >
               {userInitial}
             </div>

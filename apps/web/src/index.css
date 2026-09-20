@@ -1,6 +1,79 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
+/* Anthropic Custom Brand Typefaces */
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/anthropic/AnthropicSans@400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/anthropic/AnthropicSans@500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/anthropic/AnthropicSans@600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/anthropic/AnthropicSans@700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Serif';
+  src: url('/fonts/anthropic/AnthropicSerif@400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Serif';
+  src: url('/fonts/anthropic/AnthropicSerif@600.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Serif';
+  src: url('/fonts/anthropic/AnthropicSerif@600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Serif';
+  src: url('/fonts/anthropic/AnthropicSerif@700.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Mono';
+  src: url('/fonts/anthropic/AnthropicMono@400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @theme {
   --color-primary: #cc785c;
   --color-primary-active: #a9583e;
@@ -40,6 +113,10 @@
   --font-quote: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Scoped Anthropic Typefaces: Strictly for Dashboard features */
+  --font-anthropic-serif: "Anthropic Serif", "Newsreader", "Lora", "Tiempos Headline", "Georgia", serif;
+  --font-anthropic-sans: "Anthropic Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -154,4 +231,12 @@ body {
 
 .font-quote {
   font-family: var(--font-quote);
+}
+
+.font-anthropic-serif {
+  font-family: var(--font-anthropic-serif);
+}
+
+.font-anthropic-sans {
+  font-family: var(--font-anthropic-sans);
 }
