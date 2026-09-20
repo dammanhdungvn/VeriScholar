@@ -324,10 +324,10 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0"
       aria-hidden="true"
     >
-      {/* 1. Perspective Grid Background (Maintained with exact test classes opacity-50/opacity-40 and opacity-12) */}
+      {/* 1. Drafting Grid Container (Background grid removed as requested, keeping container for contract) */}
       <div
         data-testid="dashboard-drafting-grid"
-        className={`absolute inset-0 transition-opacity duration-700 ${
+        className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${
           isHero
             ? isDark
               ? "opacity-50"
@@ -336,16 +336,6 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
             ? "opacity-12"
             : "opacity-12"
         }`}
-        style={{
-          backgroundImage: isDark
-            ? `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-               linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`
-            : `linear-gradient(to right, rgba(165, 120, 85, 0.16) 1px, transparent 1px),
-               linear-gradient(to bottom, rgba(165, 120, 85, 0.16) 1px, transparent 1px)`,
-          backgroundSize: "48px 48px",
-          maskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
-          WebkitMaskImage: "radial-gradient(ellipse 80% 60% at 50% 25%, black 40%, transparent 100%)",
-        }}
       />
 
       {/* 2. Top-Center Ambient Glow Orb */}
