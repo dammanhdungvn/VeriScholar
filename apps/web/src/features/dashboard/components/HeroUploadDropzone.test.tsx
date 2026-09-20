@@ -8,7 +8,7 @@ describe("HeroUploadDropzone Component", () => {
     useWorkspaceStore.getState().resetWorkspace();
   });
 
-  it("renders Hero Dropzone with concise title, subtitle, and micro-badge", () => {
+  it("renders Hero Dropzone with concise title and subtitle", () => {
     const handleIngest = vi.fn();
     render(<HeroUploadDropzone onIngest={handleIngest} />);
 
@@ -18,7 +18,7 @@ describe("HeroUploadDropzone Component", () => {
     expect(
       screen.getByText(/Kéo thả hoặc chọn tệp PDF/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/PDF • Tối đa 50MB/i)).toBeInTheDocument();
+    expect(screen.queryByText(/PDF • Tối đa 50MB/i)).not.toBeInTheDocument();
 
     // Sample papers are removed
     expect(screen.queryByText(/Attention Is All You Need/i)).not.toBeInTheDocument();

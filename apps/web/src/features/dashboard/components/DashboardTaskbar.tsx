@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
@@ -38,7 +37,6 @@ export function DashboardTaskbar({
   const { user, logout } = useAuthStore();
   const sidebarState = useDashboardStore((s) => s.sidebarState);
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
-  const [isToggleHovered, setIsToggleHovered] = useState(false);
 
   const isExpanded = sidebarState === "expanded";
 
@@ -82,17 +80,17 @@ export function DashboardTaskbar({
               <button
                 type="button"
                 onClick={toggleSidebar}
-                onMouseEnter={() => setIsToggleHovered(true)}
-                onMouseLeave={() => setIsToggleHovered(false)}
                 aria-label="Mở rộng thanh điều hướng"
                 title="Mở rộng sidebar"
-                className="w-9 h-9 flex items-center justify-center rounded-xl transition-colors cursor-pointer relative text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] focus:outline-none"
+                className="group w-9 h-9 flex items-center justify-center rounded-xl transition-colors cursor-pointer relative text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] focus:outline-none"
               >
-                {isToggleHovered ? (
-                  <PanelLeft className="w-4.5 h-4.5 text-coral-600 dark:text-coral-400" />
-                ) : (
+                {/* Logo visible by default, swaps to expand icon when hovered */}
+                <span className="flex items-center justify-center transition-transform group-hover:hidden">
                   <AcademicLogo size="sm" showWordmark={false} inverted={isDark} />
-                )}
+                </span>
+                <span className="hidden items-center justify-center transition-transform group-hover:flex">
+                  <PanelLeft className="w-4.5 h-4.5 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+                </span>
               </button>
             </div>
           )}
@@ -150,65 +148,43 @@ export function DashboardTaskbar({
           </button>
         </div>
 
-        {/* Divider between Actions & Recent Sessions */}
-        <div className="px-2 py-1">
-          <div className="border-t border-[#ece8df] dark:border-[#2a2824]" />
-        </div>
+        {/* Sessions List - ONLY when isExpanded */}
+        {isExpanded && (
+          <>
+            {/* Divider between Actions & Recent Sessions */}
+            <div className="px-2 py-1">
+              <div className="border-t border-[#ece8df] dark:border-[#2a2824]" />
+            </div>
 
-        {/* Sessions List (Expanded) or Quick Icons (Collapsed) */}
-        {isExpanded ? (
-          <div className="px-2 pt-1 pb-1 overflow-y-auto max-h-[calc(100vh-280px)] space-y-1 custom-scrollbar">
-            {sessions.slice(0, 3).map((session) => {
-              const isActive = session.id === activeSessionId;
-              return (
-                <button
-                  key={session.id}
-                  type="button"
-                  onClick={() => onSelectSession(session.id)}
-                  title={session.title}
-                  className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
-                    isActive
-                      ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
-                      : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
-                  }`}
-                >
-                  {isActive && (
-                    <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-coral-500" />
-                  )}
-                  <MessageSquare
-                    className={`w-3.5 h-3.5 shrink-0 ${
-                      isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
+            <div className="px-2 pt-1 pb-1 overflow-y-auto max-h-[calc(100vh-280px)] space-y-1 custom-scrollbar">
+              {sessions.slice(0, 3).map((session) => {
+                const isActive = session.id === activeSessionId;
+                return (
+                  <button
+                    key={session.id}
+                    type="button"
+                    onClick={() => onSelectSession(session.id)}
+                    title={session.title}
+                    className={`w-full text-left flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
+                      isActive
+                        ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
+                        : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
                     }`}
-                  />
-                  <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">{session.title}</span>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-1.5 pt-1">
-            {sessions.slice(0, 3).map((session) => {
-              const isActive = session.id === activeSessionId;
-              return (
-                <button
-                  key={session.id}
-                  type="button"
-                  onClick={() => onSelectSession(session.id)}
-                  title={session.title}
-                  className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors cursor-pointer relative focus:outline-none ${
-                    isActive
-                      ? "bg-white dark:bg-[#282622] text-coral-500 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
-                      : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420]"
-                  }`}
-                >
-                  {isActive && (
-                    <span className="absolute left-0.5 top-2.5 bottom-2.5 w-0.5 rounded-full bg-coral-500" />
-                  )}
-                  <MessageSquare className="w-4 h-4" />
-                </button>
-              );
-            })}
-          </div>
+                  >
+                    {isActive && (
+                      <span className="absolute left-1 top-2.5 bottom-2.5 w-1 rounded-full bg-coral-500" />
+                    )}
+                    <MessageSquare
+                      className={`w-3.5 h-3.5 shrink-0 ${
+                        isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
+                      }`}
+                    />
+                    <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">{session.title}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </>
         )}
       </div>
 
@@ -236,21 +212,13 @@ export function DashboardTaskbar({
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-1.5">
+          <div className="flex flex-col items-center">
             <div
               title={user?.full_name ?? "Nhà nghiên cứu"}
-              className="w-8 h-8 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs cursor-pointer shadow-2xs"
+              className="w-9 h-9 rounded-xl bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs cursor-pointer shadow-2xs hover:bg-coral-500/20 transition-colors"
             >
               {userInitial}
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Đăng xuất"
-              className="w-8 h-8 flex items-center justify-center text-muted hover:text-coral-600 hover:bg-[#f4efe6] dark:hover:bg-[#282623] rounded-lg transition-colors cursor-pointer"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-            </button>
           </div>
         )}
       </div>

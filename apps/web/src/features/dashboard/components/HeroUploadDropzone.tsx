@@ -212,13 +212,6 @@ export function HeroUploadDropzone({ onIngest }: HeroUploadDropzoneProps) {
                 Kéo thả hoặc chọn tệp PDF
               </p>
             </div>
-
-            {/* Minimalist Micro Badge */}
-            <div className="pt-1">
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-mono font-medium bg-neutral-100 dark:bg-[#23211e] text-neutral-600 dark:text-neutral-300 border border-neutral-200 dark:border-[#2f2c28] shadow-2xs">
-                PDF • Tối đa 50MB
-              </span>
-            </div>
           </div>
         )}
       </div>

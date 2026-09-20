@@ -65,7 +65,7 @@ describe("DashboardPage component - Lazy Session & Dynamic Workspace Flow", () =
     expect(
       screen.getByText(/Kéo thả hoặc chọn tệp PDF/i)
     ).toBeInTheDocument();
-    expect(screen.getByText(/PDF • Tối đa 50MB/i)).toBeInTheDocument();
+    expect(screen.queryByText(/PDF • Tối đa 50MB/i)).not.toBeInTheDocument();
 
     // Invariant 1: Chat input is NOT rendered when standby
     expect(
