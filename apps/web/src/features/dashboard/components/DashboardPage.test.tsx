@@ -1,12 +1,31 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DashboardPage } from "./DashboardPage";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
+import { useDashboardStore } from "../stores/useDashboardStore";
+
+function renderWithProviders(ui: React.ReactElement) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>
+  );
+}
 
 describe("DashboardPage component", () => {
   beforeEach(() => {
     localStorage.clear();
+    useDashboardStore.getState().reset();
     useAuthStore.getState().login(
       {
         user: {
@@ -28,29 +47,32 @@ describe("DashboardPage component", () => {
     );
   });
 
-  it("renders Dashboard heading and user details properly", () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    );
+  it("renders Dashboard workspace with Taskbar and Hero section", () => {
+    renderWithProviders(<DashboardPage />);
 
-    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
-    expect(screen.getByText(/GS.TS. Nguyen Van A/i)).toBeInTheDocument();
-    expect(screen.getByText("scholar@verischolar.ai")).toBeInTheDocument();
-    expect(screen.getByTestId("dashboard-logout-btn")).toBeInTheDocument();
+    // Sidebar exists
+    expect(screen.getByRole("complementary", { name: /thanh điều hướng chính/i })).toBeInTheDocument();
+
+    // Hero title with user name
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(/không gian nghiên cứu/i);
+
+    // Input textarea exists
+    expect(
+      screen.getByPlaceholderText(/Tôi có thể giúp gì/i)
+    ).toBeInTheDocument();
+
+    // New session control exists
+    expect(screen.getByTitle("Đoạn chat mới")).toBeInTheDocument();
   });
 
-  it("logs out user when clicking logout button", () => {
-    render(
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
-    );
+  it("renders Cowork mode when appMode is cowork and allows returning to chat", () => {
+    useDashboardStore.getState().setAppMode("cowork");
+    renderWithProviders(<DashboardPage />);
 
-    const logoutBtn = screen.getByTestId("dashboard-logout-btn");
-    fireEvent.click(logoutBtn);
+    expect(screen.getByText("Kế Hoạch Thực Thi")).toBeInTheDocument();
 
-    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    const backBtn = screen.getByTitle("Quay lại hội thoại");
+    fireEvent.click(backBtn);
+    expect(useDashboardStore.getState().appMode).toBe("chat");
   });
 });

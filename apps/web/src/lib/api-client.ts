@@ -1,4 +1,5 @@
 import type { SingleResponse, ErrorResponse } from "@/types/api";
+import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
@@ -17,8 +18,13 @@ export class ApiError extends Error {
   }
 }
 
+export interface ApiResponseWithHeaders<T> {
+  data: T;
+  etag?: string | null;
+}
+
 /**
- * Base JSON fetcher with standard Envelope unwrapping
+ * Base JSON fetcher with standard Envelope unwrapping and JWT injection
  */
 export async function apiClient<T>(
   endpoint: string,
@@ -31,10 +37,25 @@ export async function apiClient<T>(
     headers.set("Content-Type", "application/json");
   }
 
+  if (typeof window !== "undefined") {
+    try {
+      const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+      if (token && !headers.has("Authorization")) {
+        headers.set("Authorization", `Bearer ${token}`);
+      }
+    } catch {
+      // Ignore localStorage access issues
+    }
+  }
+
   const response = await fetch(url, {
     ...options,
     headers,
   });
+
+  if (response.status === 204) {
+    return undefined as T;
+  }
 
   if (!response.ok) {
     let errorDetail: ErrorResponse | null = null;

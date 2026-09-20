@@ -1,16 +1,14 @@
-import { ArrowUpRight, Sparkles, Sun, Moon, User, LogOut } from "lucide-react";
+import { ArrowUpRight, Sparkles, Sun, Moon, LayoutDashboard } from "lucide-react";
 import { Link } from "react-router-dom";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { Button } from "@/components/ui/button";
-import { useLandingStore } from "../stores/useLandingStore";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 
 export function LandingNavbar() {
-  const setUploadModalOpen = useLandingStore((s) => s.setUploadModalOpen);
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
 
   return (
     <header className="sticky top-2.5 sm:top-4 z-40 w-full px-4 sm:px-6 pointer-events-none transition-all duration-300">
@@ -40,40 +38,23 @@ export function LandingNavbar() {
             </svg>
           </a>
 
-          {/* Authenticated State: User Identity Chip + Log Out Button */}
-          {isAuthenticated && user && (
-            <div className="flex items-center gap-1.5">
-              <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-soft dark:bg-[#2d2924] border border-hairline dark:border-[#423c34] text-xs font-sans text-ink dark:text-zinc-200">
-                <User className="w-3.5 h-3.5 text-primary shrink-0" />
-                <span className="truncate max-w-[120px] font-medium">{user.full_name}</span>
-              </div>
-              <button
-                type="button"
-                onClick={logout}
-                title="Đăng xuất khỏi hệ thống"
-                aria-label="Đăng xuất"
-                className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-muted hover:text-error transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          )}
-
-          {/* Primary Action Button: "Dùng thử ngay"
-              - Guest/Unauthenticated: Navigates to /login (Production standard: high-conversion unified auth gateway)
-              - Authenticated: Opens QuickUploadModal for paper analysis
+          {/* Primary Action Button:
+              - Authenticated: Navigates directly to /dashboard ("Dashboard")
+              - Guest/Unauthenticated: Navigates to /login ("Dùng thử ngay")
           */}
           {isAuthenticated ? (
             <Button
+              asChild
               variant="primary"
               size="sm"
-              onClick={() => setUploadModalOpen(true)}
               data-testid="nav-try-btn"
               className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
             >
-              <Sparkles className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
-              <span>Dùng thử ngay</span>
-              <ArrowUpRight className="w-3 h-3 text-on-primary/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              <Link to="/dashboard">
+                <LayoutDashboard className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
+                <span>Dashboard</span>
+                <ArrowUpRight className="w-3 h-3 text-on-primary/80 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+              </Link>
             </Button>
           ) : (
             <Button
