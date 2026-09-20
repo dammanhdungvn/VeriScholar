@@ -60,6 +60,7 @@ from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from core.ports.summary import IDocumentSummarizerPort
+from core.services.document_validator import AcademicPaperValidator
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -928,7 +929,12 @@ class DocumentService:
                 links=links,
             )
 
-        # 3. Transition document state to processing / validation
+        # 3. 3-Tier Academic Document Gate (Reject non-scholarly files or scan-only PDFs)
+        if await self.storage.blob_exists(doc.content_hash):
+            doc_bytes = await self.storage.get_blob(doc.content_hash)
+            await asyncio.to_thread(AcademicPaperValidator.validate_pdf, doc_bytes)
+
+        # 4. Transition document state to processing / validation
         now = datetime.now(UTC)
         doc.status = DocumentStatus.PROCESSING.value
         doc.stage = DocumentStage.VALIDATION.value

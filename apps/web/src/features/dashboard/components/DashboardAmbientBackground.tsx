@@ -203,6 +203,68 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
         ))}
       </div>
 
+      {/* 5.5 Ghost Workspace Architectural Blueprint (Subtle Scholar Horizon) */}
+      <div
+        data-testid="dashboard-ghost-workspace"
+        className={`absolute inset-0 transition-opacity duration-1000 pointer-events-none hidden md:flex items-stretch justify-between px-12 py-8 z-0 ${
+          isHero ? (isDark ? "opacity-25" : "opacity-35") : "opacity-0"
+        }`}
+      >
+        {/* Left Silhouette: Ghost Document Canvas */}
+        <div className="w-[46%] h-full rounded-2xl border border-dashed border-[#cc785c]/25 p-6 flex flex-col justify-between bg-white/[0.02] dark:bg-white/[0.01]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#cc785c]/15">
+              <div className="h-2.5 w-28 rounded-full bg-[#cc785c]/30" />
+              <div className="h-2 w-16 rounded-full bg-neutral-400/25" />
+            </div>
+            <div className="h-3.5 w-48 rounded-md bg-[#cc785c]/20" />
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <div className="h-2 w-full rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+                <div className="h-2 w-5/6 rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+                <div className="h-2 w-4/6 rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+                <div className="mt-3 p-2.5 rounded-lg border border-[#cc785c]/30 bg-[#cc785c]/5">
+                  <div className="h-2 w-20 rounded-full bg-[#cc785c]/30 mb-1" />
+                  <div className="h-2.5 w-32 rounded-full bg-[#cc785c]/20" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <div className="h-2 w-full rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+                <div className="h-2 w-5/6 rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+                <div className="h-2 w-3/4 rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-between items-center text-[10px] font-mono text-[#cc785c]/50">
+            <span>⚑ TỌA ĐỘ BẰNG CHỨNG [x0, y0, x1, y1]</span>
+            <span>TRANG 1/8</span>
+          </div>
+        </div>
+
+        {/* Right Silhouette: Ghost Socratic Copilot */}
+        <div className="w-[46%] h-full rounded-2xl border border-dashed border-[#cc785c]/20 p-6 flex flex-col justify-between bg-white/[0.02] dark:bg-white/[0.01]">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-3 border-b border-[#cc785c]/15">
+              <div className="w-5 h-5 rounded-md bg-[#cc785c]/20" />
+              <div className="h-2.5 w-32 rounded-full bg-[#cc785c]/30" />
+            </div>
+            <div className="space-y-3 pt-1">
+              <div className="p-3 rounded-xl border border-amber-500/25 bg-amber-500/5">
+                <div className="h-2 w-24 rounded-full bg-amber-500/35 mb-1.5" />
+                <div className="h-2 w-full rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+              </div>
+              <div className="p-3 rounded-xl border border-emerald-500/25 bg-emerald-500/5">
+                <div className="h-2 w-28 rounded-full bg-emerald-500/35 mb-1.5" />
+                <div className="h-2 w-4/5 rounded-full bg-neutral-400/20 dark:bg-neutral-600/20" />
+              </div>
+            </div>
+          </div>
+          <div className="h-10 w-full rounded-full border border-[#cc785c]/20 flex items-center px-4 bg-white/[0.03]">
+            <div className="h-2 w-40 rounded-full bg-neutral-400/25 dark:bg-neutral-600/25" />
+          </div>
+        </div>
+      </div>
+
       {/* 6. Interactive Cursor Celestial Glow (Warm Amber in Light, Cool Silver-Blue in Dark) */}
       {mousePos.x > 0 && mousePos.y > 0 && (
         <div
