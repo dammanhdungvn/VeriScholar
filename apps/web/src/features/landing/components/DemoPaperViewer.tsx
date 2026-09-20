@@ -11,15 +11,30 @@ export function DemoPaperViewer() {
   // Focus 100% on the canonical Attention Is All You Need paper
   const paper = MOCK_DEMO_PAPERS[0];
 
+  const isInitialMount = useRef(true);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const posEncRef = useRef<HTMLDivElement | null>(null);
   const attentionRef = useRef<HTMLDivElement | null>(null);
 
-  // Smooth scroll to target block when citation changes
+  // Smooth scroll to target block ONLY when citation changes after initial mount
   useEffect(() => {
-    if (activeCitationId === "cite-pos-enc" && posEncRef.current) {
-      posEncRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    } else if (activeCitationId === "cite-attention-formula" && attentionRef.current) {
-      attentionRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+
+    const targetEl =
+      activeCitationId === "cite-pos-enc"
+        ? posEncRef.current
+        : activeCitationId === "cite-attention-formula"
+          ? attentionRef.current
+          : null;
+
+    if (targetEl && scrollContainerRef.current) {
+      const containerRect = scrollContainerRef.current.getBoundingClientRect();
+      const targetRect = targetEl.getBoundingClientRect();
+      const offset = targetRect.top - containerRect.top - 24;
+      scrollContainerRef.current.scrollBy({ top: offset, behavior: "smooth" });
     }
   }, [activeCitationId]);
 
@@ -46,7 +61,10 @@ export function DemoPaperViewer() {
       </div>
 
       {/* Realistic Academic Paper Sheet Canvas (Daylight Ivory vs Warm Slate/Charcoal Parchment) */}
-      <div className="relative flex-1 p-5 sm:p-7 overflow-y-auto overflow-x-hidden scrollbar-none bg-[#faf8f4] dark:bg-[#25231f] text-[#1a1917] dark:text-[#ded8cc] select-text transition-colors duration-300">
+      <div
+        ref={scrollContainerRef}
+        className="relative flex-1 p-5 sm:p-7 overflow-y-auto overflow-x-hidden scrollbar-none bg-[#faf8f4] dark:bg-[#25231f] text-[#1a1917] dark:text-[#ded8cc] select-text transition-colors duration-300"
+      >
         {/* Academic Paper Header - Title & 8 Authors */}
         <div className="text-center pb-3 border-b border-[#e5e1d8] dark:border-[#353027] mb-4 transition-colors duration-300">
           <h3 className="font-serif text-xl sm:text-2xl font-bold text-[#11100f] dark:text-[#fbf9f5] tracking-tight leading-snug">
