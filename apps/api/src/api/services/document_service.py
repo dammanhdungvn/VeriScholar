@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -63,10 +64,24 @@ from core.ports.summary import IDocumentSummarizerPort
 from core.services.document_validator import AcademicPaperValidator
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 PDF_MAGIC_BYTES = b"%PDF-"
 MAX_SESSION_DOCUMENTS = 5
+
+
+@asynccontextmanager
+async def _safe_nested_transaction(db: Any) -> AsyncIterator[None]:
+    """Execute within a savepoint if supported, suppressing duplicate key errors safely."""
+    if hasattr(db, "begin_nested"):
+        try:
+            async with db.begin_nested():
+                yield
+        except IntegrityError:
+            pass
+    else:
+        yield
 
 
 class DocumentService:
@@ -516,6 +531,8 @@ class DocumentService:
             "Content-Type": "application/pdf",
             "Accept-Ranges": "bytes",
             "Content-Disposition": f'inline; filename="{safe_filename}"',
+            "ETag": f'"{content_hash}"',
+            "Cache-Control": "public, max-age=86400, immutable",
         }
 
         # Full file streaming (no Range header)
@@ -586,6 +603,15 @@ class DocumentService:
         parsed_metadata: dict | None = None,
     ) -> StagesDetail:
         """Compute or extract the 5-stage ingestion pipeline progress breakdown."""
+        if status_val == DocumentStatus.COMPLETED.value:
+            return StagesDetail(
+                validation="completed",
+                layout_detection="completed",
+                ocr="completed",
+                chunking="completed",
+                embedding="completed",
+            )
+
         if (
             parsed_metadata
             and isinstance(parsed_metadata, dict)
@@ -612,15 +638,6 @@ class DocumentService:
             "chunking": 3,
             "embedding": 4,
         }
-
-        if status_val == DocumentStatus.COMPLETED.value:
-            return StagesDetail(
-                validation="completed",
-                layout_detection="completed",
-                ocr="completed",
-                chunking="completed",
-                embedding="completed",
-            )
 
         if status_val == DocumentStatus.FAILED.value:
             curr_idx = stage_map.get(stage_norm, 0)
@@ -693,6 +710,67 @@ class DocumentService:
                     "action": "Verify document ID or check permissions.",
                 },
             )
+
+        # If document is actively processing and physical PDF blob exists,
+        # ensure layout chunking completes
+        if doc.status == DocumentStatus.PROCESSING.value and doc.content_hash:
+            if await self.storage.blob_exists(doc.content_hash):
+                count_existing_stmt = (
+                    select(func.count())
+                    .select_from(DocumentChunkModel)
+                    .where(DocumentChunkModel.document_id == document_id)
+                )
+                count_res = await db.execute(count_existing_stmt)
+                existing_count = count_res.scalar() or 0
+
+                if existing_count == 0:
+                    pdf_bytes = await self.storage.read_blob(doc.content_hash)
+                    parse_opts = (doc.parsed_metadata or {}).get("parse_options", {})
+                    c_size = parse_opts.get("chunk_size", 512)
+                    c_overlap = parse_opts.get("chunk_overlap", 50)
+                    extracted_chunks = await asyncio.to_thread(
+                        self.chunk_extractor.extract_chunks,
+                        pdf_bytes,
+                        doc.id,
+                        c_size,
+                        c_overlap,
+                    )
+                    if extracted_chunks:
+                        now = datetime.now(UTC)
+                        chunk_models = [
+                            DocumentChunkModel(
+                                id=ec.id,
+                                document_id=ec.document_id,
+                                chunk_index=ec.chunk_index,
+                                page_number=ec.page_number,
+                                content=ec.content,
+                                bounding_boxes=ec.bounding_boxes_raw,
+                                token_count=ec.token_count,
+                                embedding=None,
+                                created_at=now,
+                                updated_at=now,
+                            )
+                            for ec in extracted_chunks
+                        ]
+                        try:
+                            async with _safe_nested_transaction(db):
+                                db.add_all(chunk_models)
+                                doc.chunk_count = len(chunk_models)
+                                doc.status = DocumentStatus.COMPLETED.value
+                                doc.stage = DocumentStage.COMPLETED.value
+                                doc.progress = 100
+                                doc.updated_at = now
+                                await db.flush()
+                        except IntegrityError:
+                            # Concurrently inserted by another parallel request
+                            pass
+                else:
+                    doc.chunk_count = existing_count
+                    doc.status = DocumentStatus.COMPLETED.value
+                    doc.stage = DocumentStage.COMPLETED.value
+                    doc.progress = 100
+                    doc.updated_at = datetime.now(UTC)
+                    await db.flush()
 
         stages_detail = self._compute_stages_detail(
             status_val=doc.status,
@@ -931,7 +1009,7 @@ class DocumentService:
 
         # 3. 3-Tier Academic Document Gate (Reject non-scholarly files or scan-only PDFs)
         if await self.storage.blob_exists(doc.content_hash):
-            doc_bytes = await self.storage.get_blob(doc.content_hash)
+            doc_bytes = await self.storage.read_blob(doc.content_hash)
             await asyncio.to_thread(AcademicPaperValidator.validate_pdf, doc_bytes)
 
         # 4. Transition document state to processing / validation
@@ -1328,12 +1406,16 @@ class DocumentService:
                         )
                         for ec in extracted_chunks
                     ]
-                    db.add_all(chunk_models)
-                    doc.chunk_count = len(chunk_models)
-                    doc.status = DocumentStatus.COMPLETED.value
-                    doc.stage = DocumentStage.COMPLETED.value
-                    doc.updated_at = datetime.now(UTC)
-                    await db.flush()
+                    try:
+                        async with _safe_nested_transaction(db):
+                            db.add_all(chunk_models)
+                            doc.chunk_count = len(chunk_models)
+                            doc.status = DocumentStatus.COMPLETED.value
+                            doc.stage = DocumentStage.COMPLETED.value
+                            doc.updated_at = datetime.now(UTC)
+                            await db.flush()
+                    except IntegrityError:
+                        pass
                     # Ingestion Pre-computation: Pre-generate summary if missing
                     try:
                         await self._precompute_summary_if_missing(doc, chunk_models, pdf_bytes, db)
@@ -1480,12 +1562,16 @@ class DocumentService:
                         )
                         for ec in extracted_chunks
                     ]
-                    db.add_all(chunk_models)
-                    doc.chunk_count = len(chunk_models)
-                    doc.status = DocumentStatus.COMPLETED.value
-                    doc.stage = DocumentStage.COMPLETED.value
-                    doc.updated_at = datetime.now(UTC)
-                    await db.flush()
+                    try:
+                        async with _safe_nested_transaction(db):
+                            db.add_all(chunk_models)
+                            doc.chunk_count = len(chunk_models)
+                            doc.status = DocumentStatus.COMPLETED.value
+                            doc.stage = DocumentStage.COMPLETED.value
+                            doc.updated_at = datetime.now(UTC)
+                            await db.flush()
+                    except IntegrityError:
+                        pass
 
         # 3. Query the requested chunk
         chunk_stmt = select(DocumentChunkModel).where(
@@ -1644,9 +1730,14 @@ class DocumentService:
             created_at=now,
             updated_at=now,
         )
-        db.add(summary_record)
-        await db.flush()
-        return summary_record
+        try:
+            async with _safe_nested_transaction(db):
+                db.add(summary_record)
+                await db.flush()
+            return summary_record
+        except IntegrityError:
+            sum_res = await db.execute(sum_stmt)
+            return sum_res.scalar_one()
 
     async def get_document_summary(
         self,

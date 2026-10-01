@@ -21,24 +21,29 @@ const isMockEnabled = import.meta.env.VITE_ENABLE_MOCK_DASHBOARD === "true";
 /**
  * Hook to query sessions with TanStack Query and fallback mock support
  */
-export function useSessionsQuery(page = 1, perPage = 3, q?: string) {
+export function useSessionsQuery(
+  page = 1,
+  perPage = 20,
+  q?: string,
+  includeArchived = false
+) {
   return useQuery<SessionItem[]>({
-    queryKey: [...DASHBOARD_QUERY_KEYS.allSessions, page, perPage, q],
+    queryKey: [...DASHBOARD_QUERY_KEYS.allSessions, page, perPage, q, includeArchived],
     queryFn: async () => {
       if (isMockEnabled) {
-        return RECENT_SESSIONS.slice(0, 3);
+        return RECENT_SESSIONS;
       }
       try {
-        const remoteSessions = await dashboardApi.listSessions(page, perPage, q);
-        const result = remoteSessions.length > 0 ? remoteSessions : RECENT_SESSIONS;
-        return result.slice(0, 3);
+        return await dashboardApi.listSessions(page, perPage, q, includeArchived);
       } catch (err) {
-        // Fallback to mock sessions on network error for resilience
-        console.warn("Falling back to local sessions:", err);
-        return RECENT_SESSIONS.slice(0, 3);
+        if (isMockEnabled) {
+          console.warn("Falling back to local sessions:", err);
+          return RECENT_SESSIONS;
+        }
+        throw err;
       }
     },
-    initialData: isMockEnabled ? RECENT_SESSIONS.slice(0, 3) : undefined,
+    initialData: isMockEnabled ? RECENT_SESSIONS : undefined,
     staleTime: 30 * 1000,
   });
 }

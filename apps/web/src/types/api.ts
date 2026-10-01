@@ -31,9 +31,7 @@ export interface PaginatedMeta extends ApiMeta {
 
 export interface PaginatedResponse<T> {
   success: true;
-  data: {
-    items: T[];
-  };
+  data: T[];
   meta: PaginatedMeta;
   links: PaginationLinks;
 }

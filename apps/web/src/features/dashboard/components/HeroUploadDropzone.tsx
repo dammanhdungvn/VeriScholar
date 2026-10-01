@@ -177,17 +177,20 @@ export function HeroUploadDropzone({ onIngest }: HeroUploadDropzoneProps) {
             </div>
 
             <div className="w-full space-y-2">
-              <div className="flex justify-between text-xs text-ink-muted dark:text-[#a09e99]">
-                <span className="font-medium truncate max-w-[240px]">
+              <div className="flex justify-between items-center text-xs text-ink-muted dark:text-[#a09e99]">
+                <span
+                  className="font-medium truncate flex-1 mr-2 text-left"
+                  title={statusStage || undefined}
+                >
                   {statusStage || "Đang xử lý..."}
                 </span>
-                <span className="font-mono font-semibold text-[#cc785c]">
+                <span className="font-mono font-semibold text-[#cc785c] shrink-0">
                   {uploadProgress}%
                 </span>
               </div>
               <div className="w-full h-1.5 bg-neutral-200 dark:bg-[#2a2824] rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-[#cc785c] transition-all duration-300 rounded-full"
+                  className="h-full bg-[#cc785c] transition-all duration-150 ease-out rounded-full"
                   style={{ width: `${uploadProgress}%` }}
                 />
               </div>

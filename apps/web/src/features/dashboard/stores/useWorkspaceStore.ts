@@ -8,6 +8,8 @@ export type IngestionDocumentStatus =
   | "completed"
   | "error";
 
+export type WorkspaceRightTab = "chat" | "notes" | "summary" | "structure" | "references";
+
 export interface WorkspaceState {
   // Trạng thái phiên
   activeSessionId: string | null;
@@ -21,6 +23,9 @@ export interface WorkspaceState {
   statusStage: string | null;
   errorMessage: string | null;
 
+  // Trạng thái tab điều khiển bên phải
+  activeRightTab: WorkspaceRightTab;
+
   // Actions
   initNewStandbyChat: () => void;
   setSession: (sessionId: string | null) => void;
@@ -31,6 +36,7 @@ export interface WorkspaceState {
     stage?: string | null
   ) => void;
   setError: (message: string | null) => void;
+  setActiveRightTab: (tab: WorkspaceRightTab) => void;
   resetWorkspace: () => void;
 }
 
@@ -43,6 +49,7 @@ const initialState = {
   uploadProgress: 0,
   statusStage: null,
   errorMessage: null,
+  activeRightTab: "chat" as WorkspaceRightTab,
 };
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -71,6 +78,8 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
       documentStatus: "error",
       errorMessage,
     }),
+
+  setActiveRightTab: (activeRightTab) => set({ activeRightTab }),
 
   resetWorkspace: () =>
     set({

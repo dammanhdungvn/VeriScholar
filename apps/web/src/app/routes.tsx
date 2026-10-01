@@ -15,6 +15,10 @@ export const router = createBrowserRouter([
     element: <DashboardPage />,
   },
   {
+    path: "/dashboard/:sessionId",
+    element: <DashboardPage />,
+  },
+  {
     element: <AuthLayout />,
     children: [
       {

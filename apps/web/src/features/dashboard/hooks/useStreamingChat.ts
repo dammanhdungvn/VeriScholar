@@ -3,6 +3,7 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import type { ChatMessage, CitationBadgeData } from "@/types/dashboard";
 import { SAMPLE_CHAT_MESSAGES } from "../data/mockDashboardData";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
@@ -14,7 +15,7 @@ interface UseStreamingChatOptions {
 
 export function useStreamingChat({ activeSessionId }: UseStreamingChatOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]) {
+    if (isMockEnabled && activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]) {
       return SAMPLE_CHAT_MESSAGES[activeSessionId];
     }
     return [];
@@ -29,7 +30,11 @@ export function useStreamingChat({ activeSessionId }: UseStreamingChatOptions = 
   const [prevSessionId, setPrevSessionId] = useState(activeSessionId);
   if (activeSessionId !== prevSessionId) {
     setPrevSessionId(activeSessionId);
-    setMessages(activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId] ? SAMPLE_CHAT_MESSAGES[activeSessionId] : []);
+    setMessages(
+      isMockEnabled && activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]
+        ? SAMPLE_CHAT_MESSAGES[activeSessionId]
+        : []
+    );
   }
 
   // Clean up animation frames and abort ongoing streams on unmount
@@ -330,35 +335,104 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
             }
           },
           onerror(err) {
-            console.warn("SSE error, falling back to local academic response:", err);
-            // Fallback to local academic generator on network error
-            runMockStream(textToSend, assistantMsgId);
+            console.warn("SSE error:", err);
+            if (isMockEnabled) {
+              runMockStream(textToSend, assistantMsgId);
+            } else {
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId
+                    ? {
+                        ...msg,
+                        content:
+                          accumulatedContent ||
+                          "Không thể kết nối đến máy chủ Socratic Copilot để hoàn tất suy luận. Vui lòng kiểm tra kết nối mạng và thử lại.",
+                        is_streaming: false,
+                      }
+                    : msg
+                )
+              );
+              setIsGenerating(false);
+            }
             throw err; // Stop retrying
           },
         });
       } catch {
         if (!isCancelledRef.current && !accumulatedContent) {
-          // If SSE didn't start, run fallback
-          runMockStream(textToSend, assistantMsgId);
+          if (isMockEnabled) {
+            runMockStream(textToSend, assistantMsgId);
+          } else {
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantMsgId
+                  ? {
+                      ...msg,
+                      content: "Lỗi kết nối khi gửi câu hỏi tới hệ thống.",
+                      is_streaming: false,
+                    }
+                  : msg
+              )
+            );
+            setIsGenerating(false);
+          }
         }
       }
     },
     [inputText, isGenerating, activeSessionId, runMockStream]
   );
 
-  const resetChat = useCallback(() => {
+  const resetChat = useCallback(async () => {
     stopGeneration();
     setMessages([]);
-  }, [stopGeneration]);
+    if (activeSessionId) {
+      try {
+        await sessionsApi.clearSessionMessages(activeSessionId);
+      } catch (err) {
+        console.warn("Failed to clear messages on backend:", err);
+      }
+    }
+  }, [stopGeneration, activeSessionId]);
 
   const loadExistingSession = useCallback(
-    (sessionId: string) => {
+    async (sessionId: string) => {
       stopGeneration();
-      if (SAMPLE_CHAT_MESSAGES[sessionId]) {
+      if (isMockEnabled && SAMPLE_CHAT_MESSAGES[sessionId]) {
         setMessages(SAMPLE_CHAT_MESSAGES[sessionId]);
-      } else {
-        setMessages([]);
+        return;
       }
+      try {
+        const response = await sessionsApi.listSessionMessages(sessionId);
+        if (response.data && response.data.length > 0) {
+          const mappedMessages: ChatMessage[] = [];
+          for (const turn of response.data) {
+            mappedMessages.push({
+              id: `${turn.id}-q`,
+              session_id: turn.session_id,
+              role: "user",
+              content: turn.question,
+              created_at: turn.created_at,
+            });
+            mappedMessages.push({
+              id: `${turn.id}-a`,
+              session_id: turn.session_id,
+              role: "assistant",
+              content: turn.answer,
+              citations: turn.citations?.map((c) => ({
+                paper_id: c.document_id,
+                paper_title: c.document_title,
+                page: c.page_number,
+                bbox: c.bounding_boxes[0] || [0, 0, 1, 1, c.page_number],
+              })),
+              created_at: turn.created_at,
+            });
+          }
+          setMessages(mappedMessages);
+          return;
+        }
+      } catch {
+        // Fallback to empty if offline/not found
+      }
+      setMessages([]);
     },
     [stopGeneration]
   );

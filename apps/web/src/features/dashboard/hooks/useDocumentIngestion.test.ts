@@ -130,12 +130,15 @@ describe("useDocumentIngestion Hook (TDD)", () => {
       await result.current.ingest(validFile);
     });
 
-    expect(documentsApi.uploadDocument).toHaveBeenCalledWith(validFile);
     expect(dashboardApi.createSession).toHaveBeenCalledWith({
-      title: "Attention Is All You Need",
-      initial_document_ids: [mockDocId],
+      title: "Nghiên cứu: attention",
     });
-    expect(documentsApi.parseDocument).toHaveBeenCalledWith(mockDocId);
+    expect(documentsApi.uploadDocument).toHaveBeenCalledWith(validFile, mockSessionId);
+    expect(documentsApi.parseDocument).toHaveBeenCalledWith(mockDocId, {
+      chunk_size: 512,
+      chunk_overlap: 50,
+      extract_tables: true,
+    });
     expect(documentsApi.getStatus).toHaveBeenCalledWith(mockDocId);
 
     const finalState = useWorkspaceStore.getState();
@@ -144,5 +147,120 @@ describe("useDocumentIngestion Hook (TDD)", () => {
     expect(finalState.isStandby).toBe(false);
     expect(finalState.activeSessionId).toBe(mockSessionId);
     expect(finalState.activeDocumentId).toBe(mockDocId);
+  });
+
+  it("invokes onSessionCreated callback immediately when session is created before file processing", async () => {
+    const mockDocId = "doc-999";
+    const mockSessionId = "sess-888";
+
+    vi.mocked(dashboardApi.createSession).mockResolvedValueOnce({
+      id: mockSessionId,
+      title: "Nghiên cứu: paper",
+      document_ids: [],
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1,
+      viewport_state: { page: 1, zoom_ratio: 1.0, scroll_top: 0 },
+      active_tab: "chat",
+      is_archived: false,
+    });
+
+    vi.mocked(documentsApi.uploadDocument).mockResolvedValueOnce({
+      id: mockDocId,
+      filename: "paper.pdf",
+      file_size_bytes: 1024,
+      status: "uploaded",
+      stage: "queued",
+      session_id: mockSessionId,
+      is_duplicate: false,
+      title: "Paper Title",
+    });
+
+    vi.mocked(documentsApi.parseDocument).mockResolvedValueOnce({
+      id: mockDocId,
+      status: "processing",
+      stage: "validation",
+      progress: 0,
+    });
+
+    vi.mocked(documentsApi.getStatus).mockResolvedValueOnce({
+      id: mockDocId,
+      status: "completed",
+      stage: "completed",
+      progress: 100,
+      stages_detail: {
+        validation: "completed",
+        layout_detection: "completed",
+        ocr: "completed",
+        chunking: "completed",
+        embedding: "completed",
+      },
+    });
+
+    const onSessionCreated = vi.fn();
+    const { result } = renderHook(() => useDocumentIngestion({ pollingIntervalMs: 10 }));
+    const validFile = new File(["%PDF-1.5 test"], "paper.pdf", { type: "application/pdf" });
+
+    await act(async () => {
+      await result.current.ingest(validFile, onSessionCreated);
+    });
+
+    expect(dashboardApi.createSession).toHaveBeenCalled();
+    expect(onSessionCreated).toHaveBeenCalledWith(mockSessionId);
+    expect(documentsApi.uploadDocument).toHaveBeenCalledWith(validFile, mockSessionId);
+  });
+
+  it("reuses existingSessionId and skips createSession when session already exists", async () => {
+    const mockDocId = "doc-reuse-123";
+    const existingSessionId = "sess-existing-456";
+
+    vi.mocked(documentsApi.uploadDocument).mockResolvedValueOnce({
+      id: mockDocId,
+      filename: "multi_paper.pdf",
+      file_size_bytes: 4096,
+      status: "uploaded",
+      stage: "queued",
+      session_id: existingSessionId,
+      is_duplicate: false,
+      title: "Multi Paper",
+    });
+
+    vi.mocked(documentsApi.parseDocument).mockResolvedValueOnce({
+      id: mockDocId,
+      status: "processing",
+      stage: "validation",
+      progress: 0,
+    });
+
+    vi.mocked(documentsApi.getStatus).mockResolvedValueOnce({
+      id: mockDocId,
+      status: "completed",
+      stage: "completed",
+      progress: 100,
+      stages_detail: {
+        validation: "completed",
+        layout_detection: "completed",
+        ocr: "completed",
+        chunking: "completed",
+        embedding: "completed",
+      },
+    });
+
+    const { result } = renderHook(() => useDocumentIngestion({ pollingIntervalMs: 10 }));
+    const validFile = new File(["%PDF-1.5 test"], "multi_paper.pdf", { type: "application/pdf" });
+
+    await act(async () => {
+      await result.current.ingest(validFile, undefined, existingSessionId);
+    });
+
+    // Must NOT create a redundant session
+    expect(dashboardApi.createSession).not.toHaveBeenCalled();
+    // Must pass existing session ID to document upload
+    expect(documentsApi.uploadDocument).toHaveBeenCalledWith(validFile, existingSessionId);
+    expect(documentsApi.parseDocument).toHaveBeenCalledWith(mockDocId, {
+      chunk_size: 512,
+      chunk_overlap: 50,
+      extract_tables: true,
+    });
   });
 });
