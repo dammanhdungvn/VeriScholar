@@ -1,5 +1,6 @@
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { DashboardTaskbar } from "./DashboardTaskbar";
-import { DashboardHeader } from "./DashboardHeader";
 import { DashboardCoworkView } from "./DashboardCoworkView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { HeroUploadDropzone } from "./HeroUploadDropzone";
@@ -10,9 +11,19 @@ import { useDashboardSessions } from "../hooks/useDashboardSessions";
 import { useStreamingChat } from "../hooks/useStreamingChat";
 import { useDocumentIngestion } from "../hooks/useDocumentIngestion";
 import { DashboardErrorBoundary } from "@/components/ui/DashboardErrorBoundary";
+import { RestoreArchivedModal } from "@/features/sessions/components/RestoreArchivedModal";
+import { useRestoreArchivedSessionMutation, useSessionDetail } from "@/features/sessions/hooks/useSessionsQuery";
+import { useReaderStore } from "@/features/reader/stores/useReaderStore";
+import { DocumentLibraryModal } from "@/features/documents/components/DocumentLibraryModal";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
+import type { DocumentListItem } from "@/types/document";
 
 export function DashboardContainer() {
+  const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
+  const navigate = useNavigate();
+
   const appMode = useDashboardStore((s) => s.appMode);
+  const setAppMode = useDashboardStore((s) => s.setAppMode);
   const activeSessionId = useDashboardStore((s) => s.activeSessionId);
   const setActiveSessionId = useDashboardStore((s) => s.setActiveSessionId);
   const setActiveBbox = useDashboardStore((s) => s.setActiveBbox);
@@ -20,8 +31,10 @@ export function DashboardContainer() {
   const isStandby = useWorkspaceStore((s) => s.isStandby);
   const activeDocumentId = useWorkspaceStore((s) => s.activeDocumentId);
   const documentTitle = useWorkspaceStore((s) => s.documentTitle);
+  const documentStatus = useWorkspaceStore((s) => s.documentStatus);
   const initNewStandbyChat = useWorkspaceStore((s) => s.initNewStandbyChat);
   const setSession = useWorkspaceStore((s) => s.setSession);
+  const setDocument = useWorkspaceStore((s) => s.setDocument);
   const setStatus = useWorkspaceStore((s) => s.setStatus);
 
   const { ingest } = useDocumentIngestion();
@@ -30,7 +43,10 @@ export function DashboardContainer() {
     sessions,
     activeSession,
     selectSession,
+    createSession,
   } = useDashboardSessions();
+
+  const effectiveSessionId = routeSessionId || activeSessionId;
 
   const {
     messages,
@@ -41,7 +57,74 @@ export function DashboardContainer() {
     stopGeneration,
     resetChat,
     loadExistingSession,
-  } = useStreamingChat({ activeSessionId });
+  } = useStreamingChat({
+    activeSessionId: effectiveSessionId,
+    onSessionCreated: (newId) => {
+      selectSession(newId);
+      navigate(`/dashboard/${newId}`, { replace: true });
+    },
+  });
+
+  // Query session detail when routeSessionId is present
+  const { data: sessionDetailRes } = useSessionDetail(routeSessionId);
+
+  // Sync routeSessionId with active session state
+  useEffect(() => {
+    if (routeSessionId) {
+      if (routeSessionId !== activeSessionId) {
+        selectSession(routeSessionId);
+        setSession(routeSessionId);
+        setStatus("completed", 100);
+        loadExistingSession(routeSessionId);
+      }
+    } else if (activeSessionId) {
+      // Navigated to /dashboard without session ID
+      initNewStandbyChat();
+      setActiveSessionId(undefined);
+      setActiveBbox(null);
+      resetChat();
+    }
+  }, [
+    routeSessionId,
+    activeSessionId,
+    selectSession,
+    setSession,
+    setStatus,
+    loadExistingSession,
+    initNewStandbyChat,
+    setActiveSessionId,
+    setActiveBbox,
+    resetChat,
+  ]);
+
+  // Synchronize document details when session details are loaded from API
+  useEffect(() => {
+    if (sessionDetailRes?.data) {
+      const detail = sessionDetailRes.data;
+      const docIds = detail.document_ids || [];
+      if (docIds.length > 0) {
+        useReaderStore.getState().setOpenDocumentIds(docIds);
+        const activeDocId = detail.active_document_id || docIds[0];
+        const matchedDoc = detail.documents?.find((d) => d.id === activeDocId);
+        const title = matchedDoc?.title || detail.title;
+        setDocument(activeDocId, title);
+        useReaderStore.getState().setActiveDocumentId(activeDocId);
+
+        if (detail.viewport_state?.page) {
+          useReaderStore.getState().setCurrentPage(detail.viewport_state.page);
+        }
+      }
+    }
+  }, [sessionDetailRes?.data, setDocument]);
+
+  // Synchronize document details if activeSession from cached list has documents
+  useEffect(() => {
+    if (activeSession && activeSession.document_ids && activeSession.document_ids.length > 0) {
+      useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
+      const activeDocId = activeSession.document_ids[0];
+      setDocument(activeDocId, activeSession.title);
+    }
+  }, [activeSession, setDocument]);
 
   /**
    * BẤT BIẾN 1 (Zero DB Junk):
@@ -53,9 +136,61 @@ export function DashboardContainer() {
     setActiveSessionId(undefined);
     setActiveBbox(null);
     resetChat();
+    navigate("/dashboard");
+  };
+
+  const [isRestoreOpen, setIsRestoreOpen] = useState(false);
+  const [isLibraryOpen, setIsLibraryOpen] = useState(false);
+  const restoreArchivedMutation = useRestoreArchivedSessionMutation();
+
+  const handleSelectDocumentFromLibrary = async (doc: DocumentListItem) => {
+    setIsLibraryOpen(false);
+    const targetTitle = doc.title || doc.filename;
+
+    if (effectiveSessionId) {
+      try {
+        await sessionsApi.addDocumentToSession(effectiveSessionId, {
+          source_type: "document_id",
+          document_id: doc.id,
+        });
+      } catch {
+        // ignore if already present
+      }
+      const currentOpen = useReaderStore.getState().openDocumentIds;
+      if (!currentOpen.includes(doc.id)) {
+        useReaderStore.getState().setOpenDocumentIds([...currentOpen, doc.id]);
+      }
+      setDocument(doc.id, targetTitle);
+      setStatus("completed", 100);
+    } else {
+      // Standby mode: initialize new session with document
+      const newSession = await createSession(`Nghiên cứu: ${targetTitle}`);
+      try {
+        await sessionsApi.addDocumentToSession(newSession.id, {
+          source_type: "document_id",
+          document_id: doc.id,
+        });
+      } catch {
+        // ignore
+      }
+      useReaderStore.getState().setOpenDocumentIds([doc.id]);
+      setDocument(doc.id, targetTitle);
+      selectSession(newSession.id);
+      navigate(`/dashboard/${newSession.id}`, { replace: true });
+      setStatus("completed", 100);
+      loadExistingSession(newSession.id);
+    }
+  };
+
+  const handleRestoreArchived = async (file: File) => {
+    if (effectiveSessionId) {
+      await restoreArchivedMutation.mutateAsync({ sessionId: effectiveSessionId, file });
+      loadExistingSession(effectiveSessionId);
+    }
   };
 
   const handleSelectSession = (sessionId: string) => {
+    navigate(`/dashboard/${sessionId}`);
     selectSession(sessionId);
     setSession(sessionId);
     setStatus("completed", 100);
@@ -68,26 +203,47 @@ export function DashboardContainer() {
    */
   const handleFileUpload = async (file: File) => {
     try {
-      const result = await ingest(file);
+      const result = await ingest(
+        file,
+        (createdSessionId) => {
+          selectSession(createdSessionId);
+          navigate(`/dashboard/${createdSessionId}`, { replace: true });
+        },
+        effectiveSessionId
+      );
       if (result?.sessionId) {
         selectSession(result.sessionId);
+        navigate(`/dashboard/${result.sessionId}`, { replace: true });
         loadExistingSession(result.sessionId);
       }
     } catch {
       // Error is set in useWorkspaceStore.errorMessage and handled by HeroUploadDropzone UI
+      if (!effectiveSessionId) {
+        navigate("/dashboard", { replace: true });
+      }
     }
   };
 
-  const showStandbyHero = isStandby && messages.length === 0 && !activeDocumentId;
+  const isProcessing =
+    documentStatus === "uploading" ||
+    documentStatus === "validating" ||
+    documentStatus === "parsing";
+
+  const showStandbyHero =
+    isProcessing ||
+    documentStatus === "error" ||
+    (!routeSessionId && isStandby && messages.length === 0 && !activeDocumentId);
 
   return (
     <div className="h-screen w-screen flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
       {/* 1. Collapsible Left Taskbar / Sidebar */}
       <DashboardTaskbar
         sessions={sessions}
-        activeSessionId={activeSessionId}
+        activeSessionId={effectiveSessionId}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
+        onOpenLibrary={() => setIsLibraryOpen(true)}
+        onOpenProjects={() => setAppMode(appMode === "cowork" ? "chat" : "cowork")}
       />
 
       {/* 2. Center Canvas Area */}
@@ -95,10 +251,19 @@ export function DashboardContainer() {
         {/* Dynamic Academic Ambient Background */}
         <DashboardAmbientBackground isHero={appMode !== "cowork" && showStandbyHero} />
 
-        {/* Minimal Header */}
-        <DashboardHeader
-          sessionTitle={activeSession?.title || (documentTitle ? `Nghiên cứu: ${documentTitle}` : undefined)}
-        />
+        {/* Expired / Archived Session Re-activation Alert Banner */}
+        {activeSession?.is_archived && (
+          <div className="h-9 px-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400 shrink-0 select-none">
+            <span>Phiên nghiên cứu này đã hết hạn lưu trữ theo chính sách Zero-Retention (30 ngày).</span>
+            <button
+              type="button"
+              onClick={() => setIsRestoreOpen(true)}
+              className="px-2.5 py-0.5 rounded bg-amber-500 hover:bg-amber-600 text-white font-medium text-[11px] transition-colors cursor-pointer"
+            >
+              Tải lại PDF để khôi phục
+            </button>
+          </div>
+        )}
 
         {/* View Switcher based on AppMode, Standby State & Workspace with Error Boundary */}
         <DashboardErrorBoundary onReset={resetChat}>
@@ -118,9 +283,31 @@ export function DashboardContainer() {
               onStopGeneration={stopGeneration}
               onUploadFile={handleFileUpload}
               onResetChat={resetChat}
+              sessionId={activeSession?.id || effectiveSessionId}
+              sessionTitle={activeSession?.title || (documentTitle ? `Nghiên cứu: ${documentTitle}` : undefined)}
+              sessionVersion={activeSession?.version}
+              documentCount={activeSession?.document_ids?.length ?? 1}
+              createdAt={activeSession?.created_at}
+              onDeletedSession={handleNewSession}
             />
           )}
         </DashboardErrorBoundary>
+
+        {/* Restore Archived Session Modal */}
+        <RestoreArchivedModal
+          isOpen={isRestoreOpen}
+          onClose={() => setIsRestoreOpen(false)}
+          sessionId={effectiveSessionId || ""}
+          onRestore={handleRestoreArchived}
+        />
+
+        {/* Document Library Modal */}
+        <DocumentLibraryModal
+          isOpen={isLibraryOpen}
+          onClose={() => setIsLibraryOpen(false)}
+          onSelectDocument={handleSelectDocumentFromLibrary}
+          activeDocumentId={activeDocumentId}
+        />
       </main>
     </div>
   );

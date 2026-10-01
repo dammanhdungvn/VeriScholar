@@ -7,6 +7,10 @@ import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useWorkspaceStore } from "../stores/useWorkspaceStore";
 import { dashboardApi } from "../api/dashboardApi";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
+import { RECENT_SESSIONS } from "../data/mockDashboardData";
+
+import { Routes, Route } from "react-router-dom";
 
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = new QueryClient({
@@ -24,9 +28,32 @@ function renderWithProviders(ui: React.ReactElement) {
   );
 }
 
+function renderWithRoute(initialEntries = ["/dashboard"]) {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={initialEntries}>
+        <Routes>
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard/:sessionId" element={<DashboardPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>
+  );
+}
+
 describe("DashboardPage component - Lazy Session & Dynamic Workspace Flow", () => {
   beforeEach(() => {
     localStorage.clear();
+    vi.spyOn(dashboardApi, "listSessions").mockResolvedValue(RECENT_SESSIONS);
+    vi.spyOn(sessionsApi, "clearSessionMessages").mockResolvedValue(undefined as unknown as void);
     useDashboardStore.getState().reset();
     useWorkspaceStore.getState().resetWorkspace();
     useAuthStore.getState().login(
@@ -130,5 +157,61 @@ describe("DashboardPage component - Lazy Session & Dynamic Workspace Flow", () =
     const backBtn = screen.getByTitle("Quay lại hội thoại");
     fireEvent.click(backBtn);
     expect(useDashboardStore.getState().appMode).toBe("chat");
+  });
+
+  it("test_route_with_session_id_loads_workspace: navigating directly to /dashboard/:sessionId activates that session", async () => {
+    const targetSessionId = "session-vaswani-2017";
+    renderWithRoute([`/dashboard/${targetSessionId}`]);
+
+    await waitFor(() => {
+      // Standby hero dropzone must NOT be visible
+      expect(screen.queryByText(/Tải lên bài báo/i)).not.toBeInTheDocument();
+
+      // Active session ID is set in Dashboard store
+      expect(useDashboardStore.getState().activeSessionId).toBe(targetSessionId);
+
+      // Workspace Chat Input is visible
+      expect(screen.getByPlaceholderText(/Tôi có thể giúp gì/i)).toBeInTheDocument();
+    });
+  });
+
+  it("test_selecting_session_in_taskbar_activates_workspace: clicking a session in sidebar activates session", async () => {
+    renderWithRoute(["/dashboard"]);
+
+    // Initially in standby mode
+    expect(screen.getByText(/Tải lên bài báo/i)).toBeInTheDocument();
+
+    // Expand sidebar to view sessions
+    const expandBtn = screen.getByTitle("Mở rộng sidebar");
+    fireEvent.click(expandBtn);
+
+    // Wait for session in sidebar to load
+    const sessionBtn = await screen.findByText(/Attention Is All You Need/i);
+    fireEvent.click(sessionBtn);
+
+    await waitFor(() => {
+      // Hero dropzone disappears and workspace is active
+      expect(screen.queryByText(/Tải lên bài báo/i)).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/Tôi có thể giúp gì/i)).toBeInTheDocument();
+    });
+  });
+
+  it("test_new_chat_returns_to_standby_hero: clicking 'Đoạn chat mới' resets session and returns to standby", async () => {
+    renderWithRoute(["/dashboard/session-vaswani-2017"]);
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Tôi có thể giúp gì/i)).toBeInTheDocument();
+    });
+
+    // Click "Đoạn chat mới"
+    const newChatBtn = screen.getByTitle("Đoạn chat mới");
+    fireEvent.click(newChatBtn);
+
+    await waitFor(() => {
+      // Standby hero dropzone is restored
+      expect(screen.getByText(/Tải lên bài báo/i)).toBeInTheDocument();
+      // Chat input is hidden
+      expect(screen.queryByPlaceholderText(/Tôi có thể giúp gì/i)).not.toBeInTheDocument();
+    });
   });
 });

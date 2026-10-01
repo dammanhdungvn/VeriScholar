@@ -63,6 +63,7 @@ export interface SessionItem {
   updated_at: string;
   version: number;
   unread?: boolean;
+  is_archived?: boolean;
 }
 
 export interface SessionDetail extends SessionItem {

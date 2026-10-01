@@ -16,12 +16,18 @@ export const dashboardApi = {
   /**
    * List recent research sessions
    */
-  async listSessions(page = 1, perPage = 20, q?: string): Promise<SessionItem[]> {
+  async listSessions(
+    page = 1,
+    perPage = 20,
+    q?: string,
+    includeArchived?: boolean
+  ): Promise<SessionItem[]> {
     const params = new URLSearchParams({
       page: String(page),
       per_page: String(perPage),
     });
     if (q) params.set("q", q);
+    if (includeArchived !== undefined) params.set("include_archived", String(includeArchived));
 
     const response = await apiClient<SessionItem[] | { items: SessionItem[] }>(
       `/sessions?${params.toString()}`

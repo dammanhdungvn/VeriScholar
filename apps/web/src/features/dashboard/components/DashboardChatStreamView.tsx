@@ -106,7 +106,7 @@ export function DashboardChatStreamView({
       {/* 1. Scrollable Messages Stream */}
       <div
         ref={scrollContainerRef}
-        className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 max-w-4xl w-full mx-auto custom-scrollbar"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 space-y-6 max-w-4xl w-full mx-auto scrollbar-none"
       >
         {messages.map((message) => {
           const isUser = message.role === "user";

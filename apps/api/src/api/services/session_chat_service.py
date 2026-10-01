@@ -3,13 +3,16 @@
 import asyncio
 import json
 import re
+import time
 from collections.abc import AsyncIterator, Callable, Coroutine
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 import structlog
+from api.core.config import settings
 from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
 from api.db.models.session import (
@@ -714,41 +717,176 @@ class SessionChatService:
                 yield evt_opts
 
         # 5. Generate Answer and Calibrate Spatial Citations
-        full_text, citations = self._generate_answer_by_intent(
-            intent=intent,
-            question=request.question,
-            citations=citations,
-            target_doc_ids=target_doc_ids,
+        start_time = time.perf_counter()
+        is_test_env = settings.ENVIRONMENT == "test" or "InMemory" in type(self.db).__name__
+        has_llm_key = bool(
+            settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.get_secret_value().strip()
         )
+        should_use_llm = not is_test_env and has_llm_key and intent != IntentType.AMBIGUOUS_ROADMAP
 
         evt_cit = emit("citations", {"citations": citations})
         if evt_cit:
             yield evt_cit
 
-        tokens = full_text.split(" ")
         answer_parts: list[str] = []
         finish_reason = "stop"
 
-        for token in tokens:
-            if await is_disconnected():
-                logger.warning("sse_client_disconnected", session_id=str(session_id))
-                finish_reason = "interrupted"
-                break
+        if should_use_llm:
+            try:
+                system_prompt = (
+                    "Bạn là Socratic Copilot — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
+                    "Nhiệm vụ của bạn là giải đáp sâu sắc, chính xác và có căn cứ khoa học "
+                    "dựa trên các bài báo được cung cấp.\n\n"
+                    "QUY TẮC PHẢN HỒI:\n"
+                    "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. Không bịa đặt.\n"
+                    "2. Gắn trích dẫn: Khi đưa ra số liệu hay luận điểm then chốt, BẮT BUỘC "
+                    "gắn kèm thẻ trích dẫn (ví dụ: [^cit_1], [^cit_2]) để đối chiếu PDF.\n"
+                    "3. Phản biện Socratic: Nếu câu hỏi có tiền đề sai hoặc ngộ nhận kiến trúc, "
+                    "hãy giải thích lịch thiệp, chỉ rõ điểm sai và hướng dẫn đối chiếu bài báo.\n"
+                    "4. Phong cách: Khoa học, sư phạm, Markdown rõ ràng bằng tiếng Việt "
+                    "(hoặc ngôn ngữ câu hỏi)."
+                )
 
-            token_chunk = token + " "
-            answer_parts.append(token_chunk)
-            evt_token = emit("token", {"token": token_chunk})
-            if evt_token:
-                yield evt_token
-            await asyncio.sleep(0.01)
+                context_blocks: list[str] = []
+                for cit in citations:
+                    cid = cit.get("citation_id", "")
+                    dtitle = cit.get("document_title", "")
+                    page = cit.get("page_number", 1)
+                    matched_content = ""
+                    for it in selected_chunks:
+                        chk = it[0] if hasattr(it, "__getitem__") else it
+                        if (
+                            str(getattr(chk, "document_id", "")) == cit.get("document_id")
+                            and getattr(chk, "page_number", None) == page
+                        ):
+                            matched_content = getattr(chk, "content", "")
+                            break
+                    if not matched_content and selected_chunks:
+                        chk0 = (
+                            selected_chunks[0][0]
+                            if hasattr(selected_chunks[0], "__getitem__")
+                            else selected_chunks[0]
+                        )
+                        matched_content = getattr(chk0, "content", "")
+
+                    snippet = matched_content[:800] if matched_content else "(Nội dung trang)"
+                    context_blocks.append(f'[{cid}] Bài báo: "{dtitle}" (Trang {page}):\n{snippet}')
+
+                context_str = "\n\n".join(context_blocks)
+                llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
+
+                # Retrieve recent conversation turns for conversational memory
+                try:
+                    recent_turns_stmt = (
+                        select(SessionTurnModel)
+                        .where(SessionTurnModel.session_id == session_id)
+                        .order_by(SessionTurnModel.created_at.desc())
+                        .limit(4)
+                    )
+                    r_res = await self.db.execute(recent_turns_stmt)
+                    history_turns = list(reversed(r_res.scalars().all()))
+                    for turn in history_turns:
+                        if turn.question:
+                            llm_messages.append({"role": "user", "content": turn.question})
+                        if turn.answer:
+                            llm_messages.append({"role": "assistant", "content": turn.answer})
+                except Exception as ex:
+                    logger.debug("could_not_load_turn_history", error=str(ex))
+
+                # User message with grounded context
+                if context_str:
+                    user_content = (
+                        f"NGỮ CẢNH TRÍCH XUẤT TỪ BÀI BÁO:\n{context_str}\n\n"
+                        f"CÂU HỎI CỦA NGHIÊN CỨU VIÊN:\n{request.question}"
+                    )
+                else:
+                    user_content = request.question
+
+                llm_messages.append({"role": "user", "content": user_content})
+
+                headers = {
+                    "Authorization": f"Bearer {settings.OPENAI_API_KEY.get_secret_value()}",
+                    "Content-Type": "application/json",
+                }
+                payload: dict[str, Any] = {
+                    "model": settings.OPENAI_MODEL,
+                    "messages": llm_messages,
+                    "stream": True,
+                }
+                if not any(
+                    m in settings.OPENAI_MODEL.lower() for m in ("gpt-5", "o1", "o3", "luna")
+                ):
+                    payload["temperature"] = 0.3
+
+                async with httpx.AsyncClient(timeout=60.0) as client:
+                    async with client.stream(
+                        "POST",
+                        f"{settings.OPENAI_BASE_URL}/chat/completions",
+                        headers=headers,
+                        json=payload,
+                    ) as resp:
+                        if resp.status_code == 200:
+                            async for raw_line in resp.aiter_lines():
+                                if await is_disconnected():
+                                    logger.warning(
+                                        "sse_client_disconnected", session_id=str(session_id)
+                                    )
+                                    finish_reason = "interrupted"
+                                    break
+                                line = raw_line.strip()
+                                if line.startswith("data: ") and line != "data: [DONE]":
+                                    try:
+                                        chunk_json = json.loads(line[6:])
+                                        delta = chunk_json["choices"][0]["delta"].get("content", "")
+                                        if delta:
+                                            answer_parts.append(delta)
+                                            evt_token = emit("token", {"token": delta})
+                                            if evt_token:
+                                                yield evt_token
+                                    except Exception:
+                                        continue
+                        else:
+                            err_body = await resp.aread()
+                            logger.warning(
+                                "llm_chat_stream_bad_status",
+                                status=resp.status_code,
+                                text=err_body.decode(errors="ignore"),
+                            )
+            except Exception as e:
+                logger.warning("llm_chat_stream_failed_fallback", error=str(e))
+
+        # Fallback or Test Environment: Deterministic Socratic Response
+        if not answer_parts and finish_reason != "interrupted":
+            full_text, _ = self._generate_answer_by_intent(
+                intent=intent,
+                question=request.question,
+                citations=citations,
+                target_doc_ids=target_doc_ids,
+            )
+            tokens = full_text.split(" ")
+            for token in tokens:
+                if await is_disconnected():
+                    logger.warning("sse_client_disconnected", session_id=str(session_id))
+                    finish_reason = "interrupted"
+                    break
+
+                token_chunk = token + " "
+                answer_parts.append(token_chunk)
+                evt_token = emit("token", {"token": token_chunk})
+                if evt_token:
+                    yield evt_token
+                await asyncio.sleep(0.01)
 
         final_answer = "".join(answer_parts).strip()
+        latency_ms = (time.perf_counter() - start_time) * 1000
+        prompt_tokens = len(request.question.split()) * 2
+        completion_tokens = max(1, len(final_answer.split()))
         done_payload = {
             "finish_reason": finish_reason,
-            "prompt_tokens": len(request.question.split()) * 2,
-            "completion_tokens": len(tokens),
-            "total_tokens": len(request.question.split()) * 2 + len(tokens),
-            "latency_ms": 320.0,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+            "latency_ms": round(latency_ms, 1),
             "citations_count": len(citations),
             "intent": intent.value,
             "ambiguity_type": ambiguity.value,

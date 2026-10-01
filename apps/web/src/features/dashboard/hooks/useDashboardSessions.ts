@@ -9,7 +9,7 @@ import {
 } from "./useDashboardQueries";
 
 export function useDashboardSessions() {
-  const { data: sessions = [], isLoading, error } = useSessionsQuery();
+  const { data: sessions = [], isLoading, error } = useSessionsQuery(1, 50, undefined, true);
   const createMutation = useCreateSessionMutation();
   const deleteMutation = useDeleteSessionMutation();
   const updateTitleMutation = useUpdateSessionTitleMutation();
