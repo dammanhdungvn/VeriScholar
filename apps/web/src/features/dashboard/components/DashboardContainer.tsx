@@ -57,7 +57,13 @@ export function DashboardContainer() {
     stopGeneration,
     resetChat,
     loadExistingSession,
-  } = useStreamingChat({ activeSessionId: effectiveSessionId });
+  } = useStreamingChat({
+    activeSessionId: effectiveSessionId,
+    onSessionCreated: (newId) => {
+      selectSession(newId);
+      navigate(`/dashboard/${newId}`, { replace: true });
+    },
+  });
 
   // Query session detail when routeSessionId is present
   const { data: sessionDetailRes } = useSessionDetail(routeSessionId);

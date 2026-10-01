@@ -4,8 +4,18 @@ from typing import Literal
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Monorepo Root Directory: apps/api/src/api/core -> parents[4] is repo root
-ROOT_DIR = Path(__file__).resolve().parents[4]
+
+def find_repo_root() -> Path:
+    """Dynamically locates the monorepo root directory."""
+    curr = Path(__file__).resolve()
+    for parent in curr.parents:
+        if (parent / "pnpm-workspace.yaml").exists() or (parent / "packages" / "core").exists():
+            return parent
+    return curr.parents[4]
+
+
+# Monorepo Root Directory
+ROOT_DIR = find_repo_root()
 
 
 def get_default_reload_dirs() -> list[str]:

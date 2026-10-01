@@ -4,6 +4,7 @@ import type { ChatMessage, CitationBadgeData } from "@/types/dashboard";
 import { SAMPLE_CHAT_MESSAGES } from "../data/mockDashboardData";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
+import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
@@ -11,9 +12,13 @@ const isMockEnabled = import.meta.env.VITE_ENABLE_MOCK_DASHBOARD === "true";
 
 interface UseStreamingChatOptions {
   activeSessionId?: string;
+  onSessionCreated?: (sessionId: string) => void;
 }
 
-export function useStreamingChat({ activeSessionId }: UseStreamingChatOptions = {}) {
+export function useStreamingChat({
+  activeSessionId,
+  onSessionCreated,
+}: UseStreamingChatOptions = {}) {
   const [messages, setMessages] = useState<ChatMessage[]>(() => {
     if (isMockEnabled && activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]) {
       return SAMPLE_CHAT_MESSAGES[activeSessionId];
@@ -196,8 +201,36 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
       setMessages((prev) => [...prev, userMessage, initialAssistantMessage]);
       setIsGenerating(true);
 
-      // If mock mode is forced or no session ID, run local high-fidelity generator
-      if (isMockEnabled || !activeSessionId) {
+      let effectiveSessionId = activeSessionId;
+      if (!effectiveSessionId && !isMockEnabled) {
+        try {
+          const titleSnippet = textToSend.slice(0, 32);
+          const createRes = await sessionsApi.createSession({
+            title: `Nghiên cứu: ${titleSnippet}`,
+          });
+          if (createRes?.data?.id) {
+            effectiveSessionId = createRes.data.id;
+            onSessionCreated?.(effectiveSessionId);
+
+            const openDocs = useReaderStore.getState().openDocumentIds;
+            for (const docId of openDocs) {
+              try {
+                await sessionsApi.addDocumentToSession(effectiveSessionId, {
+                  source_type: "document_id",
+                  document_id: docId,
+                });
+              } catch {
+                // Ignore if already added
+              }
+            }
+          }
+        } catch (err) {
+          console.warn("Could not auto-create session for chat:", err);
+        }
+      }
+
+      // If mock mode is forced or no session ID could be created, run local simulator
+      if (isMockEnabled || !effectiveSessionId) {
         runMockStream(textToSend, assistantMsgId);
         return;
       }
@@ -241,7 +274,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
       };
 
       const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null;
-      const url = `${API_BASE_URL}${API_PREFIX}/sessions/${activeSessionId}/messages`;
+      const url = `${API_BASE_URL}${API_PREFIX}/sessions/${effectiveSessionId}/messages`;
 
       try {
         await fetchEventSource(url, {
@@ -378,7 +411,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
         }
       }
     },
-    [inputText, isGenerating, activeSessionId, runMockStream]
+    [inputText, isGenerating, activeSessionId, onSessionCreated, runMockStream]
   );
 
   const resetChat = useCallback(async () => {

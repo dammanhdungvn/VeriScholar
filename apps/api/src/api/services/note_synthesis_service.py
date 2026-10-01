@@ -187,26 +187,35 @@ class NoteSynthesisService:
                 f"định danh tương ứng (ví dụ: [^badge_1], [^badge_2])."
             )
 
-            # Check if OpenAI or DMR is configured
-            if settings.OPENAI_API_KEY:
+            # Check if OpenAI or DMR is configured (skip in in-memory test environments)
+            is_in_memory_test = (
+                settings.ENVIRONMENT == "test" or "InMemory" in type(self.db).__name__
+            )
+            if not is_in_memory_test and settings.OPENAI_API_KEY:
+                api_key = settings.OPENAI_API_KEY.get_secret_value()
+                json_payload: dict[str, object] = {
+                    "model": settings.OPENAI_MODEL,
+                    "messages": [
+                        {"role": "system", "content": system_prompt},
+                        {
+                            "role": "user",
+                            "content": f"Tiêu đề: {title}\n\nTrích dẫn:\n{context_str}",
+                        },
+                    ],
+                }
+                if not any(
+                    m in settings.OPENAI_MODEL.lower() for m in ("gpt-5", "o1", "o3", "luna")
+                ):
+                    json_payload["temperature"] = 0.3
+
                 async with httpx.AsyncClient(timeout=15.0) as client:
                     resp = await client.post(
                         f"{settings.OPENAI_BASE_URL}/chat/completions",
                         headers={
-                            "Authorization": f"Bearer {settings.OPENAI_API_KEY.get_secret_value()}",
+                            "Authorization": f"Bearer {api_key}",
                             "Content-Type": "application/json",
                         },
-                        json={
-                            "model": settings.OPENAI_MODEL,
-                            "messages": [
-                                {"role": "system", "content": system_prompt},
-                                {
-                                    "role": "user",
-                                    "content": f"Tiêu đề: {title}\n\nTrích dẫn:\n{context_str}",
-                                },
-                            ],
-                            "temperature": 0.3,
-                        },
+                        json=json_payload,
                     )
                     if resp.status_code == 200:
                         data = resp.json()
