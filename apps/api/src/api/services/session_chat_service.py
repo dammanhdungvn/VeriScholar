@@ -25,6 +25,7 @@ from api.schemas.session import (
     SessionChatMessageRequest,
     SessionTurnItem,
 )
+from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -653,6 +654,7 @@ class SessionChatService:
 
         turn_id = uuid4()
         now_iso = datetime.now(UTC).isoformat()
+        start_time = time.perf_counter()
         start_payload = {
             "turn_id": str(turn_id),
             "message_id": f"msg_{turn_id.hex[:8]}",
@@ -662,6 +664,68 @@ class SessionChatService:
         evt_start = emit("start", start_payload)
         if evt_start:
             yield evt_start
+
+        # 0. AI Input Guardrail: Prompt Injection & Security Boundary Scan
+        input_guard = AIGuardrailsService.scan_user_input(request.question)
+        if not input_guard.is_safe:
+            logger.warning(
+                "chat_query_blocked_by_guardrail",
+                session_id=str(session_id),
+                violation_type=input_guard.violation_type,
+                pattern=input_guard.matched_pattern,
+            )
+            evt_reasoning = emit(
+                "reasoning",
+                {
+                    "thought": (
+                        f"Phát hiện cảnh báo an toàn ({input_guard.violation_type}). "
+                        "Kích hoạt cơ chế từ chối học thuật (Academic Abstention Guardrail)."
+                    )
+                },
+            )
+            if evt_reasoning:
+                yield evt_reasoning
+
+            refusal_text = (
+                input_guard.refusal_reason
+                or "Yêu cầu không thuộc phạm vi phân tích học thuật của tài liệu."
+            )
+            evt_token = emit("token", {"token": refusal_text})
+            if evt_token:
+                yield evt_token
+
+            latency_ms = (time.perf_counter() - start_time) * 1000
+            prompt_tokens = len(request.question.split()) * 2
+            completion_tokens = len(refusal_text.split())
+            done_payload = {
+                "finish_reason": "blocked_by_guardrail",
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "latency_ms": round(latency_ms, 1),
+                "citations_count": 0,
+                "intent": IntentType.ADVERSARIAL_OUT_OF_DOMAIN.value,
+                "ambiguity_type": AmbiguityType.SCOPE_MISMATCH.value,
+            }
+            evt_done = emit("done", done_payload)
+            if evt_done:
+                yield evt_done
+
+            turn_model = SessionTurnModel(
+                id=turn_id,
+                session_id=session_id,
+                question=request.question,
+                answer=refusal_text,
+                citations=[],
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                latency_ms=int(latency_ms),
+                finish_reason="blocked_by_guardrail",
+                created_at=datetime.now(UTC),
+            )
+            self.db.add(turn_model)
+            await self.db.commit()
+            return
 
         # 1. Dynamic Retrieval & Chunk Relevance Ranking
         citations: list[dict[str, Any]] = []
@@ -733,10 +797,12 @@ class SessionChatService:
 
         if should_use_llm:
             try:
+                security_directive = AIGuardrailsService.get_security_directive()
                 system_prompt = (
                     "Bạn là Socratic Copilot — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
                     "Nhiệm vụ của bạn là giải đáp sâu sắc, chính xác và có căn cứ khoa học "
                     "dựa trên các bài báo được cung cấp.\n\n"
+                    f"{security_directive}\n\n"
                     "QUY TẮC PHẢN HỒI:\n"
                     "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. Không bịa đặt.\n"
                     "2. Gắn trích dẫn: Khi đưa ra số liệu hay luận điểm then chốt, BẮT BUỘC "
@@ -747,7 +813,7 @@ class SessionChatService:
                     "(hoặc ngôn ngữ câu hỏi)."
                 )
 
-                context_blocks: list[str] = []
+                evidence_blocks: list[dict[str, Any]] = []
                 for cit in citations:
                     cid = cit.get("citation_id", "")
                     dtitle = cit.get("document_title", "")
@@ -769,10 +835,19 @@ class SessionChatService:
                         )
                         matched_content = getattr(chk0, "content", "")
 
-                    snippet = matched_content[:800] if matched_content else "(Nội dung trang)"
-                    context_blocks.append(f'[{cid}] Bài báo: "{dtitle}" (Trang {page}):\n{snippet}')
+                    snippet_content = (
+                        matched_content[:1000] if matched_content else "(Nội dung trang)"
+                    )
+                    evidence_blocks.append(
+                        {
+                            "citation_id": cid,
+                            "document_title": dtitle,
+                            "page_number": page,
+                            "content": snippet_content,
+                        }
+                    )
 
-                context_str = "\n\n".join(context_blocks)
+                sandboxed_context = AIGuardrailsService.build_sandboxed_context(evidence_blocks)
                 llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
 
                 # Retrieve recent conversation turns for conversational memory
@@ -793,14 +868,14 @@ class SessionChatService:
                 except Exception as ex:
                     logger.debug("could_not_load_turn_history", error=str(ex))
 
-                # User message with grounded context
-                if context_str:
+                # User message with sandboxed context
+                clean_question = input_guard.sanitized_input or request.question
+                if sandboxed_context:
                     user_content = (
-                        f"NGỮ CẢNH TRÍCH XUẤT TỪ BÀI BÁO:\n{context_str}\n\n"
-                        f"CÂU HỎI CỦA NGHIÊN CỨU VIÊN:\n{request.question}"
+                        f"{sandboxed_context}\n\nCÂU HỎI CỦA NGHIÊN CỨU VIÊN:\n{clean_question}"
                     )
                 else:
-                    user_content = request.question
+                    user_content = clean_question
 
                 llm_messages.append({"role": "user", "content": user_content})
 
@@ -878,6 +953,19 @@ class SessionChatService:
                 await asyncio.sleep(0.01)
 
         final_answer = "".join(answer_parts).strip()
+
+        # Output Guardrail: Verify factual grounding and detect citation hallucinations
+        valid_cids = [c["citation_id"] for c in citations]
+        out_guard = AIGuardrailsService.verify_output_grounding(final_answer, valid_cids)
+        if not out_guard.is_grounded:
+            logger.warning(
+                "chat_output_guardrail_unfounded_claims",
+                session_id=str(session_id),
+                warning=out_guard.warning,
+                hallucinated=out_guard.hallucinated_citations,
+                has_leak=out_guard.has_system_leak,
+            )
+            final_answer = out_guard.sanitized_output
         latency_ms = (time.perf_counter() - start_time) * 1000
         prompt_tokens = len(request.question.split()) * 2
         completion_tokens = max(1, len(final_answer.split()))
