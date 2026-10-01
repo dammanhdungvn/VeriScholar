@@ -54,6 +54,7 @@ This skill guides AI agents and engineers on how to build, refactor, and verify 
 2. Check `AGENTS.md` and relevant reference docs:
    - [Architectural Invariants](references/architectural-invariants.md)
    - [Standby & Session Flow](references/standby-session-flow.md)
+   - [AI Guardrails Specification](references/guardrails-spec.md)
 3. Ensure no speculative abstractions or unnecessary dependencies are introduced (YAGNI).
 
 ### Step 2: Implementation & Monorepo Atomicity
