@@ -966,7 +966,6 @@ class SessionChatService:
                 has_leak=out_guard.has_system_leak,
             )
             final_answer = out_guard.sanitized_output
-
         latency_ms = (time.perf_counter() - start_time) * 1000
         prompt_tokens = len(request.question.split()) * 2
         completion_tokens = max(1, len(final_answer.split()))
