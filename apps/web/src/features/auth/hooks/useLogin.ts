@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import type { LoginCredentials, AuthResponse } from "@/types/auth";
-import { mockLogin } from "../data/mock-auth";
+import { authApi } from "../api/authApi";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export function useLogin() {
@@ -8,8 +8,7 @@ export function useLogin() {
 
   return useMutation<AuthResponse, Error, LoginCredentials>({
     mutationFn: async (credentials: LoginCredentials) => {
-      // In production, check import.meta.env.VITE_ENABLE_MOCK_AUTH === "true"
-      return mockLogin(credentials);
+      return authApi.login(credentials);
     },
     onSuccess: (data, variables) => {
       login(data, variables.remember_me ?? true);

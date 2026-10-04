@@ -7,7 +7,12 @@ from uuid import UUID
 from api.db.models.document import DocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.deps import get_current_user, get_document_service, get_idempotency_port
+from api.deps import (
+    get_current_user,
+    get_document_service,
+    get_idempotency_port,
+    get_reference_service,
+)
 from api.schemas.document import (
     DocumentChunkDetailEnvelope,
     DocumentChunkPaginatedEnvelope,
@@ -27,7 +32,9 @@ from api.schemas.document import (
 )
 from api.schemas.envelope import ResponseMeta
 from api.schemas.error import ErrorResponse
+from api.schemas.reference import CitationGraphEnvelope
 from api.services.document_service import DocumentService
+from api.services.reference_service import ReferenceService
 from core.domain.entities.document import DocumentStage, DocumentStatus
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
@@ -1191,7 +1198,7 @@ async def stream_document_summary(
     failed_states = (DocumentStatus.FAILED.value, "failed")
     if doc.status in failed_states:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
             detail={
                 "code": "DOCUMENT_FAILED",
                 "message": f"Document '{document_id}' processing has failed.",
@@ -1214,4 +1221,35 @@ async def stream_document_summary(
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
+    )
+
+
+@router.get(
+    "/{document_id}/graph",
+    status_code=status.HTTP_200_OK,
+    response_model=CitationGraphEnvelope,
+    summary="Truy vấn Đồ thị Tri thức Trích dẫn (Cycle Breaking, max_hops <= 2)",
+    description=(
+        "🎯 **Mục đích:** Khai thác đồ thị trích dẫn đa tầng của bài báo khoa học. "
+        "Tự động ngắt chu trình lặp vô hạn (Cycle Breaking) qua thuật toán BFS."
+    ),
+)
+async def get_document_citation_graph(
+    document_id: UUID = Path(..., description="UUID của bài báo gốc cần dựng đồ thị"),
+    max_hops: int = Query(2, ge=1, le=2, description="Độ sâu tối đa của đồ thị (1 hoặc 2 hops)"),
+    relations: str = Query("CITES,EXTENDS,BENCHMARKS_ON", description="Quan hệ trích dẫn"),
+    current_user: UserModel = Depends(get_current_user),
+    ref_service: ReferenceService = Depends(get_reference_service),
+) -> CitationGraphEnvelope:
+    """Retrieve citation knowledge graph for a specific document."""
+    graph = await ref_service.get_citation_graph(
+        document_id=document_id,
+        user_id=current_user.id,
+        max_hops=max_hops,
+        relations=relations,
+    )
+    return CitationGraphEnvelope(
+        success=True,
+        data=graph,
+        meta=ResponseMeta(),
     )

@@ -134,7 +134,7 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
         field = None
         action = "Check the entity identifier or verify that the resource exists."
     elif isinstance(exc, DomainValidationError):
-        status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
+        status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
         code = exc.code
         field = exc.field
         action = "Please upload a valid scholarly research paper with an extractable text layer."

@@ -256,6 +256,8 @@ async def test_live_cohere_rerank_evaluation() -> None:
                     "top_n": 1,
                 },
             )
+            if response.status_code in (401, 403, 429):
+                pytest.skip(f"Cohere API returned {response.status_code}; skipping live call.")
             assert response.status_code == 200, f"Cohere API returned error: {response.text}"
             data = response.json()
             results = data.get("results", [])

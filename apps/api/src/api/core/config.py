@@ -91,9 +91,23 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
 
+    # Authentication & JWT Security Settings
+    JWT_SECRET_KEY: SecretStr = SecretStr(
+        "verischolar-dev-secret-key-min-32-bytes-long-change-in-prod"
+    )
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    ENABLE_DEV_AUTH_BYPASS: bool = True
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
+
+    @property
+    def allow_dev_auth_bypass(self) -> bool:
+        """Allow dev auth bypass only in non-production environments."""
+        return not self.is_production and self.ENABLE_DEV_AUTH_BYPASS
 
 
 settings = Settings()

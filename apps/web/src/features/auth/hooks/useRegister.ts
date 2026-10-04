@@ -1,6 +1,6 @@
 import { useMutation } from "@tanstack/react-query";
 import type { RegisterPayload, AuthResponse } from "@/types/auth";
-import { mockRegister } from "../data/mock-auth";
+import { authApi } from "../api/authApi";
 import { useAuthStore } from "../stores/useAuthStore";
 
 export function useRegister() {
@@ -8,7 +8,7 @@ export function useRegister() {
 
   return useMutation<AuthResponse, Error, RegisterPayload>({
     mutationFn: async (payload: RegisterPayload) => {
-      return mockRegister(payload);
+      return authApi.register(payload);
     },
     onSuccess: (data) => {
       login(data, true);
