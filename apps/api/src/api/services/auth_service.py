@@ -276,6 +276,7 @@ class AuthService:
             refresh_token=refresh_token,
             token_type="bearer",
             expires_in=expires_in,
+            user=self.to_user_response(user),
         )
 
     async def refresh_access_token(
