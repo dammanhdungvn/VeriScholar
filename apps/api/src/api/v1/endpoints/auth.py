@@ -1,13 +1,17 @@
 """Authentication and user account endpoints."""
 
+from typing import Any
+
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.deps import get_auth_service, get_current_user
+from api.deps import get_auth_service, get_cost_control_service, get_current_user
 from api.schemas.auth import (
     AuthTokenEnvelope,
+    GoogleLoginRequest,
     LoginRequest,
     RefreshTokenRequest,
     RegisterRequest,
+    TokenQuotaEnvelope,
     UserProfileEnvelope,
 )
 from api.schemas.envelope import ResponseMeta
@@ -89,6 +93,31 @@ async def refresh_token(
     )
 
 
+@router.post(
+    "/google",
+    response_model=AuthTokenEnvelope,
+    status_code=status.HTTP_200_OK,
+    summary="Đăng nhập hoặc đăng ký bằng tài khoản Google",
+    description=(
+        "Xác thực qua Google ID token, tự động tạo tài khoản nếu chưa tồn tại "
+        "và cấp phát JWT tokens."
+    ),
+)
+async def google_login(
+    request: GoogleLoginRequest,
+    db: AsyncSession = Depends(get_db),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> AuthTokenEnvelope:
+    """Authenticate or register user with Google OAuth."""
+    user = await auth_service.authenticate_google(db=db, credential=request.credential)
+    tokens = auth_service.create_token_response(user)
+    return AuthTokenEnvelope(
+        success=True,
+        data=tokens,
+        meta=ResponseMeta(),
+    )
+
+
 @router.get(
     "/me",
     response_model=UserProfileEnvelope,
@@ -104,5 +133,28 @@ async def get_me(
     return UserProfileEnvelope(
         success=True,
         data=auth_service.to_user_response(current_user),
+        meta=ResponseMeta(),
+    )
+
+
+@router.get(
+    "/quota",
+    response_model=TokenQuotaEnvelope,
+    status_code=status.HTTP_200_OK,
+    summary="Kiểm tra hạn mức Token và dung lượng lưu trữ (BỔ SUNG 1)",
+    description=(
+        "Trả về chi tiết số token đã dùng, số token còn lại, tỷ lệ sử dụng "
+        "và cảnh báo vượt hạn mức."
+    ),
+)
+async def get_quota_status(
+    current_user: UserModel = Depends(get_current_user),
+    cost_service: Any = Depends(get_cost_control_service),
+) -> TokenQuotaEnvelope:
+    """Return live token quota and storage allocation status."""
+    status_data = cost_service.get_quota_status(current_user)
+    return TokenQuotaEnvelope(
+        success=True,
+        data=status_data,
         meta=ResponseMeta(),
     )

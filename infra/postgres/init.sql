@@ -42,6 +42,12 @@ CREATE TABLE IF NOT EXISTS users (
     hashed_password VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
     role VARCHAR(50) NOT NULL DEFAULT 'researcher',
+    google_id VARCHAR(255) UNIQUE,
+    avatar_url VARCHAR(512),
+    token_quota INTEGER NOT NULL DEFAULT 200000,
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    storage_quota_bytes BIGINT NOT NULL DEFAULT 1073741824,
+    storage_used_bytes BIGINT NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -50,6 +56,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TRIGGER trg_users_updated_at
 BEFORE UPDATE ON users
 FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
 
 -- 3.2. Content-Addressable Storage (CAS) Blobs
 CREATE TABLE IF NOT EXISTS document_storage_blobs (
@@ -320,6 +327,58 @@ CREATE INDEX IF NOT EXISTS ix_shares_token ON shares(token);
 CREATE INDEX IF NOT EXISTS ix_shares_user_id ON shares(user_id);
 CREATE INDEX IF NOT EXISTS ix_shares_document_id ON shares(document_id);
 
+-- 3.12. Research Organizations / Labs & Members
+CREATE TABLE IF NOT EXISTS organizations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name VARCHAR(255) NOT NULL,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    description TEXT,
+    storage_quota_bytes BIGINT NOT NULL DEFAULT 10737418240,
+    storage_used_bytes BIGINT NOT NULL DEFAULT 0,
+    token_quota INTEGER NOT NULL DEFAULT 1000000,
+    tokens_used INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_organizations_slug ON organizations(slug);
+
+CREATE TRIGGER trg_organizations_updated_at
+BEFORE UPDATE ON organizations
+FOR EACH ROW EXECUTE FUNCTION handle_updated_at();
+
+CREATE TABLE IF NOT EXISTS organization_members (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(50) NOT NULL DEFAULT 'member',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_organization_members_org_user UNIQUE (organization_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS ix_organization_members_org ON organization_members(organization_id);
+CREATE INDEX IF NOT EXISTS ix_organization_members_user ON organization_members(user_id);
+
+-- 3.13. Usage Records & Token Cost Control Tracking
+CREATE TABLE IF NOT EXISTS usage_records (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL,
+    activity_type VARCHAR(50) NOT NULL,
+    model_name VARCHAR(100),
+    tokens_prompt INTEGER NOT NULL DEFAULT 0,
+    tokens_completion INTEGER NOT NULL DEFAULT 0,
+    total_tokens INTEGER NOT NULL DEFAULT 0,
+    cost_cents NUMERIC(10, 4) NOT NULL DEFAULT 0.0000,
+    bytes_transferred BIGINT NOT NULL DEFAULT 0,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS ix_usage_records_user_id ON usage_records(user_id);
+CREATE INDEX IF NOT EXISTS ix_usage_records_activity ON usage_records(activity_type);
+CREATE INDEX IF NOT EXISTS ix_usage_records_created_at ON usage_records(created_at);
+
 -- ============================================================================
 -- 4. VERIFICATION LOG
 -- ============================================================================
@@ -327,6 +386,7 @@ DO $$
 BEGIN
     RAISE NOTICE 'VeriScholar PostgreSQL 18 Schema and Extensions Initialized Successfully:';
     RAISE NOTICE '  - Extensions: vector, uuid-ossp, pg_trgm';
-    RAISE NOTICE '  - 16 Relational Tables in 3NF with Cascade and OCC Triggers';
-    RAISE NOTICE '  - HNSW Vector Index and GIN Full-Text Index Configured';
+    RAISE NOTICE '  - 19 Relational Tables in 3NF with Cascade and OCC Triggers';
+    RAISE NOTICE '  - Organizations, Usage Records, and Token Cost Control Configured';
 END $$;
+

@@ -1,5 +1,3 @@
-"""Dependencies for FastAPI endpoints."""
-
 from uuid import UUID
 
 from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter
@@ -19,6 +17,7 @@ from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.services.auth_service import AuthService
+from api.services.cost_control_service import CostControlService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
 from api.services.folder_service import FolderService
@@ -239,9 +238,43 @@ async def get_current_user(
             if user_id != DEFAULT_DEV_USER_ID
             else "VeriScholar Developer",
             hashed_password="dev_dummy_password",
+            role="researcher",
             is_active=True,
+            token_quota=200000,
+            tokens_used=0,
+            storage_quota_bytes=1073741824,
+            storage_used_bytes=0,
         )
+
         db.add(user)
         await db.commit()
         await db.refresh(user)
     return user
+
+
+_cost_control_service: CostControlService | None = None
+
+
+def get_cost_control_service() -> CostControlService:
+    """Dependency providing CostControlService singleton instance."""
+    global _cost_control_service
+    if _cost_control_service is None:
+        _cost_control_service = CostControlService()
+    return _cost_control_service
+
+
+async def require_admin_user(
+    current_user: UserModel = Depends(get_current_user),
+) -> UserModel:
+    """Ensure current authenticated user has administrative privileges."""
+    if getattr(current_user, "role", "researcher") != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "INSUFFICIENT_PRIVILEGES",
+                "message": "Administrative role required to access this resource.",
+                "field": "role",
+                "action": "Authenticate with an administrative account.",
+            },
+        )
+    return current_user
