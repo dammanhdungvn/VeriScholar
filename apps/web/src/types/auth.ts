@@ -3,7 +3,7 @@
  * Strict 1-1 mapping with Backend FastAPI OpenAPI Schema
  */
 
-export type UserRole = "researcher" | "faculty" | "postdoc" | "student" | "guest";
+export type UserRole = "researcher" | "faculty" | "postdoc" | "student" | "guest" | "admin";
 
 export interface UserProfile {
   id: string; // UUID v4
@@ -15,6 +15,10 @@ export interface UserProfile {
   avatar_url?: string;
   role: UserRole;
   is_verified: boolean;
+  token_quota?: number;
+  tokens_used?: number;
+  storage_quota_bytes?: number;
+  storage_used_bytes?: number;
   created_at: string;
 }
 

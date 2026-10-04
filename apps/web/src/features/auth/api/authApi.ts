@@ -14,7 +14,20 @@ interface BackendUser {
   full_name: string | null;
   role: string;
   is_active: boolean;
+  token_quota?: number;
+  tokens_used?: number;
+  storage_quota_bytes?: number;
+  storage_used_bytes?: number;
   created_at: string;
+}
+
+export interface QuotaStatusResponse {
+  tokens_used: number;
+  token_quota: number;
+  tokens_remaining: number;
+  storage_used_bytes: number;
+  storage_quota_bytes: number;
+  percent_token_used: number;
 }
 
 interface BackendTokenResponse {
@@ -32,6 +45,10 @@ function mapBackendUser(u: BackendUser): UserProfile {
     full_name: u.full_name || u.email.split("@")[0],
     role: (u.role as UserProfile["role"]) || "researcher",
     is_verified: u.is_active,
+    token_quota: u.token_quota,
+    tokens_used: u.tokens_used,
+    storage_quota_bytes: u.storage_quota_bytes,
+    storage_used_bytes: u.storage_used_bytes,
     created_at: u.created_at,
   };
 }
@@ -128,5 +145,32 @@ export const authApi = {
   async getMe(): Promise<UserProfile> {
     const res = await apiClient<BackendUser>("/auth/me", { method: "GET" });
     return mapBackendUser(res);
+  },
+
+  /**
+   * POST /api/v1/auth/google
+   */
+  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
+    const res = await apiClient<BackendTokenResponse>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ id_token: idToken }),
+    });
+
+    const user = mapBackendUser(res.user);
+    const tokens: AuthTokens = {
+      access_token: res.access_token,
+      refresh_token: res.refresh_token,
+      token_type: "bearer",
+      expires_in: res.expires_in,
+    };
+
+    return { user, tokens };
+  },
+
+  /**
+   * GET /api/v1/auth/quota
+   */
+  async getQuota(): Promise<QuotaStatusResponse> {
+    return await apiClient<QuotaStatusResponse>("/auth/quota", { method: "GET" });
   },
 };
