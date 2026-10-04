@@ -2158,4 +2158,206 @@ curl -N -X POST "http://localhost:8000/api/v1/documents/6a6cbadb-517c-40db-bcdf-
 
 #### Parameters (Path)
 | Tên tham số | Kiểu dữ liệu | Bắt buộc | Mô tả |
-| :--- | :--- | :--- | :
+| :--- | :--- | :--- | :--- |
+| `id` | `string (uuid)` | **Có** | UUID của phiên nghiên cứu cần đóng gói ngoại tuyến. |
+
+#### Responses
+* **`200 OK`** - Đóng gói thành công, phản hồi nhị phân `application/zip` kèm header `Content-Disposition: attachment; filename="research_bundle_{id}.zip"`.
+* **`404 Not Found`** - Phiên nghiên cứu không tồn tại (`SESSION_NOT_FOUND`).
+
+---
+
+## 4. BỔ SUNG 1: Production Auth, Google OAuth & Hạn Mức Quota
+
+### [POST] `/api/v1/auth/google`
+**Summary:** `# 57. Đăng nhập hoặc Đăng ký qua Google OAuth 2.0 ID Token`  
+**Operation ID:** `google_auth_api_v1_auth_google_post`
+
+#### Request Body (`application/json`)
+```json
+{
+  "id_token": "eyJhbGciOiJSUzI1NiIsImtpZCI..."
+}
+```
+
+#### Responses
+* **`200 OK`** - Xác thực Google thành công, trả về JWT Access Token (1h) & Refresh Token (7d).
+* **`401 Unauthorized`** - ID Token không hợp lệ hoặc đã hết hạn (`INVALID_GOOGLE_TOKEN`).
+
+---
+
+### [GET] `/api/v1/auth/quota`
+**Summary:** `# 58. Truy vấn hạn mức và lượng tài nguyên LLM/CAS đã sử dụng`  
+**Operation ID:** `get_quota_api_v1_auth_quota_get`
+
+#### Responses
+* **`200 OK`** - Trả về trạng thái hạn mức:
+```json
+{
+  "success": true,
+  "data": {
+    "tokens_used": 15420,
+    "token_quota": 200000,
+    "tokens_remaining": 184580,
+    "storage_used_bytes": 26214400,
+    "storage_quota_bytes": 1073741824,
+    "percent_token_used": 7.71
+  }
+}
+```
+
+---
+
+## 5. BỔ SUNG 2: Admin Console & Quản Trị Phòng Lab Cộng Tác
+
+### [GET] `/api/v1/admin/dashboard`
+**Summary:** `# 59. Tổng quan số liệu toàn hệ thống (Users, Storage, Tokens, Chi phí)`  
+**Operation ID:** `admin_dashboard_api_v1_admin_dashboard_get`  
+*Yêu cầu quyền:* `role: admin`.
+
+---
+
+### [GET] `/api/v1/admin/users`
+**Summary:** `# 60. Danh sách người dùng hệ thống phân trang kèm hạn mức`  
+**Operation ID:** `admin_list_users_api_v1_admin_users_get`
+
+---
+
+### [PATCH] `/api/v1/admin/users/{id}/quota`
+**Summary:** `# 61. Điều chỉnh Token Quota, Storage Quota, Role hoặc Khóa tài khoản`  
+**Operation ID:** `admin_update_user_quota_api_v1_admin_users__id__quota_patch`
+
+---
+
+### [GET] `/api/v1/admin/usage`
+**Summary:** `# 62. Nhật ký kiểm toán chi tiết sử dụng tài nguyên Compute & LLM`  
+**Operation ID:** `admin_usage_logs_api_v1_admin_usage_get`
+
+---
+
+### [GET] `/api/v1/admin/system-health`
+**Summary:** `# 63. Kiểm tra sức khỏe phần cứng, CAS Storage Disk, PostgreSQL Latency`  
+**Operation ID:** `admin_system_health_api_v1_admin_system_health_get`
+
+---
+
+### [GET] `/api/v1/organizations`
+**Summary:** `# 64. Danh sách các phòng lab nghiên cứu mà người dùng tham gia`  
+**Operation ID:** `list_organizations_api_v1_organizations_get`
+
+---
+
+### [POST] `/api/v1/organizations`
+**Summary:** `# 65. Tạo phòng lab / nhóm nghiên cứu mới`  
+**Operation ID:** `create_organization_api_v1_organizations_post`
+
+---
+
+### [GET] `/api/v1/organizations/{id}`
+**Summary:** `# 66. Chi tiết phòng lab kèm danh sách thành viên và hạn mức chung`  
+**Operation ID:** `get_organization_api_v1_organizations__id__get`
+
+---
+
+### [POST] `/api/v1/organizations/{id}/members`
+**Summary:** `# 67. Thêm cộng tác viên vào phòng lab theo email`  
+**Operation ID:** `add_org_member_api_v1_organizations__id__members_post`
+
+---
+
+### [DELETE] `/api/v1/organizations/{id}/members/{user_id}`
+**Summary:** `# 68. Xóa thành viên khỏi phòng lab`  
+**Operation ID:** `remove_org_member_api_v1_organizations__id__members__user_id__delete`
+
+---
+
+## 6. Module 4: Thư Mục Đề Tài & Thư Viện Cá Nhân
+
+### [GET] `/api/v1/folders` & [POST] `/api/v1/folders`
+**Summary:** `# 69-70. CRUD danh mục thư mục nghiên cứu phân cấp`
+
+---
+
+### [GET] `/api/v1/library/starred`
+**Summary:** `# 71. Danh sách các bài báo đã gắn sao trong thư viện`
+
+---
+
+### [POST] `/api/v1/library/import`
+**Summary:** `# 72. Nạp hàng loạt tài liệu theo danh sách DOI / arXiv ID`
+
+---
+
+### [POST] `/api/v1/library/synthesize`
+**Summary:** `# 73. RAG phân tầng đa tài liệu có Sufficiency Gate`
+
+---
+
+### [POST] `/api/v1/library/compare`
+**Summary:** `# 74. Lập ma trận so sánh tự động 2-10 bài báo`
+
+---
+
+## 7. Module 3: Phân Giải Tài Liệu Tham Khảo & Đồ Thị Trích Dẫn
+
+### [POST] `/api/v1/references:resolve`
+**Summary:** `# 75. Phân giải danh mục tham khảo qua Crossref/arXiv/Semantic Scholar`
+
+---
+
+### [GET] `/api/v1/documents/{id}/graph`
+**Summary:** `# 76. Khai thác đồ thị trích dẫn có Cycle Breaking (k <= 2)`
+
+---
+
+## 8. Cross-Cutting: Chia Sẻ Công Khai & Hủy Quyền Tức Thời
+
+### [POST] `/api/v1/shares`
+**Summary:** `# 77. Tạo liên kết chia sẻ công khai có mã token mật mã`
+
+---
+
+### [GET] `/api/v1/shares/{token}`
+**Summary:** `# 78. Truy cập tài liệu chia sẻ công khai không cần đăng nhập`
+
+---
+
+### [GET] `/api/v1/shares/{token}/file`
+**Summary:** `# 79. Stream PDF công khai hỗ trợ HTTP 206 Partial Content`
+
+---
+
+### [DELETE] `/api/v1/shares/{token}`
+**Summary:** `# 80. Hủy chia sẻ tức thời (chuyển trạng thái sang HTTP 410 Gone)`
+
+---
+
+## 9. Module 2: Soạn Thảo Học Thuật, Biên Dịch Sandbox & SAFE Fact-Checking
+
+### [GET, POST, PUT, DELETE] `/api/v1/drafts`
+**Summary:** `# 81-85. Quản lý bản thảo LaTeX/Markdown kèm khóa lạc quan OCC ETag / If-Match`
+
+---
+
+### [POST] `/api/v1/drafts/{id}:compile`
+**Summary:** `# 86. SSE Stream tiến trình biên dịch LaTeX kèm cơ chế tự sửa lỗi`
+
+---
+
+### [GET] `/api/v1/drafts/{id}/preview-pdf`
+**Summary:** `# 87. Stream xem trước PDF biên dịch`
+
+---
+
+### [POST] `/api/v1/drafts/{id}:verify-claims`
+**Summary:** `# 88. Quy trình 4 bước kiểm chứng sự thật SAFE Fact-Checking`
+
+---
+
+### [GET, POST] `/api/v1/drafts/{id}/comments`
+**Summary:** `# 89-90. Ghi chú phản biện và nhận xét theo dòng văn bản`
+
+---
+
+### [GET] `/api/v1/drafts/{id}/bundle`
+**Summary:** `# 91. Xuất gói nộp bài chuẩn Camera-Ready Submission (.zip hoặc .pdf)`

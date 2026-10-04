@@ -1161,3 +1161,27 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
    - Tối đa 30 lượt biên dịch LaTeX Sandbox mỗi giờ cho mỗi người dùng.
    - Giới hạn tần suất chung: 100 requests/phút trên mỗi địa chỉ IP.
    - Cửa sổ lưu trữ `Idempotency-Key` trên Redis: 24 giờ (86.400 giây).
+
+---
+
+## 9. BỔ SUNG: AUTHENTICATION, COST CONTROL & ADMIN/LAB CONSOLE (BỔ SUNG 1 & 2)
+
+### 9.1. Quản Trị Xác Thực & Hạn Mức Token (BỔ SUNG 1)
+- `POST /api/v1/auth/google`: Đăng nhập / Đăng ký qua Google OAuth 2.0 ID Token.
+- `GET /api/v1/auth/quota`: Truy vấn hạn mức và dung lượng Token LLM & CAS Storage đã tiêu thụ.
+- Cơ chế `CostControlService`: Tự động chặn và trả về `429 Too Many Requests` (`QUOTA_EXCEEDED`) khi người dùng vượt quá số lượng token được phân bổ.
+
+### 9.2. Bảng Điều Khiển Quản Trị Hệ Thống (Admin Console - BỔ SUNG 2)
+- `GET /api/v1/admin/dashboard`: Chỉ số toàn diện về tài khoản người dùng, dung lượng lưu trữ CAS vật lý, tổng tokens LLM tiêu thụ và chi phí USD ước tính.
+- `GET /api/v1/admin/users`: Bảng danh sách tài khoản phân trang kèm hạn mức Token Quota & Storage Quota.
+- `PATCH /api/v1/admin/users/{id}/quota`: Điều chỉnh hạn mức token, dung lượng CAS, vai trò (admin/researcher/member) và trạng thái hoạt động.
+- `GET /api/v1/admin/usage`: Nhật ký kiểm toán (Audit Trail) chi tiết từng tác vụ AI của người dùng.
+- `GET /api/v1/admin/system-health`: Thăm dò trạng thái PostgreSQL, tình trạng ổ đĩa CAS blobs và độ trễ phản hồi.
+
+### 9.3. Quản Trị Phòng Lab & Đội Nhóm Nghiên Cứu (Collaborative Labs - BỔ SUNG 2)
+- `GET /api/v1/organizations`: Liệt kê các phòng lab người dùng tham gia.
+- `POST /api/v1/organizations`: Tạo mới một phòng lab / nhóm nghiên cứu.
+- `GET /api/v1/organizations/{id}`: Xem chi tiết phòng lab, hạn mức chung và danh sách thành viên.
+- `POST /api/v1/organizations/{id}/members`: Mời cộng tác viên theo email với vai trò (`admin`, `member`, `guest`).
+- `PATCH /api/v1/organizations/{id}/members/{user_id}`: Cập nhật vai trò thành viên trong phòng lab.
+- `DELETE /api/v1/organizations/{id}/members/{user_id}`: Xóa thành viên khỏi phòng lab.
