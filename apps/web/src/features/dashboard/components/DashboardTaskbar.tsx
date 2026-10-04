@@ -12,6 +12,9 @@ import {
   Archive,
   Sun,
   Moon,
+  FileCode,
+  Building2,
+  Shield,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -212,6 +215,77 @@ export function DashboardTaskbar({
               </span>
             </div>
           </button>
+
+          {/* 4. Academic Drafts Button */}
+          <button
+            type="button"
+            onClick={() => navigate("/drafts")}
+            title="Bản thảo học thuật & LaTeX"
+            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
+          >
+            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
+              <FileCode className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+            </div>
+            <div
+              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isExpanded
+                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
+                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+              }`}
+            >
+              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
+                Bản thảo LaTeX
+              </span>
+            </div>
+          </button>
+
+          {/* 5. Collaborative Labs Button */}
+          <button
+            type="button"
+            onClick={() => navigate("/labs")}
+            title="Phòng Lab nghiên cứu"
+            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
+          >
+            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
+              <Building2 className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+            </div>
+            <div
+              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+                isExpanded
+                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
+                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+              }`}
+            >
+              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
+                Phòng Lab
+              </span>
+            </div>
+          </button>
+
+          {/* 6. Admin Console Button (if admin role) */}
+          {user?.role === "admin" && (
+            <button
+              type="button"
+              onClick={() => navigate("/admin")}
+              title="Quản trị hệ thống"
+              className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
+            >
+              <div className="w-10 h-9 shrink-0 flex items-center justify-center">
+                <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400 stroke-[2.2]" />
+              </div>
+              <div
+                className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+                  isExpanded
+                    ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
+                    : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+                }`}
+              >
+                <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
+                  Admin Console
+                </span>
+              </div>
+            </button>
+          )}
         </div>
 
         {/* Sessions List - Graceful Collapse Transition, Hidden in Collapsed State */}
@@ -320,6 +394,34 @@ export function DashboardTaskbar({
               <Moon className="w-4 h-4 text-zinc-600" />
             )}
           </button>
+        )}
+
+        {isExpanded && (
+          <div className="px-2.5 py-1.5 bg-white dark:bg-[#23211e] rounded-xl border border-[#e8e4dc] dark:border-[#38332c] text-[10px] font-mono space-y-1 shadow-2xs">
+            <div className="flex justify-between text-muted">
+              <span>Hạn mức Token</span>
+              <span className="font-semibold text-coral-600 dark:text-coral-400">
+                {user?.token_quota
+                  ? `${Math.round(((user.tokens_used || 0) / user.token_quota) * 100)}%`
+                  : "Đầy đủ"}
+              </span>
+            </div>
+            <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-coral-500 rounded-full transition-all duration-500"
+                style={{
+                  width: `${
+                    user?.token_quota
+                      ? Math.min(
+                          100,
+                          Math.round(((user.tokens_used || 0) / user.token_quota) * 100)
+                        )
+                      : 10
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
         )}
 
         <div
