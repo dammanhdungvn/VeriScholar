@@ -6,6 +6,7 @@ from core.ports.idempotency import IIdempotencyPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
+from core.ports.tracer import ITracerPort
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -300,3 +301,25 @@ def get_admin_service() -> AdminService:
     if _admin_service is None:
         _admin_service = AdminService()
     return _admin_service
+
+
+_tracer_port: ITracerPort | None = None
+
+
+def get_tracer_port() -> ITracerPort:
+    """Dependency providing ITracerPort (Langfuse or Noop fallback)."""
+    global _tracer_port
+    if _tracer_port is None:
+        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
+            from core.adapters.observability.tracer import LangfuseTracerAdapter
+
+            _tracer_port = LangfuseTracerAdapter(
+                public_key=settings.LANGFUSE_PUBLIC_KEY,
+                secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
+                host=settings.LANGFUSE_HOST,
+            )
+        else:
+            from core.adapters.observability.tracer import NoopTracerAdapter
+
+            _tracer_port = NoopTracerAdapter()
+    return _tracer_port

@@ -91,6 +91,11 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
 
+    # Observability & PromptOps (Langfuse)
+    LANGFUSE_PUBLIC_KEY: str | None = None
+    LANGFUSE_SECRET_KEY: SecretStr | None = None
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+
     # Authentication & JWT Security Settings
     JWT_SECRET_KEY: SecretStr = SecretStr(
         "verischolar-dev-secret-key-min-32-bytes-long-change-in-prod"
