@@ -241,7 +241,7 @@ async def get_current_user(
             if user_id != DEFAULT_DEV_USER_ID
             else "VeriScholar Developer",
             hashed_password="dev_dummy_password",
-            role="researcher",
+            role="admin" if user_id == DEFAULT_DEV_USER_ID else "researcher",
             is_active=True,
             token_quota=200000,
             tokens_used=0,

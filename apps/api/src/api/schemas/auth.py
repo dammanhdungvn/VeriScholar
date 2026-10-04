@@ -49,15 +49,6 @@ class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., description="Valid refresh token")
 
 
-class TokenResponse(BaseModel):
-    """Token response containing access and refresh tokens."""
-
-    access_token: str = Field(..., description="JWT access token (short-lived)")
-    refresh_token: str = Field(..., description="JWT refresh token (long-lived)")
-    token_type: str = Field(default="bearer", description="Token type")
-    expires_in: int = Field(..., description="Access token expiration window in seconds")
-
-
 class UserResponse(BaseModel):
     """User profile data model."""
 
@@ -74,6 +65,16 @@ class UserResponse(BaseModel):
     storage_used_bytes: int = Field(default=0, description="Storage currently consumed in bytes")
     is_active: bool = Field(default=True, description="Account active status")
     created_at: datetime = Field(..., description="Creation timestamp in UTC")
+
+
+class TokenResponse(BaseModel):
+    """Token response containing access and refresh tokens."""
+
+    access_token: str = Field(..., description="JWT access token (short-lived)")
+    refresh_token: str = Field(..., description="JWT refresh token (long-lived)")
+    token_type: str = Field(default="bearer", description="Token type")
+    expires_in: int = Field(..., description="Access token expiration window in seconds")
+    user: UserResponse | None = Field(default=None, description="Authenticated user profile")
 
 
 class TokenQuotaStatusResponse(BaseModel):

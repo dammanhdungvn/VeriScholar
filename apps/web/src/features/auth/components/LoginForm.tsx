@@ -218,7 +218,7 @@ export function LoginForm() {
         className="w-full h-9.5 text-xs font-medium border-dashed border-hairline dark:border-[#38332c] hover:border-primary/50 text-body dark:text-zinc-300 hover:text-ink dark:hover:text-white transition-colors gap-1.5"
       >
         <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span>Tài khoản Demo</span>
+        <span>Đăng nhập nhanh (Tài khoản Demo)</span>
       </Button>
 
       {/* 7. Footer Switcher Link: Minimal direct text */}
