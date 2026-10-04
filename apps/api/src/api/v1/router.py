@@ -1,12 +1,14 @@
 """API Version 1 Router Aggregator."""
 
 from api.v1.endpoints import (
+    admin,
     auth,
     documents,
     drafts,
     folders,
     library,
     notes,
+    organizations,
     references,
     sessions,
     shares,
@@ -23,3 +25,5 @@ api_v1_router.include_router(library.router)
 api_v1_router.include_router(references.router)
 api_v1_router.include_router(shares.router)
 api_v1_router.include_router(drafts.router)
+api_v1_router.include_router(organizations.router)
+api_v1_router.include_router(admin.router)

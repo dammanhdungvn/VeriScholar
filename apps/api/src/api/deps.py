@@ -16,6 +16,7 @@ from api.adapters.pdf_annotator import PyMuPdfAnnotator
 from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
+from api.services.admin_service import AdminService
 from api.services.auth_service import AuthService
 from api.services.cost_control_service import CostControlService
 from api.services.document_service import DocumentService
@@ -24,6 +25,7 @@ from api.services.folder_service import FolderService
 from api.services.library_service import LibraryService
 from api.services.note_service import NoteService
 from api.services.note_synthesis_service import NoteSynthesisService
+from api.services.organization_service import OrganizationService
 from api.services.reference_service import ReferenceService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
@@ -278,3 +280,23 @@ async def require_admin_user(
             },
         )
     return current_user
+
+
+_org_service: OrganizationService | None = None
+_admin_service: AdminService | None = None
+
+
+def get_organization_service() -> OrganizationService:
+    """Dependency providing OrganizationService singleton instance."""
+    global _org_service
+    if _org_service is None:
+        _org_service = OrganizationService()
+    return _org_service
+
+
+def get_admin_service() -> AdminService:
+    """Dependency providing AdminService singleton instance."""
+    global _admin_service
+    if _admin_service is None:
+        _admin_service = AdminService()
+    return _admin_service
