@@ -66,6 +66,8 @@ storage/
 *.sqlite
 *.sqlite3
 *.log
+*.tar.gz
+*.sha256
 /data/*
 !/data/papers/
 /data/papers/*
