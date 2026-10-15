@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { WritingHeaderBar } from "./WritingHeaderBar";
 import { WritingEditorPane } from "./WritingEditorPane";
 import { WritingPreviewPane } from "./WritingPreviewPane";
@@ -9,6 +9,7 @@ import { DraftAssetManagementModal } from "./DraftAssetManagementModal";
 import { DraftSharingModal } from "./DraftSharingModal";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
+import { calculateRebasedRange } from "../lib/diffUtils";
 import type { PendingSuggestion } from "../types";
 
 export function WritingWorkspace() {
@@ -33,6 +34,8 @@ export function WritingWorkspace() {
     closeSuggestionPanel,
     setAssisting,
   } = useWritingStore();
+
+  const [conflictMessage, setConflictMessage] = useState<string | null>(null);
 
   // Save handler with OCC version tracking
   const handleSave = useCallback(async () => {
@@ -197,6 +200,7 @@ export function WritingWorkspace() {
           cursor_end: end,
           expected_version: draft.version,
           created_at: res.suggested_at || new Date().toISOString(),
+          base_content: currentContent,
         };
 
         openSuggestionPanel(newSuggestion);
@@ -217,18 +221,19 @@ export function WritingWorkspace() {
       try {
         setSaving(true);
         const currentContent = useWritingStore.getState().editorContent;
-        const currentRange = useWritingStore.getState().selectionRange;
+        const baseContent = suggestion.base_content ?? draft.content ?? "";
 
-        // Determine insertion position based on current cursor/selection
-        let insertStart = suggestion.cursor_start;
-        let insertEnd = suggestion.cursor_end;
-        if (currentRange && currentRange.start !== undefined) {
-          insertStart = currentRange.start;
-          insertEnd = currentRange.end;
-        }
+        // Rebase target range to accurately preserve local unpersisted edits (DEFECT-01)
+        const { start: rebasedStart, end: rebasedEnd } = calculateRebasedRange(
+          baseContent,
+          currentContent,
+          suggestion.cursor_start,
+          suggestion.cursor_end,
+          suggestion.original_text
+        );
 
-        const safeStart = Math.min(Math.max(0, insertStart), currentContent.length);
-        const safeEnd = Math.min(Math.max(safeStart, insertEnd), currentContent.length);
+        const safeStart = Math.min(Math.max(0, rebasedStart), currentContent.length);
+        const safeEnd = Math.min(Math.max(safeStart, rebasedEnd), currentContent.length);
 
         const newContent =
           currentContent.slice(0, safeStart) +
@@ -249,14 +254,33 @@ export function WritingWorkspace() {
 
         markSaved(updated);
         closeSuggestionPanel();
-      } catch (err) {
+        setConflictMessage(null);
+      } catch (err: unknown) {
         console.error("Accept suggestion failed:", err);
+        const isPreconditionFailed =
+          (err && typeof err === "object" && "status" in err && (err as { status: number }).status === 412) ||
+          (err instanceof Error && err.message.includes("412"));
+
+        if (isPreconditionFailed) {
+          try {
+            const freshDraft = await draftsApi.getDraft(activeDraftId);
+            useWritingStore.getState().setDraft(freshDraft);
+          } catch {
+            // Keep draft state if fetch fails
+          }
+          setConflictMessage(
+            "Bản thảo trên máy chủ đã thay đổi phiên bản (HTTP 412). Đã đồng bộ phiên bản mới nhất, vui lòng xác nhận áp dụng lại đề xuất."
+          );
+        } else {
+          setConflictMessage("Không thể lưu đề xuất. Vui lòng thử lại.");
+        }
       } finally {
         setSaving(false);
       }
     },
     [activeDraftId, draft, editorTitle, markSaved, closeSuggestionPanel, setSaving]
   );
+
 
   const handleRejectSuggestion = useCallback(() => {
     // Discard suggestion without touching editor content
@@ -271,6 +295,24 @@ export function WritingWorkspace() {
         onCompile={handleCompile}
         onExportBundle={handleExportBundle}
       />
+
+      {/* OCC Conflict Alert Banner */}
+      {conflictMessage && (
+        <div
+          data-testid="occ-conflict-alert"
+          className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-amber-700 dark:text-amber-300 text-xs font-medium z-20"
+        >
+          <span>{conflictMessage}</span>
+          <button
+            type="button"
+            data-testid="close-conflict-alert-btn"
+            onClick={() => setConflictMessage(null)}
+            className="hover:underline ml-4 cursor-pointer text-amber-800 dark:text-amber-200"
+          >
+            Đóng
+          </button>
+        </div>
+      )}
 
       {/* 2. Workspace Adaptive Grid / Flex */}
       <div className="flex-1 flex overflow-hidden relative">

@@ -9,6 +9,18 @@ vi.mock("../api/draftsApi", () => ({
   draftsApi: {
     getPreviewPdfBlob: vi.fn().mockResolvedValue(new Blob(["mock-pdf"], { type: "application/pdf" })),
     getPreviewPdfUrl: vi.fn((id: string) => `http://localhost:8000/api/v1/drafts/${id}/preview.pdf`),
+    getDraft: vi.fn().mockImplementation((id: string) =>
+      Promise.resolve({
+        id,
+        user_id: "user-1",
+        title: "Test Draft",
+        content: "Test Content",
+        format: "latex",
+        version: 1,
+        created_at: "2026-10-15T00:00:00Z",
+        updated_at: "2026-10-15T00:00:00Z",
+      })
+    ),
     updateDraft: vi.fn().mockImplementation((id, payload) =>
       Promise.resolve({
         id,
@@ -338,4 +350,132 @@ describe("WritingWorkspace", () => {
 
     expect(screen.getByTestId("draft-sharing-modal")).toBeInTheDocument();
   });
+
+  it("rebases offset and preserves user local edits typed before the suggestion range (DEFECT-01)", async () => {
+    const { draftsApi } = await import("../api/draftsApi");
+
+    const baseContent = "Transformers replace recurrent networks completely.";
+    useWritingStore.getState().setDraft({
+      id: "draft-1",
+      user_id: "user-1",
+      title: "Paper Title",
+      content: baseContent,
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    const origStart = baseContent.indexOf("recurrent networks"); // 21
+    const origEnd = origStart + "recurrent networks".length; // 39
+
+    // Open suggestion generated against baseContent
+    act(() => {
+      useWritingStore.getState().openSuggestionPanel({
+        id: "sugg-rebase-1",
+        draft_id: "draft-1",
+        prompt: "Refine phrasing",
+        original_text: "recurrent networks",
+        suggested_text: "sequential recurrent units",
+        explanation: "Refined phrasing",
+        confidence_score: 0.96,
+        cursor_start: origStart,
+        cursor_end: origEnd,
+        expected_version: 1,
+        created_at: "2026-10-15T10:30:00Z",
+        base_content: baseContent,
+      });
+    });
+
+    // While panel is open, user types "Recent advances: " at position 0
+    act(() => {
+      useWritingStore.getState().setEditorContent("Recent advances: " + baseContent);
+    });
+
+    const acceptBtn = screen.getByTestId("accept-suggestion-btn");
+    await act(async () => {
+      fireEvent.click(acceptBtn);
+    });
+
+    // Verify updateDraft received rebased content preserving "Recent advances: "
+    expect(draftsApi.updateDraft).toHaveBeenCalledWith(
+      "draft-1",
+      expect.objectContaining({
+        content: "Recent advances: Transformers replace sequential recurrent units completely.",
+        version: 1,
+      }),
+      "v1"
+    );
+
+    // Verify local editorContent is also updated correctly
+    expect(useWritingStore.getState().editorContent).toBe(
+      "Recent advances: Transformers replace sequential recurrent units completely."
+    );
+  });
+
+  it("handles HTTP 412 Precondition Failed gracefully, shows conflict alert banner, and preserves local edits (DEFECT-01)", async () => {
+    const { draftsApi } = await import("../api/draftsApi");
+
+    // Mock updateDraft to throw HTTP 412
+    const error412 = new Error("HTTP 412 Precondition Failed");
+    Object.assign(error412, { status: 412 });
+    vi.mocked(draftsApi.updateDraft).mockRejectedValueOnce(error412);
+    vi.mocked(draftsApi.getDraft).mockResolvedValueOnce({
+      id: "draft-1",
+      user_id: "user-1",
+      title: "Paper Title",
+      content: "Server modified content.",
+      format: "latex",
+      version: 2,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    act(() => {
+      useWritingStore.getState().openSuggestionPanel({
+        id: "sugg-412",
+        draft_id: "draft-1",
+        prompt: "Refine phrasing",
+        original_text: "",
+        suggested_text: "New text",
+        confidence_score: 0.9,
+        cursor_start: 0,
+        cursor_end: 0,
+        expected_version: 1,
+        created_at: "2026-10-15T10:30:00Z",
+      });
+    });
+
+    const acceptBtn = screen.getByTestId("accept-suggestion-btn");
+    await act(async () => {
+      fireEvent.click(acceptBtn);
+    });
+
+    // Conflict alert banner is rendered
+    expect(screen.getByTestId("occ-conflict-alert")).toBeInTheDocument();
+    expect(screen.getByText(/HTTP 412/i)).toBeInTheDocument();
+
+    // Suggestion panel remains open so user does not lose proposal
+    expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(true);
+
+    // Dismiss alert banner
+    const closeAlertBtn = screen.getByTestId("close-conflict-alert-btn");
+    act(() => {
+      fireEvent.click(closeAlertBtn);
+    });
+    expect(screen.queryByTestId("occ-conflict-alert")).toBeNull();
+  });
 });
+

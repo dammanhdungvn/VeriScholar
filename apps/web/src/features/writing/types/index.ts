@@ -116,6 +116,7 @@ export interface PendingSuggestion {
   cursor_end: number;
   expected_version: number;
   created_at: string;
+  base_content?: string;
 }
 
 // =============================================================================
