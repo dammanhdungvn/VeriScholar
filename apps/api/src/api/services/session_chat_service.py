@@ -25,6 +25,7 @@ from api.schemas.session import (
     SessionChatMessageRequest,
     SessionTurnItem,
 )
+from api.services.ai_tracing_service import AITracingService
 from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
@@ -58,8 +59,9 @@ class IntentType(str, Enum):
 class SessionChatService:
     """Service managing conversation history and cross-document SSE streaming."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
         self.db = db
+        self.ai_tracing = ai_tracing or AITracingService()
 
     async def get_messages(
         self,
@@ -146,8 +148,11 @@ class SessionChatService:
         await self.db.commit()
         logger.info("session_chat_cleared", session_id=str(session_id))
 
-    def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[Any]:
-        """Rank document chunks dynamically based on query lexical and concept overlap."""
+    def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
+        """Rank document chunks dynamically based on query lexical and concept overlap.
+
+        Returns list of (chunk_item, normalized_score) tuples, sorted by score descending.
+        """
         if not chunks:
             return []
 
@@ -197,6 +202,47 @@ class SessionChatService:
         raw_tokens = re.findall(r"[a-zA-Z0-9_\-]+", question.lower())
         q_terms = [t for t in raw_tokens if len(t) >= 2 and t not in stopwords]
 
+        key_terms = {
+            "table",
+            "bảng",
+            "encoder",
+            "decoder",
+            "d_model",
+            "bleu",
+            "complexity",
+            "recurrent",
+            "layer",
+            "layers",
+            "attention",
+            "transformer",
+            "rag",
+            "chunking",
+            "positional",
+            "encoding",
+            "multi-head",
+            "dot-product",
+            "self-attention",
+        }
+
+        synonyms: dict[str, list[str]] = {
+            "transformer": ["transformer", "attention"],
+            "attention": ["attention", "self-attention", "dot-product"],
+            "rnn": ["recurrent", "lstm", "rnn"],
+            "đệ quy": ["recurrent", "recurrence"],
+            "mã hoá": ["encoding", "encoder"],
+            "bảng": ["table"],
+            "độ phức tạp": ["complexity", "o("],
+            "chuỗi": ["sequence", "path length"],
+        }
+
+        expanded_terms = set(q_terms)
+        for term in q_terms:
+            for k, syns in synonyms.items():
+                if k in term:
+                    expanded_terms.update(syns)
+
+        total_weight = sum(3.0 if t in key_terms else 1.0 for t in expanded_terms) or 1.0
+
         def get_chunk_obj(item: Any) -> Any:
             return item[0] if hasattr(item, "__getitem__") else item
 
@@ -206,39 +252,21 @@ class SessionChatService:
             if not content_lower:
                 return 0.0
 
-            score = 0.0
-            for term in q_terms:
+            matched_weight = 0.0
+            for term in expanded_terms:
                 if term in content_lower:
-                    if term in {
-                        "table",
-                        "bảng",
-                        "encoder",
-                        "decoder",
-                        "d_model",
-                        "bleu",
-                        "complexity",
-                        "recurrent",
-                        "layer",
-                        "layers",
-                    }:
-                        score += 3.0
-                    else:
-                        score += 1.0
-            return score
+                    matched_weight += 3.0 if term in key_terms else 1.0
+
+            norm_score = min(1.0, matched_weight / total_weight)
+            return round(norm_score, 4)
 
         def get_chunk_idx(item: Any) -> int:
             chunk = get_chunk_obj(item)
             return getattr(chunk, "chunk_index", 0) or 0
 
-        sorted_chunks = sorted(
-            chunks,
-            key=lambda it: (
-                get_chunk_score(it),
-                -get_chunk_idx(it),
-            ),
-            reverse=True,
-        )
-        return sorted_chunks
+        scored_chunks = [(it, get_chunk_score(it)) for it in chunks]
+        scored_chunks.sort(key=lambda pair: (pair[1], -get_chunk_idx(pair[0])), reverse=True)
+        return scored_chunks
 
     def _classify_intent_and_ambiguity(
         self,
@@ -463,7 +491,23 @@ class SessionChatService:
         """Generate high-precision grounded answer and calibrate citation bounding boxes."""
         refined_citations = list(citations)
 
-        if intent == IntentType.FACT_EXTRACTION:
+        if (
+            target_doc_ids
+            and not citations
+            and intent
+            not in (
+                IntentType.ADVERSARIAL_PRESUPPOSITION,
+                IntentType.ADVERSARIAL_OUT_OF_DOMAIN,
+                IntentType.AMBIGUOUS_ROADMAP,
+                IntentType.TAILORED_ROADMAP,
+            )
+        ):
+            full_text = (
+                "Thông tin này không xuất hiện trong bài báo: "
+                "Nội dung bạn hỏi không được tìm thấy hoặc không đủ căn cứ đối chiếu "
+                "trong tài liệu của phiên nghiên cứu."
+            )
+        elif intent == IntentType.FACT_EXTRACTION:
             full_text = (
                 "Theo Mục 3.1 (Encoder and Decoder Stacks) tại Trang 2-3 "
                 "của bài báo 'Attention Is All You Need', "
@@ -577,6 +621,12 @@ class SessionChatService:
                 f"Đây là phản hồi cho câu hỏi: '{question}'. "
                 "Hiện tại phiên chưa nạp bài báo nào, câu trả lời dựa trên tri thức tổng quát."
             )
+        elif target_doc_ids and not citations:
+            full_text = (
+                "Thông tin này không xuất hiện trong bài báo: "
+                "Nội dung bạn hỏi không được tìm thấy hoặc không đủ căn cứ đối chiếu "
+                "trong tài liệu của phiên nghiên cứu."
+            )
         else:
             doc_count_str = f"{len(target_doc_ids)} bài báo"
             full_text = (
@@ -594,6 +644,7 @@ class SessionChatService:
         request: SessionChatMessageRequest,
         is_disconnected: Callable[[], Coroutine[Any, Any, bool]],
         last_event_id: str | None = None,
+        request_id: str | None = None,
     ) -> AsyncIterator[str]:
         """Stream SSE response with Cross-Document Context, Reasoning, and Disconnect Guard."""
         session_stmt = select(ResearchSessionModel).where(
@@ -603,22 +654,22 @@ class SessionChatService:
         s_res = await self.db.execute(session_stmt)
         session = s_res.scalar_one_or_none()
         if not session:
-            err_data = json.dumps(
-                {
-                    "code": "SESSION_NOT_FOUND",
-                    "message": "Phiên không tồn tại.",
-                }
-            )
+            err_dict = {
+                "code": "SESSION_NOT_FOUND",
+                "message": "Phiên không tồn tại.",
+                "request_id": request_id,
+            }
+            err_data = json.dumps(err_dict, ensure_ascii=False)
             yield f"event: error\ndata: {err_data}\n\n"
             return
 
         if session.is_archived:
-            err_data = json.dumps(
-                {
-                    "code": "SESSION_ARCHIVED",
-                    "message": "Phiên đã bị lưu trữ, không thể gửi tin nhắn.",
-                }
-            )
+            err_dict = {
+                "code": "SESSION_ARCHIVED",
+                "message": "Phiên đã bị lưu trữ, không thể gửi tin nhắn.",
+                "request_id": request_id,
+            }
+            err_data = json.dumps(err_dict, ensure_ascii=False)
             yield f"event: error\ndata: {err_data}\n\n"
             return
 
@@ -659,15 +710,43 @@ class SessionChatService:
             "turn_id": str(turn_id),
             "message_id": f"msg_{turn_id.hex[:8]}",
             "created_at": now_iso,
+            "request_id": request_id,
         }
+
+        trace_metadata = {"scope": request.scope}
+        if request_id:
+            trace_metadata["request_id"] = request_id
+
+        trace_span = self.ai_tracing.trace(
+            name="session_chat",
+            session_id=session_id,
+            user_id=user_id,
+            document_id=request.focused_document_id,
+            metadata=trace_metadata,
+            input=request.question,
+        )
+        trace_span.__enter__()
 
         evt_start = emit("start", start_payload)
         if evt_start:
             yield evt_start
 
         # 0. AI Input Guardrail: Prompt Injection & Security Boundary Scan
-        input_guard = AIGuardrailsService.scan_user_input(request.question)
+        with self.ai_tracing.span(
+            name="guardrail_check",
+            input=request.question,
+            metadata={"phase": "input_guardrail"},
+        ) as guard_span:
+            input_guard = AIGuardrailsService.scan_user_input(request.question)
+            guard_span.set_output(
+                {
+                    "is_safe": input_guard.is_safe,
+                    "violation_type": input_guard.violation_type,
+                }
+            )
+
         if not input_guard.is_safe:
+            trace_span.set_output({"finish_reason": "blocked_by_guardrail"})
             logger.warning(
                 "chat_query_blocked_by_guardrail",
                 session_id=str(session_id),
@@ -725,23 +804,61 @@ class SessionChatService:
             )
             self.db.add(turn_model)
             await self.db.commit()
+            trace_span.__exit__(None, None, None)
             return
 
         # 1. Dynamic Retrieval & Chunk Relevance Ranking
         citations: list[dict[str, Any]] = []
         if target_doc_ids:
-            chunk_stmt = (
-                select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
-                .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
-                .where(DocumentChunkModel.document_id.in_(target_doc_ids))
-            )
-            chunk_res = await self.db.execute(chunk_stmt)
-            all_chunks = chunk_res.all()
+            with self.ai_tracing.span(
+                name="retrieval",
+                input={"target_doc_ids": [str(d) for d in target_doc_ids]},
+                metadata={"target_docs_count": len(target_doc_ids)},
+            ) as ret_span:
+                chunk_stmt = (
+                    select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(DocumentChunkModel.document_id.in_(target_doc_ids))
+                )
+                chunk_res = await self.db.execute(chunk_stmt)
+                all_chunks = chunk_res.all()
+                ret_span.set_output({"total_chunks": len(all_chunks)})
 
-            ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
-            selected_chunks = ranked_chunks[:3] if ranked_chunks else []
+            with self.ai_tracing.span(
+                name="reranking",
+                input={"query": request.question, "total_chunks": len(all_chunks)},
+            ) as rank_span:
+                ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
+                # Global Token Budgeting (3,500 tokens) with Rerank Relevance Cutoff (>= 0.35)
+                # Max 6-8 chunks selected across all session documents globally
+                selected_chunks: list[tuple[Any, float]] = []
+                current_tokens = 0
+                max_chunks = 8
+                global_token_budget = 3500
+                relevance_cutoff = 0.35
 
-            for idx, item in enumerate(selected_chunks, start=1):
+                for item, score in ranked_chunks:
+                    if score < relevance_cutoff:
+                        continue
+                    chk = item[0] if hasattr(item, "__getitem__") else item
+                    tok_cnt = getattr(chk, "token_count", None) or max(
+                        1, int(len((getattr(chk, "content", "") or "").split()) * 1.3)
+                    )
+                    if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
+                        break
+                    selected_chunks.append((item, score))
+                    current_tokens += tok_cnt
+                    if len(selected_chunks) >= max_chunks:
+                        break
+
+                rank_span.set_output(
+                    {
+                        "selected_chunks_count": len(selected_chunks),
+                        "total_tokens_budgeted": current_tokens,
+                    }
+                )
+
+            for idx, (item, score) in enumerate(selected_chunks, start=1):
                 try:
                     chunk = item[0]
                     doc_title = item[1] if len(item) > 1 else None
@@ -758,18 +875,28 @@ class SessionChatService:
                         "document_title": doc_title or doc_fn or "Tài liệu học thuật",
                         "page_number": chunk.page_number or 1,
                         "bounding_boxes": chunk.bounding_boxes or [[0.1, 0.1, 0.9, 0.2, 1]],
-                        "score": 0.88,
+                        "score": round(max(0.35, min(1.0, score)), 2),
                     }
                 )
 
         # 2. Semantic Intent & Ambiguity Classification
-        intent, ambiguity, interactive_options = self._classify_intent_and_ambiguity(
-            request.question,
-            interactive_response=request.interactive_response,
-        )
-
-        # 3. Transparent CoT Reasoning Stream (Reasoning tokens)
-        thought = self._generate_thought_by_intent(intent, ambiguity, request.question)
+        with self.ai_tracing.span(
+            name="context_assembly",
+            metadata={"question_length": len(request.question)},
+        ) as ctx_span:
+            intent, ambiguity, interactive_options = self._classify_intent_and_ambiguity(
+                request.question,
+                interactive_response=request.interactive_response,
+            )
+            # 3. Transparent CoT Reasoning Stream (Reasoning tokens)
+            thought = self._generate_thought_by_intent(intent, ambiguity, request.question)
+            ctx_span.set_output(
+                {
+                    "intent": intent.value,
+                    "ambiguity": ambiguity.value,
+                    "has_options": bool(interactive_options),
+                }
+            )
         evt_reasoning = emit("reasoning", {"thought": thought})
         if evt_reasoning:
             yield evt_reasoning
@@ -787,6 +914,14 @@ class SessionChatService:
             settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.get_secret_value().strip()
         )
         should_use_llm = not is_test_env and has_llm_key and intent != IntentType.AMBIGUOUS_ROADMAP
+
+        gen_span = self.ai_tracing.generation(
+            name="llm_generation",
+            model=settings.OPENAI_MODEL if should_use_llm else "socratic_fallback",
+            input=request.question,
+            metadata={"should_use_llm": should_use_llm, "intent": intent.value},
+        )
+        gen_span.__enter__()
 
         evt_cit = emit("citations", {"citations": citations})
         if evt_cit:
@@ -819,7 +954,7 @@ class SessionChatService:
                     dtitle = cit.get("document_title", "")
                     page = cit.get("page_number", 1)
                     matched_content = ""
-                    for it in selected_chunks:
+                    for it, _score in selected_chunks:
                         chk = it[0] if hasattr(it, "__getitem__") else it
                         if (
                             str(getattr(chk, "document_id", "")) == cit.get("document_id")
@@ -829,9 +964,9 @@ class SessionChatService:
                             break
                     if not matched_content and selected_chunks:
                         chk0 = (
-                            selected_chunks[0][0]
-                            if hasattr(selected_chunks[0], "__getitem__")
-                            else selected_chunks[0]
+                            selected_chunks[0][0][0]
+                            if hasattr(selected_chunks[0][0], "__getitem__")
+                            else selected_chunks[0][0]
                         )
                         matched_content = getattr(chk0, "content", "")
 
@@ -841,13 +976,17 @@ class SessionChatService:
                     evidence_blocks.append(
                         {
                             "citation_id": cid,
+                            "document_id": cit.get("document_id"),
                             "document_title": dtitle,
                             "page_number": page,
+                            "bounding_boxes": cit.get("bounding_boxes"),
                             "content": snippet_content,
                         }
                     )
 
-                sandboxed_context = AIGuardrailsService.build_sandboxed_context(evidence_blocks)
+                sandboxed_context = AIGuardrailsService.build_hierarchical_sandboxed_context(
+                    evidence_blocks
+                )
                 llm_messages: list[dict[str, str]] = [{"role": "system", "content": system_prompt}]
 
                 # Retrieve recent conversation turns for conversational memory
@@ -979,6 +1118,17 @@ class SessionChatService:
             "intent": intent.value,
             "ambiguity_type": ambiguity.value,
         }
+
+        gen_span.set_output(
+            {
+                "finish_reason": finish_reason,
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "latency_ms": round(latency_ms, 1),
+            }
+        )
+        gen_span.__exit__(None, None, None)
+
         evt_done = emit("done", done_payload)
         if evt_done:
             yield evt_done
@@ -998,3 +1148,14 @@ class SessionChatService:
         )
         self.db.add(turn_model)
         await self.db.commit()
+
+        trace_span.set_output(
+            {
+                "finish_reason": finish_reason,
+                "prompt_tokens": done_payload["prompt_tokens"],
+                "completion_tokens": done_payload["completion_tokens"],
+                "citations_count": len(citations),
+                "intent": intent.value,
+            }
+        )
+        trace_span.__exit__(None, None, None)

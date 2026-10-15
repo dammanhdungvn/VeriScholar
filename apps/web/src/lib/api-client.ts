@@ -37,10 +37,21 @@ export function resolveApiUrl(endpoint: string): string {
   return `${API_BASE_URL}${API_PREFIX}${cleanEndpoint}`;
 }
 
+export function generateRequestId(customId?: string): string {
+  if (customId) return customId;
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
 function buildHeaders(options: RequestInit = {}): Headers {
   const headers = new Headers(options.headers || {});
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (!headers.has("X-Request-ID")) {
+    headers.set("X-Request-ID", generateRequestId());
   }
 
   if (typeof window !== "undefined") {
@@ -56,6 +67,7 @@ function buildHeaders(options: RequestInit = {}): Headers {
 
   return headers;
 }
+
 
 async function handleResponseError(response: Response): Promise<never> {
   let errorDetail: ErrorResponse | null = null;

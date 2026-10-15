@@ -55,7 +55,20 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
         await conn.execute(
             text("""
                 DO $$
-                BEGIN
+                    -- users table upgrades
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = 'users'
+                    ) THEN
+                        ALTER TABLE users 
+                        ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'researcher' NOT NULL,
+                        ADD COLUMN IF NOT EXISTS institution VARCHAR(255) NULL,
+                        ADD COLUMN IF NOT EXISTS academic_rank VARCHAR(100) NULL,
+                        ADD COLUMN IF NOT EXISTS orcid_id VARCHAR(50) NULL,
+                        ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500) NULL,
+                        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE NOT NULL;
+                    END IF;
+
                     -- research_sessions upgrades
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables 

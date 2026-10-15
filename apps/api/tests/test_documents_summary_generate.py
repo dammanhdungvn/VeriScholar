@@ -1,5 +1,6 @@
 """Automated integration tests for POST /api/v1/documents/{id}/summary:generate endpoint."""
 
+import json
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
 from typing import Any
@@ -550,6 +551,9 @@ async def test_stream_summary_success(
     )
     assert response.status_code == 200
     assert "text/event-stream" in response.headers["content-type"]
+    assert "x-request-id" in response.headers
+    req_id = response.headers["x-request-id"]
+    assert len(req_id) > 0
 
     body = response.text
     assert "event: summary_start" in body
@@ -559,6 +563,31 @@ async def test_stream_summary_success(
     assert "problem_statement" in body
     assert "contributions" in body
     assert "limitations" in body
+
+    # Verify request_id in summary_start event payload
+    start_line = [line for line in body.splitlines() if line.startswith('data: {"document_id"')][0]
+    start_payload = json.loads(start_line.removeprefix("data: "))
+    assert start_payload.get("request_id") == req_id
+
+
+@pytest.mark.asyncio
+async def test_stream_summary_propagates_custom_request_id(
+    client: AsyncClient,
+    sample_document: DocumentModel,
+) -> None:
+    """Endpoint 57: Propagates client-provided X-Request-ID to header and summary_start payload."""
+    custom_id = "test-doc-summary-trace-001"
+    response = await client.post(
+        f"/api/v1/documents/{sample_document.id}/summary:stream",
+        headers={"X-Request-ID": custom_id},
+    )
+    assert response.status_code == 200
+    assert response.headers.get("x-request-id") == custom_id
+
+    body = response.text
+    start_line = [line for line in body.splitlines() if line.startswith('data: {"document_id"')][0]
+    start_payload = json.loads(start_line.removeprefix("data: "))
+    assert start_payload.get("request_id") == custom_id
 
 
 @pytest.mark.asyncio

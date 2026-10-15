@@ -3,6 +3,7 @@ import {
   apiClientWithMeta,
   apiClientBlob,
   resolveApiUrl,
+  generateRequestId,
   type ApiPaginatedResult,
 } from "@/lib/api-client";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
@@ -276,12 +277,15 @@ export const documentsApi = {
    */
   async streamSummary(
     documentId: string,
-    callbacks: StreamSummaryCallbacks = {}
+    callbacks: StreamSummaryCallbacks = {},
+    requestId?: string
   ): Promise<void> {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const finalRequestId = generateRequestId(requestId);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "X-Request-ID": finalRequestId,
     };
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -340,6 +344,14 @@ export const documentsApi = {
         throw err;
       },
     });
+  },
+
+  streamDocumentSummary(
+    documentId: string,
+    callbacks: StreamSummaryCallbacks = {},
+    requestId?: string
+  ): Promise<void> {
+    return this.streamSummary(documentId, callbacks, requestId);
   },
 };
 

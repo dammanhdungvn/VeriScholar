@@ -223,6 +223,8 @@ Deep-dive architecture specifications and engineering guides are maintained in [
 - **[Continuous Integration (CI) Guide](docs/vi/guide-ci.md):** GitHub Actions Quality Gates, hermetic monorepo caching with uv and pnpm, and security invariants.
 - **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.
 - **[Module 1 Tech Decisions & Trade-offs](docs/vi/techstack-backend-module-01.md):** Ingestion, storage, and retrieval stack trade-offs.
+- **[AI Observability & Langfuse Tracing Guide](docs/vi/guide-ai-observability.md):** Production tracing architecture, Zero Data Retention (ZDR), HMAC-SHA256 pseudonymization, and CLI tooling suite.
+- **[Authentication & Multi-Tenant Data Isolation](docs/vi/decided/frontend/auth.md):** User authentication, RBAC, session management, and tenant isolation policies.
 - **[Engineering & Agent Protocol](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
 
 ---

@@ -1,7 +1,7 @@
 """API Endpoints for Research Sessions (Module 1: Dual-Pane Research Workspace)."""
 
 import io
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import structlog
 from api.db.models.user import UserModel
@@ -738,12 +738,18 @@ async def post_session_message(
     chat_service: SessionChatService = Depends(get_session_chat_service),
 ) -> StreamingResponse:
     """Stream chat Q&A using Cross-Document Context Namespacing, Reasoning, and Disconnect Guard."""
+    request_id = (
+        (getattr(request.state, "request_id", None) if request else None)
+        or (request.headers.get("x-request-id") if request else None)
+        or str(uuid4())
+    )
     generator = chat_service.stream_chat(
         session_id=id,
         user_id=current_user.id,
         request=payload,
         is_disconnected=request.is_disconnected,
         last_event_id=last_event_id,
+        request_id=request_id,
     )
     return StreamingResponse(
         generator,
@@ -752,6 +758,7 @@ async def post_session_message(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Request-ID": request_id,
         },
     )
 

@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -59,6 +59,33 @@ class Settings(BaseSettings):
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     LOG_FORMAT: Literal["console", "json"] = "console"
     SQL_ECHO: bool = False
+
+    # Authentication & JWT settings
+    JWT_SECRET_KEY: str = "verischolar-super-secure-jwt-secret-key-2026-production-grade"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 604800  # 7 days
+
+    # Langfuse AI Observability & Tracing settings
+    LANGFUSE_ENABLED: bool = False
+    LANGFUSE_PUBLIC_KEY: str | None = None
+    LANGFUSE_SECRET_KEY: SecretStr | None = None
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+    LANGFUSE_BASE_URL: str | None = None
+    LANGFUSE_SAMPLE_RATE: float = 1.0
+    LANGFUSE_MASK_INPUT_OUTPUT: bool = True
+    LANGFUSE_ENVIRONMENT: str | None = None
+
+    @model_validator(mode="after")
+    def resolve_langfuse_settings(self) -> "Settings":
+        """Synchronize LANGFUSE_BASE_URL with LANGFUSE_HOST and auto-enable if keys exist."""
+        if self.LANGFUSE_BASE_URL:
+            self.LANGFUSE_HOST = self.LANGFUSE_BASE_URL
+        if self.LANGFUSE_PUBLIC_KEY and self.LANGFUSE_SECRET_KEY:
+            # Auto-enable if keys are present and not explicitly set to false
+            if "LANGFUSE_ENABLED" not in self.model_fields_set:
+                self.LANGFUSE_ENABLED = True
+        return self
 
     # Database settings (PostgreSQL + pgvector)
     DATABASE_URL: str = "postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar"

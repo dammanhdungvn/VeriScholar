@@ -4,6 +4,7 @@ import {
   apiClientWithMeta,
   apiClientBlob,
   resolveApiUrl,
+  generateRequestId,
   type ApiResponseWithHeaders,
   type ApiPaginatedResult,
 } from "@/lib/api-client";
@@ -160,12 +161,15 @@ export const sessionsApi = {
     sessionId: string,
     data: SessionChatMessageRequest,
     callbacks: StreamEventCallbacks,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    requestId?: string
   ): Promise<void> {
     const url = resolveApiUrl(`/sessions/${sessionId}/messages`);
+    const finalRequestId = generateRequestId(requestId);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "X-Request-ID": finalRequestId,
     };
 
     if (idempotencyKey) {

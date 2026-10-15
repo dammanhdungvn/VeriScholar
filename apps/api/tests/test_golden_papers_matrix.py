@@ -480,9 +480,13 @@ async def test_level_4_realtime_grounded_summary_stream(
     resp = await client.post(f"/api/v1/documents/{doc_id}/summary:stream")
     assert resp.status_code == 200
     assert "text/event-stream" in resp.headers["content-type"]
+    assert "x-request-id" in resp.headers
+    req_id = resp.headers["x-request-id"]
+    assert len(req_id) > 0
 
     body = resp.text
     assert "event: summary_start" in body
+    assert f'"request_id": "{req_id}"' in body
     assert "event: summary_chunk" in body
     assert "event: summary_box" in body
     assert "event: summary_end" in body

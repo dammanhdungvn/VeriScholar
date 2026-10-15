@@ -56,6 +56,23 @@ export interface PasswordResetConfirm {
   new_password: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+export interface UpdateProfilePayload {
+  full_name?: string;
+  institution?: string;
+  academic_rank?: string;
+  orcid_id?: string;
+  avatar_url?: string;
+}
+
+export interface AuthMessageResponse {
+  message: string;
+}
+
 export interface AuthErrorDetail {
   field: string;
   issue: string;
@@ -66,3 +83,4 @@ export interface AuthErrorResponse {
   message: string;
   detail?: AuthErrorDetail[];
 }
+

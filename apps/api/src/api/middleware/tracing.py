@@ -33,6 +33,10 @@ class PureASGITracingMiddleware:
         if not request_id:
             request_id = str(uuid.uuid4())
 
+        if "state" not in scope:
+            scope["state"] = {}
+        scope["state"]["request_id"] = request_id
+
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(
             request_id=request_id,
@@ -51,7 +55,10 @@ class PureASGITracingMiddleware:
                 status_code = message.get("status", 500)
                 ttfb_ms = round((time.perf_counter() - start_time) * 1000, 2)
 
-                res_headers = list(message.get("headers", []))
+                # Filter out any pre-existing x-request-id to prevent duplicate headers
+                res_headers = [
+                    (k, v) for k, v in message.get("headers", []) if k.lower() != b"x-request-id"
+                ]
                 res_headers.append((b"x-request-id", request_id.encode("latin1")))
                 message = {**message, "headers": res_headers}
 

@@ -2,7 +2,7 @@
 
 import re
 from urllib.parse import quote
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from api.db.models.document import DocumentModel
 from api.db.models.user import UserModel
@@ -1200,11 +1200,18 @@ async def stream_document_summary(
             },
         )
 
+    request_id = (
+        (getattr(request.state, "request_id", None) if request else None)
+        or (request.headers.get("x-request-id") if request else None)
+        or str(uuid4())
+    )
+
     generator = service.stream_summary(
         document_id=document_id,
         user_id=current_user.id,
         db=db,
         is_disconnected=request.is_disconnected if request else None,
+        request_id=request_id,
     )
     return StreamingResponse(
         generator,
@@ -1213,5 +1220,6 @@ async def stream_document_summary(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Request-ID": request_id,
         },
     )

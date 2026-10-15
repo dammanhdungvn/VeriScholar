@@ -206,6 +206,78 @@ class AIGuardrailsService:
         return f"<untrusted_document_context>\n{body}\n</untrusted_document_context>"
 
     @classmethod
+    def build_hierarchical_sandboxed_context(
+        cls,
+        evidence_blocks: list[dict[str, Any]],
+    ) -> str:
+        """Wrap untrusted document chunks into hierarchical secure XML tags by document.
+
+        Output structure:
+        <untrusted_document_context>
+          <document id="doc_A" title="Attention" authors="Vaswani et al." year="2017">
+            <chunk id="c_12" page="4" bbox="[0.1, 0.2, 0.8, 0.3]">
+              <![CDATA[
+              ...
+              ]]>
+            </chunk>
+          </document>
+        </untrusted_document_context>
+        """
+        if not evidence_blocks:
+            return ""
+
+        docs: dict[str, dict[str, Any]] = {}
+        for block in evidence_blocks:
+            doc_id = str(block.get("document_id") or block.get("doc_id") or "doc_1")
+            if doc_id not in docs:
+                docs[doc_id] = {
+                    "id": doc_id,
+                    "title": (
+                        block.get("document_title") or block.get("title") or "Tài liệu học thuật"
+                    ),
+                    "authors": block.get("authors") or "",
+                    "year": str(block.get("year") or ""),
+                    "chunks": [],
+                }
+            docs[doc_id]["chunks"].append(block)
+
+        doc_xml_blocks: list[str] = []
+        for doc_info in docs.values():
+            attrs = [f'id="{doc_info["id"]}"', f'title="{doc_info["title"]}"']
+            if doc_info["authors"]:
+                attrs.append(f'authors="{doc_info["authors"]}"')
+            if doc_info["year"]:
+                attrs.append(f'year="{doc_info["year"]}"')
+            doc_open = f"<document {' '.join(attrs)}>"
+
+            chunk_xml_blocks: list[str] = []
+            for chk in doc_info["chunks"]:
+                cid = chk.get("chunk_id") or chk.get("citation_id") or "c_0"
+                page = chk.get("page_number") or chk.get("page") or 1
+                bbox = chk.get("bbox") or chk.get("bounding_boxes")
+
+                chunk_attrs = [f'id="{cid}"', f'page="{page}"']
+                if bbox is not None:
+                    chunk_attrs.append(f'bbox="{bbox}"')
+
+                raw_content = chk.get("content", "")
+                clean_content = cls.sanitize_untrusted_text(raw_content)
+
+                chunk_xml = (
+                    f"    <chunk {' '.join(chunk_attrs)}>\n"
+                    f"      <![CDATA[\n{clean_content}\n]]>\n"
+                    f"    </chunk>"
+                )
+                chunk_xml_blocks.append(chunk_xml)
+
+            chunks_body = "\n".join(chunk_xml_blocks)
+            doc_block = f"  {doc_open}\n{chunks_body}\n  </document>"
+            doc_xml_blocks.append(doc_block)
+
+        all_docs = "\n".join(doc_xml_blocks)
+        return f"<untrusted_document_context>\n{all_docs}\n</untrusted_document_context>"
+
+    @classmethod
     def get_security_directive(cls) -> str:
         """Return the authoritative system directive establishing prompt boundaries."""
         return (

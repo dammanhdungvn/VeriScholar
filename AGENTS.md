@@ -221,3 +221,41 @@ Before considering any task complete, cross-check and verify every item:
 - [ ] **Atomic Evidence Preserved:** Normalized `BoundingBox` coordinates are preserved on all `DocumentChunk` instances (`page >= 1`, Top-Left origin `[0.0, 1.0]`); never downgraded to raw unstructured text.
 - [ ] **Ingestion Idempotency Enforced:** Documents calculate SHA-256 hash to prevent duplicate chunking and vector index pollution.
 - [ ] **Contract & Schema Safety:** Any modified API routes return predictable, structured error envelopes and follow the staged N-1 rollout discipline.
+- [ ] **Mandatory Resource & Tool Evidence Attached:** Task completion report explicitly lists tools/skills used, concrete empirical evidence (test logs, traces, browser screenshots), or domain-specific rationale if no secondary tool was needed.
+
+---
+
+## 9. MANDATORY TOOL & RESOURCE SELECTION PROTOCOL
+
+Lựa chọn và sử dụng tài nguyên phù hợp là **bước bắt buộc** trong quy trình thực hiện task của toàn đội, không phải gợi ý tùy chọn.
+
+### 9.1. Quy Trình Trước Khi Thực Hiện Mỗi Task Có Ý Nghĩa
+1. **Xác định nhu cầu:** Phân loại rõ mục tiêu: nghiên cứu (research), thiết kế kiến trúc (design), lập trình (coding), gỡ lỗi (debug), kiểm thử (test/eval) hay nghiệm thu (review).
+2. **Khảo sát tài nguyên thực tế phù hợp:**
+   - Skills có sẵn trong repository: `.agents/skills/*` (`ui-styling`, `fastapi`, `langfuse`, `e2e-testing`, `verification-loop`, `hexagonal-architecture`, `postgres-patterns`, v.v.).
+   - Năng lực native Antigravity, Orca runtime CLI (`orca terminal`, `orca orchestration`, `orca tab`), MCP servers, CLI công cụ và tài liệu chính thức theo đúng phiên bản.
+3. **Đọc tài liệu & kích hoạt tài nguyên:**
+   - Đọc hướng dẫn/SKILL.md của tài nguyên được chọn trước khi thao tác.
+   - Sử dụng khi mang lại lợi ích thiết thực và ghi rõ yêu cầu sử dụng/kiểm chứng vào task bàn giao.
+   - Tuyệt đối không chỉ liệt kê công cụ trên danh nghĩa rồi bỏ qua hoặc tuyên bố dùng mà không thực hiện.
+
+### 9.2. Ma Trận Ứng Dụng Thực Tiễn Theo Miền Task
+- **Sửa UI / Frontend:** Đọc skill frontend liên quan (`ui-styling`, `react-patterns`), mở ứng dụng bằng browser (Playwright/Orca browser), tái hiện lỗi trực quan, sửa mã nguồn, sau đó kiểm tra lại trên giao diện; không chỉ dựa vào `pnpm build` hay jsdom unit test.
+- **Debug RAG & Tracing:** Sử dụng skill Langfuse / CLI / trace API để kiểm tra trace được cấp quyền, định vị chính xác span/bước lỗi trước khi sửa, và chạy eval suite đối chuẩn trước/sau khi vá lỗi.
+- **Sửa API, Endpoint hoặc Auth:** Đọc kỹ contract OpenAPI và skill backend/security (`fastapi`, `security-review`, `api-design`), gửi request HTTP thực tế, kiểm tra phân quyền và chạy kiểm thử chéo bằng tối thiểu 2 tài khoản khác nhau.
+- **Tích hợp Thư viện / CLI:** Đọc tài liệu chính thức đúng phiên bản phát hành, kiểm tra compatibility matrix, thực hiện smoke test độc lập; cấm đoán mò API signature.
+- **Refactor Phức Tạp & Kiến Trúc:** Cân nhắc khả năng điều phối subagents/teamwork độc lập để phân tích phản biện; chỉ kích hoạt khi giá trị vượt chi phí điều phối.
+- **Coding Song Song:** Sử dụng Orca orchestration và worktrees riêng biệt cho từng worker; giao việc kèm task tracking, nhận `worker_done` và thực hiện review độc lập trên bản đã tích hợp.
+- **Sửa Tài Liệu Đơn Giản:** Đọc code/hướng dẫn liên quan, kiểm tra link tài liệu và câu lệnh mẫu; không dựng thêm agent hay MCP cồng kềnh khi không cần thiết.
+
+### 9.3. Báo Cáo Bắt Buộc Khi Hoàn Thành Task (`worker_done`)
+Mỗi worker khi báo cáo hoàn thành nhiệm vụ bắt buộc phải đính kèm:
+1. **Tài nguyên đã dùng:** Tên công cụ/skill/CLI/tài liệu, mục đích sử dụng và kết quả cụ thể.
+2. **Bằng chứng khách quan:** Log lệnh/stdout thực tế, đường dẫn artifact, span/trace ID hoặc kết quả kiểm tra thực nghiệm (UI screenshot, test output).
+3. **Nếu không dùng tài nguyên bổ sung:** Nêu rõ lý do cụ thể gắn liền với tính chất công việc.
+4. **An toàn dữ liệu:** Tuyệt đối không đưa API keys, JWT tokens hoặc dữ liệu nhạy cảm vào bằng chứng báo cáo.
+
+### 9.4. Trách Nhiệm Thẩm Định & Giới Hạn Chi Phí
+- **Reviewer:** Kiểm tra nghiêm ngặt phần bằng chứng tài nguyên; nếu thiếu bằng chứng thực tế, yêu cầu worker bổ sung, tuyệt đối không phê duyệt hoặc đóng task sớm.
+- **Tiêu chí tối ưu:** Chọn công cụ theo chất lượng, thời gian và chi phí; không ép buộc nạp mọi skill hay tạo agent tràn lan cho việc nhỏ. Nếu công cụ không khả dụng, nêu rõ nguyên nhân và áp dụng phương án thay thế khả thi.
+- **Vai trò điều phối:** Antigravity Coordinator là đầu mối điều phối duy nhất; Orca là lớp runtime chính. Tuân thủ nghiêm ngặt PRD, bảo mật và thẩm quyền được giao.

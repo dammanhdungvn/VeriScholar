@@ -234,6 +234,8 @@ export function DashboardContainer() {
     documentStatus === "error" ||
     (!routeSessionId && isStandby && messages.length === 0 && !activeDocumentId);
 
+
+
   return (
     <div className="h-screen w-screen flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
       {/* 1. Collapsible Left Taskbar / Sidebar */}

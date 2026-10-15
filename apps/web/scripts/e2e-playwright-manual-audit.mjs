@@ -16,6 +16,70 @@ const SAMPLE_PDF_PATH = path.resolve(
   "data/papers/Attention Is All You Need.pdf"
 );
 
+const BACKEND_BASE_URL = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL || "http://localhost:8000";
+
+async function obtainAuthToken(backendUrl = BACKEND_BASE_URL) {
+  const credentials = {
+    email: "audit_reviewer@verischolar.org",
+    password: "Password123!",
+  };
+
+  // 1. Try login first
+  try {
+    const loginRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(credentials),
+    });
+    if (loginRes.ok) {
+      const data = await loginRes.json();
+      console.log(`[AUTH FIXTURE] Authenticated successfully via /login as ${credentials.email}`);
+      return data.data;
+    }
+  } catch (err) {
+    console.warn(`[AUTH FIXTURE] Login attempt failed: ${err.message}`);
+  }
+
+  // 2. If login fails, register
+  try {
+    const registerPayload = {
+      full_name: "Audit Reviewer",
+      email: credentials.email,
+      password: credentials.password,
+      accept_terms: true,
+      institution: "VeriScholar QA",
+    };
+    const regRes = await fetch(`${backendUrl}/api/v1/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(registerPayload),
+    });
+    if (regRes.ok) {
+      const data = await regRes.json();
+      console.log(`[AUTH FIXTURE] Registered new user successfully via /register as ${credentials.email}`);
+      return data.data;
+    } else {
+      console.warn(`[AUTH FIXTURE] Register returned ${regRes.status}: ${await regRes.text()}`);
+    }
+  } catch (err) {
+    console.warn(`[AUTH FIXTURE] Register attempt failed: ${err.message}`);
+  }
+
+  // 3. Fallback: retry login once more
+  const retryRes = await fetch(`${backendUrl}/api/v1/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(credentials),
+  });
+  if (retryRes.ok) {
+    const data = await retryRes.json();
+    console.log(`[AUTH FIXTURE] Authenticated on retry via /login as ${credentials.email}`);
+    return data.data;
+  }
+
+  throw new Error(`[AUTH FIXTURE] Could not authenticate with backend at ${backendUrl}`);
+}
+
 async function runAudit() {
   console.log("==================================================================");
   console.log("   VERISCHOLAR FULLSTACK PLAYWRIGHT COMPREHENSIVE AUDIT (E2E)     ");
@@ -35,6 +99,28 @@ async function runAudit() {
 
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
+  });
+
+  // Auth Fixture: Fetch token and inject into Playwright page context before navigation
+  console.log("\n[AUTH FIXTURE] Authenticating test user with backend...");
+  const authData = await obtainAuthToken(BACKEND_BASE_URL);
+  const token = authData.tokens.access_token;
+  const user = authData.user;
+  console.log(`[AUTH FIXTURE] Token acquired. User: ${user.email} (${user.id})`);
+
+  // Inject into localStorage before any page navigation happens
+  await context.addInitScript(({ token, user }) => {
+    try {
+      localStorage.setItem("verischolar_auth_token", token);
+      localStorage.setItem("verischolar_auth_user", JSON.stringify(user));
+    } catch (err) {
+      console.error("Failed to inject auth credentials into localStorage:", err);
+    }
+  }, { token, user });
+
+  // Set Authorization header for all network requests in this context
+  await context.setExtraHTTPHeaders({
+    Authorization: `Bearer ${token}`,
   });
 
   const page = await context.newPage();
@@ -63,7 +149,9 @@ async function runAudit() {
 
   page.on("console", (msg) => {
     if (msg.type() === "error") {
-      console.log(`[BROWSER ERROR] ${msg.text()}`);
+      const text = msg.text();
+      if (text.includes("fonts.gstatic.com") || text.includes("ERR_FAILED")) return;
+      console.log(`[BROWSER ERROR] ${text}`);
     }
   });
 
@@ -563,7 +651,12 @@ async function runAudit() {
   }
 }
 
-runAudit().catch((err) => {
-  console.error("Audit failed:", err);
-  process.exit(1);
-});
+runAudit()
+  .then(() => {
+    console.log("\n[SUCCESS] Fullstack Playwright live audit completed successfully.");
+    process.exit(0);
+  })
+  .catch((err) => {
+    console.error("Audit failed:", err);
+    process.exit(1);
+  });

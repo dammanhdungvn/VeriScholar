@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { sessionsApi } from "./sessionsApi";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+
+vi.mock("@microsoft/fetch-event-source", () => ({
+  fetchEventSource: vi.fn(),
+}));
 
 describe("sessionsApi", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("creates session with initial documents and receives ETag", async () => {
@@ -93,5 +98,36 @@ describe("sessionsApi", () => {
 
     const result = await sessionsApi.exportSessionBundle("session-1");
     expect(result.type).toBe("application/zip");
+  });
+
+  it("sendSessionMessageStream attaches X-Request-ID header to SSE request", async () => {
+    await sessionsApi.sendSessionMessageStream(
+      "session-1",
+      { question: "What is attention?", stream: true },
+      {}
+    );
+
+    expect(fetchEventSource).toHaveBeenCalledTimes(1);
+    const [url, options] = vi.mocked(fetchEventSource).mock.calls[0];
+    expect(url).toContain("/sessions/session-1/messages");
+    expect(options?.headers).toBeDefined();
+    expect(options?.headers?.["X-Request-ID"]).toBeDefined();
+    expect(options?.headers?.["X-Request-ID"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it("sendSessionMessageStream propagates custom requestId when provided", async () => {
+    await sessionsApi.sendSessionMessageStream(
+      "session-1",
+      { question: "Explain transformer", stream: true },
+      {},
+      "idemp-key-1",
+      "custom-trace-req-888"
+    );
+
+    const [, options] = vi.mocked(fetchEventSource).mock.calls[0];
+    expect(options?.headers?.["X-Request-ID"]).toBe("custom-trace-req-888");
+    expect(options?.headers?.["Idempotency-Key"]).toBe("idemp-key-1");
   });
 });

@@ -9,6 +9,8 @@ import {
   Scroll,
   File,
   Columns2,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -31,6 +33,8 @@ interface ViewportControlsProps {
   onReadingModeChange?: (mode: ReadingMode) => void;
   isThumbnailsOpen?: boolean;
   onToggleThumbnails?: () => void;
+  isZenPdf?: boolean;
+  onToggleZenPdf?: () => void;
 }
 
 export function ViewportControls({
@@ -48,6 +52,8 @@ export function ViewportControls({
   onReadingModeChange: propOnReadingModeChange,
   isThumbnailsOpen: propIsThumbnailsOpen,
   onToggleThumbnails: propOnToggleThumbnails,
+  isZenPdf,
+  onToggleZenPdf,
 }: ViewportControlsProps) {
   // Store fallback hooks
   const storeReadingMode = useReaderStore((s) => s.readingMode);
@@ -243,6 +249,30 @@ export function ViewportControls({
               <Download className="w-3.5 h-3.5 text-primary" />
               <span className="hidden sm:inline font-medium">
                 {isExportingPdf ? "Đang xuất..." : "Xuất PDF"}
+              </span>
+            </button>
+          </>
+        )}
+
+        {onToggleZenPdf && (
+          <>
+            <div className="w-[1px] h-4 bg-hairline dark:bg-[#332f29]" />
+            <button
+              type="button"
+              data-testid="zen-pdf-btn"
+              onClick={onToggleZenPdf}
+              aria-label={isZenPdf ? "Khôi phục chia đôi màn hình" : "Ẩn Chatbot / Chế độ đọc tập trung (Zen PDF)"}
+              title={isZenPdf ? "Khôi phục chia đôi màn hình (Esc)" : "Ẩn Chatbot / Chế độ đọc tập trung (Zen PDF)"}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] transition-colors font-sans cursor-pointer shadow-2xs",
+                isZenPdf
+                  ? "bg-primary text-white border-primary font-semibold"
+                  : "border-[#e5dfd4] dark:border-[#38332c] text-muted hover:text-ink hover:bg-white dark:hover:bg-[#252320]"
+              )}
+            >
+              {isZenPdf ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5 text-primary" />}
+              <span className="hidden sm:inline">
+                {isZenPdf ? "Thu nhỏ PDF" : "Zen PDF"}
               </span>
             </button>
           </>

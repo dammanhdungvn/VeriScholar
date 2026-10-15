@@ -78,24 +78,36 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders Grounded 3-Point Summary Card when summary data is available", () => {
+  it("renders short prompt suggestions when chat is empty and triggers onSend on click", () => {
+    const handleSend = vi.fn();
+
     renderWithClient(
       <DashboardWorkspace
         messages={[]}
         inputText=""
         onChangeText={vi.fn()}
-        onSend={vi.fn()}
+        onSend={handleSend}
         isGenerating={false}
         onStopGeneration={vi.fn()}
         onResetChat={vi.fn()}
       />
     );
 
-    // 3 Luận điểm cốt lõi
-    expect(screen.getByText(/3 Luận Điểm Cốt Lõi/i)).toBeInTheDocument();
-    expect(screen.getByText(/Vấn đề nghiên cứu/i)).toBeInTheDocument();
-    expect(screen.getByText(/Đóng góp chính/i)).toBeInTheDocument();
-    expect(screen.getByText(/Hạn chế & Hướng phát triển/i)).toBeInTheDocument();
+    // Gợi ý prompt ngắn
+    const summaryChip = screen.getByText("Tóm tắt paper");
+    expect(summaryChip).toBeInTheDocument();
+    expect(screen.getByText("Đóng góp chính")).toBeInTheDocument();
+    expect(screen.getByText("Phương pháp & Kiến trúc")).toBeInTheDocument();
+    expect(screen.getByText("Hạn chế & Thách thức")).toBeInTheDocument();
+
+    // Không tự động render card 3 luận điểm cốt lõi trong tab chat
+    expect(screen.queryByText(/3 Luận Điểm Cốt Lõi/i)).not.toBeInTheDocument();
+
+    // Click gửi prompt cho AI
+    fireEvent.click(summaryChip);
+    expect(handleSend).toHaveBeenCalledWith(
+      expect.stringContaining("tóm tắt ngắn gọn và toàn diện")
+    );
   });
 
   it("renders dynamic Grounded Bounding Box highlight overlay when activeBbox is set", () => {
@@ -208,5 +220,123 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     fireEvent.click(screen.getByText("Làm mới hội thoại"));
     expect(handleResetChat).toHaveBeenCalled();
     expect(screen.queryByTestId("academic-context-menu")).not.toBeInTheDocument();
+  });
+
+  it("renders Resizable Split-Pane draggable divider and allows keyboard/double-click resizing", () => {
+    useWorkspaceStore.getState().setSplitRatio(60);
+
+    renderWithClient(
+      <DashboardWorkspace
+        messages={mockMessages}
+        inputText=""
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+        onResetChat={vi.fn()}
+      />
+    );
+
+    const divider = screen.getByTestId("split-pane-divider");
+    expect(divider).toBeInTheDocument();
+    expect(divider).toHaveAttribute("role", "separator");
+    expect(divider).toHaveAttribute("aria-valuenow", "60");
+
+    // Double-click resets to 50%
+    fireEvent.doubleClick(divider);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(50);
+
+    // Arrow keys adjust ratio
+    fireEvent.keyDown(divider, { key: "ArrowLeft" });
+    expect(useWorkspaceStore.getState().splitRatio).toBe(48);
+
+    fireEvent.keyDown(divider, { key: "ArrowRight" });
+    expect(useWorkspaceStore.getState().splitRatio).toBe(50);
+  });
+
+  it("handles Zen reading modes (Hide Chatbot / Hide PDF) and restores with Escape or exit pill", () => {
+    renderWithClient(
+      <DashboardWorkspace
+        messages={mockMessages}
+        inputText=""
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+        onResetChat={vi.fn()}
+      />
+    );
+
+    // Initial state: Zen mode none, divider visible
+    expect(useWorkspaceStore.getState().zenMode).toBe("none");
+    expect(screen.getByTestId("split-pane-divider")).toBeInTheDocument();
+    expect(screen.queryByTestId("zen-exit-pill")).not.toBeInTheDocument();
+
+    // 1. Toggle Zen PDF mode (Hide Chatbot)
+    const zenPdfBtn = screen.getByTestId("zen-pdf-btn");
+    fireEvent.click(zenPdfBtn);
+    expect(useWorkspaceStore.getState().zenMode).toBe("pdf");
+    expect(screen.queryByTestId("split-pane-divider")).not.toBeInTheDocument();
+
+    // Floating exit pill is visible
+    const exitPill = screen.getByTestId("zen-exit-pill");
+    expect(exitPill).toBeInTheDocument();
+    expect(exitPill).toHaveTextContent(/Khôi phục chia đôi/i);
+
+    // Click exit pill restores split-pane
+    fireEvent.click(exitPill);
+    expect(useWorkspaceStore.getState().zenMode).toBe("none");
+
+    // 2. Toggle Zen Chat mode (Hide PDF)
+    const zenChatBtn = screen.getByTestId("zen-chat-btn");
+    fireEvent.click(zenChatBtn);
+    expect(useWorkspaceStore.getState().zenMode).toBe("workspace");
+
+    // Pressing Escape restores split-pane
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(useWorkspaceStore.getState().zenMode).toBe("none");
+  });
+
+  it("displays Context Chip above chat input and formats prompt on send", () => {
+    const handleSend = vi.fn();
+    const handleChangeText = vi.fn();
+
+    useWorkspaceStore.getState().setActiveContextChip({
+      text: "The Transformer is the first transduction model relying entirely on self-attention",
+      pageNumber: 1,
+      documentTitle: "Attention Is All You Need",
+    });
+
+    renderWithClient(
+      <DashboardWorkspace
+        messages={mockMessages}
+        inputText="Giải thích ý chính"
+        onChangeText={handleChangeText}
+        onSend={handleSend}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+        onResetChat={vi.fn()}
+      />
+    );
+
+    // Context Chip is rendered
+    const chip = screen.getByTestId("context-chip");
+    expect(chip).toBeInTheDocument();
+    expect(screen.getByText(/Attention Is All You Need • Tr\. 1/i)).toBeInTheDocument();
+    expect(screen.getByText(/The Transformer is the first transduction model/i)).toBeInTheDocument();
+
+    // Submit sends formatted quote
+    const sendBtn = screen.getByLabelText("Gửi câu hỏi");
+    fireEvent.click(sendBtn);
+
+    expect(handleSend).toHaveBeenCalledWith(
+      expect.stringContaining('📎 [Attention Is All You Need - Trang 1]: "The Transformer is the first transduction model relying entirely on self-attention"')
+    );
+    expect(handleSend).toHaveBeenCalledWith(
+      expect.stringContaining("Giải thích ý chính")
+    );
+
+    // Chip is cleared
+    expect(useWorkspaceStore.getState().activeContextChip).toBeNull();
   });
 });

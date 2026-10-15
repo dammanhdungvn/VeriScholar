@@ -7,29 +7,29 @@ import {
   Quote,
   MessageSquare,
   User,
-  BrainCircuit,
   Copy,
   Check,
   ThumbsUp,
   ThumbsDown,
   Square,
   ExternalLink,
-  ArrowUpRight,
   Settings,
   Archive,
   Sun,
   Moon,
   PanelLeft,
   FileText,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
+import type { BoundingBox } from "@/types/api";
 import { useTheme } from "@/hooks/useTheme";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useWorkspaceStore } from "../stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { MathRenderer } from "@/components/shared/MathRenderer";
 import { DocumentGroundedSummaryCard } from "./DocumentGroundedSummaryCard";
-import { CitationBadge } from "./CitationBadge";
 import { PresuppositionBanner } from "./PresuppositionBanner";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { DocumentTabBar } from "@/features/reader/components/DocumentTabBar";
@@ -86,22 +86,6 @@ interface DashboardWorkspaceProps {
   createdAt?: string;
   onDeletedSession?: () => void;
 }
-
-const DEFAULT_GROUNDED_SUMMARY: DocumentSummaryResponse = {
-  document_id: "doc-vaswani-2017",
-  problem_statement: {
-    text: "Các mô hình chuỗi tuần tự trước đây (RNN, LSTM, GRU) phụ thuộc chặt chẽ vào tính toán tuần tự dọc theo trục thời gian, cản trở việc song song hóa trong huấn luyện và gặp khó khăn khi mô hình hóa các phụ thuộc xa giữa các từ trong văn bản.",
-    bounding_boxes: [[0.1, 0.15, 0.9, 0.35, 1]],
-  },
-  contributions: {
-    text: "Đề xuất kiến trúc Transformer loại bỏ hoàn toàn mạng đệ quy, chỉ dựa trên cơ chế Self-Attention đa đầu (Multi-Head Attention) và hàm mã hóa vị trí Positional Encoding:\n$$PE_{(pos, 2i)} = \\sin\\left(\\frac{pos}{10000^{2i/d_{\\text{model}}}}\\right)$$\n$$PE_{(pos, 2i+1)} = \\cos\\left(\\frac{pos}{10000^{2i/d_{\\text{model}}}}\\right)$$\nĐạt BLEU score kỷ lục 28.4 trên tập dịch máy WMT 2014 English-to-German.",
-    bounding_boxes: [[0.15, 0.62, 0.85, 0.88, 6]],
-  },
-  limitations: {
-    text: "Độ phức tạp tính toán và tiêu thụ bộ nhớ của ma trận chú ý Self-Attention là $O(n^2)$ theo độ dài chuỗi $n$, khiến việc mở rộng sang các tài liệu cực dài đòi hỏi tài nguyên tính toán phần cứng lớn.",
-    bounding_boxes: [[0.1, 0.7, 0.9, 0.95, 7]],
-  },
-};
 
 /**
  * Formats assistant message markdown into paragraphs with KaTeX support
@@ -169,7 +153,7 @@ export function DashboardWorkspace({
   onStopGeneration,
   onUploadFile,
   onResetChat,
-  summary = DEFAULT_GROUNDED_SUMMARY,
+  summary = null,
   sessionId,
   sessionTitle,
   sessionVersion: initialSessionVersion = 1,
@@ -187,6 +171,71 @@ export function DashboardWorkspace({
   const activeRightTab = useWorkspaceStore((s) => s.activeRightTab);
   const setActiveRightTab = useWorkspaceStore((s) => s.setActiveRightTab);
   const setDocument = useWorkspaceStore((s) => s.setDocument);
+
+  // Module 1: Resizable Split-Pane, Zen Focus Modes & Context Chip
+  const splitRatio = useWorkspaceStore((s) => s.splitRatio);
+  const setSplitRatio = useWorkspaceStore((s) => s.setSplitRatio);
+  const zenMode = useWorkspaceStore((s) => s.zenMode);
+  const setZenMode = useWorkspaceStore((s) => s.setZenMode);
+  const activeContextChip = useWorkspaceStore((s) => s.activeContextChip);
+  const setActiveContextChip = useWorkspaceStore((s) => s.setActiveContextChip);
+
+  const workspaceContainerRef = useRef<HTMLDivElement>(null);
+  const [isDraggingSplit, setIsDraggingSplit] = useState(false);
+
+  // Drag handlers for Resizable Split-Pane
+  const handleDividerPointerDown = (e: React.PointerEvent) => {
+    e.preventDefault();
+    setIsDraggingSplit(true);
+  };
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!workspaceContainerRef.current) return;
+      const rect = workspaceContainerRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const ratio = (currentX / rect.width) * 100;
+      setSplitRatio(Math.max(20, Math.min(80, Math.round(ratio * 10) / 10)));
+    };
+
+    const handlePointerUp = () => {
+      setIsDraggingSplit(false);
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDraggingSplit, setSplitRatio]);
+
+  const handleDividerKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      setSplitRatio(splitRatio - 2);
+    } else if (e.key === "ArrowRight") {
+      e.preventDefault();
+      setSplitRatio(splitRatio + 2);
+    } else if (e.key === "Home" || e.key === "Enter") {
+      e.preventDefault();
+      setSplitRatio(50);
+    }
+  };
+
+  // Exit Zen Reading Mode with Escape key
+  useEffect(() => {
+    if (zenMode === "none") return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setZenMode("none");
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [zenMode, setZenMode]);
 
   // Responsive mobile/tablet view switcher state
   const [mobileActiveView, setMobileActiveView] = useState<"reader" | "workspace">("reader");
@@ -347,7 +396,9 @@ export function DashboardWorkspace({
   const { data: documentDetail, isLoading: isLoadingDocDetail } = useDocumentDetail(activeDocumentId);
   const { data: documentStructure } = useDocumentStructure(activeDocumentId);
   const { data: documentReferences } = useDocumentReferences(activeDocumentId);
-  const { data: liveSummary } = useDocumentSummary(activeDocumentId);
+  const { data: liveSummary } = useDocumentSummary(
+    activeRightTab === "summary" ? activeDocumentId : null
+  );
   const { data: sessionDetail } = useSessionDetail(activeSessionId);
 
   const deleteDocMutation = useDeleteDocumentMutation();
@@ -513,10 +564,30 @@ export function DashboardWorkspace({
     }
   };
 
-  const handleAddToNote = (selectedText: string, pageNumber: number) => {
+  const handleAddToNote = (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => {
     setNoteInitialText(selectedText);
     setNotePageNumber(pageNumber);
+    if (bbox) {
+      setActiveBboxStore(bbox);
+      setActiveCitation(null, bbox, pageNumber);
+    }
     setIsCreateNoteOpen(true);
+  };
+
+  const handleAddToChat = (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => {
+    setActiveRightTab("chat");
+    setMobileActiveView("workspace");
+    setActiveContextChip({
+      text: selectedText,
+      pageNumber,
+      bbox: bbox ?? null,
+      documentTitle: currentDocTitle,
+      documentId: activeDocumentId,
+    });
+    if (bbox) {
+      setActiveBboxStore(bbox);
+      setActiveCitation(null, bbox, pageNumber);
+    }
   };
 
   const handleCreateNoteSubmit = async (payload: {
@@ -555,7 +626,7 @@ export function DashboardWorkspace({
   const activeSummary =
     streamedSummary ||
     liveSummary ||
-    (isRealDocument ? null : summary || DEFAULT_GROUNDED_SUMMARY);
+    (isRealDocument ? null : summary || null);
 
   const queryClient = useQueryClient();
   const sessionDetailQuery = useSessionDetail(activeSessionId);
@@ -681,8 +752,12 @@ export function DashboardWorkspace({
 
   return (
     <div
+      ref={workspaceContainerRef}
       onContextMenu={handleContextMenu}
-      className="flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text"
+      className={cn(
+        "flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
+        isDraggingSplit && "select-none cursor-col-resize"
+      )}
     >
       {/* Mobile Top Navigation & Segmented View Switcher (Visible only on < lg screens) */}
       <div className="lg:hidden h-11 px-3 border-b border-[#e6dfd8] dark:border-[#2a2824] bg-white/80 dark:bg-[#181715]/80 backdrop-blur-md flex items-center justify-between shrink-0 select-none z-20">
@@ -739,8 +814,18 @@ export function DashboardWorkspace({
       {/* 1. LEFT PANE: MULTI-PAPER DEEP READER CANVAS (1 - 5 PAPERS)              */}
       {/* ========================================================================= */}
       <section
+        style={
+          zenMode === "pdf"
+            ? { width: "100%" }
+            : zenMode === "workspace"
+            ? { display: "none" }
+            : { width: `${splitRatio}%` }
+        }
         className={cn(
-          "w-full lg:w-1/2 flex flex-col h-full border-b-0 lg:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden",
+          "flex flex-col h-full border-b-0 lg:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden transition-[width] duration-75",
+          zenMode === "workspace" && "hidden lg:hidden",
+          zenMode === "pdf" && "w-full",
+          zenMode === "none" && "w-full lg:w-auto",
           mobileActiveView === "reader" ? "flex" : "hidden lg:flex"
         )}
       >
@@ -768,6 +853,8 @@ export function DashboardWorkspace({
           onRotate={rotateClockwise}
           onExportPdf={isRealDocument ? handleExportPdf : undefined}
           isExportingPdf={isExportingPdf}
+          isZenPdf={zenMode === "pdf"}
+          onToggleZenPdf={() => setZenMode(zenMode === "pdf" ? "none" : "pdf")}
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
@@ -786,6 +873,7 @@ export function DashboardWorkspace({
               setActiveCitation(null, null);
             }}
             onAddToNote={handleAddToNote}
+            onAddToChat={handleAddToChat}
             onAskChat={(prompt) => {
               setActiveRightTab("chat");
               onChangeText(prompt);
@@ -908,16 +996,65 @@ export function DashboardWorkspace({
         />
       </section>
 
+      {/* Draggable Divider (Desktop Only, Hidden in Zen Modes) */}
+      {zenMode === "none" && (
+        <div
+          role="separator"
+          tabIndex={0}
+          data-testid="split-pane-divider"
+          aria-orientation="vertical"
+          aria-valuenow={Math.round(splitRatio)}
+          aria-valuemin={20}
+          aria-valuemax={80}
+          aria-label="Kéo để điều chỉnh kích thước hai khung làm việc"
+          onPointerDown={handleDividerPointerDown}
+          onDoubleClick={() => setSplitRatio(50)}
+          onKeyDown={handleDividerKeyDown}
+          className={cn(
+            "hidden lg:flex w-2 -mx-1 z-30 cursor-col-resize items-center justify-center select-none hover:bg-primary/25 active:bg-primary/40 transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40",
+            isDraggingSplit && "bg-primary/30"
+          )}
+        >
+          <div className="w-[3px] h-8 rounded-full bg-[#d0c8b9] dark:bg-[#3b362e] group-hover:bg-primary transition-all pointer-events-none" />
+        </div>
+      )}
+
       {/* ========================================================================= */}
       {/* 2. RIGHT PANE: SOCRATIC COPILOT, SMART NOTES, SUMMARY & KNOWLEDGE DIGEST */}
       {/* ========================================================================= */}
       <section
         onContextMenu={handleContextMenu}
+        style={
+          zenMode === "workspace"
+            ? { width: "100%" }
+            : zenMode === "pdf"
+            ? { display: "none" }
+            : { width: `${100 - splitRatio}%` }
+        }
         className={cn(
-          "w-full lg:w-1/2 flex flex-col h-full bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative",
+          "flex flex-col h-full bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
+          zenMode === "pdf" && "hidden lg:hidden",
+          zenMode === "workspace" && "w-full",
+          zenMode === "none" && "w-full lg:w-auto",
           mobileActiveView === "workspace" ? "flex" : "hidden lg:flex"
         )}
       >
+        {/* Floating Zen Mode Restore Button */}
+        {zenMode !== "none" && (
+          <div className="absolute top-2 right-4 z-40 animate-in fade-in slide-in-from-top-2">
+            <button
+              type="button"
+              data-testid="zen-exit-pill"
+              onClick={() => setZenMode("none")}
+              aria-label="Khôi phục chia đôi màn hình"
+              title="Khôi phục chia đôi màn hình (Esc)"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#1b1a18]/90 dark:bg-white/90 text-white dark:text-[#181715] text-xs font-medium shadow-lg backdrop-blur-md hover:scale-105 active:scale-95 transition-all cursor-pointer"
+            >
+              <Minimize2 className="w-3 h-3" />
+              <span>Khôi phục chia đôi (Esc)</span>
+            </button>
+          </div>
+        )}
         {/* Right Pane Navigation Tab Bar */}
         <header className="h-11 px-3 bg-white/70 dark:bg-[#1c1b18]/70 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2">
           {/* 5 Tab Switchers */}
@@ -1032,6 +1169,27 @@ export function DashboardWorkspace({
               <Settings className="w-3.5 h-3.5" />
             </button>
 
+            {/* Zen Workspace Toggle (Hide PDF) */}
+            <button
+              type="button"
+              data-testid="zen-chat-btn"
+              onClick={() => setZenMode(zenMode === "workspace" ? "none" : "workspace")}
+              aria-label={zenMode === "workspace" ? "Khôi phục chia đôi màn hình" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
+              title={zenMode === "workspace" ? "Khôi phục chia đôi màn hình (Esc)" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
+              className={cn(
+                "inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs",
+                zenMode === "workspace"
+                  ? "bg-primary text-white border-primary hover:bg-primary/90"
+                  : "bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26]"
+              )}
+            >
+              {zenMode === "workspace" ? (
+                <Minimize2 className="w-3.5 h-3.5" />
+              ) : (
+                <Maximize2 className="w-3.5 h-3.5" />
+              )}
+            </button>
+
             {/* Theme Toggle Button (Dark / Light Mode) */}
             <button
               type="button"
@@ -1085,61 +1243,7 @@ export function DashboardWorkspace({
                 </div>
               </div>
 
-              {/* Grounded 3-Point Summary Card - Primer when chat is fresh */}
-              {activeSummary && messages.length === 0 && (
-                <div className="animate-in fade-in slide-in-from-top-3 duration-300">
-                  <DocumentGroundedSummaryCard summary={activeSummary} paperTitle={displayTitle} />
-                </div>
-              )}
 
-              {/* Scholarly Welcome & Prompt Starter Chips when no messages */}
-              {messages.length === 0 && (
-                <div className="py-6 px-2 space-y-4 text-center">
-                  <div className="w-12 h-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto shadow-xs border border-primary/20">
-                    <Sparkles className="w-6 h-6" />
-                  </div>
-                  <div className="space-y-1">
-                    <h3 className="font-serif font-bold text-base text-ink dark:text-zinc-100">
-                      Socratic Academic Copilot
-                    </h3>
-                    <p className="text-xs text-muted max-w-sm mx-auto leading-relaxed">
-                      Trợ lý phản biện học thuật chuyên sâu. Đặt câu hỏi về phương pháp, toán học, đối chứng số liệu hoặc bôi đen văn bản trên PDF để hỏi trực tiếp.
-                    </p>
-                  </div>
-
-                  <div className="pt-2 text-left space-y-2 max-w-md mx-auto">
-                    <div className="text-[11px] font-mono font-medium text-muted uppercase tracking-wider px-1">
-                      Gợi ý câu hỏi học thuật:
-                    </div>
-                    {[
-                      {
-                        label: "🎯 Bản chất cơ chế Self-Attention",
-                        prompt: "Hãy giải thích trực quan cơ chế Scaled Dot-Product Attention và tại sao phải chia cho căn bậc hai của dk?",
-                      },
-                      {
-                        label: "📊 So sánh hiệu năng thực nghiệm",
-                        prompt: "Tóm tắt các kết quả thực nghiệm về điểm BLEU trên tập WMT 2014 và chi phí tính toán huấn luyện (training FLOPs).",
-                      },
-                      {
-                        label: "⚠️ Điểm yếu & Hạn chế cốt lõi",
-                        prompt: "Những hạn chế và thách thức chính của kiến trúc Transformer khi xử lý chuỗi văn bản cực dài là gì?",
-                      },
-                    ].map((item, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => onChangeText(item.prompt)}
-                        className="w-full text-left p-2.5 rounded-xl border border-hairline/80 dark:border-[#2d2924] bg-white dark:bg-[#1f1d1a] hover:border-primary/50 hover:bg-surface-cream-strong/50 dark:hover:bg-[#25221d] transition-all text-xs text-ink dark:text-zinc-200 group cursor-pointer flex items-center justify-between shadow-2xs"
-                      >
-                        <span className="font-medium group-hover:text-primary transition-colors">
-                          {item.label}
-                        </span>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-muted group-hover:text-primary shrink-0 transition-colors" />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
 
               {/* Chat Messages Stream */}
               {messages.map((message) => {
@@ -1178,19 +1282,6 @@ export function DashboardWorkspace({
                         )}
                       </div>
 
-                      {/* Collapsible Reasoning */}
-                      {message.thought && (
-                        <details className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-ink-muted dark:text-zinc-400">
-                          <summary className="cursor-pointer font-medium select-none flex items-center gap-1.5 text-ink dark:text-zinc-300 hover:text-[#cc785c] transition-colors">
-                            <BrainCircuit className="w-3.5 h-3.5 text-[#cc785c]" />
-                            <span>Suy luận bảo chứng</span>
-                          </summary>
-                          <div className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap">
-                            {message.thought}
-                          </div>
-                        </details>
-                      )}
-
                       {/* Presupposition Alert */}
                       {message.presupposition_alert && (
                         <PresuppositionBanner alert={message.presupposition_alert} />
@@ -1198,15 +1289,6 @@ export function DashboardWorkspace({
 
                       {/* Formatted Assistant Body */}
                       <FormattedAssistantMessage content={message.content} />
-
-                      {/* Interactive Citations */}
-                      {message.citations && message.citations.length > 0 && (
-                        <div className="pt-1.5 flex flex-wrap items-center gap-1.5">
-                          {message.citations.map((cite, cIdx) => (
-                            <CitationBadge key={cIdx} citation={cite} />
-                          ))}
-                        </div>
-                      )}
 
                       {/* Action Toolbar */}
                       {!message.is_streaming && (
@@ -1247,6 +1329,42 @@ export function DashboardWorkspace({
 
             {/* Bottom-Docked Input Bar */}
             <div className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10">
+              {/* Short Prompt Suggestions - Sleek Horizontal Pills at the Bottom */}
+              {messages.length === 0 && !isGenerating && (
+                <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 mb-2.5">
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                    {[
+                      {
+                        label: "Tóm tắt paper",
+                        prompt: "Hãy tóm tắt ngắn gọn và toàn diện nội dung bài báo này (mục tiêu, phương pháp chính và kết luận).",
+                      },
+                      {
+                        label: "Đóng góp chính",
+                        prompt: "Những đóng góp và điểm mới cốt lõi (key contributions) của nghiên cứu này là gì?",
+                      },
+                      {
+                        label: "Phương pháp & Kiến trúc",
+                        prompt: "Giải thích chi tiết phương pháp nghiên cứu và kiến trúc mô hình được đề xuất trong bài báo.",
+                      },
+                      {
+                        label: "Hạn chế & Thách thức",
+                        prompt: "Những hạn chế và thách thức chính của nghiên cứu này là gì, và các tác giả gợi ý hướng phát triển ra sao?",
+                      },
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => onSend(item.prompt)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans border border-[#e5dfd4] dark:border-[#38342e] bg-white/90 dark:bg-[#22211e] text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-100 hover:border-primary/50 hover:bg-[#f6f2ea] dark:hover:bg-[#2b2722] transition-colors cursor-pointer shrink-0 shadow-2xs"
+                      >
+                        <Sparkles className="w-3 h-3 text-primary shrink-0" />
+                        <span>{item.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {isGenerating && (
                 <div className="flex justify-center mb-2">
                   <button
@@ -1266,6 +1384,17 @@ export function DashboardWorkspace({
                 onSend={onSend}
                 isGenerating={isGenerating}
                 onUploadFile={onUploadFile}
+                contextChip={activeContextChip}
+                onRemoveContextChip={() => setActiveContextChip(null)}
+                onContextChipClick={(chip) => {
+                  if (chip.bbox) {
+                    setActiveBboxStore(chip.bbox);
+                    setCurrentPage(chip.bbox[4]);
+                  } else if (chip.pageNumber) {
+                    setCurrentPage(chip.pageNumber);
+                  }
+                  setMobileActiveView("reader");
+                }}
               />
             </div>
           </>

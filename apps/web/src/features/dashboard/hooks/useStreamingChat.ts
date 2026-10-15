@@ -5,6 +5,7 @@ import { SAMPLE_CHAT_MESSAGES } from "../data/mockDashboardData";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
+import { generateRequestId } from "@/lib/api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
@@ -171,7 +172,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
   );
 
   const sendMessage = useCallback(
-    async (explicitPrompt?: string) => {
+    async (explicitPrompt?: string, customRequestId?: string) => {
       const textToSend = (explicitPrompt ?? inputText).trim();
       if (!textToSend || isGenerating) return;
 
@@ -275,6 +276,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
 
       const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null;
       const url = `${API_BASE_URL}${API_PREFIX}/sessions/${effectiveSessionId}/messages`;
+      const finalRequestId = generateRequestId(customRequestId);
 
       try {
         await fetchEventSource(url, {
@@ -282,6 +284,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
           headers: {
             "Content-Type": "application/json",
             Accept: "text/event-stream",
+            "X-Request-ID": finalRequestId,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
           body: JSON.stringify({

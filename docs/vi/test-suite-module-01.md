@@ -356,14 +356,58 @@
 
 ## 🎯 HƯỚNG DẪN THỰC THI & TỰ ĐỘNG HÓA TEST SUITE
 
-Để chạy kiểm thử tự động hóa toàn bộ 40 testcase này trên môi trường CI/CD hoặc máy local:
+### 1. Two-Tier Evaluation Suite (AI Quality & Scientific Benchmarks)
+
+Hệ thống cung cấp CLI runner đánh giá chất lượng AI đa tầng theo tiêu chuẩn PRD và AGENTS.md:
+
 ```bash
-# 1. Chạy nhóm Unit & Boundary Tests
-uv run pytest apps/api/tests/test_sessions_create.py apps/api/tests/test_sessions_lifecycle.py apps/api/tests/test_notes_synthesize.py -v
+# 1.1 Chạy trọn bộ 25-Case Project Regression Set (Corpus PDF thực tế: Attention, LoRA, RAG)
+uv run python -m scripts.eval.run_eval --tier regression
 
-# 2. Chạy Ma trận Golden Papers 5 Cấp độ
-uv run pytest apps/api/tests/test_golden_papers_matrix.py -v
+# 1.2 Chạy bộ Academic Benchmarks (QASPER, SciFact, PubMedQA)
+uv run python -m scripts.eval.run_eval --tier qasper
+uv run python -m scripts.eval.run_eval --tier scifact
+uv run python -m scripts.eval.run_eval --tier pubmedqa
 
-# 3. Chạy Thẩm định Socratic Chat Roadmap trên Paper thực tế
-uv run python3 scripts/eval_chat_roadmap.py
+# 1.3 Chạy toàn bộ tất cả các tiers (Tổng hợp báo cáo Scorecard Markdown)
+uv run python -m scripts.eval.run_eval --tier all
+
+# 1.4 Chạy bộ kiểm thử tự động của Two-Tier Eval Harness
+uv run pytest tests/evals/test_two_tier_eval.py -v
 ```
+
+**Bảng Tiêu Chí SLA Nghiệm Thu Đánh Giá AI:**
+- **Retrieval Recall@5:** $\ge 0.800$ (Khả năng truy hồi bằng chứng)
+- **Groundedness F1:** $\ge 0.700$ (Độ trung thực căn cứ câu trả lời)
+- **BoundingBox IoU:** $\ge 0.700$ (Độ khớp tọa độ không gian)
+- **Safety & Robustness:** $\ge 0.950$ (Chặn prompt injection & cách ly đa người dùng)
+
+---
+
+### 2. Monorepo Quality Gates & Toàn Bộ Test Suite
+
+Để đảm bảo chất lượng trước khi release hoặc hoàn tất milestone:
+
+```bash
+# 2.1 Backend Tests (API, Core Domain, Eval Domain - 500+ tests)
+uv run pytest
+
+# 2.2 Core In-Memory Eval Domain (100% in-memory, zero network/db)
+uv run pytest packages/core/tests/eval/ -v
+
+# 2.3 Python Linting & Formatting Check
+uv run ruff check .
+uv run ruff format --check .
+
+# 2.4 Frontend Tests (160+ Vitest tests)
+pnpm --prefix apps/web test
+
+# 2.5 Frontend Lint & Typecheck
+pnpm --prefix apps/web lint
+pnpm --prefix apps/web exec tsc -b
+pnpm --prefix apps/web build
+
+# 2.6 Playwright E2E Manual Audit (Đã tích hợp Auth Fixture tự động)
+node scripts/e2e-playwright-manual-audit.mjs
+```
+

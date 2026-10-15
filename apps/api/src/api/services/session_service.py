@@ -1,8 +1,11 @@
 """Session Service coordinating research sessions and multi-document associations."""
 
+from __future__ import annotations
+
 import io
 import zipfile
 from datetime import UTC, datetime
+from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import structlog
@@ -23,14 +26,22 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+if TYPE_CHECKING:
+    from api.services.document_service import DocumentService
+
 logger = structlog.get_logger("api.services.session")
 
 
 class SessionService:
     """Application service managing research session lifecycles."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        document_service: DocumentService | None = None,
+    ) -> None:
         self.db = db
+        self.document_service = document_service
 
     async def create_session(
         self,
@@ -727,7 +738,23 @@ class SessionService:
             for doc in documents:
                 pdf_filename = doc.filename or f"{doc.id}.pdf"
                 label = doc.title or doc.filename
-                content_bytes = f"%PDF-1.4\n% VeriScholar PDF: {label}\n%%EOF".encode("utf-8")
+                content_bytes: bytes | None = None
+                if self.document_service is not None:
+                    try:
+                        pdf_bytes, fn, _ = await self.document_service.export_annotated_pdf(
+                            doc.id, user_id, self.db, include_highlights=True
+                        )
+                        content_bytes = pdf_bytes
+                        if fn:
+                            pdf_filename = fn
+                    except Exception as ex:
+                        logger.warning(
+                            "export_annotated_pdf_fallback",
+                            doc_id=str(doc.id),
+                            error=str(ex),
+                        )
+                if content_bytes is None:
+                    content_bytes = f"%PDF-1.4\n% VeriScholar PDF: {label}\n%%EOF".encode("utf-8")
                 zf.writestr(f"documents/{pdf_filename}", content_bytes)
 
             doc_titles = [f"- {d.title or d.filename} (ID: {d.id})" for d in documents]

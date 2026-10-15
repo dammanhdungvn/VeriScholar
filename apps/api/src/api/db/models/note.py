@@ -6,7 +6,7 @@ from uuid import UUID
 from api.db.models.base import IdentifiableTimestampedModel
 from api.db.models.document import JSONType
 from sqlalchemy import (
-    ARRAY,
+    JSON,
     Boolean,
     CheckConstraint,
     ForeignKey,
@@ -18,8 +18,8 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-TagsArrayType = ARRAY(String).with_variant(PG_ARRAY(Text), "postgresql")
-UUIDsArrayType = ARRAY(String).with_variant(PG_ARRAY(String), "postgresql")
+TagsArrayType = JSON().with_variant(PG_ARRAY(Text), "postgresql")
+UUIDsArrayType = JSON().with_variant(PG_ARRAY(String), "postgresql")
 
 
 class ResearchNoteModel(IdentifiableTimestampedModel):

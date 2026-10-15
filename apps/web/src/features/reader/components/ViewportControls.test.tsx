@@ -93,4 +93,28 @@ describe("ViewportControls Component", () => {
     fireEvent.click(exportBtn);
     expect(onExport).toHaveBeenCalledTimes(1);
   });
+
+  it("handles onToggleZenPdf button click for Zen reading mode", () => {
+    const onToggleZen = vi.fn();
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+        isZenPdf={false}
+        onToggleZenPdf={onToggleZen}
+      />
+    );
+
+    const zenBtn = screen.getByTestId("zen-pdf-btn");
+    expect(zenBtn).toBeInTheDocument();
+    expect(zenBtn).toHaveTextContent(/Zen PDF/i);
+    fireEvent.click(zenBtn);
+    expect(onToggleZen).toHaveBeenCalledTimes(1);
+  });
 });

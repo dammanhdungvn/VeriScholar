@@ -90,20 +90,35 @@ async def test_sse_streaming_endpoint():
     """Verify /events streams SSE events with valid headers and chunks."""
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        # 1. Standard request without custom header
         res = await client.get("/events")
         assert res.status_code == 200
         assert "text/event-stream" in res.headers.get("content-type", "")
+        assert "x-request-id" in res.headers
+        generated_id = res.headers["x-request-id"]
+        assert len(generated_id) > 0
         content = res.text
         assert "event: progress" in content
         assert "Streaming chunk 1" in content
         assert "Streaming chunk 3" in content
+        assert generated_id in content
+
+        # 2. Custom X-Request-ID propagation
+        custom_id = "test-sse-custom-trace-001"
+        res_custom = await client.get("/events", headers={"X-Request-ID": custom_id})
+        assert res_custom.status_code == 200
+        assert res_custom.headers.get("x-request-id") == custom_id
+        assert custom_id in res_custom.text
 
 
 @pytest.mark.asyncio
 async def test_error_handlers_return_structured_json():
-    """Verify HTTP 404 error responses adhere to standard ErrorResponse schema."""
+    """Verify HTTP 404 error responses adhere to standard ErrorResponse schema
+    and propagate request_id.
+    """
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
+        # 1. Without custom request-id
         res_404 = await client.get("/non_existent_route")
         assert res_404.status_code == 404
         data_404 = res_404.json()
@@ -111,11 +126,24 @@ async def test_error_handlers_return_structured_json():
         assert "error" in data_404
         assert data_404["error"]["code"] == "HTTP_404"
         assert data_404["error"]["message"] == "Not Found"
+        assert "meta" in data_404
+        assert data_404["meta"]["request_id"] is not None
+        assert data_404["meta"]["request_id"] == res_404.headers.get("x-request-id")
+
+        # 2. With custom request-id
+        custom_id = "test-error-trace-404"
+        res_custom = await client.get("/non_existent_route", headers={"X-Request-ID": custom_id})
+        assert res_custom.status_code == 404
+        data_custom = res_custom.json()
+        assert res_custom.headers.get("x-request-id") == custom_id
+        assert data_custom["meta"]["request_id"] == custom_id
 
 
 @pytest.mark.asyncio
 async def test_validation_error_handler():
-    """Verify 422 RequestValidationError returns structured ErrorResponse with field details."""
+    """Verify 422 RequestValidationError returns structured ErrorResponse with field details
+    and request_id.
+    """
     test_router = APIRouter()
 
     class ItemPayload(BaseModel):
@@ -130,19 +158,26 @@ async def test_validation_error_handler():
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        res = await client.post("/test-validation", json={"title": "a", "count": -5})
+        custom_id = "test-validation-trace-422"
+        res = await client.post(
+            "/test-validation",
+            json={"title": "a", "count": -5},
+            headers={"X-Request-ID": custom_id},
+        )
         assert res.status_code == 422
+        assert res.headers.get("x-request-id") == custom_id
         data = res.json()
         assert data["success"] is False
         assert data["error"]["code"] == "VALIDATION_ERROR"
         assert data["error"]["field"] is not None
         assert "meta" in data
+        assert data["meta"]["request_id"] == custom_id
         assert len(data["meta"]["errors"]) > 0
 
 
 @pytest.mark.asyncio
 async def test_unhandled_exception_returns_500():
-    """Verify unhandled exception is trapped and returns structured 500 without crashing."""
+    """Verify unhandled exception is trapped and returns structured 500 with request_id."""
     test_router = APIRouter()
 
     @test_router.get("/test-bug")
@@ -154,9 +189,12 @@ async def test_unhandled_exception_returns_500():
     # In httpx ASGITransport, set raise_app_exceptions=False to test 500 HTTP response output
     transport = ASGITransport(app=app, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        res = await client.get("/test-bug")
+        custom_id = "test-bug-trace-500"
+        res = await client.get("/test-bug", headers={"X-Request-ID": custom_id})
         assert res.status_code == 500
+        assert res.headers.get("x-request-id") == custom_id
         data = res.json()
         assert data["success"] is False
         assert data["error"]["code"] == "INTERNAL_SERVER_ERROR"
         assert "action" in data["error"]
+        assert data["meta"]["request_id"] == custom_id

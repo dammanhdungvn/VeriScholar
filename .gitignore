@@ -61,6 +61,11 @@ temp/
 apps/storage/
 apps/api/storage/
 storage/
+.agents/runtime/
+*.db
+*.sqlite
+*.sqlite3
+*.log
 /data/*
 !/data/papers/
 /data/papers/*

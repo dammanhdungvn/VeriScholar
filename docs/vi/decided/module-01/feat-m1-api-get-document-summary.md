@@ -5,7 +5,6 @@
 * **Mã phản hồi chuẩn:** `200 OK` (Singleton Sub-resource theo Google Cloud AIP-130 / AIP-136)  
 * **Vị trí tài liệu lưu trữ:**  
   - [`docs/vi/decided/module-01/feat-m1-api-get-document-summary.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-summary.md)  
-  - [`docs/vi/decided/feat-m1-api-get-document-summary.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/feat-m1-api-get-document-summary.md)  
 * **Tài liệu tham chiếu chuẩn:**  
   - API Specification: [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.13: `GET /api/v1/documents/{id}/summary`)  
   - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.2: Bảng `document_summaries`, 1-1 với `documents`, `ON DELETE CASCADE`)  

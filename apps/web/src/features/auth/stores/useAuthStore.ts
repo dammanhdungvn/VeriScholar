@@ -1,5 +1,7 @@
 import { create } from "zustand";
+import type { QueryClient } from "@tanstack/react-query";
 import type { UserProfile, AuthResponse } from "@/types/auth";
+import { defaultQueryClient } from "@/lib/queryClient";
 
 export const AUTH_TOKEN_STORAGE_KEY = "verischolar_auth_token";
 export const AUTH_USER_STORAGE_KEY = "verischolar_auth_user";
@@ -10,7 +12,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (authResponse: AuthResponse, rememberMe?: boolean) => void;
-  logout: () => void;
+  logout: (queryClient?: QueryClient) => void;
   updateUser: (partialUser: Partial<UserProfile>) => void;
 }
 
@@ -58,12 +60,18 @@ export const useAuthStore = create<AuthState>((set) => {
       });
     },
 
-    logout: () => {
+    logout: (customQueryClient?: QueryClient) => {
       try {
         localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
         localStorage.removeItem(AUTH_USER_STORAGE_KEY);
       } catch {
         // Ignore storage removal errors
+      }
+      const client = customQueryClient ?? defaultQueryClient;
+      try {
+        client.clear();
+      } catch {
+        // Ignore in environments where query client is not available
       }
       set({
         user: null,
@@ -72,6 +80,7 @@ export const useAuthStore = create<AuthState>((set) => {
         isLoading: false,
       });
     },
+
 
     updateUser: (partialUser: Partial<UserProfile>) => {
       set((state) => {
