@@ -1,5 +1,7 @@
 """Pydantic v2 schemas for Research Writing Drafts."""
 
+from __future__ import annotations
+
 from datetime import UTC, datetime
 from typing import Literal
 from uuid import UUID
@@ -348,3 +350,86 @@ class DraftShareResponse(BaseModel):
     permission: str
     allow_public_link: bool
     collaborators: list[DraftCollaboratorResponse] = Field(default_factory=list)
+
+
+# ==============================================================================
+# Peer Review Comments & Annotations Schemas (/drafts/{id}/comments) - PRD §3.2
+# ==============================================================================
+
+
+class CreateDraftCommentRequest(BaseModel):
+    """Payload to create a peer review comment or reply on a draft."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start_offset: int = Field(
+        default=0,
+        ge=0,
+        description="Character start offset in the draft text",
+    )
+    end_offset: int = Field(
+        default=0,
+        ge=0,
+        description="Character end offset in the draft text",
+    )
+    selected_text: str = Field(
+        default="",
+        description="Selected text excerpt being commented on",
+    )
+    comment_text: str = Field(
+        ...,
+        min_length=1,
+        max_length=10000,
+        description="Feedback or peer review comment content",
+    )
+    parent_id: UUID | None = Field(
+        default=None,
+        description="Optional parent comment ID for threaded replies",
+    )
+
+
+class UpdateDraftCommentRequest(BaseModel):
+    """Payload to update comment text or resolve/unresolve status."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    comment_text: str | None = Field(
+        default=None,
+        min_length=1,
+        max_length=10000,
+        description="Updated comment body (only author permitted)",
+    )
+    is_resolved: bool | None = Field(
+        default=None,
+        description="Resolution status (author, editor, or owner permitted)",
+    )
+
+
+class DraftCommentResponse(BaseModel):
+    """Public representation of a peer review comment or reply."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    draft_id: UUID
+    author_id: UUID
+    author_name: str
+    start_offset: int
+    end_offset: int
+    selected_text: str
+    comment_text: str
+    parent_id: UUID | None = None
+    is_resolved: bool = False
+    created_at: datetime
+    updated_at: datetime
+    replies: list["DraftCommentResponse"] = Field(default_factory=list)
+
+
+class DraftCommentListResponse(BaseModel):
+    """List of comments attached to a draft."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    draft_id: UUID
+    items: list[DraftCommentResponse]
+    total: int

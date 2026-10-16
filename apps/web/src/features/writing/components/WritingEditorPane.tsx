@@ -14,17 +14,20 @@ import { cn } from "@/lib/utils";
 interface WritingEditorPaneProps {
   onSelectionVerify?: (selectedText: string) => void;
   onSelectionAddToChat?: (contextBuffer: string) => void;
+  onSelectionAddComment?: (selection: { start: number; end: number; text: string }) => void;
 }
 
 export function WritingEditorPane({
   onSelectionVerify,
   onSelectionAddToChat,
+  onSelectionAddComment,
 }: WritingEditorPaneProps) {
   const {
     editorContent,
     setEditorContent,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
+    setCommentsPaneOpen,
   } = useWritingStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -93,6 +96,18 @@ export function WritingEditorPane({
     onSelectionAddToChat(contextBuffer);
   };
 
+  const handleAddCommentClick = () => {
+    let start = selectionRange?.start ?? -1;
+    let end = selectionRange?.end ?? -1;
+    if (start === -1 || start === end) {
+      start = editorContent.indexOf(selectedText);
+      end = start !== -1 ? start + selectedText.length : 0;
+    }
+    setStoreSelectionRange({ start, end });
+    setCommentsPaneOpen(true);
+    onSelectionAddComment?.({ start, end, text: selectedText });
+  };
+
   const errors = lastCompileResult?.errors || [];
 
   return (
@@ -127,6 +142,14 @@ export function WritingEditorPane({
                   [Thêm vào Chat]
                 </button>
               )}
+              <button
+                type="button"
+                data-testid="editor-add-comment-btn"
+                onClick={handleAddCommentClick}
+                className="font-medium hover:underline ml-1 cursor-pointer text-coral-700 dark:text-coral-300"
+              >
+                [💬 Nhận xét]
+              </button>
             </div>
           )}
 

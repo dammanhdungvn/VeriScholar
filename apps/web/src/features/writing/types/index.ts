@@ -183,3 +183,37 @@ export interface DraftShareResponse {
   allow_public_link: boolean;
   collaborators: DraftCollaborator[];
 }
+
+// =============================================================================
+// Draft Peer Review Comments Types (/drafts/{id}/comments)
+// =============================================================================
+
+export interface DraftComment {
+  id: string;
+  draft_id: string;
+  author_id: string;
+  author_name: string;
+  start_offset: number;
+  end_offset: number;
+  selected_text: string;
+  comment_text: string;
+  parent_id?: string | null;
+  is_resolved: boolean;
+  created_at: string;
+  updated_at: string;
+  replies?: DraftComment[];
+}
+
+export interface CreateDraftCommentRequest {
+  start_offset: number;
+  end_offset: number;
+  selected_text: string;
+  comment_text: string;
+  parent_id?: string;
+}
+
+export interface UpdateDraftCommentRequest {
+  comment_text?: string;
+  is_resolved?: boolean;
+}
+

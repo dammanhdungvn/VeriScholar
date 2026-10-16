@@ -184,4 +184,78 @@ describe("useWritingStore", () => {
     expect(useWritingStore.getState().isAssetModalOpen).toBe(false);
     expect(useWritingStore.getState().isShareModalOpen).toBe(false);
   });
+
+  it("handles peer review comments state and threaded actions", () => {
+    expect(useWritingStore.getState().comments).toEqual([]);
+    expect(useWritingStore.getState().activeCommentId).toBeNull();
+    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(false);
+
+    // Toggle comments pane
+    useWritingStore.getState().setCommentsPaneOpen(true);
+    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(true);
+
+    // Set active comment id
+    useWritingStore.getState().setActiveCommentId("comm-1");
+    expect(useWritingStore.getState().activeCommentId).toBe("comm-1");
+
+    // Add top-level comment
+    const comment1 = {
+      id: "comm-1",
+      draft_id: "draft-1",
+      author_id: "user-1",
+      author_name: "Dr. Turing",
+      start_offset: 10,
+      end_offset: 25,
+      selected_text: "transformers",
+      comment_text: "Clarify model architecture.",
+      is_resolved: false,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+      replies: [],
+    };
+
+    useWritingStore.getState().addComment(comment1);
+    expect(useWritingStore.getState().comments).toHaveLength(1);
+    expect(useWritingStore.getState().comments[0].id).toBe("comm-1");
+
+    // Add threaded reply
+    const reply1 = {
+      id: "reply-1",
+      draft_id: "draft-1",
+      author_id: "user-2",
+      author_name: "Ada Lovelace",
+      start_offset: 10,
+      end_offset: 25,
+      selected_text: "transformers",
+      comment_text: "Added Section 3 references.",
+      parent_id: "comm-1",
+      is_resolved: false,
+      created_at: "2026-10-15T01:00:00Z",
+      updated_at: "2026-10-15T01:00:00Z",
+    };
+
+    useWritingStore.getState().addComment(reply1);
+    expect(useWritingStore.getState().comments[0].replies).toHaveLength(1);
+    expect(useWritingStore.getState().comments[0].replies?.[0].id).toBe("reply-1");
+
+    // Update comment
+    useWritingStore.getState().updateCommentInStore({
+      ...comment1,
+      is_resolved: true,
+    });
+    expect(useWritingStore.getState().comments[0].is_resolved).toBe(true);
+
+    // Remove comment
+    useWritingStore.getState().removeCommentFromStore("comm-1");
+    expect(useWritingStore.getState().comments).toHaveLength(0);
+    expect(useWritingStore.getState().activeCommentId).toBeNull();
+
+    // Verify reset restores default state
+    useWritingStore.getState().setCommentsPaneOpen(true);
+    useWritingStore.getState().setActiveCommentId("some-id");
+    useWritingStore.getState().reset();
+    expect(useWritingStore.getState().comments).toEqual([]);
+    expect(useWritingStore.getState().activeCommentId).toBeNull();
+    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(false);
+  });
 });

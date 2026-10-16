@@ -105,4 +105,65 @@ describe("WritingHeaderBar", () => {
 
     expect(useWritingStore.getState().isShareModalOpen).toBe(true);
   });
+
+  it("toggles comments pane and displays badge count for unresolved comments", () => {
+    // Add 2 unresolved comments and 1 resolved comment
+    useWritingStore.getState().setComments([
+      {
+        id: "c-1",
+        draft_id: "draft-xyz",
+        author_id: "u-1",
+        author_name: "Author 1",
+        start_offset: 0,
+        end_offset: 10,
+        selected_text: "Text",
+        comment_text: "Note 1",
+        is_resolved: false,
+        created_at: "2026-10-15T00:00:00Z",
+        updated_at: "2026-10-15T00:00:00Z",
+      },
+      {
+        id: "c-2",
+        draft_id: "draft-xyz",
+        author_id: "u-2",
+        author_name: "Author 2",
+        start_offset: 10,
+        end_offset: 20,
+        selected_text: "Text 2",
+        comment_text: "Note 2",
+        is_resolved: false,
+        created_at: "2026-10-15T00:00:00Z",
+        updated_at: "2026-10-15T00:00:00Z",
+      },
+      {
+        id: "c-3",
+        draft_id: "draft-xyz",
+        author_id: "u-3",
+        author_name: "Author 3",
+        start_offset: 20,
+        end_offset: 30,
+        selected_text: "Text 3",
+        comment_text: "Note 3",
+        is_resolved: true,
+        created_at: "2026-10-15T00:00:00Z",
+        updated_at: "2026-10-15T00:00:00Z",
+      },
+    ]);
+
+    render(
+      <BrowserRouter>
+        <WritingHeaderBar />
+      </BrowserRouter>
+    );
+
+    // Verify unresolved count badge is displayed
+    const badge = screen.getByTestId("unresolved-comments-badge");
+    expect(badge).toHaveTextContent("2");
+
+    // Toggle comments pane
+    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(false);
+    const commentsBtn = screen.getByTestId("header-comments-btn");
+    fireEvent.click(commentsBtn);
+    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(true);
+  });
 });

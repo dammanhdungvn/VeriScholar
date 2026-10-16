@@ -107,3 +107,67 @@ def test_draft_assist_result_entity() -> None:
     assert assist.draft_id == draft_id
     assert assist.action == "polish"
     assert len(assist.suggested_citations) == 1
+
+
+def test_draft_comment_entity() -> None:
+    """Test DraftComment domain entity creation and default values."""
+    from core.domain.entities.draft import DraftComment
+
+    comment_id = uuid4()
+    draft_id = uuid4()
+    author_id = uuid4()
+    parent_id = uuid4()
+
+    comment = DraftComment(
+        id=comment_id,
+        draft_id=draft_id,
+        author_id=author_id,
+        author_name="Prof. Turing",
+        start_offset=12,
+        end_offset=45,
+        selected_text="Transformer architecture",
+        comment_text="Consider citing the original 2017 paper.",
+        parent_id=parent_id,
+        is_resolved=False,
+    )
+
+    assert comment.id == comment_id
+    assert comment.draft_id == draft_id
+    assert comment.author_id == author_id
+    assert comment.author_name == "Prof. Turing"
+    assert comment.start_offset == 12
+    assert comment.end_offset == 45
+    assert comment.selected_text == "Transformer architecture"
+    assert comment.comment_text == "Consider citing the original 2017 paper."
+    assert comment.parent_id == parent_id
+    assert comment.is_resolved is False
+    assert comment.created_at is not None
+    assert comment.updated_at is not None
+
+
+def test_draft_comment_rbac_helpers() -> None:
+    """Test comment RBAC permission helper functions."""
+    from core.domain.entities.draft import (
+        DraftRole,
+        can_comment_draft,
+        can_resolve_draft_comment,
+        can_view_draft_comments,
+    )
+
+    # can_comment_draft: owner, editor, commenter only
+    assert can_comment_draft(DraftRole.OWNER) is True
+    assert can_comment_draft(DraftRole.EDITOR) is True
+    assert can_comment_draft(DraftRole.COMMENTER) is True
+    assert can_comment_draft(DraftRole.VIEWER) is False
+
+    # can_view_draft_comments: owner, editor, commenter, viewer
+    assert can_view_draft_comments(DraftRole.OWNER) is True
+    assert can_view_draft_comments(DraftRole.EDITOR) is True
+    assert can_view_draft_comments(DraftRole.COMMENTER) is True
+    assert can_view_draft_comments(DraftRole.VIEWER) is True
+
+    # can_resolve_draft_comment: owner, editor, commenter
+    assert can_resolve_draft_comment(DraftRole.OWNER) is True
+    assert can_resolve_draft_comment(DraftRole.EDITOR) is True
+    assert can_resolve_draft_comment(DraftRole.COMMENTER) is True
+    assert can_resolve_draft_comment(DraftRole.VIEWER) is False

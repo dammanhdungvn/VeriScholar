@@ -15,6 +15,7 @@ import {
   Loader2,
   FolderArchive,
   Share2,
+  MessageSquare,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import type { WorkspaceMode } from "../types";
@@ -27,6 +28,7 @@ interface WritingHeaderBarProps {
   onExportBundle?: () => Promise<void>;
   onOpenAssets?: () => void;
   onOpenShare?: () => void;
+  onToggleComments?: () => void;
 }
 
 export function WritingHeaderBar({
@@ -35,6 +37,7 @@ export function WritingHeaderBar({
   onExportBundle,
   onOpenAssets,
   onOpenShare,
+  onToggleComments,
 }: WritingHeaderBarProps) {
   const {
     draft,
@@ -47,7 +50,12 @@ export function WritingHeaderBar({
     isCompiling,
     openAssetModal,
     openShareModal,
+    comments,
+    isCommentsPaneOpen,
+    setCommentsPaneOpen,
   } = useWritingStore();
+
+  const unresolvedCount = comments.filter((c) => !c.parent_id && !c.is_resolved).length;
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
 
@@ -163,6 +171,31 @@ export function WritingHeaderBar({
         >
           <Share2 className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
           <span className="hidden md:inline">Chia sẻ</span>
+        </button>
+
+        {/* Comments button */}
+        <button
+          type="button"
+          onClick={onToggleComments || (() => setCommentsPaneOpen(!isCommentsPaneOpen))}
+          data-testid="header-comments-btn"
+          className={cn(
+            "h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer",
+            isCommentsPaneOpen
+              ? "bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-500/30"
+              : "bg-[#ece8df] dark:bg-[#262420] text-ink dark:text-zinc-200 hover:bg-[#e4dfd4] dark:hover:bg-[#2d2a26]"
+          )}
+          title="Bật/tắt bảng phản biện và nhận xét"
+        >
+          <MessageSquare className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
+          <span className="hidden md:inline">Nhận xét</span>
+          {unresolvedCount > 0 && (
+            <span
+              data-testid="unresolved-comments-badge"
+              className="ml-0.5 px-1.5 py-0.2 bg-coral-500 text-white rounded-full text-[10px] font-bold font-mono"
+            >
+              {unresolvedCount}
+            </span>
+          )}
         </button>
 
         {/* Save button */}

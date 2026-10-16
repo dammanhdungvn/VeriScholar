@@ -84,6 +84,22 @@ vi.mock("../api/draftsApi", () => ({
       allow_public_link: true,
       collaborators: [],
     }),
+    getComments: vi.fn().mockResolvedValue([]),
+    createComment: vi.fn().mockResolvedValue({
+      id: "c-1",
+      draft_id: "draft-1",
+      author_id: "u-1",
+      author_name: "Author",
+      start_offset: 0,
+      end_offset: 10,
+      selected_text: "Sample",
+      comment_text: "Test comment",
+      is_resolved: false,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    }),
+    updateComment: vi.fn().mockResolvedValue({}),
+    deleteComment: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
@@ -570,6 +586,44 @@ describe("WritingWorkspace", () => {
 
     // Suggestion panel remains open
     expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(true);
+  });
+
+  it("opens DraftCommentsPane when clicking Comments button in header or [💬 Nhận xét] in editor toolbar", async () => {
+    const { container } = render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByTestId("draft-comments-pane")).toBeNull();
+
+    // 1. Click header comments button
+    const commentsBtn = screen.getByTestId("header-comments-btn");
+    await act(async () => {
+      fireEvent.click(commentsBtn);
+    });
+
+    expect(screen.getByTestId("draft-comments-pane")).toBeInTheDocument();
+
+    // Close pane
+    const closeBtn = screen.getByTestId("close-comments-pane-btn");
+    await act(async () => {
+      fireEvent.click(closeBtn);
+    });
+    expect(screen.queryByTestId("draft-comments-pane")).toBeNull();
+
+    // 2. Select text in editor and click [💬 Nhận xét]
+    const textarea = container.querySelector("textarea") as HTMLTextAreaElement;
+    textarea.selectionStart = 0;
+    textarea.selectionEnd = 12;
+    fireEvent.select(textarea);
+
+    const addCommentBtn = screen.getByTestId("editor-add-comment-btn");
+    await act(async () => {
+      fireEvent.click(addCommentBtn);
+    });
+
+    expect(screen.getByTestId("draft-comments-pane")).toBeInTheDocument();
   });
 });
 

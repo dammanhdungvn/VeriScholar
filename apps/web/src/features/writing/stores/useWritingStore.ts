@@ -6,6 +6,7 @@ import type {
   VerifyFactsResponse,
   AtomicClaim,
   PendingSuggestion,
+  DraftComment,
 } from "../types";
 
 interface WritingState {
@@ -32,6 +33,9 @@ interface WritingState {
   selectionRange: { start: number; end: number } | null;
   isAssetModalOpen: boolean;
   isShareModalOpen: boolean;
+  comments: DraftComment[];
+  activeCommentId: string | null;
+  isCommentsPaneOpen: boolean;
 
   // Actions
   setDraft: (draft: Draft) => void;
@@ -56,6 +60,12 @@ interface WritingState {
   closeAssetModal: () => void;
   openShareModal: () => void;
   closeShareModal: () => void;
+  setComments: (comments: DraftComment[]) => void;
+  addComment: (comment: DraftComment) => void;
+  updateCommentInStore: (comment: DraftComment) => void;
+  removeCommentFromStore: (commentId: string) => void;
+  setActiveCommentId: (id: string | null) => void;
+  setCommentsPaneOpen: (open: boolean) => void;
   markSaved: (updatedDraft: Draft) => void;
   reset: () => void;
 }
@@ -119,6 +129,9 @@ export const useWritingStore = create<WritingState>((set) => ({
   selectionRange: null,
   isAssetModalOpen: false,
   isShareModalOpen: false,
+  comments: [],
+  activeCommentId: null,
+  isCommentsPaneOpen: false,
 
   setDraft: (draft) =>
     set({
@@ -198,6 +211,56 @@ export const useWritingStore = create<WritingState>((set) => ({
 
   closeShareModal: () => set({ isShareModalOpen: false }),
 
+  setComments: (comments) => set({ comments }),
+
+  addComment: (comment) =>
+    set((state) => {
+      if (comment.parent_id) {
+        const parentIndex = state.comments.findIndex((c) => c.id === comment.parent_id);
+        if (parentIndex !== -1) {
+          const updatedComments = [...state.comments];
+          const parent = updatedComments[parentIndex];
+          updatedComments[parentIndex] = {
+            ...parent,
+            replies: [...(parent.replies || []), comment],
+          };
+          return { comments: updatedComments };
+        }
+      }
+      return { comments: [comment, ...state.comments] };
+    }),
+
+  updateCommentInStore: (comment) =>
+    set((state) => ({
+      comments: state.comments.map((c) => {
+        if (c.id === comment.id) {
+          return { ...c, ...comment };
+        }
+        if (c.replies && c.replies.some((r) => r.id === comment.id)) {
+          return {
+            ...c,
+            replies: c.replies.map((r) => (r.id === comment.id ? { ...r, ...comment } : r)),
+          };
+        }
+        return c;
+      }),
+    })),
+
+  removeCommentFromStore: (commentId) =>
+    set((state) => ({
+      comments: state.comments
+        .filter((c) => c.id !== commentId)
+        .map((c) => ({
+          ...c,
+          replies: c.replies ? c.replies.filter((r) => r.id !== commentId) : [],
+        })),
+      activeCommentId: state.activeCommentId === commentId ? null : state.activeCommentId,
+    })),
+
+  setActiveCommentId: (activeCommentId) => set({ activeCommentId }),
+
+  setCommentsPaneOpen: (isCommentsPaneOpen) => set({ isCommentsPaneOpen }),
+
   markSaved: (updatedDraft) =>
     set({
       draft: updatedDraft,
@@ -233,5 +296,8 @@ export const useWritingStore = create<WritingState>((set) => ({
       selectionRange: null,
       isAssetModalOpen: false,
       isShareModalOpen: false,
+      comments: [],
+      activeCommentId: null,
+      isCommentsPaneOpen: false,
     }),
 }));

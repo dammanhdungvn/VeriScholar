@@ -183,3 +183,36 @@ def can_manage_draft_assets(role: DraftRole) -> bool:
 def can_manage_draft_share(role: DraftRole) -> bool:
     """Only the draft owner can configure share permissions."""
     return role == DraftRole.OWNER
+
+
+@dataclass
+class DraftComment:
+    """Domain representation of a peer review comment or line annotation on a research draft."""
+
+    id: UUID = field(default_factory=uuid4)
+    draft_id: UUID = field(default_factory=uuid4)
+    author_id: UUID = field(default_factory=uuid4)
+    author_name: str = ""
+    start_offset: int = 0
+    end_offset: int = 0
+    selected_text: str = ""
+    comment_text: str = ""
+    parent_id: UUID | None = None
+    is_resolved: bool = False
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+def can_comment_draft(role: DraftRole) -> bool:
+    """Owner, editor, and commenter can post review comments and replies."""
+    return role in (DraftRole.OWNER, DraftRole.EDITOR, DraftRole.COMMENTER)
+
+
+def can_view_draft_comments(role: DraftRole) -> bool:
+    """Any collaborator with draft access can view review comments."""
+    return role in (DraftRole.OWNER, DraftRole.EDITOR, DraftRole.COMMENTER, DraftRole.VIEWER)
+
+
+def can_resolve_draft_comment(role: DraftRole) -> bool:
+    """Owner, editor, and commenter can resolve or unresolve comments."""
+    return role in (DraftRole.OWNER, DraftRole.EDITOR, DraftRole.COMMENTER)

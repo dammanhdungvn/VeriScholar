@@ -285,4 +285,99 @@ describe("draftsApi", () => {
 
     expect(updated.collaborators).toHaveLength(2);
   });
+
+  it("manages peer review comments via GET, POST, PATCH, and DELETE", async () => {
+    const mockComment = {
+      id: "comm-1",
+      draft_id: "draft-1",
+      author_id: "user-1",
+      author_name: "Dr. Turing",
+      start_offset: 10,
+      end_offset: 25,
+      selected_text: "transformers",
+      comment_text: "Please add citation.",
+      is_resolved: false,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+      replies: [],
+    };
+
+    // 1. GET /drafts/{id}/comments
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: [mockComment],
+      }),
+    });
+
+    const comments = await draftsApi.getComments("draft-1");
+    expect(comments).toHaveLength(1);
+    expect(comments[0].comment_text).toBe("Please add citation.");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/comments"),
+      expect.objectContaining({ method: "GET" })
+    );
+
+    // 2. POST /drafts/{id}/comments
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: mockComment,
+      }),
+    });
+
+    const created = await draftsApi.createComment("draft-1", {
+      start_offset: 10,
+      end_offset: 25,
+      selected_text: "transformers",
+      comment_text: "Please add citation.",
+    });
+    expect(created.id).toBe("comm-1");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/comments"),
+      expect.objectContaining({ method: "POST" })
+    );
+
+    // 3. PATCH /drafts/{id}/comments/{commentId}
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: { ...mockComment, is_resolved: true },
+      }),
+    });
+
+    const updated = await draftsApi.updateComment("draft-1", "comm-1", {
+      is_resolved: true,
+    });
+    expect(updated.is_resolved).toBe(true);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/comments/comm-1"),
+      expect.objectContaining({ method: "PATCH" })
+    );
+
+    // 4. DELETE /drafts/{id}/comments/{commentId}
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 204,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+      }),
+    });
+
+    await draftsApi.deleteComment("draft-1", "comm-1");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/comments/comm-1"),
+      expect.objectContaining({ method: "DELETE" })
+    );
+  });
 });

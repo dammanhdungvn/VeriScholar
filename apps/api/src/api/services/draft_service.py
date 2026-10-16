@@ -15,24 +15,31 @@ from uuid import UUID, uuid4
 import structlog
 from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
-from api.db.models.draft import DraftModel
+from api.db.models.draft import DraftCommentModel, DraftModel
 from api.schemas.draft import (
     CreateDraftAssetRequest,
+    CreateDraftCommentRequest,
     CreateDraftRequest,
     DraftAssetResponse,
     DraftCollaboratorResponse,
+    DraftCommentListResponse,
+    DraftCommentResponse,
     DraftShareRequest,
     DraftShareResponse,
+    UpdateDraftCommentRequest,
     UpdateDraftRequest,
 )
 from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.draft import (
     DraftRole,
     can_call_costly_ai,
+    can_comment_draft,
     can_compile_draft,
     can_edit_draft_source,
     can_manage_draft_assets,
     can_manage_draft_share,
+    can_resolve_draft_comment,
+    can_view_draft_comments,
 )
 from core.domain.entities.latex import LatexCompilationResult
 from core.domain.entities.safe_claim import FactVerificationReport
@@ -825,6 +832,268 @@ class DraftService:
         }
         _draft_share_cache[draft_id] = settings
         return DraftShareResponse(**settings)
+
+    # ==========================================================================
+    # Peer Review Comments & Annotations (/drafts/{id}/comments) - PRD §3.2
+    # ==========================================================================
+
+    async def create_comment(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        request: CreateDraftCommentRequest,
+        author_name: str = "",
+        user_email: str | None = None,
+    ) -> DraftCommentResponse:
+        """Create a peer review comment or reply on a research draft.
+
+        Raises:
+            KeyError: When draft does not exist or user lacks access.
+            DraftRoleForbiddenError: When user has viewer role (HTTP 403).
+        """
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if not can_comment_draft(role):
+            raise DraftRoleForbiddenError(
+                f"Role '{role.value}' is strictly forbidden from commenting on this draft"
+            )
+
+        if request.parent_id is not None:
+            parent_stmt = select(DraftCommentModel).where(
+                DraftCommentModel.id == request.parent_id,
+                DraftCommentModel.draft_id == draft_id,
+            )
+            parent_res = await self.db.execute(parent_stmt)
+            if not parent_res.scalar_one_or_none():
+                raise KeyError(f"Parent comment {request.parent_id} not found on draft {draft_id}")
+
+        now = datetime.now(UTC)
+        comment = DraftCommentModel(
+            draft_id=draft_id,
+            author_id=user_id,
+            author_name=author_name or "Anonymous Researcher",
+            start_offset=request.start_offset,
+            end_offset=request.end_offset,
+            selected_text=request.selected_text,
+            comment_text=request.comment_text,
+            parent_id=request.parent_id,
+            is_resolved=False,
+            created_at=now,
+            updated_at=now,
+        )
+
+        async with self._transaction():
+            self.db.add(comment)
+
+        await self.db.refresh(comment)
+        logger.info(
+            "draft_comment_created",
+            draft_id=str(draft_id),
+            comment_id=str(comment.id),
+            author_id=str(user_id),
+            parent_id=str(request.parent_id) if request.parent_id else None,
+        )
+        return DraftCommentResponse(
+            id=comment.id,
+            draft_id=comment.draft_id,
+            author_id=comment.author_id,
+            author_name=comment.author_name,
+            start_offset=comment.start_offset,
+            end_offset=comment.end_offset,
+            selected_text=comment.selected_text,
+            comment_text=comment.comment_text,
+            parent_id=comment.parent_id,
+            is_resolved=comment.is_resolved,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            replies=[],
+        )
+
+    async def list_comments(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        user_email: str | None = None,
+    ) -> DraftCommentListResponse:
+        """List comments for a research draft organized with threaded replies.
+
+        Raises:
+            KeyError: When draft does not exist or user lacks access.
+            DraftRoleForbiddenError: When user is unauthorized.
+        """
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if not can_view_draft_comments(role):
+            raise DraftRoleForbiddenError(
+                f"Role '{role.value}' is strictly forbidden from viewing comments"
+            )
+
+        stmt = (
+            select(DraftCommentModel)
+            .where(DraftCommentModel.draft_id == draft_id)
+            .order_by(DraftCommentModel.created_at.asc())
+        )
+        result = await self.db.execute(stmt)
+        all_comments = list(result.scalars().all())
+
+        # Construct tree with nested replies
+        comment_map: dict[UUID, DraftCommentResponse] = {}
+        for c in all_comments:
+            comment_map[c.id] = DraftCommentResponse(
+                id=c.id,
+                draft_id=c.draft_id,
+                author_id=c.author_id,
+                author_name=c.author_name,
+                start_offset=c.start_offset,
+                end_offset=c.end_offset,
+                selected_text=c.selected_text,
+                comment_text=c.comment_text,
+                parent_id=c.parent_id,
+                is_resolved=c.is_resolved,
+                created_at=c.created_at,
+                updated_at=c.updated_at,
+                replies=[],
+            )
+
+        root_comments: list[DraftCommentResponse] = []
+        for c in all_comments:
+            resp_item = comment_map[c.id]
+            if c.parent_id and c.parent_id in comment_map:
+                comment_map[c.parent_id].replies.append(resp_item)
+            else:
+                root_comments.append(resp_item)
+
+        return DraftCommentListResponse(
+            draft_id=draft_id,
+            items=root_comments,
+            total=len(all_comments),
+        )
+
+    async def update_comment(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        comment_id: UUID,
+        request: UpdateDraftCommentRequest,
+        user_email: str | None = None,
+    ) -> DraftCommentResponse:
+        """Update comment text (author only) or resolution status (owner, editor, commenter).
+
+        Raises:
+            KeyError: When draft or comment does not exist.
+            DraftRoleForbiddenError: When non-author tries to edit text, or viewer tries to resolve.
+        """
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        stmt = select(DraftCommentModel).where(
+            DraftCommentModel.id == comment_id,
+            DraftCommentModel.draft_id == draft_id,
+        )
+        comment = (await self.db.execute(stmt)).scalar_one_or_none()
+        if not comment:
+            raise KeyError(f"Comment {comment_id} not found on draft {draft_id}")
+
+        async with self._transaction():
+            if request.comment_text is not None:
+                if comment.author_id != user_id:
+                    raise DraftRoleForbiddenError(
+                        "Only the original comment author is permitted to modify comment text"
+                    )
+                comment.comment_text = request.comment_text
+
+            if request.is_resolved is not None:
+                if not can_resolve_draft_comment(role):
+                    raise DraftRoleForbiddenError(
+                        f"Role '{role.value}' is not permitted to resolve or reopen comments"
+                    )
+                comment.is_resolved = request.is_resolved
+
+            comment.updated_at = datetime.now(UTC)
+
+        await self.db.refresh(comment)
+        logger.info(
+            "draft_comment_updated",
+            draft_id=str(draft_id),
+            comment_id=str(comment.id),
+            is_resolved=comment.is_resolved,
+        )
+        return DraftCommentResponse(
+            id=comment.id,
+            draft_id=comment.draft_id,
+            author_id=comment.author_id,
+            author_name=comment.author_name,
+            start_offset=comment.start_offset,
+            end_offset=comment.end_offset,
+            selected_text=comment.selected_text,
+            comment_text=comment.comment_text,
+            parent_id=comment.parent_id,
+            is_resolved=comment.is_resolved,
+            created_at=comment.created_at,
+            updated_at=comment.updated_at,
+            replies=[],
+        )
+
+    async def delete_comment(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        comment_id: UUID,
+        user_email: str | None = None,
+    ) -> None:
+        """Delete comment (permitted for comment author or draft owner).
+
+        Raises:
+            KeyError: When draft or comment does not exist.
+            DraftRoleForbiddenError: When non-author non-owner tries to delete.
+        """
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        stmt = select(DraftCommentModel).where(
+            DraftCommentModel.id == comment_id,
+            DraftCommentModel.draft_id == draft_id,
+        )
+        comment = (await self.db.execute(stmt)).scalar_one_or_none()
+        if not comment:
+            raise KeyError(f"Comment {comment_id} not found on draft {draft_id}")
+
+        if comment.author_id != user_id and role != DraftRole.OWNER:
+            raise DraftRoleForbiddenError(
+                "Only the comment author or draft owner is permitted to delete this comment"
+            )
+
+        async with self._transaction():
+            await self.db.delete(comment)
+
+        logger.info(
+            "draft_comment_deleted",
+            draft_id=str(draft_id),
+            comment_id=str(comment_id),
+            deleted_by=str(user_id),
+        )
 
 
 _draft_pdf_cache: dict[UUID, bytes] = {}

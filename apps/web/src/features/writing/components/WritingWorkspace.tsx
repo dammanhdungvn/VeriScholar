@@ -7,6 +7,7 @@ import { SourceEvidenceModal } from "./SourceEvidenceModal";
 import { SuggestionReviewPanel } from "./SuggestionReviewPanel";
 import { DraftAssetManagementModal } from "./DraftAssetManagementModal";
 import { DraftSharingModal } from "./DraftSharingModal";
+import { DraftCommentsPane } from "./DraftCommentsPane";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
 import { calculateRebasedRange } from "../lib/diffUtils";
@@ -33,9 +34,30 @@ export function WritingWorkspace() {
     openSuggestionPanel,
     closeSuggestionPanel,
     setAssisting,
+    isCommentsPaneOpen,
+    setComments,
   } = useWritingStore();
 
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
+
+  // Fetch peer review comments on draft load
+  useEffect(() => {
+    if (!activeDraftId) return;
+    let active = true;
+    draftsApi
+      .getComments(activeDraftId)
+      .then((data) => {
+        if (active && Array.isArray(data)) {
+          setComments(data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch draft comments:", err);
+      });
+    return () => {
+      active = false;
+    };
+  }, [activeDraftId, setComments]);
 
   // Save handler with OCC version tracking
   const handleSave = useCallback(async () => {
@@ -347,6 +369,9 @@ export function WritingWorkspace() {
             onSendAssistantPrompt={handleSendAssistantPrompt}
           />
         )}
+
+        {/* Column 4: Peer Review Comments & Annotations */}
+        {isCommentsPaneOpen && <DraftCommentsPane />}
       </div>
 
       {/* 3. Source Document Evidence Modal (with Bounding Box Overlay on Source Paper) */}

@@ -19,6 +19,9 @@ import type {
   DraftAssetListResponse,
   DraftShareRequest,
   DraftShareResponse,
+  DraftComment,
+  CreateDraftCommentRequest,
+  UpdateDraftCommentRequest,
 } from "../types";
 
 export const draftsApi = {
@@ -206,4 +209,54 @@ export const draftsApi = {
       body: JSON.stringify(request),
     });
   },
+
+  /**
+   * GET /api/v1/drafts/{id}/comments
+   * Retrieve list of peer review comments.
+   */
+  async getComments(draftId: string): Promise<DraftComment[]> {
+    return apiClient<DraftComment[]>(`/drafts/${draftId}/comments`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * POST /api/v1/drafts/{id}/comments
+   * Create a new comment or reply on selected text in draft.
+   */
+  async createComment(
+    draftId: string,
+    payload: CreateDraftCommentRequest
+  ): Promise<DraftComment> {
+    return apiClient<DraftComment>(`/drafts/${draftId}/comments`, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * PATCH /api/v1/drafts/{id}/comments/{commentId}
+   * Update or resolve comment.
+   */
+  async updateComment(
+    draftId: string,
+    commentId: string,
+    payload: UpdateDraftCommentRequest
+  ): Promise<DraftComment> {
+    return apiClient<DraftComment>(`/drafts/${draftId}/comments/${commentId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * DELETE /api/v1/drafts/{id}/comments/{commentId}
+   * Delete comment permanently.
+   */
+  async deleteComment(draftId: string, commentId: string): Promise<void> {
+    return apiClient<void>(`/drafts/${draftId}/comments/${commentId}`, {
+      method: "DELETE",
+    });
+  },
 };
+

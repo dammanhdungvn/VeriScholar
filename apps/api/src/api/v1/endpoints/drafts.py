@@ -11,15 +11,19 @@ from api.schemas.draft import (
     AtomicClaimResponse,
     CompileDraftResponse,
     CreateDraftAssetRequest,
+    CreateDraftCommentRequest,
     CreateDraftRequest,
     DraftAssetListResponse,
     DraftAssetResponse,
     DraftAssistRequest,
     DraftAssistResponse,
+    DraftCommentListResponse,
+    DraftCommentResponse,
     DraftResponse,
     DraftShareRequest,
     DraftShareResponse,
     LatexSyntaxErrorResponse,
+    UpdateDraftCommentRequest,
     UpdateDraftRequest,
     VerifyFactsRequest,
     VerifyFactsResponse,
@@ -917,3 +921,196 @@ async def get_draft_share(
             },
         )
     return SingleResponseEnvelope(data=settings)
+
+
+# ==============================================================================
+# Peer Review Comments & Annotations Endpoints (/drafts/{id}/comments) - PRD §3.2
+# ==============================================================================
+
+
+@router.post(
+    "/{id}/comments",
+    response_model=SingleResponseEnvelope[DraftCommentResponse],
+    status_code=status.HTTP_201_CREATED,
+    summary="Thêm bình luận phản biện hoặc trả lời trên bản thảo (PRD §3.2)",
+    responses={
+        201: {"description": "Tạo bình luận thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {
+            "model": ErrorResponse,
+            "description": "Không có quyền bình luận (ví dụ: vai trò viewer).",
+        },
+        404: {"model": ErrorResponse, "description": "Bản thảo hoặc bình luận cha không tồn tại."},
+    },
+)
+async def create_draft_comment(
+    id: UUID,
+    request: CreateDraftCommentRequest,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftCommentResponse]:
+    author_name = current_user.full_name or current_user.email
+    try:
+        comment = await draft_service.create_comment(
+            user_id=current_user.id,
+            draft_id=id,
+            request=request,
+            author_name=author_name,
+            user_email=current_user.email,
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RESOURCE_NOT_FOUND",
+                "message": str(exc),
+            },
+        ) from exc
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+                "action": "Commenter, Editor, or Owner role required to post comments.",
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(data=comment)
+
+
+@router.get(
+    "/{id}/comments",
+    response_model=SingleResponseEnvelope[DraftCommentListResponse],
+    summary="Lấy danh sách bình luận phản biện của bản thảo (PRD §3.2)",
+    responses={
+        200: {"description": "Truy xuất danh sách bình luận thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        404: {
+            "model": ErrorResponse,
+            "description": "Bản thảo không tồn tại hoặc không có quyền truy cập.",
+        },
+    },
+)
+async def list_draft_comments(
+    id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftCommentListResponse]:
+    try:
+        comments_list = await draft_service.list_comments(
+            user_id=current_user.id,
+            draft_id=id,
+            user_email=current_user.email,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(data=comments_list)
+
+
+@router.patch(
+    "/{id}/comments/{comment_id}",
+    response_model=SingleResponseEnvelope[DraftCommentResponse],
+    summary="Cập nhật nội dung hoặc trạng thái giải quyết của bình luận",
+    responses={
+        200: {"description": "Cập nhật bình luận thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {"model": ErrorResponse, "description": "Không có quyền sửa đổi bình luận."},
+        404: {"model": ErrorResponse, "description": "Bản thảo hoặc bình luận không tồn tại."},
+    },
+)
+async def update_draft_comment(
+    id: UUID,
+    comment_id: UUID,
+    request: UpdateDraftCommentRequest,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftCommentResponse]:
+    try:
+        updated = await draft_service.update_comment(
+            user_id=current_user.id,
+            draft_id=id,
+            comment_id=comment_id,
+            request=request,
+            user_email=current_user.email,
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RESOURCE_NOT_FOUND",
+                "message": str(exc),
+            },
+        ) from exc
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(data=updated)
+
+
+@router.delete(
+    "/{id}/comments/{comment_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Xóa bình luận phản biện (chỉ tác giả hoặc chủ bản thảo)",
+    responses={
+        204: {"description": "Xóa bình luận thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {
+            "model": ErrorResponse,
+            "description": "Chỉ tác giả bình luận hoặc chủ bản thảo mới có quyền xóa.",
+        },
+        404: {"model": ErrorResponse, "description": "Bản thảo hoặc bình luận không tồn tại."},
+    },
+)
+async def delete_draft_comment(
+    id: UUID,
+    comment_id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> Response:
+    try:
+        await draft_service.delete_comment(
+            user_id=current_user.id,
+            draft_id=id,
+            comment_id=comment_id,
+            user_email=current_user.email,
+        )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "RESOURCE_NOT_FOUND",
+                "message": str(exc),
+            },
+        ) from exc
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
