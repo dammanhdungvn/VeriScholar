@@ -59,8 +59,11 @@ VeriScholar là nền tảng hỗ trợ nghiên cứu khoa học chuyên sâu v�
 2. **`DEFECT-02` (Ưu tiên: MEDIUM — Backend & AI) — TRẠNG THÁI: CLOSED & VERIFIED (Commit `4968e95`):**
    - **Tệp:** `packages/core/src/core/services/safe_nli_adapter.py`, `models/nli/cross-encoder-nli-deberta-v3-small/`
    - **Kết quả:** Reviewer độc lập thẩm định đạt `VERDICT: PASS` tại `docs/handoff/defect-02-review.md`. 15/15 tests pass (0 skipped, 0 failed), latency CPU p50: 47.83ms (< 50ms SLA), SciFact benchmark passed.
-3. **`DEFECT-03` (Ưu tiên: SYSTEM / INFRA — DevOps) — TRẠNG THÁI: FAIL_CLOSED_VERIFIED:**
-   - **Mô tả:** Cơ chế Fail-Closed của `SandboxRuntimeCapabilityProbe` đã được xác minh toàn diện. Host thiếu unprivileged user namespace sẽ nâng ngoại lệ an toàn `SandboxInfrastructureUnavailableError`, kiên quyết không thực thi untrusted LaTeX trực tiếp trên host.
+3. **`TASK-BE-FACT-CHECKER-NEURAL-INTEGRATION` (Backend & AI Integration) — TRẠNG THÁI: CLOSED & VERIFIED (Commit `83b6505`):**
+   - **Tệp:** `packages/core/src/core/services/safe_fact_checker.py`, `safe_nli_adapter.py`, `apps/api/src/api/services/draft_service.py`
+   - **Kết quả:** Reviewer độc lập thẩm định Vòng 2 đạt `VERDICT: PASS` tại `docs/handoff/fact-checker-integration-review.md`. Tích hợp hoàn chỉnh `SafeNliEngineAdapter` vào `POST /api/v1/drafts/{id}/verify-facts`, cơ chế try-except exception fallback an toàn sang heuristic, early-exit latency optimization, và 28/28 tests passed.
+4. **`DEFECT-03` (Ưu tiên: SYSTEM / INFRA — DevOps) — TRẠNG THÁI: FAIL_CLOSED_VERIFIED:**
+   - **Mô tả:** Cơ chế Fail-Closed của `SandboxRuntimeCapabilityProbe` đã được xác minh toàn diện. Host thiếu unprivileged user namespace sẽ nâng ngoại lệ an toàn `SandboxInfrastructureUnavailableError`, kiên quyết không thực thi untrusted LaTeX trực tiếp trên host. Biên dịch nội bộ Tectonic CLI 0.17.0 hoạt động 100% xanh.
 
 ---
 
