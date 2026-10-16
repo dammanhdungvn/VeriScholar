@@ -121,8 +121,9 @@ pnpm --prefix apps/web test
 
 Toàn bộ tài liệu nghiệm thu kỹ thuật chính thức được lưu trữ trong thư mục `docs/handoff/`:
 
-1. [`module3-acceptance-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/module3-acceptance-review.md): Báo cáo thẩm định chất lượng độc lập nghiệm thu Module 3 (PRD §3.3) — **VERDICT: PASS**.
-2. [`fact-checker-integration-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/fact-checker-integration-review.md): Báo cáo nghiệm thu tích hợp SAFE Fact-Checker & Neural NLI Adapter — **VERDICT: PASS**.
+1. [`uat-monitoring-audit-certification.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/uat-monitoring-audit-certification.md): Bản thẩm định và chứng nhận kỹ thuật toàn diện 5 Work Packages (UAT Environment, Deep Langfuse Tracing, 5.6-luna Reasoning, Error Triage, AI Benchmarks) — **VERDICT: PASS — CERTIFIED FOR UAT**.
+2. [`module3-acceptance-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/module3-acceptance-review.md): Báo cáo thẩm định chất lượng độc lập nghiệm thu Module 3 (PRD §3.3) — **VERDICT: PASS**.
+3. [`fact-checker-integration-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/fact-checker-integration-review.md): Báo cáo nghiệm thu tích hợp SAFE Fact-Checker & Neural NLI Adapter — **VERDICT: PASS**.
 3. [`defect-01-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/defect-01-review.md): Báo cáo nghiệm thu bản vá DEFECT-01 (Frontend OCC Local Drift) — **VERDICT: PASS**.
 4. [`defect-02-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/defect-02-review.md): Báo cáo nghiệm thu bản vá DEFECT-02 (Offline ONNX NLI Engine) — **VERDICT: PASS**.
 5. [`module2-milestone1-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/module2-milestone1-review.md): Báo cáo đánh giá độc lập ban đầu của Milestone 1 Module 2 (tài liệu lịch sử mốc xuất phát).
