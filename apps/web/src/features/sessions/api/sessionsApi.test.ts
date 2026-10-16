@@ -130,4 +130,74 @@ describe("sessionsApi", () => {
     expect(options?.headers?.["X-Request-ID"]).toBe("custom-trace-req-888");
     expect(options?.headers?.["Idempotency-Key"]).toBe("idemp-key-1");
   });
+
+  it("ingests open-access references via POST /sessions/{id}/references:ingest (Module 3)", async () => {
+    const mockIngestResponse = {
+      session_id: "session-1",
+      ingested_documents: [
+        {
+          id: "doc-new-1",
+          title: "Attention Is All You Need",
+          filename: "attention.pdf",
+        },
+      ],
+      total_documents_in_session: 2,
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: mockIngestResponse,
+      }),
+    });
+
+    const result = await sessionsApi.ingestReferences("session-1", "doc-source", [1, 3]);
+    expect(result.session_id).toBe("session-1");
+    expect(result.ingested_documents).toHaveLength(1);
+    expect(result.total_documents_in_session).toBe(2);
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/sessions/session-1/references:ingest"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          document_id: "doc-source",
+          selected_ref_indices: [1, 3],
+        }),
+      })
+    );
+  });
+
+  it("fetches citation graph via GET /sessions/{id}/citation-graph (Module 3)", async () => {
+    const mockGraph = {
+      nodes: [
+        { id: "doc-1", title: "Paper 1", is_session_doc: true },
+        { id: "doc-2", title: "Paper 2", is_session_doc: false },
+      ],
+      edges: [
+        { source: "doc-1", target: "doc-2", relationship: "CITES", confidence: 0.95 },
+      ],
+      topological_order: ["doc-2", "doc-1"],
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: mockGraph,
+      }),
+    });
+
+    const result = await sessionsApi.getCitationGraph("session-1");
+    expect(result.nodes).toHaveLength(2);
+    expect(result.edges[0].relationship).toBe("CITES");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/sessions/session-1/citation-graph"),
+      expect.anything()
+    );
+  });
 });

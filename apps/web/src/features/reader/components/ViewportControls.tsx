@@ -11,6 +11,7 @@ import {
   Columns2,
   Maximize2,
   Minimize2,
+  BookMarked,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -35,6 +36,7 @@ interface ViewportControlsProps {
   onToggleThumbnails?: () => void;
   isZenPdf?: boolean;
   onToggleZenPdf?: () => void;
+  onOpenReferences?: () => void;
 }
 
 export function ViewportControls({
@@ -54,6 +56,7 @@ export function ViewportControls({
   onToggleThumbnails: propOnToggleThumbnails,
   isZenPdf,
   onToggleZenPdf,
+  onOpenReferences,
 }: ViewportControlsProps) {
   // Store fallback hooks
   const storeReadingMode = useReaderStore((s) => s.readingMode);
@@ -234,6 +237,23 @@ export function ViewportControls({
             <span className="hidden xl:inline">Hai trang</span>
           </button>
         </div>
+
+        {onOpenReferences && (
+          <>
+            <div className="w-[1px] h-4 bg-hairline dark:bg-[#332f29]" />
+            <button
+              type="button"
+              data-testid="open-references-btn"
+              onClick={onOpenReferences}
+              aria-label="Trích xuất Tài liệu Tham khảo"
+              title="Trích xuất & Mở rộng Tài liệu Tham khảo (Module 3)"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-md border border-[#e5dfd4] dark:border-[#38332c] text-muted hover:text-ink hover:bg-white dark:hover:bg-[#252320] transition-colors font-sans cursor-pointer text-[11px] shadow-2xs"
+            >
+              <BookMarked className="w-3.5 h-3.5 text-primary" />
+              <span className="hidden sm:inline font-medium">Trích xuất Tài liệu Tham khảo</span>
+            </button>
+          </>
+        )}
 
         {onExportPdf && (
           <>

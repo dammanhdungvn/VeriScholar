@@ -19,6 +19,8 @@ import type {
   SessionChatMessageRequest,
   SessionTurnItem,
   CitationItemSchema,
+  SessionIngestResponse,
+  CitationGraphData,
 } from "@/types/session";
 
 export interface ListSessionsParams {
@@ -287,5 +289,34 @@ export const sessionsApi = {
     return apiClientBlob(`/sessions/${sessionId}:export-bundle`, {
       method: "POST",
     });
+  },
+
+  /**
+   * 57. POST /api/v1/sessions/{id}/references:ingest
+   * Nạp các bài báo tham khảo Open-Access vào phiên đọc sâu (Giới hạn tối đa 5 bài) (Module 3)
+   */
+  async ingestReferences(
+    sessionId: string,
+    documentId: string,
+    refIndices: number[]
+  ): Promise<SessionIngestResponse> {
+    return apiClient<SessionIngestResponse>(
+      `/sessions/${sessionId}/references:ingest`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          document_id: documentId,
+          selected_ref_indices: refIndices,
+        }),
+      }
+    );
+  },
+
+  /**
+   * 58. GET /api/v1/sessions/{id}/citation-graph
+   * Lấy đồ thị trích dẫn đa bài của phiên (Cycle Breaking & Max-Hop <= 2) (Module 3)
+   */
+  async getCitationGraph(sessionId: string): Promise<CitationGraphData> {
+    return apiClient<CitationGraphData>(`/sessions/${sessionId}/citation-graph`);
   },
 };

@@ -21,6 +21,7 @@ import type {
   DocumentChunkDetailData,
   DocumentSummaryData,
   DocumentStarResponseData,
+  ResolvedReferenceCard,
 } from "@/types/document";
 
 export interface StreamSummaryCallbacks {
@@ -195,6 +196,19 @@ export const documentsApi = {
       {
         method: "POST",
         body: JSON.stringify({ force_reextract: forceReextract }),
+      }
+    );
+  },
+
+  /**
+   * 9b. POST /api/v1/documents/{id}/references:resolve
+   * Phân giải danh mục tài liệu tham khảo với Exa và các nguồn học thuật (Module 3)
+   */
+  async resolveReferences(documentId: string): Promise<ResolvedReferenceCard[]> {
+    return apiClient<ResolvedReferenceCard[]>(
+      `/documents/${documentId}/references:resolve`,
+      {
+        method: "POST",
       }
     );
   },

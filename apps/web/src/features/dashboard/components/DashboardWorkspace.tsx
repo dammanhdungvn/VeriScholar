@@ -855,6 +855,7 @@ export function DashboardWorkspace({
           isExportingPdf={isExportingPdf}
           isZenPdf={zenMode === "pdf"}
           onToggleZenPdf={() => setZenMode(zenMode === "pdf" ? "none" : "pdf")}
+          onOpenReferences={isRealDocument ? () => setIsRefModalOpen(true) : undefined}
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
@@ -1620,6 +1621,8 @@ export function DashboardWorkspace({
         onClose={() => setIsRefModalOpen(false)}
         references={documentReferences?.references || []}
         onReextract={handleReextractReferences}
+        documentId={activeDocumentId && activeDocumentId !== "doc-default" ? activeDocumentId : ""}
+        sessionId={activeSessionId}
       />
 
       {/* Parse Configuration Modal */}
