@@ -28,10 +28,8 @@
       "role": "Lead Quality & Security Reviewer",
       "agent": "agy",
       "pane_id": "w2:p2",
-      "active_task_id": "RE-REVIEW-DEFECT-01-OCC-V2",
-      "contract_file": ".agents/teamwork/reviewer_contract_defect_01_v2.md",
-      "report_file": "docs/handoff/defect-01-review.md",
-      "status": "RE_REVIEW_IN_PROGRESS"
+      "status": "IDLE",
+      "last_review": "DEFECT-02 review passed (VERDICT: PASS)"
     },
     "w2:p3": {
       "name": "backend",
@@ -39,15 +37,15 @@
       "agent": "agy",
       "pane_id": "w2:p3",
       "status": "IDLE",
-      "waiting_for": "Approval for NLI model weights download"
+      "last_delivery": "DEFECT-02 fix committed at 4968e95"
     },
     "w2:p4": {
       "name": "frontend",
       "role": "Senior Frontend Specialist",
       "agent": "agy",
       "pane_id": "w2:p4",
-      "active_task_id": "TASK-FE-FIX-DEFECT-01-V2",
-      "status": "SELF_REVIEW_PASSED"
+      "status": "IDLE",
+      "last_delivery": "DEFECT-01 fix committed at b8ace53"
     }
   },
   "defects": [
@@ -57,9 +55,11 @@
       "severity": "HIGH",
       "owner": "frontend",
       "component": "apps/web/src/features/writing/components/WritingWorkspace.tsx",
-      "status": "UNDER_REVIEW",
+      "status": "CLOSED_VERIFIED",
       "reviewer": "reviewer",
-      "active_review_task": "REVIEW-DEFECT-01-OCC"
+      "verdict": "PASS",
+      "commit": "b8ace53",
+      "report": "docs/handoff/defect-01-review.md"
     },
     {
       "id": "DEFECT-02",
@@ -67,7 +67,11 @@
       "severity": "MEDIUM",
       "owner": "backend",
       "component": "packages/core/src/core/services/safe_nli_adapter.py",
-      "status": "PENDING_DOWNLOAD_APPROVAL",
+      "status": "CLOSED_VERIFIED",
+      "reviewer": "reviewer",
+      "verdict": "PASS",
+      "commit": "4968e95",
+      "report": "docs/handoff/defect-02-review.md",
       "closure_condition": "Download INT8 ONNX weights into models/nli/ and pass test_safe_nli_neural.py."
     },
     {
@@ -82,17 +86,18 @@
   ],
   "baseline_metrics": {
     "backend_pytest": {
-      "passed": 570,
-      "skipped": 18,
+      "passed": 579,
+      "skipped": 9,
       "failed": 0,
-      "duration_seconds": 43.91
+      "duration_seconds": 60.82
     },
     "frontend_vitest": {
-      "passed": 245,
+      "passed": 249,
       "failed": 0,
       "suites": 49
     },
     "frontend_tsc": "0 errors",
-    "frontend_oxlint": "0 errors, 0 warnings"
+    "frontend_oxlint": "0 errors, 0 warnings",
+    "backend_ruff": "0 errors, 255 files formatted"
   }
 }
