@@ -1,191 +1,100 @@
 import { apiClient } from "@/lib/api-client";
 import type {
+  AuthResponse,
   LoginCredentials,
   RegisterPayload,
-  AuthResponse,
   UserProfile,
-  AuthTokens,
+  ChangePasswordPayload,
+  UpdateProfilePayload,
+  PasswordResetRequest,
+  PasswordResetConfirm,
+  AuthMessageResponse,
 } from "@/types/auth";
-import { mockLogin, mockRegister } from "../data/mock-auth";
-
-interface BackendUser {
-  id: string;
-  email: string;
-  full_name: string | null;
-  role: string;
-  is_active: boolean;
-  token_quota?: number;
-  tokens_used?: number;
-  storage_quota_bytes?: number;
-  storage_used_bytes?: number;
-  created_at: string;
-}
-
-export interface QuotaStatusResponse {
-  tokens_used: number;
-  token_quota: number;
-  tokens_remaining: number;
-  storage_used_bytes: number;
-  storage_quota_bytes: number;
-  percent_token_used: number;
-}
-
-interface BackendTokenResponse {
-  access_token: string;
-  refresh_token: string;
-  token_type: string;
-  expires_in: number;
-  user: BackendUser;
-}
-
-function mapBackendUser(u?: BackendUser | null, fallbackEmail?: string): UserProfile {
-  if (!u) {
-    const effectiveEmail = fallbackEmail || "scholar@verischolar.ai";
-    return {
-      id: "00000000-0000-0000-0000-000000000002",
-      email: effectiveEmail,
-      full_name: effectiveEmail.split("@")[0],
-      role: "researcher",
-      is_verified: true,
-      token_quota: 200000,
-      tokens_used: 0,
-      storage_quota_bytes: 1073741824,
-      storage_used_bytes: 0,
-      created_at: new Date().toISOString(),
-    };
-  }
-  return {
-    id: u.id,
-    email: u.email,
-    full_name: u.full_name || u.email.split("@")[0],
-    role: (u.role as UserProfile["role"]) || "researcher",
-    is_verified: u.is_active,
-    token_quota: u.token_quota,
-    tokens_used: u.tokens_used,
-    storage_quota_bytes: u.storage_quota_bytes,
-    storage_used_bytes: u.storage_used_bytes,
-    created_at: u.created_at,
-  };
-}
 
 export const authApi = {
   /**
    * POST /api/v1/auth/login
+   * Xác thực người dùng bằng email và mật khẩu, trả về UserProfile và AuthTokens
    */
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    if (import.meta.env.VITE_ENABLE_MOCK_AUTH === "true") {
-      return mockLogin(credentials);
-    }
-
-    try {
-      const res = await apiClient<BackendTokenResponse>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          email: credentials.email,
-          password: credentials.password,
-        }),
-      });
-
-      const user = mapBackendUser(res.user, credentials.email);
-      const tokens: AuthTokens = {
-        access_token: res.access_token,
-        refresh_token: res.refresh_token,
-        token_type: "bearer",
-        expires_in: res.expires_in,
-      };
-
-      return { user, tokens };
-    } catch (err) {
-      // In development, fallback to mock if backend server is not yet booted
-      if (import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL) {
-        return mockLogin(credentials);
-      }
-      throw err;
-    }
+    return apiClient<AuthResponse>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify(credentials),
+    });
   },
 
   /**
    * POST /api/v1/auth/register
+   * Đăng ký tài khoản học thuật mới
    */
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    if (import.meta.env.VITE_ENABLE_MOCK_AUTH === "true") {
-      return mockRegister(payload);
-    }
-
-    try {
-      await apiClient<BackendUser>("/auth/register", {
-        method: "POST",
-        body: JSON.stringify({
-          email: payload.email,
-          password: payload.password,
-          full_name: payload.full_name,
-          role: "researcher",
-        }),
-      });
-
-      // After registration, authenticate immediately to get tokens
-      return await this.login({
-        email: payload.email,
-        password: payload.password,
-        remember_me: true,
-      });
-    } catch (err) {
-      if (import.meta.env.DEV && !import.meta.env.VITE_API_BASE_URL) {
-        return mockRegister(payload);
-      }
-      throw err;
-    }
+    return apiClient<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 
   /**
-   * POST /api/v1/auth/refresh
+   * POST /api/v1/auth/logout
+   * Thu hồi phiên đăng nhập hiện tại trên máy chủ
    */
-  async refresh(refreshToken: string): Promise<AuthTokens> {
-    const res = await apiClient<BackendTokenResponse>("/auth/refresh", {
+  async logout(): Promise<AuthMessageResponse | void> {
+    return apiClient<AuthMessageResponse | void>("/auth/logout", {
       method: "POST",
-      body: JSON.stringify({ refresh_token: refreshToken }),
     });
-
-    return {
-      access_token: res.access_token,
-      refresh_token: res.refresh_token,
-      token_type: "bearer",
-      expires_in: res.expires_in,
-    };
   },
 
   /**
    * GET /api/v1/auth/me
+   * Lấy thông tin hồ sơ người dùng hiện tại
    */
   async getMe(): Promise<UserProfile> {
-    const res = await apiClient<BackendUser>("/auth/me", { method: "GET" });
-    return mapBackendUser(res);
-  },
-
-  /**
-   * POST /api/v1/auth/google
-   */
-  async loginWithGoogle(idToken: string): Promise<AuthResponse> {
-    const res = await apiClient<BackendTokenResponse>("/auth/google", {
-      method: "POST",
-      body: JSON.stringify({ id_token: idToken }),
+    return apiClient<UserProfile>("/auth/me", {
+      method: "GET",
     });
-
-    const user = mapBackendUser(res.user);
-    const tokens: AuthTokens = {
-      access_token: res.access_token,
-      refresh_token: res.refresh_token,
-      token_type: "bearer",
-      expires_in: res.expires_in,
-    };
-
-    return { user, tokens };
   },
 
   /**
-   * GET /api/v1/auth/quota
+   * PATCH /api/v1/auth/me
+   * Cập nhật thông tin hồ sơ học giả (full_name, institution, academic_rank, orcid_id)
    */
-  async getQuota(): Promise<QuotaStatusResponse> {
-    return await apiClient<QuotaStatusResponse>("/auth/quota", { method: "GET" });
+  async updateProfile(payload: UpdateProfilePayload): Promise<UserProfile> {
+    return apiClient<UserProfile>("/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * POST /api/v1/auth/change-password
+   * Thay đổi mật khẩu người dùng đang đăng nhập
+   */
+  async changePassword(payload: ChangePasswordPayload): Promise<AuthMessageResponse> {
+    return apiClient<AuthMessageResponse>("/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * POST /api/v1/auth/forgot-password
+   * Yêu cầu gửi email khôi phục mật khẩu
+   */
+  async forgotPassword(payload: PasswordResetRequest): Promise<AuthMessageResponse> {
+    return apiClient<AuthMessageResponse>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * POST /api/v1/auth/reset-password
+   * Xác nhận đặt lại mật khẩu bằng token
+   */
+  async resetPassword(payload: PasswordResetConfirm): Promise<AuthMessageResponse> {
+    return apiClient<AuthMessageResponse>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
 };

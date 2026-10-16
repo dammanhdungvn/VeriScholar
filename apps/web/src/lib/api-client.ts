@@ -9,14 +9,26 @@ export class ApiError extends Error {
   readonly field?: string | null;
   readonly action?: string | null;
   readonly status: number;
+  readonly requestId?: string | null;
+  readonly traceId?: string | null;
 
-  constructor(message: string, code: string, field?: string | null, action?: string | null, status = 400) {
+  constructor(
+    message: string,
+    code: string,
+    field?: string | null,
+    action?: string | null,
+    status = 400,
+    requestId?: string | null,
+    traceId?: string | null
+  ) {
     super(message);
     this.name = "ApiError";
     this.code = code;
     this.field = field;
     this.action = action;
     this.status = status;
+    this.requestId = requestId;
+    this.traceId = traceId;
   }
 }
 
@@ -37,10 +49,21 @@ export function resolveApiUrl(endpoint: string): string {
   return `${API_BASE_URL}${API_PREFIX}${cleanEndpoint}`;
 }
 
+export function generateRequestId(customId?: string): string {
+  if (customId) return customId;
+  return typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
 function buildHeaders(options: RequestInit = {}): Headers {
   const headers = new Headers(options.headers || {});
   if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
     headers.set("Content-Type", "application/json");
+  }
+
+  if (!headers.has("X-Request-ID")) {
+    headers.set("X-Request-ID", generateRequestId());
   }
 
   if (typeof window !== "undefined") {
@@ -57,6 +80,7 @@ function buildHeaders(options: RequestInit = {}): Headers {
   return headers;
 }
 
+
 async function handleResponseError(response: Response): Promise<never> {
   let errorDetail: ErrorResponse | null = null;
   try {
@@ -69,8 +93,13 @@ async function handleResponseError(response: Response): Promise<never> {
   const message = errorDetail?.error?.message || response.statusText || "Request failed";
   const field = errorDetail?.error?.field;
   const action = errorDetail?.error?.action;
+  const requestId =
+    errorDetail?.meta?.request_id ||
+    response.headers.get("x-request-id") ||
+    response.headers.get("X-Request-ID");
+  const traceId = errorDetail?.meta?.trace_id;
 
-  throw new ApiError(message, code, field, action, response.status);
+  throw new ApiError(message, code, field, action, response.status, requestId, traceId);
 }
 
 /**

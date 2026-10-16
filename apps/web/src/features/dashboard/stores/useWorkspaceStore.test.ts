@@ -57,4 +57,50 @@ describe("useWorkspaceStore (Lazy Session & Ingestion State)", () => {
     expect(state.documentStatus).toBe("error");
     expect(state.errorMessage).toBe("Tệp tải lên không có cấu trúc bài báo nghiên cứu khoa học.");
   });
+
+  it("manages splitRatio, zenMode, and activeContextChip for Module 1 Deep Reader", () => {
+    // Initial defaults
+    const initialState = useWorkspaceStore.getState();
+    expect(initialState.splitRatio).toBe(50);
+    expect(initialState.zenMode).toBe("none");
+    expect(initialState.activeContextChip).toBeNull();
+
+    // Split ratio clamped within 20 - 80%
+    useWorkspaceStore.getState().setSplitRatio(65);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(65);
+
+    useWorkspaceStore.getState().setSplitRatio(10);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(20);
+
+    useWorkspaceStore.getState().setSplitRatio(95);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(80);
+
+    // Zen mode toggles
+    useWorkspaceStore.getState().setZenMode("pdf");
+    expect(useWorkspaceStore.getState().zenMode).toBe("pdf");
+
+    useWorkspaceStore.getState().setZenMode("workspace");
+    expect(useWorkspaceStore.getState().zenMode).toBe("workspace");
+
+    useWorkspaceStore.getState().setZenMode("none");
+    expect(useWorkspaceStore.getState().zenMode).toBe("none");
+
+    // Active context chip
+    useWorkspaceStore.getState().setActiveContextChip({
+      text: "Positional encoding formula",
+      pageNumber: 3,
+      bbox: [0.1, 0.2, 0.8, 0.4, 3],
+      documentTitle: "Attention Is All You Need",
+    });
+
+    const chip = useWorkspaceStore.getState().activeContextChip;
+    expect(chip).not.toBeNull();
+    expect(chip?.text).toBe("Positional encoding formula");
+    expect(chip?.pageNumber).toBe(3);
+    expect(chip?.bbox).toEqual([0.1, 0.2, 0.8, 0.4, 3]);
+
+    // Clearing chip
+    useWorkspaceStore.getState().setActiveContextChip(null);
+    expect(useWorkspaceStore.getState().activeContextChip).toBeNull();
+  });
 });

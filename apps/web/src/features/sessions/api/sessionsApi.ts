@@ -4,6 +4,7 @@ import {
   apiClientWithMeta,
   apiClientBlob,
   resolveApiUrl,
+  generateRequestId,
   type ApiResponseWithHeaders,
   type ApiPaginatedResult,
 } from "@/lib/api-client";
@@ -18,6 +19,8 @@ import type {
   SessionChatMessageRequest,
   SessionTurnItem,
   CitationItemSchema,
+  SessionIngestResponse,
+  CitationGraphData,
 } from "@/types/session";
 
 export interface ListSessionsParams {
@@ -34,6 +37,7 @@ export interface ListSessionMessagesParams {
 export interface StreamEventCallbacks {
   onStart?: (data: { turn_id: string; message_id: string; created_at: string }) => void;
   onCitations?: (citations: CitationItemSchema[]) => void;
+  onReasoning?: (thought: string) => void;
   onToken?: (token: string) => void;
   onDone?: (data: { turn_id: string; message_id: string; total_tokens: number; finish_reason: string }) => void;
   onError?: (error: Error) => void;
@@ -160,12 +164,15 @@ export const sessionsApi = {
     sessionId: string,
     data: SessionChatMessageRequest,
     callbacks: StreamEventCallbacks,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    requestId?: string
   ): Promise<void> {
     const url = resolveApiUrl(`/sessions/${sessionId}/messages`);
+    const finalRequestId = generateRequestId(requestId);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "X-Request-ID": finalRequestId,
     };
 
     if (idempotencyKey) {
@@ -204,6 +211,9 @@ export const sessionsApi = {
               break;
             case "citations":
               callbacks.onCitations?.(parsed.citations || []);
+              break;
+            case "reasoning":
+              callbacks.onReasoning?.(parsed.thought || "");
               break;
             case "token":
               callbacks.onToken?.(parsed.token || "");
@@ -283,5 +293,34 @@ export const sessionsApi = {
     return apiClientBlob(`/sessions/${sessionId}:export-bundle`, {
       method: "POST",
     });
+  },
+
+  /**
+   * 57. POST /api/v1/sessions/{id}/references:ingest
+   * Nạp các bài báo tham khảo Open-Access vào phiên đọc sâu (Giới hạn tối đa 5 bài) (Module 3)
+   */
+  async ingestReferences(
+    sessionId: string,
+    documentId: string,
+    refIndices: number[]
+  ): Promise<SessionIngestResponse> {
+    return apiClient<SessionIngestResponse>(
+      `/sessions/${sessionId}/references:ingest`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          document_id: documentId,
+          selected_ref_indices: refIndices,
+        }),
+      }
+    );
+  },
+
+  /**
+   * 58. GET /api/v1/sessions/{id}/citation-graph
+   * Lấy đồ thị trích dẫn đa bài của phiên (Cycle Breaking & Max-Hop <= 2) (Module 3)
+   */
+  async getCitationGraph(sessionId: string): Promise<CitationGraphData> {
+    return apiClient<CitationGraphData>(`/sessions/${sessionId}/citation-graph`);
   },
 };

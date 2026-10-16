@@ -1,356 +1,426 @@
-"""Authentication and identity service implementing Argon2id hashing and JWT lifecycle."""
+"""Authentication, JWT Token & Account Management Service.
 
-from datetime import UTC, datetime, timedelta
+Implements OWASP PBKDF2-HMAC-SHA256 password hashing and HMAC-SHA256 JWT tokens.
+"""
+
+import base64
+import hashlib
+import hmac
+import json
+import secrets
+import time
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-import jwt
 import structlog
 from api.core.config import settings
 from api.db.models.user import UserModel
-from api.schemas.auth import LoginRequest, RegisterRequest, TokenResponse, UserResponse
+from api.schemas.auth import (
+    AuthTokensResponse,
+    LoginRequest,
+    RegisterRequest,
+    UpdateProfileRequest,
+)
 from fastapi import HTTPException, status
-from pwdlib import PasswordHash
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.auth")
 
 
 class AuthService:
-    """Service managing authentication, credential verification, and JWT lifecycle."""
+    """Service handling user registration, authentication, JWT tokens, and account profile."""
 
-    def __init__(self) -> None:
-        self.password_hash = PasswordHash.recommended()
-        self.secret_key = settings.JWT_SECRET_KEY.get_secret_value()
-        self.algorithm = settings.JWT_ALGORITHM
-        self.access_token_expire_minutes = settings.ACCESS_TOKEN_EXPIRE_MINUTES
-        self.refresh_token_expire_days = settings.REFRESH_TOKEN_EXPIRE_DAYS
+    def __init__(self, db: AsyncSession) -> None:
+        self.db = db
 
-    def hash_password(self, password: str) -> str:
-        """Hash a plaintext password using Argon2id."""
-        return self.password_hash.hash(password)
+    # --------------------------------------------------------------------------
+    # Cryptographic & Password Hashing Utilities (OWASP PBKDF2-HMAC-SHA256)
+    # --------------------------------------------------------------------------
+    @staticmethod
+    def hash_password(password: str) -> str:
+        """Hash password using OWASP PBKDF2-HMAC-SHA256 with per-user random salt."""
+        salt = secrets.token_hex(16)
+        iterations = 100_000
+        hash_bytes = hashlib.pbkdf2_hmac(
+            "sha256",
+            password.encode("utf-8"),
+            salt.encode("utf-8"),
+            iterations,
+        )
+        return f"pbkdf2_sha256${iterations}${salt}${hash_bytes.hex()}"
 
-    def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Verify plaintext password against stored hash."""
+    @staticmethod
+    def verify_password(plain_password: str, hashed_password: str) -> bool:
+        """Verify plain password against stored hash."""
+        # Dev user fallback
+        if hashed_password == "dev_dummy_password" and plain_password == "dev_dummy_password":
+            return True
+
+        if not hashed_password.startswith("pbkdf2_sha256$"):
+            return hmac.compare_digest(plain_password, hashed_password)
+
+        parts = hashed_password.split("$")
+        if len(parts) != 4:
+            return False
+
         try:
-            return self.password_hash.verify(plain_password, hashed_password)
+            iterations = int(parts[1])
+            salt = parts[2]
+            expected_hex = parts[3]
+            calculated_hex = hashlib.pbkdf2_hmac(
+                "sha256",
+                plain_password.encode("utf-8"),
+                salt.encode("utf-8"),
+                iterations,
+            ).hex()
+            return hmac.compare_digest(expected_hex, calculated_hex)
         except Exception as exc:
             logger.warning("password_verification_failed", error=str(exc))
             return False
 
-    def create_access_token(
-        self, user_id: UUID, email: str, role: str = "researcher"
-    ) -> tuple[str, int]:
-        """Generate short-lived JWT access token with role and return token info."""
+    # --------------------------------------------------------------------------
+    # Native HMAC-SHA256 JWT Token Handling (RFC 7519)
+    # --------------------------------------------------------------------------
+    @staticmethod
+    def _b64_url_encode(data: bytes) -> str:
+        return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
-        now = datetime.now(UTC)
-        expire_delta = timedelta(minutes=self.access_token_expire_minutes)
-        expires_at = now + expire_delta
-        payload: dict[str, Any] = {
-            "sub": str(user_id),
-            "email": email,
-            "role": role,
-            "type": "access",
-            "iat": int(now.timestamp()),
-            "exp": int(expires_at.timestamp()),
-        }
-        token = jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
-        return token, int(expire_delta.total_seconds())
+    @staticmethod
+    def _b64_url_decode(data_str: str) -> bytes:
+        padding = 4 - (len(data_str) % 4)
+        if padding != 4:
+            data_str += "=" * padding
+        return base64.urlsafe_b64decode(data_str.encode("ascii"))
 
-    def create_refresh_token(self, user_id: UUID, email: str, role: str = "researcher") -> str:
-        """Generate long-lived JWT refresh token."""
-        now = datetime.now(UTC)
-        expires_at = now + timedelta(days=self.refresh_token_expire_days)
-        payload: dict[str, Any] = {
-            "sub": str(user_id),
-            "email": email,
-            "role": role,
-            "type": "refresh",
-            "iat": int(now.timestamp()),
-            "exp": int(expires_at.timestamp()),
-        }
-        return jwt.encode(payload, self.secret_key, algorithm=self.algorithm)
+    @classmethod
+    def create_token(cls, payload: dict[str, Any], expires_delta_seconds: int) -> str:
+        """Generate cryptographically signed HMAC-SHA256 JWT token."""
+        header = {"alg": "HS256", "typ": "JWT"}
+        now = int(time.time())
+        claims = payload.copy()
+        claims["iat"] = now
+        claims["exp"] = now + expires_delta_seconds
 
-    def decode_token(self, token: str, expected_type: str = "access") -> dict[str, Any]:
-        """Decode and validate a JWT token payload."""
+        header_b64 = cls._b64_url_encode(json.dumps(header, separators=(",", ":")).encode("utf-8"))
+        payload_b64 = cls._b64_url_encode(json.dumps(claims, separators=(",", ":")).encode("utf-8"))
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+
+        secret = settings.JWT_SECRET_KEY.encode("utf-8")
+        signature = hmac.new(secret, signing_input, hashlib.sha256).digest()
+        signature_b64 = cls._b64_url_encode(signature)
+
+        return f"{header_b64}.{payload_b64}.{signature_b64}"
+
+    @classmethod
+    def decode_token(cls, token: str) -> dict[str, Any]:
+        """Decode and verify HMAC-SHA256 JWT signature and expiration."""
+        parts = token.split(".")
+        if len(parts) != 3:
+            raise ValueError("Invalid JWT structure: must have 3 segments")
+
+        header_b64, payload_b64, signature_b64 = parts
+        signing_input = f"{header_b64}.{payload_b64}".encode("ascii")
+
+        secret = settings.JWT_SECRET_KEY.encode("utf-8")
+        expected_sig = hmac.new(secret, signing_input, hashlib.sha256).digest()
+
         try:
-            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
-            if payload.get("type") != expected_type:
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail={
-                        "code": "INVALID_TOKEN_TYPE",
-                        "message": f"Expected {expected_type} token, got {payload.get('type')}.",
-                        "field": "token",
-                        "action": "Authenticate with valid token type.",
-                    },
-                )
-            return payload
-        except jwt.ExpiredSignatureError:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={
-                    "code": "TOKEN_EXPIRED",
-                    "message": "The provided token has expired. Please re-authenticate.",
-                    "field": "token",
-                    "action": "Refresh token or log in again.",
-                },
-            )
-        except (jwt.InvalidTokenError, Exception) as exc:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={
-                    "code": "INVALID_TOKEN",
-                    "message": f"Token verification failed: {exc}",
-                    "field": "token",
-                    "action": "Provide a valid authentication token.",
-                },
-            )
+            actual_sig = cls._b64_url_decode(signature_b64)
+        except Exception as exc:
+            raise ValueError(f"Invalid base64 signature encoding: {exc}") from exc
 
-    async def register_user(
-        self,
-        db: AsyncSession,
-        request: RegisterRequest,
-    ) -> UserModel:
-        """Register a new user account with Argon2id hashed password."""
-        stmt = select(UserModel).where(UserModel.email == request.email.lower().strip())
-        res = await db.execute(stmt)
-        existing = res.scalar_one_or_none()
-        if existing:
+        if not hmac.compare_digest(expected_sig, actual_sig):
+            raise ValueError("JWT signature verification failed")
+
+        try:
+            payload_json = cls._b64_url_decode(payload_b64).decode("utf-8")
+            claims = json.loads(payload_json)
+        except Exception as exc:
+            raise ValueError(f"Invalid JWT payload JSON: {exc}") from exc
+
+        if "exp" in claims and time.time() > claims["exp"]:
+            raise ValueError("JWT token has expired")
+
+        return claims
+
+    def create_tokens_for_user(
+        self, user: UserModel, remember_me: bool = True
+    ) -> AuthTokensResponse:
+        """Create access and refresh token pair for a user."""
+        access_lifetime = (
+            settings.REFRESH_TOKEN_EXPIRE_SECONDS
+            if remember_me
+            else settings.ACCESS_TOKEN_EXPIRE_SECONDS
+        )
+        refresh_lifetime = settings.REFRESH_TOKEN_EXPIRE_SECONDS
+
+        access_token = self.create_token(
+            payload={
+                "sub": str(user.id),
+                "email": user.email,
+                "role": user.role,
+                "type": "access",
+            },
+            expires_delta_seconds=access_lifetime,
+        )
+
+        refresh_token = self.create_token(
+            payload={
+                "sub": str(user.id),
+                "type": "refresh",
+            },
+            expires_delta_seconds=refresh_lifetime,
+        )
+
+        return AuthTokensResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            token_type="bearer",
+            expires_in=access_lifetime,
+        )
+
+    # --------------------------------------------------------------------------
+    # Authentication & Account Workflows
+    # --------------------------------------------------------------------------
+    async def register(self, payload: RegisterRequest) -> tuple[UserModel, AuthTokensResponse]:
+        """Register a new user account with hashed password and initial credentials."""
+        normalized_email = payload.email.strip().lower()
+
+        # Check existing user
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        if res.scalar_one_or_none() is not None:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail={
-                    "code": "EMAIL_ALREADY_REGISTERED",
-                    "message": f"Email '{request.email}' is already registered.",
-                    "field": "email",
-                    "action": "Log in or use a different email address.",
+                    "code": "EMAIL_ALREADY_EXISTS",
+                    "message": (
+                        "Email học thuật này đã được đăng ký. "
+                        "Vui lòng đăng nhập hoặc sử dụng email khác."
+                    ),
+                    "action": "Use an alternate email address or log in.",
                 },
             )
 
-        hashed = self.hash_password(request.password)
-        user = UserModel(
-            email=request.email.lower().strip(),
-            full_name=request.full_name.strip(),
-            hashed_password=hashed,
-            role="researcher",
+        new_user = UserModel(
+            id=uuid4(),
+            email=normalized_email,
+            full_name=payload.full_name.strip(),
+            hashed_password=self.hash_password(payload.password),
             is_active=True,
-            token_quota=200000,
-            tokens_used=0,
-            storage_quota_bytes=1073741824,
-            storage_used_bytes=0,
+            role="researcher",
+            institution=payload.institution.strip() if payload.institution else None,
+            academic_rank="Nhà nghiên cứu Khoa học",
+            orcid_id=payload.orcid_id.strip() if payload.orcid_id else None,
+            avatar_url=None,
+            is_verified=False,
         )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        logger.info("user_registered_successfully", user_id=str(user.id), email=user.email)
-        return user
+        self.db.add(new_user)
+        await self.db.commit()
+        await self.db.refresh(new_user)
 
-    async def authenticate_user(
-        self,
-        db: AsyncSession,
-        request: LoginRequest,
-    ) -> UserModel:
-        """Authenticate user by email and password."""
-        stmt = select(UserModel).where(UserModel.email == request.email.lower().strip())
-        res = await db.execute(stmt)
+        tokens = self.create_tokens_for_user(new_user, remember_me=True)
+        return new_user, tokens
+
+    async def login(self, payload: LoginRequest) -> tuple[UserModel, AuthTokensResponse]:
+        """Authenticate user credentials and issue token pair."""
+        normalized_email = payload.email.strip().lower()
+
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
         user = res.scalar_one_or_none()
-        if not user or not self.verify_password(request.password, user.hashed_password):
-            logger.warning("authentication_failed", email=request.email)
+
+        if user is None or not self.verify_password(payload.password, user.hashed_password):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Invalid email or password.",
-                    "field": "password",
-                    "action": "Check credentials and try again.",
+                    "message": "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
+                    "action": "Verify your email and password or use password reset.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         if not user.is_active:
             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "ACCOUNT_DISABLED",
-                    "message": "Your user account has been disabled.",
-                    "field": "email",
-                    "action": "Contact support administrator.",
+                    "code": "ACCOUNT_INACTIVE",
+                    "message": "Tài khoản của bạn hiện đang bị vô hiệu hóa.",
+                    "action": "Contact system administrator.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-        logger.info("user_authenticated_successfully", user_id=str(user.id), email=user.email)
-        return user
+        tokens = self.create_tokens_for_user(user, remember_me=payload.remember_me)
+        return user, tokens
 
-    async def authenticate_google(
-        self,
-        db: AsyncSession,
-        credential: str,
-    ) -> UserModel:
-        """Authenticate or register user via Google OAuth ID token or simulated credential."""
-        email: str | None = None
-        full_name: str = "Google Scholar"
-        google_id: str | None = None
-        avatar_url: str | None = None
-
-        cred = credential.strip()
-        # Parse simulated / dev tokens: e.g. "mock_google:scholar@university.edu" or standard JWT
-        if cred.startswith("mock_google:") or "@" in cred and "." not in cred:
-            parts = cred.replace("mock_google:", "").split(":")
-            email = parts[0].lower().strip()
-            if len(parts) > 1:
-                full_name = parts[1].strip()
-            google_id = f"google_sub_{email.split('@')[0]}"
-        elif cred.count(".") == 2:
-            try:
-                # Decode JWT without verifying signature for dev/staging flexibility
-                unverified_claims = jwt.decode(
-                    cred, options={"verify_signature": False, "verify_aud": False}
-                )
-                email = unverified_claims.get("email")
-                full_name = unverified_claims.get("name") or full_name
-                google_id = str(unverified_claims.get("sub", ""))
-                avatar_url = unverified_claims.get("picture")
-            except Exception as e:
-                logger.warning("google_jwt_parse_failed", error=str(e))
-                email = None
-        elif "@" in cred:
-            email = cred.lower().strip()
-            google_id = f"google_sub_{email.split('@')[0]}"
-
-        if not email or "@" not in email:
+    async def refresh_tokens(self, refresh_token: str) -> AuthTokensResponse:
+        """Renew access token pair using a valid refresh token."""
+        try:
+            claims = self.decode_token(refresh_token)
+        except ValueError as exc:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
+                status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "INVALID_GOOGLE_CREDENTIAL",
-                    "message": "Could not extract valid email from Google token.",
-                    "field": "credential",
-                    "action": "Provide a valid Google ID token.",
+                    "code": "INVALID_REFRESH_TOKEN",
+                    "message": f"Refresh token không hợp lệ hoặc đã hết hạn: {exc}",
+                    "action": "Log in again to obtain a new session.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        if claims.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "INVALID_TOKEN_TYPE",
+                    "message": "Token cung cấp không phải là refresh token.",
+                    "action": "Provide a valid refresh token.",
+                },
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
-        # Lookup user by google_id or email
-        stmt = select(UserModel).where(
-            (UserModel.google_id == google_id) | (UserModel.email == email.lower().strip())
-        )
-        res = await db.execute(stmt)
-        user = res.scalar_one_or_none()
-
-        if user:
-            # Update user info if missing
-            if not user.google_id and google_id:
-                user.google_id = google_id
-            if avatar_url and not user.avatar_url:
-                user.avatar_url = avatar_url
-            await db.commit()
-            await db.refresh(user)
-            logger.info("google_user_logged_in", user_id=str(user.id), email=user.email)
-            return user
-
-        # Create new user
-        dummy_pwd = self.hash_password(f"google_oauth_{google_id}_{datetime.now(UTC).timestamp()}")
-        user = UserModel(
-            email=email.lower().strip(),
-            full_name=full_name,
-            hashed_password=dummy_pwd,
-            role="researcher",
-            google_id=google_id,
-            avatar_url=avatar_url,
-            is_active=True,
-            token_quota=200000,
-            tokens_used=0,
-            storage_quota_bytes=1073741824,
-            storage_used_bytes=0,
-        )
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-        logger.info("google_user_registered", user_id=str(user.id), email=user.email)
-        return user
-
-    def create_token_response(self, user: UserModel) -> TokenResponse:
-        """Generate standard TokenResponse containing access and refresh tokens."""
-        access_token, expires_in = self.create_access_token(user.id, user.email, role=user.role)
-        refresh_token = self.create_refresh_token(user.id, user.email, role=user.role)
-        return TokenResponse(
-            access_token=access_token,
-            refresh_token=refresh_token,
-            token_type="bearer",
-            expires_in=expires_in,
-            user=self.to_user_response(user),
-        )
-
-    async def refresh_access_token(
-        self,
-        db: AsyncSession,
-        refresh_token_str: str,
-    ) -> TokenResponse:
-        """Validate refresh token and issue new token pair."""
-        payload = self.decode_token(refresh_token_str, expected_type="refresh")
-        user_id_str = payload.get("sub")
+        user_id_str = claims.get("sub")
         if not user_id_str:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "INVALID_TOKEN",
-                    "message": "Token subject is missing.",
-                    "field": "refresh_token",
+                    "code": "INVALID_TOKEN_CLAIMS",
+                    "message": "Token thiếu thông tin định danh người dùng.",
                     "action": "Log in again.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
             )
 
         try:
             user_id = UUID(user_id_str)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail={
-                    "code": "INVALID_TOKEN",
-                    "message": "Token subject is invalid UUID.",
-                    "field": "refresh_token",
-                    "action": "Log in again.",
-                },
-            )
+                detail={"code": "INVALID_USER_ID", "message": "Định danh người dùng không hợp lệ."},
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
 
         stmt = select(UserModel).where(UserModel.id == user_id)
-        res = await db.execute(stmt)
+        res = await self.db.execute(stmt)
         user = res.scalar_one_or_none()
-        if not user or not user.is_active:
+
+        if user is None or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "USER_NOT_FOUND_OR_INACTIVE",
-                    "message": "User associated with token no longer exists or is disabled.",
-                    "field": "refresh_token",
-                    "action": "Log in again.",
+                    "code": "USER_NOT_FOUND",
+                    "message": "Người dùng không tồn tại hoặc đã bị khóa.",
+                },
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        return self.create_tokens_for_user(user, remember_me=True)
+
+    async def forgot_password(self, email: str) -> str:
+        """Initiate password reset and generate a secure reset token."""
+        normalized_email = email.strip().lower()
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        if user is None:
+            # Return dummy token or neutral success to prevent enumeration
+            return self.create_token(
+                payload={"sub": str(uuid4()), "email": normalized_email, "type": "reset"},
+                expires_delta_seconds=900,
+            )
+
+        reset_token = self.create_token(
+            payload={"sub": str(user.id), "email": user.email, "type": "reset"},
+            expires_delta_seconds=900,  # 15 minutes
+        )
+        return reset_token
+
+    async def reset_password(self, token: str, new_password: str) -> None:
+        """Confirm password reset with valid token and update password."""
+        try:
+            claims = self.decode_token(token)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_RESET_TOKEN",
+                    "message": f"Mã liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn: {exc}",
+                    "action": "Request a new password reset link.",
+                },
+            ) from exc
+
+        if claims.get("type") != "reset":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_TOKEN_TYPE",
+                    "message": "Token không hợp lệ cho tác vụ đặt lại mật khẩu.",
+                    "action": "Use the valid link sent to your email.",
                 },
             )
 
-        return self.create_token_response(user)
+        user_id_str = claims.get("sub")
+        try:
+            user_id = UUID(user_id_str)
+        except (ValueError, TypeError) as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_USER_ID",
+                    "message": "ID người dùng trong token không hợp lệ.",
+                },
+            ) from exc
 
-    @staticmethod
-    def to_user_response(user: UserModel) -> UserResponse:
-        """Convert UserModel to UserResponse DTO."""
-        role = getattr(user, "role", None) or "researcher"
-        avatar_url = getattr(user, "avatar_url", None)
-        t_quota = getattr(user, "token_quota", None)
-        token_quota = t_quota if t_quota is not None else 200000
-        t_used = getattr(user, "tokens_used", None)
-        tokens_used = t_used if t_used is not None else 0
-        s_quota = getattr(user, "storage_quota_bytes", None)
-        storage_quota_bytes = s_quota if s_quota is not None else 1073741824
-        s_used = getattr(user, "storage_used_bytes", None)
-        storage_used_bytes = s_used if s_used is not None else 0
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
 
-        return UserResponse(
-            id=user.id,
-            email=user.email,
-            full_name=user.full_name,
-            role=role,
-            avatar_url=avatar_url,
-            token_quota=token_quota,
-            tokens_used=tokens_used,
-            storage_quota_bytes=storage_quota_bytes,
-            storage_used_bytes=storage_used_bytes,
-            is_active=user.is_active,
-            created_at=user.created_at,
-        )
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "USER_NOT_FOUND",
+                    "message": "Không tìm thấy tài khoản người dùng.",
+                },
+            )
+
+        user.hashed_password = self.hash_password(new_password)
+        await self.db.commit()
+
+    async def change_password(
+        self, user: UserModel, current_password: str, new_password: str
+    ) -> None:
+        """Change password for an authenticated user."""
+        if not self.verify_password(current_password, user.hashed_password):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INCORRECT_CURRENT_PASSWORD",
+                    "message": "Mật khẩu hiện tại không chính xác.",
+                    "action": "Check your current password and try again.",
+                },
+            )
+
+        user.hashed_password = self.hash_password(new_password)
+        await self.db.commit()
+
+    async def update_profile(self, user: UserModel, payload: UpdateProfileRequest) -> UserModel:
+        """Update authenticated user's profile details."""
+        if payload.full_name is not None:
+            user.full_name = payload.full_name.strip()
+        if payload.institution is not None:
+            user.institution = payload.institution.strip()
+        if payload.academic_rank is not None:
+            user.academic_rank = payload.academic_rank.strip()
+        if payload.orcid_id is not None:
+            user.orcid_id = payload.orcid_id.strip()
+        if payload.avatar_url is not None:
+            user.avatar_url = payload.avatar_url.strip()
+
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user

@@ -3,7 +3,7 @@
  * Strict 1-1 mapping with Backend FastAPI OpenAPI Schema
  */
 
-export type UserRole = "researcher" | "faculty" | "postdoc" | "student" | "guest" | "admin";
+export type UserRole = "researcher" | "faculty" | "postdoc" | "student" | "guest";
 
 export interface UserProfile {
   id: string; // UUID v4
@@ -15,10 +15,6 @@ export interface UserProfile {
   avatar_url?: string;
   role: UserRole;
   is_verified: boolean;
-  token_quota?: number;
-  tokens_used?: number;
-  storage_quota_bytes?: number;
-  storage_used_bytes?: number;
   created_at: string;
 }
 
@@ -60,6 +56,23 @@ export interface PasswordResetConfirm {
   new_password: string;
 }
 
+export interface ChangePasswordPayload {
+  current_password: string;
+  new_password: string;
+}
+
+export interface UpdateProfilePayload {
+  full_name?: string;
+  institution?: string;
+  academic_rank?: string;
+  orcid_id?: string;
+  avatar_url?: string;
+}
+
+export interface AuthMessageResponse {
+  message: string;
+}
+
 export interface AuthErrorDetail {
   field: string;
   issue: string;
@@ -70,3 +83,4 @@ export interface AuthErrorResponse {
   message: string;
   detail?: AuthErrorDetail[];
 }
+

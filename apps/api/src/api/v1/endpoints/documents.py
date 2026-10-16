@@ -2,16 +2,16 @@
 
 import re
 from urllib.parse import quote
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from api.db.models.document import DocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import (
+    get_academic_resolver,
     get_current_user,
     get_document_service,
     get_idempotency_port,
-    get_reference_service,
 )
 from api.schemas.document import (
     DocumentChunkDetailEnvelope,
@@ -22,6 +22,8 @@ from api.schemas.document import (
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
     DocumentParseRequest,
+    DocumentResolveReferencesEnvelope,
+    DocumentResolveReferencesRequest,
     DocumentStarEnvelope,
     DocumentStarRequest,
     DocumentStatusEnvelope,
@@ -32,10 +34,9 @@ from api.schemas.document import (
 )
 from api.schemas.envelope import ResponseMeta
 from api.schemas.error import ErrorResponse
-from api.schemas.reference import CitationGraphEnvelope
 from api.services.document_service import DocumentService
-from api.services.reference_service import ReferenceService
 from core.domain.entities.document import DocumentStage, DocumentStatus
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
@@ -644,6 +645,71 @@ async def extract_references(
     )
 
 
+RESOLVE_REFERENCES_DESCRIPTION = (
+    "🎯 **Mục đích:** Phân giải và làm giàu siêu dữ liệu danh mục tài liệu tham khảo "
+    "của bài báo thông qua Exa AI Search và bộ đệm học thuật (Module 3 - PRD §3.3).\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `ref_indices`: Danh sách chỉ số tham khảo cần phân giải (tùy chọn, Body).\n"
+    "- `force_refresh`: Bỏ qua bộ đệm và ép phân giải lại (mặc định: false, Body).\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- `document_id`: UUID tài liệu.\n"
+    "- `total_resolved`: Tổng số tài liệu tham khảo phân giải được.\n"
+    "- `references`: Danh sách tham khảo làm giàu với PDF URL, DOI, arXiv, v.v."
+)
+
+
+@router.post(
+    "/{document_id}/references:resolve",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentResolveReferencesEnvelope,
+    summary="Phân giải và làm giàu tài liệu tham khảo qua Exa AI (PRD §3.3)",
+    description=RESOLVE_REFERENCES_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Phân giải tài liệu tham khảo thành công.",
+            "model": DocumentResolveReferencesEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def resolve_references(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần phân giải tài liệu tham khảo",
+    ),
+    payload: DocumentResolveReferencesRequest | None = Body(
+        default=None,
+        description="Tùy chọn cấu hình phân giải tài liệu tham khảo",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+    resolver: IAcademicSearchResolverPort = Depends(get_academic_resolver),
+) -> DocumentResolveReferencesEnvelope:
+    """Resolve extracted references using Exa Neural Search or deterministic adapter."""
+    ref_indices = payload.ref_indices if payload else None
+    force_refresh = payload.force_refresh if payload else False
+    data = await service.resolve_document_references(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        ref_indices=ref_indices,
+        force_refresh=force_refresh,
+        resolver=resolver,
+    )
+    return DocumentResolveReferencesEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
 GET_STRUCTURE_DESCRIPTION = (
     "🎯 **Mục đích:** Truy xuất cấu trúc phân cấp bài báo khoa học (Table of Contents, "
     "Headings, Sections và Abstract) kèm tọa độ Bounding Box chuẩn hóa để phục vụ điều hướng "
@@ -1198,7 +1264,7 @@ async def stream_document_summary(
     failed_states = (DocumentStatus.FAILED.value, "failed")
     if doc.status in failed_states:
         raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={
                 "code": "DOCUMENT_FAILED",
                 "message": f"Document '{document_id}' processing has failed.",
@@ -1207,11 +1273,18 @@ async def stream_document_summary(
             },
         )
 
+    request_id = (
+        (getattr(request.state, "request_id", None) if request else None)
+        or (request.headers.get("x-request-id") if request else None)
+        or str(uuid4())
+    )
+
     generator = service.stream_summary(
         document_id=document_id,
         user_id=current_user.id,
         db=db,
         is_disconnected=request.is_disconnected if request else None,
+        request_id=request_id,
     )
     return StreamingResponse(
         generator,
@@ -1220,36 +1293,6 @@ async def stream_document_summary(
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
+            "X-Request-ID": request_id,
         },
-    )
-
-
-@router.get(
-    "/{document_id}/graph",
-    status_code=status.HTTP_200_OK,
-    response_model=CitationGraphEnvelope,
-    summary="Truy vấn Đồ thị Tri thức Trích dẫn (Cycle Breaking, max_hops <= 2)",
-    description=(
-        "🎯 **Mục đích:** Khai thác đồ thị trích dẫn đa tầng của bài báo khoa học. "
-        "Tự động ngắt chu trình lặp vô hạn (Cycle Breaking) qua thuật toán BFS."
-    ),
-)
-async def get_document_citation_graph(
-    document_id: UUID = Path(..., description="UUID của bài báo gốc cần dựng đồ thị"),
-    max_hops: int = Query(2, ge=1, le=2, description="Độ sâu tối đa của đồ thị (1 hoặc 2 hops)"),
-    relations: str = Query("CITES,EXTENDS,BENCHMARKS_ON", description="Quan hệ trích dẫn"),
-    current_user: UserModel = Depends(get_current_user),
-    ref_service: ReferenceService = Depends(get_reference_service),
-) -> CitationGraphEnvelope:
-    """Retrieve citation knowledge graph for a specific document."""
-    graph = await ref_service.get_citation_graph(
-        document_id=document_id,
-        user_id=current_user.id,
-        max_hops=max_hops,
-        relations=relations,
-    )
-    return CitationGraphEnvelope(
-        success=True,
-        data=graph,
-        meta=ResponseMeta(),
     )

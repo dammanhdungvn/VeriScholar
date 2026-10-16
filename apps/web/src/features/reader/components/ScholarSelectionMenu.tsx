@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { BookmarkPlus, Copy, Check, Sparkles } from "lucide-react";
+import { BookmarkPlus, Copy, Check, MessageSquarePlus } from "lucide-react";
+import type { BoundingBox } from "@/types/api";
 
-interface ScholarSelectionMenuProps {
+export interface ScholarSelectionMenuProps {
   selectedText: string;
   coord: { x: number; y: number } | null;
   pageNumber: number;
+  bbox?: BoundingBox | null;
   documentTitle?: string;
-  onAddToNote: (selectedText: string, pageNumber: number) => void;
+  onAddToNote: (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => void;
+  onAddToChat?: (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => void;
   onAskChat?: (prompt: string) => void;
   onClearSelection: () => void;
 }
@@ -15,8 +18,10 @@ export function ScholarSelectionMenu({
   selectedText,
   coord,
   pageNumber,
+  bbox,
   documentTitle,
   onAddToNote,
+  onAddToChat,
   onAskChat,
   onClearSelection,
 }: ScholarSelectionMenuProps) {
@@ -34,8 +39,11 @@ export function ScholarSelectionMenu({
     }, 1500);
   };
 
-  const handleAskSocratic = () => {
-    if (onAskChat) {
+  const handleAddToChatAction = () => {
+    if (onAddToChat) {
+      onAddToChat(selectedText, pageNumber, bbox ?? null);
+      onClearSelection();
+    } else if (onAskChat) {
       const prompt = `Hãy giải thích chi tiết ý nghĩa và luận điểm trong đoạn trích sau (Trang ${pageNumber}):\n\n"${selectedText}"`;
       onAskChat(prompt);
       onClearSelection();
@@ -43,46 +51,50 @@ export function ScholarSelectionMenu({
   };
 
   const handleSaveToNote = () => {
-    onAddToNote(selectedText, pageNumber);
+    onAddToNote(selectedText, pageNumber, bbox ?? null);
     onClearSelection();
   };
 
   return (
     <div
+      data-testid="scholar-selection-menu"
       style={{ left: coord.x, top: coord.y }}
       className="absolute z-40 -translate-x-1/2 -translate-y-full mb-2 flex items-center shadow-xl rounded-lg bg-[#1a1917] text-zinc-100 p-1 gap-1 text-xs border border-white/10 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none"
     >
-      {/* 1. Add to Note */}
-      <button
-        type="button"
-        onClick={handleSaveToNote}
-        title="Thêm đoạn trích này vào Sổ tay nghiên cứu"
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-white/15 text-zinc-200 hover:text-white transition-colors cursor-pointer"
-      >
-        <BookmarkPlus className="w-3.5 h-3.5 text-coral-400" />
-        <span className="font-medium">Vào sổ tay</span>
-      </button>
-
-      <div className="w-[1px] h-3.5 bg-white/15 my-auto" />
-
-      {/* 2. Ask Socratic Copilot */}
-      {onAskChat && (
+      {/* 1. Add to Chat (Zero-Click Context Chip) */}
+      {(onAddToChat || onAskChat) && (
         <button
           type="button"
-          onClick={handleAskSocratic}
-          title="Hỏi trợ lý Socratic về đoạn văn này"
+          data-testid="selection-add-chat-btn"
+          onClick={handleAddToChatAction}
+          title="Đưa đoạn trích vào khung chat với Context Chip (Zero-Click Focus)"
           className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-white/15 text-zinc-200 hover:text-white transition-colors cursor-pointer"
         >
-          <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-          <span className="font-medium">Hỏi Socratic</span>
+          <MessageSquarePlus className="w-3.5 h-3.5 text-coral-400" />
+          <span className="font-medium">Đưa vào Chat</span>
         </button>
       )}
+
+      {(onAddToChat || onAskChat) && <div className="w-[1px] h-3.5 bg-white/15 my-auto" />}
+
+      {/* 2. Add to Note */}
+      <button
+        type="button"
+        data-testid="selection-add-note-btn"
+        onClick={handleSaveToNote}
+        title="Lưu đoạn trích này vào Sổ tay nghiên cứu kèm số trang và tọa độ Bounding Box"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded hover:bg-white/15 text-zinc-200 hover:text-white transition-colors cursor-pointer"
+      >
+        <BookmarkPlus className="w-3.5 h-3.5 text-amber-400" />
+        <span className="font-medium">Vào sổ tay</span>
+      </button>
 
       <div className="w-[1px] h-3.5 bg-white/15 my-auto" />
 
       {/* 3. Copy with citation */}
       <button
         type="button"
+        data-testid="selection-copy-citation-btn"
         onClick={handleCopyCitation}
         title="Sao chép kèm trích dẫn chuẩn học thuật"
         className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-white/15 text-zinc-200 hover:text-white transition-colors cursor-pointer"

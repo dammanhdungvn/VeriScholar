@@ -99,4 +99,34 @@ describe("DashboardChatStreamView component", () => {
     fireEvent.click(stopBtn);
     expect(handleStop).toHaveBeenCalledTimes(1);
   });
+
+  it("renders academic reasoning tokens and active thinking indicator during stream", () => {
+    const streamingMessage: ChatMessage = {
+      id: "msg-stream-1",
+      session_id: "s1",
+      role: "assistant",
+      content: "",
+      thought: "Phân tích giả thiết và đối chiếu tài liệu trích dẫn...",
+      is_streaming: true,
+      created_at: "2026-09-19T10:00:10Z",
+    };
+
+    render(
+      <DashboardChatStreamView
+        messages={[streamingMessage]}
+        inputText=""
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={true}
+        onStopGeneration={vi.fn()}
+      />
+    );
+
+    expect(screen.getByText("Đang suy luận...")).toBeInTheDocument();
+    expect(screen.getByText("Suy luận học thuật")).toBeInTheDocument();
+    expect(screen.getByText("Đang tư duy...")).toBeInTheDocument();
+    expect(
+      screen.getByText("Phân tích giả thiết và đối chiếu tài liệu trích dẫn...")
+    ).toBeInTheDocument();
+  });
 });

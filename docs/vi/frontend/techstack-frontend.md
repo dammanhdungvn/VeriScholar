@@ -1,6 +1,6 @@
 # Lựa Chọn Công Nghệ Frontend & Đánh Đổi Kỹ Thuật (Production-Ready Architecture)
 
-Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi, đánh đổi kỹ thuật (Engineering Trade-offs) và kiến trúc giao diện người dùng chuẩn Production cho ứng dụng **Web Client (`apps/web`)** của nền tảng **VeriScholar**, kế thừa trực tiếp từ các tài liệu đặc tả [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md), [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) và tuân thủ 100% hồ sơ thiết kế [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md).
+Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi, đánh đổi kỹ thuật (Engineering Trade-offs) và kiến trúc giao diện người dùng chuẩn Production cho ứng dụng **Web Client (`apps/web`)** của nền tảng **VeriScholar**, kế thừa trực tiếp từ các tài liệu đặc tả [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md), [design-api.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) và tuân thủ 100% hồ sơ thiết kế [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md).
 
 ---
 
@@ -25,8 +25,8 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
 | Tầng Kiến Trúc | Công Nghệ Lựa Chọn | Vai Trò Trong VeriScholar Web Client | Đánh Đổi Kỹ Thuật & Lý Do Lựa Chọn |
 | :--- | :--- | :--- | :--- |
 | **Core Framework** | **React 19 (TSX)** + **Vite 8** | Nền tảng xây dựng Single-Page Application (SPA) hiện đại với TypeScript nghiêm ngặt. | Hỗ trợ Actions, `useOptimistic`, `useActionState` và tương thích tối đa với hệ sinh thái thư viện AI. Vite 8 mang lại tốc độ HMR dưới 50ms và tối ưu kích thước bundle khi build production với Rollup/ESBuild. |
-| **Styling & Design Tokens** | **Tailwind CSS v4** | Hệ thống utility-first CSS, định nghĩa bộ Semantic Design Tokens chuẩn [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md) (Nền giấy kem canvas, san hô coral, typography serif/sans). | Không phát sinh runtime CSS-in-JS overhead; kích thước CSS build siêu nhỏ (< 15KB gzipped). Cung cấp biến CSS tùy biến cho chế độ Tinted Cream Canvas và Dark Navy Surface. |
-| **UI Component Primitives** | **Radix UI** + **shadcn/ui** | Cung cấp các headless primitives (Dialog, Tabs, Tooltip, DropdownMenu, Popover, Slider). | **Không bị bó hẹp trong giao diện cứng nhắc như Ant Design hay MUI.** Mã nguồn component nằm trực tiếp trong codebase (`src/components/ui/`), 100% tuân thủ WAI-ARIA, dễ dàng tùy biến theo chuẩn [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md). |
+| **Styling & Design Tokens** | **Tailwind CSS v4** | Hệ thống utility-first CSS, định nghĩa bộ Semantic Design Tokens chuẩn [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md) (Nền giấy kem canvas, san hô coral, typography serif/sans). | Không phát sinh runtime CSS-in-JS overhead; kích thước CSS build siêu nhỏ (< 15KB gzipped). Cung cấp biến CSS tùy biến cho chế độ Tinted Cream Canvas và Dark Navy Surface. |
+| **UI Component Primitives** | **Radix UI** + **shadcn/ui** | Cung cấp các headless primitives (Dialog, Tabs, Tooltip, DropdownMenu, Popover, Slider). | **Không bị bó hẹp trong giao diện cứng nhắc như Ant Design hay MUI.** Mã nguồn component nằm trực tiếp trong codebase (`src/components/ui/`), 100% tuân thủ WAI-ARIA, dễ dàng tùy biến theo chuẩn [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md). |
 | **CSS Utilities & Icons** | **`clsx`** + **`tailwind-merge`** + **`lucide-react`** | Xử lý ghép nối class linh hoạt và cung cấp hệ thống icon vector đồng bộ. | `cn()` helper giải quyết triệt để vấn đề ghi đè class Tailwind (như `p-4` vs `p-2`). `lucide-react` cung cấp icon vector sắc nét, tải theo dạng tree-shaking từng icon. |
 | **Workspace Layout** | **`react-resizable-panels`** | Bố cục chia đôi màn hình Split-Pane giữa PDF Viewer và AI Workspace. | Tác giả BVaughn (thành viên React Core Team). Đảm bảo kéo co giãn mượt mà 60fps, hỗ trợ ẩn/hiện nhanh panel, tự động lưu tỷ lệ màn hình vào `localStorage`. |
 | **PDF Rendering Engine** | **`pdfjs-dist` (Mozilla PDF.js)** | Hiển thị tài liệu PDF gốc đa tab, render Canvas và tạo lớp phủ văn bản (Text Layer). | Tiêu chuẩn công nghiệp của Mozilla (ISO 32000-1). Hỗ trợ Web Worker đa luồng để giải mã tệp PDF lớn (> 50MB) mà không chặn main thread giao diện người dùng. |
@@ -46,7 +46,7 @@ Tài liệu này tổng hợp các quyết định lựa chọn công nghệ c�
 ### 2.1. Tại sao chọn Tailwind CSS + Radix UI thay vì Ant Design hay Material UI (MUI)?
 
 1. **Ngôn ngữ thiết kế Academic Editorial đặc thù:**
-   - Các thư viện nguyên khối như Ant Design hay MUI bị đóng khung trong phong cách ứng dụng quản trị doanh nghiệp (Enterprise CRUD) với viền bo tròn lớn và màu xanh công nghiệp, đi ngược lại hoàn toàn triết lý ấm áp và trang nhã của [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md).
+   - Các thư viện nguyên khối như Ant Design hay MUI bị đóng khung trong phong cách ứng dụng quản trị doanh nghiệp (Enterprise CRUD) với viền bo tròn lớn và màu xanh công nghiệp, đi ngược lại hoàn toàn triết lý ấm áp và trang nhã của [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md).
    - Radix UI cung cấp các headless primitives (chỉ có logic hành vi và accessibility, không chứa CSS). Đội ngũ phát triển có thể tự do định hình từng pixel bằng Tailwind CSS để đạt chuẩn thẩm mỹ học thuật tinh tế của Anthropic Claude.
 2. **Kích thước gói tải về (Bundle Size):**
    - MUI và Ant Design thường kéo theo từ 350KB đến 800KB mã nguồn JavaScript runtime vào bundle ban đầu.
@@ -114,7 +114,7 @@ Nếu mỗi chunk SSE nhận về đều gọi `setTurnAnswer(prev => prev + tok
 
 ## 3. THIẾT KẾ GIAO DIỆN HỌC THUẬT TUÂN THỦ DESIGN.MD (ACADEMIC DESIGN SYSTEM)
 
-VeriScholar kế thừa trọn vẹn đặc tả từ [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md) để xây dựng hệ thống Design Tokens:
+VeriScholar kế thừa trọn vẹn đặc tả từ [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md) để xây dựng hệ thống Design Tokens:
 
 ### 3.1. Bảng Màu & Bề Mặt Học Thuật (Academic Color Tokens)
 * **Nền giấy kem ấm áp (Canvas `#faf9f5`):** Nền sàn mặc định cho toàn bộ màn hình đọc và thư viện.

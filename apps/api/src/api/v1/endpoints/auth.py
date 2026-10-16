@@ -1,160 +1,246 @@
-"""Authentication and user account endpoints."""
+"""Authentication and Account Management API Endpoints."""
 
-from typing import Any
-
+import structlog
 from api.db.models.user import UserModel
-from api.db.session import get_db
-from api.deps import get_auth_service, get_cost_control_service, get_current_user
+from api.deps import get_auth_service, get_current_user
 from api.schemas.auth import (
-    AuthTokenEnvelope,
-    GoogleLoginRequest,
+    AuthMessageResponse,
+    AuthResponse,
+    AuthTokensResponse,
+    ChangePasswordRequest,
     LoginRequest,
-    RefreshTokenRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequest,
     RegisterRequest,
-    TokenQuotaEnvelope,
-    UserProfileEnvelope,
+    TokenRefreshRequest,
+    UpdateProfileRequest,
+    UserProfileResponse,
 )
-from api.schemas.envelope import ResponseMeta
+from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.services.auth_service import AuthService
 from fastapi import APIRouter, Depends, status
-from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = structlog.get_logger("api.endpoints.auth")
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
+# ==============================================================================
+# 1. POST /api/v1/auth/register
+# ==============================================================================
 @router.post(
     "/register",
-    response_model=UserProfileEnvelope,
     status_code=status.HTTP_201_CREATED,
-    summary="Đăng ký tài khoản người dùng mới",
+    response_model=SingleResponseEnvelope[AuthResponse],
+    summary="Đăng ký tài khoản học thuật mới (Register)",
     description=(
-        "Tạo tài khoản người dùng mới với mật khẩu được băm bằng thuật toán Argon2id an toàn."
+        "Tạo tài khoản nhà nghiên cứu mới với mật khẩu bảo mật PBKDF2-HMAC-SHA256 "
+        "và sinh bộ JWT tokens."
     ),
 )
 async def register(
-    request: RegisterRequest,
-    db: AsyncSession = Depends(get_db),
+    payload: RegisterRequest,
     auth_service: AuthService = Depends(get_auth_service),
-) -> UserProfileEnvelope:
-    """Register a new user account."""
-    user = await auth_service.register_user(db=db, request=request)
-    return UserProfileEnvelope(
-        success=True,
-        data=auth_service.to_user_response(user),
+) -> SingleResponseEnvelope[AuthResponse]:
+    """Register a new user account and return profile with credentials."""
+    user, tokens = await auth_service.register(payload)
+    return SingleResponseEnvelope(
+        data=AuthResponse(
+            user=UserProfileResponse.model_validate(user),
+            tokens=tokens,
+            message=(
+                "Đăng ký tài khoản thành viên nghiên cứu thành công! "
+                "Chào mừng bạn đến với VeriScholar."
+            ),
+        ),
         meta=ResponseMeta(),
     )
 
 
+# ==============================================================================
+# 2. POST /api/v1/auth/login
+# ==============================================================================
 @router.post(
     "/login",
-    response_model=AuthTokenEnvelope,
     status_code=status.HTTP_200_OK,
-    summary="Đăng nhập tài khoản & Nhận JWT tokens",
-    description=(
-        "Xác thực người dùng qua email và mật khẩu, trả về cặp Access Token và Refresh Token."
-    ),
+    response_model=SingleResponseEnvelope[AuthResponse],
+    summary="Đăng nhập tài khoản (Login)",
+    description="Xác thực thông tin đăng nhập và cấp cặp access_token/refresh_token HMAC-SHA256.",
 )
 async def login(
-    request: LoginRequest,
-    db: AsyncSession = Depends(get_db),
+    payload: LoginRequest,
     auth_service: AuthService = Depends(get_auth_service),
-) -> AuthTokenEnvelope:
-    """Authenticate user and issue JWT token pair."""
-    user = await auth_service.authenticate_user(db=db, request=request)
-    tokens = auth_service.create_token_response(user)
-    return AuthTokenEnvelope(
-        success=True,
-        data=tokens,
+) -> SingleResponseEnvelope[AuthResponse]:
+    """Authenticate user with email and password."""
+    user, tokens = await auth_service.login(payload)
+    return SingleResponseEnvelope(
+        data=AuthResponse(
+            user=UserProfileResponse.model_validate(user),
+            tokens=tokens,
+            message="Đăng nhập thành công vào VeriScholar.",
+        ),
         meta=ResponseMeta(),
     )
 
 
+# ==============================================================================
+# 3. POST /api/v1/auth/logout
+# ==============================================================================
+@router.post(
+    "/logout",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[AuthMessageResponse],
+    summary="Đăng xuất phiên làm việc (Logout)",
+    description="Hủy bỏ phiên làm việc của người dùng hiện tại.",
+)
+async def logout(
+    current_user: UserModel = Depends(get_current_user),
+) -> SingleResponseEnvelope[AuthMessageResponse]:
+    """Invalidate current user session."""
+    return SingleResponseEnvelope(
+        data=AuthMessageResponse(message="Đăng xuất thành công khỏi hệ thống."),
+        meta=ResponseMeta(),
+    )
+
+
+# ==============================================================================
+# 4. POST /api/v1/auth/refresh
+# ==============================================================================
 @router.post(
     "/refresh",
-    response_model=AuthTokenEnvelope,
     status_code=status.HTTP_200_OK,
-    summary="Cấp mới Access Token bằng Refresh Token",
-    description=(
-        "Kiểm tra tính hợp lệ của Refresh Token và cấp phát cặp token mới mà không cần "
-        "đăng nhập lại."
-    ),
+    response_model=SingleResponseEnvelope[AuthTokensResponse],
+    summary="Làm mới Access Token (Token Refresh)",
+    description="Cấp mới cặp tokens từ refresh_token hợp lệ mà không cần đăng nhập lại.",
 )
-async def refresh_token(
-    request: RefreshTokenRequest,
-    db: AsyncSession = Depends(get_db),
+async def refresh_tokens(
+    payload: TokenRefreshRequest,
     auth_service: AuthService = Depends(get_auth_service),
-) -> AuthTokenEnvelope:
-    """Issue new token pair using valid refresh token."""
-    tokens = await auth_service.refresh_access_token(db=db, refresh_token_str=request.refresh_token)
-    return AuthTokenEnvelope(
-        success=True,
-        data=tokens,
+) -> SingleResponseEnvelope[AuthTokensResponse]:
+    """Renew authentication tokens using valid refresh token."""
+    new_tokens = await auth_service.refresh_tokens(payload.refresh_token)
+    return SingleResponseEnvelope(
+        data=new_tokens,
         meta=ResponseMeta(),
     )
 
 
+# ==============================================================================
+# 5. POST /api/v1/auth/forgot-password
+# ==============================================================================
 @router.post(
-    "/google",
-    response_model=AuthTokenEnvelope,
+    "/forgot-password",
     status_code=status.HTTP_200_OK,
-    summary="Đăng nhập hoặc đăng ký bằng tài khoản Google",
-    description=(
-        "Xác thực qua Google ID token, tự động tạo tài khoản nếu chưa tồn tại "
-        "và cấp phát JWT tokens."
-    ),
+    response_model=SingleResponseEnvelope[dict[str, str]],
+    summary="Yêu cầu đặt lại mật khẩu (Forgot Password)",
+    description="Gửi mã liên kết khôi phục mật khẩu tới địa chỉ email đăng ký.",
 )
-async def google_login(
-    request: GoogleLoginRequest,
-    db: AsyncSession = Depends(get_db),
+async def forgot_password(
+    payload: PasswordResetRequest,
     auth_service: AuthService = Depends(get_auth_service),
-) -> AuthTokenEnvelope:
-    """Authenticate or register user with Google OAuth."""
-    user = await auth_service.authenticate_google(db=db, credential=request.credential)
-    tokens = auth_service.create_token_response(user)
-    return AuthTokenEnvelope(
-        success=True,
-        data=tokens,
+) -> SingleResponseEnvelope[dict[str, str]]:
+    """Initiate password recovery flow."""
+    reset_token = await auth_service.forgot_password(payload.email)
+    return SingleResponseEnvelope(
+        data={
+            "message": f"Liên kết thiết lập lại mật khẩu đã được xử lý cho {payload.email}.",
+            "reset_token": reset_token,
+        },
         meta=ResponseMeta(),
     )
 
 
+# ==============================================================================
+# 6. POST /api/v1/auth/reset-password
+# ==============================================================================
+@router.post(
+    "/reset-password",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[AuthMessageResponse],
+    summary="Xác nhận đặt lại mật khẩu mới (Reset Password)",
+    description="Thiết lập mật khẩu mới bằng mã reset_token đã nhận được.",
+)
+async def reset_password(
+    payload: PasswordResetConfirmRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> SingleResponseEnvelope[AuthMessageResponse]:
+    """Complete password reset using token."""
+    await auth_service.reset_password(token=payload.token, new_password=payload.new_password)
+    return SingleResponseEnvelope(
+        data=AuthMessageResponse(
+            message="Mật khẩu của bạn đã được cập nhật thành công. Vui lòng đăng nhập lại."
+        ),
+        meta=ResponseMeta(),
+    )
+
+
+# ==============================================================================
+# 7. GET /api/v1/auth/me
+# ==============================================================================
 @router.get(
     "/me",
-    response_model=UserProfileEnvelope,
     status_code=status.HTTP_200_OK,
-    summary="Lấy thông tin người dùng hiện tại",
-    description="Trả về thông tin hồ sơ của người dùng đang được xác thực qua Bearer JWT Token.",
+    response_model=SingleResponseEnvelope[UserProfileResponse],
+    summary="Lấy thông tin tài khoản hiện tại (Get Profile)",
+    description="Truy xuất hồ sơ nhà nghiên cứu đã được xác thực qua JWT token.",
 )
-async def get_me(
+async def get_my_profile(
     current_user: UserModel = Depends(get_current_user),
-    auth_service: AuthService = Depends(get_auth_service),
-) -> UserProfileEnvelope:
-    """Return profile of currently authenticated user."""
-    return UserProfileEnvelope(
-        success=True,
-        data=auth_service.to_user_response(current_user),
+) -> SingleResponseEnvelope[UserProfileResponse]:
+    """Retrieve currently authenticated user's profile."""
+    return SingleResponseEnvelope(
+        data=UserProfileResponse.model_validate(current_user),
         meta=ResponseMeta(),
     )
 
 
-@router.get(
-    "/quota",
-    response_model=TokenQuotaEnvelope,
+# ==============================================================================
+# 8. PATCH /api/v1/auth/me
+# ==============================================================================
+@router.patch(
+    "/me",
     status_code=status.HTTP_200_OK,
-    summary="Kiểm tra hạn mức Token và dung lượng lưu trữ (BỔ SUNG 1)",
+    response_model=SingleResponseEnvelope[UserProfileResponse],
+    summary="Cập nhật thông tin tài khoản (Update Profile)",
     description=(
-        "Trả về chi tiết số token đã dùng, số token còn lại, tỷ lệ sử dụng "
-        "và cảnh báo vượt hạn mức."
+        "Chỉnh sửa họ tên, cơ quan, chức danh, ORCID hoặc ảnh đại diện của người dùng hiện tại."
     ),
 )
-async def get_quota_status(
+async def update_my_profile(
+    payload: UpdateProfileRequest,
     current_user: UserModel = Depends(get_current_user),
-    cost_service: Any = Depends(get_cost_control_service),
-) -> TokenQuotaEnvelope:
-    """Return live token quota and storage allocation status."""
-    status_data = cost_service.get_quota_status(current_user)
-    return TokenQuotaEnvelope(
-        success=True,
-        data=status_data,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> SingleResponseEnvelope[UserProfileResponse]:
+    """Update profile attributes for currently authenticated user."""
+    updated_user = await auth_service.update_profile(user=current_user, payload=payload)
+    return SingleResponseEnvelope(
+        data=UserProfileResponse.model_validate(updated_user),
+        meta=ResponseMeta(),
+    )
+
+
+# ==============================================================================
+# 9. POST /api/v1/auth/change-password
+# ==============================================================================
+@router.post(
+    "/change-password",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[AuthMessageResponse],
+    summary="Đổi mật khẩu tài khoản (Change Password)",
+    description="Người dùng đã đăng nhập đổi sang mật khẩu mới sau khi xác thực mật khẩu hiện tại.",
+)
+async def change_password(
+    payload: ChangePasswordRequest,
+    current_user: UserModel = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+) -> SingleResponseEnvelope[AuthMessageResponse]:
+    """Change password for authenticated user."""
+    await auth_service.change_password(
+        user=current_user,
+        current_password=payload.current_password,
+        new_password=payload.new_password,
+    )
+    return SingleResponseEnvelope(
+        data=AuthMessageResponse(message="Đổi mật khẩu thành công."),
         meta=ResponseMeta(),
     )

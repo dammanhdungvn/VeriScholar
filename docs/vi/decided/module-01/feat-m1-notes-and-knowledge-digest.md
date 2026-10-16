@@ -99,7 +99,7 @@
 
 ### 3.1. Rà Soát & Hoàn Thiện DDL Các Bảng Liên Quan
 
-Theo đúng đặc tả trong [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md), hệ thống sử dụng 2 bảng chính:
+Theo đúng đặc tả trong [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md), hệ thống sử dụng 2 bảng chính:
 
 ```sql
 -- 1. Bảng research_notes: Lưu trích dẫn, ghi chú cá nhân và bằng chứng đóng băng
@@ -552,7 +552,7 @@ Sau khi nghiên cứu sâu các công cụ Obsidian, Logseq, Zotero 7 và Notion
 
 ## 8. Chiến Lược Kiểm Thử, Autotest Snapshot & Đánh Giá Không Gian Lận
 
-Tuân thủ nghiêm ngặt [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md), hệ thống kiểm chuẩn gồm 2 tầng:
+Tuân thủ nghiêm ngặt [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md), hệ thống kiểm chuẩn gồm 2 tầng:
 
 ### 8.1. Tầng 1: Pytest Unit & Integration Tests (`apps/api/tests/`)
 - `test_notes_crud.py`:

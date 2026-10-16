@@ -4,15 +4,15 @@
 * **Tên rút gọn (Branch name):** `feat/m1-api-document-structure`  
 * **Mã phản hồi chuẩn:** `200 OK` (Singleton Sub-resource theo Google Cloud AIP-130 / AIP-136)  
 * **Vị trí tài liệu lưu trữ:**  
-  - [`docs/vi/decided/module-01/feat-m1-api-get-document-structure.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-structure.md)  
+  - [`docs/vi/decided/module-01/feat-m1-api-get-document-structure.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-structure.md)  
 * **Tài liệu tham chiếu chuẩn:**  
-  - API Specification: [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.10: `GET /api/v1/documents/{id}/structure`)  
-  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents.parsed_metadata JSONB` & GIN index)  
-  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Two-Tier Ingestion & PDF.js Structure Navigator)  
-  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (Module 1 Deep Reading & Structure Navigation)  
-  - Thiết kế Eval & Báo cáo: [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
-  - Công nghệ Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
-  - Tập dữ liệu Ground Truth: [`data/golden-dataset/golden_eval_dataset.json`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/data/golden-dataset/golden_eval_dataset.json)  
+  - API Specification: [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.10: `GET /api/v1/documents/{id}/structure`)  
+  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents.parsed_metadata JSONB` & GIN index)  
+  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Two-Tier Ingestion & PDF.js Structure Navigator)  
+  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (Module 1 Deep Reading & Structure Navigation)  
+  - Thiết kế Eval & Báo cáo: [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
+  - Công nghệ Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
+  - Tập dữ liệu Ground Truth: [`data/golden-dataset/golden_eval_dataset.json`](file:///home/VeriScholar/Workspace/VeriScholar/data/golden-dataset/golden_eval_dataset.json)  
 
 ---
 
@@ -73,7 +73,7 @@ graph TD
 ```
 
 ### 2.1 Database & Persistence (`apps/api/src/api/db/`)
-- **Bảng `documents`:** Cột `parsed_metadata JSONB NULL` đã được định nghĩa trong schema DDL [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) và model [`apps/api/src/api/db/models/document.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/document.py).
+- **Bảng `documents`:** Cột `parsed_metadata JSONB NULL` đã được định nghĩa trong schema DDL [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) và model [`apps/api/src/api/db/models/document.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/document.py).
 - **Cấu trúc lưu trữ JSONB:**
   ```json
   {
@@ -205,7 +205,7 @@ Xây dựng lớp `DocumentStructureAPIRunner(BaseAPIRunner)` với **6 kịch b
 - **Hiển thị Terminal 3-Box Unicode:** Khung Request Input, Khung Response Output (kèm preview Sections & Abstract), Khung Nghiệp Vụ Passed/Failed.
 
 ### 3.2 Cấp độ 2: Tích Hợp Vào Test Runner Tổng Hệ Thống (`scripts/eval_api.py`)
-- Cập nhật [`scripts/eval/runners/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/eval/runners/__init__.py):
+- Cập nhật [`scripts/eval/runners/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/eval/runners/__init__.py):
   - Thêm alias `"structure": DocumentStructureAPIRunner`.
   - Thêm alias `"get_documents_structure": DocumentStructureAPIRunner`.
   - Bổ sung `"get_documents_structure"` vào `MODULE_1_ORDER` (vị trí thứ 10, ngay sau `post_documents_extract_references`).
@@ -219,9 +219,9 @@ Xây dựng lớp `DocumentStructureAPIRunner(BaseAPIRunner)` với **6 kịch b
   ```
 
 ### 3.3 Kế Hoạch Cập Nhật Tài Liệu
-1. **[`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md):** Bổ sung mục 10: `GET /api/v1/documents/{document_id}/structure` với đầy đủ tham số, request, response JSON ví dụ, các mã lỗi 404, 422.
-2. **[`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md):** Bổ sung mục đánh giá chất lượng cấu trúc bài báo khoa học (TOC/Section Heading Recall, Spatial BBox IoU).
-3. **[`scripts/README.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/README.md):** Bổ sung hàng API thứ 10 vào bảng tra cứu lệnh chạy và đường dẫn snapshot.
+1. **[`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md):** Bổ sung mục 10: `GET /api/v1/documents/{document_id}/structure` với đầy đủ tham số, request, response JSON ví dụ, các mã lỗi 404, 422.
+2. **[`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md):** Bổ sung mục đánh giá chất lượng cấu trúc bài báo khoa học (TOC/Section Heading Recall, Spatial BBox IoU).
+3. **[`scripts/README.md`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/README.md):** Bổ sung hàng API thứ 10 vào bảng tra cứu lệnh chạy và đường dẫn snapshot.
 
 ---
 

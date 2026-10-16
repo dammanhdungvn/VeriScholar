@@ -1,12 +1,16 @@
+"""Dependencies for FastAPI endpoints."""
+
 from uuid import UUID
 
 from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter
 from core.adapters.storage.local import LocalStorageAdapter
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
-from core.ports.tracer import ITracerPort
+from core.services.academic_cache import GlobalAcademicCache
+from core.services.exa_resolver import ExaAcademicResolverAdapter
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,25 +21,44 @@ from api.adapters.pdf_annotator import PyMuPdfAnnotator
 from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.services.admin_service import AdminService
+from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
-from api.services.cost_control_service import CostControlService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
-from api.services.folder_service import FolderService
-from api.services.library_service import LibraryService
 from api.services.note_service import NoteService
 from api.services.note_synthesis_service import NoteSynthesisService
-from api.services.organization_service import OrganizationService
-from api.services.reference_service import ReferenceService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
-from api.services.share_service import ShareService
 
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 _idempotency_adapter: IIdempotencyPort | None = None
 _pdf_annotator_adapter: IPdfAnnotatorPort | None = None
+_ai_tracing_service: AITracingService | None = None
+_academic_cache: GlobalAcademicCache | None = None
+_academic_resolver: IAcademicSearchResolverPort | None = None
+
+
+def get_academic_cache() -> GlobalAcademicCache:
+    """Dependency providing GlobalAcademicCache singleton."""
+    global _academic_cache
+    if _academic_cache is None:
+        _academic_cache = GlobalAcademicCache()
+    return _academic_cache
+
+
+def get_academic_resolver(
+    cache: GlobalAcademicCache = Depends(get_academic_cache),
+) -> IAcademicSearchResolverPort:
+    """Dependency providing ExaAcademicResolverAdapter with InMemory fallback."""
+    global _academic_resolver
+    if _academic_resolver is None:
+        api_key = settings.EXA_API_KEY.get_secret_value() if settings.EXA_API_KEY else None
+        _academic_resolver = ExaAcademicResolverAdapter(
+            api_key=api_key,
+            cache=cache,
+        )
+    return _academic_resolver
 
 
 def get_storage() -> IBlobStoragePort:
@@ -70,31 +93,43 @@ def get_document_summarizer() -> IDocumentSummarizerPort:
     )
 
 
+def get_ai_tracing_service() -> AITracingService:
+    """Dependency providing AITracingService singleton instance."""
+    global _ai_tracing_service
+    if _ai_tracing_service is None:
+        _ai_tracing_service = AITracingService()
+    return _ai_tracing_service
+
+
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
     summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
     pdf_annotator: IPdfAnnotatorPort = Depends(get_pdf_annotator),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DocumentService:
     """Dependency providing DocumentService instance."""
     return DocumentService(
         storage=storage,
         summarizer=summarizer,
         pdf_annotator=pdf_annotator,
+        ai_tracing=ai_tracing,
     )
 
 
 def get_session_service(
     db: AsyncSession = Depends(get_db),
+    document_service: DocumentService = Depends(get_document_service),
 ) -> SessionService:
     """Dependency providing SessionService instance bound to request database session."""
-    return SessionService(db=db)
+    return SessionService(db=db, document_service=document_service)
 
 
 def get_session_chat_service(
     db: AsyncSession = Depends(get_db),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> SessionChatService:
     """Dependency providing SessionChatService instance bound to request database session."""
-    return SessionChatService(db=db)
+    return SessionChatService(db=db, ai_tracing=ai_tracing)
 
 
 def get_note_service(
@@ -106,121 +141,105 @@ def get_note_service(
 
 def get_note_synthesis_service(
     db: AsyncSession = Depends(get_db),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> NoteSynthesisService:
     """Dependency providing NoteSynthesisService instance bound to request database session."""
-    return NoteSynthesisService(db=db)
+    return NoteSynthesisService(db=db, ai_tracing=ai_tracing)
 
 
-def get_folder_service(
+def get_auth_service(
     db: AsyncSession = Depends(get_db),
-) -> FolderService:
-    """Dependency providing FolderService instance bound to request database session."""
-    return FolderService(db=db)
-
-
-def get_library_service(
-    db: AsyncSession = Depends(get_db),
-) -> LibraryService:
-    """Dependency providing LibraryService instance bound to request database session."""
-    return LibraryService(db=db)
-
-
-def get_reference_service(
-    db: AsyncSession = Depends(get_db),
-) -> ReferenceService:
-    """Dependency providing ReferenceService instance bound to request database session."""
-    return ReferenceService(db=db)
-
-
-def get_share_service(
-    db: AsyncSession = Depends(get_db),
-    storage: IBlobStoragePort = Depends(get_storage),
-) -> ShareService:
-    """Dependency providing ShareService instance bound to request database session and storage."""
-    return ShareService(db=db, storage=storage)
+) -> AuthService:
+    """Dependency providing AuthService bound to request database session."""
+    return AuthService(db=db)
 
 
 def get_draft_service(
     db: AsyncSession = Depends(get_db),
-    storage: IBlobStoragePort = Depends(get_storage),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DraftService:
-    """Dependency providing DraftService instance bound to request database session and storage."""
-    return DraftService(db=db, storage=storage)
-
-
-_auth_service: AuthService | None = None
-
-
-def get_auth_service() -> AuthService:
-    """Dependency providing AuthService singleton instance."""
-    global _auth_service
-    if _auth_service is None:
-        _auth_service = AuthService()
-    return _auth_service
+    """Dependency providing DraftService bound to request database session."""
+    return DraftService(db=db, ai_tracing=ai_tracing)
 
 
 async def get_current_user(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    auth_service: AuthService = Depends(get_auth_service),
 ) -> UserModel:
-    """Provide authenticated user from Bearer JWT token or fallback to dev user when permitted."""
+    """Authenticate and retrieve current user.
+
+    1. Checks Authorization header for Bearer JWT token.
+       - Decodes and verifies HMAC-SHA256 JWT.
+       - Rejects with 401 Unauthorized if invalid/expired/missing claims.
+    2. Fallback for unit tests:
+       - If no Authorization header, checks X-User-Id header.
+       - Returns or creates test user.
+    3. Rejects with 401 Unauthorized if neither valid token nor X-User-Id header is provided.
+    """
     auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
-    if auth_header and auth_header.lower().startswith("bearer "):
-        token = auth_header.split(" ", 1)[1].strip()
-        payload = auth_service.decode_token(token, expected_type="access")
-        user_id_str = payload.get("sub")
+    if auth_header:
+        if not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "INVALID_AUTH_HEADER",
+                    "message": "Header Authorization phải bắt đầu bằng scheme 'Bearer '.",
+                    "action": "Use Authorization: Bearer <token>",
+                },
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        token = auth_header[7:].strip()
+        try:
+            claims = AuthService.decode_token(token)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "INVALID_TOKEN",
+                    "message": f"Token xác thực không hợp lệ hoặc đã hết hạn: {exc}",
+                    "action": "Log in again to obtain a valid access token.",
+                },
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        user_id_str = claims.get("sub")
         if not user_id_str:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "INVALID_TOKEN",
-                    "message": "Token subject is missing.",
-                    "field": "Authorization",
-                    "action": "Authenticate with valid token.",
+                    "code": "INVALID_TOKEN_CLAIMS",
+                    "message": "Token thiếu thông tin định danh người dùng.",
+                    "action": "Log in again.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
             )
         try:
             user_id = UUID(user_id_str)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "INVALID_TOKEN",
-                    "message": "Token subject is invalid UUID.",
-                    "field": "Authorization",
-                    "action": "Authenticate with valid token.",
+                    "code": "INVALID_USER_ID",
+                    "message": "ID người dùng trong token không hợp lệ.",
                 },
-            )
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
         stmt = select(UserModel).where(UserModel.id == user_id)
         result = await db.execute(stmt)
         user = result.scalar_one_or_none()
-        if not user or not user.is_active:
+        if user is None or not user.is_active:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
-                    "code": "USER_NOT_FOUND_OR_INACTIVE",
-                    "message": "Authenticated user account does not exist or is inactive.",
-                    "field": "Authorization",
-                    "action": "Log in again.",
+                    "code": "USER_NOT_FOUND",
+                    "message": "Người dùng không tồn tại hoặc tài khoản bị khóa.",
                 },
+                headers={"WWW-Authenticate": "Bearer"},
             )
         return user
 
-    # If no Bearer token provided, check if dev auth bypass is allowed
-    if not settings.allow_dev_auth_bypass:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail={
-                "code": "AUTHENTICATION_REQUIRED",
-                "message": "Authentication required. Missing Bearer token in Authorization header.",
-                "field": "Authorization",
-                "action": "Provide valid Bearer token in Authorization header.",
-            },
-        )
-
-    # Dev auth bypass for local testing & backwards compatibility
-    user_id = DEFAULT_DEV_USER_ID
+    # Fallback compatibility for unit tests (X-User-Id)
     custom_uid_header = request.headers.get("x-user-id") or request.headers.get("X-User-Id")
     if custom_uid_header:
         try:
@@ -228,98 +247,37 @@ async def get_current_user(
         except (ValueError, TypeError):
             user_id = DEFAULT_DEV_USER_ID
 
-    stmt = select(UserModel).where(UserModel.id == user_id)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    if user is None:
-        user = UserModel(
-            id=user_id,
-            email=f"user_{user_id.hex[:8]}@verischolar.org"
-            if user_id != DEFAULT_DEV_USER_ID
-            else "developer@verischolar.org",
-            full_name="VeriScholar User"
-            if user_id != DEFAULT_DEV_USER_ID
-            else "VeriScholar Developer",
-            hashed_password="dev_dummy_password",
-            role="admin" if user_id == DEFAULT_DEV_USER_ID else "researcher",
-            is_active=True,
-            token_quota=200000,
-            tokens_used=0,
-            storage_quota_bytes=1073741824,
-            storage_used_bytes=0,
-        )
-
-        db.add(user)
-        await db.commit()
-        await db.refresh(user)
-    return user
-
-
-_cost_control_service: CostControlService | None = None
-
-
-def get_cost_control_service() -> CostControlService:
-    """Dependency providing CostControlService singleton instance."""
-    global _cost_control_service
-    if _cost_control_service is None:
-        _cost_control_service = CostControlService()
-    return _cost_control_service
-
-
-async def require_admin_user(
-    current_user: UserModel = Depends(get_current_user),
-) -> UserModel:
-    """Ensure current authenticated user has administrative privileges."""
-    if getattr(current_user, "role", "researcher") != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail={
-                "code": "INSUFFICIENT_PRIVILEGES",
-                "message": "Administrative role required to access this resource.",
-                "field": "role",
-                "action": "Authenticate with an administrative account.",
-            },
-        )
-    return current_user
-
-
-_org_service: OrganizationService | None = None
-_admin_service: AdminService | None = None
-
-
-def get_organization_service() -> OrganizationService:
-    """Dependency providing OrganizationService singleton instance."""
-    global _org_service
-    if _org_service is None:
-        _org_service = OrganizationService()
-    return _org_service
-
-
-def get_admin_service() -> AdminService:
-    """Dependency providing AdminService singleton instance."""
-    global _admin_service
-    if _admin_service is None:
-        _admin_service = AdminService()
-    return _admin_service
-
-
-_tracer_port: ITracerPort | None = None
-
-
-def get_tracer_port() -> ITracerPort:
-    """Dependency providing ITracerPort (Langfuse or Noop fallback)."""
-    global _tracer_port
-    if _tracer_port is None:
-        if settings.LANGFUSE_PUBLIC_KEY and settings.LANGFUSE_SECRET_KEY:
-            from core.adapters.observability.tracer import LangfuseTracerAdapter
-
-            _tracer_port = LangfuseTracerAdapter(
-                public_key=settings.LANGFUSE_PUBLIC_KEY,
-                secret_key=settings.LANGFUSE_SECRET_KEY.get_secret_value(),
-                host=settings.LANGFUSE_HOST,
+        stmt = select(UserModel).where(UserModel.id == user_id)
+        result = await db.execute(stmt)
+        user = result.scalar_one_or_none()
+        if user is None:
+            user = UserModel(
+                id=user_id,
+                email=f"user_{user_id.hex[:8]}@verischolar.org"
+                if user_id != DEFAULT_DEV_USER_ID
+                else "developer@verischolar.org",
+                full_name="VeriScholar User"
+                if user_id != DEFAULT_DEV_USER_ID
+                else "VeriScholar Developer",
+                hashed_password="dev_dummy_password",
+                is_active=True,
+                role="researcher",
+                institution="VeriScholar Lab",
+                academic_rank="Core Developer",
+                is_verified=True,
             )
-        else:
-            from core.adapters.observability.tracer import NoopTracerAdapter
+            db.add(user)
+            await db.commit()
+            await db.refresh(user)
+        return user
 
-            _tracer_port = NoopTracerAdapter()
-    return _tracer_port
+    # Neither Authorization nor X-User-Id provided -> reject with 401 Unauthorized
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "UNAUTHORIZED",
+            "message": "Yêu cầu cần xác thực. Vui lòng cung cấp Authorization header.",
+            "action": "Provide Authorization: Bearer <token> in request headers.",
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )

@@ -4,16 +4,15 @@
 * **Tên rút gọn (Branch name):** `feat/m1-api-document-summary`  
 * **Mã phản hồi chuẩn:** `200 OK` (Singleton Sub-resource theo Google Cloud AIP-130 / AIP-136)  
 * **Vị trí tài liệu lưu trữ:**  
-  - [`docs/vi/decided/module-01/feat-m1-api-get-document-summary.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-summary.md)  
-  - [`docs/vi/decided/feat-m1-api-get-document-summary.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/feat-m1-api-get-document-summary.md)  
+  - [`docs/vi/decided/module-01/feat-m1-api-get-document-summary.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-summary.md)  
 * **Tài liệu tham chiếu chuẩn:**  
-  - API Specification: [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.13: `GET /api/v1/documents/{id}/summary`)  
-  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.2: Bảng `document_summaries`, 1-1 với `documents`, `ON DELETE CASCADE`)  
-  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Tầng 1: Document Summaries Retrieval & Visual Grounding)  
-  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (Tóm tắt Nhanh 3 Ý Cốt Lõi & Visual Grounding Bounding Boxes)  
-  - Danh mục Swagger hiện hữu: [`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md)  
-  - Thiết kế Eval & Snapshot: [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
-  - Techstack Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
+  - API Specification: [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.13: `GET /api/v1/documents/{id}/summary`)  
+  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.2: Bảng `document_summaries`, 1-1 với `documents`, `ON DELETE CASCADE`)  
+  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Tầng 1: Document Summaries Retrieval & Visual Grounding)  
+  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (Tóm tắt Nhanh 3 Ý Cốt Lõi & Visual Grounding Bounding Boxes)  
+  - Danh mục Swagger hiện hữu: [`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md)  
+  - Thiết kế Eval & Snapshot: [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
+  - Techstack Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
 
 ---
 
@@ -23,7 +22,7 @@ Sau khi rà soát toàn bộ cây mã nguồn của dự án VeriScholar:
 
 | Thành Phần Kiến Trúc | Trạng Thái Hiện Tại | Đánh Giá Chi Tiết |
 | :--- | :---: | :--- |
-| **1. Database Schema DDL** | ⚠️ Đã có trong tài liệu thiết kế, **chưa có Model code** | File [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) đã có DDL bảng `document_summaries`. Tuy nhiên, trong `apps/api/src/api/db/models/` chưa có `summary.py` hay `DocumentSummaryModel`. |
+| **1. Database Schema DDL** | ⚠️ Đã có trong tài liệu thiết kế, **chưa có Model code** | File [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) đã có DDL bảng `document_summaries`. Tuy nhiên, trong `apps/api/src/api/db/models/` chưa có `summary.py` hay `DocumentSummaryModel`. |
 | **2. Core Domain Entities** | ❌ **Chưa có** | Trong `packages/core/src/core/domain/entities/` chưa có thực thể `DocumentSummary` hoặc Value Object `SummaryPoint`. |
 | **3. Core Ports (Interfaces)** | ❌ **Chưa có** | Trong `packages/core/src/core/ports/` chưa có Port `IDocumentSummarizerPort`. |
 | **4. Pydantic Schemas** | ❌ **Chưa có** | `apps/api/src/api/schemas/document.py` chưa có `SummaryPointSchema`, `DocumentSummaryData`, `DocumentSummaryEnvelope`. |
@@ -102,7 +101,7 @@ graph TD
 ```
 
 ### 3.1 Database & Persistence (`apps/api/src/api/db/`)
-1. **Tạo Model SQLAlchemy mới:** [`apps/api/src/api/db/models/summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/summary.py)
+1. **Tạo Model SQLAlchemy mới:** [`apps/api/src/api/db/models/summary.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/summary.py)
    ```python
    class DocumentSummaryModel(Base):
        __tablename__ = "document_summaries"
@@ -146,14 +145,14 @@ graph TD
            "DocumentModel", back_populates="summary"
        )
    ```
-2. **Cập nhật [`apps/api/src/api/db/models/document.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/document.py):**
+2. **Cập nhật [`apps/api/src/api/db/models/document.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/document.py):**
    Thêm mối quan hệ 1-1:
    `summary: Mapped[Optional["DocumentSummaryModel"]] = relationship("DocumentSummaryModel", back_populates="document", uselist=False, cascade="all, delete-orphan")`
-3. **Đăng ký trong [`apps/api/src/api/db/models/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/__init__.py):**
+3. **Đăng ký trong [`apps/api/src/api/db/models/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/__init__.py):**
    Export `DocumentSummaryModel` để Alembic/Base.metadata nhận diện bảng khi tạo schema tự động.
 
 ### 3.2 Core Domain & Ports (`packages/core/`)
-1. **Value Object & Entity:** [`packages/core/src/core/domain/entities/summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/summary.py)
+1. **Value Object & Entity:** [`packages/core/src/core/domain/entities/summary.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/domain/entities/summary.py)
    - `SummaryPoint(text: str, bounding_boxes: list[BoundingBox])`
    - `DocumentSummary`:
      - `id: UUID`
@@ -165,7 +164,7 @@ graph TD
      - `latency_ms: int`
      - `created_at: datetime`
      - `updated_at: datetime`
-2. **Port Interface:** [`packages/core/src/core/ports/summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/ports/summary.py)
+2. **Port Interface:** [`packages/core/src/core/ports/summary.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/ports/summary.py)
    - `IDocumentSummarizerPort(ABC)` định nghĩa hàm:
      ```python
      @abstractmethod
@@ -178,7 +177,7 @@ graph TD
      ) -> DocumentSummary: ...
      ```
 3. **Driven Adapter (Extractor / Summarizer Implementations):**
-   - **`HeuristicGroundedSummarizer`** ([`apps/api/src/api/adapters/heuristic_summarizer.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/adapters/heuristic_summarizer.py)):  
+   - **`HeuristicGroundedSummarizer`** ([`apps/api/src/api/adapters/heuristic_summarizer.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/adapters/heuristic_summarizer.py)):  
      Phục vụ môi trường kiểm thử khép kín (Hermetic evaluation), offline và unit test không tốn tiền API key:
      - Quét tiêu đề và các câu chỉ dẫn trong Abstract/Intro để trích xuất `problem_statement` kèm bounding boxes thực tế.
      - Quét phần Contribution/Proposed Method để trích xuất `contributions`.
@@ -207,7 +206,7 @@ Triển khai phương thức nghiệp vụ:
      - Trả về `DocumentSummaryData`.
 
 ### 3.4 Driving Adapters (`apps/api/src/api/schemas/` & `endpoints/`)
-1. **Pydantic v2 Schemas** ([`apps/api/src/api/schemas/document.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/schemas/document.py)):
+1. **Pydantic v2 Schemas** ([`apps/api/src/api/schemas/document.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/schemas/document.py)):
    ```python
    class SummaryPointSchema(BaseModel):
        text: str = Field(..., description="Nội dung tóm tắt luận điểm")
@@ -245,7 +244,7 @@ Triển khai phương thức nghiệp vụ:
        data: DocumentSummaryData
        meta: MetaResponse
    ```
-2. **FastAPI Router** ([`apps/api/src/api/v1/endpoints/documents.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py)):
+2. **FastAPI Router** ([`apps/api/src/api/v1/endpoints/documents.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py)):
    - Endpoint: `GET /api/v1/documents/{document_id}/summary`
    - Tag: `documents`
    - Response model: `DocumentSummaryEnvelope`
@@ -258,7 +257,7 @@ Triển khai phương thức nghiệp vụ:
 ## 4. Thiết Kế Hệ Thống Kiểm Thử & Autotest Snapshot 2 Cấp Độ
 
 ### 4.1 Cấp độ 1: Pytest Unit & Integration Tests
-Tạo tệp: [`apps/api/tests/test_documents_summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/tests/test_documents_summary.py) bao gồm tối thiểu 8 kịch bản kiểm thử:
+Tạo tệp: [`apps/api/tests/test_documents_summary.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/tests/test_documents_summary.py) bao gồm tối thiểu 8 kịch bản kiểm thử:
 1. `test_get_document_summary_cached_success`: Lấy bản tóm tắt đã lưu trong database, kiểm tra schema đầy đủ 3 ý, latency và bounding boxes.
 2. `test_get_document_summary_on_demand_success`: Kiểm tra khả năng tự động sinh on-demand khi tài liệu chưa có sẵn bản tóm tắt trong DB.
 3. `test_get_document_summary_bounding_boxes_validity`: Kiểm tra mọi bounding box đều là tuple 5 phần tử `[x0, y0, x1, y1, page]`, tọa độ chuẩn hóa từ 0.0 đến 1.0.
@@ -269,9 +268,9 @@ Tạo tệp: [`apps/api/tests/test_documents_summary.py`](file:///home/dammanhdu
 8. `test_get_document_summary_invalid_uuid`: `422 Unprocessable Entity` khi truyền UUID sai định dạng.
 
 ### 4.2 Cấp độ 2: Autotest Snapshot Runner Chuyên Biệt
-Tạo tệp: [`scripts/eval/runners/get_documents_summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/eval/runners/get_documents_summary.py) kế thừa từ `BaseAPIRunner`:
+Tạo tệp: [`scripts/eval/runners/get_documents_summary.py`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/eval/runners/get_documents_summary.py) kế thừa từ `BaseAPIRunner`:
 - **Đăng ký aliases:** `summary`, `document-summary`, `get_documents_summary`.
-- **Thứ tự thực thi trong Module 1:** Vị trí số **13 / 13** trong [`scripts/eval/runners/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/eval/runners/__init__.py) (`MODULE_1_ORDER`).
+- **Thứ tự thực thi trong Module 1:** Vị trí số **13 / 13** trong [`scripts/eval/runners/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/eval/runners/__init__.py) (`MODULE_1_ORDER`).
 - **6 Kịch bản Đánh Giá Thực Tế:**
   1. `200 OK`: Seed bài báo mẫu (`Attention Is All You Need.pdf`), bóc tách tóm tắt 3 ý cốt lõi.
   2. `Grounded Bounding Boxes Check`: Đảm bảo 100% các luận điểm đều có tọa độ dẫn chứng gốc.
@@ -280,7 +279,7 @@ Tạo tệp: [`scripts/eval/runners/get_documents_summary.py`](file:///home/damm
   5. `Tenant Guard (404)`: Kiểm tra chặn truy vấn chéo người dùng.
   6. `Input Guard (422)`: Kiểm tra chặn UUID dị tật.
 - **Đầu ra Báo cáo:**  
-  - Tệp Markdown tóm tắt: [`temp/output/test/get_documents_summary.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/temp/output/test/get_documents_summary.md) (< 50 KB).
+  - Tệp Markdown tóm tắt: [`temp/output/test/get_documents_summary.md`](file:///home/VeriScholar/Workspace/VeriScholar/temp/output/test/get_documents_summary.md) (< 50 KB).
   - Tệp Raw JSON nguyên bản: `tests/.artifacts/get_documents_summary/<session_id>.json` (phục vụ kiểm tra tính toàn vẹn).
   - Box hiển thị trực quan trên Terminal với ký hiệu Unicode thanh mảnh.
 
@@ -289,7 +288,7 @@ Tạo tệp: [`scripts/eval/runners/get_documents_summary.py`](file:///home/damm
 ## 5. Rà Soát Biến Môi Trường (.env.example) & Quy Trình Vận Hành
 
 ### 5.1 Rà soát biến môi trường
-Kiểm tra tệp [`.env.example`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.env.example) và [`apps/api/.env.example`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/.env.example):
+Kiểm tra tệp [`.env.example`](file:///home/VeriScholar/Workspace/VeriScholar/.env.example) và [`apps/api/.env.example`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/.env.example):
 - Các biến cần thiết cho database (`DATABASE_URL`, `POSTGRES_USER`, `POSTGRES_PASSWORD`) đã có đầy đủ.
 - Các biến cho AI Provider (`OPENAI_API_KEY`, `OPENAI_MODEL`, `LLM_PROVIDER`) đã được định nghĩa trong `apps/api/.env.example`.
 - **Kết luận:** 👉 **KHÔNG CẦN THÊM BẤT KỲ BIẾN MÔI TRƯỜNG MỚI NÀO**. Tính năng chạy hoàn toàn độc lập và an toàn.

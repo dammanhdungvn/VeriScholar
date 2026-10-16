@@ -5,23 +5,25 @@ import {
   MessageSquare,
   Library,
   FolderKanban,
+  PenTool,
   LogOut,
+
   PanelLeftClose,
   PanelLeft,
   Search,
   Archive,
   Sun,
   Moon,
-  FileCode,
-  Building2,
-  Shield,
+  Settings,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
+import { AccountSettingsModal } from "@/features/auth/components/AccountSettingsModal";
 import { useTheme } from "@/hooks/useTheme";
 import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
+
 
 interface DashboardTaskbarProps {
   sessions: SessionItem[];
@@ -50,6 +52,8 @@ export function DashboardTaskbar({
   const isExpanded = sidebarState === "expanded";
   const [searchQuery, setSearchQuery] = useState("");
   const [filterArchived, setFilterArchived] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
 
   const displayedSessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -216,15 +220,15 @@ export function DashboardTaskbar({
             </div>
           </button>
 
-          {/* 4. Academic Drafts Button */}
+          {/* 4. Writing & Drafts Button (Module 2) */}
           <button
             type="button"
-            onClick={() => navigate("/drafts")}
-            title="Bản thảo học thuật & LaTeX"
+            onClick={() => navigate("/writing")}
+            title="Soạn thảo & Kiểm chứng (Module 2)"
             className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
           >
             <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-              <FileCode className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+              <PenTool className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
             </div>
             <div
               className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
@@ -234,59 +238,12 @@ export function DashboardTaskbar({
               }`}
             >
               <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                Bản thảo LaTeX
+                Soạn thảo
               </span>
             </div>
           </button>
-
-          {/* 5. Collaborative Labs Button */}
-          <button
-            type="button"
-            onClick={() => navigate("/labs")}
-            title="Phòng Lab nghiên cứu"
-            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
-          >
-            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-              <Building2 className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
-            </div>
-            <div
-              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
-                isExpanded
-                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
-                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
-              }`}
-            >
-              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                Phòng Lab
-              </span>
-            </div>
-          </button>
-
-          {/* 6. Admin Console Button (if admin role) */}
-          {user?.role === "admin" && (
-            <button
-              type="button"
-              onClick={() => navigate("/admin")}
-              title="Quản trị hệ thống"
-              className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
-            >
-              <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-                <Shield className="w-4 h-4 text-purple-600 dark:text-purple-400 stroke-[2.2]" />
-              </div>
-              <div
-                className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
-                  isExpanded
-                    ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
-                    : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
-                }`}
-              >
-                <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                  Admin Console
-                </span>
-              </div>
-            </button>
-          )}
         </div>
+
 
         {/* Sessions List - Graceful Collapse Transition, Hidden in Collapsed State */}
         <div
@@ -396,34 +353,6 @@ export function DashboardTaskbar({
           </button>
         )}
 
-        {isExpanded && (
-          <div className="px-2.5 py-1.5 bg-white dark:bg-[#23211e] rounded-xl border border-[#e8e4dc] dark:border-[#38332c] text-[10px] font-mono space-y-1 shadow-2xs">
-            <div className="flex justify-between text-muted">
-              <span>Hạn mức Token</span>
-              <span className="font-semibold text-coral-600 dark:text-coral-400">
-                {user?.token_quota
-                  ? `${Math.round(((user.tokens_used || 0) / user.token_quota) * 100)}%`
-                  : "Đầy đủ"}
-              </span>
-            </div>
-            <div className="h-1.5 w-full bg-zinc-200 dark:bg-zinc-700 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-coral-500 rounded-full transition-all duration-500"
-                style={{
-                  width: `${
-                    user?.token_quota
-                      ? Math.min(
-                          100,
-                          Math.round(((user.tokens_used || 0) / user.token_quota) * 100)
-                        )
-                      : 10
-                  }%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
-
         <div
           className={`w-full h-11 flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden ${
             isExpanded
@@ -432,12 +361,15 @@ export function DashboardTaskbar({
           }`}
         >
           {/* Avatar box - Fixed size, perfectly centered in collapsed mode */}
-          <div
-            title={user?.full_name ?? "Nhà nghiên cứu"}
-            className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0 cursor-pointer"
+          <button
+            type="button"
+            onClick={() => setIsSettingsOpen(true)}
+            title={user?.full_name ? `${user.full_name} — Cài đặt tài khoản` : "Cài đặt tài khoản"}
+            aria-label="Cài đặt tài khoản"
+            className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0 cursor-pointer hover:bg-coral-500/20 transition-colors"
           >
             {userInitial}
-          </div>
+          </button>
 
           {/* User Details & Controls - Smooth Width & Opacity Transition */}
           <div
@@ -447,13 +379,28 @@ export function DashboardTaskbar({
                 : "max-w-0 opacity-0 ml-0 pointer-events-none"
             }`}
           >
-            <div className="flex flex-col truncate pr-1">
+            <button
+              type="button"
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex flex-col truncate pr-1 text-left cursor-pointer hover:opacity-80 transition-opacity"
+              title="Cài đặt tài khoản"
+            >
               <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-anthropic-serif">
                 {user?.full_name ?? "Nhà nghiên cứu"}
               </span>
-            </div>
+            </button>
 
             <div className="flex items-center gap-0.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                title="Cài đặt tài khoản"
+                aria-label="Cài đặt tài khoản"
+                className="text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 p-1.5 rounded-lg hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+
               <button
                 type="button"
                 onClick={toggleTheme}
@@ -481,6 +428,13 @@ export function DashboardTaskbar({
         </div>
       </div>
     </aside>
+
+    {/* Account Settings Modal */}
+    <AccountSettingsModal
+      isOpen={isSettingsOpen}
+      onClose={() => setIsSettingsOpen(false)}
+    />
   </>
   );
 }
+

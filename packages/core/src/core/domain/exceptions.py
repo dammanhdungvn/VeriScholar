@@ -88,3 +88,27 @@ class DomainValidationError(InvariantViolationError):
         super().__init__(message)
         self.code = code
         self.field = field
+
+
+class SandboxInfrastructureUnavailableError(DomainError):
+    """Raised when hardened sandbox infrastructure cannot be established or verified."""
+
+    def __init__(self, message: str, reasons: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.reasons = reasons or []
+
+
+class ZipSlipSecurityError(DomainError):
+    """Raised when an uploaded archive contains directory traversal, symlinks, or absolute paths."""
+
+
+class MaliciousAssetContentError(DomainError):
+    """Raised when an asset contains dangerous macro commands or invalid binary data."""
+
+
+class AssetQuotaExceededError(DomainError):
+    """Raised when asset archive exceeds maximum file count, ratio, or total size limits."""
+
+
+class DraftRoleForbiddenError(DomainError):
+    """Raised when an authenticated collaborator attempts an action forbidden for their role."""

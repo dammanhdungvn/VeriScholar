@@ -3,6 +3,7 @@ import {
   apiClientWithMeta,
   apiClientBlob,
   resolveApiUrl,
+  generateRequestId,
   type ApiPaginatedResult,
 } from "@/lib/api-client";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
@@ -20,6 +21,7 @@ import type {
   DocumentChunkDetailData,
   DocumentSummaryData,
   DocumentStarResponseData,
+  ResolvedReferenceCard,
 } from "@/types/document";
 
 export interface StreamSummaryCallbacks {
@@ -199,6 +201,19 @@ export const documentsApi = {
   },
 
   /**
+   * 9b. POST /api/v1/documents/{id}/references:resolve
+   * Phân giải danh mục tài liệu tham khảo với Exa và các nguồn học thuật (Module 3)
+   */
+  async resolveReferences(documentId: string): Promise<ResolvedReferenceCard[]> {
+    return apiClient<ResolvedReferenceCard[]>(
+      `/documents/${documentId}/references:resolve`,
+      {
+        method: "POST",
+      }
+    );
+  },
+
+  /**
    * 10. GET /api/v1/documents/{id}/structure
    * Singleton: Cấu trúc bài báo (TOC, Headings, Sections, Abstract Bounding Boxes)
    */
@@ -276,12 +291,15 @@ export const documentsApi = {
    */
   async streamSummary(
     documentId: string,
-    callbacks: StreamSummaryCallbacks = {}
+    callbacks: StreamSummaryCallbacks = {},
+    requestId?: string
   ): Promise<void> {
     const token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
+    const finalRequestId = generateRequestId(requestId);
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       Accept: "text/event-stream",
+      "X-Request-ID": finalRequestId,
     };
     if (token) {
       headers.Authorization = `Bearer ${token}`;
@@ -340,6 +358,14 @@ export const documentsApi = {
         throw err;
       },
     });
+  },
+
+  streamDocumentSummary(
+    documentId: string,
+    callbacks: StreamSummaryCallbacks = {},
+    requestId?: string
+  ): Promise<void> {
+    return this.streamSummary(documentId, callbacks, requestId);
   },
 };
 

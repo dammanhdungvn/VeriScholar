@@ -4,9 +4,10 @@ import { useDashboardStore } from "../stores/useDashboardStore";
 
 interface CitationBadgeProps {
   citation: CitationBadgeData;
+  onOpenReferences?: () => void;
 }
 
-export function CitationBadge({ citation }: CitationBadgeProps) {
+export function CitationBadge({ citation, onOpenReferences }: CitationBadgeProps) {
   const setActiveBbox = useDashboardStore((s) => s.setActiveBbox);
   const activeBbox = useDashboardStore((s) => s.activeBbox);
 
@@ -18,11 +19,13 @@ export function CitationBadge({ citation }: CitationBadgeProps) {
 
   const handleClick = () => {
     setActiveBbox(citation.bbox);
+    onOpenReferences?.();
   };
 
   return (
     <button
       type="button"
+      data-testid="citation-badge"
       onClick={handleClick}
       title={`Xem đoạn bằng chứng tại trang ${citation.page}`}
       className={`inline-flex items-center gap-1 px-2 py-0.5 mx-1 rounded-md text-2xs font-mono transition-all cursor-pointer border ${

@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
+
 import {
   useAuthStore,
   AUTH_TOKEN_STORAGE_KEY,
@@ -84,4 +85,19 @@ describe("useAuthStore", () => {
     expect(state.user?.full_name).toBe("Test Scholar");
     expect(localStorage.getItem(AUTH_USER_STORAGE_KEY)).toContain("Harvard Medical School");
   });
+
+  it("clears queryClient cache on logout to prevent session and document leaks", () => {
+    const mockClear = vi.fn();
+    const mockQueryClient = {
+      clear: mockClear,
+    } as unknown as import("@tanstack/react-query").QueryClient;
+
+    useAuthStore.getState().login(mockAuthResponse, true);
+    useAuthStore.getState().logout(mockQueryClient);
+
+    expect(mockClear).toHaveBeenCalledTimes(1);
+    expect(useAuthStore.getState().isAuthenticated).toBe(false);
+    expect(useAuthStore.getState().user).toBeNull();
+  });
 });
+

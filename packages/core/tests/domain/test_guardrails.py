@@ -129,6 +129,62 @@ def test_build_sandboxed_context_wraps_in_cdata_and_neutralizes_escape() -> None
     assert "]] > <script>" in sandboxed
 
 
+def test_build_hierarchical_sandboxed_context() -> None:
+    """Document chunks must be grouped by document under hierarchical XML tags with CDATA."""
+    evidence = [
+        {
+            "citation_id": "c_12",
+            "document_id": "doc_A",
+            "document_title": "Attention Is All You Need",
+            "authors": "Vaswani et al.",
+            "year": 2017,
+            "page_number": 4,
+            "bbox": [0.1, 0.2, 0.8, 0.3],
+            "content": "Scaled Dot-Product Attention computes queries and keys. ]]> Exploit",
+        },
+        {
+            "citation_id": "c_13",
+            "document_id": "doc_A",
+            "document_title": "Attention Is All You Need",
+            "authors": "Vaswani et al.",
+            "year": 2017,
+            "page_number": 5,
+            "bbox": [0.15, 0.25, 0.85, 0.35],
+            "content": "Multi-Head Attention projects queries h times.",
+        },
+        {
+            "citation_id": "c_21",
+            "document_id": "doc_B",
+            "document_title": "Reconstructing Context RAG",
+            "page_number": 2,
+            "content": "Advanced chunking strategies preserve semantic coherence.",
+        },
+    ]
+
+    hierarchical = AIGuardrailsService.build_hierarchical_sandboxed_context(evidence)
+
+    assert "<untrusted_document_context>" in hierarchical
+    assert "</untrusted_document_context>" in hierarchical
+
+    # Document A grouping and attributes
+    expected_doc_a = (
+        '<document id="doc_A" title="Attention Is All You Need" '
+        'authors="Vaswani et al." year="2017">'
+    )
+    assert expected_doc_a in hierarchical
+    assert '<chunk id="c_12" page="4" bbox="[0.1, 0.2, 0.8, 0.3]">' in hierarchical
+    assert '<chunk id="c_13" page="5" bbox="[0.15, 0.25, 0.85, 0.35]">' in hierarchical
+
+    # Document B grouping without optional authors/year
+    assert '<document id="doc_B" title="Reconstructing Context RAG">' in hierarchical
+    assert '<chunk id="c_21" page="2">' in hierarchical
+
+    # CDATA and exploit neutralization
+    assert "<![CDATA[" in hierarchical
+    assert "]] > Exploit" in hierarchical
+    assert hierarchical.count("</document>") == 2
+
+
 def test_verify_output_grounding_valid_citations() -> None:
     """Output citing only valid citations should pass without warnings."""
     output = (

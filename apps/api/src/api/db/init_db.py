@@ -55,23 +55,18 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
         await conn.execute(
             text("""
                 DO $$
-                BEGIN
                     -- users table upgrades
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables 
                         WHERE table_name = 'users'
                     ) THEN
                         ALTER TABLE users 
-                        ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'researcher' NOT NULL,
-                        ADD COLUMN IF NOT EXISTS google_id VARCHAR(255) NULL,
-                        ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(512) NULL,
-                        ADD COLUMN IF NOT EXISTS token_quota INT DEFAULT 200000 NOT NULL,
-                        ADD COLUMN IF NOT EXISTS tokens_used INT DEFAULT 0 NOT NULL,
-                        ADD COLUMN IF NOT EXISTS storage_quota_bytes BIGINT 
-                            DEFAULT 1073741824 NOT NULL,
-                        ADD COLUMN IF NOT EXISTS storage_used_bytes BIGINT DEFAULT 0 NOT NULL;
-
-                        CREATE INDEX IF NOT EXISTS idx_users_google_id ON users (google_id);
+                        ADD COLUMN IF NOT EXISTS role VARCHAR(30) DEFAULT 'researcher' NOT NULL,
+                        ADD COLUMN IF NOT EXISTS institution VARCHAR(255) NULL,
+                        ADD COLUMN IF NOT EXISTS academic_rank VARCHAR(100) NULL,
+                        ADD COLUMN IF NOT EXISTS orcid_id VARCHAR(50) NULL,
+                        ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500) NULL,
+                        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE NOT NULL;
                     END IF;
 
                     -- research_sessions upgrades
@@ -210,33 +205,6 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                         BEFORE UPDATE ON note_syntheses
                         FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
                     END IF;
-
-                    -- Seed default demo accounts
-                    INSERT INTO users (
-                        id, email, full_name, hashed_password, role, is_active,
-                        token_quota, tokens_used, storage_quota_bytes, storage_used_bytes,
-                        created_at, updated_at
-                    )
-                    VALUES 
-                      (
-                        '00000000-0000-0000-0000-000000000002',
-                        'scholar@verischolar.ai',
-                        'TS. Nguyễn Văn Scholar',
-                        '$argon2id$v=19$m=65536,t=3,p=4$2YBuCrdPkOHKw4C+Ybo5hQ'
-                        '$sM8Uylx4kJfgqLonSXGFosrrN3tHo5kOR6Zc2gTSyBU',
-                        'researcher', true, 200000, 0, 1073741824, 0, NOW(), NOW()
-                      ),
-                      (
-                        '00000000-0000-0000-0000-000000000003',
-                        'admin@verischolar.ai',
-                        'Hệ Thống Quản Trị',
-                        '$argon2id$v=19$m=65536,t=3,p=4$2YBuCrdPkOHKw4C+Ybo5hQ'
-                        '$sM8Uylx4kJfgqLonSXGFosrrN3tHo5kOR6Zc2gTSyBU',
-                        'admin', true, 1000000, 0, 10737418240, 0, NOW(), NOW()
-                      )
-                    ON CONFLICT (email) DO UPDATE SET 
-                      hashed_password = EXCLUDED.hashed_password,
-                      is_active = true;
 
                 END $$;
             """)

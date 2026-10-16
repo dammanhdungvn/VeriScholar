@@ -5,10 +5,10 @@
 * **Mã Phản Hồi:** `202 Accepted`
 * **Loại Endpoint:** Custom Action Method Endpoint (Asynchronous Pipeline Trigger)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 1.4: Quy chuẩn Idempotency 24h & Mục 3.8: Custom Method Bóc tách tài liệu)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `status`, `stage`, `progress`, `parsed_metadata`)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 2: Hexagonal Ports & Adapters và Máy trạng thái xử lý Pipeline)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy tắc không dùng toán học dollar trong docs & Envelope chuẩn)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 1.4: Quy chuẩn Idempotency 24h & Mục 3.8: Custom Method Bóc tách tài liệu)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `status`, `stage`, `progress`, `parsed_metadata`)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 2: Hexagonal Ports & Adapters và Máy trạng thái xử lý Pipeline)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy tắc không dùng toán học dollar trong docs & Envelope chuẩn)
 
 ---
 

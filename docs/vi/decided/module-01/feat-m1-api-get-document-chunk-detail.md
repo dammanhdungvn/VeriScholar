@@ -4,15 +4,15 @@
 * **Tên rút gọn (Branch name):** `feat/m1-api-document-chunk-detail`  
 * **Mã phản hồi chuẩn:** `200 OK` (Sub-resource Detail theo Google Cloud AIP-130 / AIP-136)  
 * **Vị trí tài liệu lưu trữ:**  
-  - [`docs/vi/decided/module-01/feat-m1-api-get-document-chunk-detail.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-chunk-detail.md)  
+  - [`docs/vi/decided/module-01/feat-m1-api-get-document-chunk-detail.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-chunk-detail.md)  
 * **Tài liệu tham chiếu chuẩn:**  
-  - API Specification: [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.12: `GET /api/v1/documents/{id}/chunks/{chunk_id}`)  
-  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `document_chunks`, PK `id`, FK `document_id ON DELETE CASCADE`, `embedding`, `tsv`)  
-  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Module 1 Deep Reading & Citation Grounding)  
-  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (Trích dẫn bằng chứng, Deep Reading Canvas & Citation Inspector)  
-  - Danh mục Swagger hiện hữu: [`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md)  
-  - Thiết kế Eval & Snapshot: [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
-  - Techstack Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
+  - API Specification: [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.12: `GET /api/v1/documents/{id}/chunks/{chunk_id}`)  
+  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `document_chunks`, PK `id`, FK `document_id ON DELETE CASCADE`, `embedding`, `tsv`)  
+  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Module 1 Deep Reading & Citation Grounding)  
+  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (Trích dẫn bằng chứng, Deep Reading Canvas & Citation Inspector)  
+  - Danh mục Swagger hiện hữu: [`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md)  
+  - Thiết kế Eval & Snapshot: [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
+  - Techstack Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
 
 ---
 
@@ -80,7 +80,7 @@ graph TD
 ```
 
 ### 2.1 Database & Persistence (`apps/api/src/api/db/`)
-- **Bảng `document_chunks`:** Đã được định nghĩa đầy đủ tại [`apps/api/src/api/db/models/chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/chunk.py) tuân theo [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.4).
+- **Bảng `document_chunks`:** Đã được định nghĩa đầy đủ tại [`apps/api/src/api/db/models/chunk.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/chunk.py) tuân theo [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.4).
 - **Ràng buộc khóa chính & ngoại:**
   - `id UUID PRIMARY KEY DEFAULT gen_random_uuid()`: Đảm bảo tra cứu O(1) qua B-Tree Index mặc định.
   - `document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE`: Khi xóa tài liệu, toàn bộ chunks biến mất tức thì (Zero-Retention).
@@ -96,7 +96,7 @@ graph TD
   Truy vấn trên tận dụng triệt để index `(document_id, chunk_index)` để xác định tức thì `prev_id` và `next_id` trong cùng 1 lần quét cơ sở dữ liệu.
 
 ### 2.2 Core Domain & Ports (`packages/core/`)
-- **Domain Entity `Chunk`:** Đã tồn tại tại [`packages/core/src/core/domain/entities/chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/chunk.py) với đầy đủ validation:
+- **Domain Entity `Chunk`:** Đã tồn tại tại [`packages/core/src/core/domain/entities/chunk.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/domain/entities/chunk.py) với đầy đủ validation:
   - `id: UUID`
   - `document_id: UUID`
   - `chunk_index: int >= 0`
@@ -173,7 +173,7 @@ Xây dựng lớp `DocumentChunkDetailAPIRunner(BaseAPIRunner)` với **6 kịch
 - **Hiển thị Terminal 3-Box Unicode:** Khung Request Input, Khung Response Output (kèm preview Bounding Boxes & Content), Khung Nghiệp Vụ Passed/Failed.
 
 ### 3.2 Cấp độ 2: Tích Hợp Vào Test Runner Tổng Hệ Thống (`scripts/eval_api.py`)
-- Cập nhật [`scripts/eval/runners/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/eval/runners/__init__.py):
+- Cập nhật [`scripts/eval/runners/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/eval/runners/__init__.py):
   - Thêm alias `"chunk_detail": DocumentChunkDetailAPIRunner`.
   - Thêm alias `"get_documents_chunk_detail": DocumentChunkDetailAPIRunner`.
   - Bổ sung `"get_documents_chunk_detail"` vào `MODULE_1_ORDER` (vị trí thứ 11, ngay sau `get_documents_chunks`).
@@ -187,9 +187,9 @@ Xây dựng lớp `DocumentChunkDetailAPIRunner(BaseAPIRunner)` với **6 kịch
   ```
 
 ### 3.3 Kế Hoạch Cập Nhật Tài Liệu
-1. **[`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md):** Bổ sung mục 12: `GET /api/v1/documents/{document_id}/chunks/{chunk_id}` với đầy đủ mô tả tham số, response JSON chi tiết, cấu trúc error 404/422.
-2. **[`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md):** Đăng ký snapshot của API 12.
-3. **[`scripts/README.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/README.md):** Cập nhật bảng tra cứu các lệnh kiểm thử API.
+1. **[`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md):** Bổ sung mục 12: `GET /api/v1/documents/{document_id}/chunks/{chunk_id}` với đầy đủ mô tả tham số, response JSON chi tiết, cấu trúc error 404/422.
+2. **[`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md):** Đăng ký snapshot của API 12.
+3. **[`scripts/README.md`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/README.md):** Cập nhật bảng tra cứu các lệnh kiểm thử API.
 
 ---
 

@@ -103,3 +103,10 @@ export interface SessionChatMessageRequest {
   enable_thinking?: boolean;
   interactive_response?: Record<string, unknown> | null;
 }
+
+export type {
+  SessionIngestResponse,
+  CitationGraphData,
+  CitationGraphNode,
+  CitationGraphEdge,
+} from "@/features/reader/types/reference";

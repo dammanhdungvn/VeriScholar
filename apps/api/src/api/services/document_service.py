@@ -36,6 +36,7 @@ from api.schemas.document import (
     DocumentParseLinks,
     DocumentParseRequest,
     DocumentParseResponseData,
+    DocumentResolveReferencesResponseData,
     DocumentSectionResponse,
     DocumentStarResponseData,
     DocumentStatusResponseData,
@@ -46,22 +47,30 @@ from api.schemas.document import (
     PageMetadataItem,
     ParsedReferenceItemSchema,
     ReferenceItemResponse,
+    ResolvedAcademicReferenceResponse,
     StagesDetail,
     SummaryPointResponse,
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
+from api.services.ai_tracing_service import AITracingService
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.chunk import DocumentChunk
-from core.domain.entities.reference import ExtractedReference, extract_references_from_text
+from core.domain.entities.reference import (
+    ExtractedReference,
+    ParsedReferenceInfo,
+    extract_references_from_text,
+)
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
 from core.domain.value_objects.pdf_annotation import AnnotationCategory, PdfAnnotation
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.chunk import IChunkExtractorPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from core.ports.summary import IDocumentSummarizerPort
 from core.services.document_validator import AcademicPaperValidator
+from core.services.exa_resolver import InMemoryAcademicResolverAdapter
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -94,12 +103,14 @@ class DocumentService:
         chunk_extractor: IChunkExtractorPort | None = None,
         summarizer: IDocumentSummarizerPort | None = None,
         pdf_annotator: IPdfAnnotatorPort | None = None,
+        ai_tracing: AITracingService | None = None,
     ) -> None:
         self.storage = storage
         self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
         self.chunk_extractor = chunk_extractor or PyMuPDFChunkExtractor()
         self.summarizer = summarizer or HeuristicGroundedSummarizer()
         self.pdf_annotator = pdf_annotator or PyMuPdfAnnotator()
+        self.ai_tracing = ai_tracing or AITracingService()
 
     async def upload_document(
         self,
@@ -252,6 +263,8 @@ class DocumentService:
             filename=filename,
             content_hash=content_hash,
             file_size_bytes=total_size,
+            chunk_count=0,
+            pages_metadata=[],
             status=DocumentStatus.UPLOADED.value,
             stage=DocumentStage.QUEUED.value,
             progress=0,
@@ -461,7 +474,7 @@ class DocumentService:
             publication_year=doc.publication_year,
             doi=doc.doi,
             page_count=doc.page_count,
-            chunk_count=doc.chunk_count,
+            chunk_count=doc.chunk_count or 0,
             file_size_bytes=doc.file_size_bytes,
             status=doc.status,
             is_persistent=doc.is_persistent,
@@ -761,9 +774,14 @@ class DocumentService:
                                 doc.progress = 100
                                 doc.updated_at = now
                                 await db.flush()
-                        except IntegrityError:
-                            # Concurrently inserted by another parallel request
+                        except Exception:
                             pass
+
+                        # Ensure doc is active and unexpired
+                        res = await db.execute(stmt)
+                        fresh_doc = res.scalar_one_or_none()
+                        if fresh_doc is not None:
+                            doc = fresh_doc
                 else:
                     doc.chunk_count = existing_count
                     doc.status = DocumentStatus.COMPLETED.value
@@ -1224,6 +1242,137 @@ class DocumentService:
             return []
 
         return extract_references_from_text(full_ref_text)
+
+    async def resolve_document_references(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        ref_indices: list[int] | None = None,
+        force_refresh: bool = False,
+        resolver: IAcademicSearchResolverPort | None = None,
+    ) -> DocumentResolveReferencesResponseData:
+        """Resolve extracted scholarly references to rich academic metadata via resolver.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant scoping).
+            db: Active async database session.
+            ref_indices: Optional list of reference indices to resolve. If None, resolves all.
+            force_refresh: If True, bypass cache and re-query resolver.
+            resolver: Optional resolver port override.
+
+        Returns:
+            DocumentResolveReferencesResponseData containing resolved reference list.
+
+        Raises:
+            HTTPException(404): If document not found or belongs to another user.
+        """
+        # 1. Enforce multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Retrieve reference items from database, extracting if not present
+        cached_stmt = (
+            select(ReferenceItemModel)
+            .where(ReferenceItemModel.document_id == document_id)
+            .order_by(ReferenceItemModel.ref_index.asc())
+        )
+        cached_res = await db.execute(cached_stmt)
+        ref_items = list(cached_res.scalars().all())
+
+        if not ref_items:
+            # Auto-extract if references have not been extracted yet
+            await self.extract_document_references(
+                document_id=document_id,
+                user_id=user_id,
+                db=db,
+                force_reextract=False,
+            )
+            cached_res = await db.execute(cached_stmt)
+            ref_items = list(cached_res.scalars().all())
+
+        # 3. Filter by ref_indices if specified
+        if ref_indices is not None:
+            target_indices = set(ref_indices)
+            items_to_resolve = [item for item in ref_items if item.ref_index in target_indices]
+        else:
+            items_to_resolve = ref_items
+
+        active_resolver = resolver or InMemoryAcademicResolverAdapter()
+
+        # 4. Resolve references
+        resolved_responses: list[ResolvedAcademicReferenceResponse] = []
+        for item in items_to_resolve:
+            extracted_ref = ExtractedReference(
+                ref_index=item.ref_index,
+                raw_text=item.raw_text,
+                parsed=ParsedReferenceInfo(
+                    title=item.parsed_title,
+                    authors=item.parsed_authors or [],
+                    year=item.parsed_year,
+                    arxiv_id=item.arxiv_id,
+                    doi=item.doi,
+                ),
+            )
+            resolved = await active_resolver.resolve_reference(extracted_ref)
+
+            # Update DB item if newly discovered metadata exists
+            if not item.doi and resolved.doi:
+                item.doi = resolved.doi
+            if not item.arxiv_id and resolved.arxiv_id:
+                item.arxiv_id = resolved.arxiv_id
+            if not item.parsed_title and resolved.title:
+                item.parsed_title = resolved.title
+            if not item.parsed_authors and resolved.authors:
+                item.parsed_authors = resolved.authors
+            if not item.parsed_year and resolved.year:
+                item.parsed_year = resolved.year
+
+            is_ingested = item.resolved_document_id is not None
+            resolved_doc_id = item.resolved_document_id
+
+            resolved_responses.append(
+                ResolvedAcademicReferenceResponse(
+                    ref_index=resolved.ref_index,
+                    raw_text=resolved.raw_text,
+                    title=resolved.title,
+                    authors=resolved.authors,
+                    year=resolved.year,
+                    doi=resolved.doi,
+                    arxiv_id=resolved.arxiv_id,
+                    open_access_pdf_url=resolved.open_access_pdf_url,
+                    abstract=resolved.abstract,
+                    citation_count=resolved.citation_count,
+                    sources=resolved.sources,
+                    landing_url=resolved.landing_url,
+                    is_ingested=is_ingested,
+                    resolved_document_id=resolved_doc_id,
+                )
+            )
+
+        await db.commit()
+
+        return DocumentResolveReferencesResponseData(
+            document_id=document_id,
+            total_resolved=len(resolved_responses),
+            references=resolved_responses,
+        )
 
     async def get_document_structure(
         self,
@@ -1979,120 +2128,160 @@ class DocumentService:
                 },
             )
 
-        # 3. Query existing summary
-        sum_stmt = select(DocumentSummaryModel).where(
-            DocumentSummaryModel.document_id == document_id
-        )
-        sum_res = await db.execute(sum_stmt)
-        summary_record = sum_res.scalar_one_or_none()
+        with self.ai_tracing.trace(
+            name="document_summary",
+            user_id=user_id,
+            document_id=document_id,
+            metadata={"force": force, "doc_title": doc.title},
+        ) as trace_span:
+            # 3. Query existing summary
+            with self.ai_tracing.span(
+                name="summary_retrieval",
+                input={"document_id": str(document_id), "force": force},
+            ) as ret_span:
+                sum_stmt = select(DocumentSummaryModel).where(
+                    DocumentSummaryModel.document_id == document_id
+                )
+                sum_res = await db.execute(sum_stmt)
+                summary_record = sum_res.scalar_one_or_none()
+                ret_span.set_output({"cache_hit": summary_record is not None and not force})
 
-        # If summary exists and force is False -> Immediate Cache-Hit
-        if summary_record is not None and not force:
-            return self._map_summary_model_to_envelope(summary_record), "Cache-Hit"
+            # If summary exists and force is False -> Immediate Cache-Hit
+            if summary_record is not None and not force:
+                trace_span.set_output({"status": "Cache-Hit"})
+                return self._map_summary_model_to_envelope(summary_record), "Cache-Hit"
 
-        # 4. Perform synthesis (initial or forced re-synthesis)
-        pdf_bytes = None
-        if doc.content_hash and await self.storage.blob_exists(doc.content_hash):
-            pdf_bytes = await self.storage.read_blob(doc.content_hash)
+            # 4. Perform synthesis (initial or forced re-synthesis)
+            pdf_bytes = None
+            if doc.content_hash and await self.storage.blob_exists(doc.content_hash):
+                pdf_bytes = await self.storage.read_blob(doc.content_hash)
 
-        chunks_stmt = (
-            select(DocumentChunkModel)
-            .where(DocumentChunkModel.document_id == document_id)
-            .order_by(DocumentChunkModel.chunk_index.asc())
-        )
-        chunks_res = await db.execute(chunks_stmt)
-        chunk_models = list(chunks_res.scalars().all())
-
-        if not chunk_models and pdf_bytes:
-            extracted_chunks = await asyncio.to_thread(
-                self.chunk_extractor.extract_chunks,
-                pdf_bytes,
-                doc.id,
+            chunks_stmt = (
+                select(DocumentChunkModel)
+                .where(DocumentChunkModel.document_id == document_id)
+                .order_by(DocumentChunkModel.chunk_index.asc())
             )
-            if extracted_chunks:
-                now = datetime.now(UTC)
-                new_chunks = [
-                    DocumentChunkModel(
-                        id=ec.id,
-                        document_id=ec.document_id,
-                        chunk_index=ec.chunk_index,
-                        page_number=ec.page_number,
-                        content=ec.content,
-                        bounding_boxes=ec.bounding_boxes_raw,
-                        token_count=ec.token_count,
-                        embedding=None,
-                        created_at=now,
-                        updated_at=now,
-                    )
-                    for ec in extracted_chunks
-                ]
-                db.add_all(new_chunks)
-                doc.chunk_count = len(new_chunks)
-                doc.updated_at = datetime.now(UTC)
-                await db.flush()
-                chunk_models = new_chunks
+            chunks_res = await db.execute(chunks_stmt)
+            chunk_models = list(chunks_res.scalars().all())
 
-        domain_chunks = [
-            DocumentChunk(
-                id=c.id,
-                document_id=c.document_id,
-                chunk_index=c.chunk_index,
-                page_number=c.page_number,
-                content=c.content,
-                bounding_boxes=[BoundingBox.from_list(b) for b in (c.bounding_boxes or [])],
-                token_count=c.token_count,
+            if not chunk_models and pdf_bytes:
+                extracted_chunks = await asyncio.to_thread(
+                    self.chunk_extractor.extract_chunks,
+                    pdf_bytes,
+                    doc.id,
+                )
+                if extracted_chunks:
+                    now = datetime.now(UTC)
+                    new_chunks = [
+                        DocumentChunkModel(
+                            id=ec.id,
+                            document_id=ec.document_id,
+                            chunk_index=ec.chunk_index,
+                            page_number=ec.page_number,
+                            content=ec.content,
+                            bounding_boxes=ec.bounding_boxes_raw,
+                            token_count=ec.token_count,
+                            embedding=None,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        for ec in extracted_chunks
+                    ]
+                    db.add_all(new_chunks)
+                    doc.chunk_count = len(new_chunks)
+                    doc.updated_at = datetime.now(UTC)
+                    await db.flush()
+                    chunk_models = new_chunks
+
+            domain_chunks = [
+                DocumentChunk(
+                    id=c.id,
+                    document_id=c.document_id,
+                    chunk_index=c.chunk_index,
+                    page_number=c.page_number,
+                    content=c.content,
+                    bounding_boxes=[BoundingBox.from_list(b) for b in (c.bounding_boxes or [])],
+                    token_count=c.token_count,
+                )
+                for c in chunk_models
+            ]
+
+            abstract_text = None
+            if doc.parsed_metadata and isinstance(doc.parsed_metadata, dict):
+                struct_data = doc.parsed_metadata.get("structure")
+                if isinstance(struct_data, dict):
+                    abstract_text = struct_data.get("abstract")
+
+            with self.ai_tracing.generation(
+                name="summary_generation",
+                model=getattr(self.summarizer, "model", "summarizer"),
+                input={"title": doc.title, "chunk_count": len(domain_chunks)},
+            ) as gen_span:
+                domain_summary = await self.summarizer.summarize(
+                    document_id=doc.id,
+                    title=doc.title,
+                    abstract=abstract_text,
+                    chunks=domain_chunks,
+                    pdf_bytes=pdf_bytes,
+                )
+                gen_span.set_output(
+                    {
+                        "total_tokens": domain_summary.total_tokens,
+                        "latency_ms": domain_summary.latency_ms,
+                    }
+                )
+
+            prob_boxes = [b.to_list() for b in domain_summary.problem_statement.bounding_boxes]
+            contr_boxes = [b.to_list() for b in domain_summary.contributions.bounding_boxes]
+            limit_boxes = [b.to_list() for b in domain_summary.limitations.bounding_boxes]
+
+            now = datetime.now(UTC)
+            if summary_record is not None:
+                summary_record.problem_statement = domain_summary.problem_statement.text
+                summary_record.problem_citations = prob_boxes
+                summary_record.contributions = domain_summary.contributions.text
+                summary_record.contribution_citations = contr_boxes
+                summary_record.limitations = domain_summary.limitations.text
+                summary_record.limitation_citations = limit_boxes
+                summary_record.total_tokens = domain_summary.total_tokens
+                summary_record.latency_ms = domain_summary.latency_ms
+                summary_record.updated_at = now
+            else:
+                summary_record = DocumentSummaryModel(
+                    id=uuid4(),
+                    document_id=doc.id,
+                    problem_statement=domain_summary.problem_statement.text,
+                    problem_citations=prob_boxes,
+                    contributions=domain_summary.contributions.text,
+                    contribution_citations=contr_boxes,
+                    limitations=domain_summary.limitations.text,
+                    limitation_citations=limit_boxes,
+                    total_tokens=domain_summary.total_tokens,
+                    latency_ms=domain_summary.latency_ms,
+                    created_at=now,
+                    updated_at=now,
+                )
+                db.add(summary_record)
+            try:
+                await db.commit()
+            except IntegrityError:
+                await db.rollback()
+                latest_stmt = select(DocumentSummaryModel).where(
+                    DocumentSummaryModel.document_id == document_id
+                )
+                latest_res = await db.execute(latest_stmt)
+                summary_record = latest_res.scalar_one_or_none()
+                if summary_record is None:
+                    raise
+
+            trace_span.set_output(
+                {
+                    "status": "Generated",
+                    "total_tokens": domain_summary.total_tokens,
+                    "latency_ms": domain_summary.latency_ms,
+                }
             )
-            for c in chunk_models
-        ]
-
-        abstract_text = None
-        if doc.parsed_metadata and isinstance(doc.parsed_metadata, dict):
-            struct_data = doc.parsed_metadata.get("structure")
-            if isinstance(struct_data, dict):
-                abstract_text = struct_data.get("abstract")
-
-        domain_summary = await self.summarizer.summarize(
-            document_id=doc.id,
-            title=doc.title,
-            abstract=abstract_text,
-            chunks=domain_chunks,
-            pdf_bytes=pdf_bytes,
-        )
-
-        prob_boxes = [b.to_list() for b in domain_summary.problem_statement.bounding_boxes]
-        contr_boxes = [b.to_list() for b in domain_summary.contributions.bounding_boxes]
-        limit_boxes = [b.to_list() for b in domain_summary.limitations.bounding_boxes]
-
-        now = datetime.now(UTC)
-        if summary_record is not None:
-            summary_record.problem_statement = domain_summary.problem_statement.text
-            summary_record.problem_citations = prob_boxes
-            summary_record.contributions = domain_summary.contributions.text
-            summary_record.contribution_citations = contr_boxes
-            summary_record.limitations = domain_summary.limitations.text
-            summary_record.limitation_citations = limit_boxes
-            summary_record.total_tokens = domain_summary.total_tokens
-            summary_record.latency_ms = domain_summary.latency_ms
-            summary_record.updated_at = now
-        else:
-            summary_record = DocumentSummaryModel(
-                id=uuid4(),
-                document_id=doc.id,
-                problem_statement=domain_summary.problem_statement.text,
-                problem_citations=prob_boxes,
-                contributions=domain_summary.contributions.text,
-                contribution_citations=contr_boxes,
-                limitations=domain_summary.limitations.text,
-                limitation_citations=limit_boxes,
-                total_tokens=domain_summary.total_tokens,
-                latency_ms=domain_summary.latency_ms,
-                created_at=now,
-                updated_at=now,
-            )
-            db.add(summary_record)
-
-        await db.commit()
-        return self._map_summary_model_to_envelope(summary_record), "Generated"
+            return self._map_summary_model_to_envelope(summary_record), "Generated"
 
     async def export_annotated_pdf(
         self,
@@ -2257,6 +2446,7 @@ class DocumentService:
         user_id: UUID,
         db: AsyncSession,
         is_disconnected: Any = None,
+        request_id: str | None = None,
     ) -> AsyncIterator[str]:
         """Stream 3-point grounded summary tokens and spatial bounding boxes via SSE."""
         try:
@@ -2268,7 +2458,11 @@ class DocumentService:
             )
             data = envelope.data
 
-            start_dict = {"document_id": str(document_id), "status": "streaming"}
+            start_dict = {
+                "document_id": str(document_id),
+                "status": "streaming",
+                "request_id": request_id,
+            }
             start_payload = json.dumps(start_dict, ensure_ascii=False)
             yield f"event: summary_start\ndata: {start_payload}\n\n"
 
@@ -2310,6 +2504,10 @@ class DocumentService:
             end_payload = json.dumps(end_dict, ensure_ascii=False)
             yield f"event: summary_end\ndata: {end_payload}\n\n"
         except Exception as exc:
-            err_dict = {"code": "STREAM_RUNTIME_ERROR", "message": str(exc)}
+            err_dict = {
+                "code": "STREAM_RUNTIME_ERROR",
+                "message": str(exc),
+                "request_id": request_id,
+            }
             err_payload = json.dumps(err_dict, ensure_ascii=False)
             yield f"event: error\ndata: {err_payload}\n\n"

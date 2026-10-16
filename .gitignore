@@ -61,12 +61,24 @@ temp/
 apps/storage/
 apps/api/storage/
 storage/
+
+*.db
+*.sqlite
+*.sqlite3
+*.log
+*.tar.gz
+*.sha256
 /data/*
 !/data/papers/
 /data/papers/*
 !/data/papers/*.expected.json
 !/data/papers/*.pdf
 !/data/papers/golden_eval_dataset.json
+
+# Machine Learning Models & Weights
+models/*
+!models/README.md
+*.onnx
 
 # Node / Frontend
 node_modules/

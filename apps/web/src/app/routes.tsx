@@ -4,10 +4,7 @@ import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { LoginForm } from "@/features/auth/components/LoginForm";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { DashboardPage } from "@/features/dashboard/components/DashboardPage";
-import { PublicShareReader } from "@/features/shares/components/PublicShareReader";
-import { DraftingWorkspace } from "@/features/drafts/components/DraftingWorkspace";
-import { AdminConsolePage } from "@/features/admin/components/AdminConsolePage";
-import { OrganizationsPage } from "@/features/organizations/components/OrganizationsPage";
+import { WritingPage } from "@/features/writing/components/WritingPage";
 
 export const router = createBrowserRouter([
   {
@@ -23,25 +20,14 @@ export const router = createBrowserRouter([
     element: <DashboardPage />,
   },
   {
-    path: "/shares/:token",
-    element: <PublicShareReader />,
+    path: "/writing",
+    element: <WritingPage />,
   },
   {
-    path: "/drafts",
-    element: <DraftingWorkspace />,
+    path: "/writing/:draftId",
+    element: <WritingPage />,
   },
-  {
-    path: "/drafts/:draftId",
-    element: <DraftingWorkspace />,
-  },
-  {
-    path: "/admin",
-    element: <AdminConsolePage />,
-  },
-  {
-    path: "/labs",
-    element: <OrganizationsPage />,
-  },
+
   {
     element: <AuthLayout />,
     children: [

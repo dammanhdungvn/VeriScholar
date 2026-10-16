@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { documentsApi } from "./documentsApi";
+import { fetchEventSource } from "@microsoft/fetch-event-source";
+
+vi.mock("@microsoft/fetch-event-source", () => ({
+  fetchEventSource: vi.fn(),
+}));
 
 describe("documentsApi", () => {
   beforeEach(() => {
-    vi.restoreAllMocks();
+    vi.clearAllMocks();
   });
 
   it("uploads PDF document with multipart/form-data", async () => {
@@ -108,6 +113,61 @@ describe("documentsApi", () => {
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/documents/doc-1"),
       expect.objectContaining({ method: "DELETE" })
+    );
+  });
+
+  it("streamSummary attaches generated X-Request-ID to SSE request", async () => {
+    await documentsApi.streamSummary("doc-99", {});
+
+    expect(fetchEventSource).toHaveBeenCalledTimes(1);
+    const [url, options] = vi.mocked(fetchEventSource).mock.calls[0];
+    expect(url).toContain("/documents/doc-99/summary:stream");
+    expect(options?.headers).toBeDefined();
+    expect(options?.headers?.["X-Request-ID"]).toBeDefined();
+    expect(options?.headers?.["X-Request-ID"]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  it("streamDocumentSummary propagates explicit requestId and works as alias", async () => {
+    await documentsApi.streamDocumentSummary("doc-99", {}, "trace-summary-req-123");
+
+    const [, options] = vi.mocked(fetchEventSource).mock.calls[0];
+    expect(options?.headers?.["X-Request-ID"]).toBe("trace-summary-req-123");
+  });
+
+  it("resolves scholarly references via POST /documents/{id}/references:resolve (Module 3)", async () => {
+    const mockResolved = [
+      {
+        ref_index: 1,
+        raw_text: "Vaswani et al. Attention is all you need. NeurIPS 2017.",
+        title: "Attention Is All You Need",
+        authors: ["A. Vaswani", "N. Shazeer"],
+        year: 2017,
+        arxiv_id: "1706.03762",
+        open_access_pdf_url: "https://arxiv.org/pdf/1706.03762.pdf",
+        sources: ["arXiv", "Exa"],
+        citation_count: 120000,
+      },
+    ];
+
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: mockResolved,
+      }),
+    });
+
+    const result = await documentsApi.resolveReferences("doc-123");
+    expect(result).toHaveLength(1);
+    expect(result[0].title).toBe("Attention Is All You Need");
+    expect(result[0].open_access_pdf_url).toContain("arxiv.org");
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/documents/doc-123/references:resolve"),
+      expect.objectContaining({ method: "POST" })
     );
   });
 });

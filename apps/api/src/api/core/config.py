@@ -1,7 +1,8 @@
+import os
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,13 +31,22 @@ def get_default_reload_dirs() -> list[str]:
     return dirs or ["src"]
 
 
+def get_env_files() -> tuple[str, ...]:
+    """Dynamically resolves environment configuration files with environment override precedence."""
+    app_env = os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "development"
+    files = [
+        ".env",
+        str(ROOT_DIR / ".env"),
+        str(ROOT_DIR / "apps" / "api" / ".env"),
+        str(ROOT_DIR / f".env.{app_env}"),
+        str(ROOT_DIR / "apps" / "api" / f".env.{app_env}"),
+    ]
+    return tuple(files)
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=(
-            str(ROOT_DIR / "apps" / "api" / ".env"),
-            str(ROOT_DIR / ".env"),
-            ".env",
-        ),
+        env_file=get_env_files(),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="ignore",
@@ -44,7 +54,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str = "VeriScholar API"
     VERSION: str = "0.1.0"
-    ENVIRONMENT: Literal["development", "staging", "production", "test"] = "development"
+    ENVIRONMENT: Literal["development", "uat", "staging", "production", "test"] = "development"
 
     # Server settings
     HOST: str = "0.0.0.0"
@@ -52,13 +62,81 @@ class Settings(BaseSettings):
     DEBUG: bool = False
     RELOAD_DIRS: list[str] = Field(default_factory=get_default_reload_dirs)
 
-    # Storage settings (CAS Physical Blobs)
+    # Storage settings (CAS Physical Blobs & Rotating Logs)
     STORAGE_DIR: Path = ROOT_DIR / "storage" / "blobs"
+    LOGS_DIR: Path = ROOT_DIR / "storage" / "logs"
 
     # Logging settings
     LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     LOG_FORMAT: Literal["console", "json"] = "console"
     SQL_ECHO: bool = False
+
+    # Authentication & JWT settings
+    JWT_SECRET_KEY: str = "verischolar-super-secure-jwt-secret-key-2026-production-grade"
+    JWT_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 604800  # 7 days
+
+    # Langfuse AI Observability & Tracing settings
+    LANGFUSE_ENABLED: bool = False
+    LANGFUSE_PUBLIC_KEY: str | None = None
+    LANGFUSE_SECRET_KEY: SecretStr | None = None
+    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
+    LANGFUSE_BASE_URL: str | None = None
+    LANGFUSE_SAMPLE_RATE: float = 1.0
+    LANGFUSE_MASK_INPUT_OUTPUT: bool = True
+    LANGFUSE_ENVIRONMENT: str | None = None
+
+    # Reasoning Mode settings (5.6-luna)
+    REASONING_EFFORT: Literal["low", "medium", "high"] = "medium"
+    STREAM_REASONING_TOKENS: bool = True
+
+    # Cohere Reranker settings
+    COHERE_API_KEY: SecretStr | None = None
+    COHERE_RERANK_MODEL: str = "rerank-v3.5"
+    COHERE_RELEVANCE_THRESHOLD: float = 0.35
+
+    # Azure Document Intelligence settings
+    AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT: str | None = None
+    AZURE_DOCUMENT_INTELLIGENCE_KEY: SecretStr | None = None
+
+    @model_validator(mode="after")
+    def resolve_langfuse_settings(self) -> "Settings":
+        """Synchronize LANGFUSE_BASE_URL with LANGFUSE_HOST, auto-enable if keys exist,
+        and set privacy defaults.
+        """
+        if self.LANGFUSE_BASE_URL:
+            self.LANGFUSE_HOST = self.LANGFUSE_BASE_URL
+        if self.LANGFUSE_PUBLIC_KEY and self.LANGFUSE_SECRET_KEY:
+            # Auto-enable if keys are present and not explicitly set to false
+            if "LANGFUSE_ENABLED" not in self.model_fields_set:
+                self.LANGFUSE_ENABLED = True
+        if self.LANGFUSE_ENVIRONMENT is None:
+            self.LANGFUSE_ENVIRONMENT = self.ENVIRONMENT
+        # Default masking rule: unmasked in development, uat, staging, and test;
+        # masked in production (ZDR)
+        if "LANGFUSE_MASK_INPUT_OUTPUT" not in self.model_fields_set:
+            self.LANGFUSE_MASK_INPUT_OUTPUT = self.ENVIRONMENT == "production"
+        return self
+
+    @model_validator(mode="after")
+    def validate_azure_credentials(self) -> "Settings":
+        """Heuristic guard: Auto-fix if Azure endpoint and key are accidentally swapped
+        in configuration.
+        """
+        if (
+            self.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+            and not self.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT.startswith(("http://", "https://"))
+            and self.AZURE_DOCUMENT_INTELLIGENCE_KEY
+            and self.AZURE_DOCUMENT_INTELLIGENCE_KEY.get_secret_value().startswith(
+                ("http://", "https://")
+            )
+        ):
+            swapped_endpoint = self.AZURE_DOCUMENT_INTELLIGENCE_KEY.get_secret_value()
+            swapped_key = self.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT
+            self.AZURE_DOCUMENT_INTELLIGENCE_ENDPOINT = swapped_endpoint
+            self.AZURE_DOCUMENT_INTELLIGENCE_KEY = SecretStr(swapped_key)
+        return self
 
     # Database settings (PostgreSQL + pgvector)
     DATABASE_URL: str = "postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar"
@@ -91,28 +169,12 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
 
-    # Observability & PromptOps (Langfuse)
-    LANGFUSE_PUBLIC_KEY: str | None = None
-    LANGFUSE_SECRET_KEY: SecretStr | None = None
-    LANGFUSE_HOST: str = "https://cloud.langfuse.com"
-
-    # Authentication & JWT Security Settings
-    JWT_SECRET_KEY: SecretStr = SecretStr(
-        "verischolar-dev-secret-key-min-32-bytes-long-change-in-prod"
-    )
-    JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-    ENABLE_DEV_AUTH_BYPASS: bool = True
+    # Exa AI Neural Search Settings (Module 3)
+    EXA_API_KEY: SecretStr | None = None
 
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"
-
-    @property
-    def allow_dev_auth_bypass(self) -> bool:
-        """Allow dev auth bypass only in non-production environments."""
-        return not self.is_production and self.ENABLE_DEV_AUTH_BYPASS
 
 
 settings = Settings()

@@ -12,6 +12,7 @@ from api.schemas.note import (
     NoteSynthesisResponse,
     SynthesizeNotesRequest,
 )
+from api.services.ai_tracing_service import AITracingService
 from core.domain.exceptions import NoteSynthesisError
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,8 +23,9 @@ logger = structlog.get_logger("api.services.note_synthesis")
 class NoteSynthesisService:
     """Orchestrates multi-note synthesis into lessons with interactive citation badges."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
         self.db = db
+        self.ai_tracing = ai_tracing or AITracingService()
 
     async def synthesize_notes(
         self,
@@ -52,49 +54,83 @@ class NoteSynthesisService:
                 "Không tìm thấy ghi chú hợp lệ nào thuộc quyền sở hữu của bạn."
             )
 
-        # Build Interactive Badges mapping
-        badges: list[InteractiveBadgeResponse] = []
-        for idx, note in enumerate(selected_notes):
-            snapshot = note.frozen_snapshot or {}
-            authors = snapshot.get("authors") or []
-            year = snapshot.get("year")
-            doc_title = snapshot.get("document_title") or "Tài liệu"
+        with self.ai_tracing.trace(
+            name="note_synthesis",
+            user_id=user_id,
+            metadata={
+                "mode": req.mode,
+                "language": req.language,
+                "notes_count": len(req.note_ids),
+            },
+            input={"note_ids": [str(nid) for nid in req.note_ids], "mode": req.mode},
+        ) as trace_span:
+            # Build Interactive Badges mapping
+            badges: list[InteractiveBadgeResponse] = []
+            with self.ai_tracing.span(
+                name="badge_assembly",
+                metadata={"notes_count": len(selected_notes)},
+            ) as badge_span:
+                for idx, note in enumerate(selected_notes):
+                    snapshot = note.frozen_snapshot or {}
+                    authors = snapshot.get("authors") or []
+                    year = snapshot.get("year")
+                    doc_title = snapshot.get("document_title") or "Tài liệu"
 
-            if authors:
-                first_author = authors[0]
-                if len(authors) > 1:
-                    citation_label = (
-                        f"{first_author} et al., {year or 'N.D.'} • Tr. {note.page_number}"
+                    if authors:
+                        first_author = authors[0]
+                        if len(authors) > 1:
+                            citation_label = (
+                                f"{first_author} et al., {year or 'N.D.'} • Tr. {note.page_number}"
+                            )
+                        else:
+                            citation_label = (
+                                f"{first_author}, {year or 'N.D.'} • Tr. {note.page_number}"
+                            )
+                    else:
+                        short_title = doc_title[:24] + "..." if len(doc_title) > 24 else doc_title
+                        citation_label = f"{short_title} • Tr. {note.page_number}"
+
+                    if getattr(note, "is_source_detached", False):
+                        citation_label += " ⚠️ Nguồn đã ngắt"
+
+                    badge = InteractiveBadgeResponse(
+                        badge_id=f"badge_{idx + 1}",
+                        note_id=str(note.id),
+                        document_id=str(note.document_id) if note.document_id else None,
+                        citation_label=citation_label,
+                        page_number=note.page_number,
+                        bounding_boxes=note.bounding_boxes or [],
+                        quote_text=note.selected_text,
+                        is_source_detached=bool(getattr(note, "is_source_detached", False)),
                     )
-                else:
-                    citation_label = f"{first_author}, {year or 'N.D.'} • Tr. {note.page_number}"
-            else:
-                short_title = doc_title[:24] + "..." if len(doc_title) > 24 else doc_title
-                citation_label = f"{short_title} • Tr. {note.page_number}"
+                    badges.append(badge)
+                badge_span.set_output({"badges_count": len(badges)})
 
-            if getattr(note, "is_source_detached", False):
-                citation_label += " ⚠️ Nguồn đã ngắt"
+            # Generate synthesis content
+            with self.ai_tracing.generation(
+                name="llm_synthesis",
+                model=(
+                    settings.OPENAI_MODEL if settings.OPENAI_API_KEY else "deterministic_fallback"
+                ),
+                metadata={"mode": req.mode, "language": req.language},
+            ) as gen_span:
+                title, markdown_content = await self._generate_synthesis(
+                    notes=selected_notes,
+                    badges=badges,
+                    mode=req.mode,
+                    language=req.language,
+                    custom_title=req.target_title,
+                )
+                gen_span.set_output({"title": title, "content_length": len(markdown_content)})
 
-            badge = InteractiveBadgeResponse(
-                badge_id=f"badge_{idx + 1}",
-                note_id=str(note.id),
-                document_id=str(note.document_id) if note.document_id else None,
-                citation_label=citation_label,
-                page_number=note.page_number,
-                bounding_boxes=note.bounding_boxes or [],
-                quote_text=note.selected_text,
-                is_source_detached=bool(getattr(note, "is_source_detached", False)),
+            trace_span.set_output(
+                {
+                    "title": title,
+                    "mode": req.mode,
+                    "badges_count": len(badges),
+                    "content_length": len(markdown_content),
+                }
             )
-            badges.append(badge)
-
-        # Generate synthesis content
-        title, markdown_content = await self._generate_synthesis(
-            notes=selected_notes,
-            badges=badges,
-            mode=req.mode,
-            language=req.language,
-            custom_title=req.target_title,
-        )
 
         now = datetime.now(timezone.utc)
         # Persist into note_syntheses table

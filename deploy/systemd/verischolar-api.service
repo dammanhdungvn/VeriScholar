@@ -1,0 +1,18 @@
+[Unit]
+Description=VeriScholar Backend FastAPI Service (UAT)
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=VeriScholar
+Group=VeriScholar
+WorkingDirectory=/home/VeriScholar/Workspace/VeriScholar
+Environment="APP_ENV=uat" "PYTHONPATH=/home/VeriScholar/Workspace/VeriScholar/apps/api/src"
+ExecStart=/home/VeriScholar/Workspace/VeriScholar/.venv/bin/uvicorn api:app --host 127.0.0.1 --port 8000 --workers 2
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -5,9 +5,9 @@
 * **Mã Phản Hồi:** `200 OK` (Toàn bộ tệp) hoặc `206 Partial Content` (Một phần tệp)
 * **Loại Endpoint:** Binary Streaming Endpoint (Media Resource)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.3: API Stream tệp PDF gốc)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, `document_storage_blobs`)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Phần 2: Hệ thống lưu trữ và tối ưu hóa bộ nhớ cho file streaming)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.3: API Stream tệp PDF gốc)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, `document_storage_blobs`)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Phần 2: Hệ thống lưu trữ và tối ưu hóa bộ nhớ cho file streaming)
   - RFC 9110 HTTP Semantics (Phần 14: Range Requests)
 
 ---

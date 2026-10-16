@@ -51,11 +51,12 @@ This skill guides AI agents and engineers on how to build, refactor, and verify 
 
 ### Step 1: Pre-Implementation Analysis & Sanity Check
 1. State assumptions explicitly before coding.
-2. Check `AGENTS.md` and relevant reference docs:
+2. Check `AGENTS.md` (especially Section 9: Mandatory Tool & Resource Selection Protocol) and relevant reference docs:
    - [Architectural Invariants](references/architectural-invariants.md)
    - [Standby & Session Flow](references/standby-session-flow.md)
    - [AI Guardrails Specification](references/guardrails-spec.md)
-3. Ensure no speculative abstractions or unnecessary dependencies are introduced (YAGNI).
+3. **Mandatory Resource Selection:** Identify task domain, inspect available skills/MCP/CLI tools, read their guidelines, and record evidence for review.
+4. Ensure no speculative abstractions or unnecessary dependencies are introduced (YAGNI).
 
 ### Step 2: Implementation & Monorepo Atomicity
 1. Make surgical changes only.

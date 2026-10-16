@@ -49,6 +49,18 @@ Behavioral guidelines, architectural laws, clean code standards, and workflow in
   3. [Step] → verify: [check]
   ```
 
+### 1.5. Mandatory Multi-Agent Delegation Invariant
+**Không làm việc đơn độc khi có các AI chuyên trách đang hoạt động. Luôn luôn giao việc theo đúng rules/chuyên môn.**
+- **Zero Solo-Work Invariant:** Tuyệt đối **KHÔNG ĐƯỢC** một mình tự ôm đồm thực hiện toàn bộ quy trình (từ code backend, code frontend, viết test đến tự nghiệm thu) khi trong phiên làm việc đang có các AI chuyên trách khác (Backend Specialist, Frontend Specialist, Lead Reviewer, v.v.) hoạt động hoặc sẵn sàng.
+- **Phân chia công việc theo đúng vai trò & rules:**
+  - **Backend Specialist:** Chịu trách nhiệm toàn bộ logic nghiệp vụ máy chủ, API endpoints, CSDL/migrations, NLI verification services, backend unit/integration tests (`pytest`) và linter Ruff.
+  - **Frontend Specialist:** Chịu trách nhiệm toàn bộ giao diện web, UI components, state management, API client, streaming SSE hooks, TypeScript compilation (`tsc -b`), Vitest tests và UI Error Boundaries.
+  - **Lead Reviewer / Gatekeeper:** Chịu trách nhiệm kiểm tra độc lập git diff, đối chiếu kiến trúc Hexagonal, chạy các bộ AI benchmark/eval tự động và cấp chứng chỉ nghiệm thu kỹ thuật khách quan.
+  - **Coordinator / CTO:** Giữ vai trò đầu mối điều phối duy nhất, phân rã yêu cầu thành các gói công việc (task decomposition), giao việc cụ thể kèm tiêu chí nghiệm thu rõ ràng (Definition of Done), giám sát tiến độ và tổng hợp báo cáo.
+- **Quy tắc phối hợp:**
+  - Phải ủy quyền công việc qua cơ chế điều phối runtime chuẩn (`herdr agent prompt <target> ...` hoặc `invoke_subagent`).
+  - Phải chờ kết quả phản hồi từ đồng đội AI, kiểm tra chéo và đối chiếu bằng chứng khách quan trước khi xác nhận hoàn thành cho User / Product Owner.
+
 ---
 
 ## 2. DEV ENVIRONMENT TIPS
@@ -221,3 +233,75 @@ Before considering any task complete, cross-check and verify every item:
 - [ ] **Atomic Evidence Preserved:** Normalized `BoundingBox` coordinates are preserved on all `DocumentChunk` instances (`page >= 1`, Top-Left origin `[0.0, 1.0]`); never downgraded to raw unstructured text.
 - [ ] **Ingestion Idempotency Enforced:** Documents calculate SHA-256 hash to prevent duplicate chunking and vector index pollution.
 - [ ] **Contract & Schema Safety:** Any modified API routes return predictable, structured error envelopes and follow the staged N-1 rollout discipline.
+- [ ] **Mandatory Resource & Tool Evidence Attached:** Task completion report explicitly lists tools/skills used, concrete empirical evidence (test logs, traces, browser screenshots), or domain-specific rationale if no secondary tool was needed.
+- [ ] **Multi-Agent Delegation Verified:** Đã phân chia công việc cho các AI chuyên trách tương ứng (Backend, Frontend, Reviewer); tuyệt đối không tự ý làm việc đơn độc khi có đồng đội AI hoạt động.
+
+---
+
+## 9. MANDATORY TOOL & RESOURCE SELECTION PROTOCOL
+
+Lựa chọn và sử dụng tài nguyên phù hợp là **bước bắt buộc** trong quy trình thực hiện task của toàn đội, không phải gợi ý tùy chọn.
+
+### 9.1. Quy Trình Trước Khi Thực Hiện Mỗi Task Có Ý Nghĩa
+1. **Xác định nhu cầu:** Phân loại rõ mục tiêu: nghiên cứu (research), thiết kế kiến trúc (design), lập trình (coding), gỡ lỗi (debug), kiểm thử (test/eval) hay nghiệm thu (review).
+2. **Khảo sát tài nguyên thực tế phù hợp:**
+   - Skills có sẵn trong repository: `.agents/skills/*` (`ui-styling`, `fastapi`, `langfuse`, `e2e-testing`, `verification-loop`, `hexagonal-architecture`, `postgres-patterns`, v.v.).
+   - Năng lực native Antigravity, Herdr / Multi-Agent runtime CLI (`herdr agent`, `herdr pane`, `herdr workspace`), MCP servers, CLI công cụ và tài liệu chính thức theo đúng phiên bản.
+3. **Đọc tài liệu & kích hoạt tài nguyên:**
+   - Đọc hướng dẫn/SKILL.md của tài nguyên được chọn trước khi thao tác.
+   - Sử dụng khi mang lại lợi ích thiết thực và ghi rõ yêu cầu sử dụng/kiểm chứng vào task bàn giao.
+   - Tuyệt đối không chỉ liệt kê công cụ trên danh nghĩa rồi bỏ qua hoặc tuyên bố dùng mà không thực hiện.
+
+### 9.2. Ma Trận Ứng Dụng Thực Tiễn Theo Miền Task
+- **Sửa UI / Frontend:** Đọc skill frontend liên quan (`ui-styling`, `react-patterns`), mở ứng dụng bằng browser (Playwright browser), tái hiện lỗi trực quan, sửa mã nguồn, sau đó kiểm tra lại trên giao diện; không chỉ dựa vào `pnpm build` hay jsdom unit test.
+- **Debug RAG & Tracing:** Sử dụng skill Langfuse / CLI / trace API để kiểm tra trace được cấp quyền, định vị chính xác span/bước lỗi trước khi sửa, và chạy eval suite đối chuẩn trước/sau khi vá lỗi.
+- **Sửa API, Endpoint hoặc Auth:** Đọc kỹ contract OpenAPI và skill backend/security (`fastapi`, `security-review`, `api-design`), gửi request HTTP thực tế, kiểm tra phân quyền và chạy kiểm thử chéo bằng tối thiểu 2 tài khoản khác nhau.
+- **Tích hợp Thư viện / CLI:** Đọc tài liệu chính thức đúng phiên bản phát hành, kiểm tra compatibility matrix, thực hiện smoke test độc lập; cấm đoán mò API signature.
+- **Refactor Phức Tạp & Kiến Trúc:** Cân nhắc khả năng điều phối subagents/teamwork độc lập để phân tích phản biện; chỉ kích hoạt khi giá trị vượt chi phí điều phối.
+- **Coding Song Song:** Sử dụng Herdr orchestration và worktrees riêng biệt cho từng worker; giao việc kèm task tracking, nhận `worker_done` và thực hiện review độc lập trên bản đã tích hợp.
+- **Sửa Tài Liệu Đơn Giản:** Đọc code/hướng dẫn liên quan, kiểm tra link tài liệu và câu lệnh mẫu; không dựng thêm agent hay MCP cồng kềnh khi không cần thiết.
+
+### 9.3. Báo Cáo Bắt Buộc Khi Hoàn Thành Task (`worker_done`)
+Mỗi worker khi báo cáo hoàn thành nhiệm vụ bắt buộc phải đính kèm:
+1. **Tài nguyên đã dùng:** Tên công cụ/skill/CLI/tài liệu, mục đích sử dụng và kết quả cụ thể.
+2. **Bằng chứng khách quan:** Log lệnh/stdout thực tế, đường dẫn artifact, span/trace ID hoặc kết quả kiểm tra thực nghiệm (UI screenshot, test output).
+3. **Nếu không dùng tài nguyên bổ sung:** Nêu rõ lý do cụ thể gắn liền với tính chất công việc.
+4. **An toàn dữ liệu:** Tuyệt đối không đưa API keys, JWT tokens hoặc dữ liệu nhạy cảm vào bằng chứng báo cáo.
+
+### 9.4. Trách Nhiệm Thẩm Định & Giới Hạn Chi Phí
+- **Reviewer:** Kiểm tra nghiêm ngặt phần bằng chứng tài nguyên; nếu thiếu bằng chứng thực tế, yêu cầu worker bổ sung, tuyệt đối không phê duyệt hoặc đóng task sớm.
+- **Tiêu chí tối ưu:** Chọn công cụ theo chất lượng, thời gian và chi phí; không ép buộc nạp mọi skill hay tạo agent tràn lan cho việc nhỏ. Nếu công cụ không khả dụng, nêu rõ nguyên nhân và áp dụng phương án thay thế khả thi.
+- **Vai trò điều phối:** Antigravity Coordinator là đầu mối điều phối duy nhất; Herdr là lớp runtime đa tác tử chính. Tuân thủ nghiêm ngặt PRD, bảo mật và thẩm quyền được giao.
+
+---
+
+## 10. MULTI-AGENT TEAM COLLABORATION & DELEGATION MANDATE (QUY CHUẨN PHỐI HỢP ĐA TÁC TỬ)
+
+Quy chuẩn bắt buộc về phối hợp đa tác tử áp dụng cho toàn bộ AI agents và kỹ sư đóng góp vào **VeriScholar**:
+
+### 10.1. Nguyên Tắc Cấm Tự Thực Hiện Đơn Độc (Zero Solo-Work Invariant)
+1. **Kiểm tra đội ngũ trước khi hành động:**
+   - Trước khi bắt đầu bất kỳ nhiệm vụ nào có quy mô từ 2 bước trở lên, Coordinator/CTO bắt buộc phải kiểm tra trạng thái các tác tử đang chạy (`herdr agent list`, `herdr pane list`, hoặc `manage_subagents list`).
+2. **Bắt buộc phân rã và giao việc theo đúng chuyên môn & rules:**
+   - **Tuyệt đối KHÔNG ĐƯỢC** một mình tự thực hiện trọn gói khi trong phiên làm việc đang có các AI chuyên trách (`backend`, `frontend`, `reviewer`) hoạt động hoặc ở trạng thái sẵn sàng (`idle` / `done`).
+   - Mọi tác vụ Python/FastAPI/Pydantic/PostgreSQL/ONNX NLI/Pytest $\rightarrow$ **Giao cho Backend Specialist**.
+   - Mọi tác vụ React/Vite/Tailwind CSS/TypeScript/Vitest/Oxlint/Web UI $\rightarrow$ **Giao cho Frontend Specialist**.
+   - Mọi tác vụ thẩm định mã nguồn độc lập, audit git diff, đánh giá kiến trúc, kiểm tra Quality Gate, chạy benchmark suite $\rightarrow$ **Giao cho Lead Reviewer**.
+3. **Không lấn sân (No Overstepping):**
+   - Coordinator chỉ đóng vai trò phân rã bài toán, giao việc, đôn đốc và tổng hợp kết quả nghiệm thu cuối cùng.
+   - Không được tự ý sửa mã nguồn thuộc phạm vi của chuyên gia khác trừ khi tác tử đó gặp sự cố bất khả kháng hoặc cần can thiệp xử lý xung đột tích hợp liên miền sau khi các bên đã bàn giao.
+
+### 10.2. Quy Chuẩn Lệnh Giao Việc (Prompt Delegation Protocol)
+Mỗi lệnh giao việc cho tác tử khác (`herdr agent prompt <target> "..."` hoặc `invoke_subagent`) phải tuân thủ chặt chẽ cấu trúc 4 phần:
+1. **Mục tiêu & Ngữ cảnh (Goal & Context):** Mô tả rõ ràng mục tiêu cần đạt, ngữ cảnh nghiệp vụ và nhánh git hiện tại.
+2. **Phạm vi tác động (File Scope):** Liệt kê chính xác các file/thư mục thuộc trách nhiệm xử lý.
+3. **Lệnh kiểm thử & công cụ bắt buộc:** Chỉ định rõ câu lệnh linter, format và test suite mà tác tử phải chạy để tự chứng minh tính đúng đắn.
+4. **Tiêu chí hoàn thành (Definition of Done - DoD):** Nêu rõ các điều kiện tiên quyết để tác tử được phép báo cáo hoàn thành (`worker_done`).
+
+### 10.3. Cơ Chế Thẩm Định & Nghiệm Thu Chéo (Peer Review & Gatekeeping)
+1. **Không tự chứng nhận (No Self-Certification):**
+   - Người viết code không được tự duyệt code của mình.
+   - Mọi thay đổi từ `backend` hoặc `frontend` đều phải chuyển qua `reviewer` để audit độc lập trước khi Coordinator báo cáo cho User.
+2. **Bằng chứng khách quan bắt buộc:**
+   - Báo cáo hoàn thành chỉ được chấp thuận khi đi kèm log kiểm thử thực tế (100% tests passed, 0 linter warnings, 0 type errors).
+   - Nếu phát hiện vi phạm kiến trúc, linter hoặc thiếu test, Reviewer phải từ chối nghiệm thu và yêu cầu tác tử phụ trách khắc phục triệt để.

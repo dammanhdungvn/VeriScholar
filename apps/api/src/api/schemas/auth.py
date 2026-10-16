@@ -1,105 +1,121 @@
-"""Authentication schemas and response envelopes."""
+"""Pydantic schemas for Authentication, Authorization & User Profiles.
+
+Strictly 1-1 aligned with Frontend domain types (apps/web/src/types/auth.ts).
+"""
 
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
-from api.schemas.envelope import SingleResponseEnvelope
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
-EMAIL_PATTERN = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
+UserRole = Literal["researcher", "faculty", "postdoc", "student", "guest"]
+
+EMAIL_REGEX = r"^[^@\s]+@[^@\s]+\.[^@\s]+$"
 
 
-class RegisterRequest(BaseModel):
-    """Payload for user registration."""
+class UserProfileResponse(BaseModel):
+    """User profile response representation."""
 
-    email: str = Field(
-        ...,
-        min_length=5,
-        max_length=255,
-        pattern=EMAIL_PATTERN,
-        description="Unique email address",
+    id: UUID = Field(description="User unique identifier (UUID v4)")
+    email: str = Field(description="User email address")
+    full_name: str = Field(description="User full name")
+    institution: str | None = Field(default=None, description="Affiliated academic institution")
+    academic_rank: str | None = Field(default=None, description="Academic title or position")
+    orcid_id: str | None = Field(default=None, description="ORCID researcher identifier")
+    avatar_url: str | None = Field(default=None, description="URL of user profile avatar image")
+    role: str = Field(default="researcher", description="Platform permission role")
+    is_verified: bool = Field(
+        default=False, description="Whether academic credentials are verified"
     )
-    password: str = Field(..., min_length=8, max_length=128, description="User password")
-    full_name: str = Field(..., min_length=1, max_length=100, description="Full name of user")
+    created_at: datetime = Field(description="Timestamp when account was created")
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class AuthTokensResponse(BaseModel):
+    """JWT bearer and refresh token response."""
+
+    access_token: str = Field(description="Cryptographically signed HMAC-SHA256 JWT access token")
+    refresh_token: str = Field(description="Durable refresh token for renewing sessions")
+    token_type: Literal["bearer"] = Field(
+        default="bearer", description="Token authentication scheme"
+    )
+    expires_in: int = Field(default=3600, description="Access token expiration lifetime in seconds")
+
+
+class AuthResponse(BaseModel):
+    """Complete authentication payload containing user profile and tokens."""
+
+    user: UserProfileResponse = Field(description="Authenticated user profile")
+    tokens: AuthTokensResponse = Field(description="Access and refresh tokens")
+    message: str | None = Field(
+        default=None, description="Human-readable status or welcome message"
+    )
 
 
 class LoginRequest(BaseModel):
-    """Payload for user login."""
+    """Request payload for logging in with email and password."""
 
-    email: str = Field(
-        ...,
-        min_length=5,
-        max_length=255,
-        pattern=EMAIL_PATTERN,
-        description="Registered email address",
+    email: str = Field(pattern=EMAIL_REGEX, description="Account email address")
+    password: str = Field(min_length=1, description="Account password")
+    remember_me: bool = Field(default=True, description="Extend session duration flag")
+
+
+class RegisterRequest(BaseModel):
+    """Request payload for registering a new scholar account."""
+
+    full_name: str = Field(min_length=1, max_length=100, description="Full name of researcher")
+    email: str = Field(pattern=EMAIL_REGEX, description="Academic or institutional email address")
+    password: str = Field(min_length=6, description="Strong password for authentication")
+    confirm_password: str | None = Field(default=None, description="Optional password confirmation")
+    institution: str | None = Field(
+        default=None, max_length=255, description="Academic institution"
     )
-    password: str = Field(..., min_length=1, description="Account password")
+    orcid_id: str | None = Field(default=None, max_length=50, description="ORCID identifier")
+    accept_terms: bool = Field(default=True, description="Acceptance of terms of service")
 
 
-class GoogleLoginRequest(BaseModel):
-    """Payload for Google OAuth login/registration."""
+class PasswordResetRequest(BaseModel):
+    """Request payload to initiate forgot password workflow."""
 
-    credential: str = Field(..., description="Google ID Token JWT or simulated authorization token")
-    client_id: str | None = Field(default=None, description="Optional Google OAuth Client ID")
-
-
-class RefreshTokenRequest(BaseModel):
-    """Payload for refreshing access token."""
-
-    refresh_token: str = Field(..., description="Valid refresh token")
+    email: str = Field(pattern=EMAIL_REGEX, description="Email address registered with account")
 
 
-class UserResponse(BaseModel):
-    """User profile data model."""
+class PasswordResetConfirmRequest(BaseModel):
+    """Request payload to confirm password reset using token."""
 
-    id: UUID = Field(..., description="Unique user identifier")
-    email: str = Field(..., description="User email address")
-    full_name: str = Field(..., description="User full name")
-    role: str = Field(default="researcher", description="System role: admin, researcher, member")
-    avatar_url: str | None = Field(default=None, description="User avatar image URL")
-    token_quota: int = Field(default=200000, description="Allocated LLM token quota")
-    tokens_used: int = Field(default=0, description="Tokens consumed by user")
-    storage_quota_bytes: int = Field(
-        default=1073741824, description="Storage quota ceiling in bytes"
+    token: str = Field(min_length=1, description="Password reset verification token")
+    new_password: str = Field(min_length=6, description="New secure password")
+
+
+class ChangePasswordRequest(BaseModel):
+    """Request payload for authenticated password change."""
+
+    current_password: str = Field(min_length=1, description="Current valid password")
+    new_password: str = Field(min_length=6, description="New secure password")
+    confirm_password: str | None = Field(
+        default=None, description="Optional confirmation of new password"
     )
-    storage_used_bytes: int = Field(default=0, description="Storage currently consumed in bytes")
-    is_active: bool = Field(default=True, description="Account active status")
-    created_at: datetime = Field(..., description="Creation timestamp in UTC")
 
 
-class TokenResponse(BaseModel):
-    """Token response containing access and refresh tokens."""
+class UpdateProfileRequest(BaseModel):
+    """Request payload for updating user profile fields."""
 
-    access_token: str = Field(..., description="JWT access token (short-lived)")
-    refresh_token: str = Field(..., description="JWT refresh token (long-lived)")
-    token_type: str = Field(default="bearer", description="Token type")
-    expires_in: int = Field(..., description="Access token expiration window in seconds")
-    user: UserResponse | None = Field(default=None, description="Authenticated user profile")
-
-
-class TokenQuotaStatusResponse(BaseModel):
-    """Real-time token and storage quota status."""
-
-    token_quota: int = Field(..., description="Total token quota allocated")
-    tokens_used: int = Field(..., description="Total tokens consumed")
-    tokens_remaining: int = Field(..., description="Tokens left to consume")
-    percent_tokens_used: float = Field(
-        ..., description="Percentage of token quota used [0.0 - 100.0]"
-    )
-    storage_quota_bytes: int = Field(..., description="Total storage bytes allocated")
-    storage_used_bytes: int = Field(..., description="Total storage bytes consumed")
-    storage_remaining_bytes: int = Field(..., description="Storage bytes remaining")
-    percent_storage_used: float = Field(..., description="Percentage of storage used [0.0 - 100.0]")
-    is_quota_exceeded: bool = Field(..., description="True if token or storage limit exceeded")
+    full_name: str | None = Field(default=None, min_length=1, max_length=100)
+    institution: str | None = Field(default=None, max_length=255)
+    academic_rank: str | None = Field(default=None, max_length=100)
+    orcid_id: str | None = Field(default=None, max_length=50)
+    avatar_url: str | None = Field(default=None, max_length=500)
 
 
-class AuthTokenEnvelope(SingleResponseEnvelope[TokenResponse]):
-    """Standard Single Resource Envelope wrapping TokenResponse."""
+class TokenRefreshRequest(BaseModel):
+    """Request payload to renew access token using refresh token."""
+
+    refresh_token: str = Field(min_length=1, description="Valid refresh token")
 
 
-class UserProfileEnvelope(SingleResponseEnvelope[UserResponse]):
-    """Standard Single Resource Envelope wrapping UserResponse."""
+class AuthMessageResponse(BaseModel):
+    """Generic message response envelope."""
 
-
-class TokenQuotaEnvelope(SingleResponseEnvelope[TokenQuotaStatusResponse]):
-    """Standard Single Resource Envelope wrapping TokenQuotaStatusResponse."""
+    message: str = Field(description="Operation result message")

@@ -5,10 +5,10 @@
 * **Mã Phản Hồi:** `200 OK`
 * **Loại Endpoint:** Standard REST Entity Endpoint (Polling Resource)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.2: API Kiểm tra tiến độ xử lý bài báo)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `status`, `stage`, `progress`, `parsed_metadata`)
-  - [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md) (Quy trình Pipeline bóc tách đa tầng)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy tắc Zero-Retention & Envelope Response chuẩn)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.2: API Kiểm tra tiến độ xử lý bài báo)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `status`, `stage`, `progress`, `parsed_metadata`)
+  - [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md) (Quy trình Pipeline bóc tách đa tầng)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy tắc Zero-Retention & Envelope Response chuẩn)
 
 ---
 

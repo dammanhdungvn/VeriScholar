@@ -1,6 +1,7 @@
 """FastAPI Main Application Factory with Lifespan and Structured Logging."""
 
 import asyncio
+import time
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -22,9 +23,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 
 from api.core.config import settings
+from api.core.logging import setup_logging
 from api.middleware.tracing import PureASGITracingMiddleware
 from api.schemas.error import ErrorDetail, ErrorResponse
 from api.v1.router import api_v1_router
+
+# Configure structured JSON logging at module load
+setup_logging()
 
 logger = structlog.get_logger("api.lifecycle")
 
@@ -42,13 +47,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     # Ensure all declared database tables exist
     import api.db.models  # noqa: F401
+    import api.db.session as db_session
     from api.db.init_db import ensure_database_schema
     from api.db.models.base import Base
-    from api.db.session import engine
 
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-        await ensure_database_schema(conn)
+    try:
+        async with db_session.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            await ensure_database_schema(conn)
+    except Exception as exc:
+        if "sqlite" not in str(settings.DATABASE_URL).lower():
+            logger.warning(
+                "postgres_connection_failed_falling_back_to_sqlite",
+                error=str(exc),
+            )
+            await db_session.init_sqlite_fallback()
+            async with db_session.engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+                await ensure_database_schema(conn)
+        else:
+            raise
 
     yield
     logger.info("application_shutdown", log_type="lifecycle")
@@ -101,15 +119,18 @@ async def http_exception_handler(
             action="Check the request parameters or route path.",
         )
 
+    req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
     error_payload = ErrorResponse(
         success=False,
         error=error_detail,
         meta={
-            "request_id": getattr(request.state, "request_id", None),
+            "request_id": req_id,
             "trace_id": getattr(request.state, "trace_id", None),
         },
     )
-    headers = getattr(exc, "headers", None) or {}
+    headers = dict(getattr(exc, "headers", None) or {})
+    if req_id and "X-Request-ID" not in headers and "x-request-id" not in headers:
+        headers["X-Request-ID"] = req_id
     return JSONResponse(
         status_code=exc.status_code,
         content=error_payload.model_dump(mode="json"),
@@ -134,7 +155,7 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
         field = None
         action = "Check the entity identifier or verify that the resource exists."
     elif isinstance(exc, DomainValidationError):
-        status_code = status.HTTP_422_UNPROCESSABLE_CONTENT
+        status_code = status.HTTP_422_UNPROCESSABLE_ENTITY
         code = exc.code
         field = exc.field
         action = "Please upload a valid scholarly research paper with an extractable text layer."
@@ -149,6 +170,7 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
         field = None
         action = "Verify that the request conforms to domain business logic."
 
+    req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
     error_payload = ErrorResponse(
         success=False,
         error=ErrorDetail(
@@ -158,13 +180,15 @@ async def domain_exception_handler(request: Request, exc: DomainError) -> JSONRe
             action=action,
         ),
         meta={
-            "request_id": getattr(request.state, "request_id", None),
+            "request_id": req_id,
             "trace_id": getattr(request.state, "trace_id", None),
         },
     )
+    headers = {"X-Request-ID": req_id} if req_id else None
     return JSONResponse(
         status_code=status_code,
         content=error_payload.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -196,6 +220,7 @@ async def validation_exception_handler(
             }
         clean_errors.append(clean_err)
 
+    req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
     error_payload = ErrorResponse(
         success=False,
         error=ErrorDetail(
@@ -206,13 +231,15 @@ async def validation_exception_handler(
         ),
         meta={
             "errors": clean_errors,
-            "request_id": getattr(request.state, "request_id", None),
+            "request_id": req_id,
             "trace_id": getattr(request.state, "trace_id", None),
         },
     )
+    headers = {"X-Request-ID": req_id} if req_id else None
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
         content=error_payload.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -226,6 +253,7 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
         exception_type=type(exc).__name__,
         exception_message=str(exc),
     )
+    req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
     error_payload = ErrorResponse(
         success=False,
         error=ErrorDetail(
@@ -234,13 +262,15 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
             action="Please try again later or contact support if the issue persists.",
         ),
         meta={
-            "request_id": getattr(request.state, "request_id", None),
+            "request_id": req_id,
             "trace_id": getattr(request.state, "trace_id", None),
         },
     )
+    headers = {"X-Request-ID": req_id} if req_id else None
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content=error_payload.model_dump(mode="json"),
+        headers=headers,
     )
 
 
@@ -255,13 +285,73 @@ async def health_check() -> dict[str, str]:
     return {"status": "ok", "service": "verischolar-api"}
 
 
+@app.get("/health/live", tags=["system"])
+async def liveness_probe() -> dict[str, Any]:
+    """Liveness probe returning service metadata and active environment."""
+    return {
+        "status": "ok",
+        "service": "verischolar-api",
+        "environment": settings.ENVIRONMENT,
+        "version": settings.VERSION,
+    }
+
+
+@app.get("/health/ready", tags=["system"])
+async def readiness_check() -> JSONResponse:
+    """Deep readiness probe verifying PostgreSQL async connectivity and Storage writeability."""
+    from sqlalchemy import text
+
+    import api.db.session as db_session
+
+    db_status = "ok"
+    db_latency_ms = 0.0
+    try:
+        t0 = time.perf_counter()
+        async with db_session.engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+    except Exception as exc:
+        db_status = f"error: {type(exc).__name__}"
+
+    storage_status = "ok"
+    try:
+        settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        test_file = settings.STORAGE_DIR / ".health_probe"
+        test_file.write_text("ok", encoding="utf-8")
+        test_file.unlink(missing_ok=True)
+    except Exception as exc:
+        storage_status = f"error: {type(exc).__name__}"
+
+    is_ready = db_status == "ok" and storage_status == "ok"
+    res_status = status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return JSONResponse(
+        status_code=res_status,
+        content={
+            "status": "ready" if is_ready else "unready",
+            "environment": settings.ENVIRONMENT,
+            "version": settings.VERSION,
+            "checks": {
+                "database": {"status": db_status, "latency_ms": db_latency_ms},
+                "storage": {"status": storage_status},
+                "langfuse": {
+                    "enabled": settings.LANGFUSE_ENABLED,
+                    "masked": settings.LANGFUSE_MASK_INPUT_OUTPUT,
+                    "environment": settings.LANGFUSE_ENVIRONMENT,
+                },
+            },
+        },
+    )
+
+
 @app.get("/events", response_class=EventSourceResponse, tags=["streaming"])
-async def demo_sse_events() -> AsyncIterable[ServerSentEvent]:
+async def demo_sse_events(request: Request) -> AsyncIterable[ServerSentEvent]:
     """Demo Server-Sent Events (SSE) stream for verifying TTFB and non-buffering delivery."""
+    request_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
     for i in range(1, 4):
         await asyncio.sleep(0.05)
         yield ServerSentEvent(
-            data={"step": i, "content": f"Streaming chunk {i}"},
+            data={"step": i, "content": f"Streaming chunk {i}", "request_id": request_id},
             event="progress",
             id=str(i),
         )

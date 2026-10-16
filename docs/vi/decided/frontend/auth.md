@@ -1,7 +1,7 @@
 # Tài Liệu Thiết Kế & Kiến Trúc Frontend: Phân Hệ Xác Thực (Auth - Login & Register) — VeriScholar
 
 > **Vị trí lưu trữ chính thức:** `docs/vi/decided/frontend/auth.md`  
-> **Mã nguồn tính năng:** [`apps/web/src/features/auth/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/auth/)  
+> **Mã nguồn tính năng:** [`apps/web/src/features/auth/`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/auth/)  
 > **Trạng thái:** Production Decided (Đã hoàn thiện, kiểm chuẩn & tạo Pull Request [#38](https://github.com/dammanhdungvn/VeriScholar/pull/38))  
 > **Git Branch:** `feat/fe-auth`  
 > **Mục đích tài liệu:** Lưu trữ toàn diện triết lý thiết kế, Design System Tokens, các quyết định kiến trúc, lịch sử tối ưu hóa giao diện và các bất biến (invariants) của phân hệ Đăng nhập/Đăng ký để các AI Agent và kỹ sư đời sau nắm rõ bối cảnh, lý do lựa chọn và cách bảo trì an toàn.
@@ -27,7 +27,7 @@ Phân hệ Xác thực (Authentication & Onboarding) của VeriScholar là ngư�
 
 ## 2. HỆ THỐNG DESIGN SYSTEM & SEMANTIC TOKENS (DESIGN.MD)
 
-Giao diện Auth tuân thủ tuyệt đối bộ token ngữ nghĩa định nghĩa tại [`apps/web/src/index.css`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/index.css):
+Giao diện Auth tuân thủ tuyệt đối bộ token ngữ nghĩa định nghĩa tại [`apps/web/src/index.css`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/index.css):
 
 ### 2.1. Bảng màu Ngữ nghĩa (Semantic Color Tokens)
 
@@ -159,7 +159,7 @@ Giao diện Auth tuân thủ tuyệt đối bộ token ngữ nghĩa định ngh�
   - Trước đây sau khi đăng nhập thành công, hệ thống chỉ lưu token vào Zustand/LocalStorage rồi giữ nguyên tại màn hình hiện tại hoặc về landing page.
   - Cần một đích đến rõ ràng khẳng định trạng thái đã xác thực trước khi bước vào các tính năng chuyên sâu của Module 1.
 * **Giải pháp triển khai:**
-  1. **Kiến tạo trang [`DashboardPage.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.tsx):**
+  1. **Kiến tạo trang [`DashboardPage.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.tsx):**
      - Đặt tại `apps/web/src/features/dashboard/`.
      - Kế thừa `AtmosphericBackground` và thanh điều hướng thương hiệu `AcademicLogo`.
      - Hiển thị tiêu đề **Dashboard** lớn chuẩn editorial, thông tin học giả (`user.full_name`, `user.email`, `user.institution`, `user.role`).
@@ -306,7 +306,7 @@ export interface RegisterPayload {
 
 ### 4.4. Cơ Chế Mock Auth Engine Dự Phòng (`VITE_ENABLE_MOCK_AUTH=true`)
 
-Nằm tại [`apps/web/src/features/auth/data/mock-auth.ts`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/auth/data/mock-auth.ts):
+Nằm tại [`apps/web/src/features/auth/data/mock-auth.ts`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/auth/data/mock-auth.ts):
 - **Độ trễ mạng mô phỏng (Latency Simulation):** 450ms - 650ms mang lại cảm giác phản hồi thực tế.
 - **Tài khoản nghiên cứu mẫu (Pre-seeded Accounts):**
   - Email: `scholar@verischolar.ai` / Mật khẩu: `VeriScholar2026!` (GS.TS Nguyễn Văn Scholar — Viện Hàn lâm Khoa học).
@@ -354,7 +354,7 @@ export const router = createBrowserRouter([
 
 ### 5.2. Đồng Bộ Hóa Trạng Thái Trên Landing Page Navbar
 
-Cập nhật tại [`LandingNavbar.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/components/LandingNavbar.tsx):
+Cập nhật tại [`LandingNavbar.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/landing/components/LandingNavbar.tsx):
 - **Khi Chưa Đăng Nhập (`isAuthenticated = false`):**
   - Nút "Dùng thử ngay" (San hô Coral) $\rightarrow$ Dẫn trực tiếp về `/login` (chuẩn unified auth gateway). Nếu chưa có tài khoản, trang login có sẵn liên kết chuyển sang `/register`.
 - **Khi Đã Đăng Nhập (`isAuthenticated = true`):**
@@ -365,7 +365,7 @@ Cập nhật tại [`LandingNavbar.tsx`](file:///home/dammanhdungvn/Downloads/Wo
 
 ## 6. KẾT QUẢ KIỂM CHUẨN CHẤT LƯỢNG (PRODUCTION QUALITY GATES)
 
-Mọi tiêu chuẩn chất lượng theo [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) đã được kiểm định nghiêm ngặt:
+Mọi tiêu chuẩn chất lượng theo [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) đã được kiểm định nghiêm ngặt:
 
 | Tiêu chuẩn Kiểm tra | Công cụ thực hiện | Kết quả thực tế |
 | :--- | :--- | :--- |

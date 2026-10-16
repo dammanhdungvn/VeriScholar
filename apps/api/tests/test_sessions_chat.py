@@ -1,5 +1,6 @@
 """Automated integration tests for Research Sessions Chat & SSE endpoints (#52 - #54)."""
 
+import json
 from collections.abc import AsyncGenerator, Generator
 from datetime import UTC, datetime
 from typing import Any
@@ -236,6 +237,9 @@ async def test_post_session_message_sse_streaming_success(
     resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
     assert resp.status_code == 200
     assert "text/event-stream" in resp.headers["content-type"]
+    assert "x-request-id" in resp.headers
+    req_id = resp.headers["x-request-id"]
+    assert len(req_id) > 0
 
     body_text = resp.text
     assert "event: start" in body_text
@@ -244,6 +248,41 @@ async def test_post_session_message_sse_streaming_success(
     assert "event: done" in body_text
     assert len(chat_db.session_turns) == 1
     assert chat_db.session_turns[0].question == payload["question"]
+
+    # Verify request_id in start event payload
+    start_line = [line for line in body_text.splitlines() if line.startswith('data: {"turn_id"')][0]
+    start_payload = json.loads(start_line.removeprefix("data: "))
+    assert start_payload.get("request_id") == req_id
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_propagates_custom_request_id(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Endpoint 52: Propagates custom X-Request-ID to headers and start event payload."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    custom_id = "test-chat-trace-001"
+    payload = {
+        "question": "Giải thích Attention mechanism",
+        "stream": True,
+        "scope": "multi_paper",
+    }
+    resp = await client.post(
+        f"/api/v1/sessions/{s_id}/messages",
+        json=payload,
+        headers={"X-Request-ID": custom_id},
+    )
+    assert resp.status_code == 200
+    assert resp.headers.get("x-request-id") == custom_id
+
+    body_text = resp.text
+    assert "event: start" in body_text
+    start_line = [line for line in body_text.splitlines() if line.startswith('data: {"turn_id"')][0]
+    start_payload = json.loads(start_line.removeprefix("data: "))
+    assert start_payload.get("request_id") == custom_id
 
 
 @pytest.mark.asyncio
@@ -518,3 +557,103 @@ async def test_post_session_message_blocked_by_prompt_injection_guardrail(
     last_turn = chat_db.session_turns[-1]
     assert last_turn.finish_reason == "blocked_by_guardrail"
     assert "chỉ thị thay đổi hành vi hệ thống" in last_turn.answer
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_active_abstention_when_below_relevance_cutoff(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """When all chunks score < 0.35 or no chunks match, trigger active abstention."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    d_id = uuid4()
+    doc = DocumentModel(
+        id=d_id,
+        user_id=DEFAULT_DEV_USER_ID,
+        title="Attention Is All You Need",
+        filename="attention.pdf",
+        content_hash="hash_attn",
+        file_size_bytes=1024,
+    )
+    # Chunk only talks about attention
+    chunk = DocumentChunkModel(
+        id=uuid4(),
+        document_id=d_id,
+        chunk_index=0,
+        content=(
+            "The Transformer is the first transduction model relying entirely on self-attention."
+        ),
+        page_number=1,
+        bounding_boxes=[[0.1, 0.1, 0.9, 0.3, 1]],
+        token_count=15,
+    )
+    sdoc = SessionDocumentModel(session_id=s_id, document_id=d_id, display_order=0)
+    chat_db.add(doc)
+    chat_db.add(chunk)
+    chat_db.add(sdoc)
+
+    # Ask a question completely unrelated to attention/transformer
+    payload = {
+        "question": "Thuật toán sắp xếp QuickSort có độ phức tạp trung bình như thế nào?",
+        "stream": True,
+        "scope": "single_paper",
+        "focused_document_id": str(d_id),
+    }
+    resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp.status_code == 200
+
+    last_turn = chat_db.session_turns[-1]
+    assert "Thông tin này không xuất hiện trong bài báo" in last_turn.answer
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_global_token_budget_enforced(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Global token budget must limit chunks to <= 3,500 tokens and max 8 chunks."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    d_id = uuid4()
+    doc = DocumentModel(
+        id=d_id,
+        user_id=DEFAULT_DEV_USER_ID,
+        title="Transformer Deep Dive",
+        filename="transformer.pdf",
+        content_hash="hash_t",
+        file_size_bytes=2048,
+    )
+    chat_db.add(doc)
+    chat_db.add(SessionDocumentModel(session_id=s_id, document_id=d_id, display_order=0))
+
+    # Add 12 matching chunks, each 500 tokens. Total = 6,000 tokens.
+    # With a 3,500 budget, at most 7 chunks should be selected.
+    for i in range(12):
+        chk = DocumentChunkModel(
+            id=uuid4(),
+            document_id=d_id,
+            chunk_index=i,
+            content=f"Attention mechanisms in transformer architecture section {i} table details.",
+            page_number=i + 1,
+            bounding_boxes=[[0.1, 0.1, 0.9, 0.5, i + 1]],
+            token_count=500,
+        )
+        chat_db.add(chk)
+
+    payload = {
+        "question": "Giải thích transformer attention table",
+        "stream": True,
+        "scope": "single_paper",
+        "focused_document_id": str(d_id),
+    }
+    resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp.status_code == 200
+
+    # Citations count must be <= 7 (since 7 * 500 = 3500 <= 3500, and 8 * 500 = 4000 > 3500)
+    assert "citations" in resp.text
+    # Check that it did not select all 12 chunks
+    last_turn = chat_db.session_turns[-1]
+    assert len(last_turn.citations) <= 7

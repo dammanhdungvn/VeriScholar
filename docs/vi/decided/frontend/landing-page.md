@@ -1,7 +1,7 @@
 # Tài Liệu Thiết Kế & Kiến Trúc Frontend: Landing Page (VeriScholar)
 
 > **Vị trí lưu trữ chính thức:** `docs/vi/decided/frontend/landing-page.md`  
-> **Mã nguồn tính năng:** [`apps/web/src/features/landing/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/)  
+> **Mã nguồn tính năng:** [`apps/web/src/features/landing/`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/landing/)  
 > **Trạng thái:** Production Decided (Đã hoàn thiện, kiểm chuẩn & merge vào `main`)  
 > **Mục đích tài liệu:** Lưu trữ toàn diện triết lý thiết kế, hệ thống Design System Tokens, các quyết định kiến trúc, lịch sử tối ưu hóa và các bất biến (invariants) để các AI Agent và kỹ sư đời sau nắm rõ bối cảnh, lý do lựa chọn và cách bảo trì an toàn.
 
@@ -55,8 +55,8 @@ Toàn bộ Landing Page được xây dựng trên nền tảng **Tailwind CSS v
 ### 3.1. Quyết định 1: Không Tải Thư Viện PDF.js Nặng Trên Landing Page
 * **Bối cảnh:** Cần hiển thị bài báo khoa học 2 cột để minh họa việc nhảy Bounding Box.
 * **Đánh đổi:** Nếu nạp toàn bộ `pdfjs-dist` + Web Worker, bundle size tăng thêm > 800KB, First Contentful Paint (FCP) bị đẩy lên > 2.4s.
-* **Giải pháp:** Xây dựng **DOM-Based Vector Paper Simulator** ([`DemoPaperViewer.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/components/DemoPaperViewer.tsx)).
-  * Dữ liệu mock chuẩn IEEE 2 cột ([`mock-papers.ts`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/data/mock-papers.ts)).
+* **Giải pháp:** Xây dựng **DOM-Based Vector Paper Simulator** ([`DemoPaperViewer.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/landing/components/DemoPaperViewer.tsx)).
+  * Dữ liệu mock chuẩn IEEE 2 cột ([`mock-papers.ts`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/landing/data/mock-papers.ts)).
   * Ma trận tỷ lệ chuẩn hóa `[x0, y0, x1, y1, page]` với tọa độ thực relative `[0.0, 1.0]`.
   * **Kết quả:** Tốc độ tải trang < 0.6s, đạt điểm Google PageSpeed 99/100, hoàn toàn mượt mà 60fps.
 
@@ -67,14 +67,14 @@ Toàn bộ Landing Page được xây dựng trên nền tảng **Tailwind CSS v
 * **Bài học từ GitHub (Octocat) & Vercel (Triangle):** Tối giản tuyệt đối, phóng to tối đa diện tích quang học (Optical Fill ~85%–90%).
 * **Giải pháp triển khai:**
   1. **Tách riêng Core Favicon Mark:** Chỉ giữ lại biểu tượng nhận diện lõi: Cánh chim học thuật (Scholar Coral) và Vết tích xác thực chữ V (Verification Arm).
-  2. **Bộ Asset Đa Định Dạng trong [`apps/web/public/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/public/):**
+  2. **Bộ Asset Đa Định Dạng trong [`apps/web/public/`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/public/):**
      * `favicon-dark.svg`, `favicon-dark-32x32.png`, `favicon-dark.ico`: Cánh phải màu **Trắng tinh khiết (`#FFFFFF`)** cho Chrome Dark Mode.
      * `favicon-light.svg`, `favicon-light-32x32.png`, `favicon-light.ico`: Cánh phải màu **Đen mực (`#1E1B18`)** cho Chrome Light Mode.
      * `apple-touch-icon.png` (180×180 px với nền Obsidian bo góc cho iOS).
      * `site.webmanifest` (cấu hình PWA chuẩn).
   3. **Cơ chế Đồng bộ Chế độ Trình duyệt Hai Tầng:**
      * **Tầng 1 (Parser-blocking script trong `<head>`):** Thực thi đồng bộ trong microsecond trước khi parse DOM body, gán tức thì file `-dark` hoặc `-light` phù hợp với `prefers-color-scheme`.
-     * **Tầng 2 ([`favicon.ts`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/lib/favicon.ts)):** Lắng nghe sự kiện `change` của hệ thống để đổi màu icon theo thời gian thực mà không cần reload trang.
+     * **Tầng 2 ([`favicon.ts`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/lib/favicon.ts)):** Lắng nghe sự kiện `change` của hệ thống để đổi màu icon theo thời gian thực mà không cần reload trang.
 
 ---
 
@@ -178,7 +178,7 @@ apps/web/src/features/landing/
        text="Trích đoạn tọa độ BBox chứng minh"
      />
      ```
-* **Cơ chế Zero-Jank Streaming ([`useDemoStream.ts`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/landing/hooks/useDemoStream.ts)):**
+* **Cơ chế Zero-Jank Streaming ([`useDemoStream.ts`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/landing/hooks/useDemoStream.ts)):**
   * Token từ văn bản được nạp vào một hàng đợi (buffer).
   * Hàm `requestAnimationFrame` rút từng từ ra để render vào DOM mỗi frame.
   * Triệt tiêu hoàn toàn hiện tượng bão re-render (re-render storm) khi hiển thị văn bản dài.

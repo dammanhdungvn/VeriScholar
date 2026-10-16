@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import type { BoundingBox } from "@/types/api";
 
 export type IngestionDocumentStatus =
   | "idle"
@@ -9,6 +10,16 @@ export type IngestionDocumentStatus =
   | "error";
 
 export type WorkspaceRightTab = "chat" | "notes" | "summary" | "structure" | "references";
+
+export type ZenMode = "none" | "pdf" | "workspace";
+
+export interface ActiveContextChip {
+  text: string;
+  pageNumber: number;
+  bbox?: BoundingBox | null;
+  documentTitle?: string;
+  documentId?: string | null;
+}
 
 export interface WorkspaceState {
   // Trạng thái phiên
@@ -26,6 +37,11 @@ export interface WorkspaceState {
   // Trạng thái tab điều khiển bên phải
   activeRightTab: WorkspaceRightTab;
 
+  // Module 1 Deep Reader Workspace Layout & Focus Modes
+  splitRatio: number; // 20 - 80, default 50
+  zenMode: ZenMode;
+  activeContextChip: ActiveContextChip | null;
+
   // Actions
   initNewStandbyChat: () => void;
   setSession: (sessionId: string | null) => void;
@@ -37,6 +53,9 @@ export interface WorkspaceState {
   ) => void;
   setError: (message: string | null) => void;
   setActiveRightTab: (tab: WorkspaceRightTab) => void;
+  setSplitRatio: (ratio: number) => void;
+  setZenMode: (mode: ZenMode) => void;
+  setActiveContextChip: (chip: ActiveContextChip | null) => void;
   resetWorkspace: () => void;
 }
 
@@ -50,6 +69,9 @@ const initialState = {
   statusStage: null,
   errorMessage: null,
   activeRightTab: "chat" as WorkspaceRightTab,
+  splitRatio: 50,
+  zenMode: "none" as ZenMode,
+  activeContextChip: null as ActiveContextChip | null,
 };
 
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
@@ -80,6 +102,13 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
     }),
 
   setActiveRightTab: (activeRightTab) => set({ activeRightTab }),
+
+  setSplitRatio: (splitRatio) =>
+    set({ splitRatio: Math.max(20, Math.min(80, Math.round(splitRatio * 10) / 10)) }),
+
+  setZenMode: (zenMode) => set({ zenMode }),
+
+  setActiveContextChip: (activeContextChip) => set({ activeContextChip }),
 
   resetWorkspace: () =>
     set({

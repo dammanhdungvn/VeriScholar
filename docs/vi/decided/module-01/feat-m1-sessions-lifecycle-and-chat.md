@@ -159,7 +159,7 @@ Tích hợp khai báo bảng `session_turns`, trigger và index vào `apps/api/s
 Tuân thủ nguyên tắc Clean Architecture: **Không import bất kỳ thư viện I/O (FastAPI, SQLAlchemy, httpx, Redis) vào `packages/core`**.
 
 1. **Domain Entities & Value Objects:**
-   - [`ResearchSession`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/session.py):
+   - [`ResearchSession`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/domain/entities/session.py):
      - Thuộc tính: `id`, `user_id`, `title`, `document_ids`, `active_document_id`, `viewport_state`, `active_tab`, `is_archived`, `archived_at`, `version`, `created_at`, `updated_at`.
      - Nghiệp vụ bất biến:
        - `add_document(document_id)`: Kiểm tra độ dài <= 5.
@@ -173,7 +173,7 @@ Tuân thủ nguyên tắc Clean Architecture: **Không import bất kỳ thư vi
      - `citation_id`, `document_id`, `document_title`, `page_number`, `bounding_boxes: list[list[float]]`, `score`.
 
 2. **Port Protocols (`packages/core/src/core/ports/`):**
-   - [`ISessionRepository`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/ports/session.py):
+   - [`ISessionRepository`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/ports/session.py):
      - `get_by_id(session_id: UUID, user_id: UUID) -> ResearchSession | None`
      - `list_sessions(user_id: UUID, page: int, per_page: int, include_archived: bool, query: str | None) -> tuple[list[ResearchSession], int]`
      - `update_occ(session: ResearchSession, expected_version: int) -> bool` (Trả về False nếu version không khớp -> 412)
@@ -392,7 +392,7 @@ Xây dựng 2 file kiểm thử độc lập bao quát toàn bộ các ca kiểm
   - Scenario 9: Lấy lịch sử hội thoại (`GET /api/v1/sessions/{id}/messages`).
   - Scenario 10: Xóa lịch sử hội thoại (`DELETE /api/v1/sessions/{id}/messages`).
   - Scenario 11: Xóa phiên làm việc (`DELETE /api/v1/sessions/{id}`).
-- Cập nhật tài liệu: [docs/vi/design-api-eval-snapshots.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md) bổ sung Mục 7.3 đến 7.12 ghi nhận tiêu chuẩn snapshot cho 10 APIs này.
+- Cập nhật tài liệu: [docs/vi/design-api-eval-snapshots.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md) bổ sung Mục 7.3 đến 7.12 ghi nhận tiêu chuẩn snapshot cho 10 APIs này.
 
 ---
 

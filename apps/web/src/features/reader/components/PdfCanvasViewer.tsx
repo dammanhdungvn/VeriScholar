@@ -22,7 +22,8 @@ interface PdfCanvasViewerProps {
   isLoading?: boolean;
   onPageCountDetected?: (count: number) => void;
   onClearHighlight?: () => void;
-  onAddToNote?: (selectedText: string, pageNumber: number, bbox?: BoundingBox) => void;
+  onAddToNote?: (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => void;
+  onAddToChat?: (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => void;
   onAskChat?: (prompt: string) => void;
 }
 
@@ -40,6 +41,7 @@ export function PdfCanvasViewer({
   onPageCountDetected,
   onClearHighlight,
   onAddToNote,
+  onAddToChat,
   onAskChat,
 }: PdfCanvasViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,6 +66,7 @@ export function PdfCanvasViewer({
   const [selectedText, setSelectedText] = useState("");
   const [selectionCoord, setSelectionCoord] = useState<{ x: number; y: number } | null>(null);
   const [selectionPage, setSelectionPage] = useState<number>(currentPage);
+  const [selectionBbox, setSelectionBbox] = useState<BoundingBox | null>(null);
 
   // 1. Load PDF Document via cached PDF.js loader
   useEffect(() => {
@@ -98,7 +101,7 @@ export function PdfCanvasViewer({
   // Total pages from PDF document or metadata fallback
   const totalPages = pdfDoc?.numPages || documentDetail?.page_count || 1;
 
-  // 2. Handle Text Selection in PDF Text Layer
+  // 2. Handle Text Selection in PDF Text Layer with Normalized BoundingBox Calculation
   const handleMouseUp = () => {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
@@ -112,17 +115,48 @@ export function PdfCanvasViewer({
         // Find which page the selection is on by traversing up
         let node: Node | null = range?.startContainer ?? null;
         let detectedPage = currentPage;
+        let matchedPageEl: HTMLElement | null = null;
 
         while (node && node !== containerRef.current) {
           if (node instanceof HTMLElement && node.dataset?.pageNumber) {
             detectedPage = Number(node.dataset.pageNumber);
+            matchedPageEl = node;
             break;
           }
           node = node.parentNode;
         }
 
+        const targetPageEl =
+          matchedPageEl || document.getElementById(`pdf-page-${detectedPage}`);
+
+        // Calculate normalized BoundingBox: [x0, y0, x1, y1, page]
+        let calculatedBbox: BoundingBox | null = null;
+        if (targetPageEl) {
+          const innerPage =
+            targetPageEl.querySelector<HTMLElement>(".textLayer")?.parentElement ||
+            targetPageEl.querySelector<HTMLElement>("canvas")?.parentElement ||
+            targetPageEl;
+          const pageRect = innerPage.getBoundingClientRect();
+
+          if (pageRect.width > 0 && pageRect.height > 0) {
+            const rawX0 = (rect.left - pageRect.left) / pageRect.width;
+            const rawY0 = (rect.top - pageRect.top) / pageRect.height;
+            const rawX1 = (rect.right - pageRect.left) / pageRect.width;
+            const rawY1 = (rect.bottom - pageRect.top) / pageRect.height;
+
+            const x0 = Number(Math.max(0, Math.min(1, rawX0)).toFixed(4));
+            const y0 = Number(Math.max(0, Math.min(1, rawY0)).toFixed(4));
+            const x1 = Number(Math.max(x0, Math.min(1, rawX1)).toFixed(4));
+            const y1 = Number(Math.max(y0, Math.min(1, rawY1)).toFixed(4));
+            const normalizedPage = Math.max(1, detectedPage);
+
+            calculatedBbox = [x0, y0, x1, y1, normalizedPage];
+          }
+        }
+
         setSelectedText(text);
         setSelectionPage(detectedPage);
+        setSelectionBbox(calculatedBbox);
         setSelectionCoord({
           x: rect.left - containerRect.left + rect.width / 2,
           y: rect.top - containerRect.top - 8,
@@ -133,11 +167,13 @@ export function PdfCanvasViewer({
 
     setSelectedText("");
     setSelectionCoord(null);
+    setSelectionBbox(null);
   };
 
   const handleClearSelection = () => {
     setSelectedText("");
     setSelectionCoord(null);
+    setSelectionBbox(null);
     window.getSelection()?.removeAllRanges();
   };
 
@@ -334,10 +370,12 @@ export function PdfCanvasViewer({
             selectedText={selectedText}
             coord={selectionCoord}
             pageNumber={selectionPage}
+            bbox={selectionBbox}
             documentTitle={documentDetail?.title || documentDetail?.filename}
-            onAddToNote={(text, page) => {
-              if (onAddToNote) onAddToNote(text, page);
+            onAddToNote={(text, page, bbox) => {
+              if (onAddToNote) onAddToNote(text, page, bbox);
             }}
+            onAddToChat={onAddToChat}
             onAskChat={onAskChat}
             onClearSelection={handleClearSelection}
           />

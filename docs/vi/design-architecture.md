@@ -1,6 +1,6 @@
 # Thiết Kế Kiến Trúc Hệ Thống & Phần Mềm Toàn Diện (Full System & Software Architecture Specification)
 
-Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống (**System Architecture**), kiến trúc phần mềm lục giác (**Hexagonal / Ports & Adapters Architecture**), thiết kế thành phần chi tiết (**Software Component Design**), các luồng dữ liệu đầu-cuối (**End-to-End Data Flow Pipelines**), cấu trúc tổ chức mã nguồn (**Monorepo Blueprint**), và các chốt chặn an ninh hạ tầng phân tán (**Distributed Infrastructure Hardening & Invariants**) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md), và [design-database.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md).
+Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống (**System Architecture**), kiến trúc phần mềm lục giác (**Hexagonal / Ports & Adapters Architecture**), thiết kế thành phần chi tiết (**Software Component Design**), các luồng dữ liệu đầu-cuối (**End-to-End Data Flow Pipelines**), cấu trúc tổ chức mã nguồn (**Monorepo Blueprint**), và các chốt chặn an ninh hạ tầng phân tán (**Distributed Infrastructure Hardening & Invariants**) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md), [design-api.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md), và [design-database.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md).
 
 ---
 
@@ -533,7 +533,7 @@ sequenceDiagram
 Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phân tách nghiêm ngặt:
 
 ```text
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/
+/home/VeriScholar/Workspace/VeriScholar/
 ├── apps/
 │   ├── api/                                  # Driving Adapter: FastAPI Application Layer
 │   │   ├── src/

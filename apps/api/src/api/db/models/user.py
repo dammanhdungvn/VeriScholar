@@ -13,13 +13,10 @@ class UserModel(IdentifiableTimestampedModel):
     email: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     full_name: Mapped[str] = mapped_column(String(100), nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
-    role: Mapped[str] = mapped_column(String(50), default="researcher", nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
-    google_id: Mapped[str | None] = mapped_column(
-        String(255), unique=True, nullable=True, index=True
-    )
-    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
-    token_quota: Mapped[int] = mapped_column(nullable=False, default=200000)
-    tokens_used: Mapped[int] = mapped_column(nullable=False, default=0)
-    storage_quota_bytes: Mapped[int] = mapped_column(nullable=False, default=1073741824)  # 1 GB
-    storage_used_bytes: Mapped[int] = mapped_column(nullable=False, default=0)
+    role: Mapped[str] = mapped_column(String(30), default="researcher", nullable=False)
+    institution: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    academic_rank: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    orcid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

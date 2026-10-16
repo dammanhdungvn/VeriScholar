@@ -85,7 +85,7 @@ class InMemoryAsyncLifecycleStore:
             params = {}
 
         # 1. Count queries
-        if "count" in stmt_str.lower():
+        if "count(" in stmt_str.lower():
             mock_res = MagicMock()
             if "research_sessions" in stmt_str:
                 matching = [
@@ -144,11 +144,15 @@ class InMemoryAsyncLifecycleStore:
                     break
             pairs = []
             for sd in self.session_documents:
-                if sd.session_id == target_sess_id and sd.document_id in self.documents:
+                match_session = target_sess_id is None or sd.session_id == target_sess_id
+                if match_session and sd.document_id in self.documents:
                     pairs.append((sd, self.documents[sd.document_id]))
             mock_res = MagicMock()
             mock_res.all.return_value = pairs
-            mock_res.scalars.return_value.all.return_value = [sd for sd, _ in pairs]
+            if "select documents" in stmt_str.lower() or "from documents" in stmt_str.lower():
+                mock_res.scalars.return_value.all.return_value = [d for _, d in pairs]
+            else:
+                mock_res.scalars.return_value.all.return_value = [sd for sd, _ in pairs]
             mock_res.scalar_one_or_none.return_value = pairs[0] if pairs else None
             return mock_res
 
@@ -548,3 +552,48 @@ async def test_export_session_bundle_success(
 
     html_content = zf.read("chat_transcript.html").decode("utf-8")
     assert "Attention Mechanism Deep Dive" in html_content
+
+
+@pytest.mark.asyncio
+async def test_export_session_bundle_with_annotated_pdf(
+    client: AsyncClient, lifecycle_db: InMemoryAsyncLifecycleStore
+) -> None:
+    """Export bundle must invoke document_service.export_annotated_pdf to package annotated PDF."""
+    import io
+    import zipfile
+    from unittest.mock import AsyncMock
+
+    from api.deps import get_document_service
+
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID, "ISO Highlight Bundle Test")
+    lifecycle_db.add(sess)
+
+    d_id = uuid4()
+    doc = _create_mock_doc(d_id, DEFAULT_DEV_USER_ID, "Attention Paper")
+    doc.filename = "attention_annotated.pdf"
+    sdoc = SessionDocumentModel(session_id=s_id, document_id=d_id, display_order=0)
+    lifecycle_db.add(doc)
+    lifecycle_db.add(sdoc)
+
+    mock_doc_service = AsyncMock()
+    annotated_pdf_bytes = b"%PDF-1.4\n% Annotated with ISO 32000 Highlights\n%%EOF"
+    mock_doc_service.export_annotated_pdf.return_value = (
+        annotated_pdf_bytes,
+        "attention_annotated.pdf",
+        3,
+    )
+
+    app.dependency_overrides[get_document_service] = lambda: mock_doc_service
+    try:
+        resp = await client.post(f"/api/v1/sessions/{s_id}:export-bundle")
+        assert resp.status_code == 200
+        zf = zipfile.ZipFile(io.BytesIO(resp.content))
+        assert "documents/attention_annotated.pdf" in zf.namelist()
+        pdf_bytes = zf.read("documents/attention_annotated.pdf")
+        assert b"ISO 32000 Highlights" in pdf_bytes
+        mock_doc_service.export_annotated_pdf.assert_awaited_once_with(
+            d_id, DEFAULT_DEV_USER_ID, lifecycle_db, include_highlights=True
+        )
+    finally:
+        app.dependency_overrides.pop(get_document_service, None)

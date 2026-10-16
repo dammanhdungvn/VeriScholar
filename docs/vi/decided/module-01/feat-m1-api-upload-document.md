@@ -5,11 +5,11 @@
 * **Mã Phản Hồi:** `201 Created`
 * **Loại Endpoint:** Standard REST Collection Endpoint (File Ingestion)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.1: API Tải lên tài liệu PDF)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, `document_storage_blobs`, `session_documents`)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 2 & 5: Lưu trữ CAS và cô lập đa người dùng)
-  - [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (FR-1: Tải lên và khử trùng lặp PDF)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy tắc Hexagonal Architecture & Zero-Retention)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.1: API Tải lên tài liệu PDF)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, `document_storage_blobs`, `session_documents`)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 2 & 5: Lưu trữ CAS và cô lập đa người dùng)
+  - [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (FR-1: Tải lên và khử trùng lặp PDF)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy tắc Hexagonal Architecture & Zero-Retention)
 
 ---
 

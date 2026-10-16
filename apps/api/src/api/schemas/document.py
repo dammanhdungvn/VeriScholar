@@ -292,6 +292,64 @@ class DocumentExtractReferencesEnvelope(
     """Top-level single resource envelope for document reference extraction."""
 
 
+class DocumentResolveReferencesRequest(BaseModel):
+    """Configuration options for resolving document references."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    ref_indices: list[int] | None = Field(
+        default=None,
+        description="Optional list of reference indices to resolve. If omitted, resolves all.",
+    )
+    force_refresh: bool = Field(
+        default=False,
+        description="If True, bypass cache and re-query resolver",
+    )
+
+
+class ResolvedAcademicReferenceResponse(BaseModel):
+    """Single richly resolved academic reference."""
+
+    ref_index: int = Field(ge=1, description="1-indexed reference position")
+    raw_text: str = Field(description="Full raw reference citation string")
+    title: str = Field(description="Resolved scholarly paper title")
+    authors: list[str] = Field(default_factory=list, description="Resolved authors")
+    year: int | None = Field(default=None, description="Publication year")
+    doi: str | None = Field(default=None, description="Digital Object Identifier")
+    arxiv_id: str | None = Field(default=None, description="arXiv identifier")
+    open_access_pdf_url: str | None = Field(
+        default=None, description="Direct URL to open-access PDF"
+    )
+    abstract: str | None = Field(default=None, description="Abstract summary")
+    citation_count: int | None = Field(default=None, description="Citation count")
+    sources: list[str] = Field(
+        default_factory=list, description="Resolution sources e.g. Exa, arXiv"
+    )
+    landing_url: str | None = Field(default=None, description="Paper landing or publication page")
+    is_ingested: bool = Field(
+        default=False, description="Whether paper is ingested into VeriScholar"
+    )
+    resolved_document_id: UUID | None = Field(
+        default=None, description="ID of ingested document if available"
+    )
+
+
+class DocumentResolveReferencesResponseData(BaseModel):
+    """Payload data returned when document references are resolved."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    total_resolved: int = Field(ge=0, description="Total number of resolved references")
+    references: list[ResolvedAcademicReferenceResponse] = Field(
+        default_factory=list, description="List of resolved reference items"
+    )
+
+
+class DocumentResolveReferencesEnvelope(
+    SingleResponseEnvelope[DocumentResolveReferencesResponseData]
+):
+    """Top-level single resource envelope for document reference resolution."""
+
+
 class DocumentSectionResponse(BaseModel):
     """Section or heading item in the document's structure."""
 
