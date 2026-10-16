@@ -16,6 +16,7 @@ import {
   FolderArchive,
   Share2,
   MessageSquare,
+  ExternalLink,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import type { WorkspaceMode } from "../types";
@@ -26,6 +27,8 @@ interface WritingHeaderBarProps {
   onSave?: () => Promise<void>;
   onCompile?: () => Promise<void>;
   onExportBundle?: () => Promise<void>;
+  onSyncOverleaf?: () => Promise<void>;
+  isSyncingOverleaf?: boolean;
   onOpenAssets?: () => void;
   onOpenShare?: () => void;
   onToggleComments?: () => void;
@@ -35,6 +38,8 @@ export function WritingHeaderBar({
   onSave,
   onCompile,
   onExportBundle,
+  onSyncOverleaf,
+  isSyncingOverleaf = false,
   onOpenAssets,
   onOpenShare,
   onToggleComments,
@@ -235,6 +240,23 @@ export function WritingHeaderBar({
         >
           <Download className="w-3.5 h-3.5" />
           <span className="hidden sm:inline">Xuất Gói Nộp Bài</span>
+        </button>
+
+        {/* Sync Overleaf button */}
+        <button
+          type="button"
+          onClick={onSyncOverleaf}
+          disabled={isSyncingOverleaf}
+          data-testid="header-overleaf-btn"
+          className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-[#4f772d] hover:bg-[#3f6024] text-white shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+          title="Đồng bộ và mở dự án trực tiếp trên Overleaf (1-Click Launch)"
+        >
+          {isSyncingOverleaf ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <ExternalLink className="w-3.5 h-3.5" />
+          )}
+          <span className="hidden sm:inline">Đồng bộ Overleaf (1-Click)</span>
         </button>
       </div>
     </header>

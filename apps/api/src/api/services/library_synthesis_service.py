@@ -41,8 +41,11 @@ class LibrarySynthesisService:
         topic: str,
         folder_id: UUID | None = None,
         document_ids: list[UUID] | None = None,
+        search: str | None = None,
+        limit: int = 50,
+        offset: int = 0,
     ) -> ComparisonMatrixResponseData:
-        """Generate automated cross-paper literature comparison matrix across 5-20+ papers."""
+        """Generate automated cross-paper literature comparison matrix across 5-100+ papers."""
         # 1. Resolve target documents
         docs = await self._resolve_documents(user_id, folder_id, document_ids)
         if not docs:
@@ -55,7 +58,7 @@ class LibrarySynthesisService:
             )
 
         matrix_id = uuid4()
-        rows: list[ComparisonMatrixRowSchema] = []
+        all_rows: list[ComparisonMatrixRowSchema] = []
 
         # 2. Extract comparison data for each document in parallel
         for doc in docs:
@@ -92,7 +95,7 @@ class LibrarySynthesisService:
                 "Evaluation restricted to supervised benchmark splits",
             ]
 
-            rows.append(
+            all_rows.append(
                 ComparisonMatrixRowSchema(
                     document_id=doc.id,
                     title=doc.title or doc.filename,
@@ -106,8 +109,25 @@ class LibrarySynthesisService:
                 )
             )
 
-        # 3. Evaluate Sufficiency Gate
-        doc_count = len(rows)
+        # 3. Filter by search if provided
+        filtered_rows = all_rows
+        if search and search.strip():
+            kw = search.strip().lower()
+            filtered_rows = [
+                r
+                for r in all_rows
+                if kw in r.title.lower()
+                or kw in r.core_methodology.lower()
+                or any(kw in d.lower() for d in r.datasets_used)
+                or any(kw in k.lower() or kw in v.lower() for k, v in r.key_metrics.items())
+            ]
+
+        total_count = len(filtered_rows)
+        # Apply pagination (offset & limit)
+        paginated_rows = filtered_rows[offset : offset + limit]
+
+        # 4. Evaluate Sufficiency Gate
+        doc_count = len(all_rows)
         sufficiency_score = min(1.0, 0.70 + (doc_count * 0.06))
         is_sufficient = sufficiency_score >= 0.85
         missing_aspects = []
@@ -115,7 +135,7 @@ class LibrarySynthesisService:
         if doc_count < 3:
             missing_aspects.append("Số lượng mẫu nghiên cứu hạn chế (< 3 bài báo)")
             recommendations.append(f"Mở rộng tìm kiếm Exa Neural Search cho chủ đề: '{topic}'")
-        if not any(r.year and r.year >= 2024 for r in rows):
+        if not any(r.year and r.year >= 2024 for r in all_rows):
             missing_aspects.append("Thiếu các nghiên cứu cập nhật trong vòng 2 năm gần nhất")
             recommendations.append(f"Tra cứu tài liệu mới nhất 2024-2026 về '{topic}'")
 
@@ -136,11 +156,14 @@ class LibrarySynthesisService:
             ),
         )
 
-        # 4. Generate structured Markdown table
+        # 5. Generate structured Markdown table for paginated rows
         gen_time = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
         table_lines = [
             f"### Ma Trận Đối Chiếu Học Thuật: {topic}",
-            f"*Tổng số bài báo phân tích:* **{doc_count} bài** | *Thời gian sinh:* {gen_time}",
+            (
+                f"*Tổng số bài báo phân tích:* **{doc_count} bài** "
+                f"(Hiển thị {len(paginated_rows)} bài) | *Thời gian sinh:* {gen_time}"
+            ),
             "",
             (
                 "| Tài liệu / Bài báo | Năm | Phương pháp cốt lõi | "
@@ -148,7 +171,7 @@ class LibrarySynthesisService:
             ),
             "| :--- | :---: | :--- | :--- | :--- | :--- | :--- |",
         ]
-        for r in rows:
+        for r in paginated_rows:
             authors_str = r.authors[0] if r.authors else "Unknown"
             year_str = str(r.year) if r.year else "N/A"
             metrics_str = ", ".join(f"{k}: {v}" for k, v in list(r.key_metrics.items())[:2])
@@ -175,7 +198,10 @@ class LibrarySynthesisService:
             topic=topic,
             folder_id=folder_id,
             documents_compared=doc_count,
-            rows=rows,
+            total_count=total_count,
+            limit=limit,
+            offset=offset,
+            rows=paginated_rows,
             summary_synthesis=summary,
             sufficiency=sufficiency,
             markdown_table=markdown_table,
@@ -318,6 +344,11 @@ class LibrarySynthesisService:
                 DocumentModel.folder_id == folder_id,
             )
         else:
-            # All user documents
-            stmt = select(DocumentModel).where(DocumentModel.user_id == user_id).limit(50)
+            # All user documents (supports large-scale matrix 100+ papers)
+            stmt = (
+                select(DocumentModel)
+                .where(DocumentModel.user_id == user_id)
+                .order_by(DocumentModel.created_at.desc())
+                .limit(500)
+            )
         return list((await self.db.execute(stmt)).scalars().all())

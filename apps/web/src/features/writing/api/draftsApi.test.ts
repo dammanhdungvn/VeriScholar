@@ -380,4 +380,28 @@ describe("draftsApi", () => {
       expect.objectContaining({ method: "DELETE" })
     );
   });
+
+  it("exports draft to Overleaf via POST /drafts/{id}/overleaf", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: {
+          draft_id: "draft-1",
+          launch_url: "https://www.overleaf.com/docs?snip_uri=http%3A%2F%2F127.0.0.1%3A8000%2Fapi%2Fv1%2Fdrafts%2Fdraft-1%2Foverleaf-launch",
+          project_name: "VeriScholar_Draft_draft-1",
+        },
+      }),
+    });
+
+    const result = await draftsApi.exportToOverleaf("draft-1");
+    expect(result.launch_url).toContain("overleaf.com");
+    expect(result.draft_id).toBe("draft-1");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/overleaf"),
+      expect.objectContaining({ method: "POST" })
+    );
+  });
 });

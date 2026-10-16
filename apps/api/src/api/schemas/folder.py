@@ -108,6 +108,9 @@ class ComparisonMatrixRequest(BaseModel):
     document_ids: list[UUID] | None = Field(
         None, description="Danh sách bài báo cụ thể (nếu không chọn cả thư mục)"
     )
+    search: str | None = Field(None, description="Từ khóa lọc nhanh (phương pháp, dataset, metric)")
+    limit: int = Field(50, ge=1, le=200, description="Số lượng bài báo tối đa trên mỗi trang")
+    offset: int = Field(0, ge=0, description="Số lượng bản ghi bỏ qua (pagination)")
 
 
 class ComparisonMatrixRowSchema(BaseModel):
@@ -142,6 +145,9 @@ class ComparisonMatrixResponseData(BaseModel):
     topic: str
     folder_id: UUID | None = None
     documents_compared: int
+    total_count: int = 0
+    limit: int = 50
+    offset: int = 0
     rows: list[ComparisonMatrixRowSchema]
     summary_synthesis: str
     sufficiency: SufficiencyGateSchema

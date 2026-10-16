@@ -6,7 +6,11 @@ from uuid import UUID, uuid4
 
 import structlog
 from api.db.models.user import UserModel
-from api.deps import get_current_user, get_draft_service
+from api.deps import (
+    get_associative_memory_service,
+    get_current_user,
+    get_draft_service,
+)
 from api.schemas.draft import (
     AtomicClaimResponse,
     CompileDraftResponse,
@@ -23,6 +27,7 @@ from api.schemas.draft import (
     DraftShareRequest,
     DraftShareResponse,
     LatexSyntaxErrorResponse,
+    OverleafExportResponse,
     UpdateDraftCommentRequest,
     UpdateDraftRequest,
     VerifyFactsRequest,
@@ -35,6 +40,11 @@ from api.schemas.envelope import (
     SingleResponseEnvelope,
 )
 from api.schemas.error import ErrorResponse
+from api.services.associative_memory_service import (
+    AssociativeMemoryService,
+    AssociativeSuggestionsRequest,
+    AssociativeSuggestionsResponse,
+)
 from api.services.draft_service import DraftService
 from core.domain.exceptions import (
     AssetQuotaExceededError,
@@ -1114,3 +1124,71 @@ async def delete_draft_comment(
         ) from exc
 
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post(
+    "/{id}:export-overleaf",
+    response_model=SingleResponseEnvelope[OverleafExportResponse],
+    summary="Đồng bộ trực tiếp 1-click sang Overleaf (Overleaf 1-Click Sync)",
+    description=(
+        "Tạo URL trực tiếp mở bản thảo và gói tài liệu trên Overleaf theo chuẩn Web Launch API."
+    ),
+    responses={
+        200: {"description": "Dữ liệu mở Overleaf được sinh thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        404: {"model": ErrorResponse, "description": "Bản thảo không tồn tại."},
+    },
+)
+@router.post(
+    "/{id}/overleaf",
+    response_model=SingleResponseEnvelope[OverleafExportResponse],
+    include_in_schema=False,
+)
+@router.get(
+    "/{id}/overleaf-launch",
+    response_model=SingleResponseEnvelope[OverleafExportResponse],
+    include_in_schema=False,
+)
+async def export_overleaf(
+    id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[OverleafExportResponse]:
+    try:
+        data = await draft_service.export_overleaf(
+            user_id=current_user.id,
+            draft_id=id,
+            user_email=current_user.email,
+        )
+        return SingleResponseEnvelope(data=OverleafExportResponse.model_validate(data))
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "RESOURCE_NOT_FOUND", "message": str(exc)},
+        ) from exc
+
+
+@router.post(
+    "/{id}/associative-suggestions",
+    response_model=SingleResponseEnvelope[AssociativeSuggestionsResponse],
+    summary="Gợi ý liên kết tri thức chủ động (Proactive Scholarly Associative Memory)",
+    description=(
+        "Đối chiếu đoạn văn đang soạn thảo với kho ghi chú tri thức lịch sử để gợi ý trích dẫn."
+    ),
+    responses={
+        200: {"description": "Gợi ý tri thức chủ động được trích xuất thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+    },
+)
+async def get_associative_suggestions(
+    id: UUID,
+    request: AssociativeSuggestionsRequest,
+    current_user: UserModel = Depends(get_current_user),
+    memory_service: AssociativeMemoryService = Depends(get_associative_memory_service),
+) -> SingleResponseEnvelope[AssociativeSuggestionsResponse]:
+    res = await memory_service.get_suggestions_for_draft(
+        user_id=current_user.id,
+        draft_id=id,
+        request=request,
+    )
+    return SingleResponseEnvelope(data=res)

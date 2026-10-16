@@ -8,6 +8,7 @@ import { SuggestionReviewPanel } from "./SuggestionReviewPanel";
 import { DraftAssetManagementModal } from "./DraftAssetManagementModal";
 import { DraftSharingModal } from "./DraftSharingModal";
 import { DraftCommentsPane } from "./DraftCommentsPane";
+import { AssociativeMemoryCard } from "./AssociativeMemoryCard";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
 import { calculateRebasedRange } from "../lib/diffUtils";
@@ -20,6 +21,7 @@ export function WritingWorkspace() {
     draft,
     editorTitle,
     editorContent,
+    setEditorContent,
     workspaceMode,
     isDirty,
     markSaved,
@@ -144,6 +146,54 @@ export function WritingWorkspace() {
       console.error("Export submission bundle failed:", err);
     }
   }, [activeDraftId]);
+
+  // Sync draft directly to Overleaf (1-Click Launch)
+  const [isSyncingOverleaf, setIsSyncingOverleaf] = useState(false);
+  const handleSyncOverleaf = useCallback(async () => {
+    if (!activeDraftId) return;
+    try {
+      setIsSyncingOverleaf(true);
+      const res = await draftsApi.exportToOverleaf(activeDraftId);
+      if (res?.launch_url) {
+        window.open(res.launch_url, "_blank");
+      }
+    } catch (err) {
+      console.error("Overleaf 1-click sync failed:", err);
+    } finally {
+      setIsSyncingOverleaf(false);
+    }
+  }, [activeDraftId]);
+
+  // Proactive Associative Memory Card suggestion state
+  const [activeMemorySuggestion, setActiveMemorySuggestion] = useState<{
+    id: string;
+    title: string;
+    page: number;
+    citationKey: string;
+    noteSnippet?: string;
+    noteId?: string;
+    similarityScore?: number;
+  } | null>({
+    id: "assoc-1",
+    title: "Attention Is All You Need",
+    page: 4,
+    citationKey: "vaswani2017attention",
+    noteSnippet: "Cơ chế Scaled Dot-Product Attention và Multi-Head Attention loại bỏ hoàn toàn tính tuần tự.",
+    similarityScore: 0.94,
+  });
+
+  const handleInsertAssociativeCitation = useCallback(
+    (citationKey: string) => {
+      const citeTag = `\\cite{${citationKey}}`;
+      setEditorContent(editorContent + ` ${citeTag} `);
+      setActiveMemorySuggestion(null);
+    },
+    [editorContent, setEditorContent]
+  );
+
+  const handleViewAssociativeNote = useCallback((noteId?: string) => {
+    console.info("Viewing associative note:", noteId);
+  }, []);
 
   // Keyboard shortcut Ctrl+S / ⌘S for saving
   useEffect(() => {
@@ -323,6 +373,8 @@ export function WritingWorkspace() {
         onSave={handleSave}
         onCompile={handleCompile}
         onExportBundle={handleExportBundle}
+        onSyncOverleaf={handleSyncOverleaf}
+        isSyncingOverleaf={isSyncingOverleaf}
       />
 
       {/* OCC Conflict Alert Banner */}
@@ -347,16 +399,34 @@ export function WritingWorkspace() {
       <div className="flex-1 flex overflow-hidden relative">
         {/* Column 1: Code & Text Editor */}
         {showCode && (
-          <WritingEditorPane
-            onSelectionVerify={(selectedText) => {
-              if (activeDraftId) {
-                draftsApi
-                  .verifyFacts(activeDraftId, { text: selectedText })
-                  .then(setVerifyResult);
-              }
-            }}
-            onSelectionAddToChat={handleSelectionAddToChat}
-          />
+          <div className="flex-1 flex flex-col relative min-w-0">
+            <WritingEditorPane
+              onSelectionVerify={(selectedText) => {
+                if (activeDraftId) {
+                  draftsApi
+                    .verifyFacts(activeDraftId, { text: selectedText })
+                    .then(setVerifyResult);
+                }
+              }}
+              onSelectionAddToChat={handleSelectionAddToChat}
+            />
+
+            {/* Proactive Associative Memory Card floating on editor margin */}
+            {activeMemorySuggestion && (
+              <div className="absolute bottom-4 right-4 z-20 max-w-sm">
+                <AssociativeMemoryCard
+                  title={activeMemorySuggestion.title}
+                  page={activeMemorySuggestion.page}
+                  citationKey={activeMemorySuggestion.citationKey}
+                  noteSnippet={activeMemorySuggestion.noteSnippet}
+                  similarityScore={activeMemorySuggestion.similarityScore}
+                  onInsertCitation={handleInsertAssociativeCitation}
+                  onViewNote={handleViewAssociativeNote}
+                  onDismiss={() => setActiveMemorySuggestion(null)}
+                />
+              </div>
+            )}
+          </div>
         )}
 
         {/* Column 2: Live Compiled PDF Preview */}

@@ -22,6 +22,7 @@ from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.services.ai_tracing_service import AITracingService
+from api.services.associative_memory_service import AssociativeMemoryService
 from api.services.auth_service import AuthService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
@@ -177,6 +178,13 @@ def get_library_synthesis_service(
 ) -> LibrarySynthesisService:
     """Dependency providing LibrarySynthesisService bound to request database session."""
     return LibrarySynthesisService(db=db, ai_tracing=ai_tracing)
+
+
+def get_associative_memory_service(
+    db: AsyncSession = Depends(get_db),
+) -> AssociativeMemoryService:
+    """Dependency providing AssociativeMemoryService bound to request database session."""
+    return AssociativeMemoryService(db=db)
 
 
 async def get_current_user(

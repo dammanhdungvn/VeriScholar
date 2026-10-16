@@ -22,6 +22,7 @@ import type {
   DraftComment,
   CreateDraftCommentRequest,
   UpdateDraftCommentRequest,
+  OverleafExportResponse,
 } from "../types";
 
 export const draftsApi = {
@@ -256,6 +257,16 @@ export const draftsApi = {
   async deleteComment(draftId: string, commentId: string): Promise<void> {
     return apiClient<void>(`/drafts/${draftId}/comments/${commentId}`, {
       method: "DELETE",
+    });
+  },
+
+  /**
+   * POST /api/v1/drafts/{id}/overleaf
+   * Synchronize draft and retrieve 1-Click Overleaf launch URL.
+   */
+  async exportToOverleaf(id: string): Promise<OverleafExportResponse> {
+    return apiClient<OverleafExportResponse>(`/drafts/${id}/overleaf`, {
+      method: "POST",
     });
   },
 };

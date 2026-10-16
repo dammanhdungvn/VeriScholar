@@ -11,6 +11,7 @@ import {
   Lock,
   Globe,
   Mail,
+  ExternalLink,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
@@ -152,6 +153,28 @@ export function DraftSharingModal({
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const [isSyncingOverleaf, setIsSyncingOverleaf] = useState(false);
+
+  // Sync draft directly to Overleaf (1-Click Launch)
+  const handleSyncOverleaf = async () => {
+    if (!effectiveDraftId) return;
+    try {
+      setIsSyncingOverleaf(true);
+      const res = await draftsApi.exportToOverleaf(effectiveDraftId);
+      if (res?.launch_url) {
+        window.open(res.launch_url, "_blank");
+      }
+    } catch (err) {
+      console.error("Overleaf sync failed:", err);
+      setStatusMessage({
+        type: "error",
+        text: "Không thể đồng bộ Overleaf. Vui lòng thử lại sau.",
+      });
+    } finally {
+      setIsSyncingOverleaf(false);
     }
   };
 
@@ -476,19 +499,37 @@ export function DraftSharingModal({
         </div>
 
         {/* Footer */}
-        <div className="h-12 px-5 border-t border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1f1d1a] flex items-center justify-between shrink-0 text-[11px] text-zinc-400">
-          <div className="flex items-center gap-1.5">
-            <Lock className="w-3.5 h-3.5 text-zinc-400" />
-            <span>Mã hóa bảo vệ phiên bản cộng tác thời gian thực</span>
-          </div>
-
+        <div className="h-14 px-5 border-t border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1f1d1a] flex items-center justify-between shrink-0 text-xs">
           <button
             type="button"
-            onClick={effectiveClose}
-            className="px-3 py-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#2e2b26] bg-white dark:bg-[#252320] text-ink dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 font-medium cursor-pointer"
+            onClick={handleSyncOverleaf}
+            disabled={isSyncingOverleaf}
+            data-testid="overleaf-sync-btn"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#4f772d] hover:bg-[#3f6024] text-white font-medium text-xs transition-colors cursor-pointer disabled:opacity-50"
+            title="Đồng bộ và mở dự án trực tiếp trên Overleaf (1-Click Launch)"
           >
-            Đóng
+            {isSyncingOverleaf ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <ExternalLink className="w-3.5 h-3.5" />
+            )}
+            <span>Đồng bộ Overleaf (1-Click)</span>
           </button>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-400">
+              <Lock className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Mã hóa bảo vệ phiên bản cộng tác</span>
+            </div>
+
+            <button
+              type="button"
+              onClick={effectiveClose}
+              className="px-3 py-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#2e2b26] bg-white dark:bg-[#252320] text-ink dark:text-zinc-200 hover:bg-black/5 dark:hover:bg-white/5 font-medium cursor-pointer"
+            >
+              Đóng
+            </button>
+          </div>
         </div>
       </div>
     </div>

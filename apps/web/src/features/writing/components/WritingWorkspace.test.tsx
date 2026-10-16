@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, fireEvent, act } from "@testing-library/react";
+import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { WritingWorkspace } from "./WritingWorkspace";
 import { useWritingStore } from "../stores/useWritingStore";
@@ -100,6 +100,19 @@ vi.mock("../api/draftsApi", () => ({
     }),
     updateComment: vi.fn().mockResolvedValue({}),
     deleteComment: vi.fn().mockResolvedValue(undefined),
+    exportToOverleaf: vi.fn().mockResolvedValue({
+      draft_id: "draft-1",
+      title: "Test Draft",
+      format: "latex",
+      overleaf_url: "https://www.overleaf.com/docs?snip=mock",
+      snip_length: 10,
+      latex_snip: "% test",
+    }),
+    getAssociativeSuggestions: vi.fn().mockResolvedValue({
+      draft_id: "draft-1",
+      suggestions: [],
+      total_found: 0,
+    }),
   },
 }));
 
@@ -201,7 +214,7 @@ describe("WritingWorkspace", () => {
 
     const modal = screen.getByRole("dialog", { name: /Chi tiết dẫn chứng bài báo nguồn/i });
     expect(modal).toBeDefined();
-    expect(screen.getByText(/Attention Is All You Need/i)).toBeDefined();
+    expect(within(modal).getByText(/Attention Is All You Need/i)).toBeDefined();
     expect(screen.getByTestId("source-evidence-bbox-overlay")).toBeDefined();
   });
 

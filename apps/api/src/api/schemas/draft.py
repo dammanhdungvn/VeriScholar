@@ -433,3 +433,68 @@ class DraftCommentListResponse(BaseModel):
     draft_id: UUID
     items: list[DraftCommentResponse]
     total: int
+
+
+# ==============================================================================
+# Overleaf 1-Click Sync Schemas (Pillar 2)
+# ==============================================================================
+
+
+class OverleafExportResponse(BaseModel):
+    """Metadata and direct launch link for Overleaf 1-Click Sync (Pillar 2)."""
+
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+    draft_id: UUID = Field(description="ID of the draft being launched.")
+    title: str = Field(description="Title of the paper.")
+    format: str = Field(description="Document format (latex / markdown).")
+    overleaf_url: str = Field(description="Overleaf direct web launch URL with encoded snippet.")
+    launch_url: str = Field(description="Alias for overleaf_url for frontend compatibility.")
+    latex_snip: str = Field(description="Raw LaTeX source code.")
+    snip_length: int = Field(description="Length in characters of the LaTeX snippet.")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+# ==============================================================================
+# Proactive Associative Memory Engine Schemas (Pillar 3)
+# ==============================================================================
+
+
+class AssociativeSuggestionsRequest(BaseModel):
+    """Payload to request proactive associative memory suggestions for a draft."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str | None = Field(
+        default=None,
+        description="Optional current paragraph or selected text. If omitted, uses draft body.",
+    )
+    limit: int = Field(default=5, ge=1, le=50, description="Max suggestions to return.")
+    min_similarity: float = Field(
+        default=0.1, ge=0.0, le=1.0, description="Minimum similarity threshold."
+    )
+
+
+class AssociativeSuggestionItem(BaseModel):
+    """A proactive associative suggestion linking past research notes to the current draft."""
+
+    note_id: UUID
+    document_id: UUID | None = None
+    paper_title: str | None = None
+    page_number: int | None = None
+    note_content: str
+    selected_text: str
+    tags: list[str] = Field(default_factory=list)
+    similarity_score: float
+    suggested_citation: str
+    relevance_explanation: str
+    matched_keywords: list[str] = Field(default_factory=list)
+
+
+class AssociativeSuggestionsResponse(BaseModel):
+    """Collection of proactive associative memory suggestions."""
+
+    draft_id: UUID
+    suggestions: list[AssociativeSuggestionItem]
+    total_found: int
+    analyzed_text_length: int

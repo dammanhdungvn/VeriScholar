@@ -10,6 +10,7 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
@@ -579,6 +580,58 @@ class DraftService:
             zip_size_bytes=len(zip_bytes),
         )
         return zip_bytes
+
+    async def export_overleaf(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        user_email: str | None = None,
+    ) -> dict[str, Any]:
+        """Generate direct Overleaf 1-Click web launch payload."""
+        import urllib.parse
+
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        source_tex = draft.content or ""
+        if draft.format != "latex" or r"\documentclass" not in source_tex:
+            clean_title = (draft.title or "Untitled Draft").replace("{", "").replace("}", "")
+            full_latex = (
+                r"\documentclass{article}" + "\n"
+                r"\usepackage[utf8]{inputenc}" + "\n"
+                rf"\title{{{clean_title}}}" + "\n"
+                r"\author{VeriScholar Researcher}" + "\n"
+                r"\begin{document}" + "\n"
+                r"\maketitle"
+                + "\n\n"
+                + (source_tex or "% Empty draft content\n")
+                + "\n"
+                + r"\end{document}"
+            )
+        else:
+            full_latex = source_tex
+
+        encoded_snip = urllib.parse.quote_plus(full_latex)
+        encoded_title = urllib.parse.quote_plus(draft.title or "Untitled Draft")
+        overleaf_url = (
+            f"https://www.overleaf.com/docs?snip={encoded_snip}&snip_name={encoded_title}"
+        )
+
+        return {
+            "draft_id": draft.id,
+            "title": draft.title,
+            "format": draft.format,
+            "overleaf_url": overleaf_url,
+            "launch_url": overleaf_url,
+            "latex_snip": full_latex,
+            "snip_length": len(full_latex),
+            "created_at": datetime.now(UTC),
+        }
 
     async def assist_draft(
         self,

@@ -217,3 +217,18 @@ export interface UpdateDraftCommentRequest {
   is_resolved?: boolean;
 }
 
+export interface OverleafExportResponse {
+  launch_url: string;
+  draft_id?: string;
+}
+
+export interface AssociativeMemorySuggestion {
+  id: string;
+  title: string;
+  page: number;
+  citation_key?: string;
+  note_id?: string;
+  note_snippet?: string;
+  similarity_score?: number;
+}
+

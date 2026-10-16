@@ -154,4 +154,138 @@ describe("ComparisonMatrixModal Component", () => {
 
     expect(onClose).toHaveBeenCalled();
   });
+
+  it("filters matrix rows by method/keyword and resets filter", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: mockMatrixResult,
+      }),
+    });
+
+    renderWithClient(
+      <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
+    );
+
+    const topicInput = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(topicInput, { target: { value: "Transformer Scaling" } });
+    fireEvent.submit(topicInput.closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Attention Is All You Need")).toBeInTheDocument();
+      expect(screen.getByText("FlashAttention: Fast and Memory-Efficient Exact Attention")).toBeInTheDocument();
+    });
+
+    // Search for "FlashAttention"
+    const searchInput = screen.getByTestId("search-matrix-input");
+    fireEvent.change(searchInput, { target: { value: "FlashAttention" } });
+
+    expect(screen.queryByText("Attention Is All You Need")).not.toBeInTheDocument();
+    expect(screen.getByText("FlashAttention: Fast and Memory-Efficient Exact Attention")).toBeInTheDocument();
+
+    // Clear search
+    const clearBtn = screen.getByRole("button", { name: "Xóa bộ lọc" });
+    fireEvent.click(clearBtn);
+
+    expect(screen.getByText("Attention Is All You Need")).toBeInTheDocument();
+    expect(screen.getByText("FlashAttention: Fast and Memory-Efficient Exact Attention")).toBeInTheDocument();
+  });
+
+  it("exports matrix as CSV / Excel file when clicking Xuất CSV / Excel button", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: mockMatrixResult,
+      }),
+    });
+
+    const createObjectURLSpy = vi.fn().mockReturnValue("blob:http://localhost/test-uuid");
+    const revokeObjectURLSpy = vi.fn();
+    window.URL.createObjectURL = createObjectURLSpy;
+    window.URL.revokeObjectURL = revokeObjectURLSpy;
+
+    renderWithClient(
+      <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
+    );
+
+    const topicInput = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(topicInput, { target: { value: "Transformer Scaling" } });
+    fireEvent.submit(topicInput.closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("export-csv-btn")).toBeInTheDocument();
+    });
+
+    const exportBtn = screen.getByTestId("export-csv-btn");
+    expect(screen.getByText("Xuất CSV / Excel")).toBeInTheDocument();
+    fireEvent.click(exportBtn);
+
+    expect(createObjectURLSpy).toHaveBeenCalled();
+    expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:http://localhost/test-uuid");
+  });
+
+  it("paginates large-scale matrix rows and handles page navigation", async () => {
+    // Generate 25 rows
+    const manyRows = Array.from({ length: 25 }, (_, i) => ({
+      document_id: `doc-${i + 1}`,
+      title: `Paper Title ${i + 1}`,
+      authors: [`Author ${i + 1}`],
+      year: 2020 + (i % 5),
+      core_methodology: `Methodology ${i + 1}`,
+      datasets_used: [`Dataset ${i + 1}`],
+      key_metrics: { Accuracy: `${80 + i}%` },
+      strengths: [`Strength ${i + 1}`],
+      limitations: [`Limitation ${i + 1}`],
+    }));
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: {
+          ...mockMatrixResult,
+          documents_compared: 25,
+          rows: manyRows,
+        },
+      }),
+    });
+
+    renderWithClient(
+      <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
+    );
+
+    const topicInput = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(topicInput, { target: { value: "Large Scale Survey" } });
+    fireEvent.submit(topicInput.closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Paper Title 1")).toBeInTheDocument();
+      expect(screen.getByText("Paper Title 10")).toBeInTheDocument();
+      // Page size is 10, so row 11 should not be on page 1
+      expect(screen.queryByText("Paper Title 11")).not.toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Trang 1 / 3")).toBeInTheDocument();
+
+    // Click Next page
+    const nextBtn = screen.getByTestId("matrix-next-page");
+    fireEvent.click(nextBtn);
+
+    expect(screen.getByText("Paper Title 11")).toBeInTheDocument();
+    expect(screen.getByText("Paper Title 20")).toBeInTheDocument();
+    expect(screen.queryByText("Paper Title 1")).not.toBeInTheDocument();
+    expect(screen.getByText("Trang 2 / 3")).toBeInTheDocument();
+
+    // Click Prev page
+    const prevBtn = screen.getByTestId("matrix-prev-page");
+    fireEvent.click(prevBtn);
+
+    expect(screen.getByText("Paper Title 1")).toBeInTheDocument();
+    expect(screen.getByText("Trang 1 / 3")).toBeInTheDocument();
+  });
 });

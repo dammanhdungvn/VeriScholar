@@ -137,6 +137,9 @@ async def generate_global_comparison_matrix(
         topic=payload.topic,
         folder_id=payload.folder_id,
         document_ids=payload.document_ids,
+        search=payload.search,
+        limit=payload.limit,
+        offset=payload.offset,
     )
     return ComparisonMatrixEnvelope(data=matrix)
 
@@ -331,6 +334,9 @@ async def generate_folder_comparison_matrix(
         topic=payload.topic,
         folder_id=id,
         document_ids=payload.document_ids,
+        search=payload.search,
+        limit=payload.limit,
+        offset=payload.offset,
     )
     return ComparisonMatrixEnvelope(data=matrix)
 
