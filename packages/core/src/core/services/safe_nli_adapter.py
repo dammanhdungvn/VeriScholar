@@ -155,14 +155,27 @@ class SafeNliEngineAdapter(ISafeNliPort):
             )
             return
 
-        onnx_model_path = target_dir / "onnx" / "model_quint8_avx2.onnx"
-        if not onnx_model_path.exists():
-            onnx_model_path = target_dir / "onnx" / "model.onnx"
-        if not onnx_model_path.exists():
-            logger.info("safe_nli_onnx_weights_missing", path=str(onnx_model_path))
+        # Select best quantized ONNX model available for hardware
+        candidate_model_files = [
+            "model_qint8_avx512_vnni.onnx",
+            "model_qint8_avx512.onnx",
+            "model_quint8_avx2.onnx",
+            "model.onnx",
+        ]
+        onnx_model_path: Path | None = None
+        for mf in candidate_model_files:
+            cand_p = target_dir / "onnx" / mf
+            if cand_p.exists():
+                onnx_model_path = cand_p
+                break
+
+        if not onnx_model_path:
+            logger.info("safe_nli_onnx_weights_missing", path=str(target_dir / "onnx"))
             return
 
         try:
+            import os
+
             import onnxruntime as ort
             from tokenizers import Tokenizer
 
@@ -171,7 +184,9 @@ class SafeNliEngineAdapter(ISafeNliPort):
             self._tokenizer.enable_truncation(max_length=512)
 
             opts = ort.SessionOptions()
-            opts.intra_op_num_threads = 4
+            cpu_count = os.cpu_count() or 1
+            # Avoid thread thrashing and context-switch penalties on virtualized hosts
+            opts.intra_op_num_threads = 1 if cpu_count <= 2 else min(cpu_count, 4)
             opts.inter_op_num_threads = 1
             opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
 
@@ -179,6 +194,18 @@ class SafeNliEngineAdapter(ISafeNliPort):
                 str(onnx_model_path),
                 sess_options=opts,
                 providers=["CPUExecutionProvider"],
+            )
+            import numpy as np
+
+            self._np = np
+            # Warm up session to prime graph compilation and buffer allocations
+            _w_enc = self._tokenizer.encode("warmup", "warmup")
+            self._session.run(
+                ["logits"],
+                {
+                    "input_ids": np.array([_w_enc.ids], dtype=np.int64),
+                    "attention_mask": np.array([_w_enc.attention_mask], dtype=np.int64),
+                },
             )
             self._neural_active = True
             logger.info(
@@ -191,6 +218,7 @@ class SafeNliEngineAdapter(ISafeNliPort):
             self._neural_active = False
             self._session = None
             self._tokenizer = None
+            self._np = None
 
     @property
     def is_neural_active(self) -> bool:
@@ -234,10 +262,10 @@ class SafeNliEngineAdapter(ISafeNliPort):
         pairs: list[tuple[str, str]],
     ) -> list[tuple[float, float, float]]:
         """Run batched inference returning (p_contradiction, p_entailment, p_neutral)."""
-        import numpy as np
-
         if not self._session or not self._tokenizer or not pairs:
             return []
+
+        np = self._np if self._np is not None else __import__("numpy")
 
         results: list[tuple[float, float, float]] = []
         for premise, hypothesis in pairs:
@@ -288,7 +316,9 @@ class SafeNliEngineAdapter(ISafeNliPort):
         candidate_entries: list[tuple[DocumentChunk, str, float, set[str]]] = []
         for chunk in retrieval_context:
             sentences = [
-                s.strip() for s in re.split(r"(?<=[.!?])\s+", chunk.content) if len(s.strip()) > 5
+                s.strip()
+                for s in re.split(r"(?<!\d)[.!?]\s+(?!\d)", chunk.content)
+                if len(s.strip()) > 5
             ]
             candidates = [chunk.content] + sentences
             best_cand_text = chunk.content
