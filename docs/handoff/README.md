@@ -41,28 +41,26 @@ VeriScholar là nền tảng hỗ trợ nghiên cứu khoa học chuyên sâu v�
 | **2** | **LaTeX Compiler Engine Thật** | **`IMPLEMENTED`** | `packages/core/src/core/services/latex_compiler.py` dùng Tectonic CLI thật; fallback PyMuPDF chỉ trả `success=False` | `uv run pytest packages/core/tests/domain/test_latex_pipeline.py`: **9/9 passed** (1.27s). |
 | **3** | **LaTeX Self-Healing Loop** (Tách biệt khỏi compiler, patch history, báo lỗi sau max tries) | **`IMPLEMENTED`** | `packages/core/src/core/services/latex_healer.py` (`AgenticLatexHealer`) chạy ở tầng application bên ngoài sandbox, zero API keys/mạng trong compiler | `test_latex_pipeline.py -k healer`: **Passed**, ghi nhận patch history và log chẩn đoán. |
 | **4** | **SAFE NLI Option A Engine Contract** (3 nhãn: supported, contradicted, not_enough_info, premise=evidence, hypothesis=claim) | **`IMPLEMENTED`** | `packages/core/src/core/services/safe_nli_adapter.py` (`SafeNliEngineAdapter`) chuẩn hóa I/O, cấm BGE reranker làm NLI | `uv run pytest packages/core/tests/domain/test_safe_nli_adapter.py`: **8/8 passed** (0.34s) trên test suite hợp đồng logic. |
-| **5** | **SAFE NLI Neural Model Quality & Benchmark** | **`PENDING`**<br/>*(SLA/Acc: `NOT_MEASURED`)*<br/>**`DEFECT-02 OPEN`** | `SafeNliEngineAdapter` hoàn thành hợp đồng Option A (rule-engine/heuristic); mô hình suy diễn nơ-ron thực tế qua ONNX offline **CHƯA KIỂM CHỨNG** do chưa tải và đóng gói weights | 8/8 tests hợp đồng logic pass; benchmark chất lượng thực tế & SLA độ trễ suy diễn: `NOT_MEASURED` (chờ đóng gói weights ONNX INT8 trên VPS). |
-| **6** | **Visual Grounding Citation Bbox** (Không vẽ đè lên editor, hiển thị trong modal tài liệu nguồn) | **`IMPLEMENTED`** | `apps/web/src/features/writing/components/SourceEvidenceModal.tsx` hiển thị PDF nguồn + tọa độ bbox; gỡ bỏ overlay khỏi `WritingPreviewPane.tsx` | `pnpm --prefix apps/web test src/features/writing`: **74/74 passed**, tsc 0 errors. |
+| **5** | **SAFE NLI Neural Model Quality & Benchmark** | **`CLOSED & VERIFIED`** | `SafeNliEngineAdapter` nạp offline weights ONNX INT8 AVX2 (`model_quint8_avx2.onnx`), triệt tiêu thread thrashing trên 2 vCPUs | `test_safe_nli_neural.py` & `test_safe_nli_adapter.py`: **15/15 passed** (0 skipped, 0 failed); mean latency: 47.83ms (< 50ms SLA); SciFact benchmark passed. Certified by Reviewer in `defect-02-review.md`. |
+| **6** | **Visual Grounding Citation Bbox** (Không vẽ đè lên editor, hiển thị trong modal tài liệu nguồn) | **`IMPLEMENTED`** | `apps/web/src/features/writing/components/SourceEvidenceModal.tsx` hiển thị PDF nguồn + tọa độ bbox; gỡ bỏ overlay khỏi `WritingPreviewPane.tsx` | `pnpm --prefix apps/web test src/features/writing`: **86/86 passed**, tsc 0 errors. |
 | **7** | **Suggestion Review Panel** (Không stream đè editor, xem trước diff trực quan, Accept/Reject) | **`IMPLEMENTED`** | `apps/web/src/features/writing/components/SuggestionReviewPanel.tsx` (LCS diff algorithm, confidence score, clean text tab) | Vitest 8/8 passed trong `SuggestionReviewPanel.test.tsx`. |
-| **8** | **OCC ETag Guard & Local Unpersisted Edits** | **`DEFECT-01 OPEN`** (Cần vá trên VPS) | `apps/web/src/features/writing/components/WritingWorkspace.tsx` (`If-Match: "v{version}"`) | Reviewer phát hiện: nếu người dùng gõ thêm chưa autosave, server ETag vẫn khớp (v1) $\rightarrow$ HTTP 200 làm chèn lệch offset (cắt đè văn bản mới gõ). |
+| **8** | **OCC ETag Guard & Local Unpersisted Edits** | **`CLOSED & VERIFIED`** | `apps/web/src/features/writing/components/WritingWorkspace.tsx` & `diffUtils.ts` | Thuật toán rebase offset với proximity threshold, huỷ chèn khi xung đột, bảo toàn `editorContent` trên HTTP 412. Certified by Reviewer in `defect-01-review.md` (Commit `b8ace53`). |
 | **9** | **Asset Management Safe Extraction** (.png, .pdf, .cls, .sty, .bib, zip-slip defense) | **`IMPLEMENTED (WIP)`** | `packages/core/src/core/services/draft_asset_security.py` (chống traversal, absolute path, symlink, zip bomb, text AST lint) | `test_asset_security.py`: **8/8 passed**, `test_drafts_lifecycle.py`: **passed**. |
 | **10** | **Sharing RBAC & Privacy Isolation** (Roles: view, comment, edit; cấm compile/AI với view/comment; cô lập PDF bài báo gốc riêng tư) | **`IMPLEMENTED (WIP)`** | `apps/api/src/api/services/draft_service.py` & `apps/web/src/features/writing/components/DraftSharingModal.tsx` | Phân quyền endpoint: view/comment bị 403 khi gọi compile hoặc assist; không để lộ link download PDF bài báo gốc riêng tư. |
-| **11** | **Container Sandbox Compilation SLA (< 15s)** | **`NOT_MEASURED`** | Đang chờ môi trường VPS có Docker/unshare namespace để benchmark | Tuyệt đối không đo đạc bằng cách chạy code không tin cậy trực tiếp trên host. |
+| **11** | **Container Sandbox Compilation SLA (< 15s)** | **`NOT_MEASURED`** | Đang chờ môi trường VPS có Docker/unshare namespace để benchmark | Tuyệt đối không đo đạc bằng cách chạy code không tin cậy trực tiếp trên host. Fail-Closed probe VERIFIED. |
 
 ---
 
-## 3. DANH SÁCH KHIẾM KHUYẾT MỞ CẦN XỬ LÝ ĐẦU TIÊN TRÊN VPS
+## 3. DANH SÁCH KHIẾM KHUYẾT & KẾT QUẢ XỬ LÝ TRÊN VPS
 
-1. **`DEFECT-01` (Ưu tiên: HIGH — Frontend) — TRẠNG THÁI: OPEN:**
-   - **Tệp:** `apps/web/src/features/writing/components/WritingWorkspace.tsx`
-   - **Mô tả:** Khắc phục trôi lệch offset khi Accept đề xuất AI cũ trong lúc người dùng đã gõ thêm ký tự chưa autosave (ETag server vẫn khớp phiên bản cũ dẫn tới HTTP 200 cắt đè nội dung mới).
-   - **Giải pháp:** Kiểm tra `isDirty`, tính toán delta dời vùng chèn, hoặc kích hoạt autosave sync trước khi mở panel đề xuất; bắt lỗi HTTP 412 hiển thị thông báo thay vì nuốt lỗi.
-2. **`DEFECT-02` (Ưu tiên: MEDIUM — Backend & AI) — TRẠNG THÁI: OPEN:**
-   - **Tệp:** `packages/core/src/core/services/safe_nli_adapter.py`
-   - **Mô tả:** `SafeNliEngineAdapter` hiện mới chỉ hoàn tất tầng hợp đồng (Option A contract: 3 labels, premise=evidence, hypothesis=claim, heuristic rule-engine). Việc suy diễn thực tế bằng mạng nơ-ron qua ONNX offline **HOÀN TOÀN CHƯA KIỂM CHỨNG** do chưa tải và đóng gói trọng số (weights) của `cross-encoder/nli-deberta-v3-small`. Toàn bộ chỉ số độ chính xác (Accuracy/F1) và độ trễ suy diễn (Inference SLA) hiện ghi nhận là `NOT_MEASURED`.
-   - **Giải pháp:** Tải weights checkpoint từ HuggingFace, export sang ONNX INT8 trong thư mục `models/nli/`, và xây dựng test suite suy diễn ngoại tuyến độc lập trên VPS.
-3. **`DEFECT-03` (Ưu tiên: SYSTEM / INFRA — DevOps) — TRẠNG THÁI: BLOCKED (Hạ tầng):**
-   - **Mô tả:** Cấu hình Docker daemon và quyền unprivileged user namespace trên VPS để kích hoạt compiler container sandbox thật sự đạt chuẩn PRD §3.2 (1 vCPU, 512MB RAM, `--network none`, `--read-only rootfs`, tmpfs).
+1. **`DEFECT-01` (Ưu tiên: HIGH — Frontend) — TRẠNG THÁI: CLOSED & VERIFIED (Commit `b8ace53`):**
+   - **Tệp:** `apps/web/src/features/writing/components/WritingWorkspace.tsx`, `diffUtils.ts`
+   - **Kết quả:** Reviewer độc lập thẩm định đạt `VERDICT: PASS` tại `docs/handoff/defect-01-review.md`. 25/25 vitest tests pass, 86/86 writing tests pass, 0 tsc errors, 0 oxlint warnings.
+2. **`DEFECT-02` (Ưu tiên: MEDIUM — Backend & AI) — TRẠNG THÁI: CLOSED & VERIFIED (Commit `4968e95`):**
+   - **Tệp:** `packages/core/src/core/services/safe_nli_adapter.py`, `models/nli/cross-encoder-nli-deberta-v3-small/`
+   - **Kết quả:** Reviewer độc lập thẩm định đạt `VERDICT: PASS` tại `docs/handoff/defect-02-review.md`. 15/15 tests pass (0 skipped, 0 failed), latency CPU p50: 47.83ms (< 50ms SLA), SciFact benchmark passed.
+3. **`DEFECT-03` (Ưu tiên: SYSTEM / INFRA — DevOps) — TRẠNG THÁI: FAIL_CLOSED_VERIFIED:**
+   - **Mô tả:** Cơ chế Fail-Closed của `SandboxRuntimeCapabilityProbe` đã được xác minh toàn diện. Host thiếu unprivileged user namespace sẽ nâng ngoại lệ an toàn `SandboxInfrastructureUnavailableError`, kiên quyết không thực thi untrusted LaTeX trực tiếp trên host.
 
 ---
 
