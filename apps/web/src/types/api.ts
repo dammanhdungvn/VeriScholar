@@ -6,6 +6,7 @@
 export interface ApiMeta {
   request_id: string;
   timestamp: string;
+  trace_id?: string | null;
 }
 
 export interface SingleResponse<T> {

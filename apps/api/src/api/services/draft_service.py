@@ -29,6 +29,7 @@ from api.schemas.draft import (
     UpdateDraftCommentRequest,
     UpdateDraftRequest,
 )
+from api.services.ai_tracing_service import AITracingService
 from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.draft import (
     DraftRole,
@@ -62,8 +63,9 @@ logger = structlog.get_logger("api.services.draft")
 class DraftService:
     """Service managing academic writing drafts with strict tenant isolation and OCC."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
         self.db = db
+        self.ai_tracing = ai_tracing or AITracingService()
 
     @asynccontextmanager
     async def _transaction(self) -> AsyncIterator[None]:
@@ -302,38 +304,70 @@ class DraftService:
             stmt = stmt.where(DocumentModel.id.in_(document_ids))
         stmt = stmt.limit(100)
 
-        result = await self.db.execute(stmt)
-        rows = result.all()
+        with self.ai_tracing.trace(
+            name="safe_fact_verification",
+            user_id=user_id,
+            metadata={"draft_id": str(draft_id), "target_length": len(target_text)},
+        ) as trace_span:
+            with self.ai_tracing.span(
+                name="literature_retrieval",
+                input={"candidate_docs": len(document_ids) if document_ids else "all"},
+            ) as ret_span:
+                result = await self.db.execute(stmt)
+                rows = result.all()
 
-        retrieval_chunks: list[DocumentChunk] = []
-        doc_metadata: dict[UUID, str] = {}
+                retrieval_chunks: list[DocumentChunk] = []
+                doc_metadata: dict[UUID, str] = {}
 
-        for chunk_model, doc_title in rows:
-            doc_metadata[chunk_model.document_id] = doc_title or "Tài liệu nghiên cứu"
-            bboxes = [
-                BoundingBox(x0=b[0], y0=b[1], x1=b[2], y1=b[3], page=int(b[4]))
-                for b in (chunk_model.bounding_boxes or [])
-                if len(b) >= 5 and b[0] < b[2] and b[1] < b[3] and int(b[4]) >= 1
-            ]
-            retrieval_chunks.append(
-                DocumentChunk(
-                    id=chunk_model.id,
-                    document_id=chunk_model.document_id,
-                    chunk_index=chunk_model.chunk_index,
-                    page_number=chunk_model.page_number,
-                    content=chunk_model.content,
-                    bounding_boxes=bboxes,
-                    token_count=chunk_model.token_count,
+                for chunk_model, doc_title in rows:
+                    doc_metadata[chunk_model.document_id] = doc_title or "Tài liệu nghiên cứu"
+                    bboxes = [
+                        BoundingBox(x0=b[0], y0=b[1], x1=b[2], y1=b[3], page=int(b[4]))
+                        for b in (chunk_model.bounding_boxes or [])
+                        if len(b) >= 5 and b[0] < b[2] and b[1] < b[3] and int(b[4]) >= 1
+                    ]
+                    retrieval_chunks.append(
+                        DocumentChunk(
+                            id=chunk_model.id,
+                            document_id=chunk_model.document_id,
+                            chunk_index=chunk_model.chunk_index,
+                            page_number=chunk_model.page_number,
+                            content=chunk_model.content,
+                            bounding_boxes=bboxes,
+                            token_count=chunk_model.token_count,
+                        )
+                    )
+                ret_span.set_output({"chunks_found": len(retrieval_chunks)})
+
+            with self.ai_tracing.span(
+                name="nli_claim_verification",
+                input={"text_length": len(target_text), "context_chunks": len(retrieval_chunks)},
+            ) as nli_span:
+                checker = SafeFactChecker(nli_adapter=SafeNliEngineAdapter())
+                report = await checker.verify_text(
+                    text=target_text,
+                    retrieval_context=retrieval_chunks,
+                    doc_metadata=doc_metadata,
+                    draft_id=draft_id,
                 )
+                nli_span.set_output(
+                    {
+                        "total_claims": report.total_claims,
+                        "supported": report.supported_claims,
+                        "contradicted": report.contradicted_claims,
+                        "unverified": report.unverified_claims,
+                        "latency_ms": report.latency_ms,
+                    }
+                )
+
+            trace_span.set_output(
+                {
+                    "total_claims": report.total_claims,
+                    "supported": report.supported_claims,
+                    "contradicted": report.contradicted_claims,
+                }
             )
 
-        checker = SafeFactChecker(nli_adapter=SafeNliEngineAdapter())
-        report = await checker.verify_text(
-            text=target_text,
-            retrieval_context=retrieval_chunks,
-            doc_metadata=doc_metadata,
-            draft_id=draft_id,
-        )
         logger.info(
             "draft_facts_verified",
             draft_id=str(draft_id),
@@ -365,8 +399,22 @@ class DraftService:
                 f"Role '{role.value}' is strictly forbidden from compiling LaTeX"
             )
 
-        healer = AgenticLatexHealer()
-        result = await healer.compile_with_healing(draft.content, timeout_seconds=timeout_seconds)
+        with self.ai_tracing.span(
+            name="latex_agentic_healing_compile",
+            input={"content_length": len(draft.content), "timeout_seconds": timeout_seconds},
+        ) as heal_span:
+            healer = AgenticLatexHealer()
+            result = await healer.compile_with_healing(
+                draft.content, timeout_seconds=timeout_seconds
+            )
+            heal_span.set_output(
+                {
+                    "success": result.success,
+                    "retries": result.retries_attempted,
+                    "errors_count": len(result.errors),
+                    "is_sandboxed": result.is_sandboxed,
+                }
+            )
 
         preview_url = None
         if result.pdf_bytes:

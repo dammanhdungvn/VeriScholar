@@ -78,8 +78,8 @@ def setup_logging() -> None:
     )
 
     # Standard library logging handler with ProcessorFormatter
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setFormatter(
         structlog.stdlib.ProcessorFormatter(
             foreign_pre_chain=shared_processors,
             processors=[
@@ -89,14 +89,52 @@ def setup_logging() -> None:
         )
     )
 
+    handlers: list[logging.Handler] = [console_handler]
+
+    # Persistent Rotating Disk Logging for 30s Error Triage
+    try:
+        settings.LOGS_DIR.mkdir(parents=True, exist_ok=True)
+        json_formatter = structlog.stdlib.ProcessorFormatter(
+            foreign_pre_chain=shared_processors,
+            processors=[
+                structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                structlog.processors.JSONRenderer(),
+            ],
+        )
+
+        audit_handler = logging.handlers.RotatingFileHandler(
+            settings.LOGS_DIR / "api-audit.log",
+            maxBytes=50 * 1024 * 1024,
+            backupCount=10,
+            encoding="utf-8",
+        )
+        audit_handler.setFormatter(json_formatter)
+        audit_handler.setLevel(log_level)
+        handlers.append(audit_handler)
+
+        error_handler = logging.handlers.RotatingFileHandler(
+            settings.LOGS_DIR / "api-error.log",
+            maxBytes=50 * 1024 * 1024,
+            backupCount=10,
+            encoding="utf-8",
+        )
+        error_handler.setFormatter(json_formatter)
+        error_handler.setLevel(logging.WARNING)
+        handlers.append(error_handler)
+    except Exception as exc:
+        print(
+            f"Warning: Failed to initialize rotating disk logging in {settings.LOGS_DIR}: {exc}",
+            file=sys.stderr,
+        )
+
     root_logger = logging.getLogger()
-    root_logger.handlers = [handler]
+    root_logger.handlers = handlers
     root_logger.setLevel(log_level)
 
     # Prevent noisy third-party loggers from flooding
     for logger_name in ["uvicorn", "uvicorn.error", "fastapi", "httpx", "httpcore"]:
         std_logger = logging.getLogger(logger_name)
-        std_logger.handlers = [handler]
+        std_logger.handlers = handlers
         std_logger.propagate = False
         std_logger.setLevel(log_level)
 

@@ -1,6 +1,7 @@
 """FastAPI Main Application Factory with Lifespan and Structured Logging."""
 
 import asyncio
+import time
 from collections.abc import AsyncIterable, AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -282,6 +283,65 @@ app.include_router(api_v1_router)
 async def health_check() -> dict[str, str]:
     """Health check endpoint for container probes and uptime monitoring."""
     return {"status": "ok", "service": "verischolar-api"}
+
+
+@app.get("/health/live", tags=["system"])
+async def liveness_probe() -> dict[str, Any]:
+    """Liveness probe returning service metadata and active environment."""
+    return {
+        "status": "ok",
+        "service": "verischolar-api",
+        "environment": settings.ENVIRONMENT,
+        "version": settings.VERSION,
+    }
+
+
+@app.get("/health/ready", tags=["system"])
+async def readiness_check() -> JSONResponse:
+    """Deep readiness probe verifying PostgreSQL async connectivity and Storage writeability."""
+    from sqlalchemy import text
+
+    import api.db.session as db_session
+
+    db_status = "ok"
+    db_latency_ms = 0.0
+    try:
+        t0 = time.perf_counter()
+        async with db_session.engine.connect() as conn:
+            await conn.execute(text("SELECT 1"))
+        db_latency_ms = round((time.perf_counter() - t0) * 1000, 2)
+    except Exception as exc:
+        db_status = f"error: {type(exc).__name__}"
+
+    storage_status = "ok"
+    try:
+        settings.STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+        test_file = settings.STORAGE_DIR / ".health_probe"
+        test_file.write_text("ok", encoding="utf-8")
+        test_file.unlink(missing_ok=True)
+    except Exception as exc:
+        storage_status = f"error: {type(exc).__name__}"
+
+    is_ready = db_status == "ok" and storage_status == "ok"
+    res_status = status.HTTP_200_OK if is_ready else status.HTTP_503_SERVICE_UNAVAILABLE
+
+    return JSONResponse(
+        status_code=res_status,
+        content={
+            "status": "ready" if is_ready else "unready",
+            "environment": settings.ENVIRONMENT,
+            "version": settings.VERSION,
+            "checks": {
+                "database": {"status": db_status, "latency_ms": db_latency_ms},
+                "storage": {"status": storage_status},
+                "langfuse": {
+                    "enabled": settings.LANGFUSE_ENABLED,
+                    "masked": settings.LANGFUSE_MASK_INPUT_OUTPUT,
+                    "environment": settings.LANGFUSE_ENVIRONMENT,
+                },
+            },
+        },
+    )
 
 
 @app.get("/events", response_class=EventSourceResponse, tags=["streaming"])

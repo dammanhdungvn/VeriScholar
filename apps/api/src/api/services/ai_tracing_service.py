@@ -493,6 +493,40 @@ class AITracingService:
             usage_details=usage_details,
         )
 
+    def record_score(
+        self,
+        name: str,
+        value: float,
+        trace_id: str | None = None,
+        session_id: str | None = None,
+        comment: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> bool:
+        """Record user feedback, evaluation, or benchmark score to Langfuse."""
+        if not self.client:
+            return False
+        try:
+            self.client.create_score(
+                name=name,
+                value=value,
+                trace_id=trace_id,
+                session_id=str(session_id) if session_id else None,
+                comment=scrub_sensitive_text(comment) if comment else None,
+                metadata=(
+                    mask_payload(metadata, mask_enabled=self.mask_input_output)
+                    if metadata
+                    else None
+                ),
+            )
+            return True
+        except Exception as ex:
+            logger.warning(
+                "langfuse_create_score_failed",
+                name=name,
+                error=scrub_sensitive_text(str(ex)),
+            )
+            return False
+
     def flush(self) -> None:
         """Safely flush queued telemetry events to the Langfuse backend."""
         if not self.client:

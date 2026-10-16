@@ -156,9 +156,10 @@ def get_auth_service(
 
 def get_draft_service(
     db: AsyncSession = Depends(get_db),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DraftService:
     """Dependency providing DraftService bound to request database session."""
-    return DraftService(db=db)
+    return DraftService(db=db, ai_tracing=ai_tracing)
 
 
 async def get_current_user(

@@ -928,6 +928,7 @@ class SessionChatService:
             yield evt_cit
 
         answer_parts: list[str] = []
+        thought_parts: list[str] = []
         finish_reason = "stop"
 
         if should_use_llm:
@@ -1027,9 +1028,9 @@ class SessionChatService:
                     "messages": llm_messages,
                     "stream": True,
                 }
-                if not any(
-                    m in settings.OPENAI_MODEL.lower() for m in ("gpt-5", "o1", "o3", "luna")
-                ):
+                if any(m in settings.OPENAI_MODEL.lower() for m in ("gpt-5", "o1", "o3", "luna")):
+                    payload["reasoning_effort"] = settings.REASONING_EFFORT
+                else:
                     payload["temperature"] = 0.3
 
                 async with httpx.AsyncClient(timeout=60.0) as client:
@@ -1051,7 +1052,25 @@ class SessionChatService:
                                 if line.startswith("data: ") and line != "data: [DONE]":
                                     try:
                                         chunk_json = json.loads(line[6:])
-                                        delta = chunk_json["choices"][0]["delta"].get("content", "")
+                                        delta_obj = chunk_json["choices"][0].get("delta", {})
+
+                                        # 1. Capture Native Thought / Reasoning Stream
+                                        thought = (
+                                            delta_obj.get("reasoning_content")
+                                            or delta_obj.get("thought")
+                                            or ""
+                                        )
+                                        if thought:
+                                            thought_parts.append(thought)
+                                            if settings.STREAM_REASONING_TOKENS:
+                                                evt_thought = emit(
+                                                    "reasoning", {"thought": thought}
+                                                )
+                                                if evt_thought:
+                                                    yield evt_thought
+
+                                        # 2. Capture Final Answer Content Tokens
+                                        delta = delta_obj.get("content", "")
                                         if delta:
                                             answer_parts.append(delta)
                                             evt_token = emit("token", {"token": delta})
@@ -1061,13 +1080,22 @@ class SessionChatService:
                                         continue
                         else:
                             err_body = await resp.aread()
+                            err_text = err_body.decode(errors="ignore")
                             logger.warning(
                                 "llm_chat_stream_bad_status",
                                 status=resp.status_code,
-                                text=err_body.decode(errors="ignore"),
+                                text=err_text,
+                            )
+                            gen_span.update(
+                                level="ERROR",
+                                status_message=f"OpenAI HTTP {resp.status_code}: {err_text[:200]}",
                             )
             except Exception as e:
                 logger.warning("llm_chat_stream_failed_fallback", error=str(e))
+                gen_span.update(
+                    level="ERROR",
+                    status_message=f"Stream Exception: {type(e).__name__}: {str(e)}",
+                )
 
         # Fallback or Test Environment: Deterministic Socratic Response
         if not answer_parts and finish_reason != "interrupted":
@@ -1108,11 +1136,14 @@ class SessionChatService:
         latency_ms = (time.perf_counter() - start_time) * 1000
         prompt_tokens = len(request.question.split()) * 2
         completion_tokens = max(1, len(final_answer.split()))
+        full_thought = "".join(thought_parts) if thought_parts else None
+        reasoning_tokens = len(full_thought.split()) * 2 if full_thought else 0
         done_payload = {
             "finish_reason": finish_reason,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
-            "total_tokens": prompt_tokens + completion_tokens,
+            "reasoning_tokens": reasoning_tokens,
+            "total_tokens": prompt_tokens + completion_tokens + reasoning_tokens,
             "latency_ms": round(latency_ms, 1),
             "citations_count": len(citations),
             "intent": intent.value,
@@ -1124,7 +1155,9 @@ class SessionChatService:
                 "finish_reason": finish_reason,
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
+                "reasoning_tokens": reasoning_tokens,
                 "latency_ms": round(latency_ms, 1),
+                "thought_preview": full_thought[:200] if full_thought else None,
             }
         )
         gen_span.__exit__(None, None, None)

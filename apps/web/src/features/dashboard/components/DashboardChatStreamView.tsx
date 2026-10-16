@@ -146,12 +146,22 @@ export function DashboardChatStreamView({
 
                 {/* Collapsible Reasoning / Thinking Tokens if available */}
                 {message.thought && (
-                  <details className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-muted dark:text-zinc-400">
-                    <summary className="cursor-pointer font-medium select-none flex items-center gap-1.5 text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
-                      <BrainCircuit className="w-3.5 h-3.5 text-coral-500" />
-                      <span>Suy luận</span>
+                  <details
+                    open={Boolean(message.is_streaming && !message.content)}
+                    className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-muted dark:text-zinc-400"
+                  >
+                    <summary className="cursor-pointer font-medium select-none flex items-center justify-between text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
+                      <div className="flex items-center gap-1.5">
+                        <BrainCircuit className="w-3.5 h-3.5 text-coral-500" />
+                        <span>Suy luận học thuật</span>
+                      </div>
+                      {message.is_streaming && !message.content && (
+                        <span className="text-3xs text-coral-600 dark:text-coral-400 animate-pulse">
+                          Đang tư duy...
+                        </span>
+                      )}
                     </summary>
-                    <div className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap">
+                    <div className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
                       {message.thought}
                     </div>
                   </details>

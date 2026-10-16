@@ -37,6 +37,7 @@ export interface ListSessionMessagesParams {
 export interface StreamEventCallbacks {
   onStart?: (data: { turn_id: string; message_id: string; created_at: string }) => void;
   onCitations?: (citations: CitationItemSchema[]) => void;
+  onReasoning?: (thought: string) => void;
   onToken?: (token: string) => void;
   onDone?: (data: { turn_id: string; message_id: string; total_tokens: number; finish_reason: string }) => void;
   onError?: (error: Error) => void;
@@ -210,6 +211,9 @@ export const sessionsApi = {
               break;
             case "citations":
               callbacks.onCitations?.(parsed.citations || []);
+              break;
+            case "reasoning":
+              callbacks.onReasoning?.(parsed.thought || "");
               break;
             case "token":
               callbacks.onToken?.(parsed.token || "");
