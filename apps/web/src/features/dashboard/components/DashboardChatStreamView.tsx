@@ -14,6 +14,7 @@ interface DashboardChatStreamViewProps {
   isGenerating: boolean;
   onStopGeneration: () => void;
   onUploadFile?: (file: File) => void;
+  onOpenReferences?: () => void;
 }
 
 /**
@@ -83,7 +84,8 @@ export function DashboardChatStreamView({
   onSend,
   isGenerating,
   onStopGeneration,
-  onUploadFile
+  onUploadFile,
+  onOpenReferences,
 }: DashboardChatStreamViewProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
@@ -148,6 +150,7 @@ export function DashboardChatStreamView({
                 {message.thought && (
                   <details
                     open={Boolean(message.is_streaming && !message.content)}
+                    data-testid="reasoning-accordion"
                     className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-muted dark:text-zinc-400"
                   >
                     <summary className="cursor-pointer font-medium select-none flex items-center justify-between text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
@@ -179,7 +182,11 @@ export function DashboardChatStreamView({
                 {message.citations && message.citations.length > 0 && (
                   <div className="pt-2 flex flex-wrap items-center gap-1.5">
                     {message.citations.map((cite, cIdx) => (
-                      <CitationBadge key={cIdx} citation={cite} />
+                      <CitationBadge
+                        key={cIdx}
+                        citation={cite}
+                        onOpenReferences={onOpenReferences}
+                      />
                     ))}
                   </div>
                 )}
