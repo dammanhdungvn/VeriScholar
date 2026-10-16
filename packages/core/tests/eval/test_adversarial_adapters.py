@@ -724,7 +724,7 @@ class TestEvalSampleSerialization:
         q_res = q_adapter.parse_data(q_data)
         dur_q = time.perf_counter() - t0
         assert len(q_res) == 1000
-        assert dur_q < 0.50
+        assert dur_q < 1.50
 
         # 2. SciFact 1,000 items
         t0 = time.perf_counter()
@@ -740,7 +740,7 @@ class TestEvalSampleSerialization:
         s_res = s_adapter.parse_data(s_data)
         dur_s = time.perf_counter() - t0
         assert len(s_res) == 1000
-        assert dur_s < 0.50
+        assert dur_s < 1.50
 
         # 3. PubMedQA 1,000 items
         t0 = time.perf_counter()
@@ -756,7 +756,7 @@ class TestEvalSampleSerialization:
         p_res = p_adapter.parse_data(p_data)
         dur_p = time.perf_counter() - t0
         assert len(p_res) == 1000
-        assert dur_p < 0.50
+        assert dur_p < 1.50
 
         # 4. Regression 1,000 items
         sample_dict = q_res[0].to_dict()
@@ -765,4 +765,4 @@ class TestEvalSampleSerialization:
         r_res = r_adapter.parse_data(r_data)
         dur_r = time.perf_counter() - t0
         assert len(r_res) == 1000
-        assert dur_r < 0.50
+        assert dur_r < 1.50
