@@ -27,9 +27,9 @@ VeriScholar là nền tảng hỗ trợ nghiên cứu khoa học chuyên sâu v�
 - **Module 2 (Academic Writing Assistant & SAFE Fact-Checking - PRD §3.2):**
   - **Trạng thái:** **`MILESTONE 1 IMPLEMENTED - CONDITIONAL REVIEW`** (Chi tiết ở Mục 2).
   - Tạm dừng mở rộng tính năng mới theo yêu cầu chuyển giao môi trường sang VPS.
-- **Module 3 (Multi-Paper Cross Synthesis & Literature Review):**
-  - **Trạng thái:** **`CHƯA BẮT ĐẦU (0% CODE)`**.
-  - Tuyệt đối chưa kích hoạt mã nguồn hay schema của Module 3 cho tới khi Module 2 được nghiệm thu trọn vẹn trên VPS.
+- **Module 3 (Multi-Paper Ingestion, Academic Reference Resolving & Citation Graph - PRD §3.3):**
+  - **Trạng thái:** **`IMPLEMENTED & VERIFIED`** (Nghiệm thu đạt **VERDICT: PASS** tại `docs/handoff/module3-acceptance-review.md`).
+  - Bao gồm: `IAcademicSearchResolverPort` & `ExaAcademicResolverAdapter` (Exa neural search & fallback), `GlobalAcademicCache` (SLA < 10ms, cách ly nghiêm ngặt bản thảo cá nhân), Session Capacity Cap $\le 5$ (Backend 422 `SESSION_CAPACITY_EXCEEDED` & Frontend Guard/Alert), Đồ thị trích dẫn bẻ gãy chu trình $k \le 2$ & Topo reading path, và Giao diện `SmartReferenceDrawer` 3 cột.
 
 ---
 
@@ -123,6 +123,7 @@ Toàn bộ tài liệu hỗ trợ đã được chuyển vào thư mục `docs/h
 4. [`module2-milestone1-review.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/handoff/module2-milestone1-review.md): Báo cáo đánh giá độc lập đầy đủ của Lead Quality Reviewer `gg16` trên dirty working tree snapshot (trên nền commit base `fca342c`, tương ứng với mã nguồn đóng gói `6156c91`).
 5. [`quota-aware-teamwork-and-handover-protocol.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/handoff/quota-aware-teamwork-and-handover-protocol.md): Quy trình điều phối đa tác tử và quản trị rủi ro hạn ngạch.
 6. [`orchestration-state-snapshot.json`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/handoff/orchestration-state-snapshot.json): Bản sao lưu trạng thái điều phối lịch sử (đã khử sạch thông tin nhạy cảm và đường dẫn cục bộ).
+7. [`module3-acceptance-review.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/module3-acceptance-review.md): Báo cáo thẩm định chất lượng độc lập nghiệm thu Module 3 (PRD §3.3: Reference Ingestion, Cache Isolation, Capacity Cap <= 5, Cycle Breaking, SmartReferenceDrawer) — **VERDICT: PASS**.
 
 ---
 
