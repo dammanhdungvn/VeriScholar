@@ -267,3 +267,35 @@ async def test_verify_text_hexagonal_di_mock_port(
     assert report.claims[0].status == FactVerificationStatus.SUPPORTED
     assert report.claims[0].evidence_text == "Mock verified evidence."
     assert report.claims[0].reasoning == "Fake adapter verified claim successfully."
+
+
+@pytest.mark.asyncio
+async def test_verify_text_with_adapter_exception_fallback_to_heuristic(
+    sample_literature_chunks: list[DocumentChunk],
+) -> None:
+    """Verify SafeFactChecker falls back gracefully to heuristic when adapter raises exception."""
+
+    class CrashingNliAdapter(ISafeNliPort):
+        async def classify(
+            self,
+            claim: str,
+            retrieval_context: list[DocumentChunk],
+        ) -> SafeNliVerdict:
+            raise RuntimeError("Simulated unhandled ONNX runtime crash")
+
+    checker = SafeFactChecker(nli_adapter=CrashingNliAdapter())
+    text = "The Transformer architecture achieves 28.4 BLEU on English-to-German translation."
+    doc_id = sample_literature_chunks[0].document_id
+    doc_metadata = {doc_id: "Attention Is All You Need"}
+
+    report = await checker.verify_text(
+        text=text,
+        retrieval_context=sample_literature_chunks,
+        doc_metadata=doc_metadata,
+    )
+
+    # Heuristic fallback successfully catches the exception and verifies claim
+    assert report.total_claims == 1
+    assert report.supported_claims == 1
+    assert report.claims[0].status == FactVerificationStatus.SUPPORTED
+    assert report.claims[0].evidence_document_id == doc_id

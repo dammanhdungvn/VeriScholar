@@ -17,6 +17,8 @@ import re
 import time
 from uuid import UUID
 
+import structlog
+
 from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.safe_claim import (
     AtomicClaim,
@@ -24,6 +26,8 @@ from core.domain.entities.safe_claim import (
     FactVerificationStatus,
 )
 from core.ports.safe_verifier import ISafeNliPort
+
+logger = structlog.get_logger("core.services.safe_fact_checker")
 
 # Pronouns and demonstratives requiring entity resolution
 DEMONSTRATIVE_PATTERNS = [
@@ -324,7 +328,19 @@ class SafeFactChecker:
 
             async def _verify_claim_with_adapter(raw_claim: str) -> AtomicClaim:
                 normalized_claim, entities = self.normalize_entities(raw_claim)
-                verdict = await self.nli_adapter.classify(normalized_claim, retrieval_context)
+                try:
+                    assert self.nli_adapter is not None
+                    verdict = await self.nli_adapter.classify(normalized_claim, retrieval_context)
+                except Exception as err:
+                    logger.warning("safe_nli_adapter_failed_fallback_to_heuristic", error=str(err))
+                    loop = asyncio.get_running_loop()
+                    return await loop.run_in_executor(
+                        None,
+                        self._verify_single_claim,
+                        raw_claim,
+                        retrieval_context,
+                        doc_metadata,
+                    )
 
                 status_map = {
                     "supported": FactVerificationStatus.SUPPORTED,

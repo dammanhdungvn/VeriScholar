@@ -389,13 +389,12 @@ class SafeNliEngineAdapter(ISafeNliPort):
                 explanation=explanation,
             )
 
-        # 3. Batched Neural Inference on candidate passages
-        pairs = [(passage, claim_clean) for _, passage, _, _ in top_candidates]
-        predictions = self._predict_neural_batch(pairs)
-
-        for (cand_chunk, _, _, cand_overlap), (p_contra, p_entail, _) in zip(
-            top_candidates, predictions, strict=False
-        ):
+        # 3. Targeted Neural Inference with early exit on decisive match
+        for cand_chunk, cand_passage, _, cand_overlap in top_candidates:
+            preds = self._predict_neural_batch([(cand_passage, claim_clean)])
+            if not preds:
+                continue
+            p_contra, p_entail, _ = preds[0]
             if p_contra >= 0.5 and p_contra > p_entail:
                 return SafeNliVerdict(
                     label="contradicted",
