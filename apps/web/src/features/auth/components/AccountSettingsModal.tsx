@@ -72,12 +72,10 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
     };
 
     try {
-      if (import.meta.env.VITE_ENABLE_MOCK_AUTH !== "true") {
-        try {
-          await authApi.updateProfile(payload);
-        } catch {
-          // If endpoint is in migration/test, update local store
-        }
+      try {
+        await authApi.updateProfile(payload);
+      } catch {
+        // If endpoint is in migration/test, update local store
       }
       updateUser(payload);
       setProfileSuccessMsg("Hồ sơ học giả đã được cập nhật thành công.");
@@ -108,12 +106,10 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
 
     setIsChangingPassword(true);
     try {
-      if (import.meta.env.VITE_ENABLE_MOCK_AUTH !== "true") {
-        await authApi.changePassword({
-          current_password: currentPassword,
-          new_password: newPassword,
-        });
-      }
+      await authApi.changePassword({
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
       setSecuritySuccessMsg("Mật khẩu đã được thay đổi thành công.");
       setCurrentPassword("");
       setNewPassword("");

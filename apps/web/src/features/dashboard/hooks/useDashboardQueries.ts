@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { dashboardApi } from "../api/dashboardApi";
-import { RECENT_SESSIONS } from "../data/mockDashboardData";
 import type {
   SessionItem,
   SessionDetail,
@@ -16,10 +15,8 @@ export const DASHBOARD_QUERY_KEYS = {
   sessionMessages: (id: string) => ["dashboard", "messages", id] as const,
 };
 
-const isMockEnabled = import.meta.env.VITE_ENABLE_MOCK_DASHBOARD === "true";
-
 /**
- * Hook to query sessions with TanStack Query and fallback mock support
+ * Hook to query sessions with TanStack Query
  */
 export function useSessionsQuery(
   page = 1,
@@ -29,21 +26,7 @@ export function useSessionsQuery(
 ) {
   return useQuery<SessionItem[]>({
     queryKey: [...DASHBOARD_QUERY_KEYS.allSessions, page, perPage, q, includeArchived],
-    queryFn: async () => {
-      if (isMockEnabled) {
-        return RECENT_SESSIONS;
-      }
-      try {
-        return await dashboardApi.listSessions(page, perPage, q, includeArchived);
-      } catch (err) {
-        if (isMockEnabled) {
-          console.warn("Falling back to local sessions:", err);
-          return RECENT_SESSIONS;
-        }
-        throw err;
-      }
-    },
-    initialData: isMockEnabled ? RECENT_SESSIONS : undefined,
+    queryFn: () => dashboardApi.listSessions(page, perPage, q, includeArchived),
     staleTime: 30 * 1000,
   });
 }
@@ -56,33 +39,7 @@ export function useSessionDetailQuery(sessionId?: string) {
     queryKey: sessionId ? DASHBOARD_QUERY_KEYS.sessionDetail(sessionId) : ["dashboard", "session", "none"],
     queryFn: async () => {
       if (!sessionId) return null;
-      if (isMockEnabled) {
-        const mock = RECENT_SESSIONS.find((s) => s.id === sessionId);
-        if (!mock) return null;
-        return {
-          ...mock,
-          active_document_id: mock.document_ids[0] ?? null,
-          viewport_state: { page: 1, zoom_ratio: 1.0, scroll_top: 0 },
-          active_tab: "chat",
-          is_archived: false,
-        };
-      }
-      try {
-        return await dashboardApi.getSession(sessionId);
-      } catch (err) {
-        console.warn(`Failed to fetch session ${sessionId}:`, err);
-        const mock = RECENT_SESSIONS.find((s) => s.id === sessionId);
-        if (mock) {
-          return {
-            ...mock,
-            active_document_id: mock.document_ids[0] ?? null,
-            viewport_state: { page: 1, zoom_ratio: 1.0, scroll_top: 0 },
-            active_tab: "chat",
-            is_archived: false,
-          };
-        }
-        throw err;
-      }
+      return dashboardApi.getSession(sessionId);
     },
     enabled: Boolean(sessionId),
   });
@@ -100,24 +57,7 @@ export function useCreateSessionMutation() {
     CreateSessionRequest,
     { previousSessions?: SessionItem[] }
   >({
-    mutationFn: async (req: CreateSessionRequest) => {
-      if (isMockEnabled) {
-        const id = `session-${Date.now()}`;
-        const newSession: SessionDetail = {
-          id,
-          title: req.title || "Phiên nghiên cứu mới",
-          document_ids: req.initial_document_ids || [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          version: 1,
-          viewport_state: { page: 1, zoom_ratio: 1.0, scroll_top: 0 },
-          active_tab: "chat",
-          is_archived: false,
-        };
-        return newSession;
-      }
-      return dashboardApi.createSession(req);
-    },
+    mutationFn: (req: CreateSessionRequest) => dashboardApi.createSession(req),
     onMutate: async (newSessionReq) => {
       await queryClient.cancelQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
       const previousSessions = queryClient.getQueryData<SessionItem[]>(
@@ -166,21 +106,7 @@ export function useUpdateSessionTitleMutation() {
     { id: string; title: string; version: number },
     { previousSessions?: SessionItem[] }
   >({
-    mutationFn: async ({ id, title, version }) => {
-      if (isMockEnabled) {
-        const updated: SessionDetail = {
-          id,
-          title,
-          document_ids: [],
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-          version: version + 1,
-          viewport_state: { page: 1, zoom_ratio: 1.0, scroll_top: 0 },
-          active_tab: "chat",
-          is_archived: false,
-        };
-        return updated;
-      }
+    mutationFn: ({ id, title, version }) => {
       const req: UpdateSessionTitleRequest = { title };
       return dashboardApi.updateSessionTitle(id, req, version);
     },
@@ -230,10 +156,7 @@ export function useDeleteSessionMutation() {
   const queryClient = useQueryClient();
 
   return useMutation<void, Error, string, { previousSessions?: SessionItem[] }>({
-    mutationFn: async (sessionId: string) => {
-      if (isMockEnabled) return;
-      return dashboardApi.deleteSession(sessionId);
-    },
+    mutationFn: (sessionId: string) => dashboardApi.deleteSession(sessionId),
     onMutate: async (sessionId) => {
       await queryClient.cancelQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
       const previousSessions = queryClient.getQueryData<SessionItem[]>(
@@ -272,18 +195,7 @@ export function useAddDocumentMutation() {
     Error,
     { sessionId: string; request: AddDocumentToSessionRequest }
   >({
-    mutationFn: async ({ sessionId, request }) => {
-      if (isMockEnabled) {
-        return {
-          session_id: sessionId,
-          document_id: request.document_id || "mock-doc-id",
-          status: "associated",
-          display_order: 1,
-          message: "Tài liệu đã được thêm thành công.",
-        };
-      }
-      return dashboardApi.addDocument(sessionId, request);
-    },
+    mutationFn: ({ sessionId, request }) => dashboardApi.addDocument(sessionId, request),
     onSettled: (_data, _error, variables) => {
       if (variables?.sessionId) {
         queryClient.invalidateQueries({

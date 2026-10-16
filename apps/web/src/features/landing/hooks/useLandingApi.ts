@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { uploadDocumentApi } from "@/lib/api-client";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 interface SystemHealth {
   status: "healthy" | "offline";
@@ -43,20 +43,7 @@ export function useQuickUploadDocument() {
         throw new Error("Chỉ hỗ trợ định dạng tài liệu PDF khoa học.");
       }
 
-      try {
-        return await uploadDocumentApi(file);
-      } catch (err) {
-        // Fallback for demo when backend is offline
-        const isMockAllowed = import.meta.env.VITE_ENABLE_MOCK_DEMO === "true";
-        if (isMockAllowed) {
-          await new Promise((resolve) => setTimeout(resolve, 800));
-          return {
-            id: `demo-doc-${Date.now()}`,
-            filename: file.name,
-          };
-        }
-        throw err;
-      }
+      return await uploadDocumentApi(file);
     },
   });
 }

@@ -252,8 +252,18 @@ class DocumentService:
                 created_at=now,
                 updated_at=now,
             )
-            db.add(blob)
-            await db.flush()
+            try:
+                db.add(blob)
+                await db.flush()
+            except IntegrityError:
+                # Concurrent CAS race condition: another worker inserted the blob just now
+                await db.rollback()
+                res_blob = await db.execute(stmt_blob)
+                blob = res_blob.scalar_one_or_none()
+                if blob is not None:
+                    blob.ref_count += 1
+                else:
+                    raise
 
         # 5. Create user Document record
         doc = DocumentModel(

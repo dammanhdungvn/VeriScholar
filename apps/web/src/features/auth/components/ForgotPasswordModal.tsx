@@ -10,7 +10,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Mail, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
-import { mockForgotPassword } from "../data/mock-auth";
 import { authApi } from "../api/authApi";
 
 export interface ForgotPasswordModalProps {
@@ -40,13 +39,8 @@ function ForgotPasswordContent({ onClose, defaultEmail = "" }: ForgotPasswordCon
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      if (import.meta.env.VITE_ENABLE_MOCK_AUTH === "true") {
-        const res = await mockForgotPassword(email);
-        setSuccessMessage(res.message);
-      } else {
-        const res = await authApi.forgotPassword({ email });
-        setSuccessMessage(res?.message || "Đã gửi email khôi phục mật khẩu.");
-      }
+      const res = await authApi.forgotPassword({ email });
+      setSuccessMessage(res?.message || "Đã gửi email khôi phục mật khẩu.");
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Đã xảy ra lỗi. Vui lòng thử lại sau.");
     } finally {

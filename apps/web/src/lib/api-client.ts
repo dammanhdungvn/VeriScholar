@@ -1,7 +1,7 @@
 import type { SingleResponse, PaginatedResponse, ErrorResponse, PaginatedMeta, PaginationLinks } from "@/types/api";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
 
 export class ApiError extends Error {

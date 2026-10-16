@@ -17,8 +17,8 @@ describe("api-client and buildHeaders correlation tracing", () => {
   });
 
   it("resolves API URL with endpoint prefix", () => {
-    expect(resolveApiUrl("/documents")).toBe("http://localhost:8000/api/v1/documents");
-    expect(resolveApiUrl("documents")).toBe("http://localhost:8000/api/v1/documents");
+    expect(resolveApiUrl("/documents")).toBe("/api/v1/documents");
+    expect(resolveApiUrl("documents")).toBe("/api/v1/documents");
   });
 
   it("automatically generates and attaches X-Request-ID header via crypto.randomUUID", async () => {

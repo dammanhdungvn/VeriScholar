@@ -1,15 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { fetchEventSource } from "@microsoft/fetch-event-source";
 import type { ChatMessage, CitationBadgeData } from "@/types/dashboard";
-import { SAMPLE_CHAT_MESSAGES } from "../data/mockDashboardData";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { generateRequestId } from "@/lib/api-client";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
-const isMockEnabled = import.meta.env.VITE_ENABLE_MOCK_DASHBOARD === "true";
 
 interface UseStreamingChatOptions {
   activeSessionId?: string;
@@ -20,12 +18,7 @@ export function useStreamingChat({
   activeSessionId,
   onSessionCreated,
 }: UseStreamingChatOptions = {}) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (isMockEnabled && activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]) {
-      return SAMPLE_CHAT_MESSAGES[activeSessionId];
-    }
-    return [];
-  });
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const [inputText, setInputText] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -36,11 +29,7 @@ export function useStreamingChat({
   const [prevSessionId, setPrevSessionId] = useState(activeSessionId);
   if (activeSessionId !== prevSessionId) {
     setPrevSessionId(activeSessionId);
-    setMessages(
-      isMockEnabled && activeSessionId && SAMPLE_CHAT_MESSAGES[activeSessionId]
-        ? SAMPLE_CHAT_MESSAGES[activeSessionId]
-        : []
-    );
+    setMessages([]);
   }
 
   // Clean up animation frames and abort ongoing streams on unmount
@@ -71,105 +60,6 @@ export function useStreamingChat({
       prev.map((msg) => (msg.is_streaming ? { ...msg, is_streaming: false } : msg))
     );
   }, []);
-
-  /**
-   * Run local high-fidelity Socratic simulator with rAF token buffer
-   */
-  const runMockStream = useCallback(
-    (textToSend: string, assistantMsgId: string) => {
-      let fullResponse = "";
-      let sampleCitations: CitationBadgeData[] = [];
-      const lower = textToSend.toLowerCase();
-
-      if (lower.includes("rnn") || lower.includes("đệ quy") || lower.includes("vị trí")) {
-        fullResponse = `Kiến trúc Transformer **hoàn toàn loại bỏ mạng đệ quy RNN**. Để lưu giữ thứ tự tuần tự của chuỗi, các tác giả đề xuất kỹ thuật **Positional Encoding** sử dụng hàm lượng giác:
-
-$$PE_{(pos, 2i)} = \\sin\\left(\\frac{pos}{10000^{2i/d_{\\text{model}}}}\\right)$$
-$$PE_{(pos, 2i+1)} = \\cos\\left(\\frac{pos}{10000^{2i/d_{\\text{model}}}}\\right)$$
-
-Vector này được cộng trực tiếp vào phần nhúng từ trước khi đưa qua các tầng Self-Attention.`;
-        sampleCitations = [
-          {
-            paper_id: "doc-vaswani-2017",
-            paper_title: "Attention Is All You Need",
-            page: 6,
-            bbox: [0.15, 0.62, 0.85, 0.88, 6],
-          },
-        ];
-      } else if (lower.includes("tóm tắt") || lower.includes("luận điểm")) {
-        fullResponse = `**Ba Luận Điểm Khoa Học Cốt Lõi:**
-
-1. **Kiến trúc Thuần Attention:** Loại bỏ hoàn toàn Recurrence và Convolution, giúp thời gian huấn luyện nhanh hơn và dễ song song hóa.
-2. **Multi-Head Attention:** Chiếu $Q, K, V$ sang $h = 8$ không gian vector con để nắm bắt các mối quan hệ đa chiều giữa các từ.
-3. **Hiệu quả Thực nghiệm Đột phá:** Đạt điểm BLEU 28.4 trên tập dịch WMT 2014 English-to-German, vượt trội so với các mô hình trước đó.`;
-        sampleCitations = [
-          {
-            paper_id: "doc-vaswani-2017",
-            paper_title: "Attention Is All You Need",
-            page: 2,
-            bbox: [0.1, 0.15, 0.9, 0.35, 2],
-          },
-        ];
-      } else {
-        fullResponse = `Theo phân tích từ tài liệu khoa học, cơ chế tính toán trọng số được chuẩn hóa theo tỷ lệ kích thước:
-
-$$\\text{Attention}(Q, K, V) = \\text{softmax}\\left(\\frac{QK^T}{\\sqrt{d_k}}\\right)V$$
-
-Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $d_k$ lớn, tối ưu hóa quá trình lan truyền ngược.`;
-        sampleCitations = [
-          {
-            paper_id: "doc-vaswani-2017",
-            paper_title: "Attention Is All You Need",
-            page: 4,
-            bbox: [0.12, 0.28, 0.48, 0.42, 4],
-          },
-        ];
-      }
-
-      const words = fullResponse.split(" ");
-      let wordIndex = 0;
-      let accumulated = "";
-
-      const streamNextBatch = () => {
-        if (isCancelledRef.current) return;
-
-        const batchSize = Math.min(3, words.length - wordIndex);
-        for (let i = 0; i < batchSize; i++) {
-          accumulated += (wordIndex === 0 && i === 0 ? "" : " ") + words[wordIndex + i];
-        }
-        wordIndex += batchSize;
-
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantMsgId ? { ...msg, content: accumulated } : msg
-          )
-        );
-
-        if (wordIndex < words.length) {
-          animFrameRef.current = requestAnimationFrame(() => {
-            setTimeout(streamNextBatch, 35);
-          });
-        } else {
-          setIsGenerating(false);
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantMsgId
-                ? {
-                    ...msg,
-                    content: fullResponse,
-                    is_streaming: false,
-                    citations: sampleCitations,
-                  }
-                : msg
-            )
-          );
-        }
-      };
-
-      animFrameRef.current = requestAnimationFrame(streamNextBatch);
-    },
-    []
-  );
 
   const sendMessage = useCallback(
     async (explicitPrompt?: string, customRequestId?: string) => {
@@ -203,7 +93,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
       setIsGenerating(true);
 
       let effectiveSessionId = activeSessionId;
-      if (!effectiveSessionId && !isMockEnabled) {
+      if (!effectiveSessionId) {
         try {
           const titleSnippet = textToSend.slice(0, 32);
           const createRes = await sessionsApi.createSession({
@@ -230,13 +120,7 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
         }
       }
 
-      // If mock mode is explicitly enabled, run local simulator
-      if (isMockEnabled) {
-        runMockStream(textToSend, assistantMsgId);
-        return;
-      }
-
-      // If mock is disabled and no session could be established, fail explicitly
+      // If no session could be established, fail explicitly
       if (!effectiveSessionId) {
         setIsGenerating(false);
         setMessages((prev) =>
@@ -301,55 +185,61 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Accept: "text/event-stream",
-            "X-Request-ID": finalRequestId,
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "X-Request-ID": finalRequestId,
           },
           body: JSON.stringify({
-            question: textToSend,
-            stream: true,
-            scope: "multi_paper",
+            message: textToSend,
           }),
           signal: controller.signal,
           openWhenHidden: true,
           async onopen(response) {
-            if (!response.ok) {
-              throw new Error(`SSE Connection Failed: ${response.status}`);
-            }
+            if (response.ok) return;
+            const errorText = await response.text().catch(() => "");
+            throw new Error(`SSE stream connection failed (${response.status}): ${errorText}`);
           },
-          onmessage(event) {
+          onmessage(ev) {
             if (isCancelledRef.current) return;
 
-            if (event.event === "reasoning") {
-              try {
-                const data = JSON.parse(event.data) as { thought: string };
+            try {
+              if (ev.data === "[DONE]") {
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMsgId
-                      ? { ...msg, thought: (msg.thought || "") + data.thought }
+                      ? {
+                          ...msg,
+                          content: accumulatedContent,
+                          is_streaming: false,
+                          citations: citationsList.length > 0 ? citationsList : msg.citations,
+                        }
                       : msg
                   )
                 );
-              } catch {
-                // Ignore parse errors
+                setIsGenerating(false);
+                return;
               }
-            } else if (event.event === "citations") {
-              try {
-                const data = JSON.parse(event.data) as {
-                  citations: Array<{
-                    citation_id: string;
-                    document_id: string;
-                    document_title: string;
-                    page_number: number;
-                    bounding_boxes: Array<[number, number, number, number, number]>;
-                  }>;
-                };
-                citationsList = data.citations.map((c) => ({
-                  paper_id: c.document_id,
-                  paper_title: c.document_title,
-                  page: c.page_number,
-                  bbox: c.bounding_boxes[0] || [0, 0, 1, 1, c.page_number],
-                }));
+
+              const parsed = JSON.parse(ev.data);
+
+              if (parsed.type === "thinking" || parsed.type === "thought") {
+                const thoughtToken = parsed.token || parsed.thought || parsed.content || "";
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? { ...msg, thought: (msg.thought || "") + thoughtToken }
+                      : msg
+                  )
+                );
+              } else if (parsed.type === "token" || parsed.type === "content") {
+                const tokenText = parsed.token || parsed.text || parsed.content || "";
+                queueToken(tokenText);
+              } else if (parsed.type === "citation" || parsed.type === "citations") {
+                const newCites: CitationBadgeData[] = Array.isArray(parsed.citations)
+                  ? parsed.citations
+                  : parsed.citation
+                  ? [parsed.citation]
+                  : [];
+                citationsList = [...citationsList, ...newCites];
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMsgId
@@ -357,42 +247,26 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
                       : msg
                   )
                 );
-              } catch {
-                // Ignore parse errors
+              } else if (parsed.type === "presupposition_alert") {
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantMsgId
+                      ? { ...msg, presupposition_alert: parsed.alert }
+                      : msg
+                  )
+                );
+              } else if (parsed.token || parsed.text) {
+                queueToken(parsed.token || parsed.text);
               }
-            } else if (event.event === "token") {
-              try {
-                const data = JSON.parse(event.data) as { token: string };
-                queueToken(data.token);
-              } catch {
-                queueToken(event.data);
+            } catch {
+              if (ev.data && ev.data !== "[DONE]") {
+                queueToken(ev.data);
               }
-            } else if (event.event === "done") {
-              // Flush any remaining tokens
-              if (tokenQueue.length > 0) {
-                accumulatedContent += tokenQueue.join("");
-                tokenQueue = [];
-              }
-              setIsGenerating(false);
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantMsgId
-                    ? {
-                        ...msg,
-                        content: accumulatedContent,
-                        is_streaming: false,
-                        citations: citationsList.length > 0 ? citationsList : msg.citations,
-                      }
-                    : msg
-                )
-              );
             }
           },
           onerror(err) {
-            console.warn("SSE error:", err);
-            if (isMockEnabled) {
-              runMockStream(textToSend, assistantMsgId);
-            } else {
+            console.error("SSE stream error:", err);
+            if (!isCancelledRef.current) {
               setMessages((prev) =>
                 prev.map((msg) =>
                   msg.id === assistantMsgId
@@ -408,31 +282,27 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
               );
               setIsGenerating(false);
             }
-            throw err; // Stop retrying
+            throw err;
           },
         });
       } catch {
         if (!isCancelledRef.current && !accumulatedContent) {
-          if (isMockEnabled) {
-            runMockStream(textToSend, assistantMsgId);
-          } else {
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantMsgId
-                  ? {
-                      ...msg,
-                      content: "Lỗi kết nối khi gửi câu hỏi tới hệ thống.",
-                      is_streaming: false,
-                    }
-                  : msg
-              )
-            );
-            setIsGenerating(false);
-          }
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? {
+                    ...msg,
+                    content: "Lỗi kết nối khi gửi câu hỏi tới hệ thống.",
+                    is_streaming: false,
+                  }
+                : msg
+            )
+          );
+          setIsGenerating(false);
         }
       }
     },
-    [inputText, isGenerating, activeSessionId, onSessionCreated, runMockStream]
+    [inputText, isGenerating, activeSessionId, onSessionCreated]
   );
 
   const resetChat = useCallback(async () => {
@@ -450,10 +320,6 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
   const loadExistingSession = useCallback(
     async (sessionId: string) => {
       stopGeneration();
-      if (isMockEnabled && SAMPLE_CHAT_MESSAGES[sessionId]) {
-        setMessages(SAMPLE_CHAT_MESSAGES[sessionId]);
-        return;
-      }
       try {
         const response = await sessionsApi.listSessionMessages(sessionId);
         if (response.data && response.data.length > 0) {
