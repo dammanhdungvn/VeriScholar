@@ -36,7 +36,9 @@
       "role": "Senior Backend & AI Specialist",
       "agent": "agy",
       "pane_id": "w2:p3",
-      "status": "IDLE",
+      "active_task_id": "TASK-BE-FACT-CHECKER-NEURAL-INTEGRATION",
+      "contract_file": ".agents/teamwork/backend_contract_safe_fact_checker.md",
+      "status": "IN_PROGRESS",
       "last_delivery": "DEFECT-02 fix committed at 4968e95"
     },
     "w2:p4": {

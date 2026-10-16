@@ -45,6 +45,7 @@ from core.domain.value_objects.bounding_box import BoundingBox
 from core.services.draft_asset_security import DraftAssetSecurityValidator
 from core.services.latex_healer import AgenticLatexHealer
 from core.services.safe_fact_checker import SafeFactChecker
+from core.services.safe_nli_adapter import SafeNliEngineAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -319,7 +320,7 @@ class DraftService:
                 )
             )
 
-        checker = SafeFactChecker()
+        checker = SafeFactChecker(nli_adapter=SafeNliEngineAdapter())
         report = await checker.verify_text(
             text=target_text,
             retrieval_context=retrieval_chunks,

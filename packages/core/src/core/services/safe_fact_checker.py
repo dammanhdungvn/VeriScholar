@@ -23,6 +23,7 @@ from core.domain.entities.safe_claim import (
     FactVerificationReport,
     FactVerificationStatus,
 )
+from core.ports.safe_verifier import ISafeNliPort
 
 # Pronouns and demonstratives requiring entity resolution
 DEMONSTRATIVE_PATTERNS = [
@@ -54,8 +55,13 @@ CONTRADICTION_PAIRS = [
 class SafeFactChecker:
     """Production in-memory implementation of SAFE Fact-Checking Port."""
 
-    def __init__(self, min_support_threshold: float = 0.45) -> None:
+    def __init__(
+        self,
+        min_support_threshold: float = 0.45,
+        nli_adapter: ISafeNliPort | None = None,
+    ) -> None:
         self.min_support_threshold = min_support_threshold
+        self.nli_adapter = nli_adapter
 
     # --------------------------------------------------------------------------
     # 1. Fact Decomposition (Atomic Claims)
@@ -312,19 +318,66 @@ class SafeFactChecker:
             report.compute_summary()
             return report
 
-        # Async parallel claim verification
-        loop = asyncio.get_running_loop()
-        tasks = [
-            loop.run_in_executor(
-                None,
-                self._verify_single_claim,
-                claim,
-                retrieval_context,
-                doc_metadata,
-            )
-            for claim in raw_claims
-        ]
-        verified_claims = await asyncio.gather(*tasks)
+        if self.nli_adapter is not None:
+            # Neural NLI verification route using ISafeNliPort
+            chunk_by_id = {c.id: c for c in retrieval_context}
+
+            async def _verify_claim_with_adapter(raw_claim: str) -> AtomicClaim:
+                normalized_claim, entities = self.normalize_entities(raw_claim)
+                verdict = await self.nli_adapter.classify(normalized_claim, retrieval_context)
+
+                status_map = {
+                    "supported": FactVerificationStatus.SUPPORTED,
+                    "contradicted": FactVerificationStatus.CONTRADICTED,
+                    "not_enough_info": FactVerificationStatus.NOT_ENOUGH_INFO,
+                }
+                status = status_map.get(verdict.label, FactVerificationStatus.NOT_ENOUGH_INFO)
+
+                ev = verdict.evidence
+                chunk_match = chunk_by_id.get(ev.chunk_id) if (ev and ev.chunk_id) else None
+                doc_id = chunk_match.document_id if chunk_match else None
+                doc_title = (
+                    doc_metadata.get(doc_id)
+                    if (doc_id and doc_metadata and doc_id in doc_metadata)
+                    else None
+                )
+
+                if status == FactVerificationStatus.SUPPORTED:
+                    confidence = 0.90 if ev else self.min_support_threshold
+                elif status == FactVerificationStatus.CONTRADICTED:
+                    confidence = 0.90
+                else:
+                    confidence = 0.0
+
+                return AtomicClaim(
+                    claim_text=raw_claim,
+                    normalized_entities=entities,
+                    status=status,
+                    confidence_score=confidence,
+                    evidence_text=ev.text if ev else None,
+                    evidence_document_id=doc_id,
+                    evidence_document_title=doc_title,
+                    evidence_page=ev.page if ev else None,
+                    evidence_bounding_boxes=list(ev.bounding_boxes) if ev else [],
+                    reasoning=verdict.explanation,
+                )
+
+            tasks = [_verify_claim_with_adapter(c) for c in raw_claims]
+            verified_claims = await asyncio.gather(*tasks)
+        else:
+            # Async parallel claim verification with heuristic fallback
+            loop = asyncio.get_running_loop()
+            tasks = [
+                loop.run_in_executor(
+                    None,
+                    self._verify_single_claim,
+                    claim,
+                    retrieval_context,
+                    doc_metadata,
+                )
+                for claim in raw_claims
+            ]
+            verified_claims = await asyncio.gather(*tasks)
 
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
         report = FactVerificationReport(
