@@ -29,6 +29,7 @@ class DraftModel(IdentifiableTimestampedModel):
     title: Mapped[str] = mapped_column(String(255), nullable=False, default="Untitled Draft")
     content: Mapped[str] = mapped_column(Text, nullable=False, default="")
     format: Mapped[str] = mapped_column(String(20), nullable=False, default="latex")
+    template: Mapped[str | None] = mapped_column(String(50), nullable=True, default="blank")
     version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
 
     # Relationship to user

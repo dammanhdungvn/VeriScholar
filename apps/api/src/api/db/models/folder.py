@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from api.db.models.base import IdentifiableTimestampedModel
-from sqlalchemy import ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -19,6 +19,8 @@ class FolderModel(IdentifiableTimestampedModel):
     parent_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    color: Mapped[str] = mapped_column(String(30), default="#6366f1", nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     __table_args__ = (
         Index("idx_folders_user_parent", "user_id", "parent_id"),

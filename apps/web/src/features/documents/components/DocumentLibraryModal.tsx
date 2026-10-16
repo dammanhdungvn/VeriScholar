@@ -14,11 +14,14 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
+  TableProperties,
 } from "lucide-react";
 import { useDocumentsList, useDeleteDocumentMutation } from "../hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
 import { ParseConfigModal } from "./ParseConfigModal";
 import { StarDocumentModal } from "./StarDocumentModal";
+import { FolderTreeView } from "@/features/library/components/FolderTreeView";
+import { ComparisonMatrixModal } from "@/features/library/components/ComparisonMatrixModal";
 
 interface DocumentLibraryModalProps {
   isOpen: boolean;
@@ -38,6 +41,8 @@ export function DocumentLibraryModal({
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+  const [isMatrixModalOpen, setIsMatrixModalOpen] = useState<boolean>(false);
 
   // Sub-modal states
   const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
@@ -129,7 +134,7 @@ export function DocumentLibraryModal({
         }}
         className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 text-xs"
       >
-        <div className="w-full max-w-4xl max-h-[85vh] bg-canvas dark:bg-[#1a1917] rounded-xl shadow-2xl border border-hairline dark:border-[#2f2b26] flex flex-col overflow-hidden">
+        <div className="w-full max-w-5xl lg:max-w-6xl max-h-[85vh] h-[85vh] bg-canvas dark:bg-[#1a1917] rounded-xl shadow-2xl border border-hairline dark:border-[#2f2b26] flex flex-col overflow-hidden">
           {/* Header */}
           <div className="h-13 px-5 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between shrink-0 bg-surface-soft/40 dark:bg-[#1f1d1a]">
             <div className="flex items-center gap-2.5 font-serif font-semibold text-sm text-ink dark:text-zinc-100">
@@ -141,15 +146,37 @@ export function DocumentLibraryModal({
                 </span>
               )}
             </div>
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label="Đóng thư viện"
-              className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            >
-              <X className="w-4.5 h-4.5" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setIsMatrixModalOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-coral-500 hover:bg-coral-600 text-white font-medium shadow-2xs transition-colors cursor-pointer text-xs"
+              >
+                <TableProperties className="w-3.5 h-3.5" />
+                <span>Tạo Ma Trận Đối Chiếu</span>
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Đóng thư viện"
+                className="p-1 rounded-md hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
           </div>
+
+          {/* Main Dual-Pane Body */}
+          <div className="flex flex-1 min-h-0 overflow-hidden">
+            {/* Left Pane: Folder Tree */}
+            <FolderTreeView
+              selectedFolderId={selectedFolderId}
+              onSelectFolder={setSelectedFolderId}
+              className="w-56 sm:w-64 border-r border-hairline dark:border-[#2f2b26] shrink-0"
+            />
+
+            {/* Right Pane: Controls Bar, Documents List, Pagination */}
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
           {/* Controls Bar: Filter tabs & Search Input */}
           <div className="p-4 border-b border-hairline dark:border-[#2f2b26] flex flex-wrap items-center justify-between gap-3 bg-surface-card/40 dark:bg-[#171614] shrink-0">
@@ -360,6 +387,8 @@ export function DocumentLibraryModal({
           </div>
         </div>
       </div>
+    </div>
+  </div>
 
       {/* Submodal 1: Parse Config Modal */}
       {selectedParseDoc && (
@@ -419,6 +448,15 @@ export function DocumentLibraryModal({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Submodal 4: Comparison Matrix Modal */}
+      {isMatrixModalOpen && (
+        <ComparisonMatrixModal
+          isOpen={isMatrixModalOpen}
+          onClose={() => setIsMatrixModalOpen(false)}
+          folderId={selectedFolderId}
+        />
       )}
     </>
   );

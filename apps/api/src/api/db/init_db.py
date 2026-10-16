@@ -55,6 +55,70 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
         await conn.execute(
             text("""
                 DO $$
+                BEGIN
+                    -- folders table upgrades
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = 'folders'
+                    ) THEN
+                        ALTER TABLE folders 
+                        ADD COLUMN IF NOT EXISTS color VARCHAR(30) DEFAULT '#6366f1' NOT NULL,
+                        ADD COLUMN IF NOT EXISTS description TEXT NULL;
+                    END IF;
+
+                    -- drafts table upgrades
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = 'drafts'
+                    ) THEN
+                        IF EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'drafts' AND column_name = 'template'
+                        ) THEN
+                            ALTER TABLE drafts ALTER COLUMN template DROP NOT NULL;
+                            ALTER TABLE drafts ALTER COLUMN template SET DEFAULT 'standard';
+                        END IF;
+                    END IF;
+
+                    -- draft_comments schema upgrade (author_id, comment_text, etc.)
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = 'draft_comments'
+                    ) THEN
+                        IF NOT EXISTS (
+                            SELECT 1 FROM information_schema.columns
+                            WHERE table_name = 'draft_comments' AND column_name = 'author_id'
+                        ) THEN
+                            DROP TABLE IF EXISTS draft_comments CASCADE;
+                            CREATE TABLE draft_comments (
+                                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                                draft_id UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
+                                author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                                author_name VARCHAR(255) NOT NULL DEFAULT '',
+                                start_offset INT NOT NULL DEFAULT 0,
+                                end_offset INT NOT NULL DEFAULT 0,
+                                selected_text TEXT NOT NULL DEFAULT '',
+                                comment_text TEXT NOT NULL DEFAULT '',
+                                parent_id UUID NULL REFERENCES draft_comments(id) ON DELETE CASCADE,
+                                is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
+                                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                            );
+                            CREATE INDEX IF NOT EXISTS 
+                                idx_draft_comments_draft_created 
+                                ON draft_comments(draft_id, created_at);
+                            CREATE INDEX IF NOT EXISTS 
+                                idx_draft_comments_parent 
+                                ON draft_comments(parent_id);
+                            CREATE INDEX IF NOT EXISTS 
+                                ix_draft_comments_author_id 
+                                ON draft_comments(author_id);
+                            CREATE INDEX IF NOT EXISTS 
+                                ix_draft_comments_draft_id 
+                                ON draft_comments(draft_id);
+                        END IF;
+                    END IF;
+
                     -- users table upgrades
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables 

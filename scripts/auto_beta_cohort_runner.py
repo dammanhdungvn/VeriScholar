@@ -1469,12 +1469,12 @@ def format_markdown_cohort_report(report: CohortBenchmarkReport) -> str:
     lines.append("## 3. CHỈ SỐ TÀI NGUYÊN HẠ TẦNG & ĐỐI CHIẾU TIÊU CHÍ (DoD GATES)")
     lines.append(f"- **Tổng số tác vụ thực thi:** **{report.total_requests} calls**")
     lines.append(
-        f"- **Tỷ lệ thành công tổng thể (Success Rate):** **{report.success_rate_pct}%** "
-        f"({'ĐẠT' if report.gate_success_rate_passed else 'KHÔNG ĐẠT'} SLA $\\ge 95\%$)"
+        rf"- **Tỷ lệ thành công tổng thể (Success Rate):** **{report.success_rate_pct}%** "
+        rf"({'ĐẠT' if report.gate_success_rate_passed else 'KHÔNG ĐẠT'} SLA $\ge 95\%$)"
     )
     lines.append(
-        f"- **Đỉnh RAM hệ thống (Peak System RAM):** **{report.peak_ram_mb} MB** "
-        f"({'ĐẠT' if report.gate_ram_ceiling_passed else 'KHÔNG ĐẠT'} Trần an toàn $\\le 6,500$ MB)"
+        rf"- **Đỉnh RAM hệ thống (Peak System RAM):** **{report.peak_ram_mb} MB** "
+        rf"({'ĐẠT' if report.gate_ram_ceiling_passed else 'KHÔNG ĐẠT'} Trần an toàn $\le 6,500$ MB)"
     )
     lines.append(
         f"- **Khoảng an toàn bộ nhớ (Memory Headroom):** Còn trống **{report.ram_headroom_mb} MB**"

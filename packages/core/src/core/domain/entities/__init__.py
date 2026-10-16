@@ -4,6 +4,12 @@ from core.domain.entities.blob import DocumentStorageBlob
 from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.document import Document
 from core.domain.entities.draft import Draft
+from core.domain.entities.folder import (
+    ComparisonMatrixResult,
+    ComparisonMatrixRow,
+    FolderEntity,
+    SufficiencyEvaluation,
+)
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
 from core.domain.entities.note import FrozenSnapshot, ResearchNote
 from core.domain.entities.note_synthesis import (
@@ -31,6 +37,8 @@ from core.domain.entities.summary import DocumentSummary, SummaryPoint
 __all__ = [
     "AtomicClaim",
     "CitationItem",
+    "ComparisonMatrixResult",
+    "ComparisonMatrixRow",
     "Document",
     "DocumentChunk",
     "DocumentSection",
@@ -41,6 +49,7 @@ __all__ = [
     "ExtractedReference",
     "FactVerificationReport",
     "FactVerificationStatus",
+    "FolderEntity",
     "FrozenSnapshot",
     "InteractiveBadge",
     "LatexCompilationResult",
@@ -51,6 +60,7 @@ __all__ = [
     "ResearchSession",
     "ResolvedAcademicReference",
     "SessionTurn",
+    "SufficiencyEvaluation",
     "SummaryPoint",
     "SynthesisMode",
     "extract_references_from_text",

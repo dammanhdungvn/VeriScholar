@@ -55,6 +55,11 @@ class ResearchNoteModel(IdentifiableTimestampedModel):
     document = relationship("DocumentModel", foreign_keys=[document_id], lazy="selectin")
     chunk = relationship("DocumentChunkModel", foreign_keys=[chunk_id], lazy="selectin")
 
+    @property
+    def content(self) -> str:
+        """Convenience alias for user_note or selected_text."""
+        return self.user_note or self.selected_text or ""
+
     __table_args__ = (
         CheckConstraint("page_number >= 1", name="ck_research_notes_page_number_positive"),
         Index("idx_research_notes_user_doc", "user_id", "document_id"),

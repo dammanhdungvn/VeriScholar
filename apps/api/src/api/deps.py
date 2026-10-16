@@ -25,6 +25,8 @@ from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
+from api.services.folder_service import FolderService
+from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
 from api.services.note_synthesis_service import NoteSynthesisService
 from api.services.session_chat_service import SessionChatService
@@ -160,6 +162,21 @@ def get_draft_service(
 ) -> DraftService:
     """Dependency providing DraftService bound to request database session."""
     return DraftService(db=db, ai_tracing=ai_tracing)
+
+
+def get_folder_service(
+    db: AsyncSession = Depends(get_db),
+) -> FolderService:
+    """Dependency providing FolderService bound to request database session."""
+    return FolderService(db=db)
+
+
+def get_library_synthesis_service(
+    db: AsyncSession = Depends(get_db),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+) -> LibrarySynthesisService:
+    """Dependency providing LibrarySynthesisService bound to request database session."""
+    return LibrarySynthesisService(db=db, ai_tracing=ai_tracing)
 
 
 async def get_current_user(
