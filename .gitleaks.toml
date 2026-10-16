@@ -1,0 +1,12 @@
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for mock test fixtures and agent markdown documentation"
+paths = [
+    '''(?i)tests/.*''',
+    '''packages/core/tests/.*''',
+    '''apps/api/tests/.*''',
+    '''\.agents/.*''',
+    '''docs/.*''',
+]

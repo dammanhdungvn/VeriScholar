@@ -1,0 +1,4 @@
+# Gitleaks ignore list for false positive test fixtures and agent markdown documentation
+6156c91cee60945f33e126212c0daf1362f1a22c:.agents/teamwork/explorer_survey_3/handoff.md:jwt:242
+6156c91cee60945f33e126212c0daf1362f1a22c:packages/core/tests/domain/test_latex_pipeline.py:generic-api-key:188
+e725642b2ec18dd7be0e411a78a510e4cea926a5:apps/api/tests/test_ai_tracing.py:gcp-api-key:117

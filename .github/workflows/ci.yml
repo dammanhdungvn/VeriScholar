@@ -84,6 +84,15 @@ jobs:
         run: |
           uv sync --all-packages --frozen
 
+      - name: Install Tectonic LaTeX Compiler
+        run: |
+          curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh || true
+          if [ -f ./tectonic ]; then
+            sudo mv ./tectonic /usr/local/bin/
+            tectonic --version
+          fi
+
+
       - name: Verify Hexagonal Architecture Boundaries
         run: |
           # Ngăn chặn rò rỉ mã hạ tầng vào packages/core

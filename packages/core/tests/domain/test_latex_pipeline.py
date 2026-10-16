@@ -1,5 +1,7 @@
 """Unit tests for LaTeX Linter, Sandboxed Compiler, and Self-Healing Loop (Module 2)."""
 
+import shutil
+
 import pytest
 from core.domain.entities.latex import SandboxCapabilityReport
 from core.domain.exceptions import SandboxInfrastructureUnavailableError
@@ -7,6 +9,12 @@ from core.services.latex_compiler import SandboxedLatexCompiler
 from core.services.latex_healer import AgenticLatexHealer
 from core.services.latex_linter import FastLatexAstLinter
 from core.services.sandbox_probe import SandboxRuntimeCapabilityProbe
+
+_has_cli_compiler = bool(shutil.which("tectonic") or shutil.which("pdflatex"))
+requires_cli_compiler = pytest.mark.skipif(
+    not _has_cli_compiler,
+    reason="Native LaTeX compiler (tectonic/pdflatex) not installed on host",
+)
 
 
 def test_fast_ast_linter_clean_code() -> None:
@@ -69,6 +77,7 @@ def test_fast_ast_linter_unescaped_underscore() -> None:
     assert any(e.rule == "UNESCAPED_UNDERSCORE" for e in errors)
 
 
+@requires_cli_compiler
 @pytest.mark.asyncio
 async def test_sandboxed_compiler_success() -> None:
     """Verify compilation returns valid PDF preview bytes and accurately reports unconfined host."""
@@ -86,6 +95,7 @@ async def test_sandboxed_compiler_success() -> None:
     assert result.is_sandboxed is False
 
 
+@requires_cli_compiler
 @pytest.mark.asyncio
 async def test_agentic_latex_healer_auto_repair() -> None:
     """Verify that healer automatically repairs unclosed environment within retries."""
@@ -131,6 +141,7 @@ async def test_sandboxed_compiler_pymupdf_fallback_returns_failure() -> None:
     assert any(e.rule == "PREVIEW_ONLY_FALLBACK" for e in result.errors)
 
 
+@requires_cli_compiler
 @pytest.mark.asyncio
 async def test_sandboxed_compiler_hardened_probe_mock() -> None:
     """Verify is_sandboxed is True when hardened sandbox probe conditions are satisfied."""
@@ -185,7 +196,7 @@ def test_sandbox_probe_env_sanitization() -> None:
     tainted_env = {
         "PATH": "/usr/bin:/bin",
         "TMPDIR": "/tmp",
-        "OPENAI_API_KEY": "sk-secret12345",
+        "OPENAI_API_KEY": "dummy_secret_openai_token",
         "ANTHROPIC_API_KEY": "sk-ant-secret",
         "JWT_SECRET": "topsecretjwt",
         "AWS_SECRET_ACCESS_KEY": "awssecret",

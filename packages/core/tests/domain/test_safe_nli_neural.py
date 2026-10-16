@@ -9,6 +9,12 @@ from core.domain.value_objects.bounding_box import BoundingBox
 from core.eval.adapters.scifact import SciFactAdapter
 from core.services.safe_nli_adapter import SafeNliEngineAdapter
 
+_neural_available = SafeNliEngineAdapter().is_neural_active
+requires_neural_model = pytest.mark.skipif(
+    not _neural_available,
+    reason="Offline ONNX model weights not present on disk (models/nli/...)",
+)
+
 
 @pytest.fixture
 def transformer_chunk() -> DocumentChunk:
@@ -27,6 +33,7 @@ def transformer_chunk() -> DocumentChunk:
     )
 
 
+@requires_neural_model
 def test_neural_model_initialization() -> None:
     """Verify that SafeNliEngineAdapter successfully activates ONNX session."""
     adapter = SafeNliEngineAdapter()
@@ -34,6 +41,7 @@ def test_neural_model_initialization() -> None:
     assert adapter.model_name == "cross-encoder/nli-deberta-v3-small"
 
 
+@requires_neural_model
 def test_neural_model_direct_batch_prediction() -> None:
     """Verify direct batch probability outputs across 3 logical NLI classes."""
     adapter = SafeNliEngineAdapter()
@@ -82,6 +90,7 @@ def test_neural_model_direct_batch_prediction() -> None:
     assert p_neutral_3 > 0.80, f"Expected neutral > 0.80, got {p_neutral_3}"
 
 
+@requires_neural_model
 @pytest.mark.asyncio
 async def test_neural_model_classify_verdicts(transformer_chunk: DocumentChunk) -> None:
     """Verify end-to-end classify() generates compliant Option A verdicts via ONNX."""
@@ -145,6 +154,7 @@ async def test_neural_model_fallback_on_invalid_path(transformer_chunk: Document
     assert verdict.evidence is not None
 
 
+@requires_neural_model
 @pytest.mark.asyncio
 async def test_neural_inference_latency_sla(transformer_chunk: DocumentChunk) -> None:
     """Verify that inference latency strictly adheres to sub-100ms SLA on CPU."""
@@ -166,6 +176,7 @@ async def test_neural_inference_latency_sla(transformer_chunk: DocumentChunk) ->
     assert mean_latency < 50.0, f"Mean latency {mean_latency:.2f}ms exceeds 50ms SLA"
 
 
+@requires_neural_model
 @pytest.mark.asyncio
 async def test_scifact_sample_evaluation_pipeline() -> None:
     """Verify end-to-end evaluation with SciFact benchmark adapter."""

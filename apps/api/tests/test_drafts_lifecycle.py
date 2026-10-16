@@ -2,6 +2,7 @@
 
 import base64
 import io
+import shutil
 import zipfile
 from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
@@ -18,6 +19,12 @@ from api.services.auth_service import AuthService
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
+
+_has_cli_compiler = bool(shutil.which("tectonic") or shutil.which("pdflatex"))
+requires_cli_compiler = pytest.mark.skipif(
+    not _has_cli_compiler,
+    reason="Native LaTeX compiler (tectonic/pdflatex) not installed on host",
+)
 
 
 @asynccontextmanager
@@ -302,6 +309,7 @@ async def test_draft_verify_facts_endpoint() -> None:
         assert claim["evidence_bounding_boxes"][0] == [0.1, 0.2, 0.8, 0.3, 1]
 
 
+@requires_cli_compiler
 @pytest.mark.asyncio
 async def test_draft_compilation_and_preview() -> None:
     """Verify compiling draft produces preview PDF and preview endpoint serves valid PDF bytes."""
