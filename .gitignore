@@ -61,7 +61,7 @@ temp/
 apps/storage/
 apps/api/storage/
 storage/
-.agents/runtime/
+
 *.db
 *.sqlite
 *.sqlite3

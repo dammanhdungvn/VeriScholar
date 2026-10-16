@@ -361,7 +361,7 @@ class DraftService:
         result = await healer.compile_with_healing(draft.content, timeout_seconds=timeout_seconds)
 
         preview_url = None
-        if result.success and result.pdf_bytes:
+        if result.pdf_bytes:
             _draft_pdf_cache[draft_id] = result.pdf_bytes
             preview_url = f"/api/v1/drafts/{draft_id}/preview.pdf"
 

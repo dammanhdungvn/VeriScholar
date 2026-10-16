@@ -90,7 +90,10 @@ jobs:
           if [ -f ./tectonic ]; then
             sudo mv ./tectonic /usr/local/bin/
             tectonic --version
+            echo '\documentclass{article}\begin{document}warmup\end{document}' > /tmp/warmup.tex
+            tectonic -o /tmp /tmp/warmup.tex || true
           fi
+
 
 
       - name: Verify Hexagonal Architecture Boundaries
