@@ -75,6 +75,11 @@ storage/
 !/data/papers/*.pdf
 !/data/papers/golden_eval_dataset.json
 
+# Machine Learning Models & Weights
+models/*
+!models/README.md
+*.onnx
+
 # Node / Frontend
 node_modules/
 .next/
