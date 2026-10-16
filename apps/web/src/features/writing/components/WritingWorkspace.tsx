@@ -224,13 +224,20 @@ export function WritingWorkspace() {
         const baseContent = suggestion.base_content ?? draft.content ?? "";
 
         // Rebase target range to accurately preserve local unpersisted edits (DEFECT-01)
-        const { start: rebasedStart, end: rebasedEnd } = calculateRebasedRange(
+        const { start: rebasedStart, end: rebasedEnd, hasConflict } = calculateRebasedRange(
           baseContent,
           currentContent,
           suggestion.cursor_start,
           suggestion.cursor_end,
           suggestion.original_text
         );
+
+        if (hasConflict) {
+          setConflictMessage(
+            "Văn bản gốc của đề xuất đã bị thay đổi hoặc không còn khớp trên trình soạn thảo. Vui lòng kiểm tra lại trước khi áp dụng."
+          );
+          return;
+        }
 
         const safeStart = Math.min(Math.max(0, rebasedStart), currentContent.length);
         const safeEnd = Math.min(Math.max(safeStart, rebasedEnd), currentContent.length);
@@ -264,12 +271,12 @@ export function WritingWorkspace() {
         if (isPreconditionFailed) {
           try {
             const freshDraft = await draftsApi.getDraft(activeDraftId);
-            useWritingStore.getState().setDraft(freshDraft);
+            useWritingStore.setState({ draft: freshDraft });
           } catch {
             // Keep draft state if fetch fails
           }
           setConflictMessage(
-            "Bản thảo trên máy chủ đã thay đổi phiên bản (HTTP 412). Đã đồng bộ phiên bản mới nhất, vui lòng xác nhận áp dụng lại đề xuất."
+            "Bản thảo trên máy chủ đã thay đổi phiên bản (HTTP 412). Phiên bản cơ sở đã được cập nhật, vui lòng xác nhận áp dụng lại đề xuất."
           );
         } else {
           setConflictMessage("Không thể lưu đề xuất. Vui lòng thử lại.");

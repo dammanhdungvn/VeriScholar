@@ -419,8 +419,20 @@ describe("WritingWorkspace", () => {
     );
   });
 
-  it("handles HTTP 412 Precondition Failed gracefully, shows conflict alert banner, and preserves local edits (DEFECT-01)", async () => {
+  it("handles HTTP 412 Precondition Failed gracefully, shows conflict alert banner, and preserves local unpersisted edits (DEFECT-01 / FINDING-01 & 04)", async () => {
     const { draftsApi } = await import("../api/draftsApi");
+
+    const baseContent = "Transformers replace recurrent networks completely.";
+    useWritingStore.getState().setDraft({
+      id: "draft-1",
+      user_id: "user-1",
+      title: "Paper Title",
+      content: baseContent,
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    });
 
     // Mock updateDraft to throw HTTP 412
     const error412 = new Error("HTTP 412 Precondition Failed");
@@ -430,7 +442,7 @@ describe("WritingWorkspace", () => {
       id: "draft-1",
       user_id: "user-1",
       title: "Paper Title",
-      content: "Server modified content.",
+      content: "Server modified content by another collaborator.",
       format: "latex",
       version: 2,
       created_at: "2026-10-15T00:00:00Z",
@@ -455,8 +467,17 @@ describe("WritingWorkspace", () => {
         cursor_end: 0,
         expected_version: 1,
         created_at: "2026-10-15T10:30:00Z",
+        base_content: baseContent,
       });
     });
+
+    // User types local unpersisted edits while suggestion is open
+    const localEdits = "User typed unpersisted paragraph. " + baseContent;
+    act(() => {
+      useWritingStore.getState().setEditorContent(localEdits);
+    });
+
+    expect(useWritingStore.getState().isDirty).toBe(true);
 
     const acceptBtn = screen.getByTestId("accept-suggestion-btn");
     await act(async () => {
@@ -470,12 +491,85 @@ describe("WritingWorkspace", () => {
     // Suggestion panel remains open so user does not lose proposal
     expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(true);
 
+    // CRITICAL (FINDING-DEFECT-01-01 & 04): editorContent MUST NOT be overwritten by freshDraft.content!
+    expect(useWritingStore.getState().editorContent).toBe(localEdits);
+    expect(useWritingStore.getState().isDirty).toBe(true);
+
+    // Draft metadata version is refreshed so subsequent save uses v2
+    expect(useWritingStore.getState().draft?.version).toBe(2);
+
     // Dismiss alert banner
     const closeAlertBtn = screen.getByTestId("close-conflict-alert-btn");
     act(() => {
       fireEvent.click(closeAlertBtn);
     });
     expect(screen.queryByTestId("occ-conflict-alert")).toBeNull();
+  });
+
+  it("prevents text corruption and displays conflict banner when original text was deleted/modified (FINDING-DEFECT-01-02)", async () => {
+    const { draftsApi } = await import("../api/draftsApi");
+    vi.mocked(draftsApi.updateDraft).mockClear();
+
+    const baseContent = "Hello world, this is a test.";
+    useWritingStore.getState().setDraft({
+      id: "draft-1",
+      user_id: "user-1",
+      title: "Paper Title",
+      content: baseContent,
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    // Open suggestion targeting "world" at [6, 11]
+    act(() => {
+      useWritingStore.getState().openSuggestionPanel({
+        id: "sugg-conflict-del",
+        draft_id: "draft-1",
+        prompt: "Replace world",
+        original_text: "world",
+        suggested_text: "universe",
+        confidence_score: 0.95,
+        cursor_start: 6,
+        cursor_end: 11,
+        expected_version: 1,
+        created_at: "2026-10-15T10:30:00Z",
+        base_content: baseContent,
+      });
+    });
+
+    // User deleted "world" in the editor
+    const modifiedContent = "Hello , this is a test.";
+    act(() => {
+      useWritingStore.getState().setEditorContent(modifiedContent);
+    });
+
+    const acceptBtn = screen.getByTestId("accept-suggestion-btn");
+    await act(async () => {
+      fireEvent.click(acceptBtn);
+    });
+
+    // Conflict banner must be shown
+    expect(screen.getByTestId("occ-conflict-alert")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Văn bản gốc của đề xuất đã bị thay đổi hoặc không còn khớp/i)
+    ).toBeInTheDocument();
+
+    // updateDraft must NOT have been called
+    expect(draftsApi.updateDraft).not.toHaveBeenCalled();
+
+    // Editor content must NOT be mangled/corrupted
+    expect(useWritingStore.getState().editorContent).toBe(modifiedContent);
+
+    // Suggestion panel remains open
+    expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(true);
   });
 });
 

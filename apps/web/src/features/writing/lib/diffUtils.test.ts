@@ -139,5 +139,49 @@ describe("calculateRebasedRange", () => {
 
     expect(res.hasConflict).toBe(true);
   });
+
+  it("enforces proximity threshold for short keywords (length <= 4) and flags conflict when distance > 40 (FINDING-DEFECT-01-03)", () => {
+    // Target short keyword "the" at index 100 in baseContent
+    const padding = "A".repeat(96) + " on "; // 100 chars
+    const base = "the first intro. " + padding + "the table was wooden.";
+    const target = "the";
+    const secondTheIndex = base.indexOf("the table");
+    const origStart = secondTheIndex;
+    const origEnd = secondTheIndex + target.length;
+
+    // User deletes the second occurrence and types "a desk was wooden."
+    // current has only the first "the" at position 0, which is > 40 chars away
+    const current = "the first intro. " + padding + "a desk was wooden.";
+    const res = calculateRebasedRange(base, current, origStart, origEnd, target);
+
+    expect(res.hasConflict).toBe(true);
+  });
+
+  it("permits short keywords when occurrence is within proximity threshold (<= 40 chars) (FINDING-DEFECT-01-03)", () => {
+    const base = "We use the model.";
+    const origStart = base.indexOf("the");
+    const origEnd = origStart + "the".length;
+
+    // User types "Indeed, " (8 chars) at the start
+    const current = "Indeed, We use the model.";
+    const res = calculateRebasedRange(base, current, origStart, origEnd, "the");
+
+    expect(res.hasConflict).toBe(false);
+    expect(res.start).toBe(origStart + 8);
+    expect(current.slice(res.start, res.end)).toBe("the");
+  });
+
+  it("enforces proximity threshold for longer keywords (length > 4) when distance > 120 chars (FINDING-DEFECT-01-03)", () => {
+    const base = "transformer at start. " + "x".repeat(200) + " transformer at distant end.";
+    const target = "transformer";
+    const distantStart = base.lastIndexOf("transformer");
+    const distantEnd = distantStart + target.length;
+
+    // Delete the distant transformer
+    const current = "transformer at start. " + "x".repeat(200) + " something else at distant end.";
+    const res = calculateRebasedRange(base, current, distantStart, distantEnd, target);
+
+    expect(res.hasConflict).toBe(true);
+  });
 });
 

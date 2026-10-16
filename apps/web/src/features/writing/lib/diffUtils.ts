@@ -152,6 +152,12 @@ export function calculateRebasedRange(
           closestIdx = pos;
         }
       }
+
+      // Proximity threshold check (FINDING-DEFECT-01-03)
+      if (minDiff > 120 || (targetText.length <= 4 && minDiff > 40)) {
+        return { start: safeOriginalStart, end: safeOriginalEnd, hasConflict: true };
+      }
+
       return { start: closestIdx, end: closestIdx + targetText.length, hasConflict: false };
     }
   }
