@@ -230,9 +230,27 @@ Phương pháp này giúp ổn định độ dốc (gradient) khi số chiều $
         }
       }
 
-      // If mock mode is forced or no session ID could be created, run local simulator
-      if (isMockEnabled || !effectiveSessionId) {
+      // If mock mode is explicitly enabled, run local simulator
+      if (isMockEnabled) {
         runMockStream(textToSend, assistantMsgId);
+        return;
+      }
+
+      // If mock is disabled and no session could be established, fail explicitly
+      if (!effectiveSessionId) {
+        setIsGenerating(false);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content:
+                    "Không thể khởi tạo phiên nghiên cứu trên máy chủ backend. Vui lòng kiểm tra kết nối API.",
+                  is_streaming: false,
+                }
+              : msg
+          )
+        );
         return;
       }
 
