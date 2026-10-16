@@ -48,7 +48,10 @@ class AgenticLatexHealer:
 
             m = re.search(r"\\begin\{([a-zA-Z0-9*_-]+)\}", err.message)
             env_name = m.group(1) if m else "equation"
-            patched_code = code.rstrip() + f"\n\\end{{{env_name}}}\n"
+            if r"\end{document}" in code:
+                patched_code = code.replace(r"\end{document}", f"\\end{{{env_name}}}\n\\end{{document}}")
+            else:
+                patched_code = code.rstrip() + f"\n\\end{{{env_name}}}\n"
 
         elif err.rule == "UNCLOSED_BRACE":
             patched_code = code.rstrip() + "}\n"
@@ -64,7 +67,23 @@ class AgenticLatexHealer:
             if m_open and m_close:
                 open_env = m_open.group(1)
                 close_env = m_close.group(1)
-                patched_code = code.replace(f"\\end{{{close_env}}}", f"\\end{{{open_env}}}")
+                if close_env == "document":
+                    lines = code.splitlines()
+                    begin_idx = -1
+                    for idx, l in enumerate(lines):
+                        if f"\\begin{{{open_env}}}" in l:
+                            begin_idx = idx
+                    insert_idx = len(lines) - 1
+                    if begin_idx >= 0:
+                        for idx in range(begin_idx + 1, len(lines)):
+                            stripped = lines[idx].strip()
+                            if stripped.startswith((r"\section", r"\subsection", r"\end{document}")):
+                                insert_idx = idx
+                                break
+                    lines.insert(insert_idx, f"\\end{{{open_env}}}")
+                    patched_code = "\n".join(lines)
+                else:
+                    patched_code = code.replace(f"\\end{{{close_env}}}", f"\\end{{{open_env}}}")
 
         elif err.rule == "UNESCAPED_UNDERSCORE":
             lines = code.splitlines()

@@ -152,31 +152,36 @@ class FastLatexAstLinter:
                         brace_stack.pop()
 
             # Check unescaped underscores outside math mode
-            dollar_count = 0
-            k = 0
-            while k < len(clean_line):
-                if clean_line[k] == "$" and (k == 0 or clean_line[k - 1] != "\\"):
-                    dollar_count += 1
-                k += 1
+            is_in_math_mode = in_display_math or any(
+                e in ("equation", "equation*", "align", "align*", "gather", "gather*", "multline", "multline*")
+                for e, _, _ in env_stack
+            )
+            if not is_in_math_mode:
+                dollar_count = 0
+                k = 0
+                while k < len(clean_line):
+                    if clean_line[k] == "$" and (k == 0 or clean_line[k - 1] != "\\"):
+                        dollar_count += 1
+                    k += 1
 
-            if dollar_count % 2 == 0:
-                parts = clean_line.split("$")
-                for idx, part in enumerate(parts):
-                    if idx % 2 == 0:
-                        under_matches = list(re.finditer(r"(?<!\\)_", part))
-                        for um in under_matches:
-                            errors.append(
-                                LatexSyntaxError(
-                                    line=line_idx,
-                                    column=um.start(),
-                                    rule="UNESCAPED_UNDERSCORE",
-                                    message=(
-                                        "Ký tự gạch dưới '_' chưa được escape ngoài khối toán. "
-                                        "Có thể gây lỗi biên dịch 'Missing $ inserted'."
-                                    ),
-                                    suggested_fix="Đổi '_' thành '\\_' hoặc bọc trong $...$.",
+                if dollar_count % 2 == 0:
+                    parts = clean_line.split("$")
+                    for idx, part in enumerate(parts):
+                        if idx % 2 == 0:
+                            under_matches = list(re.finditer(r"(?<!\\)_", part))
+                            for um in under_matches:
+                                errors.append(
+                                    LatexSyntaxError(
+                                        line=line_idx,
+                                        column=um.start(),
+                                        rule="UNESCAPED_UNDERSCORE",
+                                        message=(
+                                            "Ký tự gạch dưới '_' chưa được escape ngoài khối toán. "
+                                            "Có thể gây lỗi biên dịch 'Missing $ inserted'."
+                                        ),
+                                        suggested_fix="Đổi '_' thành '\\_' hoặc bọc trong $...$.",
+                                    )
                                 )
-                            )
 
         # Post-loop checks for unclosed elements
         if in_display_math:

@@ -996,7 +996,7 @@ class SessionChatService:
                         select(SessionTurnModel)
                         .where(SessionTurnModel.session_id == session_id)
                         .order_by(SessionTurnModel.created_at.desc())
-                        .limit(4)
+                        .limit(20)
                     )
                     r_res = await self.db.execute(recent_turns_stmt)
                     history_turns = list(reversed(r_res.scalars().all()))
