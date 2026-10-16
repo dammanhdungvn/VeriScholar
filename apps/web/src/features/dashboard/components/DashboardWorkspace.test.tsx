@@ -339,4 +339,55 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     // Chip is cleared
     expect(useWorkspaceStore.getState().activeContextChip).toBeNull();
   });
+
+  it("renders reasoning accordion with BrainCircuit and citation badges in chat stream", () => {
+    const messageWithThoughtAndCitation: ChatMessage = {
+      id: "msg-thought-cite",
+      session_id: "ses-1",
+      role: "assistant",
+      content: "Đoạn trích dẫn này nằm tại trang 5.",
+      thought: "Suy luận logic và tham chiếu tọa độ văn bản...",
+      is_streaming: false,
+      created_at: new Date().toISOString(),
+      citations: [
+        {
+          paper_id: "doc-1",
+          paper_title: "Attention Is All You Need",
+          page: 5,
+          bbox: [0.2, 0.3, 0.8, 0.7, 5],
+        },
+      ],
+    };
+
+    renderWithClient(
+      <DashboardWorkspace
+        messages={[messageWithThoughtAndCitation]}
+        inputText=""
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+        onResetChat={vi.fn()}
+      />
+    );
+
+    // Reasoning accordion is present
+    expect(screen.getByTestId("reasoning-accordion")).toBeInTheDocument();
+    expect(screen.getByText("Suy luận học thuật")).toBeInTheDocument();
+    expect(
+      screen.getByText("Suy luận logic và tham chiếu tọa độ văn bản...")
+    ).toBeInTheDocument();
+
+    // Citation badge is present
+    const citationBtn = screen.getByTestId("citation-badge");
+    expect(citationBtn).toBeInTheDocument();
+    expect(screen.getByText("Tr.5")).toBeInTheDocument();
+
+    // Click citation badge
+    fireEvent.click(citationBtn);
+    expect(useDashboardStore.getState().activeBbox).toEqual([0.2, 0.3, 0.8, 0.7, 5]);
+
+    // SmartReferenceDrawer opens
+    expect(screen.getByTestId("smart-reference-drawer")).toBeInTheDocument();
+  });
 });
