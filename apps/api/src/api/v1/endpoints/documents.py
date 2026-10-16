@@ -7,7 +7,12 @@ from uuid import UUID, uuid4
 from api.db.models.document import DocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.deps import get_current_user, get_document_service, get_idempotency_port
+from api.deps import (
+    get_academic_resolver,
+    get_current_user,
+    get_document_service,
+    get_idempotency_port,
+)
 from api.schemas.document import (
     DocumentChunkDetailEnvelope,
     DocumentChunkPaginatedEnvelope,
@@ -17,6 +22,8 @@ from api.schemas.document import (
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
     DocumentParseRequest,
+    DocumentResolveReferencesEnvelope,
+    DocumentResolveReferencesRequest,
     DocumentStarEnvelope,
     DocumentStarRequest,
     DocumentStatusEnvelope,
@@ -29,6 +36,7 @@ from api.schemas.envelope import ResponseMeta
 from api.schemas.error import ErrorResponse
 from api.services.document_service import DocumentService
 from core.domain.entities.document import DocumentStage, DocumentStatus
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
@@ -631,6 +639,71 @@ async def extract_references(
         force_reextract=force_reextract,
     )
     return DocumentExtractReferencesEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+RESOLVE_REFERENCES_DESCRIPTION = (
+    "🎯 **Mục đích:** Phân giải và làm giàu siêu dữ liệu danh mục tài liệu tham khảo "
+    "của bài báo thông qua Exa AI Search và bộ đệm học thuật (Module 3 - PRD §3.3).\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID của bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `ref_indices`: Danh sách chỉ số tham khảo cần phân giải (tùy chọn, Body).\n"
+    "- `force_refresh`: Bỏ qua bộ đệm và ép phân giải lại (mặc định: false, Body).\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- `document_id`: UUID tài liệu.\n"
+    "- `total_resolved`: Tổng số tài liệu tham khảo phân giải được.\n"
+    "- `references`: Danh sách tham khảo làm giàu với PDF URL, DOI, arXiv, v.v."
+)
+
+
+@router.post(
+    "/{document_id}/references:resolve",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentResolveReferencesEnvelope,
+    summary="Phân giải và làm giàu tài liệu tham khảo qua Exa AI (PRD §3.3)",
+    description=RESOLVE_REFERENCES_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Phân giải tài liệu tham khảo thành công.",
+            "model": DocumentResolveReferencesEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def resolve_references(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần phân giải tài liệu tham khảo",
+    ),
+    payload: DocumentResolveReferencesRequest | None = Body(
+        default=None,
+        description="Tùy chọn cấu hình phân giải tài liệu tham khảo",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+    resolver: IAcademicSearchResolverPort = Depends(get_academic_resolver),
+) -> DocumentResolveReferencesEnvelope:
+    """Resolve extracted references using Exa Neural Search or deterministic adapter."""
+    ref_indices = payload.ref_indices if payload else None
+    force_refresh = payload.force_refresh if payload else False
+    data = await service.resolve_document_references(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
+        ref_indices=ref_indices,
+        force_refresh=force_refresh,
+        resolver=resolver,
+    )
+    return DocumentResolveReferencesEnvelope(
         success=True,
         data=data,
         meta=ResponseMeta(),

@@ -118,6 +118,9 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
 
+    # Exa AI Neural Search Settings (Module 3)
+    EXA_API_KEY: SecretStr | None = None
+
     @property
     def is_production(self) -> bool:
         return self.ENVIRONMENT == "production"

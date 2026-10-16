@@ -14,6 +14,7 @@ from core.domain.entities.note_synthesis import (
 from core.domain.entities.reference import (
     ExtractedReference,
     ParsedReferenceInfo,
+    ResolvedAcademicReference,
     extract_references_from_text,
     parse_reference_item,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "ParsedReferenceInfo",
     "ResearchNote",
     "ResearchSession",
+    "ResolvedAcademicReference",
     "SessionTurn",
     "SummaryPoint",
     "SynthesisMode",

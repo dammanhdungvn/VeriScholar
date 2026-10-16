@@ -7,13 +7,14 @@ from api.db.models.document import DocumentModel
 from api.db.models.draft import DraftCommentModel, DraftModel
 from api.db.models.folder import FolderModel
 from api.db.models.note import NoteSynthesisModel, ResearchNoteModel
-from api.db.models.reference import ReferenceItemModel
+from api.db.models.reference import CitationEdgeModel, ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.db.models.summary import DocumentSummaryModel
 from api.db.models.user import UserModel
 
 __all__ = [
     "Base",
+    "CitationEdgeModel",
     "DocumentChunkModel",
     "DocumentModel",
     "DocumentStorageBlobModel",

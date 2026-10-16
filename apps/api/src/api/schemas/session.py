@@ -219,3 +219,81 @@ class SessionChatMessageRequest(BaseModel):
         default=None,
         description="Dữ liệu phản hồi tùy chọn (persona_id, quiz) khi chọn thẻ AT-CoT",
     )
+
+
+class SessionIngestReferencesRequest(BaseModel):
+    """Payload for ingesting open-access references into session documents (PRD §3.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    document_id: UUID = Field(
+        ...,
+        description="Source document containing extracted references",
+    )
+    selected_ref_indices: list[int] = Field(
+        ...,
+        min_length=1,
+        description="List of 1-indexed reference indices to ingest into the active session",
+    )
+
+
+class IngestedReferenceItem(BaseModel):
+    """Metadata of an ingested reference paper."""
+
+    ref_index: int
+    document_id: UUID
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    open_access_pdf_url: str | None = None
+    display_order: int
+
+
+class SessionIngestReferencesResponseData(BaseModel):
+    """Response payload returned when references are ingested into a session."""
+
+    session_id: UUID
+    total_ingested: int
+    session_document_count: int
+    ingested_documents: list[IngestedReferenceItem]
+
+
+class SessionIngestReferencesEnvelope(SingleResponseEnvelope[SessionIngestReferencesResponseData]):
+    """Top-level single resource envelope for session reference ingestion."""
+
+
+class CitationGraphNode(BaseModel):
+    """Node in the multi-paper citation graph."""
+
+    id: str
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    year: int | None = None
+    doi: str | None = None
+    arxiv_id: str | None = None
+    is_session_document: bool = False
+    depth: int = 0
+
+
+class CitationGraphEdge(BaseModel):
+    """Directed edge in the multi-paper citation graph."""
+
+    source: str
+    target: str
+    relation: str = "CITES"  # CITES | EXTENDS | BENCHMARKS_ON
+    confidence: float = 1.0
+
+
+class CitationGraphResponseData(BaseModel):
+    """Response payload for multi-paper citation graph with cycle-breaking."""
+
+    session_id: UUID
+    nodes: list[CitationGraphNode]
+    edges: list[CitationGraphEdge]
+    reading_path: list[str] = Field(
+        default_factory=list,
+        description="Foundational to recent reading path generated via topological sorting",
+    )
+
+
+class CitationGraphEnvelope(SingleResponseEnvelope[CitationGraphResponseData]):
+    """Top-level single resource envelope for citation graph."""

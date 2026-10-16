@@ -6,6 +6,7 @@ from uuid import UUID, uuid4
 import structlog
 from api.db.models.user import UserModel
 from api.deps import (
+    get_academic_resolver,
     get_current_user,
     get_idempotency_port,
     get_session_chat_service,
@@ -14,10 +15,13 @@ from api.deps import (
 from api.schemas.envelope import PaginationLinks, PaginationMeta, ResponseMeta
 from api.schemas.error import ErrorResponse
 from api.schemas.session import (
+    CitationGraphEnvelope,
     SessionAddDocumentRequest,
     SessionChatMessageRequest,
     SessionCreateRequest,
     SessionHistoryEnvelope,
+    SessionIngestReferencesEnvelope,
+    SessionIngestReferencesRequest,
     SessionSingleEnvelope,
     SessionTurnListEnvelope,
     SessionUpdateMetadataRequest,
@@ -25,6 +29,7 @@ from api.schemas.session import (
 )
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
@@ -891,4 +896,80 @@ async def export_session_bundle(
             "Content-Disposition": f'attachment; filename="verischolar_session_{id}.zip"',
             "Content-Length": str(len(zip_bytes)),
         },
+    )
+
+
+# ==============================================================================
+# 57. POST /api/v1/sessions/{id}/references:ingest (Nạp bài tham khảo mở - PRD §3.3)
+# ==============================================================================
+@router.post(
+    "/{id}/references:ingest",
+    status_code=status.HTTP_200_OK,
+    response_model=SessionIngestReferencesEnvelope,
+    summary="Nạp tài liệu tham khảo mở vào phiên đọc sâu (PRD §3.3)",
+    description=(
+        "Nạp các bài báo tham khảo mở (Open-Access) từ danh mục bóc tách của bài báo nguồn "
+        "vào phiên nghiên cứu. Ràng buộc: Tổng số bài báo trong phiên không vượt quá 5 bài. "
+        "Nếu vượt quá 5 bài sẽ trả về lỗi HTTP 422 Unprocessable Entity."
+    ),
+    responses={
+        200: {"model": SessionIngestReferencesEnvelope, "description": "Nạp bài báo thành công."},
+        422: {"model": ErrorResponse, "description": "Vượt quá ngưỡng trần 5 bài báo của phiên."},
+        404: {"model": ErrorResponse, "description": "Phiên hoặc tài liệu không tồn tại."},
+    },
+)
+async def ingest_session_references(
+    id: UUID,
+    payload: SessionIngestReferencesRequest,
+    current_user: UserModel = Depends(get_current_user),
+    session_service: SessionService = Depends(get_session_service),
+    resolver: IAcademicSearchResolverPort = Depends(get_academic_resolver),
+) -> SessionIngestReferencesEnvelope:
+    """Ingest selected open-access references into the active research session (Cap <= 5)."""
+    data = await session_service.ingest_references(
+        session_id=id,
+        user_id=current_user.id,
+        document_id=payload.document_id,
+        selected_ref_indices=payload.selected_ref_indices,
+        resolver=resolver,
+    )
+    return SessionIngestReferencesEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+# ==============================================================================
+# 58. GET /api/v1/sessions/{id}/citation-graph (Đồ thị trích dẫn đa bài báo - PRD §3.3)
+# ==============================================================================
+@router.get(
+    "/{id}/citation-graph",
+    status_code=status.HTTP_200_OK,
+    response_model=CitationGraphEnvelope,
+    summary="Truy xuất đồ thị trích dẫn đa bài báo với cơ chế ngắt chu trình (PRD §3.3)",
+    description=(
+        "Xây dựng đồ thị trích dẫn đa bài báo (CITES, EXTENDS, BENCHMARKS_ON) "
+        "với độ sâu tối đa k <= 2 hops, tự động bẻ gãy chu trình (Cycle Breaking) "
+        "và trả về thứ tự đọc nền tảng (Foundational Reading Path) qua sắp xếp topo."
+    ),
+    responses={
+        200: {"model": CitationGraphEnvelope, "description": "Đồ thị trích dẫn đa bài báo."},
+        404: {"model": ErrorResponse, "description": "Phiên nghiên cứu không tồn tại."},
+    },
+)
+async def get_session_citation_graph(
+    id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    session_service: SessionService = Depends(get_session_service),
+) -> CitationGraphEnvelope:
+    """Construct multi-paper citation graph with Cycle Breaking & Max-Hop (k <= 2) constraint."""
+    data = await session_service.get_citation_graph(
+        session_id=id,
+        user_id=current_user.id,
+    )
+    return CitationGraphEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
     )

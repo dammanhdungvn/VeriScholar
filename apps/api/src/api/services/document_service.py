@@ -36,6 +36,7 @@ from api.schemas.document import (
     DocumentParseLinks,
     DocumentParseRequest,
     DocumentParseResponseData,
+    DocumentResolveReferencesResponseData,
     DocumentSectionResponse,
     DocumentStarResponseData,
     DocumentStatusResponseData,
@@ -46,6 +47,7 @@ from api.schemas.document import (
     PageMetadataItem,
     ParsedReferenceItemSchema,
     ReferenceItemResponse,
+    ResolvedAcademicReferenceResponse,
     StagesDetail,
     SummaryPointResponse,
 )
@@ -53,16 +55,22 @@ from api.schemas.envelope import PaginationLinks, PaginationMeta
 from api.services.ai_tracing_service import AITracingService
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.chunk import DocumentChunk
-from core.domain.entities.reference import ExtractedReference, extract_references_from_text
+from core.domain.entities.reference import (
+    ExtractedReference,
+    ParsedReferenceInfo,
+    extract_references_from_text,
+)
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.domain.value_objects.enums import BlobStatus, DocumentStage, DocumentStatus
 from core.domain.value_objects.pdf_annotation import AnnotationCategory, PdfAnnotation
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.chunk import IChunkExtractorPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.structure import IStructureExtractorPort
 from core.ports.summary import IDocumentSummarizerPort
 from core.services.document_validator import AcademicPaperValidator
+from core.services.exa_resolver import InMemoryAcademicResolverAdapter
 from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError
@@ -1234,6 +1242,137 @@ class DocumentService:
             return []
 
         return extract_references_from_text(full_ref_text)
+
+    async def resolve_document_references(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+        ref_indices: list[int] | None = None,
+        force_refresh: bool = False,
+        resolver: IAcademicSearchResolverPort | None = None,
+    ) -> DocumentResolveReferencesResponseData:
+        """Resolve extracted scholarly references to rich academic metadata via resolver.
+
+        Args:
+            document_id: Unique document identifier.
+            user_id: Authenticated user identifier (enforces multi-tenant scoping).
+            db: Active async database session.
+            ref_indices: Optional list of reference indices to resolve. If None, resolves all.
+            force_refresh: If True, bypass cache and re-query resolver.
+            resolver: Optional resolver port override.
+
+        Returns:
+            DocumentResolveReferencesResponseData containing resolved reference list.
+
+        Raises:
+            HTTPException(404): If document not found or belongs to another user.
+        """
+        # 1. Enforce multi-tenant scoping
+        doc_stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc_res = await db.execute(doc_stmt)
+        doc = doc_res.scalar_one_or_none()
+
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "id",
+                    "action": "Verify document ID or check access permissions.",
+                },
+            )
+
+        # 2. Retrieve reference items from database, extracting if not present
+        cached_stmt = (
+            select(ReferenceItemModel)
+            .where(ReferenceItemModel.document_id == document_id)
+            .order_by(ReferenceItemModel.ref_index.asc())
+        )
+        cached_res = await db.execute(cached_stmt)
+        ref_items = list(cached_res.scalars().all())
+
+        if not ref_items:
+            # Auto-extract if references have not been extracted yet
+            await self.extract_document_references(
+                document_id=document_id,
+                user_id=user_id,
+                db=db,
+                force_reextract=False,
+            )
+            cached_res = await db.execute(cached_stmt)
+            ref_items = list(cached_res.scalars().all())
+
+        # 3. Filter by ref_indices if specified
+        if ref_indices is not None:
+            target_indices = set(ref_indices)
+            items_to_resolve = [item for item in ref_items if item.ref_index in target_indices]
+        else:
+            items_to_resolve = ref_items
+
+        active_resolver = resolver or InMemoryAcademicResolverAdapter()
+
+        # 4. Resolve references
+        resolved_responses: list[ResolvedAcademicReferenceResponse] = []
+        for item in items_to_resolve:
+            extracted_ref = ExtractedReference(
+                ref_index=item.ref_index,
+                raw_text=item.raw_text,
+                parsed=ParsedReferenceInfo(
+                    title=item.parsed_title,
+                    authors=item.parsed_authors or [],
+                    year=item.parsed_year,
+                    arxiv_id=item.arxiv_id,
+                    doi=item.doi,
+                ),
+            )
+            resolved = await active_resolver.resolve_reference(extracted_ref)
+
+            # Update DB item if newly discovered metadata exists
+            if not item.doi and resolved.doi:
+                item.doi = resolved.doi
+            if not item.arxiv_id and resolved.arxiv_id:
+                item.arxiv_id = resolved.arxiv_id
+            if not item.parsed_title and resolved.title:
+                item.parsed_title = resolved.title
+            if not item.parsed_authors and resolved.authors:
+                item.parsed_authors = resolved.authors
+            if not item.parsed_year and resolved.year:
+                item.parsed_year = resolved.year
+
+            is_ingested = item.resolved_document_id is not None
+            resolved_doc_id = item.resolved_document_id
+
+            resolved_responses.append(
+                ResolvedAcademicReferenceResponse(
+                    ref_index=resolved.ref_index,
+                    raw_text=resolved.raw_text,
+                    title=resolved.title,
+                    authors=resolved.authors,
+                    year=resolved.year,
+                    doi=resolved.doi,
+                    arxiv_id=resolved.arxiv_id,
+                    open_access_pdf_url=resolved.open_access_pdf_url,
+                    abstract=resolved.abstract,
+                    citation_count=resolved.citation_count,
+                    sources=resolved.sources,
+                    landing_url=resolved.landing_url,
+                    is_ingested=is_ingested,
+                    resolved_document_id=resolved_doc_id,
+                )
+            )
+
+        await db.commit()
+
+        return DocumentResolveReferencesResponseData(
+            document_id=document_id,
+            total_resolved=len(resolved_responses),
+            references=resolved_responses,
+        )
 
     async def get_document_structure(
         self,

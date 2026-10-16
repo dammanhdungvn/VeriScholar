@@ -1,6 +1,7 @@
 """Reference domain entity and parsing logic for scientific documents."""
 
 import re
+from uuid import UUID
 
 from pydantic import BaseModel, Field
 
@@ -28,6 +29,25 @@ class ExtractedReference(BaseModel):
     ref_index: int
     raw_text: str
     parsed: ParsedReferenceInfo
+
+
+class ResolvedAcademicReference(BaseModel):
+    """Richly resolved academic reference with open-access and citation metadata."""
+
+    ref_index: int
+    raw_text: str
+    title: str
+    authors: list[str] = Field(default_factory=list)
+    year: int | None = None
+    doi: str | None = None
+    arxiv_id: str | None = None
+    open_access_pdf_url: str | None = None
+    abstract: str | None = None
+    citation_count: int | None = None
+    sources: list[str] = Field(default_factory=list)
+    landing_url: str | None = None
+    is_ingested: bool = False
+    resolved_document_id: UUID | None = None
 
 
 _ARXIV_PATTERN = re.compile(

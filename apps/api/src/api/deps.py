@@ -4,10 +4,13 @@ from uuid import UUID
 
 from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter
 from core.adapters.storage.local import LocalStorageAdapter
+from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
+from core.services.academic_cache import GlobalAcademicCache
+from core.services.exa_resolver import ExaAcademicResolverAdapter
 from fastapi import Depends, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +35,30 @@ DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 _idempotency_adapter: IIdempotencyPort | None = None
 _pdf_annotator_adapter: IPdfAnnotatorPort | None = None
 _ai_tracing_service: AITracingService | None = None
+_academic_cache: GlobalAcademicCache | None = None
+_academic_resolver: IAcademicSearchResolverPort | None = None
+
+
+def get_academic_cache() -> GlobalAcademicCache:
+    """Dependency providing GlobalAcademicCache singleton."""
+    global _academic_cache
+    if _academic_cache is None:
+        _academic_cache = GlobalAcademicCache()
+    return _academic_cache
+
+
+def get_academic_resolver(
+    cache: GlobalAcademicCache = Depends(get_academic_cache),
+) -> IAcademicSearchResolverPort:
+    """Dependency providing ExaAcademicResolverAdapter with InMemory fallback."""
+    global _academic_resolver
+    if _academic_resolver is None:
+        api_key = settings.EXA_API_KEY.get_secret_value() if settings.EXA_API_KEY else None
+        _academic_resolver = ExaAcademicResolverAdapter(
+            api_key=api_key,
+            cache=cache,
+        )
+    return _academic_resolver
 
 
 def get_storage() -> IBlobStoragePort:
