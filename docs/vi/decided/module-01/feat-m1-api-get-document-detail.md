@@ -5,10 +5,10 @@
 * **Mã Phản Hồi:** `200 OK`
 * **Loại Endpoint:** Standard REST Entity Endpoint (Detail Resource)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.5: API Lấy thông tin chi tiết bài báo khoa học)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `title`, `authors`, `doi`, `publication_year`, `total_pages`, `parsed_metadata`)
-  - [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md) (Quy chuẩn kích thước trang và tọa độ Bounding Box)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (SingleResponseEnvelope chuẩn)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.5: API Lấy thông tin chi tiết bài báo khoa học)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `title`, `authors`, `doi`, `publication_year`, `total_pages`, `parsed_metadata`)
+  - [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md) (Quy chuẩn kích thước trang và tọa độ Bounding Box)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (SingleResponseEnvelope chuẩn)
 
 ---
 

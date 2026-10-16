@@ -1,12 +1,12 @@
 # Hướng Dẫn Tích Hợp Hệ Thống Thiết Kế (Design System Integration)
 
-Tài liệu này xác lập quy chuẩn chuyển giao và triển khai thực tế 100% từ hồ sơ đặc tả thiết kế [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md) vào kiến trúc mã nguồn Frontend (`apps/web/`) của nền tảng **VeriScholar**.
+Tài liệu này xác lập quy chuẩn chuyển giao và triển khai thực tế 100% từ hồ sơ đặc tả thiết kế [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md) vào kiến trúc mã nguồn Frontend (`apps/web/`) của nền tảng **VeriScholar**.
 
 ---
 
 ## 1. TRIẾT LÝ THIẾT KẾ HỌC THUẬT (EDITORIAL HUMANIST PHILOSOPHY)
 
-Khác biệt hoàn toàn với phong cách giao diện SaaS đại trà dùng nền trắng tinh lạnh lẽo và màu xanh công nghệ (Cool Slate / Blue), VeriScholar tuân thủ triệt để ngôn ngữ thiết kế **Warm-Canvas Editorial Interface** từ [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md):
+Khác biệt hoàn toàn với phong cách giao diện SaaS đại trà dùng nền trắng tinh lạnh lẽo và màu xanh công nghệ (Cool Slate / Blue), VeriScholar tuân thủ triệt để ngôn ngữ thiết kế **Warm-Canvas Editorial Interface** từ [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md):
 1. **Nền giấy kem ấm áp (Tinted Cream Canvas `#faf9f5`):** Mang lại trải nghiệm đọc bài báo khoa học như trên các tạp chí học thuật danh tiếng, chống lóa và chống mỏi mắt cho nhà nghiên cứu khi làm việc nhiều giờ liền.
 2. **Điểm nhấn màu San hô ấm (Coral Accent `#cc785c`):** Điểm xuyết trên các nút bấm hành động chính (Primary CTA), huy hiệu trích dẫn quan trọng và các khối kêu gọi hành động nổi bật.
 3. **Mặt sàn công nghệ tối màu (Dark Navy Surfaces `#181715`):** Sử dụng tương phản mạnh mẽ cho các khối hiển thị mã nguồn (Code blocks), cửa sổ dòng lệnh (Terminal mockups) và đồ thị suy luận sâu của AI.
@@ -19,7 +19,7 @@ Khác biệt hoàn toàn với phong cách giao diện SaaS đại trà dùng n�
 
 ## 2. BẢNG MÃ HÓA BIẾN TOÀN CỤC (DESIGN TOKENS TO CSS VARIABLES)
 
-Toàn bộ các giá trị từ [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md) được khai báo thành biến CSS tại `src/index.css` để Tailwind CSS v4 và các component sử dụng trực tiếp:
+Toàn bộ các giá trị từ [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md) được khai báo thành biến CSS tại `src/index.css` để Tailwind CSS v4 và các component sử dụng trực tiếp:
 
 ```css
 :root {

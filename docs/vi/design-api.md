@@ -1,6 +1,6 @@
 # Thiết Kế Chi Tiết Toàn Bộ API - Nền Tảng VeriScholar (RESTful & SSE Specification)
 
-Tài liệu này định nghĩa chi tiết toàn bộ các điểm cuối (REST Endpoints & SSE Streaming), hợp đồng dữ liệu (API Contracts), ranh giới bảo mật, cơ chế kiểm soát đồng thời và bảng mã lỗi cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Sharing & Collaboration)** của hệ thống **VeriScholar** dựa trên chuẩn mực [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md).
+Tài liệu này định nghĩa chi tiết toàn bộ các điểm cuối (REST Endpoints & SSE Streaming), hợp đồng dữ liệu (API Contracts), ranh giới bảo mật, cơ chế kiểm soát đồng thời và bảng mã lỗi cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Sharing & Collaboration)** của hệ thống **VeriScholar** dựa trên chuẩn mực [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md).
 
 Tài liệu tuân thủ nghiêm ngặt các nguyên lý thiết kế API chuẩn mực quốc tế:
 - **RESTful Resource Modeling & Google Cloud AIP-136 / AIP-151 Standards** (Custom Methods chuẩn cú pháp `:<verb>`, Long-Running Operations & Real-time SSE Streams).
@@ -707,54 +707,77 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
   ```json
   {
     "line_number": 42,
+    "start_offset": 100,
+    "end_offset": 150,
     "selected_text": "Mô hình Transformer chuẩn đạt 28.4 BLEU...",
-    "comment": "Chỗ này cần bổ sung so sánh thêm với mô hình MoE mới nhất của năm 2025."
+    "comment_text": "Chỗ này cần bổ sung so sánh thêm với mô hình MoE mới nhất của năm 2025.",
+    "parent_id": null
   }
   ```
-- **Response (`201 Created`).**
+- **Ràng buộc RBAC:** Yêu cầu tối thiểu quyền `commenter`. Bị chặn `403 FORBIDDEN_ROLE_RESTRICTED` đối với `viewer`.
+- **Response (`201 Created`):** `SingleResponse<DraftComment>`.
 
-### 4.12. `GET /api/v1/drafts/{id}/comments` (Lấy Danh Sách Bình Luận)
+### 4.12. `GET /api/v1/drafts/{id}/comments` (Lấy Danh Sách Bình Luận & Phân Cấp Replies)
 - **Method:** `GET`
 - **Query Params:** `page` (int, default 1), `per_page` (int, default 50).
-- **Response (`200 OK` - Paginated Collection Envelope).**
+- **Quyền:** Yêu cầu tối thiểu quyền `viewer`.
+- **Response (`200 OK` - Paginated Collection Envelope):** Trả về mảng bình luận với cấu trúc cây `replies`.
+
+### 4.13. `PATCH /api/v1/drafts/{id}/comments/{comment_id}` (Cập Nhật / Giải Quyết Bình Luận)
+- **Method:** `PATCH`
+- **Request Body (JSON):** `{"is_resolved": true}` hoặc `{"comment_text": "Nội dung cập nhật"}`.
+- **Response (`200 OK`):** `SingleResponse<DraftComment>`.
+
+### 4.14. `DELETE /api/v1/drafts/{id}/comments/{comment_id}` (Xóa Bình Luận)
+- **Method:** `DELETE`
+- **Response (`204 No Content`).**
 
 ---
 
 ## 5. MODULE 3: KHAI THÁC TÀI LIỆU THAM KHẢO & ĐỒ THỊ TRI THỨC (REFERENCES API)
 
-### 5.1. `POST /api/v1/references:resolve` (Batch Resolving & Leaky Bucket API)
+### 5.1. `POST /api/v1/documents/{document_id}/references:resolve` (Phân Giải Tài Liệu Tham Khảo Học Thuật)
+- **Method:** `POST`
+- **Query Params:** `ref_indices` (tùy chọn: lọc danh sách chỉ số tham khảo cần giải quyết).
+- **Bộ Phân Giải (Academic Resolvers):** Gọi `ExaAcademicResolverAdapter` (Exa API thực tế) kết hợp fallback deterministic.
+- **Ranh giới Cách ly Bộ đệm (Public-Only Cache Isolation):**
+  - Siêu dữ liệu từ Exa, Crossref, Semantic Scholar, arXiv được lưu và đọc từ *Global Academic Cache* (< 10ms SLA, thực tế 0.007ms).
+  - Bản thảo riêng tư chưa xuất bản của người dùng bị chặn tuyệt đối không được ghi vào cache toàn cục.
+- **Response (`200 OK`):** Trả về danh sách `ResolvedAcademicReference` kèm `open_access_pdf_url`, `abstract`, `citation_count`, và các nguồn học thuật `sources`.
+
+### 5.2. `POST /api/v1/sessions/{session_id}/references:ingest` (Nạp Bài Tham Khảo Vào Phiên Nghiên Cứu)
 - **Method:** `POST`
 - **Request Body (JSON):**
   ```json
   {
-    "references": [
-      { "ref_id": "ref_1", "doi": "10.48550/arXiv.1607.06450", "title": "Layer normalization" },
-      { "ref_id": "ref_2", "doi": "10.18653/v1/N18-1202", "title": "Deep contextualized word representations" }
-    ]
+    "document_id": "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c",
+    "selected_ref_indices": [1, 3]
   }
   ```
-- **Ranh giới Cách ly Bộ đệm:**
-  - Siêu dữ liệu từ Crossref, Semantic Scholar, arXiv, PubMed được lưu và đọc từ *Global Academic Cache* (< 10ms).
-  - Bản thảo người dùng tải lên được cô lập tuyệt đối trong *Tenant-Isolated Cache*.
-- **Response (`200 OK`):** Trả về mảng bài báo đã phân giải kèm cờ `has_open_access_pdf` và `pdf_download_url`.
+- **Ràng Buộc Ngưỡng Trần Phiên (Session Capacity Cap $\le 5$ papers):**
+  - Nếu `current_count + len(selected_ref_indices) > 5`: ném ngoại lệ `HTTP 422 Unprocessable Entity` với mã lỗi `SESSION_CAPACITY_EXCEEDED`:
+    *"Phiên đọc sâu giới hạn tối đa 5 bài báo. Vui lòng bỏ bớt bài hoặc lưu vào Thư viện (Module 4) để quản lý kho lớn hơn"*.
+- **Quy trình xử lý:** Tự động tải PDF mở, sinh `DocumentModel`, gán `display_order`, liên kết `resolved_document_id` vào `ReferenceItemModel` và sinh cạnh `CitationEdgeModel`.
+- **Response (`200 OK`):** `SessionIngestResponse` trả về danh sách bài đã nạp và tổng số bài trong phiên.
 
-### 5.2. `GET /api/v1/documents/{id}/graph` (Truy vấn Đồ thị Tri thức Trích dẫn)
+### 5.3. `GET /api/v1/sessions/{session_id}/citation-graph` (Truy Vấn Đồ Thị Trích Dẫn & Lộ Trình Đọc Nền Tảng)
 - **Method:** `GET`
-- **Query Params:** `max_hops=2` (mặc định 2, tối đa 2), `relations=CITES,EXTENDS,BENCHMARKS_ON`.
-- **Thuật toán Ngắt chu trình (Cycle Breaking):** Tự động bẻ gãy các liên kết trích dẫn chéo vòng tròn qua `visited` node set.
+- **Thuật toán Ngắt chu trình (Cycle Breaking & Max-Hop $k \le 2$):** Tự động bẻ gãy các liên kết trích dẫn chéo vòng tròn ($A \leftrightarrow B$, $A \to B \to C \to A$) qua tập theo dõi `edge_set` và giới hạn bước nhảy tối đa 2.
+- **Lộ trình Đọc Nền tảng (Foundational Reading Path):** Áp dụng thuật toán sắp xếp Topo (Kahn's Algorithm) xác định thứ tự đọc từ bài nền tảng đến bài mở rộng.
 - **Response (`200 OK` - Graph Node-Link Schema):**
   ```json
   {
     "success": true,
     "data": {
-      "root_document_id": "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c",
+      "session_id": "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c",
       "nodes": [
-        { "id": "doc_A", "title": "Attention Is All You Need", "year": 2017, "type": "root" },
-        { "id": "doc_B", "title": "Layer Normalization", "year": 2016, "type": "cited" }
+        { "id": "doc_1", "title": "Attention Is All You Need", "year": 2017, "is_session_document": true, "depth": 0 },
+        { "id": "doc_2", "title": "Layer Normalization", "year": 2016, "is_session_document": false, "depth": 1 }
       ],
       "edges": [
-        { "source": "doc_A", "target": "doc_B", "relation": "CITES", "confidence": 1.0 }
-      ]
+        { "source": "doc_1", "target": "doc_2", "relation": "CITES", "confidence": 1.0 }
+      ],
+      "reading_path": ["doc_2", "doc_1"]
     },
     "meta": { ... }
   }

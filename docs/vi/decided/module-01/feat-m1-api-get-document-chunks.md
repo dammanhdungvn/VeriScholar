@@ -4,16 +4,16 @@
 * **Tên rút gọn (Branch name đề xuất):** `feat/m1-api-document-chunks`  
 * **Mã phản hồi chuẩn:** `200 OK` (Paginated Collection Envelope theo RFC 8288 và Google Cloud AIP-130 / AIP-136)  
 * **Vị trí tài liệu lưu trữ:**  
-  - [`docs/vi/decided/module-01/feat-m1-api-get-document-chunks.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-chunks.md)  
-  - [`docs/vi/decided/feat-m1-api-get-document-chunks.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/feat-m1-api-get-document-chunks.md)  
+  - [`docs/vi/decided/module-01/feat-m1-api-get-document-chunks.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/module-01/feat-m1-api-get-document-chunks.md)  
+  - [`docs/vi/decided/feat-m1-api-get-document-chunks.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/feat-m1-api-get-document-chunks.md)  
 * **Tài liệu tham chiếu chuẩn:**  
-  - API Specification: [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.11: `GET /api/v1/documents/{id}/chunks`)  
-  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `document_chunks`, các index B-Tree, GIN, HNSW pgvector)  
-  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Section-Aware Chunking, Layout-Aware Bounding Boxes)  
-  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (Mục 3 - Module 1 Deep Reading, Visual Grounding Overlay, Bandwidth Optimization)  
-  - Thiết kế Eval & Báo cáo: [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
-  - Công nghệ Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
-  - Tập dữ liệu Ground Truth: [`data/golden-dataset/golden_eval_dataset.json`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/data/golden-dataset/golden_eval_dataset.json)  
+  - API Specification: [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.11: `GET /api/v1/documents/{id}/chunks`)  
+  - Database Schema DDL: [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `document_chunks`, các index B-Tree, GIN, HNSW pgvector)  
+  - Kiến trúc Lục giác (Hexagonal): [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Section-Aware Chunking, Layout-Aware Bounding Boxes)  
+  - Yêu cầu sản phẩm: [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (Mục 3 - Module 1 Deep Reading, Visual Grounding Overlay, Bandwidth Optimization)  
+  - Thiết kế Eval & Báo cáo: [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md)  
+  - Công nghệ Module 1: [`docs/vi/techstack-backend-module-01.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/techstack-backend-module-01.md)  
+  - Tập dữ liệu Ground Truth: [`data/golden-dataset/golden_eval_dataset.json`](file:///home/VeriScholar/Workspace/VeriScholar/data/golden-dataset/golden_eval_dataset.json)  
 
 ---
 
@@ -75,7 +75,7 @@ graph TD
 ```
 
 ### 2.1 Database & Persistence Layer (`apps/api/src/api/db/`)
-1. **Tạo Model `DocumentChunkModel` trong [`apps/api/src/api/db/models/chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/chunk.py):**
+1. **Tạo Model `DocumentChunkModel` trong [`apps/api/src/api/db/models/chunk.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/chunk.py):**
    - Kế thừa `IdentifiableTimestampedModel` (`id`, `created_at`, `updated_at`).
    - `document_id: Mapped[UUID] = mapped_column(ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)`
    - `chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)`
@@ -87,12 +87,12 @@ graph TD
    - Ràng buộc & Chỉ mục tối ưu:
      - `UniqueConstraint("document_id", "chunk_index", name="uq_document_chunks_doc_chunk_idx")`
      - `Index("ix_document_chunks_doc_page", "document_id", "page_number")`
-2. **Cập nhật [`apps/api/src/api/db/models/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/__init__.py):**
+2. **Cập nhật [`apps/api/src/api/db/models/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/__init__.py):**
    - Export `DocumentChunkModel` để SQLAlchemy metadata nhận diện tự động.
 
 ### 2.2 Core Domain & Ports (`packages/core/src/core/`)
 1. **Kiểm tra Domain Entity `DocumentChunk`:**
-   - [`packages/core/src/core/domain/entities/chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/chunk.py) đã có sẵn với các bất biến:
+   - [`packages/core/src/core/domain/entities/chunk.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/domain/entities/chunk.py) đã có sẵn với các bất biến:
      - `id: UUID`
      - `document_id: UUID`
      - `chunk_index: int >= 0`
@@ -100,7 +100,7 @@ graph TD
      - `content: str`
      - `bounding_boxes: list[BoundingBox]` (bảo đảm 0.0 <= x0 <= x1 <= 1.0, 0.0 <= y0 <= y1 <= 1.0, page >= 1)
      - `token_count: int > 0`
-2. **Định nghĩa Port Interface `IChunkExtractorPort` trong [`packages/core/src/core/ports/chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/ports/chunk.py):**
+2. **Định nghĩa Port Interface `IChunkExtractorPort` trong [`packages/core/src/core/ports/chunk.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/ports/chunk.py):**
    ```python
    from abc import ABC, abstractmethod
    from typing import AsyncIterator
@@ -121,11 +121,11 @@ graph TD
            """Extract semantically coherent chunks with spatial bounding boxes."""
            pass
    ```
-3. **Đăng ký Port trong [`packages/core/src/core/ports/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/ports/__init__.py):**
+3. **Đăng ký Port trong [`packages/core/src/core/ports/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/ports/__init__.py):**
    - Export `IChunkExtractorPort`.
 
 ### 2.3 Driven Adapters (`apps/api/src/api/adapters/`)
-1. **Triển khai `PyMuPDFChunkExtractor` trong [`apps/api/src/api/adapters/chunk_extractor.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/adapters/chunk_extractor.py):**
+1. **Triển khai `PyMuPDFChunkExtractor` trong [`apps/api/src/api/adapters/chunk_extractor.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/adapters/chunk_extractor.py):**
    - Thuật toán bóc tách phân đoạn dựa trên bố cục khối văn bản của PyMuPDF (`fitz` blocks):
      - Lọc bỏ Page Headers, Page Footers và số trang lẻ.
      - Phân mảnh văn bản tôn trọng ranh giới câu (Sentence Boundary Splitting theo Regex `(?<=[.!?])\s+`) để tránh ngắt giữa từ hoặc giữa câu.
@@ -162,7 +162,7 @@ graph TD
    ```
 
 ### 2.5 Driving Adapters & Schemas (`apps/api/src/api/`)
-1. **Pydantic Schemas trong [`apps/api/src/api/schemas/document.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/schemas/document.py):**
+1. **Pydantic Schemas trong [`apps/api/src/api/schemas/document.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/schemas/document.py):**
    ```python
    class DocumentChunkItem(BaseModel):
        """Single chunk item in paginated response."""
@@ -177,7 +177,7 @@ graph TD
        )
        token_count: int = Field(gt=0, description="Calculated token count")
    ```
-2. **Router Endpoint trong [`apps/api/src/api/v1/endpoints/documents.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py):**
+2. **Router Endpoint trong [`apps/api/src/api/v1/endpoints/documents.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py):**
    ```python
    @router.get(
        "/{document_id}/chunks",
@@ -255,14 +255,14 @@ Kiểm thử toàn diện các ca nghiệp vụ và biên:
      ]
      ```
 2. **Cập nhật tài liệu thiết kế eval:**
-   - Bổ sung mục cho API số 11 trong [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
+   - Bổ sung mục cho API số 11 trong [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
 
 ---
 
 ## 4. Rà Soát Biến Môi Trường & An Toàn Vận Hành
 
 ### 4.1 Biến môi trường (`.env.example`)
-- Rà soát tệp [`.env.example`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.env.example):
+- Rà soát tệp [`.env.example`](file:///home/VeriScholar/Workspace/VeriScholar/.env.example):
   - `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `POSTGRES_PORT`
   - `STORAGE_DIR` (lưu CAS blobs)
 - **Đánh giá:** TARGET này sử dụng thuật toán phân đoạn Layout-Aware cục bộ (PyMuPDF) và lưu trữ PostgreSQL, **KHÔNG YÊU CẦU thêm biến môi trường bí mật mới** trong giai đoạn này. (Khóa `OPENAI_API_KEY` chỉ dùng khi sinh vector dense embedding ở pha RAG nâng cao, không chặn luồng bóc tách layout và bounding boxes).

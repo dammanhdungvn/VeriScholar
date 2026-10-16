@@ -5,9 +5,9 @@
 * **Mã Phản Hồi:** `200 OK`
 * **Loại Endpoint:** Standard REST Collection Endpoint (List Resource)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 1.2: Chuẩn phản hồi phân trang và Mục 3.4: API Danh sách tài liệu)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các chỉ mục phân trang đa người dùng `idx_documents_user_created`)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy chuẩn HATEOAS và PaginatedResponseEnvelope)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 1.2: Chuẩn phản hồi phân trang và Mục 3.4: API Danh sách tài liệu)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các chỉ mục phân trang đa người dùng `idx_documents_user_created`)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy chuẩn HATEOAS và PaginatedResponseEnvelope)
 
 ---
 

@@ -230,9 +230,9 @@ core.adapters.storage   api.adapters.pdf_annotator <-- [Driven Adapters: PyMuPdf
 - Tích hợp để khi chạy `uv run python scripts/eval_api.py --all --ci-gate`, hệ thống sẽ kích hoạt toàn bộ 15 API của Module 1 và đánh giá Quality Gate 15/15 PASS.
 
 ### 6.4. Cập Nhật Tài Liệu Kèm Theo:
-- Bổ sung đặc tả endpoint 15 vào [`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md).
-- Bổ sung cấu trúc snapshot vào [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
-- Cập nhật hướng dẫn chạy lệnh trong [`scripts/README.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/README.md).
+- Bổ sung đặc tả endpoint 15 vào [`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md).
+- Bổ sung cấu trúc snapshot vào [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
+- Cập nhật hướng dẫn chạy lệnh trong [`scripts/README.md`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/README.md).
 
 ---
 

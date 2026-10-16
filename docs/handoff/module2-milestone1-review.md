@@ -1,8 +1,8 @@
 # BÁO CÁO ĐÁNH GIÁ & NGHIỆM THU ĐỘC LẬP: MILESTONE 1 MODULE 2
 **Lead Quality Reviewer Evaluation & Audit Report**  
 **Dự án:** VeriScholar | **Tiêu chuẩn:** PRD §3.2 & Chỉ đạo Kỹ thuật Điều phối viên  
-**Snapshot Commit Cơ Sở (origin/main):** [`fca342cd3f34129560d101b89a95d764561f264b`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar)  
-**Mã Nguồn Kiểm Tra Thực Tế:** Dirty working tree snapshot trên nền `fca342c` (chứa toàn bộ mã nguồn Module 2 đang phát triển dang dở, sau đó được gom nguyên trạng vào commit [`6156c91eef3550b07b3beba43fa0f4fe617da9fe`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar))  
+**Snapshot Commit Cơ Sở (origin/main):** [`fca342cd3f34129560d101b89a95d764561f264b`](file:///home/VeriScholar/Workspace/VeriScholar)  
+**Mã Nguồn Kiểm Tra Thực Tế:** Dirty working tree snapshot trên nền `fca342c` (chứa toàn bộ mã nguồn Module 2 đang phát triển dang dở, sau đó được gom nguyên trạng vào commit [`6156c91eef3550b07b3beba43fa0f4fe617da9fe`](file:///home/VeriScholar/Workspace/VeriScholar))  
 **Trạng Thái Đối Chiếu Sau Đóng Gói:** **`PENDING`** (cần xác minh độc lập lại trên máy chủ VPS mới)  
 **Mã Task:** `task_d04b33625636` | **Dispatch Context:** `ctx_bbf803c0c9d1`  
 **Terminal Reviewer:** `term_c3228535-a7c3-4ab2-8434-4e8052aa5f56` | **Coordinator:** `term_ecd5fad9-728e-49fa-9be9-63f9af44a20a`  
@@ -42,7 +42,7 @@ Hệ thống đánh giá độc lập phân tách minh bạch giữa **Logic ki�
   - Khi người dùng bấm **"Chấp nhận & Chèn"** cho một đề xuất đã được sinh ra trước đó, client gửi request `updateDraft` kèm `If-Match: "v1"`. Server so sánh thấy phiên bản khớp hoàn toàn và trả về **HTTP 200 OK**!
   
 #### Lỗ hổng Trôi lệch Vùng chọn (Offset Drift) & Mất mát Dữ liệu cục bộ:
-Trong [`WritingWorkspace.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingWorkspace.tsx#L212-L248):
+Trong [`WritingWorkspace.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingWorkspace.tsx#L212-L248):
 ```typescript
 const handleAcceptSuggestion = useCallback(
   async (suggestion: PendingSuggestion) => {
@@ -107,7 +107,7 @@ const handleAcceptSuggestion = useCallback(
 ### 2.2. Yêu cầu 2: Bóc tách NLI Test Adapter (Mock/Stub vs Real Inference)
 
 #### Phân định Bản chất Test Suite:
-Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/safe_nli_adapter.py) và bộ test [`test_safe_nli_adapter.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/tests/domain/test_safe_nli_adapter.py):
+Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/services/safe_nli_adapter.py) và bộ test [`test_safe_nli_adapter.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/tests/domain/test_safe_nli_adapter.py):
 
 1. **Thực tế mã nguồn trong `SafeNliEngineAdapter`:**
    - Thuộc tính `model_name` mặc định là `"cross-encoder/nli-deberta-v3-small"` và fallback `"MoritzLaurer/DeBERTa-v3-base-mnli-fever-anli"`.
@@ -143,15 +143,15 @@ Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`
    - Trạng thái: **`PENDING`** (chờ đóng gói weights ONNX/PyTorch vào repository/artifact storage).
    - Accuracy & Inference Latency SLA: **`NOT_MEASURED`**.
 4. **Hiển thị Bounding Box & PDF Preview:**
-   - Mã nguồn component [`WritingPreviewPane.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingPreviewPane.tsx) và [`SourceEvidenceModal.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/writing/components/SourceEvidenceModal.tsx) tuân thủ đúng tọa độ chuẩn hóa Top-Left `[0.0, 1.0]` và trang 1-indexed. Đã kiểm thử qua Vitest với Mock Blob URL.
+   - Mã nguồn component [`WritingPreviewPane.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingPreviewPane.tsx) và [`SourceEvidenceModal.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/writing/components/SourceEvidenceModal.tsx) tuân thủ đúng tọa độ chuẩn hóa Top-Left `[0.0, 1.0]` và trang 1-indexed. Đã kiểm thử qua Vitest với Mock Blob URL.
 
 ---
 
 ### 2.4. Yêu cầu 4: Bối Cảnh Snapshot Commit & Đối Chiếu Mã Nguồn Đóng Gói
 
-- **Commit Cơ sở tại thời điểm thẩm định:** [`fca342cd3f34129560d101b89a95d764561f264b`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar) (`[core/api/docs] feat: implement 3-tier AI Guardrails safety system and design documentation (#42)`).
+- **Commit Cơ sở tại thời điểm thẩm định:** [`fca342cd3f34129560d101b89a95d764561f264b`](file:///home/VeriScholar/Workspace/VeriScholar) (`[core/api/docs] feat: implement 3-tier AI Guardrails safety system and design documentation (#42)`).
 - **Đối tượng kiểm định thực tế:** Reviewer `gg16` thực hiện kiểm định độc lập trên **dirty working tree snapshot** (các thay đổi chưa commit của Backend và Frontend trên nền `fca342c`).
-- **Mã nguồn đóng gói (Packaged Commit):** Sau khi quá trình kiểm định độc lập hoàn tất và phát hiện các defect, Điều phối viên đã gom và đóng gói nguyên vẹn toàn bộ 155 tệp mã nguồn Module 2 này vào commit [`6156c91eef3550b07b3beba43fa0f4fe617da9fe`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar) (`[core/api/web] feat(m2-wip): implement Module 2 writing assistant, sandbox probe, safe NLI adapter, and assets`).
+- **Mã nguồn đóng gói (Packaged Commit):** Sau khi quá trình kiểm định độc lập hoàn tất và phát hiện các defect, Điều phối viên đã gom và đóng gói nguyên vẹn toàn bộ 155 tệp mã nguồn Module 2 này vào commit [`6156c91eef3550b07b3beba43fa0f4fe617da9fe`](file:///home/VeriScholar/Workspace/VeriScholar) (`[core/api/web] feat(m2-wip): implement Module 2 writing assistant, sandbox probe, safe NLI adapter, and assets`).
 - **Trạng thái đối chiếu sau đóng gói:** Vì Reviewer thực hiện đánh giá trước thời điểm commit `6156c91` được tạo ra, phạm vi mã nguồn được kiểm tra trùng khớp với nội dung commit `6156c91`, nhưng việc đối chiếu chéo sau đóng gói được ghi nhận là **`PENDING`** và bắt buộc phải được chạy xác minh lại trên máy chủ VPS mới. Tuyệt đối không tự ý gán nhãn PASS cho commit `6156c91` trước khi hoàn tất kiểm thử hồi quy trên VPS.
 
 ---
@@ -160,7 +160,7 @@ Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`
 
 ### DEFECT-01: Lỗ hổng Trôi lệch Vùng chọn khi Chấp nhận Đề xuất (OCC Local Drift) — TRẠNG THÁI: OPEN
 - **Mức độ nghiêm trọng:** `HIGH`
-- **Vị trí:** [`apps/web/src/features/writing/components/WritingWorkspace.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingWorkspace.tsx#L212-L257)
+- **Vị trí:** [`apps/web/src/features/writing/components/WritingWorkspace.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingWorkspace.tsx#L212-L257)
 - **Mô tả:** Header `If-Match: "v{version}"` chỉ chặn được xung đột khi phiên bản server đã tăng. Nếu người dùng gõ thêm ký tự cục bộ (`isDirty: true`) mà chưa lưu lên server, server vẫn chấp nhận phiên bản cũ với HTTP 200 OK. Đoạn code chèn chuỗi đề xuất dựa vào `cursor_start` cũ sẽ cắt đè hoặc chèn lệch vào phần nội dung người dùng vừa gõ mới.
 - **Biện pháp khắc phục kiến nghị:**
   1. Kiểm tra trạng thái `isDirty`: Nếu có thay đổi cục bộ chưa lưu, yêu cầu thực hiện rebase offset trước khi chèn, hoặc kích hoạt lưu tự động đồng bộ trước khi mở panel đề xuất.
@@ -168,7 +168,7 @@ Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`
 
 ### DEFECT-02: Thiếu Trọng số Mô hình NLI Thực tế & Inference Ngoại Tuyến Chưa Kiểm Chứng — TRẠNG THÁI: OPEN
 - **Mức độ nghiêm trọng:** `MEDIUM`
-- **Vị trí:** [`packages/core/src/core/services/safe_nli_adapter.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/safe_nli_adapter.py)
+- **Vị trí:** [`packages/core/src/core/services/safe_nli_adapter.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/services/safe_nli_adapter.py)
 - **Mô tả:** Lớp `SafeNliEngineAdapter` đã hoàn thành tầng hợp đồng Option A (3 nhãn `supported`, `contradicted`, `not_enough_info`, `premise=evidence`, `hypothesis=claim`) và bộ luật suy nghiệm heuristic regex. Tuy nhiên, việc **suy diễn thực tế bằng mô hình nơ-ron ngoại tuyến qua ONNX hoàn toàn chưa được kiểm chứng** do máy chủ chưa tải và đóng gói trọng số (`weights/`). Toàn bộ SLA và Accuracy/F1 thực tế là `NOT_MEASURED`.
 - **Biện pháp khắc phục kiến nghị:**
   1. Tải và đóng gói mô hình `nli-deberta-v3-small` dưới dạng mô hình ONNX lượng tử hóa (quantized ONNX model) trong thư mục `models/nli/` trên VPS.
@@ -176,7 +176,7 @@ Khi rà soát mã nguồn [`packages/core/src/core/services/safe_nli_adapter.py`
 
 ### DEFECT-03: Rào cản Hạ tầng Thực thi Sandbox Cục bộ — TRẠNG THÁI: BLOCKED (Hạ tầng)
 - **Mức độ nghiêm trọng:** `LOW` (Thiết kế đã Fail-Closed an toàn, nhưng chặn tính năng biên dịch cách ly)
-- **Vị trí:** Hệ điều hành máy chủ host / [`core.services.sandbox_probe`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/sandbox_probe.py)
+- **Vị trí:** Hệ điều hành máy chủ host / [`core.services.sandbox_probe`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/services/sandbox_probe.py)
 - **Mô tả:** Nhân Linux của môi trường kích hoạt `apparmor_restrict_unprivileged_userns=1` và không có quyền truy cập `/var/run/docker.sock`, khiến việc khởi tạo container biên dịch LaTeX an toàn bị chặn.
 
 ---

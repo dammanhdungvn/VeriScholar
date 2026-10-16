@@ -5,9 +5,9 @@
 * **Mã Phản Hồi:** `200 OK`
 * **Loại Endpoint:** Custom Action Method Endpoint (Promotion Resource)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.6: API Lưu bài báo vào thư viện cá nhân)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `is_persistent`, `folder_id`)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Quy tắc chuyển đổi từ Ephemeral sang Persistent Resource)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.6: API Lưu bài báo vào thư viện cá nhân)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Bảng `documents`, các trường `is_persistent`, `folder_id`)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Quy tắc chuyển đổi từ Ephemeral sang Persistent Resource)
   - Google Cloud API Design Guide (Custom Methods with `:` syntax)
 
 ---

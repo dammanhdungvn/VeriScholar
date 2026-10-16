@@ -45,7 +45,7 @@ flowchart TD
 
 ## 2. CẤU HÌNH HỆ THỐNG (.ENV)
 
-Tất cả cấu hình được quản lý qua `pydantic-settings` tại [`apps/api/src/api/core/config.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/core/config.py). Cấu hình mẫu an toàn (không chứa secret) nằm tại [`.env.example`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.env.example):
+Tất cả cấu hình được quản lý qua `pydantic-settings` tại [`apps/api/src/api/core/config.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/core/config.py). Cấu hình mẫu an toàn (không chứa secret) nằm tại [`.env.example`](file:///home/VeriScholar/Workspace/VeriScholar/.env.example):
 
 ```bash
 # ==============================================================================
@@ -80,7 +80,7 @@ LANGFUSE_ENVIRONMENT=development
 
 ## 3. CẤU TRÚC PHÂN CẤP SPANS (MODULE 1 TRACE HIERARCHY)
 
-Trong một request hỏi-đáp Socratic ([`POST /api/v1/sessions/{id}/messages`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/router.py)), trace được tạo thành cây phân cấp như sau:
+Trong một request hỏi-đáp Socratic ([`POST /api/v1/sessions/{id}/messages`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/v1/router.py)), trace được tạo thành cây phân cấp như sau:
 
 ```text
 Trace: session_chat_stream (Root)
@@ -103,7 +103,7 @@ Trace: session_chat_stream (Root)
 Để phục vụ quản trị, kiểm thử và theo dõi trace, dự án cung cấp 3 kênh tiếp cận:
 
 ### 4.1. Agent Skill (`langfuse`)
-Được cài đặt trực tiếp vào monorepo tại [`.agents/skills/langfuse/SKILL.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/langfuse/SKILL.md).
+Được cài đặt trực tiếp vào monorepo tại [`.agents/skills/langfuse/SKILL.md`](file:///home/VeriScholar/Workspace/VeriScholar/.agents/skills/langfuse/SKILL.md).
 - Tất cả các agent/worker có thể đọc trực tiếp hướng dẫn và tài liệu chính thức từ thư mục này.
 - Được kích hoạt tự động khi thực hiện các tác vụ liên quan đến observability, prompt management, hoặc evals.
 

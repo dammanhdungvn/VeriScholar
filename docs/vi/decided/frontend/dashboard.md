@@ -4,9 +4,9 @@
 > **Trạng thái:** Đã nghiệm thu và hoàn tất triển khai (Approved & Fully Implemented)  
 > **Git Branch:** `feat/fe-dashboard` (đã khởi tạo từ `feat/fe-auth`)  
 > **Vị trí lưu trữ tài liệu:** `docs/vi/decided/frontend/dashboard.md`  
-> **Mã nguồn tính năng mục tiêu:** [`apps/web/src/features/dashboard/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/)  
-> **Tài liệu tham chiếu:** [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [DESIGN.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/DESIGN.md), [design-api.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md), [swagger.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md), [auth.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/frontend/auth.md), [landing-page.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/decided/frontend/landing-page.md)  
-> **Mẫu tham khảo đối chiếu:** [`temp/dashboard/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/temp/dashboard/)
+> **Mã nguồn tính năng mục tiêu:** [`apps/web/src/features/dashboard/`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/dashboard/)  
+> **Tài liệu tham chiếu:** [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md), [DESIGN.md](file:///home/VeriScholar/Workspace/VeriScholar/DESIGN.md), [design-api.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md), [swagger.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md), [auth.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/frontend/auth.md), [landing-page.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/decided/frontend/landing-page.md)  
+> **Mẫu tham khảo đối chiếu:** [`temp/dashboard/`](file:///home/VeriScholar/Workspace/VeriScholar/temp/dashboard/)
 
 ---
 
@@ -413,5 +413,5 @@ apps/web/src/features/dashboard/
   - Thay thế bằng câu chào hỏi chuẩn mực, thân thiện và tinh tế:
     - Tiếng Anh: *"How can I help you today?"*
     - Bản dịch tiếng Việt tự nhiên: **"Tôi có thể giúp gì cho bạn hôm nay?"**
-  - Đồng bộ trên toàn bộ component và test suites ([`DashboardChatInputBox.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.tsx#L61), [`DashboardChatInputBox.test.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.test.tsx), [`DashboardPage.test.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.test.tsx)).
+  - Đồng bộ trên toàn bộ component và test suites ([`DashboardChatInputBox.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.tsx#L61), [`DashboardChatInputBox.test.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardChatInputBox.test.tsx), [`DashboardPage.test.tsx`](file:///home/VeriScholar/Workspace/VeriScholar/apps/web/src/features/dashboard/components/DashboardPage.test.tsx)).
 

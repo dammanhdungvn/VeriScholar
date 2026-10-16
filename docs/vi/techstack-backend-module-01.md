@@ -1,6 +1,6 @@
 # Lựa Chọn Công Nghệ Backend & Đánh Đổi Kỹ Thuật (Module 1 - Deep Read)
 
-Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi, đánh đổi kỹ thuật (Engineering Trade-offs) và thiết kế **Đường ống Dữ liệu Advanced RAG Toàn diện (End-to-End Advanced RAG Pipeline)** cho **Module 1: Đọc Sâu & Đối Thoại Kép Bài Báo Học Thuật** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) và [design-database.md](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md).
+Tài liệu này tổng hợp các quyết định lựa chọn công nghệ cốt lõi, đánh đổi kỹ thuật (Engineering Trade-offs) và thiết kế **Đường ống Dữ liệu Advanced RAG Toàn diện (End-to-End Advanced RAG Pipeline)** cho **Module 1: Đọc Sâu & Đối Thoại Kép Bài Báo Học Thuật** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md), [design-architecture.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) và [design-database.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md).
 
 ---
 
@@ -313,7 +313,7 @@ Nhằm bảo đảm chất lượng bóc tách và phân đoạn đạt chuẩn 
    - Mọi thay đổi về thuật toán chunking hoặc prompt bóc tách bắt buộc phải vượt qua ngưỡng điểm chuẩn (pass@k) trước khi được merge.
 
 ### 4.5. Đồng bộ Phiên bản Cơ sở Dữ liệu: PostgreSQL 18 + `pgvector 0.8.6`
-- **Thực tế hệ thống:** Toàn bộ hệ thống VeriScholar đã được nâng cấp đồng bộ lên **PostgreSQL 18** và `pgvector/pgvector:0.8.6-pg18` trên tất cả các tài liệu kỹ thuật ([`design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md), [`design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md), [`guide-docker.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/guide-docker.md)) và cấu hình hạ tầng thực tế ([`docker-compose.yml`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docker-compose.yml)).
+- **Thực tế hệ thống:** Toàn bộ hệ thống VeriScholar đã được nâng cấp đồng bộ lên **PostgreSQL 18** và `pgvector/pgvector:0.8.6-pg18` trên tất cả các tài liệu kỹ thuật ([`design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md), [`design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md), [`guide-docker.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-docker.md)) và cấu hình hạ tầng thực tế ([`docker-compose.yml`](file:///home/VeriScholar/Workspace/VeriScholar/docker-compose.yml)).
 - **Lợi thế kỹ thuật:** PostgreSQL 18 kết hợp `pgvector 0.8.6` mang lại hiệu năng tối ưu với chỉ mục HNSW cải tiến, hỗ trợ `vector_cosine_ops`, cấu hình `iterative_scan = 'relaxed'` và truy vấn song song (Parallel Query Execution) vượt trội, đáp ứng tải tìm kiếm vector đa người dùng trong môi trường sản xuất.
 
 ---
@@ -340,11 +340,11 @@ Nhờ chuyển đổi 100% tầng AI suy luận (LLM, Embedding, Reranker) sang 
 ## 6. TRẠNG THÁI NGHIỆM THU & ĐÓNG BĂNG THIẾT KẾ (DESIGN FREEZE STATUS)
 
 Tài liệu Lựa chọn Công nghệ Backend & Đánh đổi Kỹ thuật cho Module 1 đã đạt sự khớp nối hoàn chỉnh 100% với 5 trụ cột đặc tả của hệ thống:
-1. Bản yêu cầu nghiệp vụ học thuật: [`PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md).
-2. Bản đặc tả 59 REST API Endpoints chuẩn Google AIP-136: [`design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md).
-3. Bản lược đồ cơ sở dữ liệu quan hệ & vector: [`design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md).
-4. Bản thiết kế kiến trúc phân tán Monorepo lục giác: [`design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md).
-5. Đường ống Tích hợp Liên tục 7 Chốt chặn: [`guide-ci.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/guide-ci.md).
+1. Bản yêu cầu nghiệp vụ học thuật: [`PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md).
+2. Bản đặc tả 59 REST API Endpoints chuẩn Google AIP-136: [`design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md).
+3. Bản lược đồ cơ sở dữ liệu quan hệ & vector: [`design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md).
+4. Bản thiết kế kiến trúc phân tán Monorepo lục giác: [`design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md).
+5. Đường ống Tích hợp Liên tục 7 Chốt chặn: [`guide-ci.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-ci.md).
 
 **CHÍNH THỨC XÁC NHẬN: BẢN THIẾT KẾ ĐÃ ĐƯỢC ĐÓNG BĂNG (PRODUCTION-READY & FREEZE). DỰ ÁN ĐÃ SẴN SÀNG ĐỂ TIẾN HÀNH KHỞI TẠO VÀ TRIỂN KHAI MÃ NGUỒN CHO MODULE 1.**
 

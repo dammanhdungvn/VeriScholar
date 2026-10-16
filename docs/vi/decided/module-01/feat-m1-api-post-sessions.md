@@ -76,14 +76,14 @@ Kế thừa tinh hoa từ các giải pháp trên, VeriScholar đưa ra thiết 
 
 ### 2.1. Những Thành Phần ĐÃ CÓ Trong Codebase:
 1. **Model ORM Cơ Bản:**
-   - Trong [`apps/api/src/api/db/models/session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) đã có khai báo sơ khởi `ResearchSessionModel` và `SessionDocumentModel`.
+   - Trong [`apps/api/src/api/db/models/session.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) đã có khai báo sơ khởi `ResearchSessionModel` và `SessionDocumentModel`.
    - Bảng liên kết `session_documents` đã có khai báo `session_id`, `document_id`, `added_at`.
 2. **Domain Entity SessionTurn:**
-   - [`packages/core/src/core/domain/entities/session_turn.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/session_turn.py) đã được định nghĩa độc lập không dính I/O.
+   - [`packages/core/src/core/domain/entities/session_turn.py`](file:///home/VeriScholar/Workspace/VeriScholar/packages/core/src/core/domain/entities/session_turn.py) đã được định nghĩa độc lập không dính I/O.
 3. **Cơ Chế Phân Quyền & Multi-Tenant:**
-   - Dependency `get_current_user` trong [`apps/api/src/api/deps.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/deps.py) đã sẵn sàng trích xuất `UserModel` an toàn.
+   - Dependency `get_current_user` trong [`apps/api/src/api/deps.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/deps.py) đã sẵn sàng trích xuất `UserModel` an toàn.
 4. **Hạ Tầng API Response Envelope:**
-   - [`SingleResponseEnvelope`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/schemas/envelope.py) đã chuẩn hóa cấu trúc phản hồi `{success, data, meta}`.
+   - [`SingleResponseEnvelope`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/schemas/envelope.py) đã chuẩn hóa cấu trúc phản hồi `{success, data, meta}`.
 
 ### 2.2. Những Thành Phần CHƯA CÓ (Cần Xây Dựng):
 1. **Thiếu Trường DDL Trong Model ORM (`ResearchSessionModel` & `SessionDocumentModel`):**
@@ -128,7 +128,7 @@ Kế thừa tinh hoa từ các giải pháp trên, VeriScholar đưa ra thiết 
 ## 4. Thiết Kế Kiến Trúc Lục Giác Chi Tiết (Hexagonal Architecture Breakdown)
 
 ### 4.1. Tầng Database & Persistence (DDL & ORM Models)
-Cập nhật tệp [`apps/api/src/api/db/models/session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) để đồng bộ 100% với đặc tả [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md):
+Cập nhật tệp [`apps/api/src/api/db/models/session.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) để đồng bộ 100% với đặc tả [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md):
 
 ```python
 class ResearchSessionModel(IdentifiableTimestampedModel):
@@ -325,13 +325,13 @@ Xây dựng runner độc lập kế thừa `BaseAPIRunner`:
 - **Dọn dẹp sạch sẽ (Zero-Retention):** Xóa phiên và tài liệu thử nghiệm ngay sau khi chạy xong.
 
 ### 6.3. Tích Hợp Test Runner Tổng Hệ Thống (`scripts/eval_api.py`)
-- Khai báo runner mới trong [`scripts/eval/runners/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/eval/runners/__init__.py) với alias `create-session`.
+- Khai báo runner mới trong [`scripts/eval/runners/__init__.py`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/eval/runners/__init__.py) với alias `create-session`.
 - Thêm vào danh mục thực thi của Module 1 để khi chạy `uv run python scripts/eval_api.py --all --ci-gate`, hệ thống tự động kiểm thử liên hoàn toàn bộ API mà không cần can thiệp thủ công.
 
 ### 6.4. Cập Nhật Tài Liệu Kèm Theo
-- **Swagger Documentation:** Bổ sung đặc tả Endpoint #45 vào [`docs/vi/swagger.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/swagger.md) với schema Request, Response, Headers và Status Codes.
-- **Snapshot Specification:** Bổ sung cấu trúc dữ liệu kiểm chuẩn của `POST /api/v1/sessions` vào [`docs/vi/design-api-eval-snapshots.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
-- **Hướng Dẫn Vận Hành:** Cập nhật mục hướng dẫn chạy lệnh trong [`scripts/README.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/README.md).
+- **Swagger Documentation:** Bổ sung đặc tả Endpoint #45 vào [`docs/vi/swagger.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/swagger.md) với schema Request, Response, Headers và Status Codes.
+- **Snapshot Specification:** Bổ sung cấu trúc dữ liệu kiểm chuẩn của `POST /api/v1/sessions` vào [`docs/vi/design-api-eval-snapshots.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api-eval-snapshots.md).
+- **Hướng Dẫn Vận Hành:** Cập nhật mục hướng dẫn chạy lệnh trong [`scripts/README.md`](file:///home/VeriScholar/Workspace/VeriScholar/scripts/README.md).
 
 ---
 

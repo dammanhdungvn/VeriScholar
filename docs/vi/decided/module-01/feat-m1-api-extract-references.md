@@ -5,12 +5,12 @@
 * **Mã Phản Hồi:** `200 OK`
 * **Loại Endpoint:** Custom Action Method Endpoint (Google AIP-136 Standard)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.9: `POST /api/v1/documents/{id}:extract-references`)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.6: Bảng `reference_items` và các chỉ mục DDL)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 3.1 & 3.3: Khai thác trích dẫn & Hexagonal Architecture)
-  - [`docs/vi/PRD.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/PRD.md) (Module 1 & Module 3: Khai thác tài liệu tham khảo và đồ thị tri thức)
-  - [`.agents/skills/regex-vs-llm-structured-text/SKILL.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/regex-vs-llm-structured-text/SKILL.md) (Kiến trúc phân tích cú pháp kết hợp Regex Fast-Path)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy chuẩn code sạch, kiểm thử độc lập và quản lý tiến trình)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.9: `POST /api/v1/documents/{id}:extract-references`)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Mục 3.6: Bảng `reference_items` và các chỉ mục DDL)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 3.1 & 3.3: Khai thác trích dẫn & Hexagonal Architecture)
+  - [`docs/vi/PRD.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) (Module 1 & Module 3: Khai thác tài liệu tham khảo và đồ thị tri thức)
+  - [`.agents/skills/regex-vs-llm-structured-text/SKILL.md`](file:///home/VeriScholar/Workspace/VeriScholar/.agents/skills/regex-vs-llm-structured-text/SKILL.md) (Kiến trúc phân tích cú pháp kết hợp Regex Fast-Path)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy chuẩn code sạch, kiểm thử độc lập và quản lý tiến trình)
 
 ---
 
@@ -170,7 +170,7 @@ Theo đúng đặc tả trong `docs/vi/design-api.md` Mục 3.9:
      - `test_extract_references_invalid_uuid`: Trả về `400` khi UUID sai định dạng.
      - `test_openapi_schema_contains_extract_references_endpoint`: Kiểm tra OpenAPI / Swagger schema phản ánh chính xác endpoint.
 2. **Điều kiện 2 (Master Autotest Runner Toàn Bộ API):**
-   - Cập nhật file [`apps/api/tests/run_all_api_tests.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/tests/run_all_api_tests.py):
+   - Cập nhật file [`apps/api/tests/run_all_api_tests.py`](file:///home/VeriScholar/Workspace/VeriScholar/apps/api/tests/run_all_api_tests.py):
      - Đăng ký file `test_documents_extract_references.py` vào danh sách `TEST_MODULES`.
      - Chạy lệnh duy nhất `uv run python apps/api/tests/run_all_api_tests.py` để thực thi toàn bộ 10 bộ test của tất cả các endpoint Module 1 (đạt trên 100 tests pass đồng loạt).
 

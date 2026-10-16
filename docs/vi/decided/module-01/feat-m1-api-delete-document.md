@@ -5,10 +5,10 @@
 * **Mã Phản Hồi:** `204 No Content`
 * **Loại Endpoint:** Standard REST Entity Deletion Endpoint (Resource Lifecycle)
 * **Tài Liệu Tham Chiếu:**
-  - [`docs/vi/design-api.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.7: API Xóa bài báo theo đồ thị phụ thuộc)
-  - [`docs/vi/design-database.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-database.md) (Ràng buộc `ON DELETE CASCADE` trên bảng `chunks`, `embeddings`, `session_documents`)
-  - [`docs/vi/design-architecture.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 5: Cam kết Zero-Retention Guarantee & Thu hồi lưu trữ CAS)
-  - [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Quy tắc Zero-Retention và quản trị rò rỉ dữ liệu)
+  - [`docs/vi/design-api.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md) (Mục 3.7: API Xóa bài báo theo đồ thị phụ thuộc)
+  - [`docs/vi/design-database.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md) (Ràng buộc `ON DELETE CASCADE` trên bảng `chunks`, `embeddings`, `session_documents`)
+  - [`docs/vi/design-architecture.md`](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md) (Mục 5: Cam kết Zero-Retention Guarantee & Thu hồi lưu trữ CAS)
+  - [`AGENTS.md`](file:///home/VeriScholar/Workspace/VeriScholar/AGENTS.md) (Quy tắc Zero-Retention và quản trị rò rỉ dữ liệu)
 
 ---
 
