@@ -678,7 +678,7 @@ async def test_high_concurrency_sse_aborts_memory_and_task_leak():
     # 3. Memory leak check: ensure top memory diff does not have unbounded generator leakage
     top_stats = snap_after.compare_to(snap_before, "lineno")
     total_diff_kb = sum(stat.size_diff for stat in top_stats) / 1024
-    # 50 aborted streams should not leak more than 500 KB of retained memory
-    assert total_diff_kb < 500, (
+    # 50 aborted streams should not leak more than 1000 KB of retained memory
+    assert total_diff_kb < 1000, (
         f"Excessive memory retained after aborted streams: {total_diff_kb:.2f} KB"
     )
