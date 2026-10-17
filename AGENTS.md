@@ -61,6 +61,17 @@ Behavioral guidelines, architectural laws, clean code standards, and workflow in
   - Phải ủy quyền công việc qua cơ chế điều phối runtime chuẩn (`herdr agent prompt <target> ...` hoặc `invoke_subagent`).
   - Phải chờ kết quả phản hồi từ đồng đội AI, kiểm tra chéo và đối chiếu bằng chứng khách quan trước khi xác nhận hoàn thành cho User / Product Owner.
 
+### 1.6. Runtime Introspection Invariant (Cấm Đoán Mò Hiện Trạng Hoạt Động)
+**Mọi AI Agent không được phép dừng lại ở việc đọc code tĩnh mà phải truy cập sâu vào trạng thái thực thi runtime.**
+- **Cấm suy diễn tĩnh:** Tuyệt đối không phỏng đoán ứng dụng có chạy hay không, CSDL có dữ liệu hay không, hoặc vì sao CI thất bại.
+- **Sử dụng MCP Server `verischolar-runtime` & `github`:**
+  - Kiểm tra trạng thái dịch vụ sống: `check_services_health()` hoặc `systemctl is-active verischolar-api.service`.
+  - Thăm dò endpoint thực tế: `probe_api("/health")` hoặc `curl -s http://127.0.0.1:8000/health`.
+  - Khảo sát dữ liệu sống: `query_database_readonly("summary")` hoặc câu lệnh `SELECT count(*)`.
+  - Đọc nhật ký thời gian thực: `read_service_logs("api", 50)` hoặc `journalctl -u verischolar-api -n 50 --no-pager`.
+  - Kiểm tra lỗi CI/CD tự động: `inspect_github_ci_status(pr_number)` hoặc `gh run view <id> --log-failed` để đọc trực tiếp stack trace của bước bị fail trên GitHub Actions.
+- **Kích hoạt Kỹ năng:** Tham khảo chi tiết tại `.agents/skills/runtime-diagnostics/SKILL.md`.
+
 ---
 
 ## 2. DEV ENVIRONMENT TIPS
