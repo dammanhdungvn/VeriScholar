@@ -277,14 +277,17 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
         pr_number: PR number (e.g. 44) or 0 to list latest repository workflow runs.
         failed_only: if True, retrieves error traces for failed CI jobs.
     """
+    repo = "dammanhdungvn/VeriScholar"
+    cwd = "/home/VeriScholar/Workspace/VeriScholar"
     try:
         if pr_number > 0:
             # 1. Fetch PR checks summary
             pr_cmd = subprocess.run(
-                ["gh", "pr", "view", str(pr_number), "--json", "title,state,statusCheckRollup,url"],
+                ["gh", "pr", "view", str(pr_number), "--repo", repo, "--json", "title,state,statusCheckRollup,url"],
                 capture_output=True,
                 text=True,
                 timeout=10,
+                cwd=cwd,
             )
             if pr_cmd.returncode != 0:
                 return json.dumps({"error": pr_cmd.stderr.strip()})
@@ -294,10 +297,11 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
 
         # 2. List recent runs
         runs_cmd = subprocess.run(
-            ["gh", "run", "list", "-L", "5", "--json", "databaseId,name,status,conclusion,event,headBranch,url"],
+            ["gh", "run", "list", "-L", "5", "--repo", repo, "--json", "databaseId,name,status,conclusion,event,headBranch,url"],
             capture_output=True,
             text=True,
             timeout=10,
+            cwd=cwd,
         )
         if runs_cmd.returncode != 0:
             return json.dumps({"error": runs_cmd.stderr.strip()})
@@ -309,10 +313,11 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
             if failed_run:
                 run_id = str(failed_run["databaseId"])
                 log_cmd = subprocess.run(
-                    ["gh", "run", "view", run_id, "--log-failed"],
+                    ["gh", "run", "view", run_id, "--repo", repo, "--log-failed"],
                     capture_output=True,
                     text=True,
                     timeout=15,
+                    cwd=cwd,
                 )
                 failed_run["failed_log_snippet"] = log_cmd.stdout[-2500:] if log_cmd.stdout else "No failed log text returned."
 
