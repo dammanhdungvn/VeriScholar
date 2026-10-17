@@ -305,3 +305,40 @@ Mỗi lệnh giao việc cho tác tử khác (`herdr agent prompt <target> "..."
 2. **Bằng chứng khách quan bắt buộc:**
    - Báo cáo hoàn thành chỉ được chấp thuận khi đi kèm log kiểm thử thực tế (100% tests passed, 0 linter warnings, 0 type errors).
    - Nếu phát hiện vi phạm kiến trúc, linter hoặc thiếu test, Reviewer phải từ chối nghiệm thu và yêu cầu tác tử phụ trách khắc phục triệt để.
+
+---
+
+## 11. MONOREPO ENVIRONMENT VARIABLES & SECRETS ARCHITECTURE (QUY CHUẨN QUẢN TRỊ FILE .ENV)
+
+Nhằm triệt tiêu vĩnh viễn sự nhầm lẫn giữa các file `.env` và ngăn chặn tình trạng cấu hình bị phân mảnh (Configuration Drift) giữa các AI agents trong quá trình phát triển, toàn bộ dự án tuân thủ nghiêm ngặt các thiết chế kiến trúc sau:
+
+### 11.1. Bản Đồ Phân Định Vị Trí & Trách Nhiệm (Directory & Ownership Map)
+1. **Monorepo Root Master `.env` (`/home/VeriScholar/Workspace/VeriScholar/.env`):**
+   - **Trách nhiệm:** Lưu trữ **TOÀN BỘ** bí mật hệ thống (Secrets), cấu hình kết nối CSDL PostgreSQL/pgvector, API Keys nhà cung cấp AI (OpenAI, Cohere, Azure Document Intelligence, Exa, Langfuse), cấu hình máy chủ Uvicorn (`HOST`, `PORT`, `DEBUG`), tham số Logging, JWT Token Secrets, SMTP Mailer, và Dynamic DNS (`DUCKDNS_DOMAIN`, `DUCKDNS_TOKEN`).
+   - **Thẩm quyền:** Là **Single Source of Truth vật lý DUY NHẤT** cho toàn bộ Backend (`apps/api`), Workers (`arq`), Scripts (`scripts/eval`, `scripts/benchmark`), DevOps (`docker-compose`), và Systemd Service (`verischolar-api.service`).
+2. **Backend Symlink (`apps/api/.env`):**
+   - **Trách nhiệm:** Đóng vai trò cầu nối tương thích cho các công cụ chạy trực tiếp bên trong thư mục `apps/api`.
+   - **Cơ chế:** Bắt buộc phải là một **Relative Symlink** trỏ về root: `apps/api/.env -> ../../.env`.
+   - **Nghiêm cấm:** Tuyệt đối **CẤM** xóa symlink để tạo file vật lý riêng tại `apps/api/.env`. Mọi thao tác ghi vào `apps/api/.env` bản chất là ghi trực tiếp vào root `.env`.
+3. **Frontend Client Config (`apps/web/.env`):**
+   - **Trách nhiệm:** Chỉ phục vụ tiến trình build và runtime của trình duyệt web (Vite/React).
+   - **Phạm vi biến:** **CHỈ CHỨA** các biến công khai có tiền tố `VITE_*` (ví dụ: `VITE_API_BASE_URL`, `VITE_API_PREFIX`, `VITE_APP_TITLE`, `VITE_MAX_UPLOAD_SIZE_BYTES`).
+   - **Cô lập an ninh (Security Boundary):** Tuyệt đối **CẤM** đưa bất kỳ bí mật máy chủ nào (`DATABASE_URL`, API Keys, JWT Secret, Token) vào `apps/web/.env` vì Vite sẽ đóng gói công khai vào file JavaScript tĩnh tải về máy người dùng.
+
+### 11.2. Bốn Bất Biến Kiến Trúc (Architectural Invariants)
+- **Invariant 1 — Zero-Drift Single Source of Truth:**
+  Khi cần thêm, sửa hoặc xóa bất kỳ biến môi trường nào cho CSDL, AI Models, Logging hoặc Third-party APIs, AI Agent **CHỈ ĐƯỢC PHÉP** chỉnh sửa file `/home/VeriScholar/Workspace/VeriScholar/.env`. Không được tạo file phụ trùng lặp.
+- **Invariant 2 — Symlink Preservation Invariant:**
+  Trước khi hoàn thành nhiệm vụ, AI Agent / Reviewer phải xác nhận `apps/api/.env` vẫn là symlink (`ls -l apps/api/.env` hiển thị `-> ../../.env`). Nếu symlink bị gãy hoặc bị thay thế bằng file vật lý, phải khôi phục ngay: `cd apps/api && ln -sf ../../.env .env`.
+- **Invariant 3 — Frontend Secret Isolation Invariant:**
+  Không bao giờ gộp cấu hình backend vào `apps/web/.env`. Mọi biến trong `apps/web/.env` phải bắt đầu bằng `VITE_`.
+- **Invariant 4 — Service Synchronicity Invariant:**
+  File dịch vụ systemd `/etc/systemd/system/verischolar-api.service` luôn trỏ trực tiếp đến `EnvironmentFile=/home/VeriScholar/Workspace/VeriScholar/.env`. Khi cập nhật biến môi trường cốt lõi, Agent phải thực hiện `sudo systemctl restart verischolar-api` để nạp cấu hình mới.
+
+### 11.3. Bảng Kiểm Tra Nhanh Dành Cho AI Agent (Pre-Commit Environment Checklist)
+- [ ] Biến môi trường mới của backend đã được thêm vào root `/home/VeriScholar/Workspace/VeriScholar/.env`?
+- [ ] Đã thêm biến mẫu tương ứng (ẩn key thật) vào `.env.example` để chia sẻ cho team?
+- [ ] File `apps/api/.env` vẫn giữ nguyên trạng thái relative symlink (`apps/api/.env -> ../../.env`)?
+- [ ] Không có API Key hoặc Secret nào bị rò rỉ vào `apps/web/.env` hoặc git commit?
+- [ ] Service `verischolar-api` đã được restart và phản hồi `200 OK` tại `/health`?
+

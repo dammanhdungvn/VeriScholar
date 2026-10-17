@@ -29,9 +29,9 @@ describe("WritingHeaderBar", () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText("Quantum Transformer Paper")).toBeDefined();
-    expect(screen.getByText("v4")).toBeDefined();
-    expect(screen.getByText("Đã lưu")).toBeDefined();
+    expect(screen.getByText("Quantum Transformer Paper")).toBeInTheDocument();
+    expect(screen.getByText("v4")).toBeInTheDocument();
+    expect(screen.getByText("Đã lưu")).toBeInTheDocument();
   });
 
   it("triggers layout mode switch when clicking mode button", () => {
@@ -165,5 +165,55 @@ describe("WritingHeaderBar", () => {
     const commentsBtn = screen.getByTestId("header-comments-btn");
     fireEvent.click(commentsBtn);
     expect(useWritingStore.getState().isCommentsPaneOpen).toBe(true);
+  });
+
+  it("disables Overleaf sync button and displays spinning loader during sync (isSyncingOverleaf=true)", () => {
+    const onSyncOverleaf = vi.fn();
+
+    const { container } = render(
+      <BrowserRouter>
+        <WritingHeaderBar
+          onSyncOverleaf={onSyncOverleaf}
+          isSyncingOverleaf={true}
+        />
+      </BrowserRouter>
+    );
+
+    const overleafBtn = screen.getByTestId("header-overleaf-btn");
+    expect(overleafBtn).toBeInTheDocument();
+    expect(overleafBtn).toBeDisabled();
+
+    // Check spinning loader icon
+    const spinner = container.querySelector(".animate-spin");
+    expect(spinner).toBeInTheDocument();
+
+    // Attempt clicking disabled button - should not trigger callback
+    fireEvent.click(overleafBtn);
+    expect(onSyncOverleaf).not.toHaveBeenCalled();
+  });
+
+  it("enables Overleaf sync button and triggers callback on click when idle (isSyncingOverleaf=false)", () => {
+    const onSyncOverleaf = vi.fn();
+
+    const { container } = render(
+      <BrowserRouter>
+        <WritingHeaderBar
+          onSyncOverleaf={onSyncOverleaf}
+          isSyncingOverleaf={false}
+        />
+      </BrowserRouter>
+    );
+
+    const overleafBtn = screen.getByTestId("header-overleaf-btn");
+    expect(overleafBtn).toBeInTheDocument();
+    expect(overleafBtn).not.toBeDisabled();
+
+    // No spinner when not syncing
+    const spinner = container.querySelector(".animate-spin");
+    expect(spinner).not.toBeInTheDocument();
+
+    // Click triggers onSyncOverleaf
+    fireEvent.click(overleafBtn);
+    expect(onSyncOverleaf).toHaveBeenCalledTimes(1);
   });
 });

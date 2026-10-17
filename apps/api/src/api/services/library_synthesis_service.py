@@ -4,6 +4,8 @@ and Sufficiency Gate (Module 4).
 
 from __future__ import annotations
 
+import hashlib
+from contextlib import nullcontext
 from datetime import UTC, datetime
 from typing import Any, Literal
 from uuid import UUID, uuid4
@@ -19,6 +21,7 @@ from api.schemas.folder import (
     SufficiencyGateSchema,
 )
 from api.services.ai_tracing_service import AITracingService
+from core.ports.idempotency import IIdempotencyPort
 from fastapi import HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,9 +34,15 @@ class LibrarySynthesisService:
     and Sufficiency Gate across multi-document library collections.
     """
 
-    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        ai_tracing: AITracingService | None = None,
+        cache: IIdempotencyPort | None = None,
+    ) -> None:
         self.db = db
         self.ai_tracing = ai_tracing
+        self.cache = cache
 
     async def generate_comparison_matrix(
         self,
@@ -46,68 +55,130 @@ class LibrarySynthesisService:
         offset: int = 0,
     ) -> ComparisonMatrixResponseData:
         """Generate automated cross-paper literature comparison matrix across 5-100+ papers."""
-        # 1. Resolve target documents
-        docs = await self._resolve_documents(user_id, folder_id, document_ids)
-        if not docs:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=(
-                    "Không tìm thấy tài liệu nào trong thư viện/thư mục được chọn "
-                    "để tạo ma trận so sánh."
-                ),
-            )
-
         matrix_id = uuid4()
-        all_rows: list[ComparisonMatrixRowSchema] = []
 
-        # 2. Extract comparison data for each document in parallel
-        for doc in docs:
-            # Analyze metadata and content
-            meta = doc.parsed_metadata or {}
-            authors = doc.authors or ["Unknown Authors"]
-            year = doc.publication_year or (
-                meta.get("year") if isinstance(meta.get("year"), int) else None
+        trace_ctx = (
+            self.ai_tracing.trace(
+                name="comparison_matrix",
+                user_id=user_id,
+                metadata={
+                    "topic": topic,
+                    "folder_id": str(folder_id) if folder_id else None,
+                    "requested_docs": len(document_ids) if document_ids else 0,
+                    "search": search,
+                },
+                input={"topic": topic, "search": search, "limit": limit, "offset": offset},
+                tags=["matrix", "synthesis"],
             )
+            if self.ai_tracing
+            else nullcontext()
+        )
 
-            # Heuristic/analytical extraction from parsed metadata & title
-            methodology = meta.get("methodology") or (
-                "Deep Attention Neural Architecture & Self-Attention Encoders"
-                if "attention" in (doc.title or "").lower()
-                or "transformer" in (doc.title or "").lower()
-                else "Empirical Evidence & Observational Cohort Analysis"
-            )
-            datasets = meta.get("datasets") or (
-                ["PubMedQA", "BioASQ", "SciFact"]
-                if "vaccine" in (doc.title or "").lower() or "biology" in (doc.title or "").lower()
-                else ["WMT-14", "GLUE", "ImageNet-1K"]
-            )
-            key_metrics = meta.get("metrics") or {
-                "F1-Score": "94.2%",
-                "Accuracy": "96.5%",
-                "Latency": "12.4ms",
-            }
-            strengths = meta.get("strengths") or [
-                "Scalable architectural efficiency",
-                "Robust statistical grounding on large-scale benchmarks",
-            ]
-            limitations = meta.get("limitations") or [
-                "Quadratic memory complexity under ultra-long sequences",
-                "Evaluation restricted to supervised benchmark splits",
-            ]
+        with trace_ctx as trace_span:
+            # Compute Redis cache key for extracted comparison matrix rows
+            folder_tag = str(folder_id) if folder_id else "global"
+            doc_ids_tag = ",".join(sorted(str(d) for d in document_ids)) if document_ids else ""
+            hash_seed = f"{topic.strip().lower()}:{doc_ids_tag}"
+            matrix_hash = hashlib.sha256(hash_seed.encode("utf-8")).hexdigest()[:16]
+            cache_key = f"matrix:cache:{user_id}:{folder_tag}:{matrix_hash}"
 
-            all_rows.append(
-                ComparisonMatrixRowSchema(
-                    document_id=doc.id,
-                    title=doc.title or doc.filename,
-                    authors=authors,
-                    year=year,
-                    core_methodology=methodology,
-                    datasets_used=datasets,
-                    key_metrics=key_metrics,
-                    strengths=strengths,
-                    limitations=limitations,
+            all_rows: list[ComparisonMatrixRowSchema] = []
+
+        # Return cached rows on pagination and search requests without reparsing raw documents
+        if self.cache is not None:
+            cached_data = await self.cache.get_response(cache_key)
+            if cached_data and "rows" in cached_data:
+                try:
+                    all_rows = [
+                        ComparisonMatrixRowSchema.model_validate(r) for r in cached_data["rows"]
+                    ]
+                    logger.info(
+                        "comparison_matrix_cache_hit",
+                        cache_key=cache_key,
+                        rows_count=len(all_rows),
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "comparison_matrix_cache_deserialize_error",
+                        error=str(exc),
+                    )
+                    all_rows = []
+
+        if not all_rows:
+            # 1. Resolve target documents
+            docs = await self._resolve_documents(user_id, folder_id, document_ids)
+            if not docs:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=(
+                        "Không tìm thấy tài liệu nào trong thư viện/thư mục được chọn "
+                        "để tạo ma trận so sánh."
+                    ),
                 )
-            )
+
+            # 2. Extract comparison data for each document in parallel
+            for doc in docs:
+                # Analyze metadata and content
+                meta = doc.parsed_metadata or {}
+                authors = doc.authors or ["Unknown Authors"]
+                year = doc.publication_year or (
+                    meta.get("year") if isinstance(meta.get("year"), int) else None
+                )
+
+                # Heuristic/analytical extraction from parsed metadata & title
+                methodology = meta.get("methodology") or (
+                    "Deep Attention Neural Architecture & Self-Attention Encoders"
+                    if "attention" in (doc.title or "").lower()
+                    or "transformer" in (doc.title or "").lower()
+                    else "Empirical Evidence & Observational Cohort Analysis"
+                )
+                datasets = meta.get("datasets") or (
+                    ["PubMedQA", "BioASQ", "SciFact"]
+                    if (
+                        "vaccine" in (doc.title or "").lower()
+                        or "biology" in (doc.title or "").lower()
+                    )
+                    else ["WMT-14", "GLUE", "ImageNet-1K"]
+                )
+                key_metrics = meta.get("metrics") or {
+                    "F1-Score": "94.2%",
+                    "Accuracy": "96.5%",
+                    "Latency": "12.4ms",
+                }
+                strengths = meta.get("strengths") or [
+                    "Scalable architectural efficiency",
+                    "Robust statistical grounding on large-scale benchmarks",
+                ]
+                limitations = meta.get("limitations") or [
+                    "Quadratic memory complexity under ultra-long sequences",
+                    "Evaluation restricted to supervised benchmark splits",
+                ]
+
+                all_rows.append(
+                    ComparisonMatrixRowSchema(
+                        document_id=doc.id,
+                        title=doc.title or doc.filename,
+                        authors=authors,
+                        year=year,
+                        core_methodology=methodology,
+                        datasets_used=datasets,
+                        key_metrics=key_metrics,
+                        strengths=strengths,
+                        limitations=limitations,
+                    )
+                )
+
+            # Store extracted rows in Redis cache with TTL=3600s
+            if self.cache is not None:
+                try:
+                    await self.cache.store_response(
+                        key=cache_key,
+                        response_data={"rows": [r.model_dump(mode="json") for r in all_rows]},
+                        status_code=200,
+                        ttl_seconds=3600,
+                    )
+                except Exception as exc:
+                    logger.warning("comparison_matrix_cache_store_error", error=str(exc))
 
         # 3. Filter by search if provided
         filtered_rows = all_rows
@@ -192,6 +263,19 @@ class LibrarySynthesisService:
             f"là khả năng tối ưu hóa tài nguyên phần cứng, trong khi giới hạn cốt lõi vẫn "
             f"nằm ở sự phụ thuộc vào dữ liệu gán nhãn chất lượng cao."
         )
+
+        if hasattr(trace_span, "set_output"):
+            trace_span.set_output(
+                {
+                    "documents_compared": doc_count,
+                    "total_count": total_count,
+                    "sufficiency_score": sufficiency.sufficiency_score,
+                    "is_sufficient": sufficiency.is_sufficient,
+                    "summary_preview": summary[:150],
+                }
+            )
+            trace_span.score(name="sufficiency_score", value=sufficiency.sufficiency_score)
+            trace_span.score(name="documents_analyzed", value=float(doc_count))
 
         return ComparisonMatrixResponseData(
             matrix_id=matrix_id,

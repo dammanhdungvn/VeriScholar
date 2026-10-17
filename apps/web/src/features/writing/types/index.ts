@@ -222,6 +222,30 @@ export interface OverleafExportResponse {
   draft_id?: string;
 }
 
+export interface AssociativeSuggestionItem {
+  note_id: string;
+  document_id?: string | null;
+  document_title: string;
+  paper_title: string;
+  folder_name?: string | null;
+  page_number: number;
+  selected_text: string;
+  user_note?: string | null;
+  note_content?: string;
+  similarity_score: number;
+  suggested_citation: string;
+  reason: string;
+  relevance_explanation: string;
+  matched_keywords?: string[];
+}
+
+export interface AssociativeSuggestionsResponse {
+  draft_id: string;
+  query_excerpt?: string;
+  total_found: number;
+  suggestions: AssociativeSuggestionItem[];
+}
+
 export interface AssociativeMemorySuggestion {
   id: string;
   title: string;

@@ -1,26 +1,39 @@
-## 2026-10-15T02:48:42Z
-You are reviewer_1_m1.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1
-Read the original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read Worker M1 handoff: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
+# Dispatch — Reviewer 1 (Milestone 1)
 
-YOUR MISSION:
-Review the changes made by worker_m1 for Milestone 1 (SSE Streaming & X-Request-ID Header Standardization).
-Examine:
-- `apps/api/src/api/middleware/tracing.py`
-- `apps/api/src/api/__init__.py`
-- `apps/api/src/api/v1/endpoints/documents.py` & `apps/api/src/api/services/document_service.py`
-- `apps/api/src/api/v1/endpoints/sessions.py` & `apps/api/src/api/services/session_chat_service.py`
-- `apps/api/tests/test_logging.py`, `test_documents_summary_generate.py`, `test_sessions_chat.py`, `test_golden_papers_matrix.py`
+Scope: Code review of Milestone 1 (M1_WRITING_AND_SYNTHESIS: Pillars 2, 3, 4).
+Files to examine:
+- `apps/web/src/features/writing/api/draftsApi.ts`
+- `apps/web/src/features/writing/components/WritingWorkspace.tsx`
+- `apps/api/src/api/core/config.py`
+- `apps/api/src/api/deps.py`
+- `apps/api/src/api/services/library_synthesis_service.py`
+- `apps/web/src/features/library/types/index.ts`
+- `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`
+Worker handoff: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md`
 
-Check for:
-1. Correctness: Does every SSE response and exception response return `x-request-id`? Is `scope["state"]["request_id"]` properly populated?
-2. Completeness: Are all SSE endpoints covered (`/events`, `summary:stream`, `messages`)?
-3. Robustness: Are duplicate headers eliminated? Are exception handlers safe?
-4. Code hygiene: Run `uv run pytest apps/api/tests/test_logging.py apps/api/tests/test_documents_summary_generate.py apps/api/tests/test_sessions_chat.py apps/api/tests/test_golden_papers_matrix.py`, `uv run ruff check apps/api`, and `uv run ruff format --check apps/api`.
+Output: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1/handoff.md`
+Report verdict: APPROVE or REQUEST_CHANGES.
 
-Deliver your verdict: APPROVE or REQUEST_CHANGES.
-Write your report to: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1/handoff.md
-Notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+## 2026-10-16T12:35:03Z
+[Message] sender=5237f63e-9b6a-4090-bcf4-69cfa8674802 priority=MESSAGE_PRIORITY_HIGH
+You are Reviewer 1 for Milestone 1 (M1_WRITING_AND_SYNTHESIS).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1.
+
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1/DISPATCH.md
+
+Review the code changes made by worker_m1 for correctness, architecture conformance (Monorepo, Hexagonal), type safety, and interface compatibility.
+Run tests to independently verify:
+- uv run pytest apps/api/tests/test_backend_pillars_completion.py -v
+- pnpm --prefix apps/web test src/features/writing
+- pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx
+- pnpm --prefix apps/web exec tsc -b
+
+Write your review report to:
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m1/handoff.md
+State your verdict clearly: APPROVE or REQUEST_CHANGES.
+Report via send_message to your caller.

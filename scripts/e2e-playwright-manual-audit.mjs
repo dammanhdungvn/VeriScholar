@@ -1,10 +1,17 @@
-import { chromium } from "@playwright/test";
+let chromium;
+try {
+  const pw = await import("@playwright/test");
+  chromium = pw.chromium;
+} catch {
+  const pw = await import("../apps/web/node_modules/@playwright/test/index.mjs");
+  chromium = pw.chromium;
+}
 import path from "node:path";
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const WORKSPACE_ROOT = path.resolve(__dirname, "../../../");
+const WORKSPACE_ROOT = path.resolve(__dirname, "..");
 const SCREENSHOTS_DIR = path.resolve(WORKSPACE_ROOT, "apps/web/playwright-screenshots");
 
 if (!fs.existsSync(SCREENSHOTS_DIR)) {
@@ -16,6 +23,7 @@ const SAMPLE_PDF_PATH = path.resolve(
   "data/papers/Attention Is All You Need.pdf"
 );
 
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || "http://localhost";
 const BACKEND_BASE_URL = process.env.VITE_API_BASE_URL || process.env.VITE_API_URL || "http://localhost:8000";
 
 async function obtainAuthToken(backendUrl = BACKEND_BASE_URL) {
@@ -91,8 +99,16 @@ async function runAudit() {
   const interceptedCalls = new Set();
   const apiCallDetails = [];
 
+  const chromePath = [
+    process.env.CHROME_BIN,
+    "/home/VeriScholar/.cache/puppeteer/chrome/linux-131.0.6778.204/chrome-linux64/chrome",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/chromium",
+  ].find(p => p && fs.existsSync(p));
+
   const browser = await chromium.launch({
-    executablePath: "/usr/bin/google-chrome",
+    executablePath: chromePath,
     headless: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
   });
@@ -157,8 +173,8 @@ async function runAudit() {
 
   try {
     // 1. Navigate to dashboard
-    console.log("\n[TEST 1] Navigate to http://localhost:5173/dashboard...");
-    await page.goto("http://localhost:5173/dashboard", { waitUntil: "networkidle", timeout: 15000 });
+    console.log(`\n[TEST 1] Navigate to ${FRONTEND_BASE_URL}/dashboard...`);
+    await page.goto(`${FRONTEND_BASE_URL}/dashboard`, { waitUntil: "networkidle", timeout: 15000 });
     await page.screenshot({ path: path.join(SCREENSHOTS_DIR, "01_initial_dashboard.png") });
     console.log(" ✓ Initial dashboard loaded successfully.");
 

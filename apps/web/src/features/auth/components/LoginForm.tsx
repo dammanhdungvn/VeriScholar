@@ -1,17 +1,17 @@
 import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/useLogin";
-import { mockSocialAuth } from "../data/mock-auth";
-import { useAuthStore } from "../stores/useAuthStore";
+import { useGoogleAuth } from "../hooks/useGoogleAuth";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
 import { SocialAuthButtons } from "./SocialAuthButtons";
+import { SocialConnectModal } from "./SocialConnectModal";
 import { ForgotPasswordModal } from "./ForgotPasswordModal";
+import { validateEmail } from "../utils/emailValidation";
 import {
-  Sparkles,
   Eye,
   EyeOff,
   AlertCircle,
@@ -21,47 +21,49 @@ import {
 export function LoginForm() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
-  const loginStore = useAuthStore((s) => s.login);
+  const { loginWithGoogleToken, isLoading: isGoogleLoading } = useGoogleAuth({
+    onError: (err) => setErrorMessage(err.message),
+  });
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
   const [rememberMe, setRememberMe] = React.useState(true);
   const [showPassword, setShowPassword] = React.useState(false);
-  const [isSocialLoading, setIsSocialLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
+  const [emailFieldError, setEmailFieldError] = React.useState<string | null>(null);
   const [forgotModalOpen, setForgotModalOpen] = React.useState(false);
+  const [socialModalOpen, setSocialModalOpen] = React.useState(false);
+  const [selectedSocialProvider, setSelectedSocialProvider] = React.useState<"google" | "orcid" | null>(null);
 
-  const handleQuickFillDemo = () => {
-    const demoEmail = "scholar@verischolar.ai";
-    const demoPassword = "VeriScholar2026!";
-    setEmail(demoEmail);
-    setPassword(demoPassword);
-    setErrorMessage(null);
-
-    loginMutation.mutate(
-      { email: demoEmail, password: demoPassword, remember_me: true },
-      {
-        onSuccess: () => {
-          navigate("/dashboard");
-        },
-        onError: (err) => {
-          setErrorMessage(err.message || "Đăng nhập thất bại. Vui lòng thử lại.");
-        },
-      }
-    );
+  const handleEmailBlur = () => {
+    if (!email.trim()) return;
+    const check = validateEmail(email);
+    if (!check.isValid) {
+      setEmailFieldError(check.error || "Email không hợp lệ.");
+    } else {
+      setEmailFieldError(null);
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setEmailFieldError(null);
 
     if (!email.trim() || !password) {
       setErrorMessage("Vui lòng nhập đầy đủ Email và Mật khẩu.");
       return;
     }
 
+    const emailCheck = validateEmail(email);
+    if (!emailCheck.isValid) {
+      setEmailFieldError(emailCheck.error || "Địa chỉ email không hợp lệ.");
+      setErrorMessage(emailCheck.error || "Địa chỉ email không hợp lệ.");
+      return;
+    }
+
     loginMutation.mutate(
-      { email, password, remember_me: rememberMe },
+      { email: email.trim(), password, remember_me: rememberMe },
       {
         onSuccess: () => {
           navigate("/dashboard");
@@ -73,18 +75,9 @@ export function LoginForm() {
     );
   };
 
-  const handleSocialAuth = async (provider: "google" | "orcid") => {
-    setIsSocialLoading(true);
-    setErrorMessage(null);
-    try {
-      const res = await mockSocialAuth(provider);
-      loginStore(res, true);
-      navigate("/dashboard");
-    } catch (err: unknown) {
-      setErrorMessage(err instanceof Error ? err.message : "Đăng nhập qua dịch vụ liên kết thất bại.");
-    } finally {
-      setIsSocialLoading(false);
-    }
+  const handleSocialAuth = (provider: "google" | "orcid") => {
+    setSelectedSocialProvider(provider);
+    setSocialModalOpen(true);
   };
 
   return (
@@ -99,8 +92,9 @@ export function LoginForm() {
       {/* 2. Icon-Only Social SSO at Top */}
       <SocialAuthButtons
         onSocialAuth={handleSocialAuth}
-        isLoading={isSocialLoading}
-        disabled={loginMutation.isPending}
+        onGoogleSuccess={loginWithGoogleToken}
+        isLoading={isGoogleLoading}
+        disabled={loginMutation.isPending || isGoogleLoading}
       />
 
       {/* 3. Subtle Hairline Divider */}
@@ -130,11 +124,21 @@ export function LoginForm() {
             autoComplete="email"
             placeholder="name@university.edu"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loginMutation.isPending || isSocialLoading}
-            error={Boolean(errorMessage && !email)}
+            onChange={(e) => {
+              setEmail(e.target.value);
+              if (emailFieldError) setEmailFieldError(null);
+              if (errorMessage) setErrorMessage(null);
+            }}
+            onBlur={handleEmailBlur}
+            disabled={loginMutation.isPending}
+            error={Boolean(emailFieldError || (errorMessage && !email))}
             required
           />
+          {emailFieldError && (
+            <p className="text-2xs text-error font-medium leading-tight">
+              {emailFieldError}
+            </p>
+          )}
         </div>
 
         {/* Password Field */}
@@ -157,7 +161,10 @@ export function LoginForm() {
             autoComplete="current-password"
             placeholder="••••••••"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => {
+              setPassword(e.target.value);
+              if (errorMessage) setErrorMessage(null);
+            }}
             endIcon={
               <button
                 type="button"
@@ -168,7 +175,7 @@ export function LoginForm() {
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             }
-            disabled={loginMutation.isPending || isSocialLoading}
+            disabled={loginMutation.isPending}
             error={Boolean(errorMessage && !password)}
             required
           />
@@ -180,7 +187,7 @@ export function LoginForm() {
             id="remember-me"
             checked={rememberMe}
             onCheckedChange={setRememberMe}
-            disabled={loginMutation.isPending || isSocialLoading}
+            disabled={loginMutation.isPending}
           />
           <label
             htmlFor="remember-me"
@@ -194,12 +201,12 @@ export function LoginForm() {
         <Button
           type="submit"
           variant="primary"
-          disabled={loginMutation.isPending || isSocialLoading}
+          disabled={loginMutation.isPending}
           className="w-full h-10.5 text-sm font-medium shadow-xs mt-1"
         >
           {loginMutation.isPending ? (
             <>
-              <Loader2 className="w-4 h-4 animate-spin text-on-primary" />
+              <Loader2 className="w-4 h-4 animate-spin text-on-primary mr-1.5" />
               <span>Đang xác thực...</span>
             </>
           ) : (
@@ -208,20 +215,7 @@ export function LoginForm() {
         </Button>
       </form>
 
-      {/* 6. Demo Quick Access: 1-click Auto-login with Demo account */}
-      <Button
-        type="button"
-        variant="secondary"
-        onClick={handleQuickFillDemo}
-        disabled={loginMutation.isPending || isSocialLoading}
-        data-testid="quick-fill-demo-btn"
-        className="w-full h-9.5 text-xs font-medium border-dashed border-hairline dark:border-[#38332c] hover:border-primary/50 text-body dark:text-zinc-300 hover:text-ink dark:hover:text-white transition-colors gap-1.5"
-      >
-        <Sparkles className="w-3.5 h-3.5 text-primary shrink-0" />
-        <span>Tài khoản Demo</span>
-      </Button>
-
-      {/* 7. Footer Switcher Link: Minimal direct text */}
+      {/* 6. Footer Switcher Link */}
       <div className="pt-1 text-center text-xs">
         <Link
           to="/register"
@@ -236,6 +230,15 @@ export function LoginForm() {
         open={forgotModalOpen}
         onOpenChange={setForgotModalOpen}
         defaultEmail={email}
+      />
+
+      {/* Social Academic Connect Modal */}
+      <SocialConnectModal
+        open={socialModalOpen}
+        onOpenChange={setSocialModalOpen}
+        provider={selectedSocialProvider}
+        onGoogleTokenSubmit={loginWithGoogleToken}
+        isLoading={isGoogleLoading}
       />
     </div>
   );

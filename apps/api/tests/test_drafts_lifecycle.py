@@ -75,7 +75,7 @@ async def create_test_user(
             id=uuid4(),
             email=email,
             full_name="Lead Author",
-            hashed_password=AuthService.hash_password("SecurePass123!"),
+            hashed_password="mock_hashed_password",
             is_active=True,
             is_verified=True,
             role="researcher",

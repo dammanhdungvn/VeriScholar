@@ -1,8 +1,9 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, act, within } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { WritingWorkspace } from "./WritingWorkspace";
 import { useWritingStore } from "../stores/useWritingStore";
+import { draftsApi } from "../api/draftsApi";
 
 // Mock draftsApi
 vi.mock("../api/draftsApi", () => ({
@@ -138,10 +139,10 @@ describe("WritingWorkspace", () => {
       </BrowserRouter>
     );
 
-    expect(screen.getByText("Self-Attention In Transformers")).toBeDefined();
-    expect(screen.getByText("main.tex")).toBeDefined();
-    expect(screen.getByText("Bản Dựng PDF Trực Tiếp")).toBeDefined();
-    expect(screen.getByText("SAFE Fact-Checking")).toBeDefined();
+    expect(screen.getByText("Self-Attention In Transformers")).toBeInTheDocument();
+    expect(screen.getByText("main.tex")).toBeInTheDocument();
+    expect(screen.getByText("Bản Dựng PDF Trực Tiếp")).toBeInTheDocument();
+    expect(screen.getByText("SAFE Fact-Checking")).toBeInTheDocument();
   });
 
   it("forwards selection context buffer into assistant chat and switches dual-code to tri-pane", async () => {
@@ -168,7 +169,7 @@ describe("WritingWorkspace", () => {
     fireEvent.select(textarea);
 
     const addToChatBtn = screen.getByRole("button", { name: /Thêm vào Chat/i });
-    expect(addToChatBtn).toBeDefined();
+    expect(addToChatBtn).toBeInTheDocument();
 
     // Click [Thêm vào Chat]
     await act(async () => {
@@ -177,7 +178,7 @@ describe("WritingWorkspace", () => {
 
     // Verify workspaceMode automatically transitioned to tri-pane so assistant is revealed
     expect(useWritingStore.getState().workspaceMode).toBe("tri-pane");
-    expect(screen.getByText("SAFE Fact-Checking")).toBeDefined();
+    expect(screen.getByText("SAFE Fact-Checking")).toBeInTheDocument();
 
     // Verify assistantPrompt was updated in the store with XML context tags
     const storePrompt = useWritingStore.getState().assistantPrompt;
@@ -213,9 +214,9 @@ describe("WritingWorkspace", () => {
     });
 
     const modal = screen.getByRole("dialog", { name: /Chi tiết dẫn chứng bài báo nguồn/i });
-    expect(modal).toBeDefined();
-    expect(within(modal).getByText(/Attention Is All You Need/i)).toBeDefined();
-    expect(screen.getByTestId("source-evidence-bbox-overlay")).toBeDefined();
+    expect(modal).toBeInTheDocument();
+    expect(within(modal).getByText(/Attention Is All You Need/i)).toBeInTheDocument();
+    expect(screen.getByTestId("source-evidence-bbox-overlay")).toBeInTheDocument();
   });
 
   it("triggers assistDraft without overwriting editor content and opens SuggestionReviewPanel", async () => {
@@ -637,6 +638,368 @@ describe("WritingWorkspace", () => {
     });
 
     expect(screen.getByTestId("draft-comments-pane")).toBeInTheDocument();
+  });
+});
+
+describe("WritingWorkspace Associative Memory Integration", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    useWritingStore.getState().reset();
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("starts with activeMemorySuggestion=null and unmounted card on blank drafts", async () => {
+    useWritingStore.getState().setDraft({
+      id: "draft-blank-1",
+      user_id: "user-1",
+      title: "Blank Draft",
+      content: "",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+
+    act(() => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+    expect(draftsApi.getAssociativeSuggestions).not.toHaveBeenCalled();
+  });
+
+  it("does not call associative suggestions API when draft content is shorter than 10 characters", async () => {
+    useWritingStore.getState().setDraft({
+      id: "draft-short-1",
+      user_id: "user-1",
+      title: "Short Draft",
+      content: "   short   ",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(1200);
+    });
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+    expect(draftsApi.getAssociativeSuggestions).not.toHaveBeenCalled();
+  });
+
+  it("remains unmounted when draft text >= 10 chars produces 0 associative suggestions", async () => {
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockResolvedValueOnce({
+      draft_id: "draft-empty-sugg",
+      suggestions: [],
+      total_found: 0,
+    });
+
+    useWritingStore.getState().setDraft({
+      id: "draft-empty-sugg",
+      user_id: "user-1",
+      title: "Unmatched Research Topic",
+      content: "This is a sufficiently long draft text discussing unrelated concepts.",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    expect(draftsApi.getAssociativeSuggestions).toHaveBeenCalledWith(
+      "draft-empty-sugg",
+      expect.objectContaining({
+        content: "This is a sufficiently long draft text discussing unrelated concepts.",
+        limit: 3,
+      })
+    );
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+  });
+
+  it("mounts AssociativeMemoryCard when dynamic text matching notes is provided and API returns suggestions", async () => {
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockResolvedValue({
+      draft_id: "draft-assoc-match",
+      total_found: 1,
+      suggestions: [
+        {
+          note_id: "note-attn-99",
+          document_title: "Attention Is All You Need",
+          paper_title: "Attention Is All You Need",
+          page_number: 4,
+          selected_text: "Multi-Head Attention replaces recurrence.",
+          suggested_citation: "\\cite{vaswani2017attention}",
+          user_note: "Multi-Head Attention removes recurrence completely.",
+          similarity_score: 0.95,
+          reason: "High lexical and semantic overlap with Transformer architecture",
+          relevance_explanation: "Detailed explanation of attention mechanisms",
+        },
+      ],
+    });
+
+    useWritingStore.getState().setDraft({
+      id: "draft-assoc-match",
+      user_id: "user-1",
+      title: "Draft on Transformers",
+      content: "",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+
+    act(() => {
+      useWritingStore
+        .getState()
+        .setEditorContent("We explore self-attention mechanisms in transformer networks.");
+    });
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    const card = screen.getByTestId("associative-memory-card");
+    expect(card).toBeInTheDocument();
+    expect(screen.getByText("Attention Is All You Need")).toBeInTheDocument();
+    expect(screen.getByText(/\(Trang 4\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Multi-Head Attention removes recurrence/i)).toBeInTheDocument();
+    expect(screen.getByText("95%")).toBeInTheDocument();
+  });
+
+  it("inserts citation and unmounts card when [Chèn trích dẫn] is clicked", async () => {
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockResolvedValue({
+      draft_id: "draft-insert-test",
+      total_found: 1,
+      suggestions: [
+        {
+          note_id: "note-flash-1",
+          document_title: "FlashAttention: Fast and Memory-Efficient Exact Attention",
+          paper_title: "FlashAttention: Fast and Memory-Efficient Exact Attention",
+          page_number: 2,
+          selected_text: "IO-aware exact attention tiling.",
+          suggested_citation: "\\cite{dao2022flashattention}",
+          user_note: "IO-aware exact attention tiling.",
+          similarity_score: 0.93,
+          reason: "IO-aware attention tiling speedup",
+          relevance_explanation: "Tiling attention into SRAM blocks",
+        },
+      ],
+    });
+
+    const initialContent = "We implement IO-aware exact attention tiling for CUDA speedup.";
+    useWritingStore.getState().setDraft({
+      id: "draft-insert-test",
+      user_id: "user-1",
+      title: "Kernel Optimizations",
+      content: initialContent,
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    expect(screen.getByTestId("associative-memory-card")).toBeInTheDocument();
+
+    const insertBtn = screen.getByTestId("insert-citation-btn");
+    act(() => {
+      fireEvent.click(insertBtn);
+    });
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+
+    const currentContent = useWritingStore.getState().editorContent;
+    expect(currentContent).toContain("\\cite{dao2022flashattention}");
+    expect(currentContent).toBe(initialContent + " \\cite{dao2022flashattention} ");
+  });
+
+  it("unmounts card when user clicks dismiss close button", async () => {
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockResolvedValue({
+      draft_id: "draft-dismiss-test",
+      total_found: 1,
+      suggestions: [
+        {
+          note_id: "note-lora-1",
+          document_title: "LoRA: Low-Rank Adaptation of Large Language Models",
+          paper_title: "LoRA: Low-Rank Adaptation of Large Language Models",
+          page_number: 3,
+          selected_text: "Freezes weights and injects low rank decomposition.",
+          suggested_citation: "\\cite{hu2021lora}",
+          user_note: "Freezes pre-trained weights and injects trainable rank decomposition matrices.",
+          similarity_score: 0.88,
+          reason: "Parameter-efficient adaptation",
+          relevance_explanation: "Low-rank parameter matrix update decomposition",
+        },
+      ],
+    });
+
+    useWritingStore.getState().setDraft({
+      id: "draft-dismiss-test",
+      user_id: "user-1",
+      title: "PEFT Survey",
+      content: "Low-rank parameter efficient fine-tuning adaptations.",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    expect(screen.getByTestId("associative-memory-card")).toBeInTheDocument();
+
+    const dismissBtn = screen.getByRole("button", { name: "Đóng gợi ý" });
+    act(() => {
+      fireEvent.click(dismissBtn);
+    });
+
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+  });
+
+  it("debounces rapid typing so API is only called once after typing stops", async () => {
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockResolvedValue({
+      draft_id: "draft-debounce-test",
+      total_found: 0,
+      suggestions: [],
+    });
+
+    useWritingStore.getState().setDraft({
+      id: "draft-debounce-test",
+      user_id: "user-1",
+      title: "Typing Test",
+      content: "",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    act(() => {
+      useWritingStore.getState().setEditorContent("Initial typing...");
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      useWritingStore.getState().setEditorContent("Initial typing... continuing draft");
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+
+    act(() => {
+      useWritingStore.getState().setEditorContent("Initial typing... continuing draft and finishing paragraph.");
+    });
+
+    expect(draftsApi.getAssociativeSuggestions).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    expect(draftsApi.getAssociativeSuggestions).toHaveBeenCalledTimes(1);
+    expect(draftsApi.getAssociativeSuggestions).toHaveBeenCalledWith(
+      "draft-debounce-test",
+      expect.objectContaining({
+        content: "Initial typing... continuing draft and finishing paragraph.",
+      })
+    );
+  });
+
+  it("gracefully catches and logs API errors without crashing UI", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.mocked(draftsApi.getAssociativeSuggestions).mockRejectedValueOnce(
+      new Error("Network timeout")
+    );
+
+    useWritingStore.getState().setDraft({
+      id: "draft-error-test",
+      user_id: "user-1",
+      title: "Error Draft",
+      content: "This is a valid long text that triggers an API call that fails.",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-16T00:00:00Z",
+      updated_at: "2026-10-16T00:00:00Z",
+    });
+
+    render(
+      <BrowserRouter>
+        <WritingWorkspace />
+      </BrowserRouter>
+    );
+
+    await act(async () => {
+      vi.advanceTimersByTime(850);
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      "Failed to fetch proactive associative suggestions:",
+      expect.any(Error)
+    );
+    expect(screen.queryByTestId("associative-memory-card")).toBeNull();
+
+    consoleWarnSpy.mockRestore();
   });
 });
 

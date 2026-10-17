@@ -9,6 +9,8 @@ import type {
   PasswordResetRequest,
   PasswordResetConfirm,
   AuthMessageResponse,
+  VerifyEmailPayload,
+  ResendVerificationPayload,
 } from "@/types/auth";
 
 export const authApi = {
@@ -29,6 +31,28 @@ export const authApi = {
    */
   async register(payload: RegisterPayload): Promise<AuthResponse> {
     return apiClient<AuthResponse>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * POST /api/v1/auth/verify-email
+   * Xác thực email học thuật với mã OTP 6 số
+   */
+  async verifyEmail(payload: VerifyEmailPayload): Promise<AuthMessageResponse> {
+    return apiClient<AuthMessageResponse>("/auth/verify-email", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  /**
+   * POST /api/v1/auth/resend-verification
+   * Gửi lại mã OTP xác thực email
+   */
+  async resendVerification(payload: ResendVerificationPayload): Promise<AuthMessageResponse> {
+    return apiClient<AuthMessageResponse>("/auth/resend-verification", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -97,4 +121,16 @@ export const authApi = {
       body: JSON.stringify(payload),
     });
   },
+
+  /**
+   * POST /api/v1/auth/google
+   * Xác thực tài khoản học giả qua Google OAuth 2.0 (Google Identity Services)
+   */
+  async googleLogin(idToken: string): Promise<AuthResponse> {
+    return apiClient<AuthResponse>("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({ id_token: idToken }),
+    });
+  },
 };
+

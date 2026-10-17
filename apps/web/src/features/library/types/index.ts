@@ -69,6 +69,10 @@ export interface ComparisonMatrixResponse {
   topic: string;
   folder_id: string | null;
   documents_compared: number;
+  total_count?: number;
+  limit?: number;
+  offset?: number;
+  search?: string;
   rows: ComparisonMatrixRow[];
   summary_synthesis: string;
   sufficiency: SufficiencyGateResult;
@@ -80,6 +84,10 @@ export interface ComparisonMatrixRequest {
   topic: string;
   folder_id?: string | null;
   document_ids?: string[] | null;
+  search?: string;
+  limit?: number;
+  offset?: number;
+  total_count?: number;
 }
 
 export interface HierarchicalRagRequest {

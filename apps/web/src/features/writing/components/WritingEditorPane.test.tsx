@@ -32,13 +32,23 @@ describe("WritingEditorPane", () => {
     useWritingStore.getState().reset();
   });
 
-  it("renders editor toolbar, line count, and textarea", () => {
+  it("renders editor toolbar, line count, and textarea, and updates line count upon typing", () => {
     useWritingStore.getState().setEditorContent("\\section{Intro}\nHello world\nTesting 123");
     render(<WritingEditorPane />);
 
-    expect(screen.getByText("main.tex")).toBeDefined();
-    expect(screen.getByText("(3 dòng)")).toBeDefined();
-    expect(screen.getByRole("textbox")).toBeDefined();
+    expect(screen.getByText("main.tex")).toBeInTheDocument();
+    expect(screen.getByText("(3 dòng)")).toBeInTheDocument();
+    const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
+    expect(textarea).toBeInTheDocument();
+
+    // Type new content with 5 lines
+    fireEvent.change(textarea, {
+      target: { value: "Line 1\nLine 2\nLine 3\nLine 4\nLine 5" },
+    });
+
+    expect(screen.getByText("(5 dòng)")).toBeInTheDocument();
+    expect(useWritingStore.getState().editorContent).toBe("Line 1\nLine 2\nLine 3\nLine 4\nLine 5");
+    expect(useWritingStore.getState().isDirty).toBe(true);
   });
 
   it("triggers onSelectionAddToChat with formatted context buffer when clicking [Thêm vào Chat]", () => {
@@ -61,9 +71,9 @@ describe("WritingEditorPane", () => {
     fireEvent.select(textarea);
 
     // Expect selection indicator and button
-    expect(screen.getByText(`Đã chọn ${target.length} ký tự`)).toBeDefined();
+    expect(screen.getByText(`Đã chọn ${target.length} ký tự`)).toBeInTheDocument();
     const addToChatBtn = screen.getByRole("button", { name: /Thêm vào Chat/i });
-    expect(addToChatBtn).toBeDefined();
+    expect(addToChatBtn).toBeInTheDocument();
 
     // Click [Thêm vào Chat]
     fireEvent.click(addToChatBtn);

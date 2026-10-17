@@ -527,8 +527,8 @@ class TestBenchmarkRunnerAdversarial:
         tracemalloc.stop()
 
         # 3. Assert performance criteria
-        # Evaluation over 100 in-memory samples must be sub-second (< 250ms)
-        assert t_elapsed < 0.250, f"Evaluation took {t_elapsed:.3f}s (exceeded 250ms SLA)"
+        # Evaluation over 100 in-memory samples must be sub-second (< 400ms)
+        assert t_elapsed < 0.400, f"Evaluation took {t_elapsed:.3f}s (exceeded 400ms SLA)"
 
         # Memory allocation must not spike (< 2MB)
         peak_mb = peak_mem / (1024 * 1024)

@@ -10,9 +10,13 @@ export interface UserProfile {
   email: string;
   full_name: string;
   institution?: string;
+  department?: string;
   academic_rank?: string;
   orcid_id?: string;
   avatar_url?: string;
+  bio?: string;
+  research_interests?: string;
+  google_scholar_url?: string;
   role: UserRole;
   is_verified: boolean;
   created_at: string;
@@ -64,9 +68,13 @@ export interface ChangePasswordPayload {
 export interface UpdateProfilePayload {
   full_name?: string;
   institution?: string;
+  department?: string;
   academic_rank?: string;
   orcid_id?: string;
   avatar_url?: string;
+  bio?: string;
+  research_interests?: string;
+  google_scholar_url?: string;
 }
 
 export interface AuthMessageResponse {
@@ -82,5 +90,20 @@ export interface AuthErrorResponse {
   code: string;
   message: string;
   detail?: AuthErrorDetail[];
+}
+
+export interface VerifyEmailPayload {
+  email: string;
+  code?: string;
+  otp?: string;
+  token?: string;
+}
+
+export interface ResendVerificationPayload {
+  email: string;
+}
+
+export interface GoogleLoginPayload {
+  id_token: string;
 }
 

@@ -13,8 +13,10 @@ export function getCachedPdfDocument(url: string): Promise<PDFDocumentProxy> {
     return existing;
   }
 
+  const token = typeof window !== "undefined" ? localStorage.getItem("verischolar_auth_token") : null;
   const loadingTask = pdfjsLib.getDocument({
     url,
+    httpHeaders: token ? { Authorization: `Bearer ${token}` } : {},
     withCredentials: false,
   });
 

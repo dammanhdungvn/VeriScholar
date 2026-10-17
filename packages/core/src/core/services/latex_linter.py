@@ -152,10 +152,17 @@ class FastLatexAstLinter:
                         brace_stack.pop()
 
             # Check unescaped underscores outside math mode
-            is_in_math_mode = in_display_math or any(
-                e in ("equation", "equation*", "align", "align*", "gather", "gather*", "multline", "multline*")
-                for e, _, _ in env_stack
+            math_envs = (
+                "equation",
+                "equation*",
+                "align",
+                "align*",
+                "gather",
+                "gather*",
+                "multline",
+                "multline*",
             )
+            is_in_math_mode = in_display_math or any(e in math_envs for e, _, _ in env_stack)
             if not is_in_math_mode:
                 dollar_count = 0
                 k = 0

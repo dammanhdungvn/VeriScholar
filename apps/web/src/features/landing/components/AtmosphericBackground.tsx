@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTheme } from "@/hooks/useTheme";
+
+const MAX_METEORS = 8;
+const MAX_SYNAPTIC_PULSES = 8;
 
 export function AtmosphericBackground() {
   const { theme } = useTheme();
@@ -10,28 +13,51 @@ export function AtmosphericBackground() {
     isDarkRef.current = isDark;
   }, [isDark]);
 
-  const [mousePos, setMousePos] = useState({ x: -1000, y: -1000 });
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const spotlightRef = useRef<HTMLDivElement | null>(null);
   const mousePosRef = useRef({ x: -1000, y: -1000 });
 
+  // 1. Off-Thread / Direct DOM Spotlight Tracking (0 React Re-renders on mousemove)
   useEffect(() => {
     const handleWindowMouseMove = (e: MouseEvent) => {
-      const pos = { x: e.clientX, y: e.clientY };
-      setMousePos(pos);
-      mousePosRef.current = pos;
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (spotlightRef.current) {
+        const dark = isDarkRef.current;
+        spotlightRef.current.style.background = dark
+          ? `radial-gradient(650px circle at ${e.clientX}px ${e.clientY}px, rgba(217, 119, 87, 0.12), transparent 60%)`
+          : `radial-gradient(650px circle at ${e.clientX}px ${e.clientY}px, rgba(204, 110, 75, 0.10), transparent 60%)`;
+      }
     };
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
-    return () => window.removeEventListener("mousemove", handleWindowMouseMove);
+    const handleMouseLeave = () => {
+      mousePosRef.current = { x: -1000, y: -1000 };
+      if (spotlightRef.current) {
+        spotlightRef.current.style.background = "none";
+      }
+    };
+
+    window.addEventListener("mousemove", handleWindowMouseMove, { passive: true });
+    document.addEventListener("mouseleave", handleMouseLeave);
+    return () => {
+      window.removeEventListener("mousemove", handleWindowMouseMove);
+      document.removeEventListener("mouseleave", handleMouseLeave);
+    };
   }, []);
 
+  // 2. High-Performance Particle Engine with Tab-Visibility & Memory Leaking Safeguards
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let meteorInterval: ReturnType<typeof setInterval> | null = null;
+    let pulseInterval: ReturnType<typeof setInterval> | null = null;
+    let initialTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isRunning = true;
+    let lastFrameTime = performance.now();
+
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -42,7 +68,7 @@ export function AtmosphericBackground() {
     };
     window.addEventListener("resize", handleResize);
 
-    // Effect 1: Neural Nodes (65 in Dark Mode for Cosmic Constellation, 38 in Light Mode for Silk Attention Mesh)
+    // Effect 1: Neural Nodes (65 in Dark Mode, 52 in Light Mode)
     const totalParticleCount = 65;
     const particles: Array<{
       x: number;
@@ -64,7 +90,7 @@ export function AtmosphericBackground() {
       });
     }
 
-    // Effect 2: Dark Mode 6s Periodic Meteors (ONLY active in Dark Mode)
+    // Effect 2: Dark Mode 6s Periodic Meteors (Capped at MAX_METEORS to prevent background memory pileup)
     const meteors: Array<{
       x: number;
       y: number;
@@ -76,9 +102,12 @@ export function AtmosphericBackground() {
     }> = [];
 
     const spawnMeteorShowerWave = () => {
-      // Do NOT spawn meteors in Light Mode
-      if (!isDarkRef.current) return;
-      const count = Math.floor(Math.random() * 2) + 2;
+      // Guard 1: Do not spawn when tab is hidden or in light mode
+      if (document.hidden || !isDarkRef.current) return;
+      // Guard 2: Hard upper bound - never accumulate runaway meteors
+      if (meteors.length >= MAX_METEORS) return;
+
+      const count = Math.min(Math.floor(Math.random() * 2) + 2, MAX_METEORS - meteors.length);
       for (let mIdx = 0; mIdx < count; mIdx++) {
         const angle = Math.random() * 0.85 + 0.35;
         const startX = Math.random() * (width * 1.2) - width * 0.1;
@@ -96,10 +125,7 @@ export function AtmosphericBackground() {
       }
     };
 
-    const meteorInterval = setInterval(spawnMeteorShowerWave, 6000);
-    const initialTimeout = setTimeout(spawnMeteorShowerWave, 1200);
-
-    // Effect 3: Light Mode Synaptic Pulse Packets (ONLY active in Light Mode)
+    // Effect 3: Light Mode Synaptic Pulse Packets
     const synapticPulses: Array<{
       fromIdx: number;
       toIdx: number;
@@ -108,9 +134,9 @@ export function AtmosphericBackground() {
     }> = [];
 
     const spawnSynapticPulse = () => {
-      // Pulses are specifically crafted for the Light Mode Silk Attention Mesh
-      if (isDarkRef.current) return;
-      if (synapticPulses.length >= 8) return;
+      if (document.hidden || isDarkRef.current) return;
+      if (synapticPulses.length >= MAX_SYNAPTIC_PULSES) return;
+
       const lightNodeCount = 52;
       for (let attempt = 0; attempt < 10; attempt++) {
         const i = Math.floor(Math.random() * lightNodeCount);
@@ -132,14 +158,41 @@ export function AtmosphericBackground() {
       }
     };
 
-    const pulseInterval = setInterval(spawnSynapticPulse, 900);
+    const startIntervals = () => {
+      stopIntervals();
+      meteorInterval = setInterval(spawnMeteorShowerWave, 6000);
+      pulseInterval = setInterval(spawnSynapticPulse, 900);
+      initialTimeout = setTimeout(spawnMeteorShowerWave, 1200);
+    };
 
-    const render = () => {
+    const stopIntervals = () => {
+      if (meteorInterval) {
+        clearInterval(meteorInterval);
+        meteorInterval = null;
+      }
+      if (pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
+      }
+      if (initialTimeout) {
+        clearTimeout(initialTimeout);
+        initialTimeout = null;
+      }
+    };
+
+    const render = (currentTime: number) => {
+      if (!isRunning) return;
+
+      // Delta time normalization (capped at 2.0x to avoid teleports upon tab reactivation)
+      const elapsed = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+      const deltaFactor = Math.min(Math.max(elapsed / 16.67, 0.1), 2.0);
+
       ctx.clearRect(0, 0, width, height);
       const m = mousePosRef.current;
       const currentIsDark = isDarkRef.current;
 
-      // 1. Dark Mode Meteors Rendering (Preserved 100% as requested)
+      // 1. Dark Mode Meteors Rendering
       if (currentIsDark) {
         for (let i = meteors.length - 1; i >= 0; i--) {
           const star = meteors[i];
@@ -164,9 +217,9 @@ export function AtmosphericBackground() {
           ctx.stroke();
           ctx.shadowBlur = 0;
 
-          star.x += Math.cos(star.angle) * star.speed;
-          star.y += Math.sin(star.angle) * star.speed;
-          star.opacity -= 0.0035;
+          star.x += Math.cos(star.angle) * star.speed * deltaFactor;
+          star.y += Math.sin(star.angle) * star.speed * deltaFactor;
+          star.opacity -= 0.0035 * deltaFactor;
 
           if (star.opacity <= 0 || star.y > height + 250 || star.x > width + 250) {
             meteors.splice(i, 1);
@@ -175,10 +228,8 @@ export function AtmosphericBackground() {
       }
 
       // 2. Neural Nodes & Synapses
-      // In Light Mode: use 52 nodes with visible contrast, rich terracotta tone and distinct synapses
-      // In Dark Mode: use full 65 nodes with cosmic glowing bloom
       const activeCount = currentIsDark ? totalParticleCount : 52;
-      const speedScale = currentIsDark ? 1.0 : 0.7;
+      const speedScale = (currentIsDark ? 1.0 : 0.7) * deltaFactor;
 
       for (let i = 0; i < activeCount; i++) {
         const p1 = particles[i];
@@ -197,14 +248,12 @@ export function AtmosphericBackground() {
           ctx.fill();
           ctx.shadowBlur = 0;
         } else {
-          // Light Mode Node: Sleek, compact and delicate neural node
           ctx.beginPath();
           ctx.arc(p1.x, p1.y, p1.radius * 1.1, 0, Math.PI * 2);
           ctx.fillStyle = `rgba(184, 75, 42, ${Math.min(0.85, p1.opacity * 1.3)})`;
           ctx.fill();
         }
 
-        // Synaptic connection lines between nodes
         const maxDist = currentIsDark ? 120 : 135;
         for (let j = i + 1; j < activeCount; j++) {
           const p2 = particles[j];
@@ -221,7 +270,6 @@ export function AtmosphericBackground() {
               ctx.strokeStyle = `rgba(217, 119, 87, ${lineAlpha})`;
               ctx.lineWidth = 0.8;
             } else {
-              // Light Mode: Clearly visible terracotta & amber synapse line
               const lineAlpha = Math.pow(1 - dist / maxDist, 1.1) * 0.38;
               ctx.strokeStyle = `rgba(184, 80, 48, ${lineAlpha})`;
               ctx.lineWidth = 0.95;
@@ -230,7 +278,6 @@ export function AtmosphericBackground() {
           }
         }
 
-        // Mouse Query Attention Interaction
         if (m.x > 0 && m.y > 0) {
           const mDx = p1.x - m.x;
           const mDy = p1.y - m.y;
@@ -245,7 +292,6 @@ export function AtmosphericBackground() {
               ctx.strokeStyle = `rgba(240, 180, 160, ${mAlpha})`;
               ctx.lineWidth = 1.1;
             } else {
-              // Light Mode: Clear interactive query beam
               const mAlpha = (1 - mDist / 175) * 0.55;
               ctx.strokeStyle = `rgba(195, 75, 35, ${mAlpha})`;
               ctx.lineWidth = 1.1;
@@ -255,11 +301,11 @@ export function AtmosphericBackground() {
         }
       }
 
-      // 3. Light Mode Synaptic Pulse Packets along active lines
+      // 3. Light Mode Synaptic Pulse Packets
       if (!currentIsDark) {
         for (let k = synapticPulses.length - 1; k >= 0; k--) {
           const pulse = synapticPulses[k];
-          pulse.progress += pulse.speed;
+          pulse.progress += pulse.speed * deltaFactor;
           if (pulse.progress >= 1) {
             synapticPulses.splice(k, 1);
             continue;
@@ -287,20 +333,53 @@ export function AtmosphericBackground() {
       animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    // 3. Page Lifecycle / Background Tab Management: Pause completely when tab is hidden
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab went to background: pause rendering & stop spawning
+        isRunning = false;
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        stopIntervals();
+        // Purge any lingering meteors so reactivation is 100% clean and zero-lag
+        meteors.length = 0;
+        synapticPulses.length = 0;
+      } else {
+        // Tab became visible again: resume smoothly
+        isRunning = true;
+        lastFrameTime = performance.now();
+        startIntervals();
+        if (animationFrameId === null) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    // Initial start if page is visible
+    if (!document.hidden) {
+      startIntervals();
+      animationFrameId = requestAnimationFrame(render);
+    }
 
     return () => {
+      isRunning = false;
       window.removeEventListener("resize", handleResize);
-      clearInterval(meteorInterval);
-      clearInterval(pulseInterval);
-      clearTimeout(initialTimeout);
-      cancelAnimationFrame(animationFrameId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      stopIntervals();
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
     };
   }, []);
 
   return (
     <div className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
-      {/* Perspective Grid Background - Subtle drafting watermark in light mode, starlight grid in dark mode */}
+      {/* Perspective Grid Background */}
       <div
         className={`absolute inset-0 transition-opacity duration-300 ${isDark ? "opacity-15" : "opacity-35"}`}
         style={{
@@ -315,14 +394,10 @@ export function AtmosphericBackground() {
         }}
       />
 
-      {/* Interactive Mouse Spotlight Follower */}
+      {/* Interactive Mouse Spotlight Follower (Updated directly via ref to eliminate React render overhead) */}
       <div
+        ref={spotlightRef}
         className="absolute inset-0 transition-opacity duration-300"
-        style={{
-          background: isDark
-            ? `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(217, 119, 87, 0.12), transparent 60%)`
-            : `radial-gradient(650px circle at ${mousePos.x}px ${mousePos.y}px, rgba(204, 110, 75, 0.10), transparent 60%)`,
-        }}
       />
 
       {/* Ambient Rotating Glow Orbs */}

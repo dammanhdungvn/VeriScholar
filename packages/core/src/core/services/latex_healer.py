@@ -49,7 +49,8 @@ class AgenticLatexHealer:
             m = re.search(r"\\begin\{([a-zA-Z0-9*_-]+)\}", err.message)
             env_name = m.group(1) if m else "equation"
             if r"\end{document}" in code:
-                patched_code = code.replace(r"\end{document}", f"\\end{{{env_name}}}\n\\end{{document}}")
+                replacement = f"\\end{{{env_name}}}\n\\end{{document}}"
+                patched_code = code.replace(r"\end{document}", replacement)
             else:
                 patched_code = code.rstrip() + f"\n\\end{{{env_name}}}\n"
 
@@ -70,14 +71,16 @@ class AgenticLatexHealer:
                 if close_env == "document":
                     lines = code.splitlines()
                     begin_idx = -1
-                    for idx, l in enumerate(lines):
-                        if f"\\begin{{{open_env}}}" in l:
+                    for idx, line in enumerate(lines):
+                        if f"\\begin{{{open_env}}}" in line:
                             begin_idx = idx
                     insert_idx = len(lines) - 1
                     if begin_idx >= 0:
                         for idx in range(begin_idx + 1, len(lines)):
                             stripped = lines[idx].strip()
-                            if stripped.startswith((r"\section", r"\subsection", r"\end{document}")):
+                            if stripped.startswith(
+                                (r"\section", r"\subsection", r"\end{document}")
+                            ):
                                 insert_idx = idx
                                 break
                     lines.insert(insert_idx, f"\\end{{{open_env}}}")

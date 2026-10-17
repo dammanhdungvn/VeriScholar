@@ -1,38 +1,39 @@
-# Master Plan — VeriScholar Module 1 Comprehensive AI Evaluation Benchmark & Infrastructure
+# Master Plan — VeriScholar 100% Completion Across 5 Core Technology Pillars
 
 ## Objective
-Triển khai bộ kiểm chuẩn đánh giá chất lượng AI toàn diện cho Module 1 (Scholar Reading & Deep Reader), kết hợp giữa Public Benchmarks (QASPER, SciFact, PubMedQA) và Project Regression Set (25 test cases chuyên sâu bằng corpus PDF thực tế: Attention Is All You Need, LoRA, RAG), bổ sung Playwright E2E Auth Fixture và chuẩn hóa header X-Request-ID cho toàn bộ SSE streaming.
+Elevate VeriScholar to 100% completion across all 5 core technology pillars:
+1. Pillar 2 (LaTeX Writing): 1-Click Overleaf Integration (`POST /api/v1/drafts/{id}:export-overleaf` & UI Launch Button)
+2. Pillar 3 (Knowledge Capital & 2-Tier RAG): Proactive Scholarly Associative Memory (`POST /api/v1/drafts/{id}/associative-suggestions` & UI Insight Card)
+3. Pillar 4 (Multi-Paper Synthesis): Scalable 100+ Paper Comparison Matrix with Server-Side Pagination, Filtering & CSV Export
+4. Pillar 5 (Enterprise Scalability): Full On-Premise Enterprise Docker Compose stack & automated single-command bootstrap script
 
-## Phase 0: Survey & Investigation
-- [ ] Survey 1: SSE Streaming endpoints, ASGI tracing middleware, `X-Request-ID` propagation in `apps/api`.
-- [ ] Survey 2: Module 1 architecture in `packages/core` (parsers, chunkers, hybrid search, grounding, reranking) & existing eval harness.
-- [ ] Survey 3: Benchmark dataset formats (QASPER, SciFact, PubMedQA), PDF corpus files, and Playwright E2E auth fixture setup in `apps/web`.
-- [ ] Synthesize Survey results into `PROJECT.md` (Feature Inventory, Architecture, Milestones, Code Layout).
+## Phase 0: Survey & Codebase Exploration
+- [ ] Explorer 1: Pillars 2 & 3 (LaTeX draft endpoints, Overleaf form/payload specs, UI writing workspace, notes/annotations storage, semantic associative memory logic).
+- [ ] Explorer 2: Pillar 4 (Comparison Matrix endpoints, database query/pagination, Redis caching, frontend matrix virtualized grid, search, column filters, CSV export).
+- [ ] Explorer 3: Pillar 5 & Baseline Testing (Docker compose configs, Postgres pgvector, Redis, PgBouncer, ARQ worker, bootstrap scripts, and full baseline pytest/vitest pass).
+- [ ] Synthesize Survey results into updated `PROJECT.md` (Feature Inventory, Architecture, Milestones, Code Layout).
 
-## Milestone 1: SSE Streaming & X-Request-ID Header Standardization
-- Ensure ASGI middleware extracts or generates `X-Request-ID` (`uuid4`).
-- Standardize all SSE streaming responses (`apps/api`) to include `X-Request-ID` header and emit event-level tracing/metadata.
-- Ensure clients/tests receive `X-Request-ID` consistently.
-- Verification: Unit & API integration tests for SSE endpoints and middleware.
+## Milestone 1: Pillar 2 — 1-Click Overleaf Integration
+- Backend: Endpoint `POST /api/v1/drafts/{id}:export-overleaf` generates valid Overleaf launch URL / snippet form data with LaTeX source, bibtex, and authentication payload.
+- Frontend: Writing workspace provides "Đồng bộ Overleaf (1-Click)" button that opens draft directly in Overleaf.
+- Verification: Pytest endpoint tests + Vitest UI component tests.
 
-## Milestone 2: Module 1 Public Benchmarks Adapter & Evaluators (QASPER, SciFact, PubMedQA)
-- Build evaluation adapters/loaders for:
-  - QASPER (Question Answering on Scholarly Pages with Evidence Retrieval)
-  - SciFact (Scientific claim verification / citation support)
-  - PubMedQA (Biomedical question answering)
-- Implement metrics: Retrieval Recall@k, Grounding Precision/F1, Faithfulness / Citation Accuracy, normalized BoundingBox validation.
-- In-memory test execution adhering to Ports & Adapters, zero live network during unit eval tests.
+## Milestone 2: Pillar 3 — Proactive Scholarly Associative Memory
+- Backend: Endpoint `POST /api/v1/drafts/{id}/associative-suggestions` returns relevant historical user research notes matching draft content using semantic embedding / trigram similarity.
+- Frontend: Writing UI displays floating "Spark of Insight" recommendation card with one-click citation insertion.
+- Verification: Unit tests for associative memory matching + API tests + Vitest UI tests.
 
-## Milestone 3: Project Regression Test Set (25 Test Cases on Real PDF Corpus)
-- Corpus: Attention Is All You Need, LoRA, RAG papers.
-- Define 25 targeted test cases across retrieval, chunking, math/table extraction, bounding box grounding, and citation verification.
-- Implement automated regression runner with scoring and threshold gates.
+## Milestone 3: Pillar 4 — Scalable 100+ Paper Comparison Matrix
+- Backend: Matrix API supporting server-side pagination (`limit`, `offset`, `search`), column filtering across Methodology, Datasets, Metrics, and Redis query caching for heavy extractions. CSV export endpoint/utility.
+- Frontend: Comparison matrix virtualized rendering for large collections (100+ papers) with smooth search and filtering.
+- Verification: Matrix performance & pagination pytest tests + Vitest virtualized table tests.
 
-## Milestone 4: Playwright E2E Auth Fixture & Web Integration
-- In `apps/web`: Create reusable Playwright Auth fixture (mocked/stored state or session bypass) for end-to-end tests.
-- Add E2E tests verifying Deep Reader UI with SSE streaming receiving `X-Request-ID` and rendering grounding bounding boxes.
+## Milestone 4: Pillar 5 — Enterprise On-Premise Deployment Package
+- Architecture: `deploy/docker-compose.enterprise.yml` and `scripts/bootstrap_enterprise.sh`.
+- Services: API, Web, PostgreSQL 16 pgvector, Redis 7, ARQ Worker, PgBouncer for air-gapped university and lab deployments.
+- Verification: Docker compose config validation, shell script syntax/execution check (`bash -n`), configuration tests.
 
-## Phase 5: Final Acceptance, Dual-Track E2E Test Suite & Adversarial Hardening
-- 100% test pass on backend (`uv run pytest`) and frontend (`pnpm --prefix apps/web exec tsc -b`, `pnpm --prefix apps/web lint`).
-- Forensic Audit verification (`teamwork_preview_auditor`).
-- Adversarial review & final completion handoff.
+## Milestone 5: Final Acceptance, Dual-Track E2E Test Suite & Adversarial Hardening
+- 100% tests pass on backend (`uv run pytest`) and frontend (`pnpm --prefix apps/web exec tsc -b`, `pnpm --prefix apps/web test`).
+- Zero regressions across existing benchmarks and modules.
+- Forensic Integrity Audit (`teamwork_preview_auditor`).

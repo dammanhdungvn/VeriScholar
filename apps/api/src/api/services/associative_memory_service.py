@@ -13,6 +13,7 @@ import structlog
 from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
 from api.db.models.note import ResearchNoteModel
+from api.services.ai_tracing_service import AITracingService
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -94,8 +95,9 @@ class AssociativeSuggestionsResponse(BaseModel):
 class AssociativeMemoryService:
     """Service providing proactive associative memory recall for academic writing."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
         self.db = db
+        self.ai_tracing = ai_tracing or AITracingService()
 
     def _tokenize(self, text: str) -> set[str]:
         """Extract normalized alphanumeric words for lexical overlap calculation."""
@@ -158,7 +160,9 @@ class AssociativeMemoryService:
         if not effective_content or not effective_content.strip():
             from api.db.models.draft import DraftModel
 
-            draft_stmt = select(DraftModel).where(DraftModel.id == draft_id)
+            draft_stmt = select(DraftModel).where(
+                (DraftModel.id == draft_id) & (DraftModel.user_id == user_id)
+            )
             draft_obj = (await self.db.execute(draft_stmt)).scalar_one_or_none()
             effective_content = draft_obj.content if draft_obj and draft_obj.content else ""
 
@@ -170,74 +174,89 @@ class AssociativeMemoryService:
         target_limit = request.limit or request.max_results or 3
         min_thresh = request.min_similarity if request.min_similarity is not None else 0.15
 
-        # 1. Fetch user's research notes with attached documents
-        stmt = (
-            select(ResearchNoteModel, DocumentModel)
-            .outerjoin(DocumentModel, ResearchNoteModel.document_id == DocumentModel.id)
-            .where(ResearchNoteModel.user_id == user_id)
-            .order_by(ResearchNoteModel.created_at.desc())
-            .limit(100)
-        )
-        result = await self.db.execute(stmt)
-        records = result.all()
-
-        scored_candidates: list[tuple[float, ResearchNoteModel, DocumentModel | None]] = []
-        for note, doc in records:
-            combined_text = f"{note.user_note or ''} {note.selected_text or ''}"
-            score = self._compute_relevance(draft_tokens, combined_text)
-            if score >= min_thresh:
-                scored_candidates.append((score, note, doc))
-
-        # Sort descending by relevance score
-        scored_candidates.sort(key=lambda x: x[0], reverse=True)
-        top_candidates = scored_candidates[:target_limit]
-
-        suggestions: list[AssociativeSuggestionItem] = []
-        for score, note, doc in top_candidates:
-            doc_title = (doc.title or doc.filename) if doc else "Ghi chú tri thức"
-            year_val = doc.publication_year if doc else None
-            year_str = str(year_val) if year_val else "2024"
-            author_tag = (
-                doc.authors[0].split()[-1].lower()
-                if (doc and doc.authors and len(doc.authors) > 0)
-                else "author"
+        with self.ai_tracing.retriever(
+            name="associative_memory_recall",
+            input={"draft_id": str(draft_id), "excerpt": query_excerpt},
+            metadata={"target_limit": target_limit, "min_thresh": min_thresh},
+        ) as trace_span:
+            # 1. Fetch user's research notes with attached documents
+            stmt = (
+                select(ResearchNoteModel, DocumentModel)
+                .outerjoin(DocumentModel, ResearchNoteModel.document_id == DocumentModel.id)
+                .where(ResearchNoteModel.user_id == user_id)
+                .order_by(ResearchNoteModel.created_at.desc())
+                .limit(100)
             )
-            citation_key = f"\\cite{{{author_tag}{year_str}}}"
+            result = await self.db.execute(stmt)
+            records = result.all()
 
-            # Fetch folder name if document is in a folder
-            folder_name: str | None = None
-            if doc and doc.folder_id:
-                folder_stmt = (
-                    select(FolderModel.name).where(FolderModel.id == doc.folder_id).limit(1)
+            scored_candidates: list[tuple[float, ResearchNoteModel, DocumentModel | None]] = []
+            for note, doc in records:
+                combined_text = f"{note.user_note or ''} {note.selected_text or ''}"
+                score = self._compute_relevance(draft_tokens, combined_text)
+                if score >= min_thresh:
+                    scored_candidates.append((score, note, doc))
+
+            # Sort descending by relevance score
+            scored_candidates.sort(key=lambda x: x[0], reverse=True)
+            top_candidates = scored_candidates[:target_limit]
+
+            suggestions: list[AssociativeSuggestionItem] = []
+            for score, note, doc in top_candidates:
+                doc_title = (doc.title or doc.filename) if doc else "Ghi chú tri thức"
+                year_val = doc.publication_year if doc else None
+                year_str = str(year_val) if year_val else "2024"
+                author_tag = (
+                    doc.authors[0].split()[-1].lower()
+                    if (doc and doc.authors and len(doc.authors) > 0)
+                    else "author"
                 )
-                folder_res = await self.db.execute(folder_stmt)
-                folder_name = folder_res.scalar_one_or_none()
+                citation_key = f"\\cite{{{author_tag}{year_str}}}"
 
-            relevance_reason = (
-                f"Đoạn văn đang viết có các thuật ngữ tương đồng cao với ghi chú tại bài "
-                f"'{doc_title}' (Trang {note.page_number})."
-            )
-            combined_note_text = f"{note.user_note or ''} {note.selected_text or ''}"
-            matched_kw = sorted(list(draft_tokens & self._tokenize(combined_note_text)))
+                # Fetch folder name if document is in a folder
+                folder_name: str | None = None
+                if doc and doc.folder_id:
+                    folder_stmt = (
+                        select(FolderModel.name).where(FolderModel.id == doc.folder_id).limit(1)
+                    )
+                    folder_res = await self.db.execute(folder_stmt)
+                    folder_name = folder_res.scalar_one_or_none()
 
-            suggestions.append(
-                AssociativeSuggestionItem(
-                    note_id=note.id,
-                    document_id=doc.id if doc else None,
-                    document_title=doc_title,
-                    paper_title=doc_title,
-                    folder_name=folder_name,
-                    page_number=note.page_number,
-                    selected_text=note.selected_text[:200],
-                    user_note=note.user_note,
-                    note_content=note.user_note or note.selected_text,
-                    similarity_score=round(score, 3),
-                    suggested_citation=citation_key,
-                    reason=relevance_reason,
-                    relevance_explanation=relevance_reason,
-                    matched_keywords=matched_kw,
+                relevance_reason = (
+                    f"Đoạn văn đang viết có các thuật ngữ tương đồng cao với ghi chú tại bài "
+                    f"'{doc_title}' (Trang {note.page_number})."
                 )
+                combined_note_text = f"{note.user_note or ''} {note.selected_text or ''}"
+                matched_kw = sorted(list(draft_tokens & self._tokenize(combined_note_text)))
+
+                suggestions.append(
+                    AssociativeSuggestionItem(
+                        note_id=note.id,
+                        document_id=doc.id if doc else None,
+                        document_title=doc_title,
+                        paper_title=doc_title,
+                        folder_name=folder_name,
+                        page_number=note.page_number,
+                        selected_text=note.selected_text[:200],
+                        user_note=note.user_note,
+                        note_content=note.user_note or note.selected_text,
+                        similarity_score=round(score, 3),
+                        suggested_citation=citation_key,
+                        reason=relevance_reason,
+                        relevance_explanation=relevance_reason,
+                        matched_keywords=matched_kw,
+                    )
+                )
+
+            trace_span.set_output(
+                {
+                    "returned_suggestions": len(suggestions),
+                    "total_found": len(scored_candidates),
+                }
             )
+            if suggestions:
+                top_score = float(suggestions[0].similarity_score)
+                trace_span.score(name="top_note_similarity", value=top_score)
 
         logger.info(
             "associative_suggestions_generated",

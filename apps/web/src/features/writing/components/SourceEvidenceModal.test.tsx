@@ -57,31 +57,31 @@ describe("SourceEvidenceModal", () => {
     );
 
     // Header & Meta
-    expect(screen.getByText(/Attention Is All You Need/i)).toBeDefined();
-    expect(screen.getByText("SUPPORTED")).toBeDefined();
-    expect(screen.getByText("Trang 2")).toBeDefined();
-    expect(screen.getByText("98% độ tin cậy")).toBeDefined();
+    expect(screen.getByText(/Attention Is All You Need/i)).toBeInTheDocument();
+    expect(screen.getByText("SUPPORTED")).toBeInTheDocument();
+    expect(screen.getByText("Trang 2")).toBeInTheDocument();
+    expect(screen.getByText("98% độ tin cậy")).toBeInTheDocument();
 
     // Claim & Evidence Quotes
-    expect(screen.getByText(new RegExp(mockClaimWithDoc.claim_text, "i"))).toBeDefined();
-    expect(screen.getByText(new RegExp(mockClaimWithDoc.evidence_text!, "i"))).toBeDefined();
+    expect(screen.getByText(new RegExp(mockClaimWithDoc.claim_text, "i"))).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(mockClaimWithDoc.evidence_text!, "i"))).toBeInTheDocument();
 
     // PDF Iframe Viewport
     const pdfContainer = screen.getByTestId("source-pdf-container");
-    expect(pdfContainer).toBeDefined();
+    expect(pdfContainer).toBeInTheDocument();
     const iframe = pdfContainer.querySelector("iframe");
-    expect(iframe).toBeDefined();
+    expect(iframe).toBeInTheDocument();
     expect(iframe?.getAttribute("src")).toContain("/documents/doc-vaswani-2017/file#page=2");
 
     // Bounding Box Overlays
     const bboxOverlay = screen.getByTestId("source-evidence-bbox-overlay");
-    expect(bboxOverlay).toBeDefined();
+    expect(bboxOverlay).toBeInTheDocument();
     const highlights = screen.getAllByTestId("evidence-bbox-highlight");
     expect(highlights.length).toBe(2);
 
     // Coordinate badges
-    expect(screen.getByText(/Tọa độ Bounding Box/i)).toBeDefined();
-    expect(screen.getByText(/#1: \[0.120, 0.340, 0.850, 0.420\]/i)).toBeDefined();
+    expect(screen.getByText(/Tọa độ Bounding Box/i)).toBeInTheDocument();
+    expect(screen.getByText(/#1: \[0.120, 0.340, 0.850, 0.420\]/i)).toBeInTheDocument();
   });
 
   it("renders citation fallback when evidence_document_id is absent", () => {
@@ -89,8 +89,8 @@ describe("SourceEvidenceModal", () => {
       <SourceEvidenceModal isOpen={true} claim={mockClaimWithoutDoc} onClose={vi.fn()} />
     );
 
-    expect(screen.getByText("CONTRADICTED")).toBeDefined();
-    expect(screen.getByTestId("source-pdf-fallback")).toBeDefined();
+    expect(screen.getByText("CONTRADICTED")).toBeInTheDocument();
+    expect(screen.getByTestId("source-pdf-fallback")).toBeInTheDocument();
     expect(screen.getAllByText(new RegExp(mockClaimWithoutDoc.evidence_text!, "i")).length).toBeGreaterThanOrEqual(1);
   });
 
@@ -118,8 +118,8 @@ describe("SourceEvidenceModal", () => {
     act(() => {
       useWritingStore.getState().openEvidenceModal(mockClaimWithDoc);
     });
-    expect(screen.getByRole("dialog")).toBeDefined();
-    expect(screen.getByText(/Attention Is All You Need/i)).toBeDefined();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByText(/Attention Is All You Need/i)).toBeInTheDocument();
 
     // Close via store
     act(() => {

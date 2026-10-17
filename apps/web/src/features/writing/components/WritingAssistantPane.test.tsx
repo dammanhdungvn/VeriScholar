@@ -38,11 +38,11 @@ describe("WritingAssistantPane", () => {
   it("renders verification results and claim cards", () => {
     render(<WritingAssistantPane />);
 
-    expect(screen.getByText("SAFE Fact-Checking")).toBeDefined();
-    expect(screen.getByText("100%")).toBeDefined();
-    expect(screen.getByText(new RegExp(mockClaim.claim_text, "i"))).toBeDefined();
-    expect(screen.getByText("Trang 3")).toBeDefined();
-    expect(screen.getByText(/Xem Bounding Box ↗/i)).toBeDefined();
+    expect(screen.getByText("SAFE Fact-Checking")).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(mockClaim.claim_text, "i"))).toBeInTheDocument();
+    expect(screen.getByText("Trang 3")).toBeInTheDocument();
+    expect(screen.getByText(/Xem Bounding Box ↗/i)).toBeInTheDocument();
   });
 
   it("triggers openEvidenceModal when clicking claim card or [Xem Bounding Box ↗]", () => {

@@ -101,6 +101,7 @@ export function DemoChatPanel() {
   const inputRef = React.useRef<HTMLInputElement | null>(null);
   const timersRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
   const streamIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const typingIntervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Auto-scroll chat to bottom continuously as text streams or messages change
   React.useEffect(() => {
@@ -119,6 +120,10 @@ export function DemoChatPanel() {
   const clearAllTimers = React.useCallback(() => {
     timersRef.current.forEach(clearTimeout);
     timersRef.current = [];
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
     if (streamIntervalRef.current) {
       clearInterval(streamIntervalRef.current);
       streamIntervalRef.current = null;
@@ -144,12 +149,15 @@ export function DemoChatPanel() {
     let charIdx = 0;
 
     const startTypingTimeout = setTimeout(() => {
-      const typingInterval = setInterval(() => {
+      typingIntervalRef.current = setInterval(() => {
         charIdx++;
         setInputVal(CANONICAL_PROMPT.slice(0, charIdx));
 
         if (charIdx >= promptChars.length) {
-          clearInterval(typingInterval);
+          if (typingIntervalRef.current) {
+            clearInterval(typingIntervalRef.current);
+            typingIntervalRef.current = null;
+          }
           setIsTyping(false);
 
           // 2. Pause briefly as if about to press Enter (350ms)

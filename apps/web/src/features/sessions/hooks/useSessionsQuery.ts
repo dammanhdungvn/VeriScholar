@@ -127,6 +127,7 @@ export function useUpdateSessionMetadataMutation() {
 }
 
 export function useUpdateSessionViewportMutation() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({
       sessionId,
@@ -137,6 +138,13 @@ export function useUpdateSessionViewportMutation() {
       data: SessionUpdateViewportRequest;
       etag: string;
     }) => sessionsApi.updateSessionViewport(sessionId, data, etag),
+    onError: (err: unknown, { sessionId }) => {
+      // If 412 Precondition Failed, quietly refresh session details to synchronize ETag
+      const errorObj = err as { status?: number; response?: { status?: number } };
+      if (errorObj?.status === 412 || errorObj?.response?.status === 412) {
+        queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.detail(sessionId) });
+      }
+    },
     // Viewport persistence is background sync; do not invalidate query to avoid scroll re-fetch cascades
   });
 }

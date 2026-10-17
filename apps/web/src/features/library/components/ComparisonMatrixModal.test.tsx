@@ -193,28 +193,84 @@ describe("ComparisonMatrixModal Component", () => {
     expect(screen.getByText("FlashAttention: Fast and Memory-Efficient Exact Attention")).toBeInTheDocument();
   });
 
-  it("exports matrix as CSV / Excel file when clicking Xuất CSV / Excel button", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        success: true,
-        data: mockMatrixResult,
-      }),
-    });
+  it("exports matrix as CSV / Excel file with strict RFC 4180 escaping and UTF-8 BOM", async () => {
+    let capturedBlobContent = "";
+
+    const originalBlob = globalThis.Blob;
+    globalThis.Blob = class MockBlob extends originalBlob {
+      constructor(blobParts?: BlobPart[], options?: BlobPropertyBag) {
+        super(blobParts, options);
+        if (blobParts && blobParts.length > 0) {
+          capturedBlobContent = blobParts.map((p) => String(p)).join("");
+        }
+      }
+    };
 
     const createObjectURLSpy = vi.fn().mockReturnValue("blob:http://localhost/test-uuid");
     const revokeObjectURLSpy = vi.fn();
     window.URL.createObjectURL = createObjectURLSpy;
     window.URL.revokeObjectURL = revokeObjectURLSpy;
 
+    const adversarialRows = [
+      {
+        document_id: "adv-1",
+        title: 'Attention Is "All" You Need: The "Transformer" Era',
+        authors: ["Vaswani, Ashish", "Shazeer, Noam"],
+        year: 2017,
+        core_methodology: "Self-Attention with Q, K, V vectors",
+        datasets_used: ["WMT, 2014 En-De", "WMT, 2014 En-Fr"],
+        key_metrics: { "F1-Score": "94,2%", BLEU: '28.4 "SOTA"' },
+        strengths: ['Highly "parallel" computation', "Eliminates recurrence, convolution"],
+        limitations: ["O(n^2) sequence memory\nquadratic bottleneck"],
+      },
+      {
+        document_id: "adv-2",
+        title: "Paper with, Commas, and Null Fields",
+        authors: undefined,
+        year: null,
+        core_methodology: "Heuristic, empirical analysis",
+        datasets_used: [],
+        key_metrics: {},
+        strengths: [],
+        limitations: [],
+      },
+    ];
+
+    const mockResponse: ComparisonMatrixResponse = {
+      matrix_id: "matrix-adv",
+      folder_id: null,
+      documents_compared: 2,
+      topic: 'Testing "Quotes" & Commas',
+      rows: adversarialRows as unknown as ComparisonMatrixResponse["rows"],
+      summary_synthesis: "Adversarial synthesis",
+      markdown_table: "| Adv |",
+      sufficiency: {
+        sufficiency_score: 0.9,
+        is_sufficient: true,
+        analyzed_aspects: [],
+        missing_aspects: [],
+        recommended_search_queries: [],
+        reasoning: "Good",
+      },
+      generated_at: "2026-10-16T00:00:00Z",
+    };
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        success: true,
+        data: mockResponse,
+      }),
+    });
+
     renderWithClient(
       <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
     );
 
-    const topicInput = screen.getByPlaceholderText(/Cơ chế Attention/i);
-    fireEvent.change(topicInput, { target: { value: "Transformer Scaling" } });
-    fireEvent.submit(topicInput.closest("form")!);
+    const input = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(input, { target: { value: 'Testing "Quotes" & Commas' } });
+    fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => {
       expect(screen.getByTestId("export-csv-btn")).toBeInTheDocument();
@@ -226,32 +282,135 @@ describe("ComparisonMatrixModal Component", () => {
 
     expect(createObjectURLSpy).toHaveBeenCalled();
     expect(revokeObjectURLSpy).toHaveBeenCalledWith("blob:http://localhost/test-uuid");
+
+    // 1. Verify UTF-8 BOM is present at character index 0
+    expect(capturedBlobContent.charCodeAt(0)).toBe(0xfeff);
+
+    // 2. Verify Double Quote escaping: inner double quotes become double-double quotes ("")
+    expect(capturedBlobContent).toContain('"Attention Is ""All"" You Need: The ""Transformer"" Era"');
+    expect(capturedBlobContent).toContain('28.4 ""SOTA""');
+
+    // 3. Verify Comma escaping
+    expect(capturedBlobContent).toContain('"Vaswani, Ashish; Shazeer, Noam"');
+    expect(capturedBlobContent).toContain('"WMT, 2014 En-De; WMT, 2014 En-Fr"');
+
+    // 4. Verify newline in limitations is safely enclosed
+    expect(capturedBlobContent).toContain('"O(n^2) sequence memory\nquadratic bottleneck"');
+
+    // 5. Verify null / undefined fields are exported as empty quotes
+    expect(capturedBlobContent).toContain('""');
+
+    globalThis.Blob = originalBlob;
   });
 
-  it("paginates large-scale matrix rows and handles page navigation", async () => {
-    // Generate 25 rows
-    const manyRows = Array.from({ length: 25 }, (_, i) => ({
+  it("handles 120 simulated papers with strict DOM pagination (pageSize 10, 50) and boundary checks", async () => {
+    const totalSimulated = 120;
+    const manyRows = Array.from({ length: totalSimulated }, (_, i) => ({
       document_id: `doc-${i + 1}`,
-      title: `Paper Title ${i + 1}`,
-      authors: [`Author ${i + 1}`],
+      title: i % 10 === 0 ? `BioASQ Study ${i + 1}` : `Deep Learning Architecture ${i + 1}`,
+      authors: [`Author ${i + 1}`, `Co-Author ${i + 1}`],
       year: 2020 + (i % 5),
-      core_methodology: `Methodology ${i + 1}`,
-      datasets_used: [`Dataset ${i + 1}`],
-      key_metrics: { Accuracy: `${80 + i}%` },
-      strengths: [`Strength ${i + 1}`],
-      limitations: [`Limitation ${i + 1}`],
+      core_methodology: `Attention Mechanism Variant ${i + 1}`,
+      datasets_used: i % 10 === 0 ? ["BioASQ", "PubMedQA"] : ["WMT-14", "GLUE"],
+      key_metrics: { Accuracy: `${85 + (i % 15)}%`, F1: `0.${90 + (i % 9)}` },
+      strengths: [`High throughput in pipeline ${i + 1}`],
+      limitations: [`Memory footprint scale ${i + 1}`],
     }));
+
+    const mockResponse: ComparisonMatrixResponse = {
+      matrix_id: "matrix-120",
+      folder_id: null,
+      documents_compared: totalSimulated,
+      topic: "Large Scale Foundation Models",
+      rows: manyRows,
+      summary_synthesis: "Synthesizing 120 papers...",
+      markdown_table: "| 120 Papers |",
+      sufficiency: {
+        sufficiency_score: 0.98,
+        is_sufficient: true,
+        analyzed_aspects: ["Architectures", "Metrics"],
+        missing_aspects: [],
+        recommended_search_queries: [],
+        reasoning: "High sufficiency with 120 empirical papers.",
+      },
+      generated_at: "2026-10-16T00:00:00Z",
+    };
 
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
       json: async () => ({
         success: true,
-        data: {
-          ...mockMatrixResult,
-          documents_compared: 25,
-          rows: manyRows,
-        },
+        data: mockResponse,
+      }),
+    });
+
+    const { container } = renderWithClient(
+      <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
+    );
+
+    const input = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(input, { target: { value: "Large Scale Foundation Models" } });
+    fireEvent.submit(input.closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByText("BioASQ Study 1")).toBeInTheDocument();
+    });
+
+    // 1. Verify initial DOM paging: exactly 10 rows in tbody
+    const tbodyRows = container.querySelectorAll("tbody tr");
+    expect(tbodyRows.length).toBe(10);
+    expect(screen.getByText("Trang 1 / 12")).toBeInTheDocument();
+
+    // Verify boundary: Prev button is disabled on Page 1
+    const prevBtn = screen.getByTestId("matrix-prev-page");
+    const nextBtn = screen.getByTestId("matrix-next-page");
+    expect(prevBtn).toBeDisabled();
+    expect(nextBtn).not.toBeDisabled();
+
+    // 2. Navigate to Page 2
+    fireEvent.click(nextBtn);
+    expect(screen.getByText("Trang 2 / 12")).toBeInTheDocument();
+    expect(screen.getByText("BioASQ Study 11")).toBeInTheDocument();
+    expect(screen.queryByText("BioASQ Study 1")).not.toBeInTheDocument();
+    expect(container.querySelectorAll("tbody tr").length).toBe(10);
+
+    // 3. Test changing Page Size to 50
+    const pageSizeSelect = screen.getByLabelText("Số dòng mỗi trang");
+    fireEvent.change(pageSizeSelect, { target: { value: "50" } });
+    expect(screen.getByText("Trang 1 / 3")).toBeInTheDocument();
+    expect(container.querySelectorAll("tbody tr").length).toBe(50);
+
+    // 4. Test real-time filtering among 120 papers
+    const searchInput = screen.getByTestId("search-matrix-input");
+    fireEvent.change(searchInput, { target: { value: "BioASQ" } });
+    expect(screen.getByText(/Kết quả lọc:/i)).toBeInTheDocument();
+    expect(container.querySelectorAll("tbody tr").length).toBe(12);
+    expect(screen.getByText("Trang 1 / 1")).toBeInTheDocument();
+  });
+
+  it("disables submit button when topic input is empty or whitespace", () => {
+    renderWithClient(
+      <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
+    );
+
+    const submitBtn = screen.getByRole("button", { name: /Sinh Ma Trận Đối Chiếu/i });
+    expect(submitBtn).toBeDisabled();
+
+    const input = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(input, { target: { value: "    " } });
+    expect(submitBtn).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "Empirical Analysis of LLM" } });
+    expect(submitBtn).not.toBeDisabled();
+  });
+
+  it("displays error alert when synthesis API fails with 500 error", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: async () => ({
+        detail: "Hệ thống tổng hợp gặp sự cố máy chủ nội bộ (500).",
       }),
     });
 
@@ -259,33 +418,12 @@ describe("ComparisonMatrixModal Component", () => {
       <ComparisonMatrixModal isOpen={true} onClose={vi.fn()} />
     );
 
-    const topicInput = screen.getByPlaceholderText(/Cơ chế Attention/i);
-    fireEvent.change(topicInput, { target: { value: "Large Scale Survey" } });
-    fireEvent.submit(topicInput.closest("form")!);
+    const input = screen.getByPlaceholderText(/Cơ chế Attention/i);
+    fireEvent.change(input, { target: { value: "Faulty Query" } });
+    fireEvent.submit(input.closest("form")!);
 
     await waitFor(() => {
-      expect(screen.getByText("Paper Title 1")).toBeInTheDocument();
-      expect(screen.getByText("Paper Title 10")).toBeInTheDocument();
-      // Page size is 10, so row 11 should not be on page 1
-      expect(screen.queryByText("Paper Title 11")).not.toBeInTheDocument();
+      expect(screen.getByRole("alert")).toBeInTheDocument();
     });
-
-    expect(screen.getByText("Trang 1 / 3")).toBeInTheDocument();
-
-    // Click Next page
-    const nextBtn = screen.getByTestId("matrix-next-page");
-    fireEvent.click(nextBtn);
-
-    expect(screen.getByText("Paper Title 11")).toBeInTheDocument();
-    expect(screen.getByText("Paper Title 20")).toBeInTheDocument();
-    expect(screen.queryByText("Paper Title 1")).not.toBeInTheDocument();
-    expect(screen.getByText("Trang 2 / 3")).toBeInTheDocument();
-
-    // Click Prev page
-    const prevBtn = screen.getByTestId("matrix-prev-page");
-    fireEvent.click(prevBtn);
-
-    expect(screen.getByText("Paper Title 1")).toBeInTheDocument();
-    expect(screen.getByText("Trang 1 / 3")).toBeInTheDocument();
   });
 });

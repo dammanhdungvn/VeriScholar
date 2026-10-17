@@ -90,7 +90,7 @@ async def create_test_user(
             id=uuid4(),
             email=email,
             full_name=full_name,
-            hashed_password=AuthService.hash_password("SecurePassword123!"),
+            hashed_password="mock_hashed_password",
             is_active=True,
             role="researcher",
             institution="MIT / Bell Labs",

@@ -10,6 +10,7 @@ Features:
 
 import hashlib
 import hmac
+import os
 import random
 import re
 from collections.abc import Mapping, Sequence
@@ -94,7 +95,29 @@ class BaseTraceSpan(AbstractContextManager, AbstractAsyncContextManager):
         pass
 
     def set_usage(
-        self, prompt_tokens: int = 0, completion_tokens: int = 0, total_tokens: int = 0
+        self,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int = 0,
+        reasoning_tokens: int = 0,
+    ) -> None:
+        pass
+
+    def score(
+        self,
+        name: str,
+        value: float | str,
+        comment: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        pass
+
+    def score_trace(
+        self,
+        name: str,
+        value: float | str,
+        comment: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         pass
 
@@ -151,6 +174,10 @@ class LangfuseTraceSpan(BaseTraceSpan):
         model: str | None = None,
         model_parameters: dict[str, Any] | None = None,
         usage_details: dict[str, int] | None = None,
+        user_id: str | None = None,
+        session_id: str | None = None,
+        tags: list[str] | None = None,
+        version: str | None = None,
     ) -> None:
         self.client = client
         self.name = name
@@ -159,6 +186,10 @@ class LangfuseTraceSpan(BaseTraceSpan):
         self.model = model
         self.model_parameters = model_parameters
         self.usage_details = usage_details
+        self.user_id = user_id
+        self.session_id = session_id
+        self.tags = tags
+        self.version = version
         self.initial_input = mask_payload(input_data, mask_enabled=mask_enabled)
         self.initial_output = mask_payload(output_data, mask_enabled=mask_enabled)
         self.metadata = metadata or {}
@@ -176,8 +207,28 @@ class LangfuseTraceSpan(BaseTraceSpan):
                 model=self.model,
                 model_parameters=self.model_parameters,
                 usage_details=self.usage_details,
+                version=self.version,
             )
             self._raw_span = self._cm.__enter__()
+
+            # Propagate first-class OpenTelemetry attributes for Langfuse
+            # users/sessions/tags dashboards
+            if self._raw_span is not None and hasattr(self._raw_span, "_otel_span"):
+                otel_span = self._raw_span._otel_span
+                if otel_span and hasattr(otel_span, "is_recording") and otel_span.is_recording():
+                    try:
+                        from langfuse import LangfuseOtelSpanAttributes as A
+
+                        if self.user_id:
+                            otel_span.set_attribute(A.TRACE_USER_ID, str(self.user_id))
+                        if self.session_id:
+                            otel_span.set_attribute(A.TRACE_SESSION_ID, str(self.session_id))
+                        if self.tags:
+                            otel_span.set_attribute(A.TRACE_TAGS, self.tags)
+                        if self.version:
+                            otel_span.set_attribute(A.RELEASE, self.version)
+                    except Exception:
+                        pass
         except Exception as ex:
             logger.warning(
                 "langfuse_observation_start_failed",
@@ -228,14 +279,77 @@ class LangfuseTraceSpan(BaseTraceSpan):
         self.update(metadata=metadata)
 
     def set_usage(
-        self, prompt_tokens: int = 0, completion_tokens: int = 0, total_tokens: int = 0
+        self,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        total_tokens: int = 0,
+        reasoning_tokens: int = 0,
     ) -> None:
+        tot = total_tokens or (prompt_tokens + completion_tokens + reasoning_tokens)
         usage = {
+            "input": prompt_tokens,
+            "output": completion_tokens,
+            "total": tot,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
-            "total_tokens": total_tokens or (prompt_tokens + completion_tokens),
+            "total_tokens": tot,
         }
+        if reasoning_tokens:
+            usage["reasoning"] = reasoning_tokens
         self.update(usage_details=usage)
+
+    def score(
+        self,
+        name: str,
+        value: float | str,
+        comment: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Record an evaluation score on this observation."""
+        if self._raw_span is None:
+            return
+        try:
+            clean_comment = scrub_sensitive_text(comment) if comment else None
+            clean_meta = mask_payload(metadata, self.mask_enabled) if metadata else None
+            if hasattr(self._raw_span, "score"):
+                self._raw_span.score(
+                    name=name,
+                    value=value,
+                    comment=clean_comment,
+                    metadata=clean_meta,
+                )
+            elif hasattr(self._raw_span, "score_trace"):
+                self._raw_span.score_trace(
+                    name=name,
+                    value=value,
+                    comment=clean_comment,
+                    metadata=clean_meta,
+                )
+        except Exception as ex:
+            logger.debug("span_score_failed", name=name, error=str(ex))
+
+    def score_trace(
+        self,
+        name: str,
+        value: float | str,
+        comment: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> None:
+        """Record an evaluation score on the root trace."""
+        if self._raw_span is None:
+            return
+        try:
+            clean_comment = scrub_sensitive_text(comment) if comment else None
+            clean_meta = mask_payload(metadata, self.mask_enabled) if metadata else None
+            if hasattr(self._raw_span, "score_trace"):
+                self._raw_span.score_trace(
+                    name=name,
+                    value=value,
+                    comment=clean_comment,
+                    metadata=clean_meta,
+                )
+        except Exception as ex:
+            logger.debug("trace_score_failed", name=name, error=str(ex))
 
     def record_exception(self, exc: Exception) -> None:
         if self._raw_span is None:
@@ -341,8 +455,8 @@ class AITracingService:
         self._initialize_client()
 
     def _initialize_client(self) -> None:
-        """Safely initialize the Langfuse client if enabled and credentials are present."""
-        if not self.enabled:
+        is_test_env = settings.ENVIRONMENT == "test" or bool(os.getenv("PYTEST_CURRENT_TEST"))
+        if not self.enabled or is_test_env:
             logger.info("ai_tracing_disabled_noop_mode")
             return
 
@@ -400,6 +514,7 @@ class AITracingService:
         input: Any = None,
         output: Any = None,
         sample_rate: float | None = None,
+        version: str | None = None,
     ) -> BaseTraceSpan:
         """Start a root AI trace context manager.
 
@@ -440,6 +555,10 @@ class AITracingService:
             output_data=output,
             metadata=meta,
             mask_enabled=self.mask_input_output,
+            user_id=str(user_id) if user_id else None,
+            session_id=str(session_id) if session_id else None,
+            tags=tags,
+            version=version or getattr(settings, "VERSION", "0.1.0"),
         )
 
     def span(
@@ -463,6 +582,54 @@ class AITracingService:
             output_data=output,
             metadata=meta,
             mask_enabled=self.mask_input_output,
+        )
+
+    def retriever(
+        self,
+        name: str = "retrieval",
+        input: Any = None,
+        output: Any = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> BaseTraceSpan:
+        """Start a specialized retriever observation for vector/chunk retrieval."""
+        return self.span(
+            name=name,
+            input=input,
+            output=output,
+            metadata=metadata,
+            as_type="retriever",
+        )
+
+    def guardrail(
+        self,
+        name: str = "guardrail",
+        input: Any = None,
+        output: Any = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> BaseTraceSpan:
+        """Start a specialized guardrail observation for safety and grounding checks."""
+        return self.span(
+            name=name,
+            input=input,
+            output=output,
+            metadata=metadata,
+            as_type="guardrail",
+        )
+
+    def tool(
+        self,
+        name: str = "tool",
+        input: Any = None,
+        output: Any = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> BaseTraceSpan:
+        """Start a specialized tool observation for deterministic compute and external tools."""
+        return self.span(
+            name=name,
+            input=input,
+            output=output,
+            metadata=metadata,
+            as_type="tool",
         )
 
     def generation(

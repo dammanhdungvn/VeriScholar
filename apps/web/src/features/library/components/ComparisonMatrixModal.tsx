@@ -92,6 +92,7 @@ export function ComparisonMatrixModal({
         topic: topic.trim(),
         folder_id: folderId || undefined,
         document_ids: documentIds || undefined,
+        limit: 200,
       });
       setMatrixData(res);
       setSearchFilter("");
@@ -274,6 +275,20 @@ export function ComparisonMatrixModal({
                     ))}
                   </div>
                 </div>
+
+                {matrixMutation.isError && (
+                  <div
+                    role="alert"
+                    className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-700 dark:text-rose-300 text-xs flex items-center gap-2"
+                  >
+                    <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
+                    <span>
+                      {matrixMutation.error instanceof Error
+                        ? matrixMutation.error.message
+                        : "Không thể khởi tạo ma trận đối chiếu. Vui lòng thử lại sau."}
+                    </span>
+                  </div>
+                )}
 
                 <div className="pt-2 flex justify-end">
                   <button

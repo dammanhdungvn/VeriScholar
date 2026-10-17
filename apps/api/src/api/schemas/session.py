@@ -5,7 +5,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class ViewportStateSchema(BaseModel):
@@ -203,7 +203,13 @@ class SessionTurnListEnvelope(PaginatedResponseEnvelope[SessionTurnItem]):
 class SessionChatMessageRequest(BaseModel):
     """Request payload for sending question and streaming response in session."""
 
-    question: str = Field(..., min_length=1, max_length=4000, description="Nội dung câu hỏi")
+    question: str = Field(
+        ...,
+        validation_alias=AliasChoices("question", "message"),
+        min_length=1,
+        max_length=4000,
+        description="Nội dung câu hỏi",
+    )
     stream: bool = Field(True, description="Kích hoạt truyền dòng Server-Sent Events (SSE)")
     scope: Literal["multi_paper", "single_paper"] = Field(
         "multi_paper",

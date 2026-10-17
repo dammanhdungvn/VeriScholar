@@ -9,6 +9,9 @@ interface DashboardAmbientBackgroundProps {
   isHero?: boolean;
 }
 
+const MAX_METEORS = 8;
+const MAX_SYNAPTIC_PULSES = 8;
+
 export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBackgroundProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
@@ -25,27 +28,32 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
   useEffect(() => {
     if (!isHero) return;
 
+    let rafId: number | null = null;
     const handleWindowMouseMove = (e: MouseEvent) => {
-      const pos = { x: e.clientX, y: e.clientY };
-      setMousePos(pos);
-      mousePosRef.current = pos;
+      mousePosRef.current = { x: e.clientX, y: e.clientY };
+      if (rafId === null) {
+        rafId = requestAnimationFrame(() => {
+          setMousePos({ x: e.clientX, y: e.clientY });
+          rafId = null;
+        });
+      }
     };
 
     const handleWindowMouseLeave = () => {
-      const pos = { x: -1000, y: -1000 };
-      setMousePos(pos);
-      mousePosRef.current = pos;
+      mousePosRef.current = { x: -1000, y: -1000 };
+      setMousePos({ x: -1000, y: -1000 });
     };
 
-    window.addEventListener("mousemove", handleWindowMouseMove);
+    window.addEventListener("mousemove", handleWindowMouseMove, { passive: true });
     window.addEventListener("mouseleave", handleWindowMouseLeave);
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       window.removeEventListener("mousemove", handleWindowMouseMove);
       window.removeEventListener("mouseleave", handleWindowMouseLeave);
     };
   }, [isHero]);
 
-  // Landing Page Particle & Meteor Animation Engine adapted for Dashboard
+  // Particle & Meteor Animation Engine adapted for Dashboard with Tab Visibility Controls
   useEffect(() => {
     if (!isHero) return;
     const canvas = canvasRef.current;
@@ -53,7 +61,13 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    let animationFrameId: number;
+    let animationFrameId: number | null = null;
+    let meteorInterval: ReturnType<typeof setInterval> | null = null;
+    let pulseInterval: ReturnType<typeof setInterval> | null = null;
+    let initialTimeout: ReturnType<typeof setTimeout> | null = null;
+    let isRunning = true;
+    let lastFrameTime = performance.now();
+
     let width = (canvas.width = window.innerWidth);
     let height = (canvas.height = window.innerHeight);
 
@@ -64,7 +78,7 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
     };
     window.addEventListener("resize", handleResize);
 
-    // Effect 1: Neural Nodes (65 in Dark Mode for Cosmic Constellation, 52 in Light Mode for Silk Attention Mesh)
+    // Effect 1: Neural Nodes (65 in Dark Mode, 52 in Light Mode)
     const totalParticleCount = 65;
     const particles: Array<{
       x: number;
@@ -86,7 +100,7 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       });
     }
 
-    // Effect 2: 6s Periodic Meteors (Shooting Stars Wave)
+    // Effect 2: 6s Periodic Meteors (Capped at MAX_METEORS to prevent runaway background accumulation)
     const meteors: Array<{
       x: number;
       y: number;
@@ -98,8 +112,10 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
     }> = [];
 
     const spawnMeteorShowerWave = () => {
-      // Spawn meteors with vibrant color trail in dark mode, and warm terracotta in light mode
-      const count = Math.floor(Math.random() * 2) + 2;
+      if (document.hidden) return;
+      if (meteors.length >= MAX_METEORS) return;
+
+      const count = Math.min(Math.floor(Math.random() * 2) + 2, MAX_METEORS - meteors.length);
       for (let mIdx = 0; mIdx < count; mIdx++) {
         const angle = Math.random() * 0.85 + 0.35;
         const startX = Math.random() * (width * 1.2) - width * 0.1;
@@ -117,9 +133,6 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       }
     };
 
-    const meteorInterval = setInterval(spawnMeteorShowerWave, 6000);
-    const initialTimeout = setTimeout(spawnMeteorShowerWave, 1000);
-
     // Effect 3: Light Mode Synaptic Pulse Packets
     const synapticPulses: Array<{
       fromIdx: number;
@@ -129,8 +142,9 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
     }> = [];
 
     const spawnSynapticPulse = () => {
-      if (isDarkRef.current) return;
-      if (synapticPulses.length >= 8) return;
+      if (document.hidden || isDarkRef.current) return;
+      if (synapticPulses.length >= MAX_SYNAPTIC_PULSES) return;
+
       const lightNodeCount = 52;
       for (let attempt = 0; attempt < 10; attempt++) {
         const i = Math.floor(Math.random() * lightNodeCount);
@@ -152,31 +166,55 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       }
     };
 
-    const pulseInterval = setInterval(spawnSynapticPulse, 900);
+    const startIntervals = () => {
+      stopIntervals();
+      meteorInterval = setInterval(spawnMeteorShowerWave, 6000);
+      pulseInterval = setInterval(spawnSynapticPulse, 900);
+      initialTimeout = setTimeout(spawnMeteorShowerWave, 1000);
+    };
 
-    const render = () => {
+    const stopIntervals = () => {
+      if (meteorInterval) {
+        clearInterval(meteorInterval);
+        meteorInterval = null;
+      }
+      if (pulseInterval) {
+        clearInterval(pulseInterval);
+        pulseInterval = null;
+      }
+      if (initialTimeout) {
+        clearTimeout(initialTimeout);
+        initialTimeout = null;
+      }
+    };
+
+    const render = (currentTime: number) => {
+      if (!isRunning) return;
+
+      const elapsed = currentTime - lastFrameTime;
+      lastFrameTime = currentTime;
+      const deltaFactor = Math.min(Math.max(elapsed / 16.67, 0.1), 2.0);
+
       ctx.clearRect(0, 0, width, height);
       const m = mousePosRef.current;
       const currentIsDark = isDarkRef.current;
 
-      // 1. Meteors Rendering (Glowing Shooting Stars)
+      // 1. Meteors Rendering
       for (let i = meteors.length - 1; i >= 0; i--) {
         const star = meteors[i];
         const tailX = star.x - Math.cos(star.angle) * star.length;
         const tailY = star.y - Math.sin(star.angle) * star.length;
 
         const grad = ctx.createLinearGradient(star.x, star.y, tailX, tailY);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
         if (currentIsDark) {
-          grad.addColorStop(0, `rgba(255, 255, 255, ${star.opacity})`);
           grad.addColorStop(0.2, `rgba(255, 220, 190, ${star.opacity * 0.85})`);
           grad.addColorStop(0.65, `rgba(217, 119, 87, ${star.opacity * 0.35})`);
-          grad.addColorStop(1, "rgba(217, 119, 87, 0)");
         } else {
-          grad.addColorStop(0, `rgba(217, 119, 87, ${star.opacity})`);
-          grad.addColorStop(0.25, `rgba(245, 158, 11, ${star.opacity * 0.8})`);
-          grad.addColorStop(0.7, `rgba(204, 120, 92, ${star.opacity * 0.3})`);
-          grad.addColorStop(1, "rgba(204, 120, 92, 0)");
+          grad.addColorStop(0.25, `rgba(255, 200, 160, ${star.opacity * 0.8})`);
+          grad.addColorStop(0.7, `rgba(184, 75, 42, ${star.opacity * 0.3})`);
         }
+        grad.addColorStop(1, "rgba(217, 119, 87, 0)");
 
         ctx.beginPath();
         ctx.moveTo(star.x, star.y);
@@ -186,22 +224,22 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
         ctx.lineCap = "round";
 
         ctx.shadowBlur = 16;
-        ctx.shadowColor = currentIsDark ? "#e89b82" : "rgba(204, 120, 92, 0.6)";
+        ctx.shadowColor = currentIsDark ? "#e89b82" : "#b84b2a";
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        star.x += Math.cos(star.angle) * star.speed;
-        star.y += Math.sin(star.angle) * star.speed;
-        star.opacity -= 0.0035;
+        star.x += Math.cos(star.angle) * star.speed * deltaFactor;
+        star.y += Math.sin(star.angle) * star.speed * deltaFactor;
+        star.opacity -= 0.0035 * deltaFactor;
 
         if (star.opacity <= 0 || star.y > height + 250 || star.x > width + 250) {
           meteors.splice(i, 1);
         }
       }
 
-      // 2. Neural Nodes & Synaptic Constellation Lines
+      // 2. Neural Nodes & Synapses
       const activeCount = currentIsDark ? totalParticleCount : 52;
-      const speedScale = currentIsDark ? 1.0 : 0.7;
+      const speedScale = (currentIsDark ? 1.0 : 0.7) * deltaFactor;
 
       for (let i = 0; i < activeCount; i++) {
         const p1 = particles[i];
@@ -226,7 +264,6 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
           ctx.fill();
         }
 
-        // Synaptic connection lines between nodes
         const maxDist = currentIsDark ? 120 : 135;
         for (let j = i + 1; j < activeCount; j++) {
           const p2 = particles[j];
@@ -251,7 +288,6 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
           }
         }
 
-        // Interactive Mouse Query Attention Beam
         if (m.x > 0 && m.y > 0) {
           const mDx = p1.x - m.x;
           const mDy = p1.y - m.y;
@@ -275,11 +311,11 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
         }
       }
 
-      // 3. Light Mode Synaptic Pulse Packets along active lines
+      // 3. Light Mode Synaptic Pulse Packets
       if (!currentIsDark) {
         for (let k = synapticPulses.length - 1; k >= 0; k--) {
           const pulse = synapticPulses[k];
-          pulse.progress += pulse.speed;
+          pulse.progress += pulse.speed * deltaFactor;
           if (pulse.progress >= 1) {
             synapticPulses.splice(k, 1);
             continue;
@@ -307,14 +343,43 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    // Page Lifecycle: Pause when tab is backgrounded
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        isRunning = false;
+        if (animationFrameId !== null) {
+          cancelAnimationFrame(animationFrameId);
+          animationFrameId = null;
+        }
+        stopIntervals();
+        meteors.length = 0;
+        synapticPulses.length = 0;
+      } else {
+        isRunning = true;
+        lastFrameTime = performance.now();
+        startIntervals();
+        if (animationFrameId === null) {
+          animationFrameId = requestAnimationFrame(render);
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    if (!document.hidden) {
+      startIntervals();
+      animationFrameId = requestAnimationFrame(render);
+    }
 
     return () => {
+      isRunning = false;
       window.removeEventListener("resize", handleResize);
-      clearInterval(meteorInterval);
-      clearInterval(pulseInterval);
-      clearTimeout(initialTimeout);
-      cancelAnimationFrame(animationFrameId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      stopIntervals();
+      if (animationFrameId !== null) {
+        cancelAnimationFrame(animationFrameId);
+        animationFrameId = null;
+      }
     };
   }, [isHero]);
 
@@ -324,7 +389,7 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
       className="pointer-events-none absolute inset-0 overflow-hidden select-none z-0"
       aria-hidden="true"
     >
-      {/* 1. Drafting Grid Container (Background grid removed as requested, keeping container for contract) */}
+      {/* 1. Drafting Grid Container */}
       <div
         data-testid="dashboard-drafting-grid"
         className={`absolute inset-0 pointer-events-none transition-opacity duration-700 ${
@@ -366,7 +431,7 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
         } ${isDark ? "bg-[#e8a55a]/10" : "bg-[#e8a55a]/6"}`}
       />
 
-      {/* 5. Celestial Motes Container (kept for test contract) */}
+      {/* 5. Celestial Motes Container */}
       <div
         data-testid="dashboard-celestial-motes"
         className={`absolute inset-0 transition-opacity duration-700 ${
@@ -374,7 +439,7 @@ export function DashboardAmbientBackground({ isHero = true }: DashboardAmbientBa
         }`}
       />
 
-      {/* 5.5 Interactive Particles & Meteor Canvas (Synced with Landing Page) */}
+      {/* 5.5 Interactive Particles & Meteor Canvas */}
       <div
         data-testid="dashboard-scholar-motifs"
         className={`absolute inset-0 transition-opacity duration-700 pointer-events-none z-0 ${

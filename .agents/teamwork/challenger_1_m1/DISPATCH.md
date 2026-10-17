@@ -1,19 +1,35 @@
-## 2026-10-15T02:48:42Z
-You are challenger_1_m1.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1
-Read the original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read Worker M1 handoff: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
+# Dispatch — Challenger 1 (Milestone 1)
 
-YOUR MISSION:
-Empirically challenge and stress-test the SSE Streaming & X-Request-ID Header Standardization.
-Write and run empirical stress tests (using httpx / pytest):
-1. Send requests with NO `X-Request-ID` -> Verify server generates valid UUID4 and returns it on `/events`, `summary:stream`, `/messages`.
-2. Send requests with custom `X-Request-ID: my-custom-trace-uuid-12345` -> Verify exact echo in response header and SSE payload.
-3. Send requests with uppercase `X-REQUEST-ID` and duplicate headers -> Verify exactly one canonical lowercase `x-request-id` is returned without duplication.
-4. Verify SSE event stream chunk parsing: Ensure `summary_start` and `start` contain `request_id`.
+Scope: Empirical stress testing of Milestone 1 (M1_WRITING_AND_SYNTHESIS: Pillars 2, 3, 4).
+Input:
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md` (read section ## 2026-10-16T12:03:58Z)
+- `/home/VeriScholar/Workspace/VeriScholar/AGENTS.md`
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md`
 
-Report your empirical findings and pass/fail verdict (CONFIRM / REJECT).
-Write your report to: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1/handoff.md
-Notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+Output: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1/handoff.md`
+Report verdict: CONFIRM CORRECTNESS or REJECT.
+
+
+## 2026-10-16T12:35:03Z
+Sender: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+Content:
+You are Challenger 1 for Milestone 1 (M1_WRITING_AND_SYNTHESIS).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1.
+
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1/DISPATCH.md
+
+Empirically stress-test Milestone 1 implementations:
+- Overleaf export endpoint: Test URL generation with special characters in title, empty content, and custom LaTeX code.
+- Associative suggestions: Test with high similarity, zero similarity, empty draft text.
+- Library comparison matrix: Test Redis cache hit vs miss behavior, pagination bounds (limit=200, offset=0, offset=100), and search keyword filtering across methodology, datasets, and metrics.
+
+Write your findings and empirical evidence to:
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_1_m1/handoff.md
+State your verdict: CONFIRM CORRECTNESS or REJECT.
+Report via send_message to your caller.

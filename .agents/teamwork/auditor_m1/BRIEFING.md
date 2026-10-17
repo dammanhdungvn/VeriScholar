@@ -1,14 +1,14 @@
-# BRIEFING — 2026-10-15T02:54:15Z
+# BRIEFING — 2026-10-16T12:44:00Z
 
 ## Mission
-Forensic integrity audit of Milestone 1 implementation (Pure ASGI Tracing Middleware, logging, request ID propagation, and SSE integration).
+Forensic integrity audit of Milestone 1 (M1_WRITING_AND_SYNTHESIS) implementation: Pillars 2, 3, and 4.
 
 ## 🔒 My Identity
 - Archetype: forensic_auditor
 - Roles: critic, specialist, auditor
-- Working directory: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/auditor_m1
-- Original parent: a2173842-299f-4803-8153-e166837e5cde
-- Target: Milestone 1
+- Working directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/auditor_m1
+- Original parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Target: Milestone 1 (M1_WRITING_AND_SYNTHESIS)
 
 ## 🔒 Key Constraints
 - Audit-only — do NOT modify implementation code
@@ -18,51 +18,56 @@ Forensic integrity audit of Milestone 1 implementation (Pure ASGI Tracing Middle
 - Deliver verdict: CLEAN or INTEGRITY VIOLATION
 
 ## Current Parent
-- Conversation ID: a2173842-299f-4803-8153-e166837e5cde
-- Updated: 2026-10-15T02:54:15Z
+- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Updated: 2026-10-16T12:44:00Z
 
 ## Audit Scope
-- **Work product**: Milestone 1 changes in `apps/api/src/api/` and `apps/api/tests/`
+- **Work product**: Milestone 1 changes:
+  - `apps/web/src/features/writing/api/draftsApi.ts`
+  - `apps/web/src/features/writing/components/WritingWorkspace.tsx`
+  - `apps/api/src/api/core/config.py`
+  - `apps/api/src/api/deps.py`
+  - `apps/api/src/api/services/library_synthesis_service.py`
+  - `apps/web/src/features/library/types/index.ts`
+  - `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`
+  - Test suites: `test_backend_pillars_completion.py`, `test_m1_pillars_empirical_stress.py`, and Vitest suites
 - **Profile loaded**: General Project
 - **Audit type**: forensic integrity check
 
 ## Audit Progress
 - **Phase**: reporting
 - **Checks completed**:
-  - Ground truth requirements analysis (ORIGINAL_REQUEST.md, PROJECT.md, AGENTS.md)
-  - Full git diff inspection of M1 code
-  - Static analysis: prohibited pattern scan (hardcoded test values, fake stubs, bypasses)
-  - Pre-populated artifact detection
-  - Lint and formatting check (`uv run ruff check apps/api`, `uv run ruff format --check apps/api`) -> 0 errors, 0 warnings
-  - Targeted M1 test execution -> 40/40 PASSED
-  - Full API test execution -> 229/229 PASSED
-  - Full Core domain test execution -> 76/76 PASSED
-  - Frontend typecheck, lint, and build (`apps/web`) -> 0 errors, build succeeded
-  - Empirical stress test verification (`apps/api/tests/test_sse_request_id_stress.py`) -> 15/15 PASSED
+  - Ground-truth requirements analysis
+  - Static analysis: hardcoded values, dummy facades, bypasses
+  - Frontend typecheck (`tsc -b`) and linter (`oxlint`) -> 0 errors
+  - Frontend Vitest suites (`writing`: 103/103 passed, `ComparisonMatrixModal`: 7/7 passed)
+  - Backend Ruff lint check -> 2 ERRORS in `library_synthesis_service.py` (I001, E501)
+  - Backend Pillars test execution (`test_backend_pillars_completion.py`) -> 4/4 passed
+  - Empirical Challenger Stress test execution (`test_m1_pillars_empirical_stress.py`) -> 1 FAILED, 9 PASSED
+  - Security & Tenant Isolation Analysis -> Cross-tenant authorization bypass in `export_overleaf`
 - **Checks remaining**: None
-- **Findings so far**: CLEAN — No integrity violations found. Genuine, production-grade implementation.
+- **Findings so far**: INTEGRITY VIOLATION — Multiple critical defects and integrity violations detected.
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Hardcoded request IDs or test values in backend: REJECTED (Grep search returned 0 results)
-  - Fake stubs or bypasses in PureASGITracingMiddleware: REJECTED (Fully authentic ASGI implementation)
-  - Swallowed exceptions in middleware or exception handlers: REJECTED (All exceptions re-raised or logged with context)
-  - Duplicate or mixed-case X-Request-ID headers: TESTED & PROVED ROBUST (Filtered and normalized to single lowercase header)
-  - Empty X-Request-ID fallback: TESTED & PROVED ROBUST (Falls back to valid UUID4)
-- **Vulnerabilities found**: None
+  - Pre-populated hardcoded state in frontend: CONFIRMED VIOLATION (`WritingWorkspace.tsx` lines 176-183 initial state hardcoded to `assoc-1`, `Attention Is All You Need`, `vaswani2017attention`, 0.94)
+  - Cross-tenant authorization isolation in `export_overleaf`: CONFIRMED VIOLATION (`draft_service.py:597-603` checks `if not draft:` instead of `if not draft or not role:`, returning 200 to unauthorized users)
+  - Lint and code hygiene gate: CONFIRMED VIOLATION (`library_synthesis_service.py` fails `ruff check` with I001 import order and E501 line length > 100)
+- **Vulnerabilities found**:
+  - Security / Tenant Isolation Bypass: Unauthorized users can export any draft to Overleaf via `POST /api/v1/drafts/{id}:export-overleaf`.
+  - Quality Gate Violation: Ruff lint errors in backend service.
+  - Hardcoded pre-populated UI state: Fake initial associative card suggestion.
 - **Untested angles**: None within M1 scope
 
 ## Loaded Skills
-- Source: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md
-  - Local copy: None (referenced directly)
-  - Core methodology: Essential engineering protocols, architectural laws, and domain invariants for VeriScholar
+- None
 
 ## Key Decisions Made
-- Confirmed full compliance with Monorepo Atomicity and Monorepo Invariants.
-- Forensic Verdict: CLEAN.
+- Rejection of work product under Forensic Auditor mandate.
+- Forensic Verdict: INTEGRITY VIOLATION.
 
 ## Artifact Index
 - DISPATCH.md — audit dispatch assignment
-- BRIEFING.md — persistent auditor memory
+- BRIEFING.md — persistent auditor working memory
 - progress.md — auditor liveness heartbeat
-- handoff.md — forensic audit report
+- handoff.md — final forensic audit report

@@ -130,7 +130,7 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
         http_client: httpx.AsyncClient | None = None,
         timeout: float = 10.0,
     ) -> None:
-        self.api_key = api_key or os.getenv("EXA_API_KEY", "")
+        self.api_key = api_key if api_key is not None else os.getenv("EXA_API_KEY", "")
         self.cache = cache or GlobalAcademicCache()
         self.fallback_adapter = fallback_adapter or InMemoryAcademicResolverAdapter()
         self._external_client = http_client
