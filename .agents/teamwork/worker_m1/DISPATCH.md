@@ -1,55 +1,53 @@
-## 2026-10-15T02:36:18Z
+## 2026-10-16T12:24:33Z
+You are Worker M1 for Milestone 1 (M1_WRITING_AND_SYNTHESIS).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1.
 
-You are worker_m1.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1
-Read the original user request at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read the detailed survey report from explorer_survey_1 at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/explorer_survey_1/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
-Also read skills:
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/fastapi/SKILL.md
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/explorer_survey_pillar2_3/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/explorer_survey_pillar4/handoff.md
 
 MANDATORY INTEGRITY WARNING:
 DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-EXCLUSIVE WRITE OWNERSHIP:
-You own these files exclusively. Concurrent workers will not touch them:
-- apps/api/src/api/middleware/tracing.py
-- apps/api/src/api/__init__.py
-- apps/api/src/api/v1/endpoints/documents.py
-- apps/api/src/api/services/document_service.py
-- apps/api/src/api/v1/endpoints/sessions.py
-- apps/api/src/api/services/session_chat_service.py
-- apps/api/tests/test_logging.py
-- apps/api/tests/test_documents_summary_generate.py
-- apps/api/tests/test_sessions_chat.py
-- apps/api/tests/test_golden_papers_matrix.py
+Scope & Tasks:
+1. Pillar 2 (Overleaf 1-Click Sync):
+   - Verify `POST /api/v1/drafts/{id}:export-overleaf` generates valid Overleaf launch URL and snippet form data.
+   - Verify Frontend Writing Workspace provides "Đồng bộ Overleaf (1-Click)" button (`data-testid="header-overleaf-btn"` in `WritingHeaderBar.tsx`) opening draft directly in Overleaf.
+2. Pillar 3 (Proactive Scholarly Associative Memory):
+   - In `apps/web/src/features/writing/api/draftsApi.ts`:
+     Add `getAssociativeSuggestions(id: string, payload: { content?: string; text?: string; limit?: number; min_similarity?: number })` calling `POST /drafts/${id}/associative-suggestions`.
+   - In `apps/web/src/features/writing/components/WritingWorkspace.tsx`:
+     Wire `getAssociativeSuggestions` so the floating `AssociativeMemoryCard` proactively suggests relevant historical notes and allows one-click citation insertion (`data-testid="insert-citation-btn"`).
+3. Pillar 4 (Multi-Paper Synthesis & Comparison Matrix):
+   - In `apps/api/src/api/core/config.py`:
+     Expose `REDIS_URL: str = "redis://localhost:6379/0"` in `Settings`.
+   - In `apps/api/src/api/deps.py`:
+     Initialize `RedisIdempotencyAdapter(redis_url=settings.REDIS_URL)` with fallback to in-memory adapter.
+   - In `apps/api/src/api/services/library_synthesis_service.py`:
+     Implement Redis caching for extracted comparison matrix rows using Redis key `matrix:cache:{user_id}:{folder_id or 'global'}:{hash}` with TTL=3600s, returning cached rows on pagination and search requests without reparsing raw documents every time.
+   - In `apps/web/src/features/library/types/index.ts`:
+     Add `total_count?: number`, `limit?: number`, `offset?: number`, `search?: string` to `ComparisonMatrixRequest` and `ComparisonMatrixResponse`.
+   - In `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`:
+     Pass `limit: 200` in matrix generation payload so 100+ papers are fully retrieved and rendered without truncation to default limit 50.
 
-TASK OBJECTIVES (Milestone 1: SSE Streaming & X-Request-ID Header Standardization):
-1. In `apps/api/src/api/middleware/tracing.py`:
-   - Set `scope.setdefault("state", {})["request_id"] = request_id` so that `request.state.request_id` is properly populated for all requests.
-   - In `send_wrapper`, deduplicate `x-request-id` headers: filter out any pre-existing `b"x-request-id"` before appending canonical `(b"x-request-id", request_id.encode("latin1"))`.
-2. In `apps/api/src/api/__init__.py`:
-   - Import and invoke `setup_logging()` at module load / startup per `docs/vi/guide-logging-system.md:65`.
-   - Update demo SSE endpoint `GET /events` to accept `request: Request` and emit `request_id` in its payload.
-3. In `apps/api/src/api/v1/endpoints/documents.py` & `apps/api/src/api/services/document_service.py`:
-   - In `stream_document_summary`: explicitly add `"X-Request-ID": request_id` to `StreamingResponse(headers=...)`. Retrieve `request_id` from `request.state.request_id` or headers. Pass `request_id` into `service.stream_summary()`.
-   - In `DocumentService.stream_summary`: include `"request_id": request_id` in the `summary_start` event payload and error event payload.
-4. In `apps/api/src/api/v1/endpoints/sessions.py` & `apps/api/src/api/services/session_chat_service.py`:
-   - In `post_session_message`: explicitly add `"X-Request-ID": request_id` to `StreamingResponse(headers=...)`. Retrieve `request_id` from `request.state.request_id` or headers. Pass `request_id` into `chat_service.stream_chat()`.
-   - In `SessionChatService.stream_chat`: include `"request_id": request_id` in `start` event payload, attach `request_id` to Langfuse trace metadata, and include in error event payload.
-5. In API Test Suites:
-   - In `apps/api/tests/test_logging.py`: Add tests asserting `x-request-id` header in `GET /events`, custom `X-Request-ID` propagation, and `request.state.request_id` presence in error envelope metadata.
-   - In `apps/api/tests/test_documents_summary_generate.py`: Add assertions for `x-request-id` header and `"request_id"` in `summary_start`.
-   - In `apps/api/tests/test_sessions_chat.py`: Add assertions for `x-request-id` header and `"request_id"` in `start`.
-   - In `apps/api/tests/test_golden_papers_matrix.py`: Assert `x-request-id` header in streaming tests.
-6. Verification & Quality Gates:
-   - Run tests: `uv run pytest apps/api/tests/test_logging.py apps/api/tests/test_documents_summary_generate.py apps/api/tests/test_sessions_chat.py apps/api/tests/test_golden_papers_matrix.py`
-   - Run full API test suite: `uv run pytest apps/api/tests`
-   - Run linter & formatter: `uv run ruff check apps/api` and `uv run ruff format --check apps/api`
-   - Verify all pass with 0 errors and 0 warnings.
+File Ownership:
+- `apps/web/src/features/writing/api/draftsApi.ts`
+- `apps/web/src/features/writing/components/WritingWorkspace.tsx`
+- `apps/api/src/api/core/config.py`
+- `apps/api/src/api/deps.py`
+- `apps/api/src/api/services/library_synthesis_service.py`
+- `apps/web/src/features/library/types/index.ts`
+- `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`
 
-Write your complete handoff report to:
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
-When done, notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+Required Verifications:
+- `uv run pytest apps/api/tests/test_backend_pillars_completion.py -v`
+- `pnpm --prefix apps/web test src/features/writing`
+- `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx`
+- `pnpm --prefix apps/web exec tsc -b`
+
+Write a complete handoff report to:
+`/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md`
+Report your completion and summary to your caller via `send_message`.

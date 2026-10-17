@@ -736,6 +736,7 @@ class SessionChatService:
             name="guardrail_check",
             input=request.question,
             metadata={"phase": "input_guardrail"},
+            as_type="guardrail",
         ) as guard_span:
             input_guard = AIGuardrailsService.scan_user_input(request.question)
             guard_span.set_output(
@@ -744,6 +745,7 @@ class SessionChatService:
                     "violation_type": input_guard.violation_type,
                 }
             )
+            guard_span.score(name="input_safety", value=1.0 if input_guard.is_safe else 0.0)
 
         if not input_guard.is_safe:
             trace_span.set_output({"finish_reason": "blocked_by_guardrail"})
@@ -814,6 +816,7 @@ class SessionChatService:
                 name="retrieval",
                 input={"target_doc_ids": [str(d) for d in target_doc_ids]},
                 metadata={"target_docs_count": len(target_doc_ids)},
+                as_type="retriever",
             ) as ret_span:
                 chunk_stmt = (
                     select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
@@ -827,6 +830,7 @@ class SessionChatService:
             with self.ai_tracing.span(
                 name="reranking",
                 input={"query": request.question, "total_chunks": len(all_chunks)},
+                as_type="tool",
             ) as rank_span:
                 ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
                 # Global Token Budgeting (3,500 tokens) with Rerank Relevance Cutoff (>= 0.35)
@@ -1150,12 +1154,16 @@ class SessionChatService:
             "ambiguity_type": ambiguity.value,
         }
 
-        gen_span.set_output(
+        gen_span.set_output(final_answer)
+        gen_span.set_usage(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            total_tokens=prompt_tokens + completion_tokens + reasoning_tokens,
+            reasoning_tokens=reasoning_tokens,
+        )
+        gen_span.set_metadata(
             {
                 "finish_reason": finish_reason,
-                "prompt_tokens": prompt_tokens,
-                "completion_tokens": completion_tokens,
-                "reasoning_tokens": reasoning_tokens,
                 "latency_ms": round(latency_ms, 1),
                 "thought_preview": full_thought[:200] if full_thought else None,
             }
@@ -1182,13 +1190,19 @@ class SessionChatService:
         self.db.add(turn_model)
         await self.db.commit()
 
-        trace_span.set_output(
+        trace_span.set_output(final_answer)
+        trace_span.set_metadata(
             {
                 "finish_reason": finish_reason,
                 "prompt_tokens": done_payload["prompt_tokens"],
                 "completion_tokens": done_payload["completion_tokens"],
+                "total_tokens": done_payload["total_tokens"],
                 "citations_count": len(citations),
                 "intent": intent.value,
+                "ambiguity_type": ambiguity.value,
+                "latency_ms": done_payload["latency_ms"],
             }
         )
+        trace_span.score(name="groundedness", value=1.0 if out_guard.is_grounded else 0.0)
+        trace_span.score(name="citations_count", value=float(len(citations)))
         trace_span.__exit__(None, None, None)

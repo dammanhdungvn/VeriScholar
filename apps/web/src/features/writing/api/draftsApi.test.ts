@@ -404,4 +404,52 @@ describe("draftsApi", () => {
       expect.objectContaining({ method: "POST" })
     );
   });
+
+  it("retrieves proactive associative suggestions via POST /drafts/{id}/associative-suggestions", async () => {
+    globalThis.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: new Headers({ "Content-Type": "application/json" }),
+      json: async () => ({
+        success: true,
+        data: {
+          draft_id: "draft-1",
+          total_found: 1,
+          suggestions: [
+            {
+              note_id: "note-1",
+              document_title: "Attention Is All You Need",
+              paper_title: "Attention Is All You Need",
+              page_number: 4,
+              selected_text: "Multi-head attention mechanism",
+              user_note: "Breakthrough architecture",
+              similarity_score: 0.92,
+              suggested_citation: "\\cite{vaswani2017attention}",
+              reason: "High lexical similarity with draft content",
+              relevance_explanation: "Đoạn văn có các thuật ngữ tương đồng cao",
+            },
+          ],
+        },
+      }),
+    });
+
+    const result = await draftsApi.getAssociativeSuggestions("draft-1", {
+      content: "We propose multi-head attention mechanism.",
+      limit: 3,
+    });
+
+    expect(result.draft_id).toBe("draft-1");
+    expect(result.total_found).toBe(1);
+    expect(result.suggestions[0].note_id).toBe("note-1");
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/v1/drafts/draft-1/associative-suggestions"),
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({
+          content: "We propose multi-head attention mechanism.",
+          limit: 3,
+        }),
+      })
+    );
+  });
 });

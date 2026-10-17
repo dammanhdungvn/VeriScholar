@@ -1,88 +1,85 @@
-# Project: VeriScholar Module 1 Comprehensive AI Evaluation Benchmark & Infrastructure
+# Project: VeriScholar 100% Completion Across 5 Core Technology Pillars
 
 ## Architecture
 VeriScholar operates as a monorepo containing:
-- `packages/core`: Core domain logic, ports, entities (`DocumentChunk`, `BoundingBox`), guardrails, and the new in-memory Evaluation Domain (`core/eval/`). Strict zero-external-network / zero-DB unit testing invariant.
-- `apps/api`: FastAPI ASGI backend handling document ingestion, hybrid search, Cohere/local cross-encoder reranking, session chat, and SSE streaming. Includes `PureASGITracingMiddleware` for distributed tracing (`X-Request-ID`).
-- `apps/web`: Vite 8 + React 19 web frontend with PDF.js Deep Reader canvas, dynamic percentage-scaled `BboxHighlightLayer`, Zustand auth storage (`verischolar_auth_token`), and Playwright E2E testing suite.
-
-Data Flow & Evaluation Architecture:
-```
-[Public Benchmarks: QASPER, SciFact, PubMedQA] ──┐
-                                                 ├──> [core/eval/adapters] ──> [EvalSample]
-[Project Regression: 25 Cases (Attention,LoRA,RAG)] ┘                                 │
-                                                                                      ▼
-[Module 1 Engine: Retrieval + Rerank + Grounding + Generation] <─── [BenchmarkRunner]
-                               │
-                               ▼
-[Evaluation Metrics: TokenF1, Recall@k, ClassificationF1, BBoxIoU, Geometry, Safety]
-                               │
-                               ▼
-                    [BenchmarkReport Scorecard]
-```
+- `packages/core`: Core domain logic, ports, entities (`ComparisonMatrixRow`, `ComparisonMatrixResult`, `Draft`, `ResearchNote`, `DocumentChunk`, `BoundingBox`), adapters (`RedisIdempotencyAdapter`, `ExaAcademicResolverAdapter`), and evaluation domain. Strict in-memory unit testing invariant with zero external network leaks.
+- `apps/api`: FastAPI ASGI backend handling document ingestion, drafts lifecycle, LaTeX/Overleaf export (`POST /api/v1/drafts/{id}:export-overleaf`), proactive associative memory (`POST /api/v1/drafts/{id}/associative-suggestions`), literature comparison matrix (`POST /api/v1/folders/comparison-matrix`) with Redis query caching and multi-field search/pagination, and ARQ worker background jobs.
+- `apps/web`: Vite 8 + React 19 web frontend with Writing Workspace (`WritingHeaderBar` with 1-Click Overleaf Launch, `AssociativeMemoryCard` floating recommendation card with 1-click citation insert) and Library Comparison Matrix (`ComparisonMatrixModal` with server-side pagination, multi-attribute filtering, and UTF-8 BOM CSV export).
+- `deploy/`: On-premise enterprise deployment bundle (`docker-compose.enterprise.yml`, `Dockerfile.api`, `Dockerfile.web`, `nginx/verischolar.conf`, `pgbouncer/pgbouncer.ini`) orchestrating API, Web, PostgreSQL 16 + pgvector, Redis 7.2, ARQ Worker, and PgBouncer for air-gapped university and lab deployments.
+- `scripts/`: Single-command enterprise installer (`bootstrap_enterprise.sh`).
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| F1 | ASGI Tracing Middleware & Request ID State | Set `scope["state"]["request_id"]`, deduplicate headers, and call `setup_logging()` in `api/__init__.py`. | M1 | Survey 1 |
-| F2 | SSE Streaming X-Request-ID Standardization | Explicit `X-Request-ID` header on `GET /events`, `POST /summary:stream`, `POST /messages`, and embed `request_id` in initial event payloads. | M1 | Survey 1 |
-| F3 | Hexagonal Evaluation Domain Architecture | Standardized in-memory models (`EvalSample`, `MetricResult`, `BenchmarkReport`), base adapter port, and decoupled metrics in `packages/core/src/core/eval/`. | M2 | Survey 2 |
-| F4 | Public Benchmark Adapters (QASPER, SciFact, PubMedQA) | Dataset adapters for QASPER, SciFact, and PubMedQA with in-memory offline subset fixtures for unit tests. | M2 | Survey 2 |
-| F5 | Project Regression Set (25 Test Cases) | 5x5 deep test matrix across Attention, LoRA, and RAG covering layout, equations, bounding boxes, hybrid search, and negative queries. | M3 | Survey 3 |
-| F6 | Playwright E2E Auth Fixture | Two-tier Playwright fixture (`auth.fixture.ts` with `authenticatedPage` using `page.addInitScript`) in `apps/web`. | M4 | Survey 3 |
-| F7 | Web E2E Verification Tests | Playwright E2E specs for Deep Reader BoundingBox overlays and SSE streaming with `X-Request-ID`. | M4 | Survey 3 |
-| F8 | Final E2E Suite, Dual-Track Runner & Adversarial Audit | Integrated benchmark runner (`scripts/eval/run_eval.py`), 100% test pass across monorepo, challenger verification, and forensic audit. | M5 | Synthesis |
+| F1 | 1-Click Overleaf Direct Sync (Pillar 2) | Endpoint `POST /api/v1/drafts/{id}:export-overleaf` packing LaTeX snippet launch URL, and frontend toolbar button `header-overleaf-btn` in `WritingHeaderBar.tsx`. | M1 | Survey 1 |
+| F2 | Proactive Scholarly Associative Memory (Pillar 3) | Endpoint `POST /api/v1/drafts/{id}/associative-suggestions` returning historical user notes matching draft content, and frontend floating `AssociativeMemoryCard.tsx` with 1-click citation insertion. | M1 | Survey 1 |
+| F3 | Scalable 100+ Paper Comparison Matrix (Pillar 4) | Server-side pagination (`limit`, `offset`, `search`), multi-field filtering across Title, Methodology, Datasets, Metrics, Redis query caching in `LibrarySynthesisService`, frontend pagination alignment in `ComparisonMatrixModal.tsx`, and CSV export. | M1 | Survey 2 |
+| F4 | Enterprise On-Premise Docker Compose Stack (Pillar 5) | Production-ready `deploy/docker-compose.enterprise.yml` configuring API, Web, PostgreSQL 16 pgvector with init.sql, Redis 7.2, PgBouncer, and ARQ worker with proper Nginx reverse proxy routing. | M2 | Survey 3 |
+| F5 | Automated Enterprise Bootstrap Script (Pillar 5) | Turn-key single-command installer `scripts/bootstrap_enterprise.sh` with prerequisite checking, secrets generation, topology display, and syntax verification. | M2 | Survey 3 |
+| F6 | Monorepo Test Baseline Harmonization & Ruff Cleanliness | Patch `exa_resolver.py` environment secret leak, resolve 12 ruff formatting/lint errors in `latex_healer.py` and `latex_linter.py`, ensuring 100% test pass rate across `pytest` and `vitest`. | M2 | Survey 3 |
+| F7 | Monorepo Zero-Regression Acceptance & Forensic Audit | Comprehensive verification of 100% backend pytest, 100% frontend vitest, type checking (`tsc -b`), Challenger empirical verification, and Forensic Audit (`teamwork_preview_auditor`). | M3 | Synthesis |
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | M1_SSE_TRACING | SSE Streaming & X-Request-ID Header Standardization in `apps/api` | none | DONE |
-| 2 | M2_PUBLIC_BENCHMARKS | Core Evaluation Domain & Public Benchmark Suite (QASPER, SciFact, PubMedQA) in `packages/core` | none | IN_PROGRESS |
-| 3 | M3_REGRESSION_CORPUS | Project Regression Set (25 Test Cases across Attention, LoRA, RAG Corpus) & decoupled metrics runner | M2 | PLANNED |
-| 4 | M4_PLAYWRIGHT_AUTH | Playwright E2E Auth Fixture & Web E2E Verification in `apps/web` | M1 | PLANNED |
-| 5 | M5_FINAL_ACCEPTANCE | Dual-Track Acceptance, E2E CLI Runner, Full Suite Pass & Forensic Audit | M1, M2, M3, M4 | PLANNED |
+| 1 | M1_WRITING_AND_SYNTHESIS | Pillars 2, 3 & 4: Overleaf 1-click sync, Associative Memory frontend wiring, Matrix Redis caching & 100+ papers pagination alignment. | none | DONE |
+| 2 | M2_ENTERPRISE_AND_BASELINE | Pillar 5 & Baseline: Enterprise Docker Compose fixes, Nginx routing, `arq` dependency, `bootstrap_enterprise.sh`, and `exa_resolver` test leak fix + ruff linting. | none | IN_PROGRESS |
+| 3 | M3_FINAL_ACCEPTANCE_AUDIT | Full Monorepo Zero-Regression Pass (Backend Pytest 100%, Frontend Vitest 100%, Challenger empirical stress testing, Forensic Integrity Audit CLEAN). | M1, M2 | PLANNED |
 
 ## Interface Contracts
-### apps/api ↔ Client / SSE Streaming
-- **Headers**:
-  - `X-Request-ID`: Client-provided UUID4 string or server-generated UUID4 string. Must be present on all HTTP responses, including SSE `text/event-stream` responses.
-  - `Content-Type`: `text/event-stream`
-  - `Cache-Control`: `no-cache`
-- **Initial Event Payload**:
-  - `summary:stream` -> event `summary_start`: `{"document_id": str, "status": "streaming", "request_id": str}`
-  - `/messages` -> event `start`: `{"turn_id": str, "message_id": str, "created_at": str, "request_id": str}`
+### apps/api ↔ Overleaf 1-Click Launch
+- **Endpoint**: `POST /api/v1/drafts/{id}:export-overleaf`
+- **Response**: `SingleResponseEnvelope[OverleafExportResponse]` containing:
+  - `draft_id`: UUID
+  - `title`: string
+  - `overleaf_url`: string (e.g. `https://www.overleaf.com/docs?snip=...&snip_name=...`)
+  - `launch_url`: string (alias for `overleaf_url`)
+  - `latex_snip`: string
+  - `snip_length`: int
 
-### packages/core Evaluation Domain ↔ Benchmark Adapters
-- **Domain Value Objects**:
-  - `BoundingBox`: `[x0, y0, x1, y1, page]`, `x0 < x1`, `y0 < y1`, `page >= 1`, normalized floats `[0.0, 1.0]`, Top-Left origin.
-- **Evaluation Sample Contract (`core.eval.models.EvalSample`)**:
-  - `id`: `str`
-  - `dataset`: `"qasper" | "scifact" | "pubmedqa" | "project_regression"`
-  - `split`: `str` ("dev" | "test" | "train")
-  - `paper_id`: `str`
-  - `paper_title`: `str`
-  - `query`: `str`
-  - `ground_truth_answers`: `list[str]`
-  - `ground_truth_evidence`: `list[dict[str, Any]]`
-  - `ground_truth_bboxes`: `list[list[float]]` (normalized `[x0, y0, x1, y1, page]`)
-  - `metadata`: `dict[str, Any]`
+### apps/api ↔ Proactive Associative Suggestions
+- **Endpoint**: `POST /api/v1/drafts/{id}/associative-suggestions`
+- **Request**: `AssociativeSuggestionsRequest` (`content: str | None`, `text: str | None`, `limit: int`, `min_similarity: float`)
+- **Response**: `SingleResponseEnvelope[AssociativeSuggestionsResponse]` containing:
+  - `draft_id`: UUID
+  - `suggestions`: list of `AssociativeSuggestionItem` (`note_id`, `paper_title`, `similarity_score`, `suggested_citation`, `reason`)
 
-### apps/web ↔ Playwright Auth Contract
-- `localStorage` Keys:
-  - `verischolar_auth_token`: JWT string with claims `{"sub": UUID, "email": str, "role": str, "exp": int}`
-  - `verischolar_auth_user`: Serialized JSON string conforming to `UserProfile` (`id`, `email`, `full_name`, `role`, etc.)
+### apps/api ↔ Comparison Matrix (Pillar 4)
+- **Endpoints**: `POST /api/v1/folders/comparison-matrix` and `POST /api/v1/folders/{id}/comparison-matrix`
+- **Request**: `ComparisonMatrixRequest` (`topic: str`, `folder_id: UUID | None`, `document_ids: list[UUID] | None`, `search: str | None`, `limit: int` [default 50, max 200], `offset: int` [default 0])
+- **Response**: `ComparisonMatrixEnvelope` containing:
+  - `matrix_id`: UUID
+  - `total_count`: int
+  - `limit`: int
+  - `offset`: int
+  - `rows`: list of `ComparisonMatrixRowSchema`
+  - `sufficiency`: `SufficiencyGateSchema`
+  - `markdown_table`: str
+
+### Enterprise Stack Contract
+- **Database**: PostgreSQL 16 with `pgvector` extension initialized via `./infra/postgres/init.sql`.
+- **Nginx Reverse Proxy**:
+  - Web SPA root: `/usr/share/nginx/html;`
+  - API Proxy: `proxy_pass http://api:8000;` (connecting to `verischolar-enterprise-api` container)
+  - SSE Streaming routes: `proxy_buffering off;`, `proxy_cache off;`, `proxy_read_timeout 3600s;`.
 
 ## Code Layout
-- `apps/api/src/api/middleware/tracing.py`: Pure ASGI tracing middleware (`scope["state"]["request_id"]`, header deduplication).
-- `apps/api/src/api/__init__.py`: App lifespan, `setup_logging()` invocation, `/events` endpoint.
-- `apps/api/src/api/v1/endpoints/documents.py`: `stream_document_summary` endpoint.
-- `apps/api/src/api/services/document_service.py`: `DocumentService.stream_summary` with `request_id`.
-- `apps/api/src/api/v1/endpoints/sessions.py`: `post_session_message` endpoint.
-- `apps/api/src/api/services/session_chat_service.py`: `SessionChatService.stream_chat` with `request_id`.
-- `packages/core/src/core/eval/`: Core evaluation domain (models, adapters, metrics, runner).
-- `packages/core/tests/eval/`: In-memory evaluation unit test suite & offline subset fixtures.
-- `scripts/eval/`: CLI benchmark evaluation runner and full benchmark dataset downloaders.
-- `data/papers/`: Full PDF benchmark corpus (Attention, LoRA, RAG).
-- `apps/web/playwright.config.ts`: Playwright test runner configuration.
-- `apps/web/tests/fixtures/auth.fixture.ts`: Two-tier Playwright E2E auth fixture.
-- `apps/web/tests/e2e/`: End-to-end test specifications.
+- `apps/api/src/api/v1/endpoints/drafts.py`: Drafts endpoints (Overleaf export, associative suggestions).
+- `apps/api/src/api/services/draft_service.py`: Draft service with LaTeX export and Overleaf URL construction.
+- `apps/api/src/api/services/associative_memory_service.py`: Associative memory matching service.
+- `apps/api/src/api/v1/endpoints/folders.py`: Comparison matrix endpoints.
+- `apps/api/src/api/services/library_synthesis_service.py`: Comparison matrix extraction, filtering, and Redis caching.
+- `apps/api/src/api/core/config.py`: Application settings (`REDIS_URL`).
+- `apps/api/src/api/deps.py`: Dependency injection for caching adapters.
+- `apps/web/src/features/writing/components/WritingHeaderBar.tsx`: Overleaf 1-click launch button.
+- `apps/web/src/features/writing/components/AssociativeMemoryCard.tsx`: Floating associative insight card.
+- `apps/web/src/features/writing/components/WritingWorkspace.tsx`: Writing workspace view.
+- `apps/web/src/features/writing/api/draftsApi.ts`: Drafts API client.
+- `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`: Comparison matrix modal.
+- `apps/web/src/features/library/types/index.ts`: Library and matrix TypeScript types.
+- `deploy/docker-compose.enterprise.yml`: Enterprise compose specification.
+- `deploy/nginx/verischolar.conf`: Enterprise Nginx configuration.
+- `scripts/bootstrap_enterprise.sh`: Automated enterprise bootstrap script.
+- `packages/core/src/core/services/exa_resolver.py`: Academic resolver with env leak fix.
+- `packages/core/src/core/services/latex_healer.py`: LaTeX healer service.
+- `packages/core/src/core/services/latex_linter.py`: LaTeX linter service.

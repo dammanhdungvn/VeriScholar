@@ -1,67 +1,71 @@
-# BRIEFING — 2026-10-15T02:48:00Z
+# BRIEFING — 2026-10-16T12:33:45Z
 
 ## Mission
-Standardize SSE Streaming and X-Request-ID Header & context propagation across apps/api.
+Elevate VeriScholar to 100% completion for Milestone 1 (M1_WRITING_AND_SYNTHESIS: Pillars 2, 3, and 4) across Overleaf 1-click sync, Associative Memory frontend wiring, and Comparison Matrix Redis caching & 100+ papers pagination.
 
 ## 🔒 My Identity
-- Archetype: worker
+- Archetype: worker_m1
 - Roles: implementer, qa, specialist
-- Working directory: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1
-- Original parent: a2173842-299f-4803-8153-e166837e5cde
-- Milestone: M1_SSE_TRACING
+- Working directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1
+- Original parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Milestone: M1_WRITING_AND_SYNTHESIS
 
 ## 🔒 Key Constraints
-- Follow AGENTS.md: Surgical changes, no dummy/hardcoded tests, no external network in unit tests, minimal diff.
-- Exclusive write ownership: apps/api/src/api/middleware/tracing.py, apps/api/src/api/__init__.py, apps/api/src/api/v1/endpoints/documents.py, apps/api/src/api/services/document_service.py, apps/api/src/api/v1/endpoints/sessions.py, apps/api/src/api/services/session_chat_service.py, apps/api/tests/test_logging.py, apps/api/tests/test_documents_summary_generate.py, apps/api/tests/test_sessions_chat.py, apps/api/tests/test_golden_papers_matrix.py.
-- Zero warnings, zero lint errors (ruff check & ruff format --check).
-- Only agent metadata in .agents/teamwork/worker_m1. Never code/tests.
+- Monorepo boundaries: touch only assigned files (`apps/web/src/features/writing/api/draftsApi.ts`, `apps/web/src/features/writing/components/WritingWorkspace.tsx`, `apps/api/src/api/core/config.py`, `apps/api/src/api/deps.py`, `apps/api/src/api/services/library_synthesis_service.py`, `apps/web/src/features/library/types/index.ts`, `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`).
+- Mandatory Integrity Mandate: genuine implementations only, no hardcoded test shortcuts, real state, real behavior.
+- Verifications required:
+  - `uv run pytest apps/api/tests/test_backend_pillars_completion.py -v`
+  - `pnpm --prefix apps/web test src/features/writing`
+  - `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx`
+  - `pnpm --prefix apps/web exec tsc -b`
 
 ## Current Parent
-- Conversation ID: a2173842-299f-4803-8153-e166837e5cde
-- Updated: 2026-10-15T02:36:18Z
+- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Updated: 2026-10-16T12:33:45Z
 
 ## Task Summary
-- **What to build**: SSE Streaming & X-Request-ID Header Standardization in apps/api.
-- **Success criteria**: All SSE endpoints return X-Request-ID; request.state.request_id populated; setup_logging called; payload start events contain request_id; all unit and integration tests pass with 0 errors and 0 warnings.
-- **Interface contracts**: PROJECT.md § Interface Contracts (apps/api ↔ Client / SSE Streaming)
-- **Code layout**: PROJECT.md § Code Layout
+- **What to build**:
+  1. Pillar 2 (Overleaf 1-Click Sync): Verified `POST /api/v1/drafts/{id}:export-overleaf` and `WritingHeaderBar.tsx` button (`data-testid="header-overleaf-btn"`).
+  2. Pillar 3: Added `getAssociativeSuggestions` in `draftsApi.ts` and wired it in `WritingWorkspace.tsx` so `AssociativeMemoryCard` proactively suggests relevant historical notes and allows one-click citation insertion (`data-testid="insert-citation-btn"`).
+  3. Pillar 4: Exposed `REDIS_URL` in `Settings` (`apps/api/src/api/core/config.py`), initialized `RedisIdempotencyAdapter` in `apps/api/src/api/deps.py`, implemented Redis caching for extracted comparison matrix rows (`matrix:cache:{user_id}:{folder_id or 'global'}:{hash}`) with TTL=3600s in `LibrarySynthesisService`, updated `ComparisonMatrixRequest` and `ComparisonMatrixResponse` in `apps/web/src/features/library/types/index.ts`, and passed `limit: 200` in `ComparisonMatrixModal.tsx`.
+- **Success criteria**: Genuine implementation, 100% backend pytest passing, 100% frontend vitest passing, 0 TypeScript compile errors.
+- **Interface contracts**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
+- **Code layout**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md § Code Layout`
 
-## Loaded Skills
-- Source: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/fastapi/SKILL.md
-  Local copy: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/skills/fastapi_SKILL.md
-  Core methodology: FastAPI streaming with EventSourceResponse/StreamingResponse, Annotated parameters, dependency injection, and clean router patterns.
-- Source: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md
-  Local copy: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/skills/verischolar_protocol_SKILL.md
-  Core methodology: Architectural laws, atomic evidence coordinates [x0, y0, x1, y1, page] (page >= 1, Top-Left), standby sessions, in-memory isolation, and quality gates.
+## Key Decisions Made
+- `LibrarySynthesisService` checks and writes comparison matrix rows using `RedisIdempotencyAdapter` with fallback to `InMemoryIdempotencyAdapter`.
+- Cache key format: `matrix:cache:{user_id}:{folder_id or 'global'}:{matrix_hash}` with TTL=3600s.
+- Debounced live fetch in `WritingWorkspace.tsx` when editor content updates.
+- Extended unit test suite in `draftsApi.test.ts` to cover `getAssociativeSuggestions`.
+
+## Artifact Index
+- `.agents/teamwork/worker_m1/DISPATCH.md` — Worker assignment and instructions
+- `.agents/teamwork/worker_m1/BRIEFING.md` — Situational awareness and state memory
+- `.agents/teamwork/worker_m1/progress.md` — Execution heartbeat
+- `.agents/teamwork/worker_m1/handoff.md` — Final handoff report
 
 ## Change Tracker
 - **Files modified**:
-  - `apps/api/src/api/middleware/tracing.py`: Added `scope["state"]["request_id"]` and deduplicated `x-request-id` response headers.
-  - `apps/api/src/api/__init__.py`: Invoked `setup_logging()` at module load; emitted `request_id` in `GET /events` payload; ensured exception handlers output `X-Request-ID` header and meta.
-  - `apps/api/src/api/v1/endpoints/documents.py`: Added `X-Request-ID` to `StreamingResponse` headers and passed `request_id` to `DocumentService.stream_summary`.
-  - `apps/api/src/api/services/document_service.py`: Accepted `request_id` in `stream_summary`, included in `summary_start` & `error` payloads; restored `db.add(summary_record)` for newly generated summaries.
-  - `apps/api/src/api/v1/endpoints/sessions.py`: Added `X-Request-ID` to `StreamingResponse` headers and passed `request_id` to `SessionChatService.stream_chat`.
-  - `apps/api/src/api/services/session_chat_service.py`: Accepted `request_id`, included in `start` event payload, attached to Langfuse trace metadata, and included in `SESSION_NOT_FOUND` / `SESSION_ARCHIVED` error payloads.
-  - `apps/api/tests/test_logging.py`: Added assertions for `x-request-id` header in `/events`, custom trace propagation, and `request_id` in error envelope metadata.
-  - `apps/api/tests/test_documents_summary_generate.py`: Added assertions for `x-request-id` header and `request_id` in `summary_start`, plus custom trace propagation test.
-  - `apps/api/tests/test_sessions_chat.py`: Added assertions for `x-request-id` header and `request_id` in `start`, plus custom trace propagation test.
-  - `apps/api/tests/test_golden_papers_matrix.py`: Added assertions for `x-request-id` header and `request_id` in `summary_start`.
-- **Build status**: 214 passed in `apps/api/tests`, 76 passed in `packages/core/tests`.
+  - `apps/api/src/api/core/config.py`: Expose `REDIS_URL: str = "redis://localhost:6379/0"` in `Settings`
+  - `apps/api/src/api/deps.py`: Instantiate `RedisIdempotencyAdapter` with in-memory fallback and pass to `LibrarySynthesisService`
+  - `apps/api/src/api/services/library_synthesis_service.py`: Implement Redis caching for extracted matrix rows with TTL=3600s
+  - `apps/web/src/features/library/types/index.ts`: Add `total_count`, `limit`, `offset`, `search` to request/response types
+  - `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`: Pass `limit: 200` in matrix generation payload
+  - `apps/web/src/features/writing/types/index.ts`: Add `AssociativeSuggestionItem` and `AssociativeSuggestionsResponse`
+  - `apps/web/src/features/writing/api/draftsApi.ts`: Add `getAssociativeSuggestions`
+  - `apps/web/src/features/writing/api/draftsApi.test.ts`: Add unit test for `getAssociativeSuggestions`
+  - `apps/web/src/features/writing/components/WritingWorkspace.tsx`: Wire `getAssociativeSuggestions` to live suggestions
+- **Build status**: All backend & frontend builds and test suites passed (100% pass)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: All 214 API tests and 76 Core tests PASSED.
-- **Lint status**: `ruff check` and `ruff format --check` passed with 0 errors and 0 warnings.
-- **Tests added/modified**: 4 test files updated with comprehensive `x-request-id` header and payload assertions.
+- **Build/test result**:
+  - `uv run pytest apps/api/tests/test_backend_pillars_completion.py -v`: 4 passed (100%)
+  - `pnpm --prefix apps/web test src/features/writing`: 14 files passed, 103 passed (100%)
+  - `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx`: 7 passed (100%)
+  - `pnpm --prefix apps/web exec tsc -b`: 0 errors (Code 0)
+- **Lint status**: Clean
+- **Tests added/modified**: `draftsApi.test.ts` (+1 test for `getAssociativeSuggestions`)
 
-## Key Decisions Made
-- [Decision 1]: Use scope.setdefault("state", {})["request_id"] = request_id in PureASGITracingMiddleware.
-- [Decision 2]: Deduplicate b"x-request-id" before appending canonical header in send_wrapper.
-- [Decision 3]: Call setup_logging() at module load in apps/api/src/api/__init__.py.
-- [Decision 4]: Pass request_id to stream_summary and stream_chat and include in summary_start and start event payloads.
-- [Decision 5]: Ensure all 4 global exception handlers in api/__init__.py populate request_id in ErrorResponse meta and X-Request-ID response headers.
-
-## Artifact Index
-- DISPATCH.md - Assignment from orchestrator
-- handoff.md - Final handoff report
-- progress.md - Liveness heartbeat
+## Loaded Skills
+- None

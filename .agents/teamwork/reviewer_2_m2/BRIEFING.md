@@ -1,7 +1,7 @@
-# BRIEFING — 2026-10-15T05:32:00Z
+# BRIEFING — 2026-10-16T13:30:40Z
 
 ## Mission
-Perform an independent adversarial review of Milestone 2 (eval adapters, benchmark fidelity, domain invariants, test rigor, integrity checks).
+Perform an independent review and adversarial evaluation of Milestone 2 (M2_ENTERPRISE_AND_BASELINE deliverables: PostgreSQL 16 image tag & init.sql volume mount, Nginx root path & proxy_pass upstream target, arq dependency in pyproject.toml, exa_resolver in-memory isolation, ruff linter results).
 
 ## 🔒 My Identity
 - Archetype: reviewer / critic
@@ -10,58 +10,57 @@ Perform an independent adversarial review of Milestone 2 (eval adapters, benchma
 - Original parent: a2173842-299f-4803-8153-e166837e5cde
 - Milestone: Milestone 2
 - Instance: 2 of 2
+- Working directory (2026-10-16): /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2
+- Current parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Current Milestone: M2_ENTERPRISE_AND_BASELINE (2026-10-16)
+- Current Instance: Reviewer 2
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
 - Report failures as findings — do NOT fix them directly
 - Check for integrity violations (hardcoded test results, facade implementations, bypassed tasks, fabricated logs, self-certifying work)
 - Deliver explicit verdict: APPROVE or REQUEST_CHANGES
+- Milestone 2 Scope: Review Docker compose, Nginx config, bootstrap script, arq dependency, exa_resolver in-memory isolation, ruff linter
 
 ## Current Parent
-- Conversation ID: a2173842-299f-4803-8153-e166837e5cde
-- Updated: not yet
+- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Updated: 2026-10-16T13:30:40Z
 
 ## Review Scope
 - **Files to review**:
-  - `packages/core/src/core/eval/` (models, adapters, metrics, runner)
-  - `packages/core/src/core/ports/` (eval, retrieval, reranker)
-  - `packages/core/src/core/domain/value_objects/bounding_box.py`
-  - `packages/core/src/core/domain/entities/chunk.py`
-  - `packages/core/tests/eval/` (13 test files, 106 tests)
-  - `packages/core/tests/domain/test_hexagonal_invariants.py`
-  - Worker M2 handoff: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md`
-- **Interface contracts**: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`, `ORIGINAL_REQUEST.md`, `AGENTS.md`
+  - `deploy/docker-compose.enterprise.yml`
+  - `deploy/nginx/verischolar.conf`
+  - `pyproject.toml` and `uv.lock`
+  - `packages/core/src/core/services/exa_resolver.py`
+  - `scripts/bootstrap_enterprise.sh`
+  - Worker M2 handoff: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md`
+- **Interface contracts**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`, `ORIGINAL_REQUEST.md`, `AGENTS.md`
 - **Review criteria**: Correctness, completeness, benchmark fidelity, domain invariants, test rigor, adversarial edge cases, integrity checks.
 
 ## Review Checklist
 - **Items reviewed**:
-  - `packages/core/src/core/domain/value_objects/bounding_box.py` (checked Field validation and model_validator)
-  - `packages/core/src/core/eval/models.py` (checked EvalSample, MetricResult, EvalPrediction, BenchmarkReport)
-  - `packages/core/src/core/eval/adapters/` (QASPER, SciFact, PubMedQA, Regression)
-  - `packages/core/src/core/eval/metrics/` (TokenF1, RetrievalRecall, Classification, BoundingBoxIoU, SpatialGeometry, Safety)
-  - `packages/core/src/core/eval/evaluators/benchmark_runner.py` (BenchmarkRunner implementation and default fallback predictions)
-  - `packages/core/tests/eval/` (all 13 test suites and 4 offline fixtures)
-- **Verdict**: REQUEST_CHANGES
+  - Pending independent verification execution
+- **Verdict**: Pending
 - **Unverified claims**:
-  - Claimed strict enforcement of BoundingBox coordinate invariants `[0.0, 1.0]` across eval domain -> Disproven in `SpatialGeometryMetric`.
+  - PostgreSQL 16 image tag & init.sql volume mount
+  - Nginx web root & proxy_pass upstream target
+  - arq dependency in pyproject.toml
+  - exa_resolver in-memory isolation with empty api_key
+  - ruff linter cleanliness
 
 ## Attack Surface
 - **Hypotheses tested**:
-  - Hypothesis 1: `SpatialGeometryMetric` does not enforce upper bound `<= 1.0` on bounding box coordinates. Result: CONFIRMED. Unnormalized PDF coordinates `[50, 100, 400, 700, 1]` pass with score 1.0 and 0 anomalies.
-  - Hypothesis 2: `ClassificationMetric` allows empty predictions and false positives via substring matching. Result: CONFIRMED. `""` and `None` pass with 1.0 against `"SUPPORT"`. Substring `"no"` passes against `"NOT_ENOUGH_INFO"`.
-  - Hypothesis 3: `PubMedQAAdapter` exposes opposite decisions to false-positive pass in `ClassificationMetric` by appending `long_answer` to `ground_truth_answers`. Result: CONFIRMED. Golden decision "yes" with a long answer containing "no" passes with score 1.0 when prediction is "no".
-  - Hypothesis 4: `SafetyMetric` contains hardcoded test case output `"28.4"`. Result: CONFIRMED. Hardcoded `"28.4"` in `refute_markers` specifically tailored for test case REG-16.
+  - To be tested during investigation
 - **Vulnerabilities found**:
-  - 1 Critical Integrity Violation: Hardcoded test case value `"28.4"` in `SafetyMetric`.
-  - 1 Critical Domain Invariant Bug: `SpatialGeometryMetric` allows coordinates > 1.0 to pass unchecked.
-  - 1 Critical Benchmark Fidelity Flaw: `ClassificationMetric` bidirectional substring check enables empty answers and opposite medical answers to pass.
+  - None yet
 - **Untested angles**:
-  - Live external API integrations (out of scope for core in-memory domain).
+  - Enterprise docker compose syntax and configuration
+  - Bootstrap script robustness
+  - In-memory isolation under empty string, None, and environment variable states
+  - Linter cleanliness across packages/core, scripts/, deploy/
 
 ## Key Decisions Made
-- Completed forensic and adversarial code analysis.
-- Found critical integrity and domain invariant violations requiring changes.
-- Formulated verdict: REQUEST_CHANGES.
+- Initialized briefing and progress for M2_ENTERPRISE_AND_BASELINE review.
 
 ## Artifact Index
 - `.agents/teamwork/reviewer_2_m2/DISPATCH.md` — Incoming dispatch log

@@ -1,14 +1,18 @@
 # Progress — challenger_2_m2
 
-Last visited: 2026-10-15T05:27:30Z
+Last visited: 2026-10-16T13:30:30Z
 
 ## Status
-- [x] Initialized DISPATCH.md, BRIEFING.md, and progress.md
-- [x] Read context: ORIGINAL_REQUEST.md, PROJECT.md, Worker M2 handoff.md, AGENTS.md
-- [x] Inspect implementation in `packages/core/src/core/eval/` and tests in `packages/core/tests/`
-- [x] Formulate empirical adversarial test plan
-- [x] Write and execute adversarial test harness (`packages/core/tests/eval/test_adversarial_metrics_runner.py` - 55 passed)
-- [x] Full core test suite verification (241 passed in 0.68s)
-- [x] Ruff lint & formatting checks passed cleanly
-- [x] Analyze findings, stress-test limits, and determine CONFIRM / REJECT verdict (Verdict: CONFIRM)
-- [ ] Write handoff.md and send completion message to parent
+- [x] Initialized DISPATCH.md and reviewed prompt instructions
+- [x] Read ORIGINAL_REQUEST.md, AGENTS.md, PROJECT.md, worker_m2/handoff.md
+- [ ] Run and empirically verify `test_exa_resolver.py`
+- [ ] Run full core test suite `packages/core/tests/`
+- [ ] Run Ruff linter on `packages/core scripts/ deploy/`
+- [ ] Run Ruff format check on `packages/core scripts/`
+- [ ] Adversarial challenge / stress-testing:
+  - Exa resolver edge cases (empty strings vs None vs invalid keys, network leak prevention when env var set)
+  - Code cleanliness / format / syntax in touched scripts/deploy/core files
+  - Additional baseline test coverage & failure modes
+- [ ] Write handoff.md with 5 components and clear verdict (CONFIRM CORRECTNESS or REJECT)
+- [ ] Update BRIEFING.md
+- [ ] Send final message to caller

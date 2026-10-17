@@ -1,7 +1,7 @@
-# BRIEFING — 2026-10-15T05:25:00Z
+# BRIEFING — 2026-10-16T13:31:00Z
 
 ## Mission
-Empirically stress-test benchmark adapters (QASPER, SciFact, PubMedQA, Regression) in `packages/core/src/core/eval/adapters/` with adversarial tests.
+Empirically validate Pillar 5 Enterprise Stack (`docker compose config`, `bootstrap_enterprise.sh`, `Dockerfile.api`, `Dockerfile.web`, network topology, volume binds, and ports).
 
 ## 🔒 My Identity
 - Archetype: empirical challenger
@@ -10,26 +10,34 @@ Empirically stress-test benchmark adapters (QASPER, SciFact, PubMedQA, Regressio
 - Original parent: a2173842-299f-4803-8153-e166837e5cde
 - Milestone: M2
 - Instance: 1 of 1
+- Current Working Directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_1_m2
+- Parent ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Milestone: M2_ENTERPRISE_AND_BASELINE
 
 ## 🔒 Key Constraints
 - Review-only — do NOT modify implementation code
 - Must run verification code directly (no unverified claims)
 - `.agents/teamwork/` holds only metadata (no source/tests/data files)
+- Empirical adversarial validation: stress-test assumptions, verify dry-run, check syntax and network/volume topologies
 
 ## Current Parent
-- Conversation ID: a2173842-299f-4803-8153-e166837e5cde
-- Updated: 2026-10-15T03:21:38Z
+- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Updated: 2026-10-16T13:29:44Z
 
 ## Review Scope
-- **Files to review**: `packages/core/src/core/eval/adapters/` (qasper.py, scifact.py, pubmedqa.py, regression.py, base.py, etc.)
-- **Interface contracts**: `packages/core/src/core/eval/models.py`, `AGENTS.md`, `PROJECT.md`
-- **Review criteria**: Edge cases, coordinate extremes, label variations, serialization fidelity, robust error handling
+- **Files to review**:
+  - `deploy/docker-compose.enterprise.yml`
+  - `deploy/.env.enterprise`
+  - `deploy/Dockerfile.api`
+  - `deploy/Dockerfile.web`
+  - `deploy/nginx/verischolar.conf`
+  - `scripts/bootstrap_enterprise.sh`
+  - `infra/postgres/init.sql`
+- **Interface contracts**: `deploy/` and `scripts/` contracts in `PROJECT.md`, `worker_m2/handoff.md`, PRD §R4
+- **Review criteria**: Docker compose validity, Dockerfile buildx syntax, bootstrap installer execution, network topology, volume binds, security, port collisions, service dependencies
 
 ## Key Decisions Made
-- Expanded adversarial test suite `packages/core/tests/eval/test_adversarial_adapters.py` to 51 tests across all 4 challenge areas.
-- Empirically proved linear O(N) throughput (>250k samples/sec) across all 4 adapters.
-- Discovered and empirically documented 3 vulnerabilities: (1) unguarded list comprehensions in QASPER/PubMedQA on non-dict list items, (2) explicit `None` field injections causing `TypeError`, (3) substring matching false positives in `ClassificationMetric` ("no" matching "NOT_ENOUGH_INFO").
-- Verdict: CONFIRM with documented recommendations.
+- [2026-10-16] Began empirical validation of Pillar 5 Enterprise Stack.
 
 ## Artifact Index
 - `DISPATCH.md` — Dispatch history
@@ -38,25 +46,14 @@ Empirically stress-test benchmark adapters (QASPER, SciFact, PubMedQA, Regressio
 - `handoff.md` — 5-component empirical challenge report
 
 ## Attack Surface
-- **Hypotheses tested**: 
-  1. Empty/whitespace files and invalid input types across adapters. (PASSED)
-  2. Non-dict elements inside dataset list. (FOUND VULNERABILITY: AttributeError)
-  3. None-valued fields injection into adapter methods. (FOUND VULNERABILITY: TypeError)
-  4. Coordinate extremes: [0.0, 1.0], degenerate points, multi-page isolation. (PASSED)
-  5. Label casing: YES/No/Maybe in PubMedQA, SUPPORT/CONTRADICT/NOT_ENOUGH_INFO in SciFact. (PASSED)
-  6. Substring matching in ClassificationMetric. (FOUND VULNERABILITY: "no" in "not_enough_info")
-  7. Round-trip EvalSample serialization fidelity and mutation isolation. (PASSED)
-  8. Linear O(N) throughput stress test (1,000 samples). (PASSED in < 0.01s)
-- **Vulnerabilities found**:
-  1. `QASPERAdapter` and `PubMedQAAdapter` unguarded list comprehensions fail on non-dict elements (`AttributeError`).
-  2. `QASPERAdapter`, `SciFactAdapter`, and `EvalSample.from_dict` crash on explicit `None` values (`TypeError`).
-  3. `ClassificationMetric` substring check creates false positives (`"no"` matches `"NOT_ENOUGH_INFO"`).
-- **Untested angles**: Live network dataset streaming (prohibited by hexagonal architectural laws).
+- **Hypotheses tested**: [TBD]
+- **Vulnerabilities found**: [TBD]
+- **Untested angles**: [TBD]
 
 ## Loaded Skills
-- **Source**: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/python-testing/SKILL.md
-- **Local copy**: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_1_m2/skills/python-testing.md
-- **Core methodology**: Pytest fixtures, edge case testing, parametrization, robust assertion
-- **Source**: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md
-- **Local copy**: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_1_m2/skills/verischolar-agent-protocol.md
-- **Core methodology**: VeriScholar architectural laws, 1-indexed page, [0,1] normalized coordinates, atomic evidence
+- **Source**: /home/VeriScholar/.agents/skills/find-skills/SKILL.md
+- **Local copy**: None
+- **Core methodology**: Skill discovery
+- **Source**: /home/VeriScholar/.agents/skills/herdr/SKILL.md
+- **Local copy**: None
+- **Core methodology**: Herdr terminal multiplexing

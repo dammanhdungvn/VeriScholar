@@ -74,8 +74,10 @@ class Settings(BaseSettings):
     # Authentication & JWT settings
     JWT_SECRET_KEY: str = "verischolar-super-secure-jwt-secret-key-2026-production-grade"
     JWT_ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_SECONDS: int = 3600
-    REFRESH_TOKEN_EXPIRE_SECONDS: int = 604800  # 7 days
+    ACCESS_TOKEN_EXPIRE_SECONDS: int = 7200  # 2 hours standard
+    REMEMBER_ME_ACCESS_TOKEN_EXPIRE_SECONDS: int = 2592000  # 30 days for persistent session
+    REFRESH_TOKEN_EXPIRE_SECONDS: int = 7776000  # 90 days durable refresh
+    GOOGLE_CLIENT_ID: str = ""
 
     # Langfuse AI Observability & Tracing settings
     LANGFUSE_ENABLED: bool = False
@@ -108,8 +110,8 @@ class Settings(BaseSettings):
         if self.LANGFUSE_BASE_URL:
             self.LANGFUSE_HOST = self.LANGFUSE_BASE_URL
         if self.LANGFUSE_PUBLIC_KEY and self.LANGFUSE_SECRET_KEY:
-            # Auto-enable if keys are present and not explicitly set to false
-            if "LANGFUSE_ENABLED" not in self.model_fields_set:
+            # Auto-enable if keys exist and not explicitly set, except in test mode
+            if "LANGFUSE_ENABLED" not in self.model_fields_set and self.ENVIRONMENT != "test":
                 self.LANGFUSE_ENABLED = True
         if self.LANGFUSE_ENVIRONMENT is None:
             self.LANGFUSE_ENVIRONMENT = self.ENVIRONMENT
@@ -141,6 +143,9 @@ class Settings(BaseSettings):
     # Database settings (PostgreSQL + pgvector)
     DATABASE_URL: str = "postgresql+asyncpg://verischolar:verischolar@localhost:5432/verischolar"
     TEST_DATABASE_URL: str | None = None
+
+    # Redis Cache & Background Tasks
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     @field_validator("DATABASE_URL", mode="after")
     @classmethod

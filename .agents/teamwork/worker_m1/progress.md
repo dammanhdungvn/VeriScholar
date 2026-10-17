@@ -1,26 +1,27 @@
-# Progress: M1_SSE_TRACING
+# Progress — Worker M1 (M1_WRITING_AND_SYNTHESIS)
 
-Last visited: 2026-10-15T02:47:30Z
-Agent: worker_m1
+Last visited: 2026-10-16T12:33:30Z
 
-## Completed Steps
-- [x] Received dispatch message and created DISPATCH.md
-- [x] Read ORIGINAL_REQUEST.md, PROJECT.md, AGENTS.md, explorer_survey_1/handoff.md
-- [x] Read and dumped local copies of fastapi and verischolar-agent-protocol skills
-- [x] Created BRIEFING.md and initialized progress.md
-- [x] Inspected source code of all 10 owned files
-- [x] Implemented changes in `apps/api/src/api/middleware/tracing.py` (`scope["state"]["request_id"]`, header deduplication)
-- [x] Implemented changes in `apps/api/src/api/__init__.py` (`setup_logging()`, `GET /events` request_id in data payload, exception handlers `X-Request-ID` headers & meta)
-- [x] Implemented changes in `apps/api/src/api/v1/endpoints/documents.py` & `document_service.py` (`request_id` passed, added to `X-Request-ID` header, `summary_start` and error payloads)
-- [x] Implemented changes in `apps/api/src/api/v1/endpoints/sessions.py` & `session_chat_service.py` (`request_id` passed, added to `X-Request-ID` header, `start` event payload, Langfuse trace metadata, and error payloads)
-- [x] Updated and enhanced test suites (`test_logging.py`, `test_documents_summary_generate.py`, `test_sessions_chat.py`, `test_golden_papers_matrix.py`)
-- [x] Verified 40 targeted tests passed (`test_logging.py`, `test_documents_summary_generate.py`, `test_sessions_chat.py`, `test_golden_papers_matrix.py`)
-- [x] Verified full API test suite passed: 214 passed in 24.98s
-- [x] Verified core test suite passed: 76 passed in 0.35s
-- [x] Verified ruff linting & formatting: `uv run ruff check apps/api` and `uv run ruff format --check apps/api` (0 errors, 0 warnings)
-
-## Current Step
-- [ ] Update BRIEFING.md and generate handoff.md
-
-## Next Steps
-- [ ] Send handoff message to parent orchestrator
+## Status: Verification & Handoff
+- [x] Initialized DISPATCH.md and BRIEFING.md
+- [x] Inspect existing implementations in files to be modified
+- [x] Implement Pillar 4 Backend changes:
+  - `apps/api/src/api/core/config.py`: Expose `REDIS_URL: str = "redis://localhost:6379/0"` in `Settings`
+  - `apps/api/src/api/deps.py`: Initialize `RedisIdempotencyAdapter(redis_url=settings.REDIS_URL)` with fallback to in-memory adapter; inject cache into `LibrarySynthesisService`
+  - `apps/api/src/api/services/library_synthesis_service.py`: Implement Redis caching for extracted comparison matrix rows using key `matrix:cache:{user_id}:{folder_id or 'global'}:{hash}` with TTL=3600s, returning cached rows on pagination and search without reparsing raw documents
+- [x] Implement Pillar 4 Frontend changes:
+  - `apps/web/src/features/library/types/index.ts`: Add `total_count?: number`, `limit?: number`, `offset?: number`, `search?: string` to `ComparisonMatrixRequest` and `ComparisonMatrixResponse`
+  - `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`: Pass `limit: 200` in matrix generation payload so 100+ papers are fully retrieved
+- [x] Implement Pillar 3 Frontend changes:
+  - `apps/web/src/features/writing/types/index.ts`: Add `AssociativeSuggestionItem` and `AssociativeSuggestionsResponse`
+  - `apps/web/src/features/writing/api/draftsApi.ts`: Add `getAssociativeSuggestions(id, payload)` calling `POST /drafts/${id}/associative-suggestions`
+  - `apps/web/src/features/writing/components/WritingWorkspace.tsx`: Wire `getAssociativeSuggestions` so floating `AssociativeMemoryCard` proactively suggests relevant historical notes and allows one-click citation insertion (`data-testid="insert-citation-btn"`)
+- [x] Added unit test in `draftsApi.test.ts` covering `getAssociativeSuggestions`
+- [x] Verify Pillar 2 Overleaf 1-Click Sync:
+  - Confirmed `POST /api/v1/drafts/{id}:export-overleaf` and `GET overleaf-launch` generate valid Overleaf launch URL and snippet form data
+  - Confirmed frontend `WritingHeaderBar.tsx` button `data-testid="header-overleaf-btn"` opens draft directly in Overleaf
+- [x] Run backend verification tests: `uv run pytest apps/api/tests/test_backend_pillars_completion.py -v` (4 passed, 100%)
+- [x] Run frontend vitest:
+  - `pnpm --prefix apps/web test src/features/writing` (14 files passed, 103 passed, 100%)
+  - `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx` (7 passed, 100%)
+- [ ] Finalize handoff report and notify caller

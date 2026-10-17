@@ -3,14 +3,12 @@
 # Scalable Multi-Tenant Architecture (3,000 -> 100,000 Concurrent Academic Users)
 # ==============================================================================
 
-version: "3.9"
-
 services:
   # ----------------------------------------------------------------------------
   # 1. High-Density Database (PostgreSQL 16 + pgvector)
   # ----------------------------------------------------------------------------
   postgres:
-    image: pgvector/pgvector:0.8.6-pg18
+    image: pgvector/pgvector:0.8.0-pg16
     container_name: verischolar-enterprise-db
     restart: unless-stopped
     environment:
@@ -19,6 +17,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-verischolar_secure_pass}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ../infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-verischolar} -d ${POSTGRES_DB:-verischolar}"]
       interval: 5s

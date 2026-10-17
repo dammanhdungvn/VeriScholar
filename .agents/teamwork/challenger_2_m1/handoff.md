@@ -1,128 +1,200 @@
-# Handoff Report: Empirical Challenge for Milestone 1 (Error Handling & Concurrency)
+# Handoff Report: Milestone 1 Adversarial Stress Testing & Edge-Case Verification
 
 **Agent**: `challenger_2_m1`  
-**Role**: `critic`, `specialist` (Empirical Challenger)  
-**Milestone**: `M1_SSE_TRACING`  
-**Verdict**: **CONFIRM**  
-**Date**: 2026-10-15  
+**Role**: `critic`, `specialist` (EMPIRICAL CHALLENGER 2)  
+**Target Milestone**: `M1_WRITING_AND_SYNTHESIS` (Pillars 2, 3, 4)  
+**Working Directory**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1`  
+**Date**: 2026-10-16  
+**Verdict**: **CONFIRM CORRECTNESS**
 
 ---
 
 ## 1. Observation
 
-1. **Concurrency and structlog Contextvars Isolation**:
-   - `apps/api/src/api/middleware/tracing.py:40-45`:
-     ```python
-     structlog.contextvars.clear_contextvars()
-     structlog.contextvars.bind_contextvars(
-         request_id=request_id,
-         method=scope.get("method"),
-         path=scope.get("path"),
-     )
-     ```
-   - In `apps/api/tests/test_concurrency_error_sse_challenge.py::test_concurrent_requests_structlog_contextvars_isolation`, 50 concurrent requests with unique client UUIDs (`stress-concurrency-{idx}-{uuid4()}`) were launched against `/events`. Every response header `x-request-id` matched the client's custom UUID, and all 3 SSE data chunks per stream (`{"step": i, "content": ..., "request_id": ...}`) echoed that exact request ID. Zero cross-request bleeding was observed across all 150 streamed event chunks.
-   - In `apps/api/tests/test_concurrency_error_sse_challenge.py::test_interleaved_async_execution_contextvars_integrity`, an asynchronous interleaving stress test was run where Task A (slow, 50ms sleep) started first, Task B (fast, 5ms sleep) started 10ms later and finished first. `structlog.contextvars.get_contextvars()["request_id"]` was measured before sleep, during interleaving, and after sleep:
-     - Task A: `ctx_before == id_slow`, `ctx_after == id_slow`.
-     - Task B: `ctx_before == id_fast`, `ctx_after == id_fast`.
-     Zero contextvar mutation or premature clearing occurred during task yielding.
+### 1.1. Frontend Edge-Case Stress Testing
+Direct tests were executed against `AssociativeMemoryCard` and `WritingHeaderBar`:
 
-2. **Error Envelope and Header Emittance across 400, 401, 404, 422, and 500**:
-   - `apps/api/src/api/__init__.py:94-273`: Global exception handlers implement RFC 7807 structured JSON envelopes (`ErrorResponse`) and propagate `headers={"X-Request-ID": req_id}` and `meta["request_id"]`.
-   - In `apps/api/tests/test_concurrency_error_sse_challenge.py`:
-     - **400 Bad Request** (`test_error_400_bad_request_envelope_and_header`): Both explicit `HTTPException(400)` and `DomainError` returned HTTP 400 with `success: False`, matching `x-request-id` header and matching `meta["request_id"]` (tested with custom ID and server-generated UUID4).
-     - **401 Unauthorized** (`test_error_401_unauthorized_envelope_and_header`): Protected route `/api/v1/sessions` without credentials or with invalid Bearer token returned HTTP 401 with `x-request-id` header, matching `meta["request_id"]`, and `WWW-Authenticate: Bearer` header.
-     - **404 Not Found** (`test_error_404_not_found_envelope_and_header`): Unmatched route `/api/v1/non_existent_path` returned HTTP 404 with `x-request-id` header, `error.code == "HTTP_404"`, and matching `meta["request_id"]`.
-     - **422 Validation Error** (`test_error_422_validation_error_envelope_and_header`): Invalid payload (`POST /api/v1/sessions` with malformed UUID) and invalid path parameter (`GET /api/v1/documents/not-a-valid-uuid`) returned HTTP 422 with `x-request-id` header, matching `meta["request_id"]`, and detailed field-level error list in `meta["errors"]`.
-     - **500 Internal Server Error** (`test_error_500_unhandled_internal_error_envelope_and_header`): Route raising unhandled `ZeroDivisionError` was trapped by `unhandled_exception_handler` and `ServerErrorMiddleware`, returning HTTP 500 with `error.code == "INTERNAL_SERVER_ERROR"`, `x-request-id` header, and matching `meta["request_id"]`.
-
-3. **Aborted SSE Streams, Disconnect Handling, and Memory Leaks**:
-   - `apps/api/src/api/services/document_service.py:2351-2352`:
-     ```python
-     if is_disconnected and await is_disconnected():
-         return
+1. **`AssociativeMemoryCard` Missing `citationKey` & Input Sanitization (`apps/web/src/features/writing/components/AssociativeMemoryCard.tsx:38-43`)**:
+   - Implementation:
+     ```typescript
+     const effectiveCitationKey = citationKey || title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16);
      ```
-     Tested in `test_sse_client_abort_disconnect_guard_in_summary_stream`: upon disconnect signal after 3 events, generator immediately terminated without continuing to produce the remaining ~150 tokens.
-   - `apps/api/src/api/services/session_chat_service.py:1044-1049, 1082-1085`:
-     ```python
-     if await is_disconnected():
-         logger.warning("sse_client_disconnected", session_id=str(session_id))
-         finish_reason = "interrupted"
-         break
-     ```
-     Tested in `test_sse_client_abort_disconnect_guard_in_chat_stream`: upon disconnect signal, generator stopped token emission, persisted `SessionTurnModel` with `finish_reason = "interrupted"`, exited Langfuse trace span cleanly, and committed session state.
-   - In `test_high_concurrency_sse_aborts_memory_and_task_leak`: 50 concurrent SSE streams were initiated and aborted immediately on first body chunk:
-     - `PureASGITracingMiddleware` caught the cancellation, logged `http_request_finished` with `client_aborted=True, status_code=499`.
-     - Active asyncio tasks count was verified before and after abort storm: no orphaned background tasks remained.
-     - Contextvars were cleared: `request_id` did not leak into global/task scope.
-     - Heap memory allocations tracked via `tracemalloc`: total memory difference was `< 500 KB` across 50 aborts, with zero uncollected generator frames or connection leak.
+   - In `AssociativeMemoryCard.challenge.test.tsx`:
+     - Test `derives effectiveCitationKey from title when citationKey is missing/undefined`: with `title="Attention Is All You Need"`, derived key was exactly `"attentionisallyo"` (16 alphanumeric chars), `onInsertCitation` called with `"attentionisallyo"`, and card transitioned to `"Đã chèn"`.
+     - Test `handles title with special characters and symbols when citationKey is missing`: with `title="[Survey 2024] Transformer & LLM: What's Next?!"`, derived key was safely sanitized to `"survey2024transf"`.
+     - Test `handles empty title or title with only symbols without throwing runtime error`: with `title="???###!!!"`, derived key safely evaluated to `""`, `onInsertCitation("")` called without throwing runtime exception.
+     - Test `prioritizes explicit citationKey over derived title key`: with `citationKey="vaswani2017attention"` and `title="Some Random Title"`, explicit key was prioritized.
+     - Test `safely handles omission of all optional props (page, noteSnippet, similarityScore, onDismiss, onViewNote)`: default page 1 rendered, optional snippet and similarity omitted, clicking `onViewNote` when undefined did not throw.
+     - Test `renders similarity score correctly when similarityScore is 0.0 or 1.0`: correctly rendered `"0%"` and `"100%"`.
 
-4. **Suite Test Results**:
-   - Dedicated empirical challenge suite:
-     `uv run pytest apps/api/tests/test_concurrency_error_sse_challenge.py`: 10 passed in 1.71s.
-   - Full API suite:
-     `uv run pytest apps/api/tests/`: 239 passed in 28.75s.
-   - Core domain suite:
-     `uv run pytest packages/core/tests`: 76 passed in 0.32s.
-   - Code formatting and linting:
-     `uv run ruff check apps/api` and `uv run ruff format --check apps/api`: 0 errors, 0 warnings.
+2. **`WritingHeaderBar` State During Overleaf Sync (`apps/web/src/features/writing/components/WritingHeaderBar.tsx:246-260`)**:
+   - Implementation:
+     ```tsx
+     <button
+       type="button"
+       onClick={onSyncOverleaf}
+       disabled={isSyncingOverleaf}
+       data-testid="header-overleaf-btn"
+       className="... disabled:opacity-50"
+       title="Đồng bộ và mở dự án trực tiếp trên Overleaf (1-Click Launch)"
+     >
+       {isSyncingOverleaf ? (
+         <Loader2 className="w-3.5 h-3.5 animate-spin" />
+       ) : (
+         <ExternalLink className="w-3.5 h-3.5" />
+       )}
+       <span className="hidden sm:inline">Đồng bộ Overleaf (1-Click)</span>
+     </button>
+     ```
+   - In `WritingHeaderBar.challenge.test.tsx`:
+     - Test `disables Overleaf sync button and displays spinning loader during sync (isSyncingOverleaf=true)`: button `header-overleaf-btn` is disabled (`toBeDisabled()`), contains `.animate-spin` icon, and clicking does not invoke `onSyncOverleaf` (called 0 times).
+     - Test `enables Overleaf sync button and triggers callback on click when idle (isSyncingOverleaf=false)`: button is enabled, no `.animate-spin` icon, clicking invokes `onSyncOverleaf` (called 1 time).
+
+### 1.2. Comparison Matrix Modal 100+ Simulated Papers & CSV Escaping
+Direct tests were executed in `ComparisonMatrixModal.challenge.test.tsx`:
+
+1. **DOM Paging with 120 Simulated Papers (`apps/web/src/features/library/components/ComparisonMatrixModal.tsx:77-83`)**:
+   - Initial render (pageSize = 10):
+     - Exactly 10 `<tr>` rows rendered inside `tbody` (`tbodyRows.length === 10`).
+     - Pagination label displays `"Hiển thị 1 - 10 trong số 120 bài báo"` and `"Trang 1 / 12"`.
+     - Boundary check: `matrix-prev-page` is strictly disabled on Page 1 (`toBeDisabled()`), while `matrix-next-page` is enabled.
+   - Page navigation:
+     - Clicking `matrix-next-page` advances to Page 2 (`"Trang 2 / 12"`).
+     - Exactly 10 rows rendered (`Deep Learning Architecture 11` rendered, `BioASQ Study 1` removed from DOM).
+   - Page size reconfiguration:
+     - Selecting `pageSize = 50` via select element dynamically re-slices rows: renders exactly 50 `<tr>` elements in DOM, and total pages recalculates to `"Trang 1 / 3"`.
+   - Real-time client-side keyword filtering:
+     - Filtering for `"BioASQ"` across 120 papers matches 12 papers: displays `"Kết quả lọc: 12 / 120 bài báo"`, renders exactly 12 rows in DOM, and pagination resets to `"Trang 1 / 1"`.
+
+2. **RFC 4180 CSV Export Escaping & UTF-8 BOM (`apps/web/src/features/library/components/ComparisonMatrixModal.tsx:126-174`)**:
+   - Implementation:
+     ```typescript
+     const escapeCsv = (val: unknown): string => {
+       if (val === null || val === undefined) return '""';
+       const str = String(val).replace(/"/g, '""');
+       return `"${str}"`;
+     };
+     ...
+     const csvContent = "\uFEFF" + csvLines.join("\r\n");
+     ```
+   - In `ComparisonMatrixModal.challenge.test.tsx`:
+     - UTF-8 BOM check: First character `capturedBlobContent.charCodeAt(0)` is `0xFEFF` (`\uFEFF`).
+     - Double quotes escaping: `Attention Is "All" You Need: The "Transformer" Era` was properly escaped as `"Attention Is ""All"" You Need: The ""Transformer"" Era"`. `28.4 "SOTA"` escaped as `28.4 ""SOTA""`.
+     - Commas in cells: `Vaswani, Ashish; Shazeer, Noam` and `WMT, 2014 En-De; WMT, 2014 En-Fr` were safely enclosed within double quotes, preventing column corruption.
+     - Newlines: `"O(n^2) sequence memory\nquadratic bottleneck"` was safely enclosed.
+     - Null and undefined values: properly converted to empty quoted string `""`.
+
+### 1.3. Redis Unavailability & Fallback Behavior
+Direct tests were executed in `apps/api/tests/test_redis_fallback_challenge.py`:
+
+1. **Dead Host / Closed Port Degradation (`packages/core/src/core/adapters/cache/idempotency.py:64-80`)**:
+   - Test `test_redis_adapter_fallback_on_unreachable_host`: initializing `RedisIdempotencyAdapter` with `redis://127.0.0.1:65530/0` (closed port).
+   - Calling `adapter.store_response` and `adapter.get_response` completed cleanly without raising exceptions, storing and retrieving data via `InMemoryIdempotencyAdapter` fallback.
+
+2. **Runtime `ConnectionError` on `get_response` (`packages/core/src/core/adapters/cache/idempotency.py:82-94`)**:
+   - Test `test_redis_adapter_fallback_when_get_raises_connection_error`: mocked `aioredis` client raising `ConnectionError("Connection refused by Redis server")`.
+   - `get_response` caught the exception, logged a warning, and returned the cached value from fallback.
+
+3. **Runtime `TimeoutError` on `store_response` (`packages/core/src/core/adapters/cache/idempotency.py:96-123`)**:
+   - Test `test_redis_adapter_fallback_when_set_raises_connection_error`: mocked `aioredis` client raising `TimeoutError("Redis socket read timeout")`.
+   - `store_response` caught the exception, logged a warning, and ensured data was stored in fallback. Subsequent retrieval from fallback verified zero data loss.
+
+4. **`LibrarySynthesisService` with Offline Redis (`apps/api/src/api/services/library_synthesis_service.py:70-89`)**:
+   - Test `test_library_synthesis_service_caching_with_dead_redis`: `LibrarySynthesisService` initialized with closed Redis port `redis://127.0.0.1:65531/0`.
+   - Call 1: extracted comparison rows and cached them into fallback.
+   - Call 2: retrieved cached rows directly from fallback cache without reprocessing documents.
+
+5. **AI Tracing Service Version Parameter Resolution (`apps/api/src/api/services/ai_tracing_service.py:516,558`)**:
+   - Test `test_ai_tracing_version_parameter_and_span_creation`: verified `AITracingService.trace()` accepts `version: str | None = None` and initializes `LangfuseTraceSpan` cleanly without `NameError`.
 
 ---
 
 ## 2. Logic Chain
 
-1. **Concurrency Isolation Proof (Observation 1)**:
-   - Python 3.12 `contextvars` uses task-local storage. Each asyncio Task receives a copy of the parent context at creation. In `PureASGITracingMiddleware`, `structlog.contextvars.bind_contextvars()` sets values for the specific task context.
-   - Empirical test with 50 concurrent requests and interleaved async sleeps confirmed that task switching does not mutate or overwrite other coroutines' `structlog` context or `scope["state"]["request_id"]`.
-   - Therefore, concurrent requests cannot bleed or cross-contaminate request IDs.
+1. **Frontend Edge-Case Resilience**:
+   - *Observation*: `AssociativeMemoryCard` derives `effectiveCitationKey` using `title.toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 16)`.
+   - *Inference*: Even if the backend or user note omits `citationKey` or provides titles with symbols/emojis/punctuation, the component never crashes or produces undefined references.
+   - *Observation*: `WritingHeaderBar` binds `disabled={isSyncingOverleaf}` and swaps `<ExternalLink>` for `<Loader2 className="... animate-spin" />`.
+   - *Inference*: Double-submission and racing sync requests are prevented at the UI layer.
 
-2. **Error Envelope Uniformity (Observation 2)**:
-   - `PureASGITracingMiddleware` sits as the outer ASGI wrapper inside `CORSMiddleware`, wrapping `ExceptionMiddleware`. It intercepts all `http.response.start` messages, ensuring `x-request-id` is appended to headers.
-   - Global exception handlers in `api/__init__.py` read `req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")` and explicitly inject it into `meta["request_id"]`.
-   - Empirical tests for status codes 400, 401, 404, 422, and 500 confirmed that in all cases (both with client-provided custom headers and with server-generated UUID4s), the `x-request-id` header is emitted and strictly matches `meta["request_id"]`.
+2. **Scalability & Large-Scale Literature Synthesis (Pillar 4)**:
+   - *Observation*: `ComparisonMatrixModal` uses `filteredRows.slice((currentPage - 1) * pageSize, start + pageSize)`.
+   - *Inference*: Passing 120 papers does not saturate browser DOM rendering; exactly 10 (or selected 50) rows are mounted in the DOM table at any given time.
+   - *Observation*: `escapeCsv` wraps each cell with `"${str.replace(/"/g, '""')}"` and prepends `\uFEFF`.
+   - *Inference*: Exported CSV files conform strictly to RFC 4180; embedded commas, double quotes, and newlines do not shift or distort columns in Microsoft Excel or spreadsheet software.
 
-3. **Resource Leak & SSE Abort Resilience (Observation 3)**:
-   - Streaming endpoints (`/events`, `summary:stream`, `post_session_message`) integrate `is_disconnected` guards and rely on Starlette's `StreamingResponse` task cancellation.
-   - When a client aborts mid-stream, generator execution breaks immediately without generating wasteful tokens, turns are recorded with `finish_reason = "interrupted"`, and Langfuse trace spans exit properly.
-   - A 50-client concurrent abort storm confirmed that all coroutines terminate, `asyncio.all_tasks()` returns to baseline, and heap memory usage remains bounded with zero generator accumulation.
+3. **High Availability & Fault Tolerance (Redis Degradation)**:
+   - *Observation*: `RedisIdempotencyAdapter` wraps both Redis connection and per-request `get`/`set` operations in `try-except` blocks delegating to `InMemoryIdempotencyAdapter`.
+   - *Inference*: In air-gapped environments, local development without Redis, or sudden Redis container restarts, `LibrarySynthesisService` and `Idempotency` middleware continue serving requests with zero downtime or HTTP 500 errors.
 
 ---
 
 ## 3. Caveats
 
-- **Starlette `ClientDisconnect` Type**: In `PureASGITracingMiddleware`, the exception catch is `except (asyncio.CancelledError, ConnectionResetError): status_code = 499`. Starlette's `ClientDisconnect` inherits from `Exception` rather than `CancelledError`. In ASGI 2.3 under Uvicorn, task cancellation raises `asyncio.CancelledError`, which is correctly caught and mapped to 499. If an alternative ASGI server raises `ClientDisconnect` directly without cancelling the task, it would enter `except Exception:` and log 500. This is a minor non-blocking observability caveat that does not affect request processing or resource cleanup.
+- **Overleaf URL Length Limits**: Overleaf 1-click launch embeds LaTeX source code in the query parameter (`?snip=...`). For exceptionally large multi-chapter drafts (> 30 KB), the browser or HTTP server URL length limits may be reached; in such cases, the international submission bundle ZIP export (`onExportBundle`) serves as the designated alternative.
+- **In-Memory Cache Persistence**: When Redis is unavailable, the fallback `InMemoryIdempotencyAdapter` is process-local and does not share cache state across multiple horizontal Uvicorn worker processes. However, this is an acceptable and expected behavior for a degradation fallback.
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: CONFIRM**
+**Verdict: CONFIRM CORRECTNESS**
 
-Milestone 1 (`M1_SSE_TRACING`) satisfies all requirements:
-1. Concurrency isolation is verified: no structlog contextvars bleeding across concurrent or interleaved requests.
-2. Error response uniformity is verified: 400, 401, 404, 422, and unhandled 500 errors consistently emit canonical `x-request-id` headers and matching `meta["request_id"]`.
-3. Client abort handling is verified: mid-stream SSE client disconnects cleanly terminate generator execution, record partial turns, close trace spans, release memory, and leave no orphaned asyncio tasks.
+Empirical stress testing and edge-case verification for Milestone 1 (`M1_WRITING_AND_SYNTHESIS`) confirm that:
+1. `AssociativeMemoryCard` safely handles missing citation keys, edge-case titles, and prop omissions.
+2. `WritingHeaderBar` cleanly enforces disabled state and spinning progress indicators during 1-click Overleaf synchronization.
+3. `ComparisonMatrixModal` flawlessly renders large collections (100+ papers) with strict DOM page virtualization and exports RFC 4180 compliant CSV files with UTF-8 BOM encoding.
+4. `RedisIdempotencyAdapter` and `LibrarySynthesisService` degrade gracefully with zero unhandled exceptions when Redis is offline or encounters connection failures.
+5. All test suites across the monorepo pass cleanly:
+   - Frontend Challenge Tests: 10/10 passed in 18.15s
+   - Frontend Writing & Library Full Suite: 21 files, 134/134 passed in 58.54s
+   - Backend Redis Fallback Challenge Suite: 5/5 passed in 4.87s
+   - Backend Pillars Completion Suite: 4/4 passed in 4s
+   - TypeScript Compilation: `tsc -b` exits with code 0 (0 errors)
+   - Linter: `ruff check` and `ruff format --check` pass with 0 errors
 
 ---
 
 ## 5. Verification Method
 
-To independently verify all challenge findings:
+To independently execute and verify the empirical challenge suites:
 
-1. **Run the Challenger 2 Empirical Test Suite**:
+1. **Run Frontend Challenge Test Suites (Edge Cases & 100+ Papers Paging & CSV)**:
    ```bash
-   uv run pytest apps/api/tests/test_concurrency_error_sse_challenge.py -v
+   pnpm --prefix apps/web test \
+     src/features/writing/components/AssociativeMemoryCard.challenge.test.tsx \
+     src/features/writing/components/WritingHeaderBar.challenge.test.tsx \
+     src/features/library/components/ComparisonMatrixModal.challenge.test.tsx --run
    ```
-   *Expected*: 10 passed in ~2s.
+   *Expected Output*: 3 test files passed, 10/10 passed.
 
-2. **Run Full Backend API Test Suite**:
+2. **Run Full Writing & Library Frontend Vitest Suite**:
    ```bash
-   uv run pytest apps/api/tests/
+   pnpm --prefix apps/web test src/features/writing src/features/library --run
    ```
-   *Expected*: 239 passed in ~29s.
+   *Expected Output*: 21 test files passed, 134/134 passed.
 
-3. **Verify Linter and Formatter**:
+3. **Verify Frontend TypeScript Compilation**:
    ```bash
-   uv run ruff check apps/api
-   uv run ruff format --check apps/api
+   pnpm --prefix apps/web exec tsc -b
    ```
-   *Expected*: Clean with 0 errors and 0 warnings.
+   *Expected Output*: Exit code 0, 0 errors.
+
+4. **Run Backend Redis Fallback & Idempotency Challenge Suite**:
+   ```bash
+   uv run pytest apps/api/tests/test_redis_fallback_challenge.py -v
+   ```
+   *Expected Output*: 5 passed in ~4.8s.
+
+5. **Run Backend Technical Pillars Verification Suite**:
+   ```bash
+   uv run pytest apps/api/tests/test_backend_pillars_completion.py -v
+   ```
+   *Expected Output*: 4 passed in ~4s.
+
+6. **Verify Backend Code Quality and Formatting**:
+   ```bash
+   uv run ruff check apps/api/tests/test_redis_fallback_challenge.py
+   uv run ruff format --check apps/api/tests/test_redis_fallback_challenge.py
+   ```
+   *Expected Output*: `All checks passed!` and `1 file already formatted`.

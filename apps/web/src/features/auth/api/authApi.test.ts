@@ -143,4 +143,23 @@ describe("authApi", () => {
     });
     expect(res.message).toBe("Password reset completed");
   });
+
+  it("calls POST /auth/google with id_token payload", async () => {
+    const mockApiClient = vi.spyOn(apiClientModule, "apiClient").mockResolvedValueOnce({
+      user: { id: "g-1", email: "scholar@stanford.edu" },
+      tokens: { access_token: "google_access_token_xyz" },
+      message: "Xác thực Google thành công!",
+    });
+
+    const res = await authApi.googleLogin("mock_google_id_token_123");
+
+    expect(mockApiClient).toHaveBeenCalledWith("/auth/google", {
+      method: "POST",
+      body: JSON.stringify({
+        id_token: "mock_google_id_token_123",
+      }),
+    });
+    expect(res.user.email).toBe("scholar@stanford.edu");
+    expect(res.tokens.access_token).toBe("google_access_token_xyz");
+  });
 });

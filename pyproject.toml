@@ -17,6 +17,7 @@ dependencies = [
     "python-multipart>=0.0.20",
     "pypdf>=5.1.0",
     "python-dotenv>=1.0.0",
+    "arq>=0.26.0",
 ]
 
 [dependency-groups]
@@ -55,6 +56,10 @@ select = ["E", "F", "I"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**" = ["E501", "E402"]
+"apps/api/tests/**" = ["E501"]
+"packages/core/tests/**" = ["E501"]
+"apps/api/src/api/templates/**" = ["E501"]
+"tests/**" = ["E501"]
 
 [tool.pytest.ini_options]
 testpaths = [

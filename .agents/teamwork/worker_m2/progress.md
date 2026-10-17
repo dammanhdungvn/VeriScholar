@@ -1,59 +1,22 @@
-# Progress Tracking — worker_m2
+# Progress — Worker M2 (M2_ENTERPRISE_AND_BASELINE)
 
-**Last visited**: 2026-10-15T03:20:00Z
-**Milestone**: M2_PUBLIC_BENCHMARKS
-**Current Status**: Complete & Verified
+Last visited: 2026-10-16T13:27:35Z
 
-## Tasks
-- [x] 1. Update embedding dimension validation in `packages/core/src/core/domain/entities/chunk.py` (accept 1024 or 1536)
-- [x] 2. Create ports in `packages/core/src/core/ports/`:
-  - [x] `retrieval.py` (`IRetrievalSearchPort`)
-  - [x] `reranker.py` (`ICrossEncoderRerankerPort`)
-  - [x] `eval.py` (`IDatasetAdapter`, `IEvalMetric`, `IBenchmarkEvaluator`)
-- [x] 3. Create evaluation domain models in `packages/core/src/core/eval/models.py`:
-  - [x] `EvalSample`
-  - [x] `MetricResult`
-  - [x] `BenchmarkReport`
-  - [x] `EvalPrediction`
-- [x] 4. Create adapters in `packages/core/src/core/eval/adapters/`:
-  - [x] `base.py` (`BaseDatasetAdapter`)
-  - [x] `qasper.py` (`QASPERAdapter`)
-  - [x] `scifact.py` (`SciFactAdapter`)
-  - [x] `pubmedqa.py` (`PubMedQAAdapter`)
-  - [x] `regression.py` (`ProjectRegressionAdapter`)
-  - [x] `__init__.py`
-- [x] 5. Create metrics in `packages/core/src/core/eval/metrics/`:
-  - [x] `base.py` (`BaseEvalMetric`)
-  - [x] `token_f1.py` (`TokenF1Metric` with SQuAD answer normalization)
-  - [x] `retrieval_recall.py` (`RetrievalRecallMetric`)
-  - [x] `classification.py` (`ClassificationMetric` - accuracy and macro F1)
-  - [x] `bbox_iou.py` (`BoundingBoxIoUMetric` - [x0, y0, x1, y1, page] spatial IoU)
-  - [x] `spatial_geometry.py` (`SpatialGeometryMetric` - coordinates, bounds, area < 0.95)
-  - [x] `safety.py` (`SafetyMetric` - prompt injection, active abstention, refutation, tenant isolation, ungrounded citations)
-  - [x] `__init__.py`
-- [x] 6. Create benchmark runner in `packages/core/src/core/eval/evaluators/`:
-  - [x] `benchmark_runner.py`
-  - [x] `__init__.py`
-- [x] 7. Create offline fixture files in `packages/core/tests/eval/fixtures/`:
-  - [x] `qasper_subset.json`
-  - [x] `scifact_subset.json`
-  - [x] `pubmedqa_subset.json`
-  - [x] `regression_subset.json`
-- [x] 8. Implement exhaustive unit tests in `packages/core/tests/eval/`:
-  - [x] `test_qasper_adapter.py`
-  - [x] `test_scifact_adapter.py`
-  - [x] `test_pubmedqa_adapter.py`
-  - [x] `test_regression_adapter.py`
-  - [x] `test_token_f1_metric.py`
-  - [x] `test_retrieval_recall_metric.py`
-  - [x] `test_classification_metric.py`
-  - [x] `test_bbox_iou_metric.py`
-  - [x] `test_spatial_geometry_metric.py`
-  - [x] `test_safety_metric.py`
-  - [x] `test_benchmark_runner.py`
-  - [x] `test_chunk_dimensions.py`
-- [x] 9. Verify quality gates:
-  - [x] `uv run pytest packages/core/tests` (135 passed in 0.45s, 100% in-memory)
-  - [x] `uv run ruff check packages/core` (0 errors)
-  - [x] `uv run ruff format --check packages/core` (0 errors)
-- [x] 10. Update BRIEFING.md and write `handoff.md`.
+## Status
+- [x] Read referenced documents (ORIGINAL_REQUEST.md, AGENTS.md, PROJECT.md, explorer_survey_pillar5_tests/handoff.md)
+- [x] Inspect existing owned files and ruff check/format outputs
+- [x] Task 1: Update `deploy/docker-compose.enterprise.yml` (removed obsolete `version: "3.9"`, mounted `init.sql`, set PostgreSQL 16 image)
+- [x] Task 2: Update `deploy/nginx/verischolar.conf` (set root `/usr/share/nginx/html;`, proxy_pass `http://api:8000;`)
+- [x] Task 3: Update `pyproject.toml` with `arq>=0.26.0` and sync/lock via `uv sync --all-packages`
+- [x] Task 4: Verify `scripts/bootstrap_enterprise.sh` dry-run (exit code 0)
+- [x] Task 5: Harmonize `packages/core/src/core/services/exa_resolver.py` (verified `api_key=""` safety)
+- [x] Task 6: Fix lint/format errors in `latex_healer.py`, `latex_linter.py`, `benchmark_multi_agent_stress.py`
+- [x] Run all required verifications:
+  - `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config` (exit code 0)
+  - `bash scripts/bootstrap_enterprise.sh` (exit code 0)
+  - `uv run pytest packages/core/tests/services/test_exa_resolver.py -v` (12/12 passed)
+  - `uv run ruff check packages/core scripts/ deploy/` (0 errors)
+  - `uv run ruff format --check packages/core scripts/` (0 errors)
+  - `uv run pytest packages/core/tests/` (320/320 passed)
+- [ ] Update BRIEFING.md
+- [ ] Write handoff.md and send message to caller

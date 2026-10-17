@@ -1,27 +1,31 @@
-# Dispatch for Challenger 2 M1
-Working directory: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1
-Path to original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Path to PROJECT.md: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Path to Worker M1 report: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
+# Dispatch — Challenger 2 (Milestone 1)
 
-## 2026-10-15T02:48:42Z
-Sender: a2173842-299f-4803-8153-e166837e5cde
-Priority: MESSAGE_PRIORITY_HIGH
-Content:
-You are challenger_2_m1.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1
-Read the original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read Worker M1 handoff: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
+Scope: Edge cases, cache eviction, concurrency, and UI boundary verification for Milestone 1.
+Input:
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md` (read section ## 2026-10-16T12:03:58Z)
+- `/home/VeriScholar/Workspace/VeriScholar/AGENTS.md`
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md`
 
-YOUR MISSION:
-Empirically challenge error handling and concurrency in Milestone 1.
-Write and execute test scenarios:
-1. Concurrent requests with distinct `X-Request-ID` headers: Ensure structlog contextvars or state do not bleed or cross-contaminate between concurrent requests.
-2. Error conditions: Verify 400 Bad Request, 401 Unauthorized, 404 Not Found, 422 Validation Error, and unhandled 500 Internal Error all emit `x-request-id` header and matching `meta["request_id"]`.
-3. Check memory/leaks on aborted SSE streams (client disconnects mid-stream).
+Output: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1/handoff.md`
+Report verdict: CONFIRM CORRECTNESS or REJECT.
+## 2026-10-16T12:35:03Z
+You are Challenger 2 for Milestone 1 (M1_WRITING_AND_SYNTHESIS).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1.
 
-Report your empirical findings and pass/fail verdict (CONFIRM / REJECT).
-Write your report to: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1/handoff.md
-Notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1/DISPATCH.md
+
+Conduct adversarial stress testing and edge-case verification:
+- Test frontend components under edge cases (e.g. AssociativeMemoryCard with missing citation key, WritingHeaderBar disabled during sync).
+- Test comparison matrix modal with 100+ simulated papers, verifying DOM paging and CSV export escaping with quotes/commas.
+- Test fallback behavior when Redis is unavailable.
+
+Write your findings and empirical evidence to:
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/challenger_2_m1/handoff.md
+State your verdict: CONFIRM CORRECTNESS or REJECT.
+Report via send_message to your caller.

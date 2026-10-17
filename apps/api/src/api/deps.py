@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter
+from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIdempotencyAdapter
 from core.adapters.storage.local import LocalStorageAdapter
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
@@ -73,7 +73,13 @@ def get_idempotency_port() -> IIdempotencyPort:
     """Dependency providing Idempotency Port singleton instance."""
     global _idempotency_adapter
     if _idempotency_adapter is None:
-        _idempotency_adapter = InMemoryIdempotencyAdapter()
+        try:
+            _idempotency_adapter = RedisIdempotencyAdapter(
+                redis_url=settings.REDIS_URL,
+                fallback=InMemoryIdempotencyAdapter(),
+            )
+        except Exception:
+            _idempotency_adapter = InMemoryIdempotencyAdapter()
     return _idempotency_adapter
 
 
@@ -175,16 +181,18 @@ def get_folder_service(
 def get_library_synthesis_service(
     db: AsyncSession = Depends(get_db),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+    idempotency_port: IIdempotencyPort = Depends(get_idempotency_port),
 ) -> LibrarySynthesisService:
     """Dependency providing LibrarySynthesisService bound to request database session."""
-    return LibrarySynthesisService(db=db, ai_tracing=ai_tracing)
+    return LibrarySynthesisService(db=db, ai_tracing=ai_tracing, cache=idempotency_port)
 
 
 def get_associative_memory_service(
     db: AsyncSession = Depends(get_db),
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> AssociativeMemoryService:
     """Dependency providing AssociativeMemoryService bound to request database session."""
-    return AssociativeMemoryService(db=db)
+    return AssociativeMemoryService(db=db, ai_tracing=ai_tracing)
 
 
 async def get_current_user(
@@ -202,6 +210,7 @@ async def get_current_user(
     3. Rejects with 401 Unauthorized if neither valid token nor X-User-Id header is provided.
     """
     auth_header = request.headers.get("authorization") or request.headers.get("Authorization")
+    token = None
     if auth_header:
         if not auth_header.startswith("Bearer "):
             raise HTTPException(
@@ -214,6 +223,10 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         token = auth_header[7:].strip()
+    elif request.query_params.get("token"):
+        token = request.query_params.get("token", "").strip()
+
+    if token:
         try:
             claims = AuthService.decode_token(token)
         except ValueError as exc:

@@ -1,13 +1,13 @@
 # Progress — challenger_1_m2
 
-Last visited: 2026-10-15T05:25:30Z
+Last visited: 2026-10-16T13:31:00Z
 
-- [x] Initial dispatch received and parsed
-- [x] BRIEFING.md initialized
-- [x] Read context: ORIGINAL_REQUEST.md, PROJECT.md, worker_m2/handoff.md, AGENTS.md
-- [x] Inspect implementation in packages/core/src/core/eval/
-- [x] Formulate adversarial test plan covering 4 dimensions
-- [x] Implement and execute empirical test harness (51 tests in test_adversarial_adapters.py)
-- [x] Document observations, logic chain, vulnerabilities / robustness findings
-- [x] Verify full workspace suite (452 passed, 9 skipped, 1 warning)
-- [x] Compile handoff report and notify parent
+- [x] Received dispatch for Milestone 2 (M2_ENTERPRISE_AND_BASELINE)
+- [x] Initialized DISPATCH.md and updated BRIEFING.md
+- [ ] Inspect deploy and scripts configuration files (`deploy/docker-compose.enterprise.yml`, `deploy/.env.enterprise`, `deploy/Dockerfile.api`, `deploy/Dockerfile.web`, `deploy/nginx/verischolar.conf`, `scripts/bootstrap_enterprise.sh`, `infra/postgres/init.sql`)
+- [ ] Empirically run docker compose config validation
+- [ ] Empirically run bootstrap installer script dry-run
+- [ ] Empirically run docker buildx syntax check for `deploy/Dockerfile.api` and `deploy/Dockerfile.web`
+- [ ] Inspect and stress-test network topology, service dependencies, volume mounts, port bindings, environment variable interpolation, and permissions
+- [ ] Document findings, adversarial scenarios, and verdicts in `handoff.md`
+- [ ] Send completion message to parent agent

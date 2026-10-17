@@ -23,6 +23,7 @@ import type {
   CreateDraftCommentRequest,
   UpdateDraftCommentRequest,
   OverleafExportResponse,
+  AssociativeSuggestionsResponse,
 } from "../types";
 
 export const draftsApi = {
@@ -268,6 +269,28 @@ export const draftsApi = {
     return apiClient<OverleafExportResponse>(`/drafts/${id}/overleaf`, {
       method: "POST",
     });
+  },
+
+  /**
+   * POST /api/v1/drafts/{id}/associative-suggestions
+   * Retrieve proactive scholarly associative memory suggestions based on draft content.
+   */
+  async getAssociativeSuggestions(
+    id: string,
+    payload: {
+      content?: string;
+      text?: string;
+      limit?: number;
+      min_similarity?: number;
+    } = {}
+  ): Promise<AssociativeSuggestionsResponse> {
+    return apiClient<AssociativeSuggestionsResponse>(
+      `/drafts/${id}/associative-suggestions`,
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      }
+    );
   },
 };
 

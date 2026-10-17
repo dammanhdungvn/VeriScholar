@@ -1,83 +1,74 @@
-# BRIEFING — 2026-10-15T03:20:00Z
+# BRIEFING — 2026-10-16T13:27:45Z
 
 ## Mission
-Implement Milestone 2: Core Evaluation Domain & Public Benchmark Suite (QASPER, SciFact, PubMedQA, and Project Regression) in `packages/core`, update embedding dimensions in `DocumentChunk`, define hexagonal ports (`retrieval.py`, `reranker.py`, `eval.py`), implement domain models, adapters, metrics, runner, and offline unit test suite with 100% in-memory isolation.
+Complete Milestone 2 (M2_ENTERPRISE_AND_BASELINE): Configure Pillar 5 Enterprise Stack and harmonize baseline test/lint suite.
 
 ## 🔒 My Identity
-- Archetype: worker_m2
+- Archetype: worker
 - Roles: implementer, qa, specialist
-- Working directory: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2
-- Original parent: a2173842-299f-4803-8153-e166837e5cde
-- Milestone: M2_PUBLIC_BENCHMARKS
+- Working directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2
+- Original parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Milestone: M2_ENTERPRISE_AND_BASELINE
 
 ## 🔒 Key Constraints
-- Strict monorepo invariants: `packages/core` must NEVER import from `apps/api` or `apps/web`.
-- 100% in-memory isolation: zero external network, zero live DB in `packages/core/tests`.
-- Normalized BoundingBox: `[x0, y0, x1, y1, page]`, `0.0 <= x0 < x1 <= 1.0`, `0.0 <= y0 < y1 <= 1.0`, `page >= 1`, Top-Left origin.
-- Zero ruff lint/format warnings.
-- DO NOT CHEAT: Genuine implementations only, no dummy facade or hardcoded test returns.
+- DO NOT CHEAT. All implementations must be genuine.
+- Strict file ownership:
+  - `deploy/docker-compose.enterprise.yml`
+  - `deploy/nginx/verischolar.conf`
+  - `pyproject.toml`
+  - `scripts/bootstrap_enterprise.sh`
+  - `packages/core/src/core/services/exa_resolver.py`
+  - `packages/core/src/core/services/latex_healer.py`
+  - `packages/core/src/core/services/latex_linter.py`
+  - `scripts/benchmark_multi_agent_stress.py`
+- Required verifications:
+  - `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config` (exit code 0)
+  - `bash scripts/bootstrap_enterprise.sh` (exit code 0)
+  - `uv run pytest packages/core/tests/services/test_exa_resolver.py -v` (all pass)
+  - `uv run ruff check packages/core scripts/ deploy/` (0 errors)
+  - `uv run ruff format --check packages/core scripts/` (0 errors)
 
 ## Current Parent
-- Conversation ID: a2173842-299f-4803-8153-e166837e5cde
-- Updated: 2026-10-15T03:20:00Z
+- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
+- Updated: not yet
 
 ## Task Summary
 - **What to build**:
-  1. `DocumentChunk` embedding dimension validation accepting both 1024 (BGE-M3) and 1536 (OpenAI).
-  2. Ports: `IRetrievalSearchPort`, `ICrossEncoderRerankerPort`, `IDatasetAdapter`, `IEvalMetric`, `IBenchmarkEvaluator`.
-  3. `core/eval/models.py`: `EvalSample`, `MetricResult`, `BenchmarkReport`, `EvalPrediction`.
-  4. `core/eval/adapters/`: `BaseDatasetAdapter`, `QASPERAdapter`, `SciFactAdapter`, `PubMedQAAdapter`, `ProjectRegressionAdapter`.
-  5. `core/eval/metrics/`: `BaseEvalMetric`, `TokenF1Metric`, `RetrievalRecallMetric`, `ClassificationMetric`, `BoundingBoxIoUMetric`, `SpatialGeometryMetric`, `SafetyMetric`.
-  6. `core/eval/evaluators/benchmark_runner.py`: Benchmark runner.
-  7. `packages/core/tests/eval/fixtures/`: Offline JSON fixtures for QASPER, SciFact, PubMedQA, Regression.
-  8. `packages/core/tests/eval/`: 12 test modules covering all adapters, metrics, runner, and multi-model dimensions.
-- **Success criteria**:
-  - `uv run pytest packages/core/tests` passes 100% (135 passed in 0.45s).
-  - `uv run ruff check packages/core` and `uv run ruff format --check packages/core` exit with 0 errors/warnings.
-- **Interface contracts**: `PROJECT.md` & `explorer_survey_2/handoff.md`.
-- **Code layout**: `packages/core/src/core/eval/`, `packages/core/src/core/ports/`, `packages/core/tests/eval/`.
+  1. Fix `deploy/docker-compose.enterprise.yml`: remove version, mount init.sql into postgres, set postgres image to pg16.
+  2. Fix `deploy/nginx/verischolar.conf`: web root to `/usr/share/nginx/html;`, proxy pass to `http://api:8000;`.
+  3. Fix `pyproject.toml`: add `"arq>=0.26.0"`.
+  4. Verify `scripts/bootstrap_enterprise.sh` exits 0.
+  5. Fix `packages/core/src/core/services/exa_resolver.py:133`: handle `api_key=""` properly without falling back to os.getenv.
+  6. Fix 12 ruff formatting and linting errors across `latex_healer.py`, `latex_linter.py`, `benchmark_multi_agent_stress.py`.
+- **Success criteria**: All 5 verification commands exit 0 cleanly with zero errors.
+- **Interface contracts**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
+- **Code layout**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
 
 ## Key Decisions Made
-- Standardized `EvalSample`, `MetricResult`, and `BenchmarkReport` as lightweight dataclasses with serialization and deserialization helpers (`to_dict`, `from_dict`).
-- Used `@runtime_checkable` for all newly introduced port protocols (`IRetrievalSearchPort`, `ICrossEncoderRerankerPort`, `IDatasetAdapter`, `IEvalMetric`, `IBenchmarkEvaluator`).
-- Decoupled `TokenF1Metric` (answer vs golden answer using SQuAD article/punctuation normalization) from `RetrievalRecallMetric` (chunks vs evidence passages) and `ClassificationMetric` (macro F1 and decision accuracy for SciFact/PubMedQA).
-- Supported both 1024 (BGE-M3) and 1536 (OpenAI text-embedding-3-small) dimensions in `DocumentChunk` through `VALID_EMBEDDING_DIMS = (1024, 1536)` without breaking existing invariant checks.
+- `deploy/docker-compose.enterprise.yml`: removed `version: "3.9"`, bound `../infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro`, updated image to `pgvector/pgvector:0.8.0-pg16`.
+- `deploy/nginx/verischolar.conf`: updated root to `/usr/share/nginx/html;`, replaced all `http://127.0.0.1:8000` with `http://api:8000;`.
+- `pyproject.toml`: added `"arq>=0.26.0"` to main dependencies, synchronized lockfile via `uv sync --all-packages`.
+- Cleaned up untracked temporary duplicate `deploy/nginx/verischolar-enterprise.conf` and reverted `Dockerfile.web` to point to `verischolar.conf`.
 
 ## Artifact Index
-- `.agents/teamwork/worker_m2/DISPATCH.md` — Dispatch task instructions
-- `.agents/teamwork/worker_m2/BRIEFING.md` — Situational awareness
-- `.agents/teamwork/worker_m2/progress.md` — Progress and heartbeat tracking
-- `.agents/teamwork/worker_m2/handoff.md` — Final handoff report
-- `packages/core/src/core/domain/entities/chunk.py` — Multi-model embedding dimension support
-- `packages/core/src/core/ports/retrieval.py` — Hybrid search port protocol
-- `packages/core/src/core/ports/reranker.py` — Cross-encoder reranker port protocol
-- `packages/core/src/core/ports/eval.py` — Evaluation domain port protocols
-- `packages/core/src/core/eval/` — Evaluation domain implementation (models, adapters, metrics, runner)
-- `packages/core/tests/eval/` — Comprehensive in-memory evaluation test suite and offline fixtures
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/DISPATCH.md` — Dispatch message
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/BRIEFING.md` — Persistent briefing
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/progress.md` — Progress tracker and heartbeat
+- `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md` — Final handoff report
 
 ## Change Tracker
 - **Files modified**:
-  - `packages/core/src/core/domain/entities/chunk.py`: Support 1024 and 1536 dimensions
-  - `packages/core/src/core/ports/retrieval.py`: `IRetrievalSearchPort`
-  - `packages/core/src/core/ports/reranker.py`: `ICrossEncoderRerankerPort`
-  - `packages/core/src/core/ports/eval.py`: `IDatasetAdapter`, `IEvalMetric`, `IBenchmarkEvaluator`
-  - `packages/core/src/core/eval/**`: Models, adapters (QASPER, SciFact, PubMedQA, Regression), metrics (TokenF1, Recall@k, Classification, BBoxIoU, SpatialGeometry, Safety), runner
-  - `packages/core/tests/eval/**`: Offline fixtures and unit test suite
-- **Build status**: 135 passed in 0.45s (0 failures, 0 warnings)
+  - `deploy/docker-compose.enterprise.yml`: Removed obsolete version, added init.sql volume mount, updated postgres image to pgvector:0.8.0-pg16.
+  - `deploy/nginx/verischolar.conf`: Pointed root to /usr/share/nginx/html, changed upstream proxy targets to http://api:8000.
+  - `pyproject.toml`: Added arq>=0.26.0 to dependencies.
+  - `uv.lock`: Synchronized with arq and dependencies.
+- **Build status**: Pass (all 5 required verifications pass with 0 errors)
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**: Pass (135/135 tests in packages/core/tests passed)
-- **Lint status**: Clean (0 errors, 85 files formatted cleanly)
-- **Tests added/modified**: 59 new unit tests in `packages/core/tests/eval/`
+- **Build/test result**: 12/12 passed in `test_exa_resolver.py`; 320/320 passed in `packages/core/tests/`.
+- **Lint status**: 0 errors in `packages/core scripts/ deploy/`; 0 format violations in `packages/core scripts/`.
+- **Tests added/modified**: Existing tests validated with zero regressions.
 
 ## Loaded Skills
-- **Source**: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/hexagonal-architecture/SKILL.md`
-  - **Local copy**: `.agents/teamwork/worker_m2/skills/hexagonal-architecture/SKILL.md`
-  - **Core methodology**: Ports & Adapters separation, dependency inversion inward toward domain models.
-- **Source**: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/scholar-evaluation/SKILL.md`
-  - **Local copy**: `.agents/teamwork/worker_m2/skills/scholar-evaluation/SKILL.md`
-  - **Core methodology**: Scholarly evaluation rubric, evidence checking, claim verification.
-- **Source**: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md`
-  - **Local copy**: `.agents/teamwork/worker_m2/skills/verischolar-agent-protocol/SKILL.md`
-  - **Core methodology**: Non-negotiable domain invariants: normalized bounding boxes [x0, y0, x1, y1, page], 1-indexed pages, in-memory test isolation.
+- None

@@ -28,17 +28,24 @@ export function PasswordStrengthMeter({ password, className }: PasswordStrengthM
 
       <div className="flex items-center justify-between text-3xs text-muted dark:text-[#9c988f]">
         <span>Độ an toàn:</span>
-        <span
-          className={cn(
-            "font-medium",
-            strength.score <= 1 && "text-error",
-            strength.score === 2 && "text-amber-500",
-            strength.score === 3 && "text-accent-teal",
-            strength.score >= 4 && "text-success"
+        <div className="flex items-center gap-1.5">
+          <span
+            className={cn(
+              "font-medium",
+              strength.score <= 1 && "text-error",
+              strength.score === 2 && "text-amber-500",
+              strength.score === 3 && "text-accent-teal",
+              strength.score >= 4 && "text-success"
+            )}
+          >
+            {strength.label}
+          </span>
+          {strength.entropy > 0 && (
+            <span className="text-muted/70 dark:text-[#787369] font-mono">
+              ({strength.entropy} bits)
+            </span>
           )}
-        >
-          {strength.label}
-        </span>
+        </div>
       </div>
     </div>
   );

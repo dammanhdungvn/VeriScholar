@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { WritingPreviewPane } from "./WritingPreviewPane";
 import { useWritingStore } from "../stores/useWritingStore";
 
@@ -34,7 +34,7 @@ describe("WritingPreviewPane", () => {
     render(<WritingPreviewPane />);
 
     // Header title
-    expect(screen.getByText("Bản Dựng PDF Trực Tiếp")).toBeDefined();
+    expect(screen.getByText("Bản Dựng PDF Trực Tiếp")).toBeInTheDocument();
 
     // Verify evidence badge is NOT present
     expect(screen.queryByText(/dẫn chứng/i)).toBeNull();
@@ -44,7 +44,7 @@ describe("WritingPreviewPane", () => {
     expect(screen.queryByText(/Dẫn chứng #1/i)).toBeNull();
   });
 
-  it("renders zoom controls and handles zoom buttons", async () => {
+  it("renders zoom controls and handles zoom in, zoom out, and reset buttons", async () => {
     useWritingStore.getState().setDraft({
       id: "draft-xyz",
       user_id: "user-1",
@@ -57,15 +57,34 @@ describe("WritingPreviewPane", () => {
     });
     render(<WritingPreviewPane />);
 
-    expect(screen.getByTitle("Phóng to")).toBeDefined();
-    expect(screen.getByTitle("Thu nhỏ")).toBeDefined();
-    expect(screen.getByTitle("Đặt lại 100%")).toBeDefined();
+    const zoomInBtn = screen.getByTitle("Phóng to");
+    const zoomOutBtn = screen.getByTitle("Thu nhỏ");
+    const resetZoomBtn = screen.getByTitle("Đặt lại 100%");
+
+    expect(zoomInBtn).toBeInTheDocument();
+    expect(zoomOutBtn).toBeInTheDocument();
+    expect(resetZoomBtn).toBeInTheDocument();
+    expect(screen.getByText("100%")).toBeInTheDocument();
+
+    // Zoom in: 100% -> 115%
+    fireEvent.click(zoomInBtn);
+    expect(screen.getByText("115%")).toBeInTheDocument();
+
+    // Zoom out twice: 115% -> 100% -> 85%
+    fireEvent.click(zoomOutBtn);
+    expect(screen.getByText("100%")).toBeInTheDocument();
+    fireEvent.click(zoomOutBtn);
+    expect(screen.getByText("85%")).toBeInTheDocument();
+
+    // Reset: 85% -> 100%
+    fireEvent.click(resetZoomBtn);
+    expect(screen.getByText("100%")).toBeInTheDocument();
   });
 
   it("displays sandbox compilation spinner when isCompiling is true", () => {
     useWritingStore.getState().setCompiling(true);
     render(<WritingPreviewPane />);
 
-    expect(screen.getByText(/Đang biên dịch bản thảo trong sandbox/i)).toBeDefined();
+    expect(screen.getByText(/Đang biên dịch bản thảo trong sandbox/i)).toBeInTheDocument();
   });
 });

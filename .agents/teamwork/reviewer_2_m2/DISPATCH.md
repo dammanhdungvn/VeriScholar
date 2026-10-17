@@ -1,22 +1,37 @@
-## 2026-10-15T05:20:21Z
-From: a2173842-299f-4803-8153-e166837e5cde (parent)
-Priority: MESSAGE_PRIORITY_HIGH
+# Dispatch — Reviewer 2 (Milestone 2)
 
-You are reviewer_2_m2.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2
-Read the original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read Worker M2 handoff: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
+Scope: Independent review of Milestone 2 (M2_ENTERPRISE_AND_BASELINE).
+Worker handoff: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md`
 
-YOUR MISSION:
-Perform an independent adversarial review of Milestone 2.
-Focus specifically on:
-1. Domain invariants: BoundingBox spatial coordinates `[x0, y0, x1, y1, page]`, `0.0 <= x0 < x1 <= 1.0`, `0.0 <= y0 < y1 <= 1.0`, `page >= 1`, Top-Left origin. Are coordinates strictly validated?
-2. Benchmark fidelity: Do QASPER, SciFact, and PubMedQA adapters correctly extract and map domain-specific fields into `EvalSample`?
-3. Test rigor: Are tests asserting real outputs and catching intentional faults?
-4. Run tests: `uv run pytest packages/core/tests/eval/ -v` and `uv run pytest packages/core/tests/domain/test_hexagonal_invariants.py`.
+Output: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2/handoff.md`
+Report verdict: APPROVE or REQUEST_CHANGES.
 
-Deliver your verdict: APPROVE or REQUEST_CHANGES.
-Write your report to: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2/handoff.md
-Notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+
+## 2026-10-16T13:29:44Z
+You are Reviewer 2 for Milestone 2 (M2_ENTERPRISE_AND_BASELINE).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2.
+
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2/DISPATCH.md
+
+Perform an independent review of Milestone 2 deliverables:
+- Verify PostgreSQL 16 image tag and init.sql volume mount
+- Verify Nginx root path and proxy_pass upstream target
+- Verify arq dependency in pyproject.toml
+- Verify exa_resolver in-memory isolation with empty api_key
+- Verify ruff linter results
+
+Run independent verifications:
+- docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config
+- bash scripts/bootstrap_enterprise.sh
+- uv run pytest packages/core/tests/services/test_exa_resolver.py -v
+- uv run ruff check packages/core scripts/ deploy/
+
+Write your report to:
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_2_m2/handoff.md
+State your verdict clearly: APPROVE or REQUEST_CHANGES.
+Report via send_message to your caller.

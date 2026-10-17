@@ -1,26 +1,38 @@
-## 2026-10-15T05:20:15Z
+# Dispatch — Reviewer 1 (Milestone 2)
 
-You are reviewer_1_m2.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2
-Read the original request: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read Worker M2 handoff: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
+Scope: Code and architecture review of Milestone 2 (M2_ENTERPRISE_AND_BASELINE: Pillar 5 Enterprise Stack & Baseline Test Harmonization).
+Worker handoff: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md`
 
-YOUR MISSION:
-Review the changes made by worker_m2 for Milestone 2 (Core Evaluation Domain & Public Benchmark Suite).
-Examine:
-- `packages/core/src/core/domain/entities/chunk.py` (embedding dimension support for 1024 and 1536)
-- `packages/core/src/core/ports/` (`retrieval.py`, `reranker.py`, `eval.py`)
-- `packages/core/src/core/eval/` (`models.py`, `adapters/`, `metrics/`, `evaluators/benchmark_runner.py`)
-- `packages/core/tests/eval/` (fixtures and 12 unit test modules)
+Output: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2/handoff.md`
+Report verdict: APPROVE or REQUEST_CHANGES.
 
-Check for:
-1. Hexagonal Architecture: Does `packages/core` remain 100% free of web/db framework dependencies?
-2. 100% In-Memory Isolation: Zero network calls, zero live DB.
-3. Decoupled metrics: Token F1 vs Retrieval Recall vs Classification vs Spatial IoU vs Safety.
-4. Run tests & quality checks: `uv run pytest packages/core/tests`, `uv run ruff check packages/core`, `uv run ruff format --check packages/core`.
 
-Deliver your verdict: APPROVE or REQUEST_CHANGES.
-Write your report to: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2/handoff.md
-Notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+## 2026-10-16T13:29:44Z
+You are Reviewer 1 for Milestone 2 (M2_ENTERPRISE_AND_BASELINE).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2.
+
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2/DISPATCH.md
+
+Review all code changes made by worker_m2 for correctness, robustness, and architecture conformance:
+- `deploy/docker-compose.enterprise.yml`
+- `deploy/nginx/verischolar.conf`
+- `pyproject.toml`
+- `scripts/bootstrap_enterprise.sh`
+- `packages/core/src/core/services/exa_resolver.py`
+- Linter cleanup across core services
+
+Run independent verifications:
+- docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config
+- bash scripts/bootstrap_enterprise.sh
+- uv run pytest packages/core/tests/services/test_exa_resolver.py -v
+- uv run ruff check packages/core scripts/ deploy/
+
+Write your report to:
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/reviewer_1_m2/handoff.md
+State your verdict clearly: APPROVE or REQUEST_CHANGES.
+Report via send_message to your caller.

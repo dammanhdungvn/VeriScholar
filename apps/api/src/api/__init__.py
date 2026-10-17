@@ -46,27 +46,70 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         port=settings.PORT,
     )
     # Ensure all declared database tables exist
+    from sqlalchemy import text
+
     import api.db.models  # noqa: F401
     import api.db.session as db_session
     from api.db.init_db import ensure_database_schema
     from api.db.models.base import Base
 
-    try:
-        async with db_session.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
-            await ensure_database_schema(conn)
-    except Exception as exc:
-        if "sqlite" not in str(settings.DATABASE_URL).lower():
-            logger.warning(
-                "postgres_connection_failed_falling_back_to_sqlite",
-                error=str(exc),
-            )
-            await db_session.init_sqlite_fallback()
+    is_postgres = "postgres" in str(settings.DATABASE_URL).lower()
+
+    for attempt in range(1, 4):
+        try:
             async with db_session.engine.begin() as conn:
+                if conn.dialect.name == "postgresql":
+                    # Acquire advisory lock to prevent concurrent uvicorn workers
+                    # from clashing on DDL
+                    await conn.execute(text("SELECT pg_advisory_xact_lock(88991122)"))
                 await conn.run_sync(Base.metadata.create_all)
                 await ensure_database_schema(conn)
-        else:
-            raise
+            break
+        except Exception as exc:
+            err_str = str(exc).lower()
+            is_concurrency_error = any(
+                k in err_str
+                for k in (
+                    "concurrently updated",
+                    "deadlock",
+                    "lock not available",
+                    "serialization",
+                )
+            )
+            if is_concurrency_error and attempt < 3:
+                logger.warning(
+                    "database_schema_concurrency_retry",
+                    attempt=attempt,
+                    error=str(exc),
+                )
+                await asyncio.sleep(0.4 * attempt)
+                continue
+            elif is_postgres:
+                is_connection_error = any(
+                    k in err_str
+                    for k in (
+                        "connection refused",
+                        "cannot connect",
+                        "could not translate host",
+                        "connection reset",
+                        "is the server running",
+                    )
+                )
+                if is_connection_error:
+                    logger.warning(
+                        "postgres_connection_failed_falling_back_to_sqlite",
+                        error=str(exc),
+                    )
+                    await db_session.init_sqlite_fallback()
+                    async with db_session.engine.begin() as conn:
+                        await conn.run_sync(Base.metadata.create_all)
+                        await ensure_database_schema(conn)
+                    break
+                else:
+                    logger.error("database_schema_initialization_error", error=str(exc))
+                    break
+            else:
+                raise
 
     yield
     logger.info("application_shutdown", log_type="lifecycle")

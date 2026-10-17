@@ -31,10 +31,6 @@ import argparse
 import asyncio
 import io
 import json
-import os
-import re
-import subprocess
-import sys
 import time
 import uuid
 import zipfile
@@ -163,7 +159,12 @@ async def read_sse_stream(resp: httpx.Response) -> dict[str, Any]:
         elif line.startswith("data: "):
             try:
                 data = json.loads(line[6:])
-                events.append({"event": current_event if "current_event" in locals() else "data", "data": data})
+                events.append(
+                    {
+                        "event": current_event if "current_event" in locals() else "data",
+                        "data": data,
+                    }
+                )
                 if isinstance(data, dict):
                     if "token" in data:
                         text_buffer += data["token"]
@@ -253,7 +254,6 @@ async def run_persona_13_turn_lifecycle(
         # Turn 1: Anchor Turn — Ingestion of specific research constraints & needle
         # ----------------------------------------------------------------------
         session_id: str | None = None
-        t0 = time.perf_counter()
         try:
             # Create session
             r_sess = await client.post(
@@ -301,7 +301,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(1, "Anchor Context Ingestion", "/sessions/messages", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    1,
+                    "Anchor Context Ingestion",
+                    "/sessions/messages",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -336,7 +346,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(2, "Socratic Theoretical QA", "/sessions/messages", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    2,
+                    "Socratic Theoretical QA",
+                    "/sessions/messages",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -375,12 +395,17 @@ async def run_persona_13_turn_lifecycle(
                     resp.status_code,
                     lat_t3,
                     ok_t3,
-                    {"citations_count": len(sse_res3["citations"]), "valid_bboxes": valid_bbox_count},
+                    {
+                        "citations_count": len(sse_res3["citations"]),
+                        "valid_bboxes": valid_bbox_count,
+                    },
                 )
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(3, "Spatial Grounding", "/sessions/messages", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    3, "Spatial Grounding", "/sessions/messages", "POST", 500, 0, False, {}, str(ex)
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -421,27 +446,43 @@ async def run_persona_13_turn_lifecycle(
                 )
             )
         except Exception as ex:
-            result.turns.append(TurnMetric(4, "Create Research Note", "/notes", "POST", 500, 0, False, {}, str(ex)))
+            result.turns.append(
+                TurnMetric(4, "Create Research Note", "/notes", "POST", 500, 0, False, {}, str(ex))
+            )
 
         # ----------------------------------------------------------------------
         # Turn 5: Academic LaTeX Draft Initialization
         # ----------------------------------------------------------------------
         draft_id: str | None = None
         draft_content_v1 = (
-            r"\documentclass{article}" "\n"
-            r"\usepackage{amsmath}" "\n"
-            rf"\title{{Foundations of Scaled Genomic Transformers: Seed {seed_needle}}}" "\n"
-            rf"\author{{{persona_name}}}" "\n"
-            r"\begin{document}" "\n"
-            r"\maketitle" "\n"
-            r"\begin{abstract}" "\n"
-            r"We study gradient bounds in high-dimensional attention mechanisms." "\n"
-            r"\end{abstract}" "\n"
-            r"\section{Introduction}" "\n"
-            r"Scaled dot-product attention computes alignment weights as follows:" "\n"
-            r"\begin{equation}" "\n"
-            r"A(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V" "\n"
-            r"\end{equation}" "\n"
+            r"\documentclass{article}"
+            "\n"
+            r"\usepackage{amsmath}"
+            "\n"
+            rf"\title{{Foundations of Scaled Genomic Transformers: Seed {seed_needle}}}"
+            "\n"
+            rf"\author{{{persona_name}}}"
+            "\n"
+            r"\begin{document}"
+            "\n"
+            r"\maketitle"
+            "\n"
+            r"\begin{abstract}"
+            "\n"
+            r"We study gradient bounds in high-dimensional attention mechanisms."
+            "\n"
+            r"\end{abstract}"
+            "\n"
+            r"\section{Introduction}"
+            "\n"
+            r"Scaled dot-product attention computes alignment weights as follows:"
+            "\n"
+            r"\begin{equation}"
+            "\n"
+            r"A(Q,K,V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V"
+            "\n"
+            r"\end{equation}"
+            "\n"
             r"\end{document}"
         )
         t_t5 = time.perf_counter()
@@ -472,7 +513,9 @@ async def run_persona_13_turn_lifecycle(
                 )
             )
         except Exception as ex:
-            result.turns.append(TurnMetric(5, "Create LaTeX Draft", "/drafts", "POST", 500, 0, False, {}, str(ex)))
+            result.turns.append(
+                TurnMetric(5, "Create LaTeX Draft", "/drafts", "POST", 500, 0, False, {}, str(ex))
+            )
 
         # ----------------------------------------------------------------------
         # Turn 6: Optimistic Concurrency Control (OCC) Draft Update
@@ -482,8 +525,10 @@ async def run_persona_13_turn_lifecycle(
             draft_content_v2 = draft_content_v1.replace(
                 r"\end{document}",
                 (
-                    r"\section{Methodology}" "\n"
-                    r"We introduce linear memory projection to bound compute." "\n"
+                    r"\section{Methodology}"
+                    "\n"
+                    r"We introduce linear memory projection to bound compute."
+                    "\n"
                     r"\end{document}"
                 ),
             )
@@ -513,7 +558,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(6, "OCC Versioned Draft Update", "/drafts/{id}", "PUT", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    6,
+                    "OCC Versioned Draft Update",
+                    "/drafts/{id}",
+                    "PUT",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -546,13 +601,25 @@ async def run_persona_13_turn_lifecycle(
                     ok_t7 and pdf_bytes_ok,
                     {
                         "pdf_bytes_len": len(r_pdf.content) if pdf_bytes_ok else 0,
-                        "retries": r_comp.json()["data"].get("retries_attempted", 0) if ok_t7 else -1,
+                        "retries": r_comp.json()["data"].get("retries_attempted", 0)
+                        if ok_t7
+                        else -1,
                     },
                 )
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(7, "LaTeX to PDF Compilation", "/drafts/compile", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    7,
+                    "LaTeX to PDF Compilation",
+                    "/drafts/compile",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -610,7 +677,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(8, "Agentic Self-Healing LaTeX", "/drafts/compile", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    8,
+                    "Agentic Self-Healing LaTeX",
+                    "/drafts/compile",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -649,7 +726,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(9, "Associative Memory Recall", "/associative-suggestions", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    9,
+                    "Associative Memory Recall",
+                    "/associative-suggestions",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -658,9 +745,9 @@ async def run_persona_13_turn_lifecycle(
         t_t10 = time.perf_counter()
         try:
             needle_probe_q = (
-                f"Dựa trên toàn bộ lịch sử thảo luận từ Turn 1 tới nay, "
-                f"hãy cho tôi biết chính xác mã hạt giống kiểm định (seed needle code) "
-                f"và kích thước vocab của mô hình chúng ta đã xác định ban đầu?"
+                "Dựa trên toàn bộ lịch sử thảo luận từ Turn 1 tới nay, "
+                "hãy cho tôi biết chính xác mã hạt giống kiểm định (seed needle code) "
+                "và kích thước vocab của mô hình chúng ta đã xác định ban đầu?"
             )
             async with client.stream(
                 "POST",
@@ -672,7 +759,9 @@ async def run_persona_13_turn_lifecycle(
             lat_t10 = (time.perf_counter() - t_t10) * 1000
 
             # Inspect persisted turns in database
-            r_hist = await client.get(f"/api/v1/sessions/{session_id}/messages", headers=auth_headers)
+            r_hist = await client.get(
+                f"/api/v1/sessions/{session_id}/messages", headers=auth_headers
+            )
             hist_items = r_hist.json().get("data", []) if r_hist.status_code == 200 else []
             persisted_turns_count = len(hist_items) if isinstance(hist_items, list) else 0
 
@@ -717,7 +806,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(10, "Needle Context Retention", "/sessions/messages", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    10,
+                    "Needle Context Retention",
+                    "/sessions/messages",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -749,7 +848,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(11, "Overleaf 1-Click Export", "/drafts:export-overleaf", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    11,
+                    "Overleaf 1-Click Export",
+                    "/drafts:export-overleaf",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -771,9 +880,7 @@ async def run_persona_13_turn_lifecycle(
             ok_t12 = r_matrix.status_code == 200
             matrix_data = r_matrix.json().get("data", {}) if ok_t12 else {}
             has_matrix_structure = (
-                "total_count" in matrix_data
-                and "rows" in matrix_data
-                and "limit" in matrix_data
+                "total_count" in matrix_data and "rows" in matrix_data and "limit" in matrix_data
             )
             result.turns.append(
                 TurnMetric(
@@ -792,7 +899,17 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(12, "Comparison Matrix", "/folders/comparison-matrix", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    12,
+                    "Comparison Matrix",
+                    "/folders/comparison-matrix",
+                    "POST",
+                    500,
+                    0,
+                    False,
+                    {},
+                    str(ex),
+                )
             )
 
         # ----------------------------------------------------------------------
@@ -829,7 +946,9 @@ async def run_persona_13_turn_lifecycle(
             )
         except Exception as ex:
             result.turns.append(
-                TurnMetric(13, "Export Bundle", "/drafts:export-bundle", "POST", 500, 0, False, {}, str(ex))
+                TurnMetric(
+                    13, "Export Bundle", "/drafts:export-bundle", "POST", 500, 0, False, {}, str(ex)
+                )
             )
 
     # Summarize persona metrics
@@ -920,7 +1039,9 @@ async def run_multi_agent_stress_benchmark(
     bench_duration = time.perf_counter() - t_bench_start
     total_turns = sum(p.total_turns for p in persona_results)
     total_success = sum(p.successful_turns for p in persona_results)
-    overall_success_rate = round((total_success / total_turns * 100.0) if total_turns > 0 else 0.0, 2)
+    overall_success_rate = round(
+        (total_success / total_turns * 100.0) if total_turns > 0 else 0.0, 2
+    )
 
     all_latencies: list[float] = []
     http_5xx_errors = 0
@@ -949,7 +1070,9 @@ async def run_multi_agent_stress_benchmark(
         peak_ram_mb=round(peak_used_mb, 1),
         ram_delta_mb=round(peak_used_mb - baseline_used_mb, 1),
         peak_cpu_pct=34.2,  # Empirical CPU benchmark reading
-        avg_turn_latency_ms=round(sum(all_latencies) / len(all_latencies), 2) if all_latencies else 0.0,
+        avg_turn_latency_ms=round(sum(all_latencies) / len(all_latencies), 2)
+        if all_latencies
+        else 0.0,
         p50_turn_latency_ms=calc_percentile(all_latencies, 50.0),
         p95_turn_latency_ms=calc_percentile(all_latencies, 95.0),
         http_5xx_count=http_5xx_errors,
@@ -964,7 +1087,9 @@ async def run_multi_agent_stress_benchmark(
     print(f"- LaTeX Compilation Success: {report.latex_compilation_success_pct}%")
     print(f"- Agentic Self-Healing Success: {report.latex_healing_success_pct}%")
     print(f"- HTTP 5xx Server Errors: {report.http_5xx_count}")
-    print(f"- Turn Latencies: avg={report.avg_turn_latency_ms}ms, p50={report.p50_turn_latency_ms}ms, p95={report.p95_turn_latency_ms}ms")
+    print(
+        f"- Turn Latencies: avg={report.avg_turn_latency_ms}ms, p50={report.p50_turn_latency_ms}ms, p95={report.p95_turn_latency_ms}ms"
+    )
     print(f"- Peak RAM Usage: {report.peak_ram_mb} MB (Delta: +{report.ram_delta_mb} MB)")
 
     # Save JSON report
@@ -980,7 +1105,11 @@ async def run_multi_agent_stress_benchmark(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Agent 10+ Turn Stress Benchmark")
     parser.add_argument("--base-url", default="http://127.0.0.1:8000", help="Target API URL")
-    parser.add_argument("--concurrency", type=int, default=3, help="Number of concurrent personas (default: 3)")
+    parser.add_argument(
+        "--concurrency", type=int, default=3, help="Number of concurrent personas (default: 3)"
+    )
     args = parser.parse_args()
 
-    asyncio.run(run_multi_agent_stress_benchmark(base_url=args.base_url, concurrency=args.concurrency))
+    asyncio.run(
+        run_multi_agent_stress_benchmark(base_url=args.base_url, concurrency=args.concurrency)
+    )

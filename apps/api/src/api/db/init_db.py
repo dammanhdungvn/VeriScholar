@@ -130,7 +130,11 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                         ADD COLUMN IF NOT EXISTS academic_rank VARCHAR(100) NULL,
                         ADD COLUMN IF NOT EXISTS orcid_id VARCHAR(50) NULL,
                         ADD COLUMN IF NOT EXISTS avatar_url VARCHAR(500) NULL,
-                        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE NOT NULL;
+                        ADD COLUMN IF NOT EXISTS is_verified BOOLEAN DEFAULT FALSE NOT NULL,
+                        ADD COLUMN IF NOT EXISTS department VARCHAR(255) NULL,
+                        ADD COLUMN IF NOT EXISTS bio VARCHAR(1000) NULL,
+                        ADD COLUMN IF NOT EXISTS research_interests VARCHAR(500) NULL,
+                        ADD COLUMN IF NOT EXISTS google_scholar_url VARCHAR(500) NULL;
                     END IF;
 
                     -- research_sessions upgrades
@@ -273,4 +277,33 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                 END $$;
             """)
         )
+        logger.info("database_schema_upgrades_ensured", dialect=dialect_name)
+    elif dialect_name == "sqlite":
+        try:
+            table_check = await conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='drafts'")
+            )
+            if table_check.scalar_one_or_none():
+                res = await conn.execute(text("PRAGMA table_info(drafts)"))
+                cols = [row[1] for row in res.fetchall()]
+                if "template" not in cols:
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE drafts ADD COLUMN template VARCHAR(50) DEFAULT 'standard'"
+                        )
+                    )
+                if "pdf_preview_storage_path" not in cols:
+                    await conn.execute(
+                        text("ALTER TABLE drafts ADD COLUMN pdf_preview_storage_path TEXT")
+                    )
+                if "last_compile_status" not in cols:
+                    await conn.execute(
+                        text("ALTER TABLE drafts ADD COLUMN last_compile_status VARCHAR(20)")
+                    )
+                if "last_compiled_at" not in cols:
+                    await conn.execute(
+                        text("ALTER TABLE drafts ADD COLUMN last_compiled_at TIMESTAMP")
+                    )
+        except Exception as sq_err:
+            logger.debug("sqlite_schema_upgrade_skipped", error=str(sq_err))
         logger.info("database_schema_upgrades_ensured", dialect=dialect_name)

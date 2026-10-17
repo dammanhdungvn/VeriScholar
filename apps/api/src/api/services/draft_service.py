@@ -361,13 +361,17 @@ class DraftService:
                     }
                 )
 
+            faithfulness = report.supported_claims / max(1, report.total_claims)
             trace_span.set_output(
                 {
                     "total_claims": report.total_claims,
                     "supported": report.supported_claims,
                     "contradicted": report.contradicted_claims,
+                    "unverified": report.unverified_claims,
+                    "faithfulness_score": round(faithfulness, 3),
                 }
             )
+            trace_span.score(name="nli_faithfulness", value=round(faithfulness, 3))
 
         logger.info(
             "draft_facts_verified",
@@ -595,7 +599,7 @@ class DraftService:
             user_id=user_id,
             user_email=user_email,
         )
-        if not draft:
+        if not draft or not role:
             raise KeyError(f"Draft {draft_id} not found")
 
         source_tex = draft.content or ""
@@ -666,28 +670,38 @@ class DraftService:
         original_text = target_selection or ""
         citations = ["vaswani2017attention"]
 
-        if target_selection and target_selection.strip():
-            suggested_text = (
-                f"{target_selection.strip()}\n"
-                r"As corroborated by recent studies \cite{vaswani2017attention}, "
-                "this approach achieves verifiable performance guarantees."
-            )
-            explanation = (
-                f"Đã chuẩn hóa và bổ sung lập luận học thuật ({action}) "
-                f"theo yêu cầu: '{effective_prompt[:40]}'."
-            )
-            confidence_score = 0.95
-        else:
-            title_text = section_title or effective_prompt[:30].title()
-            suggested_text = (
-                f"\\section{{{title_text}}}\n"
-                "Recent developments demonstrate superior factual grounding. "
-                r"Following \cite{vaswani2017attention}, we evaluate evidence consistency."
-            )
-            explanation = (
-                f"Đã sinh nội dung học thuật ({action}) cho yêu cầu: '{effective_prompt[:40]}'."
-            )
-            confidence_score = 0.92
+        with self.ai_tracing.trace(
+            name="draft_assist",
+            user_id=user_id,
+            metadata={"draft_id": str(draft_id), "action": action},
+            input={"prompt": effective_prompt, "target_selection": target_selection},
+            tags=["draft", "copilot"],
+        ) as trace_span:
+            if target_selection and target_selection.strip():
+                suggested_text = (
+                    f"{target_selection.strip()}\n"
+                    r"As corroborated by recent studies \cite{vaswani2017attention}, "
+                    "this approach achieves verifiable performance guarantees."
+                )
+                explanation = (
+                    f"Đã chuẩn hóa và bổ sung lập luận học thuật ({action}) "
+                    f"theo yêu cầu: '{effective_prompt[:40]}'."
+                )
+                confidence_score = 0.95
+            else:
+                title_text = section_title or effective_prompt[:30].title()
+                suggested_text = (
+                    f"\\section{{{title_text}}}\n"
+                    "Recent developments demonstrate superior factual grounding. "
+                    r"Following \cite{vaswani2017attention}, we evaluate evidence consistency."
+                )
+                explanation = (
+                    f"Đã sinh nội dung học thuật ({action}) cho yêu cầu: '{effective_prompt[:40]}'."
+                )
+                confidence_score = 0.92
+
+            trace_span.set_output(suggested_text)
+            trace_span.score(name="assist_confidence", value=float(confidence_score))
 
         logger.info(
             "draft_assist_generated",

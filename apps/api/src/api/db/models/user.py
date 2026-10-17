@@ -20,3 +20,7 @@ class UserModel(IdentifiableTimestampedModel):
     orcid_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_verified: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    department: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    bio: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+    research_interests: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    google_scholar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

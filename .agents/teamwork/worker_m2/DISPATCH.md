@@ -1,75 +1,54 @@
-## 2026-10-15T03:03:36Z
-You are worker_m2.
-Your working directory is: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2
-Read the original user request at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md
-Read the project specifications at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
-Read the detailed survey report from explorer_survey_2 at: /home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/explorer_survey_2/handoff.md
-Read the engineering guidelines in /home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md.
-Also read skills:
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/hexagonal-architecture/SKILL.md
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/scholar-evaluation/SKILL.md
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/skills/verischolar-agent-protocol/SKILL.md
+## 2026-10-16T13:22:04Z
+You are Worker M2 for Milestone 2 (M2_ENTERPRISE_AND_BASELINE).
+Your working directory is: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2.
+
+Read:
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/ORIGINAL_REQUEST.md (specifically section ## 2026-10-16T12:03:58Z)
+- /home/VeriScholar/Workspace/VeriScholar/AGENTS.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md
+- /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/explorer_survey_pillar5_tests/handoff.md
 
 MANDATORY INTEGRITY WARNING:
 DO NOT CHEAT. All implementations must be genuine. DO NOT hardcode test results, create dummy/facade implementations, or circumvent the intended task. A teamwork_preview_auditor will independently verify your work. Integrity violations WILL be detected and your work WILL be rejected.
 
-EXCLUSIVE WRITE OWNERSHIP:
-You own these files/directories exclusively:
-- packages/core/src/core/domain/entities/chunk.py
-- packages/core/src/core/ports/retrieval.py
-- packages/core/src/core/ports/reranker.py
-- packages/core/src/core/ports/eval.py
-- packages/core/src/core/eval/** (all modules under packages/core/src/core/eval/)
-- packages/core/tests/eval/** (all test files and fixtures under packages/core/tests/eval/)
+Scope & Tasks:
+1. Pillar 5 Enterprise Stack:
+   - In `deploy/docker-compose.enterprise.yml`:
+     - Remove obsolete `version: "3.9"`.
+     - In `postgres` service: mount `./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro` so pgvector and uuid extensions initialize on startup.
+     - In `postgres` service: change image to `pgvector/pgvector:0.8.0-pg16` (or `pgvector/pgvector:pg16`) to strictly match the PostgreSQL 16 specification in PRD §R4.
+   - In `deploy/nginx/verischolar.conf`:
+     - Set web root to `root /usr/share/nginx/html;` (matching `deploy/Dockerfile.web` build output).
+     - Update all proxy passes from `proxy_pass http://127.0.0.1:8000;` to `proxy_pass http://api:8000;` (connecting to `verischolar-enterprise-api` container in docker network).
+   - In `pyproject.toml`:
+     - Add `"arq>=0.26.0"` to main dependencies so `deploy/Dockerfile.api` installs the `arq` CLI required by `arq-worker`.
+   - In `scripts/bootstrap_enterprise.sh`:
+     - Verify dry-run execution: `bash scripts/bootstrap_enterprise.sh` exits cleanly with code 0.
+2. Baseline Test Harmonization:
+   - In `packages/core/src/core/services/exa_resolver.py:133`:
+     Change `self.api_key = api_key or os.getenv("EXA_API_KEY", "")` to:
+     `self.api_key = api_key if api_key is not None else os.getenv("EXA_API_KEY", "")`
+     so that unit tests passing `api_key=""` never leak environment secrets or trigger live HTTP requests to `api.exa.ai`.
+   - In `packages/core/src/core/services/latex_healer.py` and `packages/core/src/core/services/latex_linter.py` and `scripts/benchmark_multi_agent_stress.py`:
+     Fix the 12 ruff formatting and linting errors (E501 line length, E741 ambiguous variable name `l`, unused imports/variables) so that `uv run ruff check .` and `uv run ruff format --check .` exit cleanly with zero errors.
 
-TASK OBJECTIVES (Milestone 2: Core Evaluation Domain & Public Benchmark Suite):
-1. In `packages/core/src/core/domain/entities/chunk.py`:
-   - Update embedding dimension validation so that `embedding` accepts either 1024 (BGE-M3) or 1536 (OpenAI text-embedding-3-small) dimensions, preventing invariant violation errors when testing multi-model pipelines.
-2. In `packages/core/src/core/ports/`:
-   - Add `packages/core/src/core/ports/retrieval.py`: `IRetrievalSearchPort` protocol for candidate chunk retrieval (dense + sparse).
-   - Add `packages/core/src/core/ports/reranker.py`: `ICrossEncoderRerankerPort` protocol for cross-encoder reranking and relevance threshold cutoff (>= 0.35).
-   - Add `packages/core/src/core/ports/eval.py`: `IDatasetAdapter`, `IEvalMetric`, `IBenchmarkEvaluator` protocols.
-3. In `packages/core/src/core/eval/`:
-   - Implement `models.py`: `EvalSample`, `MetricResult`, `BenchmarkReport` dataclasses / Pydantic models.
-   - Implement `adapters/base.py`: `BaseDatasetAdapter` with `parse_data()` and `load_file()`.
-   - Implement `adapters/qasper.py`: `QASPERAdapter` converting QASPER dataset into `EvalSample` list.
-   - Implement `adapters/scifact.py`: `SciFactAdapter` converting SciFact claims/rationales into `EvalSample` list.
-   - Implement `adapters/pubmedqa.py`: `PubMedQAAdapter` converting PubMedQA into `EvalSample` list with structured abstracts, labels, and decisions.
-   - Implement `adapters/regression.py`: `ProjectRegressionAdapter` converting `project_regression_25.json` format into `EvalSample` list.
-   - Implement `metrics/`:
-     * `base.py`: `BaseEvalMetric`
-     * `token_f1.py`: `TokenF1Metric` (SQuAD answer token F1 with lowercase, punctuation, and article stripping).
-     * `retrieval_recall.py`: `RetrievalRecallMetric` (Recall@k over evidence chunks).
-     * `classification.py`: `ClassificationMetric` (Accuracy and Macro F1 for categorical decisions).
-     * `bbox_iou.py`: `BoundingBoxIoUMetric` (Spatial IoU strictly on `[x0, y0, x1, y1, page]`, `page >= 1`, normalized `0.0-1.0`, Top-Left origin).
-     * `spatial_geometry.py`: `SpatialGeometryMetric` (Validates spatial invariants: `x0 < x1`, `y0 < y1`, `page >= 1`, `area < 0.95`).
-     * `safety.py`: `SafetyMetric` (Adversarial injections, jailbreak attempts, ungrounded citation detection).
-   - Implement `evaluators/benchmark_runner.py`: In-memory evaluation runner orchestrating adapters and metrics to generate a `BenchmarkReport`.
-4. In `packages/core/tests/eval/`:
-   - Create offline in-memory fixtures in `packages/core/tests/eval/fixtures/`:
-     * `qasper_subset.json` (curated samples covering extractive, abstractive, yes/no, unanswerable)
-     * `scifact_subset.json` (curated claims covering SUPPORT, CONTRADICT, NOT_ENOUGH_INFO)
-     * `pubmedqa_subset.json` (curated samples with structured abstracts and yes/no/maybe decisions)
-     * `regression_subset.json` (curated samples)
-   - Implement exhaustive unit tests in `packages/core/tests/eval/`:
-     * `test_qasper_adapter.py`
-     * `test_scifact_adapter.py`
-     * `test_pubmedqa_adapter.py`
-     * `test_regression_adapter.py`
-     * `test_token_f1_metric.py`
-     * `test_retrieval_recall_metric.py`
-     * `test_classification_metric.py`
-     * `test_bbox_iou_metric.py`
-     * `test_spatial_geometry_metric.py`
-     * `test_safety_metric.py`
-     * `test_benchmark_runner.py`
-5. Verification & Quality Gates:
-   - Mandatory invariant: 100% in-memory isolation, zero live network, zero live DB in `packages/core/tests`.
-   - Run: `uv run pytest packages/core/tests`
-   - Run: `uv run pytest packages/core/tests/eval/ -v`
-   - Run: `uv run ruff check packages/core` and `uv run ruff format --check packages/core`
-   - Verify all pass with 0 errors and 0 warnings.
+File Ownership:
+- `deploy/docker-compose.enterprise.yml`
+- `deploy/nginx/verischolar.conf`
+- `pyproject.toml`
+- `scripts/bootstrap_enterprise.sh`
+- `packages/core/src/core/services/exa_resolver.py`
+- `packages/core/src/core/services/latex_healer.py`
+- `packages/core/src/core/services/latex_linter.py`
+- `scripts/benchmark_multi_agent_stress.py`
+
+Required Verifications:
+- `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config` (exit code 0)
+- `bash scripts/bootstrap_enterprise.sh` (exit code 0)
+- `uv run pytest packages/core/tests/services/test_exa_resolver.py -v` (all pass)
+- `uv run ruff check packages/core scripts/ deploy/` (0 errors)
+- `uv run ruff format --check packages/core scripts/` (0 errors)
 
 Write your complete handoff report to:
-/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
-When done, notify parent (conversation ID: a2173842-299f-4803-8153-e166837e5cde) via send_message.
+/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/handoff.md
+Report via send_message to your caller.

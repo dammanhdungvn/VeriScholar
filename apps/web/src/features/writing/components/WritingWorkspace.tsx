@@ -173,14 +173,7 @@ export function WritingWorkspace() {
     noteSnippet?: string;
     noteId?: string;
     similarityScore?: number;
-  } | null>({
-    id: "assoc-1",
-    title: "Attention Is All You Need",
-    page: 4,
-    citationKey: "vaswani2017attention",
-    noteSnippet: "Cơ chế Scaled Dot-Product Attention và Multi-Head Attention loại bỏ hoàn toàn tính tuần tự.",
-    similarityScore: 0.94,
-  });
+  } | null>(null);
 
   const handleInsertAssociativeCitation = useCallback(
     (citationKey: string) => {
@@ -194,6 +187,41 @@ export function WritingWorkspace() {
   const handleViewAssociativeNote = useCallback((noteId?: string) => {
     console.info("Viewing associative note:", noteId);
   }, []);
+
+  // Proactively fetch scholarly associative suggestions from historical research notes
+  useEffect(() => {
+    if (!activeDraftId || !editorContent || editorContent.trim().length < 10) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await draftsApi.getAssociativeSuggestions(activeDraftId, {
+          content: editorContent,
+          limit: 3,
+        });
+        if (res?.suggestions && res.suggestions.length > 0) {
+          const top = res.suggestions[0];
+          let citationKey = top.suggested_citation || "";
+          const citeMatch = citationKey.match(/\\cite\{([^}]+)\}/);
+          if (citeMatch) {
+            citationKey = citeMatch[1];
+          }
+          setActiveMemorySuggestion({
+            id: top.note_id,
+            title: top.paper_title || top.document_title || "Relevant Note",
+            page: top.page_number || 1,
+            citationKey: citationKey || "ref",
+            noteSnippet: top.user_note || top.selected_text || top.note_content,
+            noteId: top.note_id,
+            similarityScore: top.similarity_score,
+          });
+        }
+      } catch (err) {
+        console.warn("Failed to fetch proactive associative suggestions:", err);
+      }
+    }, 800);
+
+    return () => clearTimeout(timer);
+  }, [activeDraftId, editorContent]);
 
   // Keyboard shortcut Ctrl+S / ⌘S for saving
   useEffect(() => {

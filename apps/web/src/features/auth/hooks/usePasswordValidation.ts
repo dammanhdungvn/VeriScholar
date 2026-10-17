@@ -7,6 +7,24 @@ export interface PasswordStrength {
   hasNumber: boolean;
   hasSpecial: boolean;
   isAcceptable: boolean;
+  entropy: number; // Entropy in bits
+}
+
+/**
+ * Calculate password bit entropy using NIST / Shannon formula:
+ * E = L * log2(R) where L is length and R is character pool size.
+ */
+export function calculatePasswordEntropy(password: string): number {
+  if (!password) return 0;
+
+  let poolSize = 0;
+  if (/[a-z]/.test(password)) poolSize += 26;
+  if (/[A-Z]/.test(password)) poolSize += 26;
+  if (/[0-9]/.test(password)) poolSize += 10;
+  if (/[!@#$%^&*(),.?":{}|<>_\-+=[\]\\]/.test(password)) poolSize += 33;
+
+  if (poolSize === 0) return 0;
+  return Math.round(password.length * Math.log2(poolSize));
 }
 
 export function evaluatePasswordStrength(password: string): PasswordStrength {
@@ -20,6 +38,7 @@ export function evaluatePasswordStrength(password: string): PasswordStrength {
       hasNumber: false,
       hasSpecial: false,
       isAcceptable: false,
+      entropy: 0,
     };
   }
 
@@ -27,6 +46,7 @@ export function evaluatePasswordStrength(password: string): PasswordStrength {
   const hasUppercase = /[A-Z]/.test(password);
   const hasNumber = /[0-9]/.test(password);
   const hasSpecial = /[!@#$%^&*(),.?":{}|<>_\-+=[\]\\]/.test(password);
+  const entropy = calculatePasswordEntropy(password);
 
   let score = 0;
   if (hasMinLength) score += 1;
@@ -57,6 +77,7 @@ export function evaluatePasswordStrength(password: string): PasswordStrength {
     hasNumber,
     hasSpecial,
     isAcceptable: hasMinLength && score >= 2,
+    entropy,
   };
 }
 

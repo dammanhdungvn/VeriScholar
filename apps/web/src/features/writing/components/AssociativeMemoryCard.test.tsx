@@ -81,4 +81,90 @@ describe("AssociativeMemoryCard Component", () => {
 
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
+
+  it("derives effectiveCitationKey from title when citationKey is missing/undefined", () => {
+    const onInsert = vi.fn();
+    render(
+      <AssociativeMemoryCard
+        title="Attention Is All You Need"
+        onInsertCitation={onInsert}
+      />
+    );
+
+    const insertBtn = screen.getByTestId("insert-citation-btn");
+    expect(insertBtn).toBeInTheDocument();
+    fireEvent.click(insertBtn);
+
+    expect(onInsert).toHaveBeenCalledWith("attentionisallyo");
+    expect(screen.getByText("Đã chèn")).toBeInTheDocument();
+  });
+
+  it("handles title with special characters and symbols when citationKey is missing", () => {
+    const onInsert = vi.fn();
+    render(
+      <AssociativeMemoryCard
+        title="[Survey 2024] Transformer & LLM: What's Next?!"
+        onInsertCitation={onInsert}
+      />
+    );
+
+    const insertBtn = screen.getByTestId("insert-citation-btn");
+    fireEvent.click(insertBtn);
+
+    expect(onInsert).toHaveBeenCalledWith("survey2024transf");
+  });
+
+  it("handles empty title or title with only symbols without throwing runtime error", () => {
+    const onInsert = vi.fn();
+    render(
+      <AssociativeMemoryCard
+        title="???###!!!"
+        onInsertCitation={onInsert}
+      />
+    );
+
+    const insertBtn = screen.getByTestId("insert-citation-btn");
+    expect(() => fireEvent.click(insertBtn)).not.toThrow();
+    expect(onInsert).toHaveBeenCalledWith("");
+  });
+
+  it("prioritizes explicit citationKey over derived title key", () => {
+    const onInsert = vi.fn();
+    render(
+      <AssociativeMemoryCard
+        title="Some Random Title"
+        citationKey="vaswani2017attention"
+        onInsertCitation={onInsert}
+      />
+    );
+
+    const insertBtn = screen.getByTestId("insert-citation-btn");
+    fireEvent.click(insertBtn);
+
+    expect(onInsert).toHaveBeenCalledWith("vaswani2017attention");
+  });
+
+  it("safely handles omission of all optional props (page, noteSnippet, similarityScore, onDismiss, onViewNote)", () => {
+    render(<AssociativeMemoryCard title="Minimal Card" />);
+
+    expect(screen.getByText(/\(Trang 1\)/i)).toBeInTheDocument();
+    expect(screen.queryByText(/“/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Độ tương quan ngữ nghĩa/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Đóng gợi ý" })).not.toBeInTheDocument();
+
+    const viewBtn = screen.getByTestId("view-note-btn");
+    expect(() => fireEvent.click(viewBtn)).not.toThrow();
+  });
+
+  it("renders similarity score correctly when similarityScore is 0.0 or 1.0", () => {
+    const { rerender } = render(
+      <AssociativeMemoryCard title="Zero Similarity" similarityScore={0.0} />
+    );
+    expect(screen.getByText("0%")).toBeInTheDocument();
+
+    rerender(
+      <AssociativeMemoryCard title="Perfect Similarity" similarityScore={1.0} />
+    );
+    expect(screen.getByText("100%")).toBeInTheDocument();
+  });
 });

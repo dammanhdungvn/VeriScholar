@@ -167,4 +167,116 @@ describe("AccountSettingsModal", () => {
     fireEvent.click(cancelBtn);
     expect(handleClose).toHaveBeenCalledTimes(2);
   });
+
+  it("renders Scholar Hero Card with large initials avatar, full name and verified trust badge", () => {
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} />);
+
+    // 1. Scholar Identity & Trust Badge
+    expect(screen.getByText("GS.TS. Tran Van Test")).toBeInTheDocument();
+    expect(screen.getByText(/Học giả đã xác thực \(ISO 32000-1 \/ DOI Ready\)/i)).toBeInTheDocument();
+    expect(screen.getByText("faculty")).toBeInTheDocument();
+
+    // 2. Initials Avatar
+    expect(screen.getByText("GT")).toBeInTheDocument(); // GS.TS. ... Test -> GT
+  });
+
+  it("renders and updates new academic fields (department, google_scholar_url, research_interests, bio)", async () => {
+    const updateSpy = vi.spyOn(authApi, "updateProfile").mockResolvedValueOnce({
+      ...mockUser,
+      department: "Khoa Khoa học & Kỹ thuật Máy tính",
+      google_scholar_url: "https://scholar.google.com/citations?user=test1234",
+      research_interests: "AI, NLP, Machine Learning",
+      bio: "Giảng viên và nhà nghiên cứu chuyên sâu về mô hình ngôn ngữ lớn.",
+    });
+
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} />);
+
+    const deptInput = screen.getByLabelText(/Khoa \/ Phòng thí nghiệm/i);
+    const scholarInput = screen.getByLabelText(/Google Scholar Profile/i);
+    const interestsInput = screen.getByLabelText(/Lĩnh vực nghiên cứu/i);
+    const bioTextarea = screen.getByLabelText(/Tiểu sử học thuật/i);
+    const saveButton = screen.getByRole("button", { name: /Lưu thay đổi/i });
+
+    fireEvent.change(deptInput, { target: { value: "Khoa Khoa học & Kỹ thuật Máy tính" } });
+    fireEvent.change(scholarInput, { target: { value: "https://scholar.google.com/citations?user=test1234" } });
+    fireEvent.change(interestsInput, { target: { value: "AI, NLP, Machine Learning" } });
+    fireEvent.change(bioTextarea, { target: { value: "Giảng viên và nhà nghiên cứu chuyên sâu về mô hình ngôn ngữ lớn." } });
+
+    // Check tags preview
+    expect(screen.getByText("#AI")).toBeInTheDocument();
+    expect(screen.getByText("#NLP")).toBeInTheDocument();
+
+    fireEvent.click(saveButton);
+
+    await waitFor(() => {
+      expect(updateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          department: "Khoa Khoa học & Kỹ thuật Máy tính",
+          google_scholar_url: "https://scholar.google.com/citations?user=test1234",
+          research_interests: "AI, NLP, Machine Learning",
+          bio: "Giảng viên và nhà nghiên cứu chuyên sâu về mô hình ngôn ngữ lớn.",
+        })
+      );
+    });
+
+    const updatedUser = useAuthStore.getState().user;
+    expect(updatedUser?.department).toBe("Khoa Khoa học & Kỹ thuật Máy tính");
+  });
+
+  it("switches to Connected Accounts tab and displays Google GIS and ORCID status", () => {
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} />);
+
+    const connectedTab = screen.getByRole("button", { name: /Tài khoản liên kết/i });
+    fireEvent.click(connectedTab);
+
+    expect(screen.getByText("Google Workspace SSO")).toBeInTheDocument();
+    expect(screen.getByText(/Đã kết nối qua Google GIS/i)).toBeInTheDocument();
+    expect(screen.getByText("ORCID Member Registry")).toBeInTheDocument();
+    expect(screen.getByText("Overleaf / LaTeX Cloud Workspace")).toBeInTheDocument();
+  });
+
+  it("switches to Security tab and renders active session card with logout button", () => {
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} defaultTab="security" />);
+
+    expect(screen.getByText(/Phiên làm việc hiện tại \(Active Session\)/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Đăng xuất thiết bị/i })).toBeInTheDocument();
+  });
+
+  it("validates current password is required when submitting password change", async () => {
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} defaultTab="security" />);
+
+    const newPwd = screen.getByLabelText(/^Mật khẩu mới/i);
+    const confirmPwd = screen.getByLabelText(/Xác nhận mật khẩu mới/i);
+    const submitBtn = screen.getByRole("button", { name: /Cập nhật mật khẩu/i });
+
+    fireEvent.change(newPwd, { target: { value: "NewSecurePassword123!" } });
+    fireEvent.change(confirmPwd, { target: { value: "NewSecurePassword123!" } });
+    fireEvent.submit(submitBtn.closest("form")!);
+
+    await waitFor(() => {
+      expect(screen.getByText("Vui lòng nhập mật khẩu hiện tại.")).toBeInTheDocument();
+    });
+  });
+
+  it("displays error alert when changePassword API fails (401/400/500)", async () => {
+    vi.spyOn(authApi, "changePassword").mockRejectedValueOnce(
+      new Error("Mật khẩu hiện tại không chính xác.")
+    );
+
+    render(<AccountSettingsModal isOpen={true} onClose={vi.fn()} defaultTab="security" />);
+
+    const currentPwd = screen.getByLabelText(/Mật khẩu hiện tại/i);
+    const newPwd = screen.getByLabelText(/^Mật khẩu mới/i);
+    const confirmPwd = screen.getByLabelText(/Xác nhận mật khẩu mới/i);
+    const submitBtn = screen.getByRole("button", { name: /Cập nhật mật khẩu/i });
+
+    fireEvent.change(currentPwd, { target: { value: "WrongCurrentPassword123!" } });
+    fireEvent.change(newPwd, { target: { value: "NewSecurePassword123!" } });
+    fireEvent.change(confirmPwd, { target: { value: "NewSecurePassword123!" } });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Mật khẩu hiện tại không chính xác.")).toBeInTheDocument();
+    });
+  });
 });

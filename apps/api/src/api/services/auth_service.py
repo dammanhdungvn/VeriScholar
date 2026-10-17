@@ -12,6 +12,7 @@ import time
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 import structlog
 from api.core.config import settings
 from api.db.models.user import UserModel
@@ -21,18 +22,60 @@ from api.schemas.auth import (
     RegisterRequest,
     UpdateProfileRequest,
 )
+from api.services.email_service import EmailService
+from api.utils.email_validator import validate_academic_or_trusted_email
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.auth")
 
+# In-memory OTP cache with TTL: key -> {"code": str, "user_id": str, "exp": float}
+_otp_cache: dict[str, dict[str, Any]] = {}
+
+
+async def _save_otp_cache(key: str, data: dict[str, Any], ttl_seconds: int = 900) -> None:
+    """Store OTP in in-memory cache and Redis if available for multi-worker support."""
+    _otp_cache[key] = data
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5
+        )
+        await client.set(f"verischolar:otp:{key}", json.dumps(data), ex=ttl_seconds)
+        await client.aclose()
+    except Exception as exc:
+        logger.debug("redis_otp_save_fallback_in_memory", error=str(exc))
+
+
+async def _get_otp_cache(key: str) -> dict[str, Any] | None:
+    """Retrieve OTP from Redis or in-memory cache."""
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5
+        )
+        val = await client.get(f"verischolar:otp:{key}")
+        await client.aclose()
+        if val:
+            return json.loads(val)  # type: ignore[no-any-return]
+    except Exception:
+        pass
+
+    cached = _otp_cache.get(key)
+    if cached and time.time() < cached.get("exp", 0):
+        return cached
+    return None
+
 
 class AuthService:
     """Service handling user registration, authentication, JWT tokens, and account profile."""
 
-    def __init__(self, db: AsyncSession) -> None:
+    def __init__(self, db: AsyncSession, email_service: EmailService | None = None) -> None:
         self.db = db
+        self.email_service = email_service or EmailService()
 
     # --------------------------------------------------------------------------
     # Cryptographic & Password Hashing Utilities (OWASP PBKDF2-HMAC-SHA256)
@@ -147,9 +190,9 @@ class AuthService:
     def create_tokens_for_user(
         self, user: UserModel, remember_me: bool = True
     ) -> AuthTokensResponse:
-        """Create access and refresh token pair for a user."""
+        """Create access and refresh token pair for a user with persistent 30-day lifetime."""
         access_lifetime = (
-            settings.REFRESH_TOKEN_EXPIRE_SECONDS
+            settings.REMEMBER_ME_ACCESS_TOKEN_EXPIRE_SECONDS
             if remember_me
             else settings.ACCESS_TOKEN_EXPIRE_SECONDS
         )
@@ -183,9 +226,24 @@ class AuthService:
     # --------------------------------------------------------------------------
     # Authentication & Account Workflows
     # --------------------------------------------------------------------------
-    async def register(self, payload: RegisterRequest) -> tuple[UserModel, AuthTokensResponse]:
+    async def register(self, payload: RegisterRequest) -> tuple[UserModel, AuthTokensResponse, str]:
         """Register a new user account with hashed password and initial credentials."""
         normalized_email = payload.email.strip().lower()
+
+        # Check trusted email source (second-line defense)
+        is_valid, err_msg = validate_academic_or_trusted_email(normalized_email)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INVALID_EMAIL_DOMAIN",
+                    "message": err_msg or "Email không thuộc nguồn học thuật hoặc uy tín hợp lệ.",
+                    "action": (
+                        "Use an official academic email or trusted provider "
+                        "(Gmail, Outlook, iCloud...)."
+                    ),
+                },
+            )
 
         # Check existing user
         stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
@@ -220,8 +278,35 @@ class AuthService:
         await self.db.commit()
         await self.db.refresh(new_user)
 
+        # Generate 6-digit OTP code and verification token
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
+        verify_token = self.create_token(
+            payload={
+                "sub": str(new_user.id),
+                "email": new_user.email,
+                "type": "verify_email",
+                "code": otp_code,
+            },
+            expires_delta_seconds=900,  # 15 minutes
+        )
+        await _save_otp_cache(
+            f"verify:{normalized_email}",
+            {
+                "code": otp_code,
+                "user_id": str(new_user.id),
+                "exp": time.time() + 900,
+            },
+            ttl_seconds=900,
+        )
+
+        # Dispatch verification email (SMTP or audit log fallback)
+        try:
+            await self.email_service.send_verification_email(new_user.email, otp_code, verify_token)
+        except Exception as exc:
+            logger.warning("send_verification_email_error", error=str(exc))
+
         tokens = self.create_tokens_for_user(new_user, remember_me=True)
-        return new_user, tokens
+        return new_user, tokens, otp_code
 
     async def login(self, payload: LoginRequest) -> tuple[UserModel, AuthTokensResponse]:
         """Authenticate user credentials and issue token pair."""
@@ -254,6 +339,157 @@ class AuthService:
             )
 
         tokens = self.create_tokens_for_user(user, remember_me=payload.remember_me)
+        return user, tokens
+
+    async def authenticate_google(self, id_token: str) -> tuple[UserModel, AuthTokensResponse]:
+        """Verify Google ID token via Google tokeninfo API and authenticate/provision scholar."""
+        if not id_token or not id_token.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        token_url = "https://oauth2.googleapis.com/tokeninfo"
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(token_url, params={"id_token": id_token.strip()})
+        except Exception as exc:
+            logger.warning("google_tokeninfo_network_error", error=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        if resp.status_code != 200:
+            logger.warning("google_tokeninfo_invalid", status_code=resp.status_code, body=resp.text)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        try:
+            token_data = resp.json()
+        except Exception as exc:
+            logger.warning("google_tokeninfo_json_error", error=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        # Verify audience to prevent OIDC Confused Deputy Attack
+        expected_client_id = settings.GOOGLE_CLIENT_ID.strip()
+        aud = token_data.get("aud")
+        if not expected_client_id or aud != expected_client_id:
+            logger.warning(
+                "google_tokeninfo_audience_mismatch",
+                expected_client_id=expected_client_id,
+                actual_aud=aud,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc audience không khớp với ứng dụng.",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        email = token_data.get("email")
+        if not email or not isinstance(email, str) or not email.strip():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token Google không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        email_verified = token_data.get("email_verified")
+        if not (email_verified is True or str(email_verified).lower() == "true"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email Google chưa được xác thực bởi nhà cung cấp.",
+            )
+
+        normalized_email = email.strip().lower()
+
+        # Strict whitelist domain validation
+        is_valid, err_msg = validate_academic_or_trusted_email(normalized_email)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INVALID_EMAIL_DOMAIN",
+                    "message": err_msg or "Email không thuộc nguồn học thuật hoặc uy tín hợp lệ.",
+                    "action": (
+                        "Vui lòng sử dụng tài khoản Google có email học thuật "
+                        "(.edu, .edu.vn, .ac.*) hoặc nhà cung cấp uy tín (Gmail, Outlook, Proton)."
+                    ),
+                },
+            )
+
+        # Lookup existing user
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        google_name = (
+            token_data.get("name") or token_data.get("given_name") or normalized_email.split("@")[0]
+        )
+        full_name = " ".join(str(google_name).strip().split()) or "Nhà nghiên cứu Google"
+        google_picture = token_data.get("picture")
+
+        if user is None:
+            random_pw = secrets.token_urlsafe(32)
+            user = UserModel(
+                id=uuid4(),
+                email=normalized_email,
+                full_name=full_name,
+                hashed_password=self.hash_password(random_pw),
+                role="researcher",
+                is_active=True,
+                is_verified=True,
+                academic_rank="Nhà nghiên cứu Khoa học",
+                avatar_url=str(google_picture).strip() if google_picture else None,
+            )
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+            logger.info(
+                "google_auth_provisioned_new_user",
+                user_id=str(user.id),
+                email=normalized_email,
+            )
+        else:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={
+                        "code": "ACCOUNT_INACTIVE",
+                        "message": "Tài khoản của bạn hiện đang bị vô hiệu hóa.",
+                        "action": "Contact system administrator.",
+                    },
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            updated = False
+            if not user.is_verified:
+                user.is_verified = True
+                updated = True
+            if not user.avatar_url and google_picture:
+                user.avatar_url = str(google_picture).strip()
+                updated = True
+
+            if updated:
+                await self.db.commit()
+                await self.db.refresh(user)
+
+            logger.info(
+                "google_auth_authenticated_existing_user",
+                user_id=str(user.id),
+                email=normalized_email,
+            )
+
+        tokens = self.create_tokens_for_user(user, remember_me=True)
         return user, tokens
 
     async def refresh_tokens(self, refresh_token: str) -> AuthTokensResponse:
@@ -319,61 +555,111 @@ class AuthService:
 
         return self.create_tokens_for_user(user, remember_me=True)
 
-    async def forgot_password(self, email: str) -> str:
-        """Initiate password reset and generate a secure reset token."""
+    async def forgot_password(self, email: str) -> tuple[str, str]:
+        """Initiate password reset and generate a secure reset token & 6-digit OTP code."""
         normalized_email = email.strip().lower()
         stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
         res = await self.db.execute(stmt)
         user = res.scalar_one_or_none()
 
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
+
         if user is None:
             # Return dummy token or neutral success to prevent enumeration
-            return self.create_token(
-                payload={"sub": str(uuid4()), "email": normalized_email, "type": "reset"},
+            dummy_token = self.create_token(
+                payload={
+                    "sub": str(uuid4()),
+                    "email": normalized_email,
+                    "type": "reset",
+                    "code": otp_code,
+                },
                 expires_delta_seconds=900,
             )
+            return dummy_token, otp_code
 
         reset_token = self.create_token(
-            payload={"sub": str(user.id), "email": user.email, "type": "reset"},
+            payload={
+                "sub": str(user.id),
+                "email": user.email,
+                "type": "reset",
+                "code": otp_code,
+            },
             expires_delta_seconds=900,  # 15 minutes
         )
-        return reset_token
+        await _save_otp_cache(
+            f"reset:{normalized_email}",
+            {
+                "code": otp_code,
+                "user_id": str(user.id),
+                "exp": time.time() + 900,
+            },
+            ttl_seconds=900,
+        )
 
-    async def reset_password(self, token: str, new_password: str) -> None:
-        """Confirm password reset with valid token and update password."""
+        # Dispatch email with OTP code and link
         try:
-            claims = self.decode_token(token)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "INVALID_RESET_TOKEN",
-                    "message": f"Mã liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn: {exc}",
-                    "action": "Request a new password reset link.",
-                },
-            ) from exc
+            await self.email_service.send_password_reset_email(user.email, otp_code, reset_token)
+        except Exception as exc:
+            logger.warning("send_password_reset_email_error", error=str(exc))
 
-        if claims.get("type") != "reset":
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "INVALID_TOKEN_TYPE",
-                    "message": "Token không hợp lệ cho tác vụ đặt lại mật khẩu.",
-                    "action": "Use the valid link sent to your email.",
-                },
-            )
+        return reset_token, otp_code
 
-        user_id_str = claims.get("sub")
-        try:
-            user_id = UUID(user_id_str)
-        except (ValueError, TypeError) as exc:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "code": "INVALID_USER_ID",
-                    "message": "ID người dùng trong token không hợp lệ.",
-                },
-            ) from exc
+    async def reset_password(self, token: str, new_password: str, email: str | None = None) -> None:
+        """Confirm password reset with valid token or 6-digit OTP code and update password."""
+        user_id = None
+        clean_token = token.strip()
+
+        # Check if 6-digit OTP code was provided
+        if len(clean_token) == 6 and clean_token.isdigit() and email:
+            normalized_email = email.strip().lower()
+            cached = await _get_otp_cache(f"reset:{normalized_email}")
+            if cached and cached.get("code") == clean_token:
+                user_id = UUID(cached["user_id"])
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_RESET_CODE",
+                        "message": "Mã xác thực 6 số không chính xác hoặc đã hết hạn (15 phút).",
+                        "action": "Request a new password reset code.",
+                    },
+                )
+        else:
+            try:
+                claims = self.decode_token(clean_token)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_RESET_TOKEN",
+                        "message": (
+                            f"Mã liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn: {exc}"
+                        ),
+                        "action": "Request a new password reset link.",
+                    },
+                ) from exc
+
+            if claims.get("type") != "reset":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_TOKEN_TYPE",
+                        "message": "Token không hợp lệ cho tác vụ đặt lại mật khẩu.",
+                        "action": "Use the valid link sent to your email.",
+                    },
+                )
+
+            user_id_str = claims.get("sub")
+            try:
+                user_id = UUID(user_id_str)
+            except (ValueError, TypeError) as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_USER_ID",
+                        "message": "ID người dùng trong token không hợp lệ.",
+                    },
+                ) from exc
 
         stmt = select(UserModel).where(UserModel.id == user_id)
         res = await self.db.execute(stmt)
@@ -390,6 +676,93 @@ class AuthService:
 
         user.hashed_password = self.hash_password(new_password)
         await self.db.commit()
+
+    async def verify_email(self, email: str, token_or_code: str) -> UserModel:
+        """Verify scholarly email address using 6-digit OTP code or JWT token."""
+        normalized_email = email.strip().lower()
+        clean_input = token_or_code.strip()
+
+        is_valid = False
+
+        if len(clean_input) == 6 and clean_input.isdigit():
+            cached = await _get_otp_cache(f"verify:{normalized_email}")
+            if cached and cached.get("code") == clean_input:
+                is_valid = True
+        else:
+            try:
+                claims = self.decode_token(clean_input)
+                if claims.get("type") == "verify_email":
+                    claim_email = claims.get("email")
+                    if claim_email and (
+                        not normalized_email or normalized_email == claim_email.lower()
+                    ):
+                        is_valid = True
+                        normalized_email = claim_email.lower()
+            except Exception:
+                pass
+
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_VERIFICATION_CODE",
+                    "message": (
+                        "Mã xác thực không hợp lệ hoặc đã hết hạn (15 phút). "
+                        "Vui lòng yêu cầu gửi lại mã mới."
+                    ),
+                },
+            )
+
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy tài khoản người dùng tương ứng với email này.",
+            )
+
+        user.is_verified = True
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
+    async def resend_verification(self, email: str) -> str:
+        """Resend email verification OTP code and token."""
+        normalized_email = email.strip().lower()
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Không tìm thấy tài khoản đăng ký với email này.",
+            )
+
+        otp_code = f"{secrets.randbelow(900000) + 100000}"
+        verify_token = self.create_token(
+            payload={
+                "sub": str(user.id),
+                "email": user.email,
+                "type": "verify_email",
+                "code": otp_code,
+            },
+            expires_delta_seconds=900,
+        )
+        await _save_otp_cache(
+            f"verify:{normalized_email}",
+            {
+                "code": otp_code,
+                "user_id": str(user.id),
+                "exp": time.time() + 900,
+            },
+            ttl_seconds=900,
+        )
+        try:
+            await self.email_service.send_verification_email(user.email, otp_code, verify_token)
+        except Exception as exc:
+            logger.warning("resend_verification_email_error", error=str(exc))
+        return otp_code
 
     async def change_password(
         self, user: UserModel, current_password: str, new_password: str
@@ -420,6 +793,14 @@ class AuthService:
             user.orcid_id = payload.orcid_id.strip()
         if payload.avatar_url is not None:
             user.avatar_url = payload.avatar_url.strip()
+        if payload.department is not None:
+            user.department = payload.department.strip()
+        if payload.bio is not None:
+            user.bio = payload.bio.strip()
+        if payload.research_interests is not None:
+            user.research_interests = payload.research_interests.strip()
+        if payload.google_scholar_url is not None:
+            user.google_scholar_url = payload.google_scholar_url.strip()
 
         await self.db.commit()
         await self.db.refresh(user)

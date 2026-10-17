@@ -1,158 +1,185 @@
-# Forensic Audit Report: Milestone 1 (SSE Streaming & X-Request-ID Header Standardization)
+# Forensic Audit Report: Milestone 1 (M1_WRITING_AND_SYNTHESIS)
 
-**Auditor**: `auditor_m1`  
-**Milestone**: `M1_SSE_TRACING`  
-**Working Directory**: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/teamwork/auditor_m1`  
-**Date**: 2026-10-15  
-**Verdict**: **CLEAN**
+**Work Product**: Milestone 1 Implementation (Pillars 2, 3, and 4)  
+**Profile**: General Project  
+**Auditor**: Forensic Auditor (`auditor_m1`)  
+**Verdict**: **INTEGRITY VIOLATION** (REJECTED)  
+
+---
+
+## Forensic Audit Summary
+
+| Check | Scope | Result | Details |
+|---|---|:---:|---|
+| **Static Analysis — Hardcoded Values** | `apps/web/src/features/writing/components/WritingWorkspace.tsx` | 🔴 **FAIL** | `activeMemorySuggestion` initialized with pre-populated dummy state (`assoc-1`, "Attention Is All You Need", "vaswani2017attention", 0.94) instead of starting `null`. |
+| **Contract Conformance & Security Isolation** | `apps/api/src/api/services/draft_service.py` | 🔴 **FAIL** | `export_overleaf` checks `if not draft:` instead of `if not draft or not role:`. Cross-tenant draft export returned HTTP 200 instead of HTTP 404/403. |
+| **Code Hygiene & Quality Gate** | `apps/api/src/api/services/library_synthesis_service.py` | 🔴 **FAIL** | `uv run ruff check` failed with 2 errors: `I001` (unsorted imports) and `E501` (line length 103 > 100). |
+| **Empirical Behavioral Verification** | `apps/api/tests/test_m1_pillars_empirical_stress.py` | 🔴 **FAIL** | 1 test failed: `test_overleaf_export_errors_and_isolation` due to authorization leak. |
+| **Frontend Compilation & Lint** | `apps/web` (`tsc -b`, `oxlint`) | 🟢 **PASS** | `tsc -b` exits code 0; `oxlint` found 0 errors and 0 warnings. |
+| **Frontend Vitest Suites** | `src/features/writing` & `ComparisonMatrixModal` | 🟢 **PASS** | 103/103 tests passed in writing; 7/7 tests passed in ComparisonMatrixModal. |
+| **Core Architecture & Ports/Adapters** | Hexagonal Architecture adherence | 🟢 **PASS** | In-memory fallback mechanism in `RedisIdempotencyAdapter` is isolated; no leaky core dependencies. |
 
 ---
 
 ## 1. Observation
 
-### 1.1 Source Code and Implementation Observations
-1. **`apps/api/src/api/middleware/tracing.py`**:
-   - Lines 36-38: Explicitly initializes `scope["state"]` if missing and assigns `scope["state"]["request_id"] = request_id`:
+1. **Defect 1: Cross-Tenant Authorization Leak in Overleaf Export**
+   - **File**: `apps/api/src/api/services/draft_service.py`, lines 597–603:
      ```python
-     if "state" not in scope:
-         scope["state"] = {}
-     scope["state"]["request_id"] = request_id
+     draft, role = await self.get_user_draft_role(
+         draft_id=draft_id,
+         user_id=user_id,
+         user_email=user_email,
+     )
+     if not draft:
+         raise KeyError(f"Draft {draft_id} not found")
      ```
-     This populates Starlette's `request.state.request_id` for downstream handlers.
-   - Lines 58-63: Deduplicates response headers and appends a canonical lowercase `(b"x-request-id", request_id.encode("latin1"))`:
-     ```python
-     res_headers = [
-         (k, v) for k, v in message.get("headers", []) if k.lower() != b"x-request-id"
-     ]
-     res_headers.append((b"x-request-id", request_id.encode("latin1")))
-     message = {**message, "headers": res_headers}
+   - **Empirical Execution**: In `apps/api/tests/test_m1_pillars_empirical_stress.py`, `test_overleaf_export_errors_and_isolation` tests whether User 2 can export User 1's private draft.
+   - **Verbatim Error**:
      ```
-   - Lines 67-75: Exception handling re-raises all errors (`raise`), ensuring no swallowed exceptions, while calculating TTFB and total duration accurately.
+     FAILED apps/api/tests/test_m1_pillars_empirical_stress.py::test_overleaf_export_errors_and_isolation - assert 200 == 404
+     ```
+   - **Log Evidence**:
+     ```json
+     {'log_type': 'access', 'status_code': 200, 'method': 'POST', 'path': '/api/v1/drafts/811127a0-140d-4086-be56-590548a77f50:export-overleaf', 'request_id': '68508ec4-a8c0-4cb7-90c0-be3ffcf7c921'}
+     ```
+   - When User 2 invokes `POST /api/v1/drafts/{id}:export-overleaf` for User 1's draft, `get_user_draft_role` returns `(draft, None)`. Because line 602 only checks `if not draft:` rather than `if not draft or not role:`, it does NOT raise `KeyError`, bypassing access control and generating an Overleaf payload for an unauthorized user.
 
-2. **`apps/api/src/api/__init__.py`**:
-   - Line 31: `setup_logging()` is invoked at module level, configuring structlog formatters, processors, and muting raw uvicorn logs before ASGI startup.
-   - Lines 121, 130-132, 172, 186, 222, 237, 255, 268: All exception handlers (`http_exception_handler`, `domain_exception_handler`, `validation_exception_handler`, `unhandled_exception_handler`) reliably extract `req_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")`, populate `meta["request_id"] = req_id`, and attach `headers={"X-Request-ID": req_id}`.
-   - Lines 288-297: `demo_sse_events(request: Request)` extracts `request_id` and embeds it in each event payload `{"step": i, "content": f"Streaming chunk {i}", "request_id": request_id}`.
+2. **Defect 2: Hardcoded Pre-Populated Dummy Suggestion in UI**
+   - **File**: `apps/web/src/features/writing/components/WritingWorkspace.tsx`, lines 168–183:
+     ```typescript
+     // Proactive Associative Memory Card suggestion state
+     const [activeMemorySuggestion, setActiveMemorySuggestion] = useState<{
+       id: string;
+       title: string;
+       page: number;
+       citationKey: string;
+       noteSnippet?: string;
+       noteId?: string;
+       similarityScore?: number;
+     } | null>({
+       id: "assoc-1",
+       title: "Attention Is All You Need",
+       page: 4,
+       citationKey: "vaswani2017attention",
+       noteSnippet: "Cơ chế Scaled Dot-Product Attention và Multi-Head Attention loại bỏ hoàn toàn tính tuần tự.",
+       similarityScore: 0.94,
+     });
+     ```
+   - Rather than initializing to `null` and displaying insights only when queried from the proactive associative API (`draftsApi.getAssociativeSuggestions`), the UI loads with hardcoded mock research note values.
 
-3. **`apps/api/src/api/v1/endpoints/documents.py` & `apps/api/src/api/services/document_service.py`**:
-   - `stream_document_summary` extracts `request_id`, passes it to `service.stream_summary(..., request_id=request_id)`, and includes `"X-Request-ID": request_id` in `StreamingResponse` headers.
-   - `DocumentService.stream_summary` injects `"request_id": request_id` into `summary_start` (`{"document_id": str(document_id), "status": "streaming", "request_id": request_id}`) and `error` payloads.
+3. **Defect 3: Ruff Linter Quality Gate Violation**
+   - **File**: `apps/api/src/api/services/library_synthesis_service.py`
+   - **Command**: `uv run ruff check apps/api/src/api/services/library_synthesis_service.py`
+   - **Verbatim Output**:
+     ```
+     I001 [*] Import block is un-sorted or un-formatted
+       --> apps/api/src/api/services/library_synthesis_service.py:5:1
 
-4. **`apps/api/src/api/v1/endpoints/sessions.py` & `apps/api/src/api/services/session_chat_service.py`**:
-   - `post_session_message` extracts `request_id`, passes it to `chat_service.stream_chat(..., request_id=request_id)`, and includes `"X-Request-ID": request_id` in `StreamingResponse` headers.
-   - `SessionChatService.stream_chat` injects `"request_id": request_id` into `start` (`{"turn_id": str(turn_id), "message_id": f"msg_{turn_id.hex[:8]}", "created_at": now_iso, "request_id": request_id}`) and `error` payloads (`SESSION_NOT_FOUND`, `SESSION_ARCHIVED`).
-   - Attached `request_id` to `trace_metadata["request_id"] = request_id` for Langfuse AI tracing.
-
-### 1.2 Static Analysis & Forensic Integrity Scans
-1. **Hardcoded Test Output Detection**:
-   - Query: `test-` across `apps/api/src/api/`:
-     Result: 0 matches.
-   - Query: `mock` in `apps/api/src/api/middleware/tracing.py`:
-     Result: 0 matches.
-   - Query: `pass` in `apps/api/src/api/middleware/tracing.py`:
-     Result: 0 matches.
-2. **Pre-populated Artifact Detection**:
-   - Query: `find .agents/teamwork/ -name '*.log' -o -name '*result*'`:
-     Result: 0 files found.
-3. **Facade Implementation Detection**:
-   - All modules execute genuine logic with dynamic UUID4 generation, real `perf_counter` timing, and authentic SSE generators.
-
-### 1.3 Behavioral Execution Results
-1. **Linting and Code Formatting**:
-   - Command: `uv run ruff check apps/api && uv run ruff format --check apps/api`
-   - Output: `All checks passed!`, `70 files already formatted`.
-2. **Targeted M1 Test Suite**:
-   - Command: `uv run pytest apps/api/tests/test_logging.py apps/api/tests/test_documents_summary_generate.py apps/api/tests/test_sessions_chat.py apps/api/tests/test_golden_papers_matrix.py -v`
-   - Output: `40 passed, 1 warning in 9.98s`.
-3. **Empirical Stress Test Suite (`test_sse_request_id_stress.py`)**:
-   - Command: `uv run pytest apps/api/tests/test_sse_request_id_stress.py -v`
-   - Output: `15 passed in 3.58s`.
-4. **Full API Test Suite**:
-   - Command: `uv run pytest apps/api/tests`
-   - Output: `229 passed, 1 warning in 25.64s`.
-5. **Full Core Domain Test Suite**:
-   - Command: `uv run pytest packages/core/tests`
-   - Output: `76 passed in 0.33s`.
-6. **Web Client TypeScript Compile, Lint, and Build**:
-   - Command: `pnpm --prefix apps/web exec tsc -b && pnpm --prefix apps/web lint && pnpm --prefix apps/web build`
-   - Output: `Found 0 warnings and 0 errors.`, `vite build` succeeded in 909ms.
+     E501 Line too long (103 > 100)
+        --> apps/api/src/api/services/library_synthesis_service.py:139:101
+         |
+     137 |                 datasets = meta.get("datasets") or (
+     138 |                     ["PubMedQA", "BioASQ", "SciFact"]
+     139 |                     if "vaccine" in (doc.title or "").lower() or "biology" in (doc.title or "").lower()
+         |                                                                                                     ^^^
+     140 |                     else ["WMT-14", "GLUE", "ImageNet-1K"]
+     141 |                 )
+         |
+     Found 2 errors.
+     [*] 1 fixable with the `--fix` option.
+     ```
 
 ---
 
 ## 2. Logic Chain
 
-1. **Compliance with Ground Truth (`ORIGINAL_REQUEST.md` & `PROJECT.md`)**:
-   - `ORIGINAL_REQUEST.md` mandates: "chuẩn hóa header X-Request-ID cho toàn bộ SSE streaming".
-   - `PROJECT.md` Feature F1 and F2 require:
-     - ASGI Tracing Middleware populating `scope["state"]["request_id"]`
-     - Header deduplication on responses
-     - Early `setup_logging()` invocation in `api/__init__.py`
-     - Standardized `X-Request-ID` header on `GET /events`, `POST /summary:stream`, `POST /messages`
-     - Embedding `request_id` in initial event payloads (`summary_start`, `start`, and error events).
-   - Observations 1.1.1 through 1.1.4 confirm that every single required interface and behavior has been genuinely implemented without shortcuts.
+1. **Security & Invariant Violation**:
+   - `AGENTS.md` and `PROJECT.md` require multi-tenant boundary isolation and proper authorization enforcement across all API endpoints.
+   - Other draft endpoints (`get_draft`, `update_draft`, `delete_draft`, `export_bundle`) consistently enforce:
+     ```python
+     if not draft or not role:
+         raise KeyError(f"Draft {draft_id} not found")
+     ```
+   - `export_overleaf` in `draft_service.py` omits `or not role:`. As directly proven by `test_overleaf_export_errors_and_isolation`, User 2 can export User 1's draft, causing an authorization leak (HTTP 200 instead of 404/403).
 
-2. **Deduplication and Header Normalization**:
-   - Observation 1.1.1 shows that `PureASGITracingMiddleware` strips prior `x-request-id` headers and adds a canonical header. This ensures that even when route handlers explicitly pass `"X-Request-ID"` to `StreamingResponse(headers=...)`, the client receives exactly one header, avoiding duplicate or mismatched headers.
-   - Empirical stress tests (`test_dim3_uppercase_header_canonical_single_response`, `test_dim3_duplicate_headers_deduplicated_to_single_header`) confirm this behavior under adversarial inputs.
+2. **Integrity Forensics Prohibited Pattern Violation**:
+   - The forensic specification strictly prohibits:
+     - Hardcoded test results / expected outputs.
+     - Facade implementations where UI renders static mock objects.
+   - `WritingWorkspace.tsx` lines 176–183 pre-populates `activeMemorySuggestion` with hardcoded string literals and numeric scores (`assoc-1`, `Attention Is All You Need`, `vaswani2017attention`, `0.94`) on component mount, mimicking a successful suggestion before any dynamic processing takes place.
 
-3. **Exception Safety and Traceability**:
-   - Observations 1.1.1 and 1.1.2 show that unhandled 500 exceptions, 404s, and 422 validation errors are cleanly mapped to RFC 7807 envelopes with `meta["request_id"]` and the `X-Request-ID` HTTP header, while no exceptions are silently swallowed.
+3. **Quality Gate Failure**:
+   - `AGENTS.md` Section 8 explicitly states: *"Zero Warning / Zero Lint: `uv run ruff check .` and `uv run ruff format --check .` exit cleanly with zero errors and warnings."*
+   - `library_synthesis_service.py` introduces 2 Ruff errors (`I001`, `E501`), causing `uv run ruff check` to fail with exit code 1.
 
-4. **Monorepo Atomicity and Layout Compliance**:
-   - Changes are strictly confined to `apps/api/src/api/` and `apps/api/tests/`.
-   - Invariants from `AGENTS.md` are upheld: `packages/core` does not import from `apps/api` or `apps/web`.
-   - All tests pass across backend and core (305 total automated tests passing), and web builds without errors.
+4. **Test Suite Failure**:
+   - `test_m1_pillars_empirical_stress.py` execution results in 1 failure (`test_overleaf_export_errors_and_isolation`).
+   - Under the Integrity Forensics core principles: *"If ANY check fails, the verdict is INTEGRITY VIOLATION and the work product must be rejected."*
 
 ---
 
 ## 3. Caveats
 
-No caveats. All claims were empirically verified through independent test runs, static analysis, pattern scanning, and build checks.
+- **Caveat 1**: The basic functional paths in `test_backend_pillars_completion.py` (4/4 tests) and frontend Vitest suites (110/110 tests) passed. However, `test_backend_pillars_completion.py` only tested single-user happy paths and did not verify cross-user isolation or unauthorized access handling.
+- **Caveat 2**: As an auditor, per Key Constraints, no source code modifications were made. The identified defects must be resolved by the implementation agent (`worker_m1`).
 
 ---
 
 ## 4. Conclusion
 
-**Verdict: CLEAN**.
+The work product for Milestone 1 fails forensic integrity verification due to:
+1. **Critical Security / Authorization Bypass** in `apps/api/src/api/services/draft_service.py`: `export_overleaf` lacks role verification (`if not draft or not role:`), allowing cross-user draft data leaks.
+2. **Prohibited Pattern Violation** in `apps/web/src/features/writing/components/WritingWorkspace.tsx`: Pre-populated static mock data in `useState` for proactive associative suggestions.
+3. **Quality Gate Lint Failures** in `apps/api/src/api/services/library_synthesis_service.py`: 2 Ruff errors (`I001`, `E501`).
+4. **Empirical Verification Failure**: `uv run pytest apps/api/tests/test_m1_pillars_empirical_stress.py` exits with code 1.
 
-Milestone 1 satisfies all functional, architectural, and integrity requirements. The implementation of `PureASGITracingMiddleware`, `setup_logging()`, `scope["state"]["request_id"]`, and SSE streaming `X-Request-ID` propagation is authentic, robust, and free of any hardcoded or facade implementations.
+**Verdict: INTEGRITY VIOLATION — REJECTED.**
+
+### Required Remediation for Worker M1:
+1. In `apps/api/src/api/services/draft_service.py` line 602, change:
+   ```python
+   if not draft or not role:
+       raise KeyError(f"Draft {draft_id} not found")
+   ```
+2. In `apps/web/src/features/writing/components/WritingWorkspace.tsx` line 176, initialize `activeMemorySuggestion` to `null`:
+   ```typescript
+   const [activeMemorySuggestion, setActiveMemorySuggestion] = useState<{
+     id: string;
+     title: string;
+     page: number;
+     citationKey: string;
+     noteSnippet?: string;
+     noteId?: string;
+     similarityScore?: number;
+   } | null>(null);
+   ```
+3. In `apps/api/src/api/services/library_synthesis_service.py`:
+   - Sort imports to satisfy `I001`.
+   - Wrap line 139 to under 100 characters to satisfy `E501`.
+4. Re-run `uv run pytest apps/api/tests/test_m1_pillars_empirical_stress.py` and ensure 10/10 tests pass.
 
 ---
 
 ## 5. Verification Method
 
-To independently reproduce this verification:
+To independently reproduce all forensic audit findings:
 
-1. **Ruff Lint & Format Check**:
+1. **Verify Isolation Failure in Overleaf Export**:
    ```bash
-   uv run ruff check apps/api
-   uv run ruff format --check apps/api
+   uv run pytest apps/api/tests/test_m1_pillars_empirical_stress.py::test_overleaf_export_errors_and_isolation -v
    ```
-   *Expected*: `All checks passed!` and `70 files already formatted`.
+   *Actual Result*: Fails with `assert 200 == 404` (User 2 exports User 1 draft).
 
-2. **Targeted M1 Suite**:
+2. **Verify Ruff Lint Errors**:
    ```bash
-   uv run pytest apps/api/tests/test_logging.py apps/api/tests/test_documents_summary_generate.py apps/api/tests/test_sessions_chat.py apps/api/tests/test_golden_papers_matrix.py -v
+   uv run ruff check apps/api/src/api/services/library_synthesis_service.py
    ```
-   *Expected*: 40 passed in ~10s.
+   *Actual Result*: Exits code 1 with 2 errors (`I001`, `E501`).
 
-3. **Empirical Stress Test Suite**:
+3. **Verify Hardcoded Mock in WritingWorkspace**:
+   Inspect `apps/web/src/features/writing/components/WritingWorkspace.tsx` lines 176–183:
    ```bash
-   uv run pytest apps/api/tests/test_sse_request_id_stress.py -v
+   grep -n -C 5 "assoc-1" apps/web/src/features/writing/components/WritingWorkspace.tsx
    ```
-   *Expected*: 15 passed in ~3.5s.
-
-4. **Full Workspace Test Suite**:
-   ```bash
-   uv run pytest apps/api/tests
-   uv run pytest packages/core/tests
-   ```
-   *Expected*: 229 passed in `apps/api`, 76 passed in `packages/core`.
-
-5. **Frontend Build**:
-   ```bash
-   pnpm --prefix apps/web exec tsc -b
-   pnpm --prefix apps/web lint
-   pnpm --prefix apps/web build
-   ```
-   *Expected*: 0 errors, successful production build.
+   *Actual Result*: Hardcoded initial state contains dummy mock data.
