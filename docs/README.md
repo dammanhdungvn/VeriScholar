@@ -15,7 +15,6 @@ flowchart TD
     Root --> S3["03-frontend-engineering/<br/>(Kỹ Thuật Web Client React 19)"]
     Root --> S4["04-operations-and-cicd/<br/>(Vận Hành Sản Xuất, CI/CD, Docker)"]
     Root --> S5["05-testing-and-qa/<br/>(Chiến Lược Kiểm Thử & Quality Gate)"]
-    Root --> S6["06-archive-and-legacy/<br/>(Kho Lưu Trữ Lịch Sử & Kiểm Toán)"]
 ```
 
 ---
@@ -32,6 +31,8 @@ flowchart TD
 | **[ai-guardrails-and-rag.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/ai-guardrails-and-rag.md)** | Hàng rào an toàn AI: RAG 2 tầng, trích xuất tọa độ Bounding Box, ghép bảng (Table Stitching), kiểm tra tiền đề câu hỏi (Presupposition Validation). |
 | **[prompt-management.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/prompt-management.md)** | Quản lý Prompt học thuật: Phân tầng chỉ thị (System / Developer / User), định danh Socratic Mentor, co giãn ngân sách token (Elastic Table Budgeting). |
 | **[scholar-profile-and-identity.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/scholar-profile-and-identity.md)** | Hồ sơ học giả Academic Luxury 3 Tabs, định danh ORCID iD, Google Scholar, luồng Google Identity Services (GIS OAuth 2.0) và phòng thủ tấn công OIDC Confused Deputy Attack (CVSS 8.8). |
+| **[directory-structure.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/directory-structure.md)** | Cấu trúc thư mục Backend Monorepo `uv workspace`: `apps/api` (Driving Adapters), `packages/core` (Domain Entities & Ports), và quy chuẩn cách ly I/O tuyệt đối. |
+| **[swagger-offline.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/swagger-offline.md)** | Đặc tả ngoại tuyến Swagger OpenAPI 3.1.0 đầy đủ các schemas, payloads, headers và HTTP response codes. |
 
 ---
 
@@ -71,14 +72,7 @@ flowchart TD
 | :--- | :--- |
 | **[testing-strategy.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/testing-strategy.md)** | Chiến lược kiểm thử đa tầng: Pytest backend (27 tests), 4 bài test an ninh thâm nhập (SQLi, XSS, Role Escalation, JWT Tampering), Vitest client (63 files, 378 tests), thanh lọc triệt để 2.105 dòng test trùng lặp. |
 | **[quality-gates-certification.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/quality-gates-certification.md)** | Báo cáo kiểm toán độc lập chính thức từ Lead Reviewer / Architecture Gatekeeper cấp chứng chỉ nghiệm thu Quality Gate Pass (100/100). |
-
----
-
-### 6. Phân Hệ 06: Kho Lưu Trữ Lịch Sử & Kiểm Toán ([`docs/06-archive-and-legacy/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/README.md))
-| Thư mục con | Mô tả nội dung lưu trữ vĩnh viễn |
-| :--- | :--- |
-| **[handoff/](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/handoff/)** | Biên bản kiểm toán UAT, báo cáo thử nghiệm Beta Cohort, đánh giá hiệu năng hệ thống ban đầu, phân tích lỗi kỹ thuật. |
-| **[decided/](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/decided/)** | 31 văn bản thiết kế chi tiết từng endpoint sơ khai của Module 1, Module 2, Module 3 và các luồng giao diện ban đầu. |
+| **[api-eval-snapshots.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/api-eval-snapshots.md)** | Bộ ảnh chụp kiểm thử AI và đánh giá API ngoại tuyến (Offline Snapshot & Evaluation Datasets). |
 
 ---
 

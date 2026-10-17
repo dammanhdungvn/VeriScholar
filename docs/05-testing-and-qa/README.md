@@ -16,5 +16,8 @@ Phân hệ này tập hợp toàn bộ các tài liệu về chiến lược ki�
 2. **[Chứng Chỉ Thẩm Định Quality Gate Mới Nhất (quality-gates-certification.md)](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/quality-gates-certification.md):**  
    Văn kiện kiểm toán độc lập chính thức từ Lead Architecture & Quality Gatekeeper chứng nhận 100/100 chuẩn Production cho toàn bộ hệ sinh thái CI/CD và Tài liệu Kỹ thuật.
 
+3. **[Bộ Ảnh Chụp Kiểm Thử AI & Đánh Giá API Ngoại Tuyến (api-eval-snapshots.md)](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/api-eval-snapshots.md):**  
+   Tập hợp các bộ dữ liệu đánh giá chất lượng phản hồi LLM, độ chính xác RAG 2 tầng và các bộ mock response phục vụ kiểm thử snapshot tự động.
+
 ---
 *Thuộc Bộ Tài Liệu Kỹ Thuật VeriScholar Enterprise.*

@@ -36,5 +36,18 @@ Tài liệu này cung cấp hướng dẫn toàn diện về kiến trúc mã ng
 - Tuyệt đối cấm sử dụng kiểu `any`. Mọi payload API phải có định nghĩa Interface/Type rõ ràng tại thư mục `src/types/` hoặc `features/<feature>/types/`.
 - Áp dụng Zod hoặc Pydantic Schema mapping để xác thực dữ liệu đầu vào.
 
+### 2.4. Quy Chuẩn Vòng Đời Tab Ngầm & Chống Tích Tụ Bộ Nhớ (Page Lifecycle & Background Tab Safeguards)
+- **Bắt buộc xử lý `visibilitychange`:** Mọi component sử dụng vòng lặp hoạt ảnh liên tục (`requestAnimationFrame`, Canvas 2D, `setInterval`) phải đăng ký lắng nghe sự kiện `document.addEventListener("visibilitychange")`.
+- **Đóng băng sạch (Clean Freeze on `document.hidden`):**
+  - Hủy ngay `cancelAnimationFrame(animationFrameId)`.
+  - Hủy toàn bộ bộ đếm thời gian liên hoàn (`clearInterval(meteorInterval)`, `clearInterval(pulseInterval)`).
+  - Thu dọn sạch hàng đợi hoặc đặt mảng về rỗng (`meteors.length = 0`) nhằm triệt tiêu hoàn toàn nguy cơ tích tụ hàng nghìn đối tượng khi hàm `render()` bị trình duyệt tạm dừng.
+- **Giới hạn trần cứng (Hard Upper Bounds):**
+  - Mọi mảng sinh hạt/vật thể động phải có trần cố định (ví dụ: `MAX_METEORS = 8`, `MAX_SYNAPTIC_PULSES = 8`). Không bao giờ đẩy thêm phần tử nếu mảng đã đạt ngưỡng.
+- **Chuẩn hóa Delta-Time (`performance.now()`):**
+  - Tính toán bước nhảy thời gian `elapsed = currentTime - lastFrameTime` và giới hạn `deltaFactor = Math.min(Math.max(elapsed / 16.67, 0.1), 2.0)` để ngăn ngừa hiện tượng dịch chuyển đột ngột (particle teleportation) hoặc giật khung hình khi tab được kích hoạt trở lại.
+- **Tối ưu hóa Off-Thread / Direct DOM Updates:**
+  - Đối với các hiệu ứng theo dõi con trỏ chuột toàn cục (`mousemove`), sử dụng tham chiếu trực tiếp (`spotlightRef.current.style.background = ...`) thay cho `useState` nhằm loại trừ 100% chi phí kích hoạt React Re-render thừa thãi (120-240Hz).
+
 ---
 *Thuộc Bộ Tài Liệu Kỹ Thuật VeriScholar Enterprise.*

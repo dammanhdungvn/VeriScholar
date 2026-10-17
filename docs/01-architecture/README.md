@@ -27,5 +27,11 @@ Phân hệ này tập hợp toàn bộ các tài liệu thiết kế nền tản
 7. **[Hồ Sơ Học Giả & An Ninh Định Danh (scholar-profile-and-identity.md)](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/scholar-profile-and-identity.md):**  
    Thiết kế phân hệ 3 Tabs đạt chuẩn Academic Luxury, tích hợp định danh ORCID iD quốc tế, Google Scholar, luồng xác thực Google Identity Services (GIS OAuth 2.0) và giải pháp phòng thủ tuyệt đối trước lỗ hổng OIDC Confused Deputy Attack (CVSS 8.8).
 
+8. **[Cấu Trúc Thư Mục Backend & Hạt Nhân Lục Giác (directory-structure.md)](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/directory-structure.md):**  
+   Tổ chức cây thư mục chuẩn Monorepo `uv workspace`: `apps/api` (Driving Adapters), `packages/core` (Pure Domain Entities & Ports), và các cơ chế cách ly I/O tuyệt đối.
+
+9. **[Đặc Tả Ngoại Tuyến Swagger OpenAPI 3.1.0 (swagger-offline.md)](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/swagger-offline.md):**  
+   Đặc tả chi tiết toàn bộ các schema, payload, request/response headers và mã phản hồi HTTP của toàn hệ thống API phục vụ tích hợp độc lập không phụ thuộc backend runtime.
+
 ---
 *Thuộc Bộ Tài Liệu Kỹ Thuật VeriScholar Enterprise.*
