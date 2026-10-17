@@ -9,7 +9,6 @@ import smtplib
 from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 
 import httpx
 import structlog
@@ -26,9 +25,11 @@ try:
 except ImportError:
     HAS_EMAIL_TEMPLATES = False
 
+from api.core.config import ROOT_DIR
+
 logger = structlog.get_logger("api.services.email")
 
-EMAIL_LOG_PATH = Path("/home/VeriScholar/Workspace/VeriScholar/storage/logs/auth-emails.log")
+EMAIL_LOG_PATH = ROOT_DIR / "storage" / "logs" / "auth-emails.log"
 
 
 class EmailService:
