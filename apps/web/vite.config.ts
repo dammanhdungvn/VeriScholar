@@ -21,6 +21,11 @@ export default defineConfig({
   test: {
     globals: true,
     environment: "jsdom",
+    pool: "vmThreads",
     setupFiles: ["./src/test/setup.ts"],
+    reporters: ["default", "junit"],
+    outputFile: {
+      junit: "test-results.xml",
+    },
   },
 });

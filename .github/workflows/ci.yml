@@ -41,6 +41,7 @@ jobs:
               - 'uv.lock'
             frontend:
               - 'apps/web/**'
+              - '.github/workflows/ci.yml'
 
   security-scan:
     name: Security & Secret Leak Detection
@@ -180,7 +181,15 @@ jobs:
 
       - name: Run Vitest unit & integration test suite
         run: |
-          pnpm test:run
+          pnpm test:run --reporter=default --reporter=junit --outputFile=test-results.xml
+
+      - name: Upload Frontend Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-test-results
+          path: apps/web/test-results.xml
+          retention-days: 7
 
       - name: Run Vite production build test
         run: |

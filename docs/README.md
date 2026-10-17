@@ -1,41 +1,88 @@
-# Trung Tâm Tài Liệu Kỹ Thuật VeriScholar (Master Technical Documentation)
+# Trung Tâm Quản Trị & Điều Hướng Tài Liệu Kỹ Thuật VeriScholar (Master Documentation Portal)
 
-Chào mừng bạn đến với kho lưu trữ tài liệu kỹ thuật chính thức của nền tảng **VeriScholar** — Hệ thống Phân tích & Trợ lý Nghiên cứu Khoa học Đẳng cấp Quốc tế dành cho Học giả và Viện Nghiên cứu.
+Chào mừng bạn đến với Cổng tài liệu kỹ thuật chính thức của nền tảng **VeriScholar** — Hệ thống Phân tích & Trợ lý Nghiên cứu Khoa học Đẳng cấp Quốc tế dành cho Học giả và Viện Nghiên cứu.
 
-Tất cả các tài liệu được xây dựng theo chuẩn mực kỹ thuật phân tán hiện đại, bảo đảm tính toàn vẹn thông tin, tính khả thi vận hành và quy chuẩn an toàn bảo mật nghiêm ngặt.
-
----
-
-## 📚 MỤC LỤC TÀI LIỆU TOÀN DIỆN (DOCUMENTATION INDEX)
-
-### 1. Kiến Trúc & Thiết Kế Hệ Thống (Architecture & System Design)
-- **[Thiết Kế Kiến Trúc Tổng Thể (System Architecture)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-architecture.md):** Tổng quan kiến trúc đa thành phần Monorepo, Hexagonal Architecture, ranh giới các domain và luồng dữ liệu.
-- **[Thiết Kế Cơ Sở Dữ Liệu (Database Design)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md):** Lược đồ CSDL PostgreSQL 16, pgvector, triggers OCC (`handle_occ_and_timestamp`), chiến lược chỉ mục và mô hình dữ liệu.
-- **[Hồ Sơ Học Giả & Nhận Diện Học Thuật (Scholar Profile Architecture)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-academic-profile.md):** Ngôn ngữ Academic Luxury, cấu trúc 3 Tabs, ORCID iD, Google Scholar, Google GIS OAuth 2.0 và cơ chế phòng thủ OIDC Confused Deputy Attack (CVSS 8.8).
-- **[Thiết Kế API Chuẩn Mực (API Design)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md):** Quy chuẩn RESTful API, Server-Sent Events (SSE) streaming, phân trang server-side và xử lý mã lỗi HTTP.
-- **[Đặc Tả Yêu Cầu Sản Phẩm (PRD)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md):** Yêu cầu sản phẩm, hành trình người dùng và tiêu chí chấp nhận 5 trụ cột công nghệ.
-
-### 2. Đường Ống CI/CD & Vận Hành Sản Xuất (CI/CD & Production Operations)
-- **[Hướng Dẫn Đường Ống Tích Hợp Liên Tục CI (CI Quality Gates Guide)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-ci.md):** 9 chốt chặn chất lượng trong `.github/workflows/ci.yml`: Ruff lint/format, Pytest coverage, Hexagonal boundary, Secret scanning (Gitleaks), Oxlint, TypeScript compiler, Vitest Frontend Suite, và Docker Container Validation.
-- **[Hướng Dẫn Triển Khai Liên Tục CD & Vận Hành (CD & Production Operations)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-cd-and-deployment.md):** Kịch bản triển khai tự động `scripts/deploy_production.sh`, Zero-Downtime Migration (`init_db.py`), Nginx Reverse Proxy & SSL, Systemd daemon management (`verischolar-api.service`), automated health check và cơ chế Auto-Rollback khi gặp sự cố.
-- **[Hướng Dẫn Triển Khai Docker & On-Premise Enterprise (Docker Guide)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-docker.md):** Khởi chạy cụm dịch vụ On-Premise (`deploy/docker-compose.enterprise.yml`), PgBouncer, pgvector, Redis và ARQ Worker bằng script `scripts/bootstrap_enterprise.sh`.
-
-### 3. Giao Diện Người Dùng & Frontend Web (Frontend Engineering)
-- **[Kiến Trúc Frontend & Design System](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/frontend/techstack-frontend.md):** React 19, TypeScript, Vite, Tailwind CSS, Zustand store, và Lucide React icons.
-- **[Cấu Trúc Thư Mục Frontend](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/frontend/directory-structure.md):** Bố cục tính năng theo chuẩn Feature-Driven Development (`features/auth`, `features/reader`, `features/writing`, `features/library`, `features/dashboard`).
-- **[Tiêu Chuẩn Mã Nguồn Frontend](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/frontend/coding-standards.md):** Quy tắc viết mã, quản lý Hooks, định kiểu dữ liệu nghiêm ngặt và tối ưu hóa kết xuất DOM.
-
-### 4. Trí Tuệ Nhân Tạo & Khả Năng Quan Sát (AI & Observability)
-- **[Hàng Rào Bảo Vệ An Toàn AI (AI Guardrails)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-ai-guardrails.md):** Phòng chống Hallucination, phát hiện thiên kiến và xác thực ngữ nghĩa trích dẫn học thuật.
-- **[Khả Năng Quan Sát & Đo Lường AI (AI Observability)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-ai-observability.md):** Giám sát độ trễ LLM, đo lường chi phí token và truy vết luồng suy luận qua Langfuse.
-- **[Hệ Thống Nhật Ký Có Cấu Trúc (Structured Logging System)](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/guide-logging-system.md):** Chuẩn mực Structlog JSON, PureASGITracingMiddleware, correlation ID (`x-request-id`), và bộ lọc thông tin nhạy cảm PII redaction.
-
-### 5. Hồ Sơ Bàn Giao & Kiểm Toán Chất Lượng (Handoff & Audit Records)
-- **[Hồ Sơ Bàn Giao & Kiểm Toán Toàn Diện](file:///home/VeriScholar/Workspace/VeriScholar/docs/handoff/README.md):** Nhật ký kiểm định UAT, chứng chỉ nghiệm thu Quality Gates, và báo cáo thử nghiệm Beta Cohort.
+Toàn bộ hệ thống tài liệu đã được tái cấu trúc theo mô hình phân tầng khoa học (**Enterprise Hierarchical Taxonomy**), bảo đảm thông tin phản ánh 100% hiện trạng sản xuất, lưu trữ vĩnh viễn không thất thoát và cập nhật liên tục theo tiến độ dự án.
 
 ---
 
-## 🚀 HƯỚNG DẪN KHỞI ĐỘNG NHANH CHO LẬP TRÌNH VIÊN (QUICK START)
+## 🏛️ SƠ ĐỒ CẤU TRÚC PHÂN TẦNG TÀI LIỆU (DOCUMENTATION TAXONOMY)
+
+```mermaid
+flowchart TD
+    Root["📂 docs/ (Root)"] --> S1["01-architecture/<br/>(Kiến Trúc & Thiết Kế Hệ Thống)"]
+    Root --> S2["02-modules-and-features/<br/>(5 Trụ Cột Công Nghệ & PRD)"]
+    Root --> S3["03-frontend-engineering/<br/>(Kỹ Thuật Web Client React 19)"]
+    Root --> S4["04-operations-and-cicd/<br/>(Vận Hành Sản Xuất, CI/CD, Docker)"]
+    Root --> S5["05-testing-and-qa/<br/>(Chiến Lược Kiểm Thử & Quality Gate)"]
+    Root --> S6["06-archive-and-legacy/<br/>(Kho Lưu Trữ Lịch Sử & Kiểm Toán)"]
+```
+
+---
+
+## 📑 BẢNG CHỈ MỤC TÀI LIỆU TOÀN DIỆN (MASTER NAVIGATION INDEX)
+
+### 1. Phân Hệ 01: Kiến Trúc & Thiết Kế Hệ Thống ([`docs/01-architecture/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/README.md))
+| Tài liệu | Mô tả tóm tắt nội dung |
+| :--- | :--- |
+| **[architecture-overview.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/architecture-overview.md)** | Kiến trúc lục giác (Hexagonal Architecture), phân tầng Ingress/Core/Persistence/Sandbox, và ranh giới nghiệp vụ bất biến. |
+| **[backend-techstack.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/backend-techstack.md)** | Toàn cảnh công nghệ Backend 5 Trụ Cột: Python 3.12, `uv` Monorepo, FastAPI, PostgreSQL 16 pgvector, Redis 7, ARQ Worker, PyMuPDF, Langfuse. |
+| **[database-design.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/database-design.md)** | Thiết kế CSDL PostgreSQL 16 + pgvector: Lược đồ quan hệ, triggers OCC (`handle_occ_and_timestamp`), triggers ngắt nguồn (`handle_note_source_detached`), chỉ mục HNSW và Full-Text. |
+| **[api-specification.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/api-specification.md)** | Quy chuẩn giao tiếp API: RESTful AIP-136/AIP-158, Unbuffered SSE Streaming, phân trang server-side, chuẩn xử lý lỗi RFC 7807 (Problem Details). |
+| **[ai-guardrails-and-rag.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/ai-guardrails-and-rag.md)** | Hàng rào an toàn AI: RAG 2 tầng, trích xuất tọa độ Bounding Box, ghép bảng (Table Stitching), kiểm tra tiền đề câu hỏi (Presupposition Validation). |
+| **[prompt-management.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/prompt-management.md)** | Quản lý Prompt học thuật: Phân tầng chỉ thị (System / Developer / User), định danh Socratic Mentor, co giãn ngân sách token (Elastic Table Budgeting). |
+| **[scholar-profile-and-identity.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/01-architecture/scholar-profile-and-identity.md)** | Hồ sơ học giả Academic Luxury 3 Tabs, định danh ORCID iD, Google Scholar, luồng Google Identity Services (GIS OAuth 2.0) và phòng thủ tấn công OIDC Confused Deputy Attack (CVSS 8.8). |
+
+---
+
+### 2. Phân Hệ 02: Đặc Tả Chi Tiết 5 Trụ Cột Công Nghệ ([`docs/02-modules-and-features/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/README.md))
+| Tài liệu | Mô tả tóm tắt nội dung |
+| :--- | :--- |
+| **[prd.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/prd.md)** | Bản đặc tả yêu cầu sản phẩm (PRD) hoàn chỉnh 5 Trụ Cột: Bài toán nghiên cứu, cam kết bảo mật không lưu trữ (Zero-Retention Guarantee), SLAs hiệu năng và quy chuẩn bảo mật. |
+| **[pillar-1-deep-reading.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/pillar-1-deep-reading.md)** | **Trụ Cột 1:** Không gian đọc sâu đa tab PDF.js, hiển thị lớp phủ Bounding Box, hỏi đáp đối thoại Socratic Copilot, và lưu trữ phiên đọc (Session Snapshots). |
+| **[pillar-2-latex-writing.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/pillar-2-latex-writing.md)** | **Trụ Cột 2:** Không gian soạn thảo 3 cột thích ứng, **đồng bộ 1-chạm sang Overleaf** (`POST /api/v1/drafts/{id}:export-overleaf`), vòng lặp tự vá lỗi biên dịch LaTeX Sandbox, và bộ máy kiểm chứng sự thật SAFE Fact-Checking. |
+| **[pillar-3-knowledge-capital.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/pillar-3-knowledge-capital.md)** | **Trụ Cột 3:** Sổ tay tri thức học giả, **Ký ức liên tưởng chủ động** (`POST /api/v1/drafts/{id}/associative-suggestions`), thẻ gợi ý Tia sáng Tri thức (Spark of Insight), Bản chụp bằng chứng đóng băng (Frozen Evidence Snapshot), và đồ thị trích dẫn 2-hop (GraphRAG). |
+| **[pillar-4-literature-matrix.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/pillar-4-literature-matrix.md)** | **Trụ Cột 4:** **Ma trận so sánh tài liệu quy mô lớn (100+ bài báo)** với phân trang Server-side (`limit`, `offset`, `search`), bộ nhớ đệm truy vấn Redis, bộ lọc đa tiêu chí, xuất file CSV/Excel UTF-8 BOM chuẩn RFC 4180, và quản lý thư mục nghiên cứu. |
+| **[pillar-5-enterprise-stack.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/02-modules-and-features/pillar-5-enterprise-stack.md)** | **Trụ Cột 5:** Cụm triển khai On-Premise Air-Gapped (`deploy/docker-compose.enterprise.yml`), bộ cài đặt 1 lệnh (`scripts/bootstrap_enterprise.sh`), di trú CSDL Zero-Downtime (`init_db.py`), CD tự động kèm Auto-Rollback (`deploy_production.sh`), và phân hệ Hồ sơ học giả Academic Luxury. |
+
+---
+
+### 3. Phân Hệ 03: Kỹ Thuật Phát Triển Frontend Web ([`docs/03-frontend-engineering/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/03-frontend-engineering/README.md))
+| Tài liệu | Mô tả tóm tắt nội dung |
+| :--- | :--- |
+| **[frontend-architecture-and-standards.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/03-frontend-engineering/frontend-architecture-and-standards.md)** | Kiến trúc ứng dụng React 19, TypeScript 5.9, Vite 8, TanStack Query v5, Zustand v5, tiêu chuẩn viết React Hooks, và quy chuẩn an toàn kiểu dữ liệu. |
+| **[directory-structure.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/03-frontend-engineering/directory-structure.md)** | Cấu trúc thư mục theo mô hình hướng tính năng (`apps/web/src/features/`): `auth`, `reader`, `writing`, `library`, `dashboard`. |
+| **[academic-luxury-design-system.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/03-frontend-engineering/academic-luxury-design-system.md)** | Hệ thống thiết kế Academic Luxury: Hệ màu Slate/Emerald/Indigo, kiểu chữ học thuật Serif/Sans, công thức toán KaTeX, và cơ chế vẽ lớp phủ tọa độ Bounding Box trực quan trên PDF Canvas. |
+
+---
+
+### 4. Phân Hệ 04: Vận Hành Sản Xuất, CI/CD & Hạ Tầng ([`docs/04-operations-and-cicd/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/04-operations-and-cicd/README.md))
+| Tài liệu | Mô tả tóm tắt nội dung |
+| :--- | :--- |
+| **[ci-quality-gates-guide.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/04-operations-and-cicd/ci-quality-gates-guide.md)** | Hướng dẫn đường ống CI 9 chốt chặn: Ruff, Pytest với JUnit XML & Coverage, Hexagonal Boundary Check, Gitleaks, Oxlint, TypeScript, **Vitest Suite (378 tests)**, và **Docker Validation Gate**. |
+| **[cd-and-production-operations.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/04-operations-and-cicd/cd-and-production-operations.md)** | Hướng dẫn triển khai liên tục CD 6 pha khép kín: Pre-flight checks, Zero-Downtime Migration, đóng gói Web, Nginx reload, Systemd API restart, và **cơ chế Auto-Rollback khi health-check thất bại**. |
+| **[docker-enterprise-guide.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/04-operations-and-cicd/docker-enterprise-guide.md)** | Hướng dẫn vận hành hạ tầng Docker Enterprise: PostgreSQL 16 pgvector, PgBouncer pooler, Redis 7, ARQ Worker và kịch bản `bootstrap_enterprise.sh`. |
+| **[logging-and-observability.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/04-operations-and-cicd/logging-and-observability.md)** | Hệ thống nhật ký có cấu trúc Structlog JSON, PureASGITracingMiddleware, correlation ID (`x-request-id`), bọc lọc thông tin PII, và đo lường LLM qua Langfuse. |
+
+---
+
+### 5. Phân Hệ 05: Chiến Lược Kiểm Thử & Đảm Bảo Chất Lượng ([`docs/05-testing-and-qa/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/README.md))
+| Tài liệu | Mô tả tóm tắt nội dung |
+| :--- | :--- |
+| **[testing-strategy.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/testing-strategy.md)** | Chiến lược kiểm thử đa tầng: Pytest backend (27 tests), 4 bài test an ninh thâm nhập (SQLi, XSS, Role Escalation, JWT Tampering), Vitest client (63 files, 378 tests), thanh lọc triệt để 2.105 dòng test trùng lặp. |
+| **[quality-gates-certification.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/05-testing-and-qa/quality-gates-certification.md)** | Báo cáo kiểm toán độc lập chính thức từ Lead Reviewer / Architecture Gatekeeper cấp chứng chỉ nghiệm thu Quality Gate Pass (100/100). |
+
+---
+
+### 6. Phân Hệ 06: Kho Lưu Trữ Lịch Sử & Kiểm Toán ([`docs/06-archive-and-legacy/`](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/README.md))
+| Thư mục con | Mô tả nội dung lưu trữ vĩnh viễn |
+| :--- | :--- |
+| **[handoff/](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/handoff/)** | Biên bản kiểm toán UAT, báo cáo thử nghiệm Beta Cohort, đánh giá hiệu năng hệ thống ban đầu, phân tích lỗi kỹ thuật. |
+| **[decided/](file:///home/VeriScholar/Workspace/VeriScholar/docs/06-archive-and-legacy/decided/)** | 31 văn bản thiết kế chi tiết từng endpoint sơ khai của Module 1, Module 2, Module 3 và các luồng giao diện ban đầu. |
+
+---
+
+## 🚀 HƯỚNG DẪN KHỞI ĐỘNG NHANH CHO KỸ SƯ MỚI (QUICK START)
 
 ```bash
 # 1. Sao chép kho mã nguồn
@@ -48,16 +95,19 @@ uv sync --all-packages
 # 3. Cài đặt phụ thuộc Frontend (Node.js 20 + pnpm)
 pnpm --dir apps/web install
 
-# 4. Chạy kiểm thử chất lượng toàn diện
+# 4. Chạy kiểm thử toàn diện cục bộ (Pytest & Vitest)
 uv run pytest
 pnpm --dir apps/web test:run
 
-# 5. Khởi động môi trường phát triển
+# 5. Khởi động môi trường phát triển cục bộ
 # Terminal 1: Backend API
 uv run uvicorn api:app --reload --host 127.0.0.1 --port 8000
-# Terminal 2: Frontend Web UI
+# Terminal 2: Frontend Web Client
 pnpm --dir apps/web dev
+
+# 6. Triển khai lên Production (Zero-Downtime)
+./scripts/deploy_production.sh
 ```
 
 ---
-*Bản quyền © 2026 VeriScholar. Mọi quyền được bảo lưu.*
+*Bản quyền © 2026 VeriScholar Platform. Mọi quyền được bảo lưu.*

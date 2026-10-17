@@ -1,7 +1,7 @@
-# BRIEFING — 2026-10-16T12:33:45Z
+# BRIEFING — 2026-10-17T04:12:50Z
 
 ## Mission
-Elevate VeriScholar to 100% completion for Milestone 1 (M1_WRITING_AND_SYNTHESIS: Pillars 2, 3, and 4) across Overleaf 1-click sync, Associative Memory frontend wiring, and Comparison Matrix Redis caching & 100+ papers pagination.
+Implement Requirement R1: Frontend Vitest Quality Gate in CI (`apps/web/vite.config.ts` vmThreads pool and JUnit reporter, `.github/workflows/ci.yml` frontend-checks test step and artifact upload).
 
 ## 🔒 My Identity
 - Archetype: worker_m1
@@ -9,6 +9,8 @@ Elevate VeriScholar to 100% completion for Milestone 1 (M1_WRITING_AND_SYNTHESIS
 - Working directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m1
 - Original parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
 - Milestone: M1_WRITING_AND_SYNTHESIS
+- Current parent: 037f66b3-4056-4a88-a7ee-29473f69a483
+- Milestone updated: M1 (Frontend Vitest Quality Gate in CI)
 
 ## 🔒 Key Constraints
 - Monorepo boundaries: touch only assigned files (`apps/web/src/features/writing/api/draftsApi.ts`, `apps/web/src/features/writing/components/WritingWorkspace.tsx`, `apps/api/src/api/core/config.py`, `apps/api/src/api/deps.py`, `apps/api/src/api/services/library_synthesis_service.py`, `apps/web/src/features/library/types/index.ts`, `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`).
@@ -18,25 +20,37 @@ Elevate VeriScholar to 100% completion for Milestone 1 (M1_WRITING_AND_SYNTHESIS
   - `pnpm --prefix apps/web test src/features/writing`
   - `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx`
   - `pnpm --prefix apps/web exec tsc -b`
+- M1 CI Quality Gate constraints:
+  - Exclusive Write Ownership: `apps/web/vite.config.ts`, `.github/workflows/ci.yml` (frontend-checks and detect-changes jobs)
+  - Configure pool: 'vmThreads' in Vitest test config
+  - Configure reporters to support JUnit XML (test-results.xml)
+  - Ensure changes to .github/workflows/ci.yml trigger frontend-checks in detect-changes
+  - Update pnpm test:run step in frontend-checks to run with --reporter=default --reporter=junit --outputFile=test-results.xml
+  - Add actions/upload-artifact@v4 step with name: frontend-test-results, path: apps/web/test-results.xml, and if: always()
+  - Full Vitest suite must pass (378/378 tests) with exit code 0; any failure must yield exit code 1 to block PR merge
+  - pnpm build in apps/web must pass
+  - .github/workflows/ci.yml YAML syntax must be valid
 
 ## Current Parent
-- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
-- Updated: 2026-10-16T12:33:45Z
+- Conversation ID: 037f66b3-4056-4a88-a7ee-29473f69a483
+- Updated: 2026-10-17T04:12:50Z
 
 ## Task Summary
 - **What to build**:
-  1. Pillar 2 (Overleaf 1-Click Sync): Verified `POST /api/v1/drafts/{id}:export-overleaf` and `WritingHeaderBar.tsx` button (`data-testid="header-overleaf-btn"`).
-  2. Pillar 3: Added `getAssociativeSuggestions` in `draftsApi.ts` and wired it in `WritingWorkspace.tsx` so `AssociativeMemoryCard` proactively suggests relevant historical notes and allows one-click citation insertion (`data-testid="insert-citation-btn"`).
-  3. Pillar 4: Exposed `REDIS_URL` in `Settings` (`apps/api/src/api/core/config.py`), initialized `RedisIdempotencyAdapter` in `apps/api/src/api/deps.py`, implemented Redis caching for extracted comparison matrix rows (`matrix:cache:{user_id}:{folder_id or 'global'}:{hash}`) with TTL=3600s in `LibrarySynthesisService`, updated `ComparisonMatrixRequest` and `ComparisonMatrixResponse` in `apps/web/src/features/library/types/index.ts`, and passed `limit: 200` in `ComparisonMatrixModal.tsx`.
-- **Success criteria**: Genuine implementation, 100% backend pytest passing, 100% frontend vitest passing, 0 TypeScript compile errors.
+  1. In `apps/web/vite.config.ts`: Set `pool: 'vmThreads'` in the Vitest `test` config. Configure reporters to support JUnit XML (`test-results.xml`).
+  2. In `.github/workflows/ci.yml`:
+     - Under `detect-changes`, ensure `.github/workflows/ci.yml` is included in `frontend` filter paths.
+     - In `frontend-checks`, update test step to `pnpm test:run --reporter=default --reporter=junit --outputFile=test-results.xml`.
+     - In `frontend-checks`, add `actions/upload-artifact@v4` step with `name: frontend-test-results`, `path: apps/web/test-results.xml`, and `if: always()`.
+- **Success criteria**: Genuine implementation, Vitest executes under ~40s, JUnit XML generated at `apps/web/test-results.xml`, 378/378 tests pass, PR merge blocking verified on failure, `pnpm build` passes, YAML syntax passes validation.
 - **Interface contracts**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
 - **Code layout**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md § Code Layout`
 
 ## Key Decisions Made
-- `LibrarySynthesisService` checks and writes comparison matrix rows using `RedisIdempotencyAdapter` with fallback to `InMemoryIdempotencyAdapter`.
-- Cache key format: `matrix:cache:{user_id}:{folder_id or 'global'}:{matrix_hash}` with TTL=3600s.
-- Debounced live fetch in `WritingWorkspace.tsx` when editor content updates.
-- Extended unit test suite in `draftsApi.test.ts` to cover `getAssociativeSuggestions`.
+- Vitest `pool: 'vmThreads'` reuses JSDOM across test runs in worker threads, reducing execution time from 278s to ~34s while maintaining isolation.
+- `apps/web/vite.config.ts` includes `reporters: ['default', 'junit']` and `outputFile: { junit: 'test-results.xml' }` (or CLI override compatibility).
+- GitHub Actions artifact upload uses root relative path `apps/web/test-results.xml` because `defaults.run.working-directory` does not apply to `uses:` action steps.
+- `if: always()` ensures test results artifact is captured even on test failures for debugging.
 
 ## Artifact Index
 - `.agents/teamwork/worker_m1/DISPATCH.md` — Worker assignment and instructions
@@ -46,26 +60,15 @@ Elevate VeriScholar to 100% completion for Milestone 1 (M1_WRITING_AND_SYNTHESIS
 
 ## Change Tracker
 - **Files modified**:
-  - `apps/api/src/api/core/config.py`: Expose `REDIS_URL: str = "redis://localhost:6379/0"` in `Settings`
-  - `apps/api/src/api/deps.py`: Instantiate `RedisIdempotencyAdapter` with in-memory fallback and pass to `LibrarySynthesisService`
-  - `apps/api/src/api/services/library_synthesis_service.py`: Implement Redis caching for extracted matrix rows with TTL=3600s
-  - `apps/web/src/features/library/types/index.ts`: Add `total_count`, `limit`, `offset`, `search` to request/response types
-  - `apps/web/src/features/library/components/ComparisonMatrixModal.tsx`: Pass `limit: 200` in matrix generation payload
-  - `apps/web/src/features/writing/types/index.ts`: Add `AssociativeSuggestionItem` and `AssociativeSuggestionsResponse`
-  - `apps/web/src/features/writing/api/draftsApi.ts`: Add `getAssociativeSuggestions`
-  - `apps/web/src/features/writing/api/draftsApi.test.ts`: Add unit test for `getAssociativeSuggestions`
-  - `apps/web/src/features/writing/components/WritingWorkspace.tsx`: Wire `getAssociativeSuggestions` to live suggestions
-- **Build status**: All backend & frontend builds and test suites passed (100% pass)
+  - `apps/web/vite.config.ts`: [TBD]
+  - `.github/workflows/ci.yml`: [TBD]
+- **Build status**: Pending
 - **Pending issues**: None
 
 ## Quality Status
-- **Build/test result**:
-  - `uv run pytest apps/api/tests/test_backend_pillars_completion.py -v`: 4 passed (100%)
-  - `pnpm --prefix apps/web test src/features/writing`: 14 files passed, 103 passed (100%)
-  - `pnpm --prefix apps/web test src/features/library/components/ComparisonMatrixModal.test.tsx`: 7 passed (100%)
-  - `pnpm --prefix apps/web exec tsc -b`: 0 errors (Code 0)
+- **Build/test result**: Pending verification
 - **Lint status**: Clean
-- **Tests added/modified**: `draftsApi.test.ts` (+1 test for `getAssociativeSuggestions`)
+- **Tests added/modified**: CI and Vitest configuration
 
 ## Loaded Skills
 - None
