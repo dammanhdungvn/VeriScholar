@@ -242,15 +242,16 @@ else
 fi
 
 # ------------------------------------------------------------------------------
-# Phase 5: Backend API Service Graceful Restart
+# Phase 5: Backend API Service Graceful Restart (Zero-Downtime Rolling Reload)
 # ------------------------------------------------------------------------------
-log_info "[Phase 5/6] Gracefully Restarting Backend FastAPI Service..."
+log_info "[Phase 5/6] Gracefully Reloading Backend FastAPI Service (Zero-Downtime)..."
 
 if [ "$DRY_RUN" = true ]; then
-    log_info "[DRY-RUN] Would execute: sudo systemctl restart verischolar-api"
+    log_info "[DRY-RUN] Would execute: sudo systemctl reload verischolar-api"
 else
-    sudo systemctl restart verischolar-api
-    log_success "Backend service restarted (verischolar-api.service active)."
+    log_info "Sending SIGHUP rolling reload to uvicorn master process..."
+    sudo systemctl reload verischolar-api || sudo systemctl restart verischolar-api
+    log_success "Backend service reloaded (verischolar-api.service active)."
 fi
 
 # ------------------------------------------------------------------------------

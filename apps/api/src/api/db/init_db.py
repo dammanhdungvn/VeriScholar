@@ -312,6 +312,7 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
 async def run_standalone_migrations() -> None:
     """Run idempotent database schema migrations directly from CLI / CD pipeline."""
     from api.db.session import engine
+
     logger.info("starting_standalone_database_migrations")
     async with engine.begin() as conn:
         await ensure_database_schema(conn)
@@ -321,4 +322,5 @@ async def run_standalone_migrations() -> None:
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(run_standalone_migrations())

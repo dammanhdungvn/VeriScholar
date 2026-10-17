@@ -1,7 +1,7 @@
-# BRIEFING — 2026-10-16T13:27:45Z
+# BRIEFING — 2026-10-17T04:32:30Z
 
 ## Mission
-Complete Milestone 2 (M2_ENTERPRISE_AND_BASELINE): Configure Pillar 5 Enterprise Stack and harmonize baseline test/lint suite.
+Implement Requirement R2: Docker Infrastructure & Container CI Gate (setuptools fix in pyproject.toml, root .dockerignore, Buildx GHA caching & dual compose config in ci.yml).
 
 ## 🔒 My Identity
 - Archetype: worker
@@ -9,6 +9,8 @@ Complete Milestone 2 (M2_ENTERPRISE_AND_BASELINE): Configure Pillar 5 Enterprise
 - Working directory: /home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2
 - Original parent: 5237f63e-9b6a-4090-bcf4-69cfa8674802
 - Milestone: M2_ENTERPRISE_AND_BASELINE
+- Subagent invocation parent: 037f66b3-4056-4a88-a7ee-29473f69a483
+- Active Milestone: M2 (Docker Infrastructure & Container CI Gate)
 
 ## 🔒 Key Constraints
 - DO NOT CHEAT. All implementations must be genuine.
@@ -21,34 +23,39 @@ Complete Milestone 2 (M2_ENTERPRISE_AND_BASELINE): Configure Pillar 5 Enterprise
   - `packages/core/src/core/services/latex_healer.py`
   - `packages/core/src/core/services/latex_linter.py`
   - `scripts/benchmark_multi_agent_stress.py`
-- Required verifications:
-  - `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config` (exit code 0)
-  - `bash scripts/bootstrap_enterprise.sh` (exit code 0)
-  - `uv run pytest packages/core/tests/services/test_exa_resolver.py -v` (all pass)
-  - `uv run ruff check packages/core scripts/ deploy/` (0 errors)
-  - `uv run ruff format --check packages/core scripts/` (0 errors)
+- Active Dispatch Exclusive Write Ownership:
+  - `pyproject.toml`
+  - `.dockerignore`
+  - `.github/workflows/ci.yml` (docker-validation job and related filters)
+- Verified build context transfer must be < 1MB (down from 318MB).
+- Both offline compose config validations must succeed without network/daemon.
+- `docker build -f deploy/Dockerfile.web .` must exit 0.
+- `docker build -f deploy/Dockerfile.api .` must exit 0.
+- Valid YAML syntax for `.github/workflows/ci.yml`.
 
 ## Current Parent
-- Conversation ID: 5237f63e-9b6a-4090-bcf4-69cfa8674802
-- Updated: not yet
+- Conversation ID: 037f66b3-4056-4a88-a7ee-29473f69a483
+- Updated: 2026-10-17T04:32:30Z
 
 ## Task Summary
 - **What to build**:
-  1. Fix `deploy/docker-compose.enterprise.yml`: remove version, mount init.sql into postgres, set postgres image to pg16.
-  2. Fix `deploy/nginx/verischolar.conf`: web root to `/usr/share/nginx/html;`, proxy pass to `http://api:8000;`.
-  3. Fix `pyproject.toml`: add `"arq>=0.26.0"`.
-  4. Verify `scripts/bootstrap_enterprise.sh` exits 0.
-  5. Fix `packages/core/src/core/services/exa_resolver.py:133`: handle `api_key=""` properly without falling back to os.getenv.
-  6. Fix 12 ruff formatting and linting errors across `latex_healer.py`, `latex_linter.py`, `benchmark_multi_agent_stress.py`.
-- **Success criteria**: All 5 verification commands exit 0 cleanly with zero errors.
+  1. Root `pyproject.toml`: Add `[tool.setuptools] packages = []` to prevent setuptools flat-layout discovery abort when building wheel in Dockerfile.api.
+  2. Root `.dockerignore`: Exclude node_modules, .venv, .git, .agents, dist, __pycache__, etc.
+  3. `.github/workflows/ci.yml`:
+     - In `detect-changes` filter: add path triggers for `deploy/**`, `Dockerfile*`, `.dockerignore`.
+     - In `docker-validation`: dual-mode offline compose config validation, Buildx setup, GHA caching `type=gha,mode=max,scope=api` and `type=gha,mode=max,scope=web`, both builds with `push: false`.
+- **Success criteria**:
+  - `docker compose -f deploy/docker-compose.enterprise.yml config -q` exits 0.
+  - `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config -q` exits 0.
+  - `docker build -f deploy/Dockerfile.web .` exits 0, context < 1MB.
+  - `docker build -f deploy/Dockerfile.api .` exits 0.
+  - `.github/workflows/ci.yml` passes YAML lint / parser.
 - **Interface contracts**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
 - **Code layout**: `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/PROJECT.md`
 
 ## Key Decisions Made
-- `deploy/docker-compose.enterprise.yml`: removed `version: "3.9"`, bound `../infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro`, updated image to `pgvector/pgvector:0.8.0-pg16`.
-- `deploy/nginx/verischolar.conf`: updated root to `/usr/share/nginx/html;`, replaced all `http://127.0.0.1:8000` with `http://api:8000;`.
-- `pyproject.toml`: added `"arq>=0.26.0"` to main dependencies, synchronized lockfile via `uv sync --all-packages`.
-- Cleaned up untracked temporary duplicate `deploy/nginx/verischolar-enterprise.conf` and reverted `Dockerfile.web` to point to `verischolar.conf`.
+- Reproduced the setuptools flat-layout error in `deploy/Dockerfile.api` (exited with code 1 at `RUN pip install .`).
+- Verified offline docker compose execution works standalone and with `.env.enterprise`.
 
 ## Artifact Index
 - `/home/VeriScholar/Workspace/VeriScholar/.agents/teamwork/worker_m2/DISPATCH.md` — Dispatch message
@@ -58,17 +65,14 @@ Complete Milestone 2 (M2_ENTERPRISE_AND_BASELINE): Configure Pillar 5 Enterprise
 
 ## Change Tracker
 - **Files modified**:
-  - `deploy/docker-compose.enterprise.yml`: Removed obsolete version, added init.sql volume mount, updated postgres image to pgvector:0.8.0-pg16.
-  - `deploy/nginx/verischolar.conf`: Pointed root to /usr/share/nginx/html, changed upstream proxy targets to http://api:8000.
-  - `pyproject.toml`: Added arq>=0.26.0 to dependencies.
-  - `uv.lock`: Synchronized with arq and dependencies.
-- **Build status**: Pass (all 5 required verifications pass with 0 errors)
-- **Pending issues**: None
+  - None yet
+- **Build status**: In progress
+- **Pending issues**: Applying setuptools fix, creating .dockerignore, updating ci.yml.
 
 ## Quality Status
-- **Build/test result**: 12/12 passed in `test_exa_resolver.py`; 320/320 passed in `packages/core/tests/`.
-- **Lint status**: 0 errors in `packages/core scripts/ deploy/`; 0 format violations in `packages/core scripts/`.
-- **Tests added/modified**: Existing tests validated with zero regressions.
+- **Build/test result**: Pending verification of changes
+- **Lint status**: Pending
+- **Tests added/modified**: CI validation gate tests
 
 ## Loaded Skills
 - None

@@ -1,0 +1,71 @@
+# Version control & CI
+.git
+.git/**
+.github
+.github/**
+
+# Agents & Teamwork
+.agents
+.agents/**
+
+# Python virtual environments
+.venv
+.venv/**
+venv
+venv/**
+env
+env/**
+
+# Node dependencies & caches
+node_modules
+**/node_modules
+**/node_modules/**
+apps/web/node_modules
+apps/web/node_modules/**
+apps/web/dist
+apps/web/dist/**
+dist
+**/dist/**
+build
+**/build/**
+
+# Python caches and bytecode
+__pycache__
+**/__pycache__
+**/__pycache__/**
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Tests and testing caches
+.pytest_cache
+**/.pytest_cache/**
+.ruff_cache
+**/.ruff_cache/**
+.coverage
+htmlcov
+**/htmlcov/**
+test-results.xml
+tests
+tests/**
+apps/api/tests
+apps/api/tests/**
+packages/core/tests
+packages/core/tests/**
+
+# Data, storage, and models
+storage
+storage/**
+data
+data/**
+models
+models/**
+temp
+temp/**
+docs
+docs/**
+
+# Database files
+*.db
+*.sqlite3

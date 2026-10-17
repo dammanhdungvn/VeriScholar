@@ -1,22 +1,16 @@
-# Progress — Worker M2 (M2_ENTERPRISE_AND_BASELINE)
+# Progress — Worker M2 (Requirement R2: Docker & Container CI Gate)
 
-Last visited: 2026-10-16T13:27:35Z
+Last visited: 2026-10-17T04:32:45Z
 
 ## Status
-- [x] Read referenced documents (ORIGINAL_REQUEST.md, AGENTS.md, PROJECT.md, explorer_survey_pillar5_tests/handoff.md)
-- [x] Inspect existing owned files and ruff check/format outputs
-- [x] Task 1: Update `deploy/docker-compose.enterprise.yml` (removed obsolete `version: "3.9"`, mounted `init.sql`, set PostgreSQL 16 image)
-- [x] Task 2: Update `deploy/nginx/verischolar.conf` (set root `/usr/share/nginx/html;`, proxy_pass `http://api:8000;`)
-- [x] Task 3: Update `pyproject.toml` with `arq>=0.26.0` and sync/lock via `uv sync --all-packages`
-- [x] Task 4: Verify `scripts/bootstrap_enterprise.sh` dry-run (exit code 0)
-- [x] Task 5: Harmonize `packages/core/src/core/services/exa_resolver.py` (verified `api_key=""` safety)
-- [x] Task 6: Fix lint/format errors in `latex_healer.py`, `latex_linter.py`, `benchmark_multi_agent_stress.py`
-- [x] Run all required verifications:
-  - `docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config` (exit code 0)
-  - `bash scripts/bootstrap_enterprise.sh` (exit code 0)
-  - `uv run pytest packages/core/tests/services/test_exa_resolver.py -v` (12/12 passed)
-  - `uv run ruff check packages/core scripts/ deploy/` (0 errors)
-  - `uv run ruff format --check packages/core scripts/` (0 errors)
-  - `uv run pytest packages/core/tests/` (320/320 passed)
-- [ ] Update BRIEFING.md
-- [ ] Write handoff.md and send message to caller
+- [x] Read referenced documents (ORIGINAL_REQUEST.md, PROJECT.md, survey_explorer_2/survey_report.md, survey_explorer_2/handoff.md, DISPATCH.md)
+- [x] Reproduced failure: `docker build -f deploy/Dockerfile.api .` failed at Step 7/7 with flat-layout discovery error
+- [x] Verified offline docker-compose config passes (defaults and .env.enterprise)
+- [ ] Task 1: Update `pyproject.toml` with `[tool.setuptools] packages = []`
+- [ ] Task 2: Create root `.dockerignore` to exclude node_modules, .venv, .git, etc.
+- [ ] Task 3: Update `.github/workflows/ci.yml` (detect-changes filters + docker-validation job with dual compose config and Buildx GHA cache)
+- [ ] Task 4: Verify `docker build -f deploy/Dockerfile.api .` succeeds (exit code 0)
+- [ ] Task 5: Verify `docker build -f deploy/Dockerfile.web .` succeeds (exit code 0, context < 1MB)
+- [ ] Task 6: Validate YAML syntax of `.github/workflows/ci.yml`
+- [ ] Task 7: Run ruff check and full test suite to guarantee zero regression
+- [ ] Task 8: Write handoff.md and report to caller

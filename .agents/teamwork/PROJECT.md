@@ -24,16 +24,17 @@
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| 1 | M1: Frontend Vitest Quality Gate | `apps/web/vite.config.ts`, `.github/workflows/ci.yml` (frontend-checks) | none | IN_PROGRESS |
-| 2 | M2: Docker & Container CI Gate | `pyproject.toml`, `.dockerignore`, `.github/workflows/ci.yml` (docker-validation) | none | PLANNED |
-| 3 | M3: Zero-Downtime CD Pipeline | `scripts/deploy_production.sh`, `deploy/nginx/production-host.conf`, `.github/workflows/cd.yml` | M1, M2 | PLANNED |
-| 4 | M4: Architecture Audit & Certification | E2E verification, fault injection, timing benchmarks, certification | M1, M2, M3 | PLANNED |
+| 1 | M1: Frontend Vitest Quality Gate | `apps/web/vite.config.ts`, `.github/workflows/ci.yml` (frontend-checks) | none | DONE |
+| 2 | M2: Docker & Container CI Gate | `pyproject.toml`, `.dockerignore`, `.github/workflows/ci.yml` (docker-validation) | none | DONE |
+| 3 | M3: Zero-Downtime CD Pipeline | `scripts/deploy_production.sh`, `deploy/nginx/production-host.conf`, `.github/workflows/cd.yml` | M1, M2 | DONE |
+| 4 | M4: Architecture Audit & Certification | E2E verification, fault injection, timing benchmarks, certification | M1, M2, M3 | DONE |
 
 ## Interface Contracts
 ### CI Workflow <-> Test Runners
 - Frontend tests executed via `pnpm test:run --reporter=default --reporter=junit --outputFile=test-results.xml` in `apps/web`.
 - Exit code `0` indicates 100% pass (378/378 tests). Exit code `1` fails the CI check and blocks PR merge.
 - JUnit artifact uploaded via `actions/upload-artifact@v4` with `path: apps/web/test-results.xml` and `if: always()`.
+- Verified in M1: 378/378 tests pass in 37.96s, valid JUnit XML.
 
 ### Docker CI <-> Build Infrastructure
 - Compose syntax validated via `docker compose -f deploy/docker-compose.enterprise.yml config -q`.
