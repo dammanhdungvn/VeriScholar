@@ -6,37 +6,60 @@ import { MathRenderer } from "@/components/shared/MathRenderer";
 
 export function DemoPaperViewer() {
   const activeCitationId = useLandingStore((s) => s.activeCitationId);
+  const citationFocusTick = useLandingStore((s) => s.citationFocusTick);
   const setActiveCitation = useLandingStore((s) => s.setActiveCitation);
 
   // Focus 100% on the canonical Attention Is All You Need paper
   const paper = MOCK_DEMO_PAPERS[0];
 
-  const isInitialMount = useRef(true);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const posEncRef = useRef<HTMLDivElement | null>(null);
   const attentionRef = useRef<HTMLDivElement | null>(null);
 
-  // Smooth scroll to target block ONLY when citation changes after initial mount
+  // Smooth scroll and vertically center the target bounding box within the paper viewer
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
-      return;
-    }
+    const scrollToCitation = () => {
+      const container = scrollContainerRef.current;
+      if (!container || !activeCitationId) return;
 
-    const targetEl =
-      activeCitationId === "cite-pos-enc"
-        ? posEncRef.current
-        : activeCitationId === "cite-attention-formula"
-          ? attentionRef.current
-          : null;
+      const targetEl =
+        activeCitationId === "cite-pos-enc"
+          ? posEncRef.current
+          : activeCitationId === "cite-attention-formula"
+            ? attentionRef.current
+            : null;
 
-    if (targetEl && scrollContainerRef.current) {
-      const containerRect = scrollContainerRef.current.getBoundingClientRect();
+      if (!targetEl) return;
+
+      const containerRect = container.getBoundingClientRect();
       const targetRect = targetEl.getBoundingClientRect();
-      const offset = targetRect.top - containerRect.top - 24;
-      scrollContainerRef.current.scrollBy({ top: offset, behavior: "smooth" });
-    }
-  }, [activeCitationId]);
+
+      // Absolute distance from top of scroll container's scrollable canvas
+      const currentScroll = container.scrollTop;
+      const targetTopInContainer = currentScroll + (targetRect.top - containerRect.top);
+      const targetHeight = targetRect.height;
+      const containerHeight = container.clientHeight;
+
+      // Position the target element vertically:
+      // If it fits with breathing room, center it with golden-ratio aesthetic bias
+      // Otherwise align with 24px top clearance
+      let desiredScroll: number;
+      if (targetHeight < containerHeight - 56) {
+        desiredScroll = Math.max(0, targetTopInContainer - (containerHeight - targetHeight) / 2);
+      } else {
+        desiredScroll = Math.max(0, targetTopInContainer - 24);
+      }
+
+      container.scrollTo({
+        top: desiredScroll,
+        behavior: "smooth",
+      });
+    };
+
+    // Frame delay to guarantee KaTeX formula layout and web fonts are fully measured
+    const timer = setTimeout(scrollToCitation, 100);
+    return () => clearTimeout(timer);
+  }, [activeCitationId, citationFocusTick]);
 
   return (
     <div className="flex flex-col h-full bg-[#faf8f4] dark:bg-[#25231f] rounded-xl border border-[#d8d3c7] dark:border-[#3a352c] overflow-hidden transition-colors duration-300 shadow-2xs dark:shadow-md">
@@ -63,7 +86,7 @@ export function DemoPaperViewer() {
       {/* Realistic Academic Paper Sheet Canvas (Daylight Ivory vs Warm Slate/Charcoal Parchment) */}
       <div
         ref={scrollContainerRef}
-        className="relative flex-1 p-5 sm:p-7 overflow-y-auto overflow-x-hidden scrollbar-none bg-[#faf8f4] dark:bg-[#25231f] text-[#1a1917] dark:text-[#ded8cc] select-text transition-colors duration-300"
+        className="relative flex-1 p-5 sm:p-7 pb-36 sm:pb-44 overflow-y-auto overflow-x-hidden paper-scrollbar bg-[#faf8f4] dark:bg-[#25231f] text-[#1a1917] dark:text-[#ded8cc] select-text transition-colors duration-300"
       >
         {/* Academic Paper Header - Title & 8 Authors */}
         <div className="text-center pb-3 border-b border-[#e5e1d8] dark:border-[#353027] mb-4 transition-colors duration-300">
@@ -118,25 +141,25 @@ export function DemoPaperViewer() {
                 const cite = paper.sample_turns[0]?.citations.find((c) => c.id === "cite-pos-enc");
                 if (cite) setActiveCitation(cite);
               }}
-              className={`relative p-3 rounded-[2px] transition-all duration-300 cursor-pointer ${
+              className={`relative p-3 rounded-[3px] transition-all duration-300 cursor-pointer overflow-visible ${
                 activeCitationId === "cite-pos-enc"
-                  ? "bg-[#f5a623]/12 dark:bg-[#d97757]/14 border-[1.5px] border-[#d97757] shadow-xs dark:shadow-[0_0_20px_rgba(217,119,87,0.32)]"
+                  ? "bg-[#f5a623]/12 dark:bg-[#d97757]/14 border-[1.5px] border-[#d97757] shadow-xs dark:shadow-[0_0_20px_rgba(217,119,87,0.32)] ring-1 ring-[#d97757]/20"
                   : "border-[1.5px] border-transparent hover:bg-[#d97757]/6 hover:border-[#d97757]/30"
               }`}
             >
               {/* 4 Optical Corner Crosshairs */}
               {activeCitationId === "cite-pos-enc" && (
                 <>
-                  <span className="absolute -top-[2px] -left-[2px] w-2 h-2 border-t-2 border-l-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -top-[2px] -right-[2px] w-2 h-2 border-t-2 border-r-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -bottom-[2px] -left-[2px] w-2 h-2 border-b-2 border-l-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -bottom-[2px] -right-[2px] w-2 h-2 border-b-2 border-r-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -top-[2px] -left-[2px] w-2.5 h-2.5 border-t-2 border-l-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -top-[2px] -right-[2px] w-2.5 h-2.5 border-t-2 border-r-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -bottom-[2px] -left-[2px] w-2.5 h-2.5 border-b-2 border-l-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -bottom-[2px] -right-[2px] w-2.5 h-2.5 border-b-2 border-r-2 border-[#d97757] pointer-events-none" />
                 </>
               )}
 
               {/* Clean Non-overlapping Margin Chip */}
               {activeCitationId === "cite-pos-enc" && (
-                <div className="flex items-center gap-1.5 pb-1 mb-1.5 border-b border-[#d97757]/20 dark:border-[#d97757]/30 text-[#c25e3e] dark:text-[#e8a55a] font-mono text-[10.5px]">
+                <div className="flex items-center gap-1.5 pb-1 mb-1.5 border-b border-[#d97757]/25 dark:border-[#d97757]/35 text-[#c25e3e] dark:text-[#e8a55a] font-mono text-[10.5px]">
                   <CheckCircle2 className="w-3 h-3 text-[#d97757] shrink-0" />
                   <span className="font-semibold">Mục 3.5 • Tr. 6</span>
                 </div>
@@ -150,7 +173,7 @@ export function DemoPaperViewer() {
               </p>
 
               {/* Dual KaTeX Formulas (Sin and Cos) */}
-              <div className="my-2 p-2 bg-[#f2eee6] dark:bg-[#1c1a17] border border-[#dfd9cd] dark:border-[#332f27] rounded-[2px] text-center overflow-x-auto space-y-1.5 transition-colors duration-300">
+              <div className="my-2 p-2.5 bg-[#f2eee6] dark:bg-[#1c1a17] border border-[#dfd9cd] dark:border-[#332f27] rounded-[2px] text-center overflow-x-auto space-y-2 transition-colors duration-300">
                 <MathRenderer
                   math="\text{PE}_{(\text{pos}, 2i)} = \sin\left(\frac{\text{pos}}{10000^{2i/d_{\text{model}}}}\right)"
                   block
@@ -161,6 +184,18 @@ export function DemoPaperViewer() {
                 />
               </div>
             </div>
+
+            <p>
+              where <MathRenderer math="pos" /> is the position and <MathRenderer math="i" /> is the dimension. That is, each dimension of the positional encoding corresponds to a sinusoid with wavelength forming a geometric progression from <MathRenderer math="2\pi" /> to <MathRenderer math="10000 \cdot 2\pi" />.
+            </p>
+
+            <p>
+              <strong className="font-semibold text-[#141413] dark:text-[#fbf9f5]">4 Why Self-Attention</strong>—We compare various aspects of self-attention layers to the recurrent and convolutional layers commonly used for mapping one variable-length sequence of symbol representations to another.
+            </p>
+
+            <p>
+              As noted in Table 1, a self-attention layer connects all positions with a constant number of sequentially executed operations <MathRenderer math="\mathcal{O}(1)" />, whereas a recurrent layer requires <MathRenderer math="\mathcal{O}(n)" /> sequential operations.
+            </p>
           </div>
 
           {/* Column 2 */}
@@ -175,24 +210,24 @@ export function DemoPaperViewer() {
                 const cite = turn2?.citations[0];
                 if (cite) setActiveCitation(cite);
               }}
-              className={`relative p-3 rounded-[2px] transition-all duration-300 cursor-pointer ${
+              className={`relative p-3 rounded-[3px] transition-all duration-300 cursor-pointer overflow-visible ${
                 activeCitationId === "cite-attention-formula"
-                  ? "bg-[#f5a623]/12 dark:bg-[#d97757]/14 border-[1.5px] border-[#d97757] shadow-xs dark:shadow-[0_0_20px_rgba(217,119,87,0.32)]"
+                  ? "bg-[#f5a623]/12 dark:bg-[#d97757]/14 border-[1.5px] border-[#d97757] shadow-xs dark:shadow-[0_0_20px_rgba(217,119,87,0.32)] ring-1 ring-[#d97757]/20"
                   : "border-[1.5px] border-transparent hover:bg-[#d97757]/6 hover:border-[#d97757]/30"
               }`}
             >
               {/* 4 Optical Corner Crosshairs */}
               {activeCitationId === "cite-attention-formula" && (
                 <>
-                  <span className="absolute -top-[2px] -left-[2px] w-2 h-2 border-t-2 border-l-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -top-[2px] -right-[2px] w-2 h-2 border-t-2 border-r-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -bottom-[2px] -left-[2px] w-2 h-2 border-b-2 border-l-2 border-[#d97757] pointer-events-none" />
-                  <span className="absolute -bottom-[2px] -right-[2px] w-2 h-2 border-b-2 border-r-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -top-[2px] -left-[2px] w-2.5 h-2.5 border-t-2 border-l-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -top-[2px] -right-[2px] w-2.5 h-2.5 border-t-2 border-r-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -bottom-[2px] -left-[2px] w-2.5 h-2.5 border-b-2 border-l-2 border-[#d97757] pointer-events-none" />
+                  <span className="absolute -bottom-[2px] -right-[2px] w-2.5 h-2.5 border-b-2 border-r-2 border-[#d97757] pointer-events-none" />
                 </>
               )}
 
               {activeCitationId === "cite-attention-formula" && (
-                <div className="flex items-center gap-1.5 pb-1 mb-1.5 border-b border-[#d97757]/20 dark:border-[#d97757]/30 text-[#c25e3e] dark:text-[#e8a55a] font-mono text-[10.5px]">
+                <div className="flex items-center gap-1.5 pb-1 mb-1.5 border-b border-[#d97757]/25 dark:border-[#d97757]/35 text-[#c25e3e] dark:text-[#e8a55a] font-mono text-[10.5px]">
                   <CheckCircle2 className="w-3 h-3 text-[#d97757] shrink-0" />
                   <span className="font-semibold">Mục 3.2.1 • Tr. 4</span>
                 </div>
@@ -219,6 +254,14 @@ export function DemoPaperViewer() {
 
             <p>
               <strong className="font-semibold text-[#141413] dark:text-[#fbf9f5]">5 Training</strong>—We trained on the standard WMT 2014 English-German dataset consisting of about 4.5 million sentence pairs.
+            </p>
+
+            <p>
+              <strong className="font-semibold text-[#141413] dark:text-[#fbf9f5]">6 Results</strong>—On the WMT 2014 English-to-German translation task, the big transformer model outperforms the best previously reported models by more than 2.0 BLEU, establishing a new state-of-the-art BLEU score of 28.4.
+            </p>
+
+            <p>
+              <strong className="font-semibold text-[#141413] dark:text-[#fbf9f5]">7 Conclusion</strong>—In this work, we presented the Transformer, the first sequence transduction model based entirely on attention, replacing recurrent layers with multi-headed self-attention.
             </p>
           </div>
         </div>

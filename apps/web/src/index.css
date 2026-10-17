@@ -216,6 +216,34 @@ body {
   background: #cc785c;
 }
 
+/* Academic Paper Subtle Scrollbar */
+.paper-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d6cfc4 transparent;
+}
+.paper-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.paper-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.paper-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6cfc4;
+  border-radius: 4px;
+}
+.paper-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cc785c;
+}
+.dark .paper-scrollbar {
+  scrollbar-color: #3d372e transparent;
+}
+.dark .paper-scrollbar::-webkit-scrollbar-thumb {
+  background: #3d372e;
+}
+.dark .paper-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d97757;
+}
+
 /* Typography Utility Helper Classes */
 .font-display {
   font-family: var(--font-display);

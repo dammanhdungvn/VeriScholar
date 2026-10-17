@@ -7,6 +7,7 @@ interface LandingState {
   activeTurnId: string;
   activeCitationId: string | null;
   activeCitation: DemoCitation | null;
+  citationFocusTick: number;
   isUploadModalOpen: boolean;
   isVideoModalOpen: boolean;
   isMobileMenuOpen: boolean;
@@ -25,6 +26,7 @@ export const useLandingStore = create<LandingState>((set) => ({
   activeTurnId: "turn-1",
   activeCitationId: "cite-pos-enc",
   activeCitation: MOCK_DEMO_PAPERS[0]?.sample_turns[0]?.citations[0] ?? null,
+  citationFocusTick: 0,
   isUploadModalOpen: false,
   isVideoModalOpen: false,
   isMobileMenuOpen: false,
@@ -34,12 +36,13 @@ export const useLandingStore = create<LandingState>((set) => ({
     const firstTurn = paper?.sample_turns[0];
     const firstCitation = firstTurn?.citations[0] ?? null;
 
-    set({
+    set((state) => ({
       activePaperId: paperId,
       activeTurnId: firstTurn?.id ?? "",
       activeCitationId: firstCitation?.id ?? null,
       activeCitation: firstCitation,
-    });
+      citationFocusTick: state.citationFocusTick + 1,
+    }));
   },
 
   setActiveTurnId: (turnId) => {
@@ -52,15 +55,17 @@ export const useLandingStore = create<LandingState>((set) => ({
         activeTurnId: turnId,
         activeCitationId: firstCitation?.id ?? null,
         activeCitation: firstCitation,
+        citationFocusTick: state.citationFocusTick + 1,
       };
     });
   },
 
   setActiveCitation: (citation) =>
-    set({
+    set((state) => ({
       activeCitationId: citation?.id ?? null,
       activeCitation: citation,
-    }),
+      citationFocusTick: state.citationFocusTick + 1,
+    })),
 
   setUploadModalOpen: (open) => set({ isUploadModalOpen: open }),
   setVideoModalOpen: (open) => set({ isVideoModalOpen: open }),
