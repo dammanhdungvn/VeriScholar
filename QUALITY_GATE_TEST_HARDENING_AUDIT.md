@@ -41,6 +41,7 @@ os.environ["LANGFUSE_ENABLED"] = "false"
 settings.ENVIRONMENT = "test"
 settings.LANGFUSE_ENABLED = False
 
+
 # Tầng 3: Autouse Fixture bảo vệ mỗi test case
 @pytest.fixture(autouse=True)
 def disable_external_telemetry(monkeypatch: pytest.MonkeyPatch) -> None:
