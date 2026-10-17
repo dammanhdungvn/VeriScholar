@@ -61,6 +61,7 @@ flowchart TD
 
     D0 -->|backend changed OR push to main| D1["Job 1: Backend Quality Gates (Python 3.12 / uv)"]
     D0 -->|frontend changed OR push to main| D2["Job 2: Frontend Quality Gates (Node.js 20 / pnpm)"]
+    D0 -->|any changed OR push to main| D3["Job 3: Docker Container Validation (Buildx & Compose)"]
 
     subgraph BACKEND ["Job: backend-checks (ubuntu-latest)"]
         D1 --> E1["1. Checkout Code (actions/checkout@v4)"]
@@ -81,12 +82,22 @@ flowchart TD
         F4 --> F5["5. Dependency Vulnerability Audit (pnpm audit --prod)"]
         F5 --> F6["6. Oxlint Static Analysis (pnpm --prefix apps/web lint)"]
         F6 --> F7["7. TypeScript Type-Checking (pnpm --prefix apps/web exec tsc -b)"]
-        F7 --> F8["8. Vite Production Build Test (pnpm --prefix apps/web build)"]
+        F7 --> F8["8. Vitest Unit & Integration Suite (pnpm test:run)"]
+        F8 --> F9["9. Vite Production Build Test (pnpm --prefix apps/web build)"]
+    end
+
+    subgraph DOCKER ["Job: docker-validation (ubuntu-latest)"]
+        D3 --> K1["1. Checkout Code (actions/checkout@v4)"]
+        K1 --> K2["2. Validate Enterprise Compose (docker compose config -q)"]
+        K2 --> K3["3. Setup Docker Buildx (docker/setup-buildx-action@v3)"]
+        K3 --> K4["4. Test Build API Image (deploy/Dockerfile.api)"]
+        K4 --> K5["5. Test Build Web Image (deploy/Dockerfile.web)"]
     end
 
     D_SEC --> G["Quality Gates Checkpoint"]
     E8 --> G
-    F8 --> G
+    F9 --> G
+    K5 --> G
     G -->|100% Passed| H["Green Check (Cho phép Merge PR)"]
     G -->|Bất kỳ lỗi nào| I["Red Cross (Chặn Merge, Báo cáo chi tiết lỗi)"]
 ```
@@ -165,6 +176,24 @@ flowchart TD
   "
   ```
 - **Tiêu chuẩn đỗ:** Trả về thông báo `Hexagonal boundary verification: PASSED` với mã thoát `0`.
+
+### 3.8. Chốt chặn 8: Kiểm Thử Đơn Vị & Tích Hợp Giao Diện Frontend (Vitest Suite)
+- **Mục đích:** Khắc phục triệt để lỗ hổng thiếu sót bài kiểm thử giao diện trong CI. Tự động thực thi toàn bộ bài test unit và integration trên client (`apps/web`), kiểm tra các thành phần React, Custom Hooks (`useGoogleAuth`, `useNotes`), xử lý Store trạng thái Zustand, và các Modal quan trọng (`ComparisonMatrixModal`, `ScholarProfileModal`).
+- **Lệnh thực thi trong CI:**
+  ```bash
+  pnpm --prefix apps/web test:run
+  ```
+- **Tiêu chuẩn đỗ:** 100% các tệp test đỗ với trạng thái `PASSED`. Bất kỳ bài test nào bị lỗi đều kích hoạt cảnh báo đỏ và chặn đứng hành động hợp nhất (merge) Pull Request.
+
+### 3.9. Chốt chặn 9: Xác Thực Cấu Hình & Đóng Gói Container Docker (Docker Infrastructure Gate)
+- **Mục đích:** Bảo đảm tính toàn vẹn của gói triển khai On-Premise Enterprise. Tự động kiểm tra cú pháp tệp `deploy/docker-compose.enterprise.yml` và kiểm tra khả năng đóng gói (build testing) của cả hai Dockerfile sản xuất (`deploy/Dockerfile.api` và `deploy/Dockerfile.web`) bằng Docker Buildx.
+- **Lệnh thực thi trong CI:**
+  ```bash
+  docker compose -f deploy/docker-compose.enterprise.yml config -q
+  docker build -f deploy/Dockerfile.api .
+  docker build -f deploy/Dockerfile.web .
+  ```
+- **Tiêu chuẩn đỗ:** Cú pháp docker-compose hợp lệ không phát sinh cảnh báo, cả 2 Docker image biên dịch thành công mà không thiếu phụ thuộc (`pnpm-lock.yaml`, `uv.lock`).
 
 ---
 
@@ -340,9 +369,48 @@ jobs:
         run: |
           pnpm exec tsc -b
 
+      - name: Run Vitest unit & integration test suite
+        run: |
+          pnpm test:run
+
       - name: Run Vite production build test
         run: |
           pnpm build
+
+  docker-validation:
+    name: Container & Infrastructure Validation (Docker)
+    needs: [detect-changes]
+    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Validate Enterprise Docker Compose Configuration
+        run: |
+          docker compose -f deploy/docker-compose.enterprise.yml config -q
+          echo "Enterprise docker-compose configuration is valid."
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Test Build Backend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.api
+          push: false
+          tags: verischolar-api:ci-test
+
+      - name: Test Build Frontend Docker Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: deploy/Dockerfile.web
+          push: false
+          tags: verischolar-web:ci-test
 ```
 
 ---
@@ -448,4 +516,6 @@ pnpm --prefix apps/web build
 - [x] **Khóa phụ thuộc nghiêm ngặt (Deterministic Builds):** Áp dụng `uv sync --all-packages --frozen` và `pnpm install --frozen-lockfile`.
 - [x] **Kiểm toán lỗ hổng bảo mật phụ thuộc (Vulnerability Audit):** Tích hợp `pnpm audit --prod` trong luồng Frontend.
 - [x] **Khả năng quan sát kiểm thử (Test Observability):** Xuất báo cáo `test-results.xml` và độ phủ mã nguồn, lưu trữ dạng GitHub Artifacts trong 7 ngày.
+- [x] **Kiểm thử tự động giao diện (Frontend Vitest Suite):** Tích hợp `pnpm test:run` chạy toàn diện unit và integration test, bảo đảm 100% pass trước khi build.
+- [x] **Xác thực hạ tầng & đóng gói Container (Docker Gate):** Xác thực cú pháp `docker-compose.enterprise.yml` và kiểm tra khả năng build cả API và Web image với Docker Buildx.
 - [x] **Tài liệu hướng dẫn hoàn chỉnh:** Cung cấp giải thích chi tiết song ngữ kèm bảng thuật ngữ trực quan cho Fresher.

@@ -307,3 +307,18 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
         except Exception as sq_err:
             logger.debug("sqlite_schema_upgrade_skipped", error=str(sq_err))
         logger.info("database_schema_upgrades_ensured", dialect=dialect_name)
+
+
+async def run_standalone_migrations() -> None:
+    """Run idempotent database schema migrations directly from CLI / CD pipeline."""
+    from api.db.session import engine
+    logger.info("starting_standalone_database_migrations")
+    async with engine.begin() as conn:
+        await ensure_database_schema(conn)
+    await engine.dispose()
+    logger.info("standalone_database_migrations_completed_successfully")
+
+
+if __name__ == "__main__":
+    import asyncio
+    asyncio.run(run_standalone_migrations())

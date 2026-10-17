@@ -1,12 +1,14 @@
 # Multi-stage Node/Vite build for VeriScholar Enterprise Web UI
 FROM node:20-alpine AS builder
 
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
+
 WORKDIR /app
-COPY apps/web/package*.json ./
-RUN npm ci
+COPY apps/web/package.json apps/web/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY apps/web/ ./
-RUN npm run build
+RUN pnpm build
 
 # Nginx production serving
 FROM nginx:alpine
