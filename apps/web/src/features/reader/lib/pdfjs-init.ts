@@ -23,6 +23,15 @@ import("${fullWorkerUrl}");`,
   }
 }
 
+// Polyfill Promise.try for environments lacking ECMAScript Promise.try (pdfjs-dist requirement)
+if (typeof (Promise as unknown as { try?: unknown }).try !== "function") {
+  (Promise as unknown as { try: (fn: (...args: unknown[]) => unknown, ...args: unknown[]) => Promise<unknown> }).try = function (fn, ...args) {
+    return new Promise((resolve) => resolve(fn(...args)));
+  };
+}
+if (typeof window !== "undefined" && typeof (window as unknown as { Promise?: { try?: unknown } }).Promise?.try !== "function") {
+  (window as unknown as { Promise: { try: unknown } }).Promise.try = (Promise as unknown as { try: unknown }).try;
+}
 // Polyfill Uint8Array.prototype.toHex for browser environments lacking Stage 3 proposal
 if (
   typeof Uint8Array !== "undefined" &&
