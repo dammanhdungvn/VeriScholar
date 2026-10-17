@@ -95,4 +95,28 @@ describe("DashboardTaskbar component", () => {
     fireEvent.click(projectsBtn);
     expect(handleProjects).toHaveBeenCalledTimes(1);
   });
+
+  it("opens elegant dropdown popover with 'Hồ sơ cá nhân' and 'Cài đặt' when clicking Taskbar Avatar", () => {
+    render(
+      <MemoryRouter>
+        <DashboardTaskbar
+          sessions={RECENT_SESSIONS}
+          onSelectSession={vi.fn()}
+          onNewSession={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    const avatarBtn = screen.getByTestId("taskbar-avatar-btn");
+    expect(avatarBtn).toBeInTheDocument();
+
+    // Popover is initially closed
+    expect(screen.queryByTestId("avatar-dropdown-popover")).not.toBeInTheDocument();
+
+    // Click Taskbar Avatar opens popover with the 2 required options
+    fireEvent.click(avatarBtn);
+    expect(screen.getByTestId("avatar-dropdown-popover")).toBeInTheDocument();
+    expect(screen.getByText("Hồ sơ cá nhân")).toBeInTheDocument();
+    expect(screen.getByText("Cài đặt")).toBeInTheDocument();
+  });
 });

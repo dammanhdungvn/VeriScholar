@@ -90,3 +90,7 @@ playwright-screenshots/
 # Evaluation Artifacts (Raw Payloads & JSON fixtures)
 tests/.artifacts/
 test-results.xml
+
+# Teamwork scratch
+.agents/teamwork/
+

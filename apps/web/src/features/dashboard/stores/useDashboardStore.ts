@@ -27,8 +27,34 @@ interface DashboardState {
   reset: () => void;
 }
 
+export const TASKBAR_STATE_STORAGE_KEY = "verischolar_taskbar_state";
+
+export function getStoredSidebarState(): SidebarState {
+  if (typeof window === "undefined") {
+    return "collapsed";
+  }
+  try {
+    const saved = localStorage.getItem(TASKBAR_STATE_STORAGE_KEY);
+    if (saved === "expanded" || saved === "collapsed") {
+      return saved;
+    }
+  } catch {
+    // Ignore storage read issues in test/private browsing
+  }
+  return "collapsed";
+}
+
+function persistSidebarState(state: SidebarState) {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(TASKBAR_STATE_STORAGE_KEY, state);
+  } catch {
+    // Ignore storage write issues
+  }
+}
+
 export const useDashboardStore = create<DashboardState>((set) => ({
-  sidebarState: "collapsed",
+  sidebarState: getStoredSidebarState(),
   appMode: "chat",
   selectedModel: AVAILABLE_MODELS[0],
   effortLevel: "Cao",
@@ -39,11 +65,16 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isVoiceModalOpen: false,
 
   toggleSidebar: () =>
-    set((state) => ({
-      sidebarState: state.sidebarState === "collapsed" ? "expanded" : "collapsed"
-    })),
+    set((state) => {
+      const nextState: SidebarState = state.sidebarState === "collapsed" ? "expanded" : "collapsed";
+      persistSidebarState(nextState);
+      return { sidebarState: nextState };
+    }),
 
-  setSidebarState: (sidebarState) => set({ sidebarState }),
+  setSidebarState: (sidebarState) => {
+    persistSidebarState(sidebarState);
+    set({ sidebarState });
+  },
   setAppMode: (appMode) => set({ appMode }),
   setSelectedModel: (selectedModel) => set({ selectedModel }),
   setEffortLevel: (effortLevel) => set({ effortLevel }),
@@ -55,7 +86,7 @@ export const useDashboardStore = create<DashboardState>((set) => ({
 
   reset: () =>
     set({
-      sidebarState: "collapsed",
+      sidebarState: getStoredSidebarState(),
       appMode: "chat",
       selectedModel: AVAILABLE_MODELS[0],
       effortLevel: "Cao",

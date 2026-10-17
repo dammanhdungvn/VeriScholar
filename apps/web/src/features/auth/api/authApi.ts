@@ -132,5 +132,17 @@ export const authApi = {
       body: JSON.stringify({ id_token: idToken }),
     });
   },
+
+  /**
+   * POST /api/v1/auth/github
+   * Xác thực tài khoản học giả qua GitHub OAuth 2.0
+   */
+  async githubLogin(payload: { code?: string; access_token?: string; redirect_uri?: string }): Promise<AuthResponse> {
+    return apiClient<AuthResponse>("/auth/github", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
 };
+
 

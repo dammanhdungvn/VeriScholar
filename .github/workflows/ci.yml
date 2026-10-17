@@ -10,7 +10,7 @@ on:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -23,6 +23,7 @@ jobs:
     outputs:
       backend: ${{ steps.filter.outputs.backend }}
       frontend: ${{ steps.filter.outputs.frontend }}
+      docker: ${{ steps.filter.outputs.docker }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -42,6 +43,10 @@ jobs:
             frontend:
               - 'apps/web/**'
               - '.github/workflows/ci.yml'
+            docker:
+              - 'deploy/**'
+              - '.dockerignore'
+              - 'infra/**'
 
   security-scan:
     name: Security & Secret Leak Detection
@@ -198,7 +203,7 @@ jobs:
   docker-validation:
     name: Container & Infrastructure Validation (Docker)
     needs: [detect-changes]
-    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
+    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.docker == 'true' || github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
@@ -206,10 +211,15 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Enterprise Docker Compose Configuration
+      - name: Validate Enterprise Docker Compose Configuration (Default Fallbacks)
         run: |
           docker compose -f deploy/docker-compose.enterprise.yml config -q
-          echo "Enterprise docker-compose configuration is valid."
+          echo "Enterprise docker-compose configuration (defaults) is valid."
+
+      - name: Validate Enterprise Docker Compose Configuration (.env.enterprise)
+        run: |
+          docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config -q
+          echo "Enterprise docker-compose configuration (.env.enterprise) is valid."
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -220,7 +230,14 @@ jobs:
           context: .
           file: deploy/Dockerfile.api
           push: false
+          load: true
           tags: verischolar-api:ci-test
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+
+      - name: Smoke Test Backend Docker Container
+        run: |
+          docker run --rm verischolar-api:ci-test python -c "import api; print('API module verified')"
 
       - name: Test Build Frontend Docker Image
         uses: docker/build-push-action@v6
@@ -229,4 +246,6 @@ jobs:
           file: deploy/Dockerfile.web
           push: false
           tags: verischolar-web:ci-test
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web
 

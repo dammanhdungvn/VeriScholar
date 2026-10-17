@@ -390,4 +390,27 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     // SmartReferenceDrawer opens
     expect(screen.getByTestId("smart-reference-drawer")).toBeInTheDocument();
   });
+
+  it("renders smooth empty state for Paper Viewer and Chat AI when no document is loaded", () => {
+    renderWithClient(
+      <DashboardWorkspace
+        messages={[]}
+        inputText=""
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+        onResetChat={vi.fn()}
+      />
+    );
+
+    // Left Pane Paper Viewer: shows graceful empty state rather than infinite loading skeleton
+    expect(screen.getByText("Chưa có tài liệu nghiên cứu nào")).toBeInTheDocument();
+    expect(screen.getByText(/Tải lên tệp PDF bài báo khoa học/i)).toBeInTheDocument();
+
+    // Right Pane Chat AI: shows smooth Socratic onboarding empty state
+    expect(screen.getByTestId("chat-empty-state")).toBeInTheDocument();
+    expect(screen.getByText("Socratic Copilot sẵn sàng đối thoại")).toBeInTheDocument();
+    expect(screen.getByText(/Chưa có tài liệu nghiên cứu nào được nạp/i)).toBeInTheDocument();
+  });
 });

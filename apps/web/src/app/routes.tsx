@@ -5,6 +5,8 @@ import { LoginForm } from "@/features/auth/components/LoginForm";
 import { RegisterForm } from "@/features/auth/components/RegisterForm";
 import { DashboardPage } from "@/features/dashboard/components/DashboardPage";
 import { WritingPage } from "@/features/writing/components/WritingPage";
+import { ProfilePage } from "@/features/auth/components/ProfilePage";
+import { SettingsPage } from "@/features/auth/components/SettingsPage";
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +20,14 @@ export const router = createBrowserRouter([
   {
     path: "/dashboard/:sessionId",
     element: <DashboardPage />,
+  },
+  {
+    path: "/profile",
+    element: <ProfilePage />,
+  },
+  {
+    path: "/settings",
+    element: <SettingsPage />,
   },
   {
     path: "/writing",

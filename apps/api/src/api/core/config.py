@@ -78,6 +78,8 @@ class Settings(BaseSettings):
     REMEMBER_ME_ACCESS_TOKEN_EXPIRE_SECONDS: int = 2592000  # 30 days for persistent session
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 7776000  # 90 days durable refresh
     GOOGLE_CLIENT_ID: str = ""
+    GITHUB_CLIENT_ID: str = ""
+    GITHUB_CLIENT_SECRET: str = ""
 
     # Langfuse AI Observability & Tracing settings
     LANGFUSE_ENABLED: bool = False

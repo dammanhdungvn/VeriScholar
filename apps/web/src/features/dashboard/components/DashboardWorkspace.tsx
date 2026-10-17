@@ -883,7 +883,7 @@ export function DashboardWorkspace({
               setMobileActiveView("workspace");
             }}
           />
-        ) : (isLoadingDocs || isLoadingDocDetail || Boolean(activeDocumentId) || effectiveDocuments.length > 0) ? (
+        ) : ((isRealDocument && (isLoadingDocs || isLoadingDocDetail)) || (bboxStyle && activeBbox)) ? (
           <div className="flex-1 overflow-auto p-4 sm:p-6 scrollbar-none flex justify-center bg-[#eae5db]/60 dark:bg-[#141311]">
             <div
               style={{
@@ -1247,6 +1247,40 @@ export function DashboardWorkspace({
               </div>
 
 
+
+              {/* Socratic Welcome & Empty State when no messages */}
+              {messages.length === 0 && (
+                <div
+                  data-testid="chat-empty-state"
+                  className="flex-1 flex flex-col items-center justify-center text-center py-10 px-4 select-none space-y-4 max-w-md mx-auto my-auto animate-in fade-in duration-200"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center border border-[#cc785c]/20 shadow-xs">
+                    <Sparkles className="w-6 h-6" />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <h3 className="font-serif font-semibold text-sm sm:text-base text-ink dark:text-zinc-100">
+                      Socratic Copilot sẵn sàng đối thoại
+                    </h3>
+                    <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
+                      {isRealDocument
+                        ? `Đã sẵn sàng phân tích bài báo "${displayTitle}". Đặt câu hỏi hoặc chọn gợi ý bên dưới để đối thoại phản biện.`
+                        : "Chưa có tài liệu nghiên cứu nào được nạp. Hãy tải lên tệp PDF để kích hoạt trích xuất Bounding Box hoặc đặt câu hỏi học thuật tổng quát."}
+                    </p>
+                  </div>
+
+                  {!isRealDocument && (
+                    <button
+                      type="button"
+                      onClick={() => setIsAddDocOpen(true)}
+                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#cc785c]/10 text-[#cc785c] hover:bg-[#cc785c]/20 border border-[#cc785c]/20 transition-colors cursor-pointer shadow-2xs"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>+ Tải lên bài báo PDF</span>
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Chat Messages Stream */}
               {messages.map((message) => {

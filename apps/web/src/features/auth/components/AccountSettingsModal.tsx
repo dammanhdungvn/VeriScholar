@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 import { getScholarInitials } from "../utils/avatarUtils";
+import { cn } from "@/lib/utils";
 
 export interface AccountSettingsModalProps {
   isOpen: boolean;
@@ -34,12 +35,17 @@ export interface AccountSettingsModalProps {
   defaultTab?: "profile" | "connected" | "security";
 }
 
-interface AccountSettingsContentProps {
-  onClose: () => void;
-  defaultTab: "profile" | "connected" | "security";
+export interface AccountSettingsContentProps {
+  onClose?: () => void;
+  defaultTab?: "profile" | "connected" | "security";
+  isPage?: boolean;
 }
 
-function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentProps) {
+export function AccountSettingsContent({
+  onClose,
+  defaultTab = "profile",
+  isPage = false,
+}: AccountSettingsContentProps) {
   const { user, updateUser, logout } = useAuthStore();
   const [activeTab, setActiveTab] = useState<"profile" | "connected" | "security">(defaultTab);
 
@@ -160,29 +166,27 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
     .map((t) => t.trim())
     .filter(Boolean);
 
-  return (
+  const contentNode = (
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label="Cài đặt tài khoản"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
+      className={cn(
+        "w-full bg-canvas dark:bg-[#1a1815] rounded-2xl shadow-2xl border border-hairline dark:border-[#38332c] flex flex-col overflow-hidden text-ink dark:text-[#f5f3ed]",
+        isPage ? "max-w-4xl shadow-sm border border-hairline/80 dark:border-[#332e27]" : "max-w-2xl max-h-[92vh]"
+      )}
+      onClick={(e) => e.stopPropagation()}
     >
-      <div
-        className="w-full max-w-2xl bg-canvas dark:bg-[#1a1815] rounded-2xl shadow-2xl border border-hairline dark:border-[#38332c] flex flex-col overflow-hidden text-ink dark:text-[#f5f3ed] max-h-[92vh]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="h-14 px-6 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between shrink-0 bg-surface-soft/20 dark:bg-[#151311]">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-600/10 text-amber-700 dark:text-amber-500 flex items-center justify-center">
-              <User className="w-4 h-4" />
-            </div>
-            <div>
-              <h2 className="font-serif font-bold text-sm sm:text-base text-ink dark:text-zinc-100">
-                Cài đặt tài khoản
-              </h2>
-            </div>
+      {/* Header */}
+      <div className="h-14 px-6 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between shrink-0 bg-surface-soft/20 dark:bg-[#151311]">
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-amber-600/10 text-amber-700 dark:text-amber-500 flex items-center justify-center">
+            <User className="w-4 h-4" />
           </div>
+          <div>
+            <h2 className="font-serif font-bold text-sm sm:text-base text-ink dark:text-zinc-100">
+              {activeTab === "profile" ? "Hồ sơ cá nhân" : "Cài đặt tài khoản"}
+            </h2>
+          </div>
+        </div>
+        {onClose && (
           <button
             type="button"
             onClick={onClose}
@@ -191,7 +195,8 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
+        )}
+      </div>
 
         {/* Scholar Hero Card */}
         <div className="p-5 sm:p-6 border-b border-hairline dark:border-[#2f2b26] bg-gradient-to-r from-amber-500/5 via-stone-500/5 to-transparent shrink-0">
@@ -798,7 +803,7 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
                       size="sm"
                       onClick={() => {
                         logout();
-                        onClose();
+                        onClose?.();
                         window.location.href = "/login";
                       }}
                       className="h-8 text-2xs flex items-center gap-1.5 cursor-pointer text-rose-600 hover:text-rose-700 hover:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-500/20"
@@ -813,6 +818,20 @@ function AccountSettingsContent({ onClose, defaultTab }: AccountSettingsContentP
           )}
         </div>
       </div>
+  );
+
+  if (isPage) {
+    return contentNode;
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Cài đặt tài khoản"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/65 backdrop-blur-xs animate-in fade-in duration-200"
+    >
+      {contentNode}
     </div>
   );
 }

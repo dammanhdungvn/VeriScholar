@@ -4,6 +4,7 @@ import { AVAILABLE_MODELS } from "../data/mockDashboardData";
 
 describe("useDashboardStore", () => {
   beforeEach(() => {
+    localStorage.clear();
     useDashboardStore.getState().reset();
   });
 
@@ -15,6 +16,22 @@ describe("useDashboardStore", () => {
     expect(state.effortLevel).toBe("Cao");
     expect(state.activeSessionId).toBeUndefined();
     expect(state.activeBbox).toBeNull();
+  });
+
+  it("persists sidebarState to localStorage key verischolar_taskbar_state", () => {
+    const store = useDashboardStore.getState();
+    store.setSidebarState("expanded");
+    expect(localStorage.getItem("verischolar_taskbar_state")).toBe("expanded");
+    expect(useDashboardStore.getState().sidebarState).toBe("expanded");
+
+    store.toggleSidebar();
+    expect(localStorage.getItem("verischolar_taskbar_state")).toBe("collapsed");
+    expect(useDashboardStore.getState().sidebarState).toBe("collapsed");
+
+    // Simulating page refresh by calling reset() with localStorage pre-populated
+    localStorage.setItem("verischolar_taskbar_state", "expanded");
+    useDashboardStore.getState().reset();
+    expect(useDashboardStore.getState().sidebarState).toBe("expanded");
   });
 
   it("toggles sidebar between collapsed and expanded", () => {

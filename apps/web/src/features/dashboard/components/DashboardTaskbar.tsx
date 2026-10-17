@@ -20,6 +20,7 @@ import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { AccountSettingsModal } from "@/features/auth/components/AccountSettingsModal";
+import { AvatarDropdownPopover } from "@/features/auth/components/AvatarDropdownPopover";
 import { useTheme } from "@/hooks/useTheme";
 import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
@@ -53,6 +54,7 @@ export function DashboardTaskbar({
   const [searchQuery, setSearchQuery] = useState("");
   const [filterArchived, setFilterArchived] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
 
 
   const displayedSessions = useMemo(() => {
@@ -354,26 +356,37 @@ export function DashboardTaskbar({
         )}
 
         <div
-          className={`w-full h-11 flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden ${
+          className={`w-full h-11 flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] relative ${
             isExpanded
               ? "bg-white dark:bg-[#23211e] border border-[#e8e4dc] dark:border-[#38332c] px-2 shadow-2xs"
               : "bg-transparent border-transparent justify-center p-0"
           }`}
         >
-          {/* Avatar box - Fixed size, perfectly centered in collapsed mode */}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            title={user?.full_name ? `${user.full_name} — Cài đặt tài khoản` : "Cài đặt tài khoản"}
-            aria-label="Cài đặt tài khoản"
-            className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0 cursor-pointer hover:bg-coral-500/20 transition-colors"
-          >
-            {userInitial}
-          </button>
+          {/* Avatar box with Dropdown Popover */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setIsAvatarDropdownOpen((prev) => !prev)}
+              data-testid="taskbar-avatar-btn"
+              title={user?.full_name ? `${user.full_name} — Tùy chọn tài khoản` : "Tùy chọn tài khoản"}
+              aria-label="Tùy chọn tài khoản"
+              className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0 cursor-pointer hover:bg-coral-500/20 transition-colors"
+            >
+              {userInitial}
+            </button>
+
+            <AvatarDropdownPopover
+              isOpen={isAvatarDropdownOpen}
+              onClose={() => setIsAvatarDropdownOpen(false)}
+              side="top"
+              align="left"
+              className="bottom-full mb-3 left-0"
+            />
+          </div>
 
           {/* User Details & Controls - Smooth Width & Opacity Transition */}
           <div
-            className={`flex items-center justify-between min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+            className={`flex items-center justify-between min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden ${
               isExpanded
                 ? "flex-1 opacity-100 max-w-[170px] ml-2.5"
                 : "max-w-0 opacity-0 ml-0 pointer-events-none"
@@ -381,9 +394,9 @@ export function DashboardTaskbar({
           >
             <button
               type="button"
-              onClick={() => setIsSettingsOpen(true)}
+              onClick={() => setIsAvatarDropdownOpen((prev) => !prev)}
               className="flex flex-col truncate pr-1 text-left cursor-pointer hover:opacity-80 transition-opacity"
-              title="Cài đặt tài khoản"
+              title="Tùy chọn tài khoản"
             >
               <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-anthropic-serif">
                 {user?.full_name ?? "Nhà nghiên cứu"}
