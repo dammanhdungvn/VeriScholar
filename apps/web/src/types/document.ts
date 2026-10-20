@@ -31,6 +31,13 @@ export interface DocumentListItem {
   status: DocumentStatus | string;
   is_persistent: boolean;
   created_at: string;
+  authors?: string[] | null;
+  publication_year?: number | null;
+  year?: number | null;
+  folder_id?: string | null;
+  starred_at?: string | null;
+  page_count?: number | null;
+  file_size_bytes?: number;
 }
 
 export interface DocumentDetailResponseData {

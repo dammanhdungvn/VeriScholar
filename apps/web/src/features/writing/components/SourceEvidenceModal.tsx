@@ -69,8 +69,7 @@ export function SourceEvidenceModal({
           <div className="flex items-center gap-2">
             <BookOpen className="w-4 h-4 text-coral-600 dark:text-coral-400" />
             <span className="font-semibold text-sm text-ink dark:text-zinc-100 font-anthropic-serif">
-              Tài Liệu Nguồn Dẫn Chứng:{" "}
-              {effectiveClaim.evidence_document_title || "Bài báo khoa học nguồn"}
+              Dẫn chứng: {effectiveClaim.evidence_document_title || "Tài liệu nguồn"}
             </span>
           </div>
 
@@ -113,9 +112,10 @@ export function SourceEvidenceModal({
             {/* Claim Card */}
             <div className="p-3 rounded-lg bg-[#fbf9f5] dark:bg-[#201e1a] border border-[#ece8df] dark:border-[#2a2824]">
               <div className="flex items-center justify-between text-[10px] font-semibold text-muted dark:text-zinc-400 uppercase tracking-wider mb-1">
-                <span>Mệnh đề đã kiểm chứng</span>
+                <span>Mệnh đề</span>
                 <span className="font-mono text-coral-600 dark:text-coral-400">
-                  {Math.round(effectiveClaim.confidence_score * 100)}% độ tin cậy
+                  <span aria-hidden="true">{Math.round(effectiveClaim.confidence_score * 100)}% tin cậy</span>
+                  <span className="sr-only">{Math.round(effectiveClaim.confidence_score * 100)}% độ tin cậy</span>
                 </span>
               </div>
               <p className="font-medium text-ink dark:text-zinc-100 text-xs leading-snug">
@@ -133,7 +133,7 @@ export function SourceEvidenceModal({
             <div className="p-3 rounded-lg bg-[#fbf9f5] dark:bg-[#201e1a] border border-[#ece8df] dark:border-[#2a2824]">
               <div className="flex items-center gap-1 text-[10px] font-semibold text-muted dark:text-zinc-400 uppercase tracking-wider mb-1">
                 <Quote className="w-3 h-3 text-coral-500" />
-                <span>Bằng chứng trích dẫn đối chiếu</span>
+                <span>Đoạn trích đối chiếu</span>
               </div>
               <blockquote className="font-serif italic text-xs leading-snug text-ink dark:text-zinc-200 border-l-2 border-coral-500 pl-2">
                 "{effectiveClaim.evidence_text || 'Không có đoạn trích văn bản kèm theo.'}"

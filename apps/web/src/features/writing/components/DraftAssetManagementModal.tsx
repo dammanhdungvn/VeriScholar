@@ -220,7 +220,8 @@ export function DraftAssetManagementModal({
           <div className="flex items-center gap-2">
             <FolderArchive className="w-4 h-4 text-coral-600 dark:text-coral-400" />
             <span className="font-semibold text-sm text-ink dark:text-zinc-100 font-anthropic-serif">
-              Quản lý Assets Học Thuật (.png, .pdf, .bib, .cls, .sty)
+              <span aria-hidden="true">Quản lý Assets</span>
+              <span className="sr-only">Quản lý Assets Học Thuật (.png, .pdf, .bib, .cls, .sty)</span>
             </span>
           </div>
 
@@ -292,7 +293,7 @@ export function DraftAssetManagementModal({
               <div className="flex flex-col items-center space-y-2 py-2">
                 <Loader2 className="w-8 h-8 text-coral-500 animate-spin" />
                 <span className="font-medium text-ink dark:text-zinc-200">
-                  Đang mã hóa & đăng ký asset vào bản thảo...
+                  Đang tải lên asset...
                 </span>
               </div>
             ) : (
@@ -303,11 +304,11 @@ export function DraftAssetManagementModal({
                 <div className="font-medium text-ink dark:text-zinc-200">
                   Kéo thả tệp vào đây, hoặc{" "}
                   <span className="text-coral-600 dark:text-coral-400 underline">
-                    chọn tệp từ máy tính
+                    chọn từ máy tính
                   </span>
                 </div>
                 <p className="text-[11px] text-muted dark:text-zinc-400">
-                  Hỗ trợ hình ảnh biểu đồ (.png, .jpg), trích dẫn (.bib), định dạng mẫu (.cls, .sty) và tài liệu đính kèm (.pdf)
+                  Hỗ trợ .png, .jpg, .bib, .cls, .sty, .pdf
                 </p>
               </div>
             )}

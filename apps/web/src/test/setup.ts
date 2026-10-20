@@ -18,6 +18,23 @@ if (typeof window !== "undefined" && typeof (window as unknown as { Promise?: { 
   (window as unknown as { Promise: { try: unknown } }).Promise.try = (Promise as unknown as { try: unknown }).try;
 }
 
+// Polyfill Map.prototype.getOrInsertComputed and getOrInsert
+if (typeof Map !== "undefined" && typeof (Map.prototype as unknown as { getOrInsertComputed?: unknown }).getOrInsertComputed !== "function") {
+  (Map.prototype as unknown as { getOrInsertComputed: (key: unknown, callback: (key: unknown) => unknown) => unknown }).getOrInsertComputed = function(this: Map<unknown, unknown>, key: unknown, callback: (key: unknown) => unknown) {
+    if (this.has(key)) return this.get(key);
+    const value = callback(key);
+    this.set(key, value);
+    return value;
+  };
+}
+if (typeof Map !== "undefined" && typeof (Map.prototype as unknown as { getOrInsert?: unknown }).getOrInsert !== "function") {
+  (Map.prototype as unknown as { getOrInsert: (key: unknown, defaultValue: unknown) => unknown }).getOrInsert = function(this: Map<unknown, unknown>, key: unknown, defaultValue: unknown) {
+    if (this.has(key)) return this.get(key);
+    this.set(key, defaultValue);
+    return defaultValue;
+  };
+}
+
 // Mock matchMedia for jsdom
 Object.defineProperty(window, "matchMedia", {
   writable: true,
@@ -35,4 +52,13 @@ Object.defineProperty(window, "matchMedia", {
 
 // Mock scrollIntoView for jsdom
 window.HTMLElement.prototype.scrollIntoView = function () {};
+
+// Mock ResizeObserver for jsdom
+if (typeof globalThis.ResizeObserver === "undefined") {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
 

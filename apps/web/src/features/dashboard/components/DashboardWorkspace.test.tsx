@@ -94,11 +94,13 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     );
 
     // Gợi ý prompt ngắn
-    const summaryChip = screen.getByText("Tóm tắt paper");
+    const summaryChips = screen.getAllByText("Tóm tắt paper");
+    expect(summaryChips.length).toBeGreaterThanOrEqual(1);
+    const summaryChip = summaryChips[0];
     expect(summaryChip).toBeInTheDocument();
-    expect(screen.getByText("Đóng góp chính")).toBeInTheDocument();
-    expect(screen.getByText("Phương pháp & Kiến trúc")).toBeInTheDocument();
-    expect(screen.getByText("Hạn chế & Thách thức")).toBeInTheDocument();
+    expect(screen.getAllByText("Đóng góp chính")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Phương pháp & Kiến trúc")[0]).toBeInTheDocument();
+    expect(screen.getAllByText("Hạn chế & Thách thức")[0]).toBeInTheDocument();
 
     // Không tự động render card 3 luận điểm cốt lõi trong tab chat
     expect(screen.queryByText(/3 Luận Điểm Cốt Lõi/i)).not.toBeInTheDocument();
@@ -127,7 +129,7 @@ describe("DashboardWorkspace Split-Pane Component", () => {
 
     const overlay = screen.getByTestId("grounded-bbox-overlay");
     expect(overlay).toBeInTheDocument();
-    expect(overlay).toHaveTextContent(/Tr. 6/i);
+    expect(overlay.textContent).toBe("");
   });
 
   it("calls onSend when user types and submits in the bottom-docked chat input", () => {
@@ -383,12 +385,10 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     expect(citationBtn).toBeInTheDocument();
     expect(screen.getByText("Tr.5")).toBeInTheDocument();
 
-    // Click citation badge
+    // Click citation badge: focuses on bounding box without popping up reference drawer
     fireEvent.click(citationBtn);
     expect(useDashboardStore.getState().activeBbox).toEqual([0.2, 0.3, 0.8, 0.7, 5]);
-
-    // SmartReferenceDrawer opens
-    expect(screen.getByTestId("smart-reference-drawer")).toBeInTheDocument();
+    expect(screen.queryByTestId("smart-reference-drawer")).not.toBeInTheDocument();
   });
 
   it("renders smooth empty state for Paper Viewer and Chat AI when no document is loaded", () => {

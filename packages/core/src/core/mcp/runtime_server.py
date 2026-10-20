@@ -9,18 +9,17 @@ Provides deep runtime inspection tools for AI Agents:
 - GitHub CLI CI/CD inspection (failed job logs, PR status, workflow runs)
 """
 
-import asyncio
 import json
 import os
 import re
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict
 
 import asyncpg
 import httpx
-from mcp.server.mcpserver import MCPServer
 import redis.asyncio as aioredis
+from mcp.server.mcpserver import MCPServer
 
 # Initialize MCP Server
 server = MCPServer("verischolar-runtime-diagnostics")
@@ -142,11 +141,24 @@ async def query_database_readonly(sql: str = "summary") -> str:
             return json.dumps({"error": f"Failed to connect to database: {str(e)}"}, indent=2)
 
     # Safety Guard: strictly allow only SELECT statements
-    dangerous_keywords = ["insert", "update", "delete", "drop", "alter", "truncate", "create", "grant"]
+    dangerous_keywords = [
+        "insert",
+        "update",
+        "delete",
+        "drop",
+        "alter",
+        "truncate",
+        "create",
+        "grant",
+    ]
     first_word = clean_sql.split()[0].lower() if clean_sql else ""
     if first_word != "select":
         return json.dumps(
-            {"error": "Safety violation: Only SELECT queries are permitted in read-only diagnostics."},
+            {
+                "error": (
+                    "Safety violation: Only SELECT queries are permitted in read-only diagnostics."
+                )
+            },
             indent=2,
         )
     for kw in dangerous_keywords:
@@ -165,11 +177,16 @@ async def query_database_readonly(sql: str = "summary") -> str:
         await conn.close()
 
         records = [dict(r) for r in rows]
+
         # Serialize datetime / uuid / bytes
         def default_serializer(obj: Any) -> Any:
             return str(obj)
 
-        return json.dumps({"row_count": len(records), "data": records}, default=default_serializer, indent=2)
+        return json.dumps(
+            {"row_count": len(records), "data": records},
+            default=default_serializer,
+            indent=2,
+        )
     except Exception as e:
         return json.dumps({"error": f"Query failed: {str(e)}"}, indent=2)
 
@@ -219,18 +236,22 @@ async def probe_api(path: str = "/health", host: str = "http://127.0.0.1:8000") 
             except Exception:
                 body_json = resp.text[:500]
 
+            allowed_headers = ["content-type", "server", "x-request-id"]
             return json.dumps(
                 {
                     "url": url,
                     "status_code": resp.status_code,
                     "ttfb_ms": ttfb_ms,
-                    "headers": {k: v for k, v in resp.headers.items() if k.lower() in ["content-type", "server", "x-request-id"]},
+                    "headers": {
+                        k: v for k, v in resp.headers.items() if k.lower() in allowed_headers
+                    },
                     "body": body_json,
                 },
                 indent=2,
             )
     except Exception as e:
-        return json.dumps({"url": url, "error": str(e), "duration_ms": round((time.perf_counter() - t0) * 1000, 2)}, indent=2)
+        duration_ms = round((time.perf_counter() - t0) * 1000, 2)
+        return json.dumps({"url": url, "error": str(e), "duration_ms": duration_ms}, indent=2)
 
 
 @server.tool()
@@ -249,13 +270,15 @@ async def read_service_logs(service: str = "api", lines: int = 40, filter_keywor
     elif service == "nginx-access":
         cmd = ["tail", "-n", str(lines), "/var/log/nginx/access.log"]
     else:
-        return json.dumps({"error": f"Unsupported service '{service}'. Use 'api', 'nginx-error', or 'nginx-access'."})
+        err_msg = f"Unsupported service '{service}'. Use 'api', 'nginx-error', or 'nginx-access'."
+        return json.dumps({"error": err_msg})
 
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=5)
         output_lines = proc.stdout.splitlines()
         if filter_keyword:
-            output_lines = [l for l in output_lines if filter_keyword.lower() in l.lower()]
+            kw = filter_keyword.lower()
+            output_lines = [item for item in output_lines if kw in item.lower()]
 
         return json.dumps(
             {
@@ -283,7 +306,16 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
         if pr_number > 0:
             # 1. Fetch PR checks summary
             pr_cmd = subprocess.run(
-                ["gh", "pr", "view", str(pr_number), "--repo", repo, "--json", "title,state,statusCheckRollup,url"],
+                [
+                    "gh",
+                    "pr",
+                    "view",
+                    str(pr_number),
+                    "--repo",
+                    repo,
+                    "--json",
+                    "title,state,statusCheckRollup,url",
+                ],
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -297,7 +329,17 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
 
         # 2. List recent runs
         runs_cmd = subprocess.run(
-            ["gh", "run", "list", "-L", "5", "--repo", repo, "--json", "databaseId,name,status,conclusion,event,headBranch,url"],
+            [
+                "gh",
+                "run",
+                "list",
+                "-L",
+                "5",
+                "--repo",
+                repo,
+                "--json",
+                "databaseId,name,status,conclusion,event,headBranch,url",
+            ],
             capture_output=True,
             text=True,
             timeout=10,
@@ -319,7 +361,9 @@ async def inspect_github_ci_status(pr_number: int = 0, failed_only: bool = True)
                     timeout=15,
                     cwd=cwd,
                 )
-                failed_run["failed_log_snippet"] = log_cmd.stdout[-2500:] if log_cmd.stdout else "No failed log text returned."
+                failed_run["failed_log_snippet"] = (
+                    log_cmd.stdout[-2500:] if log_cmd.stdout else "No failed log text returned."
+                )
 
         return json.dumps({"recent_runs": runs}, indent=2)
     except Exception as e:

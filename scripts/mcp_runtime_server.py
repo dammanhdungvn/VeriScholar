@@ -4,8 +4,8 @@
 Used by Antigravity / Gemini CLI to spawn the MCP server over stdio.
 """
 
-import sys
 import os
+import sys
 
 # Ensure repo packages are in sys.path
 workspace_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

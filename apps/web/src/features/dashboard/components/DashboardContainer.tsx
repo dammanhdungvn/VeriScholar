@@ -1,10 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardTaskbar } from "./DashboardTaskbar";
 import { DashboardCoworkView } from "./DashboardCoworkView";
+import { DashboardProjectView } from "./DashboardProjectView";
+import { LibraryWorkspaceView } from "@/features/library/components/LibraryWorkspaceView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { HeroUploadDropzone } from "./HeroUploadDropzone";
 import { DashboardWorkspace } from "./DashboardWorkspace";
+import { MobileDashboardHeader } from "./MobileDashboardHeader";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useWorkspaceStore } from "../stores/useWorkspaceStore";
 import { useDashboardSessions } from "../hooks/useDashboardSessions";
@@ -27,6 +30,7 @@ export function DashboardContainer() {
   const activeSessionId = useDashboardStore((s) => s.activeSessionId);
   const setActiveSessionId = useDashboardStore((s) => s.setActiveSessionId);
   const setActiveBbox = useDashboardStore((s) => s.setActiveBbox);
+  const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
 
   const isStandby = useWorkspaceStore((s) => s.isStandby);
   const activeDocumentId = useWorkspaceStore((s) => s.activeDocumentId);
@@ -98,6 +102,8 @@ export function DashboardContainer() {
   ]);
 
   // Synchronize document details when session details are loaded from API
+  const syncedSessionIdRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (sessionDetailRes?.data) {
       const detail = sessionDetailRes.data;
@@ -110,7 +116,8 @@ export function DashboardContainer() {
         setDocument(activeDocId, title);
         useReaderStore.getState().setActiveDocumentId(activeDocId);
 
-        if (detail.viewport_state?.page) {
+        if (syncedSessionIdRef.current !== detail.id && detail.viewport_state?.page) {
+          syncedSessionIdRef.current = detail.id;
           useReaderStore.getState().setCurrentPage(detail.viewport_state.page);
         }
       }
@@ -132,6 +139,7 @@ export function DashboardContainer() {
    * TUYỆT ĐỐI KHÔNG gọi API POST /api/v1/sessions khi chưa có tài liệu.
    */
   const handleNewSession = () => {
+    setAppMode("chat");
     initNewStandbyChat();
     setActiveSessionId(undefined);
     setActiveBbox(null);
@@ -190,6 +198,7 @@ export function DashboardContainer() {
   };
 
   const handleSelectSession = (sessionId: string) => {
+    setAppMode("chat");
     navigate(`/dashboard/${sessionId}`);
     selectSession(sessionId);
     setSession(sessionId);
@@ -244,14 +253,22 @@ export function DashboardContainer() {
         activeSessionId={effectiveSessionId}
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
-        onOpenLibrary={() => setIsLibraryOpen(true)}
-        onOpenProjects={() => setAppMode(appMode === "cowork" ? "chat" : "cowork")}
+        onOpenLibrary={() => navigate("/library")}
+        onOpenProjects={() => navigate("/projects")}
       />
 
       {/* 2. Center Canvas Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+        {/* Sticky Mobile Dashboard Header (< 768px) */}
+        <MobileDashboardHeader
+          onToggleSidebar={toggleSidebar}
+          onNewSession={handleNewSession}
+        />
+
         {/* Dynamic Academic Ambient Background */}
-        <DashboardAmbientBackground isHero={appMode !== "cowork" && showStandbyHero} />
+        <DashboardAmbientBackground
+          isHero={appMode === "chat" && showStandbyHero}
+        />
 
         {/* Expired / Archived Session Re-activation Alert Banner */}
         {activeSession?.is_archived && (
@@ -269,7 +286,23 @@ export function DashboardContainer() {
 
         {/* View Switcher based on AppMode, Standby State & Workspace with Error Boundary */}
         <DashboardErrorBoundary onReset={resetChat}>
-          {appMode === "cowork" ? (
+          {appMode === "project" ? (
+            <DashboardProjectView
+              onNewSession={handleNewSession}
+              onSelectSession={handleSelectSession}
+              onSelectDocument={(docId) => {
+                setDocument(docId, "Tài liệu dự án");
+                setAppMode("chat");
+              }}
+            />
+          ) : appMode === "library" ? (
+            <LibraryWorkspaceView
+              onSelectDocument={(doc) => {
+                handleSelectDocumentFromLibrary(doc);
+                setAppMode("chat");
+              }}
+            />
+          ) : appMode === "cowork" ? (
             <DashboardCoworkView />
           ) : showStandbyHero ? (
             <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">

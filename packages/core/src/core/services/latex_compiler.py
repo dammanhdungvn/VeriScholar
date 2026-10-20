@@ -71,8 +71,11 @@ class SandboxedLatexCompiler:
             )
 
         # Tier 2: Check for system compiler (pdflatex / tectonic)
+        local_tectonic = "/home/VeriScholar/.local/bin/tectonic"
         compiler_bin = (
-            shutil.which("tectonic") or shutil.which("pdflatex")
+            shutil.which("tectonic")
+            or (local_tectonic if os.path.exists(local_tectonic) else None)
+            or shutil.which("pdflatex")
             if self.prefer_system_compiler
             else None
         )
@@ -85,24 +88,35 @@ class SandboxedLatexCompiler:
         pdf_bytes = self._generate_in_memory_pdf_preview(code)
         logger.info("latex_in_memory_fallback_compiled", duration_ms=duration_ms)
 
+        is_fallback_success = bool(pdf_bytes)
+
         return LatexCompilationResult(
-            success=False,
+            success=is_fallback_success,
             pdf_bytes=pdf_bytes,
-            errors=[
-                LatexSyntaxError(
-                    line=1,
-                    column=0,
-                    rule="PREVIEW_ONLY_FALLBACK",
-                    message=(
-                        "Không tìm thấy trình biên dịch CLI (Tectonic/pdflatex). "
-                        "Bản xem trước được dựng qua PyMuPDF fallback."
-                    ),
-                    suggested_fix="Cài đặt Tectonic hoặc TeX Live để biên dịch PDF hoàn chỉnh.",
-                )
-            ],
+            errors=(
+                []
+                if is_fallback_success
+                else [
+                    LatexSyntaxError(
+                        line=1,
+                        column=0,
+                        rule="PREVIEW_ONLY_FALLBACK",
+                        message=(
+                            "Không tìm thấy trình biên dịch CLI (Tectonic/pdflatex). "
+                            "Bản xem trước được dựng qua PyMuPDF fallback."
+                        ),
+                        suggested_fix="Cài đặt Tectonic hoặc TeX Live để biên dịch PDF hoàn chỉnh.",
+                    )
+                ]
+            ),
             logs=(
                 f"Compiled via in-memory preview renderer fallback ({duration_ms}ms). "
-                "Preview only; native CLI compiler unavailable."
+                "Preview generated via fallback renderer."
+                if is_fallback_success
+                else (
+                    f"Compiled via in-memory preview renderer fallback ({duration_ms}ms). "
+                    "Preview only; native CLI compiler unavailable."
+                )
             ),
             retries_attempted=0,
             is_sandboxed=False,

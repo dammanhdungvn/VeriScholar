@@ -334,6 +334,46 @@ async def test_star_document_invalid_uuid(client: AsyncClient) -> None:
 
 
 @pytest.mark.asyncio
+async def test_star_document_toggle_via_dedicated_endpoint(
+    client: AsyncClient,
+    mock_db: InMemoryAsyncStarSession,
+) -> None:
+    """Toggle star endpoint flips is_persistent back and forth."""
+    doc_id = uuid4()
+    doc = _create_sample_doc(doc_id=doc_id, is_persistent=False)
+    mock_db.add(doc)
+
+    # 1. First toggle: False -> True
+    res1 = await client.post(f"/api/v1/documents/{doc_id}:toggle-star")
+    assert res1.status_code == 200
+    assert res1.json()["data"]["is_persistent"] is True
+    assert doc.is_persistent is True
+
+    # 2. Second toggle: True -> False
+    res2 = await client.post(f"/api/v1/documents/{doc_id}:toggle-star")
+    assert res2.status_code == 200
+    assert res2.json()["data"]["is_persistent"] is False
+    assert doc.is_persistent is False
+
+
+@pytest.mark.asyncio
+async def test_star_document_toggle_via_payload(
+    client: AsyncClient,
+    mock_db: InMemoryAsyncStarSession,
+) -> None:
+    """POST /documents/{id}:star with toggle=True toggles state."""
+    doc_id = uuid4()
+    doc = _create_sample_doc(doc_id=doc_id, is_persistent=True)
+    mock_db.add(doc)
+
+    # Starred -> unstarred via payload
+    res = await client.post(f"/api/v1/documents/{doc_id}:star", json={"toggle": True})
+    assert res.status_code == 200
+    assert res.json()["data"]["is_persistent"] is False
+    assert doc.is_persistent is False
+
+
+@pytest.mark.asyncio
 async def test_star_document_openapi_spec(client: AsyncClient) -> None:
     """Verify endpoint is registered with summary, description, and responses in OpenAPI."""
     response = await client.get("/openapi.json")

@@ -72,7 +72,7 @@ describe("ViewportControls Component", () => {
     expect(onReset).toHaveBeenCalled();
   });
 
-  it("handles onExportPdf button click", () => {
+  it("handles onExportPdf action through options menu", () => {
     const onExport = vi.fn();
     render(
       <ViewportControls
@@ -88,13 +88,17 @@ describe("ViewportControls Component", () => {
       />
     );
 
-    const exportBtn = screen.getByRole("button", { name: /Xuất PDF/i });
+    // Open options menu
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    fireEvent.click(overflowBtn);
+
+    const exportBtn = screen.getByTestId("overflow-export-pdf-btn");
     expect(exportBtn).toBeInTheDocument();
     fireEvent.click(exportBtn);
     expect(onExport).toHaveBeenCalledTimes(1);
   });
 
-  it("handles onToggleZenPdf button click for Zen reading mode", () => {
+  it("handles onToggleZenPdf button click for Zen reading mode directly on toolbar", () => {
     const onToggleZen = vi.fn();
     render(
       <ViewportControls
@@ -118,7 +122,7 @@ describe("ViewportControls Component", () => {
     expect(onToggleZen).toHaveBeenCalledTimes(1);
   });
 
-  it("handles onOpenReferences button click for Smart Reference Drawer (Module 3)", () => {
+  it("handles onOpenReferences action through options menu", () => {
     const onOpenRefs = vi.fn();
     render(
       <ViewportControls
@@ -134,10 +138,155 @@ describe("ViewportControls Component", () => {
       />
     );
 
-    const openRefsBtn = screen.getByTestId("open-references-btn");
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    fireEvent.click(overflowBtn);
+
+    const openRefsBtn = screen.getByTestId("overflow-open-references-btn");
     expect(openRefsBtn).toBeInTheDocument();
     expect(openRefsBtn).toHaveTextContent(/Trích xuất Tài liệu Tham khảo/i);
     fireEvent.click(openRefsBtn);
     expect(onOpenRefs).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders overflow menu button when in compact/overflow mode", () => {
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+      />
+    );
+
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    expect(overflowBtn).toBeInTheDocument();
+    expect(overflowBtn).toHaveTextContent(/Tùy chọn/i);
+    expect(screen.queryByTestId("viewport-overflow-popover")).not.toBeInTheDocument();
+  });
+
+  it("opens popover menu on click and handles reading mode selection", () => {
+    const onReadingModeChange = vi.fn();
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+        readingMode="continuous"
+        onReadingModeChange={onReadingModeChange}
+      />
+    );
+
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    fireEvent.click(overflowBtn);
+
+    const popover = screen.getByTestId("viewport-overflow-popover");
+    expect(popover).toBeInTheDocument();
+
+    const singleBtn = screen.getByTestId("overflow-reading-mode-single");
+    fireEvent.click(singleBtn);
+    expect(onReadingModeChange).toHaveBeenCalledWith("single");
+  });
+
+  it("handles action items in overflow popover menu", () => {
+    const onOpenRefs = vi.fn();
+    const onExport = vi.fn();
+    const onToggleZen = vi.fn();
+
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+        onOpenReferences={onOpenRefs}
+        onExportPdf={onExport}
+        onToggleZenPdf={onToggleZen}
+      />
+    );
+
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    fireEvent.click(overflowBtn);
+
+    const refsBtn = screen.getByTestId("overflow-open-references-btn");
+    fireEvent.click(refsBtn);
+    expect(onOpenRefs).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId("viewport-overflow-popover")).not.toBeInTheDocument();
+
+    // Reopen and test export
+    fireEvent.click(overflowBtn);
+    const exportBtn = screen.getByTestId("overflow-export-pdf-btn");
+    fireEvent.click(exportBtn);
+    expect(onExport).toHaveBeenCalledTimes(1);
+
+    // Reopen and test zen
+    fireEvent.click(overflowBtn);
+    const zenBtn = screen.getByTestId("overflow-zen-pdf-btn");
+    fireEvent.click(zenBtn);
+    expect(onToggleZen).toHaveBeenCalledTimes(1);
+  });
+
+  it("closes popover on Escape key", () => {
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+      />
+    );
+
+    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
+    fireEvent.click(overflowBtn);
+    expect(screen.getByTestId("viewport-overflow-popover")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByTestId("viewport-overflow-popover")).not.toBeInTheDocument();
+  });
+
+  it("handles reading mode selection from the inline toolbar dropdown", () => {
+    const onReadingModeChange = vi.fn();
+    render(
+      <ViewportControls
+        currentPage={1}
+        totalPages={10}
+        zoomRatio={1.0}
+        onPageChange={vi.fn()}
+        onZoomIn={vi.fn()}
+        onZoomOut={vi.fn()}
+        onResetZoom={vi.fn()}
+        onRotate={vi.fn()}
+        readingMode="continuous"
+        onReadingModeChange={onReadingModeChange}
+      />
+    );
+
+    const modeBtn = screen.getByTestId("reading-mode-dropdown-btn");
+    expect(modeBtn).toHaveTextContent("Cuộn");
+
+    fireEvent.click(modeBtn);
+    expect(screen.getByTestId("reading-mode-menu-popover")).toBeInTheDocument();
+
+    const twoPageOpt = screen.getByTestId("mode-opt-two-page");
+    fireEvent.click(twoPageOpt);
+
+    expect(onReadingModeChange).toHaveBeenCalledWith("two-page");
+    expect(screen.queryByTestId("reading-mode-menu-popover")).not.toBeInTheDocument();
   });
 });

@@ -49,26 +49,51 @@ class InMemoryAsyncListSession:
 
         target_user_id = params.get("user_id_1") or params.get("user_id")
         target_status = params.get("status_1") or params.get("status")
+        target_persistent = None
+        if (
+            "is_persistent = true" in stmt_str.lower()
+            or "is_persistent is true" in stmt_str.lower()
+        ):
+            target_persistent = True
+        elif (
+            "is_persistent = false" in stmt_str.lower()
+            or "is_persistent is false" in stmt_str.lower()
+        ):
+            target_persistent = False
+        elif "is_persistent_1" in params:
+            target_persistent = params.get("is_persistent_1")
+        elif "is_persistent" in params:
+            target_persistent = params.get("is_persistent")
+
+        target_search = None
+        for k, v in params.items():
+            if isinstance(v, str) and v.startswith("%") and v.endswith("%") and len(v) >= 2:
+                target_search = v[1:-1].lower()
+                break
+
+        def _matches(d: DocumentModel) -> bool:
+            if target_user_id is not None and d.user_id != target_user_id:
+                return False
+            if target_status is not None and d.status != target_status:
+                return False
+            if target_persistent is not None and d.is_persistent != target_persistent:
+                return False
+            if target_search is not None:
+                title_match = bool(d.title and target_search in d.title.lower())
+                fn_match = bool(d.filename and target_search in d.filename.lower())
+                if not (title_match or fn_match):
+                    return False
+            return True
 
         # 1. Count query
         if "count(" in stmt_str and "FROM documents" in stmt_str:
-            matched = [
-                d
-                for d in self.documents.values()
-                if (target_user_id is None or d.user_id == target_user_id)
-                and (target_status is None or d.status == target_status)
-            ]
+            matched = [d for d in self.documents.values() if _matches(d)]
             result_mock.scalar.return_value = len(matched)
             return result_mock
 
         # 2. Select query with pagination
         if "FROM documents" in stmt_str:
-            matched = [
-                d
-                for d in self.documents.values()
-                if (target_user_id is None or d.user_id == target_user_id)
-                and (target_status is None or d.status == target_status)
-            ]
+            matched = [d for d in self.documents.values() if _matches(d)]
             # Order by created_at desc
             matched.sort(key=lambda d: d.created_at, reverse=True)
 
@@ -329,6 +354,46 @@ async def test_list_documents_validation_errors(
 
     res_per_page = await client.get("/api/v1/documents?per_page=101")
     assert res_per_page.status_code == 422
+
+
+@pytest.mark.asyncio
+async def test_list_documents_search_and_star_filters(
+    client: AsyncClient,
+    mock_db: InMemoryAsyncListSession,
+    test_user: UserModel,
+) -> None:
+    """Verify list_documents supports search query and star filter."""
+    doc1 = _create_mock_document(test_user.id, "attention.pdf", title="Attention Is All You Need")
+    doc1.is_persistent = True
+    doc2 = _create_mock_document(test_user.id, "bert.pdf", title="BERT Pre-training")
+    doc2.is_persistent = False
+    doc3 = _create_mock_document(test_user.id, "diffusion.pdf", title="Denoising Diffusion")
+    doc3.is_persistent = True
+
+    mock_db.add(doc1)
+    mock_db.add(doc2)
+    mock_db.add(doc3)
+
+    # 1. Search by title
+    res_search = await client.get("/api/v1/documents?search=Attention")
+    assert res_search.status_code == 200
+    data_search = res_search.json()["data"]
+    assert len(data_search) == 1
+    assert data_search[0]["title"] == "Attention Is All You Need"
+
+    # 2. Filter by star=true
+    res_star = await client.get("/api/v1/documents?star=true")
+    assert res_star.status_code == 200
+    data_star = res_star.json()["data"]
+    assert len(data_star) == 2
+    assert all(d["is_persistent"] is True for d in data_star)
+
+    # 3. Filter by star=false
+    res_unstar = await client.get("/api/v1/documents?star=false")
+    assert res_unstar.status_code == 200
+    data_unstar = res_unstar.json()["data"]
+    assert len(data_unstar) == 1
+    assert data_unstar[0]["title"] == "BERT Pre-training"
 
 
 @pytest.mark.asyncio

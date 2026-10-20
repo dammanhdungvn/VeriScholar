@@ -51,10 +51,13 @@ class UpdateDraftRequest(BaseModel):
         default=None,
         description="Updated format.",
     )
-    version: int = Field(
-        ...,
+    version: int | None = Field(
+        default=None,
         ge=1,
-        description="Expected current version for optimistic concurrency control (OCC).",
+        description=(
+            "Expected current version for optimistic concurrency control (OCC). "
+            "Optional if If-Match header is provided."
+        ),
         examples=[1],
     )
 

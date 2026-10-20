@@ -13,6 +13,15 @@ vi.mock("react-router-dom", async () => {
   };
 });
 
+const mockToggleTheme = vi.fn();
+vi.mock("@/hooks/useTheme", () => ({
+  useTheme: () => ({
+    theme: "light",
+    isDark: false,
+    toggleTheme: mockToggleTheme,
+  }),
+}));
+
 describe("AvatarDropdownPopover component", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -29,7 +38,7 @@ describe("AvatarDropdownPopover component", () => {
     expect(screen.queryByTestId("avatar-dropdown-popover")).not.toBeInTheDocument();
   });
 
-  it("renders with 2 options: 'Hồ sơ cá nhân' and 'Cài đặt' when isOpen is true", () => {
+  it("renders with 3 sections: Header Card, Action List, and Footer List", () => {
     useAuthStore.getState().login({
       user: {
         id: "u-1",
@@ -54,16 +63,36 @@ describe("AvatarDropdownPopover component", () => {
     );
 
     expect(screen.getByTestId("avatar-dropdown-popover")).toBeInTheDocument();
+
+    // 1. Header Card
+    expect(screen.getByTestId("popover-header-card")).toBeInTheDocument();
     expect(screen.getByText("GS. Nguyễn Văn A")).toBeInTheDocument();
     expect(screen.getByText("scholar@hcmut.edu.vn")).toBeInTheDocument();
 
-    const profileBtn = screen.getByTestId("popover-profile-btn");
-    expect(profileBtn).toBeInTheDocument();
-    expect(profileBtn).toHaveTextContent("Hồ sơ cá nhân");
+    // 2. Action List
+    expect(screen.getByTestId("popover-upgrade-btn")).toHaveTextContent("Nâng cấp gói");
+    expect(screen.getByTestId("popover-profile-btn")).toHaveTextContent("Hồ sơ cá nhân");
+    expect(screen.getByTestId("popover-settings-btn")).toHaveTextContent("Cài đặt");
+    expect(screen.getByTestId("popover-theme-btn")).toHaveTextContent("Chế độ giao diện: Sáng");
 
-    const settingsBtn = screen.getByTestId("popover-settings-btn");
-    expect(settingsBtn).toBeInTheDocument();
-    expect(settingsBtn).toHaveTextContent("Cài đặt");
+    // 3. Footer List
+    expect(screen.getByTestId("popover-help-btn")).toHaveTextContent("Trợ giúp & Tài liệu");
+    expect(screen.getByTestId("popover-logout-btn")).toHaveTextContent("Đăng xuất");
+  });
+
+  it("navigates to /profile and calls onClose when clicking Header Card", () => {
+    const handleClose = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <AvatarDropdownPopover isOpen={true} onClose={handleClose} />
+      </MemoryRouter>
+    );
+
+    fireEvent.click(screen.getByTestId("popover-header-card"));
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/profile");
   });
 
   it("navigates to /profile and calls onClose when clicking 'Hồ sơ cá nhân'", () => {
@@ -82,7 +111,29 @@ describe("AvatarDropdownPopover component", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/profile");
   });
 
-  it("navigates to /settings and calls onClose when clicking 'Cài đặt'", () => {
+  it("calls onOpenSettings and closes popover when clicking 'Cài đặt' if prop provided", () => {
+    const handleClose = vi.fn();
+    const handleOpenSettings = vi.fn();
+
+    render(
+      <MemoryRouter>
+        <AvatarDropdownPopover
+          isOpen={true}
+          onClose={handleClose}
+          onOpenSettings={handleOpenSettings}
+        />
+      </MemoryRouter>
+    );
+
+    const settingsBtn = screen.getByTestId("popover-settings-btn");
+    fireEvent.click(settingsBtn);
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(handleOpenSettings).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).not.toHaveBeenCalledWith("/settings");
+  });
+
+  it("navigates to /settings and calls onClose when clicking 'Cài đặt' without onOpenSettings", () => {
     const handleClose = vi.fn();
 
     render(
@@ -96,6 +147,37 @@ describe("AvatarDropdownPopover component", () => {
 
     expect(handleClose).toHaveBeenCalledTimes(1);
     expect(mockNavigate).toHaveBeenCalledWith("/settings");
+  });
+
+  it("toggles theme when clicking theme option", () => {
+    render(
+      <MemoryRouter>
+        <AvatarDropdownPopover isOpen={true} onClose={vi.fn()} />
+      </MemoryRouter>
+    );
+
+    const themeBtn = screen.getByTestId("popover-theme-btn");
+    fireEvent.click(themeBtn);
+
+    expect(mockToggleTheme).toHaveBeenCalledTimes(1);
+  });
+
+  it("calls logout, navigates to /login and closes popover on clicking 'Đăng xuất'", () => {
+    const handleClose = vi.fn();
+    const logoutSpy = vi.spyOn(useAuthStore.getState(), "logout");
+
+    render(
+      <MemoryRouter>
+        <AvatarDropdownPopover isOpen={true} onClose={handleClose} />
+      </MemoryRouter>
+    );
+
+    const logoutBtn = screen.getByTestId("popover-logout-btn");
+    fireEvent.click(logoutBtn);
+
+    expect(handleClose).toHaveBeenCalledTimes(1);
+    expect(logoutSpy).toHaveBeenCalledTimes(1);
+    expect(mockNavigate).toHaveBeenCalledWith("/login");
   });
 
   it("closes popover when pressing Escape key", () => {

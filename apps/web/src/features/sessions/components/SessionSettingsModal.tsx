@@ -97,19 +97,19 @@ export function SessionSettingsModal({
 
           <div className="p-3 rounded-md bg-surface-soft dark:bg-[#201e1b] border border-hairline dark:border-[#2d2924] space-y-1.5 font-mono text-[11px] text-muted">
             <div className="flex justify-between">
-              <span>Mã phiên (UUID):</span>
+              <span>Mã phiên:</span>
               <span className="text-ink dark:text-zinc-300">{sessionId.slice(0, 8)}...</span>
             </div>
             <div className="flex justify-between">
-              <span>Phiên bản OCC:</span>
+              <span>Phiên bản:</span>
               <span className="text-ink dark:text-zinc-300">v{version}</span>
             </div>
             <div className="flex justify-between">
-              <span>Số lượng bài báo:</span>
+              <span>Tài liệu:</span>
               <span className="text-ink dark:text-zinc-300">{documentCount} / 5</span>
             </div>
             <div className="flex justify-between">
-              <span>Khởi tạo lúc:</span>
+              <span>Khởi tạo:</span>
               <span className="text-ink dark:text-zinc-300">
                 {new Date(createdAt).toLocaleDateString()}
               </span>

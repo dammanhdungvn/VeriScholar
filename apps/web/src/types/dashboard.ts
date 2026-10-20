@@ -1,5 +1,5 @@
 export type SidebarState = "collapsed" | "expanded";
-export type AppMode = "chat" | "cowork";
+export type AppMode = "chat" | "cowork" | "project" | "library";
 
 export interface ModelOption {
   id: string;
@@ -14,6 +14,7 @@ export interface ModelOption {
 export type BoundingBox = [number, number, number, number, number]; // [x0, y0, x1, y1, page]
 
 export interface CitationBadgeData {
+  citation_id?: string;
   paper_id: string;
   paper_title: string;
   page: number;

@@ -299,3 +299,60 @@ async def test_verify_text_with_adapter_exception_fallback_to_heuristic(
     assert report.supported_claims == 1
     assert report.claims[0].status == FactVerificationStatus.SUPPORTED
     assert report.claims[0].evidence_document_id == doc_id
+
+
+def test_clean_latex_for_fact_checking_strips_preamble_and_environments() -> None:
+    """Verify that decompose_claims sanitizes LaTeX preambles, macros, math, and comments."""
+    checker = SafeFactChecker()
+    latex_code = r"""\documentclass{article}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue}
+\geometry{a4paper, margin=1in}
+\title{Self-Attention Networks}
+\author{Research Author}
+
+\begin{document}
+\maketitle
+
+% This is an internal draft comment
+\section{Experimental Results}
+The Transformer architecture achieves 28.4 BLEU on English-to-German translation.
+In our experiments, the proposed model outperforms previous ensemble baselines by 2.1 BLEU.
+Furthermore, training required 8 GPUs for 3.5 days.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{architecture.png}
+\caption{System Architecture Diagram}
+\end{figure}
+
+\begin{equation}
+E = mc^2 + \int_0^1 f(x) dx
+\end{equation}
+
+\bibliographystyle{plain}
+\bibliography{sample}
+\end{document}
+"""
+    claims = checker.decompose_claims(latex_code)
+
+    # Must extract only genuine prose sentences, not LaTeX commands
+    assert len(claims) >= 3
+    assert any("28.4 BLEU" in c for c in claims)
+    assert any("outperforms previous ensemble" in c for c in claims)
+    assert any("8 GPUs" in c for c in claims)
+
+    # Must NOT contain LaTeX preamble, environments, or comments
+    for c in claims:
+        assert r"\documentclass" not in c
+        assert r"\usepackage" not in c
+        assert r"\hypersetup" not in c
+        assert r"\geometry" not in c
+        assert r"\begin" not in c
+        assert r"\end" not in c
+        assert r"\includegraphics" not in c
+        assert "E = mc^2" not in c
+        assert "draft comment" not in c
+

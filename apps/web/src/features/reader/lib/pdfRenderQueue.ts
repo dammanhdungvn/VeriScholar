@@ -1,5 +1,6 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { pdfjsLib } from "./pdfjs-init";
+import { useAuthStore, AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 
 /**
  * In-memory document proxy cache to eliminate duplicate network transfers
@@ -13,7 +14,9 @@ export function getCachedPdfDocument(url: string): Promise<PDFDocumentProxy> {
     return existing;
   }
 
-  const token = typeof window !== "undefined" ? localStorage.getItem("verischolar_auth_token") : null;
+  const storedToken =
+    typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null;
+  const token = storedToken || useAuthStore.getState().token;
   const loadingTask = pdfjsLib.getDocument({
     url,
     httpHeaders: token ? { Authorization: `Bearer ${token}` } : {},

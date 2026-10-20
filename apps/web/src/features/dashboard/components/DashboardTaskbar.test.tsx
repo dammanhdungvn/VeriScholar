@@ -113,10 +113,45 @@ describe("DashboardTaskbar component", () => {
     // Popover is initially closed
     expect(screen.queryByTestId("avatar-dropdown-popover")).not.toBeInTheDocument();
 
-    // Click Taskbar Avatar opens popover with the 2 required options
+    // Click Taskbar Avatar opens popover with the required options
     fireEvent.click(avatarBtn);
     expect(screen.getByTestId("avatar-dropdown-popover")).toBeInTheDocument();
     expect(screen.getByText("Hồ sơ cá nhân")).toBeInTheDocument();
     expect(screen.getByText("Cài đặt")).toBeInTheDocument();
+  });
+
+  it("applies Cabinet Principle: renders single unified user button without exposed footer buttons", () => {
+    render(
+      <MemoryRouter>
+        <DashboardTaskbar
+          sessions={RECENT_SESSIONS}
+          onSelectSession={vi.fn()}
+          onNewSession={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    // No separate theme button in collapsed footer
+    expect(screen.queryByTitle("Chế độ sáng")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Chế độ tối")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Cài đặt tài khoản")).not.toBeInTheDocument();
+    expect(screen.queryByTitle("Đăng xuất")).not.toBeInTheDocument();
+
+    // Expand sidebar
+    const toggleBtn = screen.getByTitle("Mở rộng sidebar");
+    fireEvent.click(toggleBtn);
+
+    // Shows user name and 'Tài khoản cá nhân' label
+    expect(screen.getByText("Tài khoản cá nhân")).toBeInTheDocument();
+
+    // Click Taskbar Avatar to open popover, then click 'Cài đặt' to open AccountSettingsModal
+    const avatarBtn = screen.getByTestId("taskbar-avatar-btn");
+    fireEvent.click(avatarBtn);
+
+    const settingsOption = screen.getByTestId("popover-settings-btn");
+    fireEvent.click(settingsOption);
+
+    // Modal is opened
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });

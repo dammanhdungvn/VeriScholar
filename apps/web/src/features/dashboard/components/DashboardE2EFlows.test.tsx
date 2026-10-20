@@ -178,20 +178,13 @@ describe("E2E User Flow & Edge Cases Verification", () => {
 
       const bboxOverlay = screen.getByTestId("grounded-bbox-overlay");
       expect(bboxOverlay).toBeInTheDocument();
-      expect(screen.getByText("Dẫn chứng • Tr. 4")).toBeInTheDocument();
+      expect(bboxOverlay.textContent).toBe("");
 
-      // 4. Verify SmartReferenceDrawer is opened
-      const drawer = screen.getByTestId("smart-reference-drawer");
-      expect(drawer).toBeInTheDocument();
-      expect(screen.getByText(/Tài liệu Tham khảo & Đọc Sâu \(PRD §3\.3\)/i)).toBeInTheDocument();
-
-      // 5. Close drawer via close button
-      const closeBtn = screen.getByTestId("close-drawer-btn");
-      fireEvent.click(closeBtn);
+      // 4. Verify SmartReferenceDrawer is NOT opened on citation click (PRD Visual Grounding only)
       expect(screen.queryByTestId("smart-reference-drawer")).not.toBeInTheDocument();
     });
 
-    it("allows DashboardChatStreamView to trigger onOpenReferences when citation is clicked", () => {
+    it("allows DashboardChatStreamView to focus bounding box without opening reference drawer when citation is clicked", () => {
       const handleOpenReferences = vi.fn();
       const messageWithCitation: ChatMessage = {
         id: "msg-stream-cite",
@@ -225,7 +218,7 @@ describe("E2E User Flow & Edge Cases Verification", () => {
       fireEvent.click(citationBadge);
 
       expect(useDashboardStore.getState().activeBbox).toEqual([0.1, 0.1, 0.8, 0.8, 2]);
-      expect(handleOpenReferences).toHaveBeenCalledTimes(1);
+      expect(handleOpenReferences).not.toHaveBeenCalled();
     });
   });
 

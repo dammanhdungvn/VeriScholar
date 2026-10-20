@@ -15,7 +15,7 @@ export function BboxHighlightLayer({
   currentPage,
   isActive = true,
   label,
-  onClear,
+  onClear: _onClear,
 }: BboxHighlightLayerProps) {
   if (!bbox) return null;
 
@@ -31,27 +31,10 @@ export function BboxHighlightLayer({
       aria-label={label || `Đoạn trích dẫn bằng chứng tại trang ${page}`}
       style={style}
       className={cn(
-        "absolute rounded-xs pointer-events-none transition-all duration-300 z-10",
-        "border-[1.5px] border-accent-amber/90 bg-accent-amber/15 shadow-2xs",
-        isActive && "border-primary bg-primary/20 animate-pulse ring-1 ring-primary/40"
+        "absolute rounded-xs pointer-events-none transition-all duration-300 z-20",
+        "border-2 border-amber-500/90 bg-amber-400/20 shadow-sm",
+        isActive && "border-2 border-amber-500 bg-amber-400/25 ring-2 ring-amber-400/50 shadow-md animate-pulse"
       )}
-    >
-      {/* Visual Badge for Citation Position */}
-      <div className="absolute -top-5 left-0 flex items-center gap-1 pointer-events-auto">
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-mono font-medium tracking-tight bg-primary text-white shadow-xs">
-          Tr. {page}
-        </span>
-        {onClear && (
-          <button
-            type="button"
-            onClick={onClear}
-            className="w-4 h-4 rounded-full bg-black/60 hover:bg-black text-white flex items-center justify-center text-[10px]"
-            aria-label="Xóa viền highlight"
-          >
-            ×
-          </button>
-        )}
-      </div>
-    </div>
+    />
   );
 }

@@ -647,6 +647,51 @@ class SessionChatService:
         request_id: str | None = None,
     ) -> AsyncIterator[str]:
         """Stream SSE response with Cross-Document Context, Reasoning, and Disconnect Guard."""
+        gen = self._stream_chat_generator(
+            session_id=session_id,
+            user_id=user_id,
+            request=request,
+            is_disconnected=is_disconnected,
+            last_event_id=last_event_id,
+            request_id=request_id,
+        )
+        try:
+            async for chunk in gen:
+                yield chunk
+        except asyncio.CancelledError:
+            logger.info("sse_chat_stream_cancelled", session_id=str(session_id))
+            raise
+        except Exception as exc:
+            logger.error(
+                "sse_chat_stream_unhandled_error",
+                session_id=str(session_id),
+                error=str(exc),
+            )
+            err_dict = {
+                "code": "STREAM_RUNTIME_ERROR",
+                "message": "Đã xảy ra sự cố trong quá trình xử lý câu hỏi.",
+                "detail": str(exc),
+                "request_id": request_id,
+            }
+            yield f"event: error\ndata: {json.dumps(err_dict, ensure_ascii=False)}\n\n"
+            yield "data: [DONE]\n\n"
+        finally:
+            try:
+                await gen.aclose()
+            except Exception as close_err:
+                logger.debug("sse_chat_generator_close_suppressed", error=str(close_err))
+            logger.info("sse_chat_stream_closed", session_id=str(session_id))
+
+    async def _stream_chat_generator(
+        self,
+        session_id: UUID,
+        user_id: UUID,
+        request: SessionChatMessageRequest,
+        is_disconnected: Callable[[], Coroutine[Any, Any, bool]],
+        last_event_id: str | None = None,
+        request_id: str | None = None,
+    ) -> AsyncIterator[str]:
+        """Internal generator yielding SSE events for session chat."""
         session_stmt = select(ResearchSessionModel).where(
             ResearchSessionModel.id == session_id,
             ResearchSessionModel.user_id == user_id,
@@ -755,14 +800,19 @@ class SessionChatService:
                 violation_type=input_guard.violation_type,
                 pattern=input_guard.matched_pattern,
             )
+            if input_guard.violation_type == "OUT_OF_ACADEMIC_SCOPE":
+                thought_msg = (
+                    "Phát hiện câu hỏi nằm ngoài phạm vi học thuật (OUT_OF_ACADEMIC_SCOPE). "
+                    "Kích hoạt cơ chế định hướng học thuật (Academic Scope Guardrail)."
+                )
+            else:
+                thought_msg = (
+                    f"Phát hiện cảnh báo an toàn ({input_guard.violation_type}). "
+                    "Kích hoạt cơ chế từ chối học thuật (Academic Abstention Guardrail)."
+                )
             evt_reasoning = emit(
                 "reasoning",
-                {
-                    "thought": (
-                        f"Phát hiện cảnh báo an toàn ({input_guard.violation_type}). "
-                        "Kích hoạt cơ chế từ chối học thuật (Academic Abstention Guardrail)."
-                    )
-                },
+                {"thought": thought_msg},
             )
             if evt_reasoning:
                 yield evt_reasoning
@@ -779,6 +829,7 @@ class SessionChatService:
             prompt_tokens = len(request.question.split()) * 2
             completion_tokens = len(refusal_text.split())
             done_payload = {
+                "type": "done",
                 "finish_reason": "blocked_by_guardrail",
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
@@ -788,9 +839,6 @@ class SessionChatService:
                 "intent": IntentType.ADVERSARIAL_OUT_OF_DOMAIN.value,
                 "ambiguity_type": AmbiguityType.SCOPE_MISMATCH.value,
             }
-            evt_done = emit("done", done_payload)
-            if evt_done:
-                yield evt_done
 
             turn_model = SessionTurnModel(
                 id=turn_id,
@@ -805,7 +853,17 @@ class SessionChatService:
                 created_at=datetime.now(UTC),
             )
             self.db.add(turn_model)
-            await self.db.commit()
+            try:
+                await self.db.commit()
+            except Exception as db_err:
+                logger.error("failed_to_persist_guardrail_turn", error=str(db_err))
+                await self.db.rollback()
+
+            evt_done = emit("done", done_payload)
+            if evt_done:
+                yield evt_done
+            yield "data: [DONE]\n\n"
+
             trace_span.__exit__(None, None, None)
             return
 
@@ -845,8 +903,12 @@ class SessionChatService:
                     if score < relevance_cutoff:
                         continue
                     chk = item[0] if hasattr(item, "__getitem__") else item
+                    cnt = getattr(chk, "content", "") or ""
+                    # Exclude empty or placeholder chunks without substantive text
+                    if not cnt.strip() or len(cnt.strip()) < 20:
+                        continue
                     tok_cnt = getattr(chk, "token_count", None) or max(
-                        1, int(len((getattr(chk, "content", "") or "").split()) * 1.3)
+                        1, int(len(cnt.split()) * 1.3)
                     )
                     if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
                         break
@@ -944,13 +1006,31 @@ class SessionChatService:
                     "dựa trên các bài báo được cung cấp.\n\n"
                     f"{security_directive}\n\n"
                     "QUY TẮC PHẢN HỒI:\n"
-                    "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. Không bịa đặt.\n"
-                    "2. Gắn trích dẫn: Khi đưa ra số liệu hay luận điểm then chốt, BẮT BUỘC "
-                    "gắn kèm thẻ trích dẫn (ví dụ: [^cit_1], [^cit_2]) để đối chiếu PDF.\n"
-                    "3. Phản biện Socratic: Nếu câu hỏi có tiền đề sai hoặc ngộ nhận kiến trúc, "
+                    "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
+                    "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
+                    "2. Gắn trích dẫn inline: Khi đưa ra số liệu hay luận điểm then chốt "
+                    "lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn inline (ví dụ: [^cit_1], [^cit_2]) "
+                    "NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa luận điểm đó. "
+                    "CHỈ trích dẫn [^cit_X] khi trong ngữ cảnh cung cấp thực sự có nội dung "
+                    "bằng chứng rõ ràng cho chi tiết. Nếu chỉ có bảng phân rã hoặc chưa có "
+                    "trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa [^cit_X].\n"
+                    "3. Hiển thị công thức toán học: Định dạng chuẩn LaTeX KaTeX. "
+                    "Sử dụng \\[ ... \\] hoặc $$ ... $$ cho công thức hiển thị riêng dòng, "
+                    "và \\( ... \\) hoặc $ ... $ cho công thức inline trong dòng.\n"
+                    "4. Vẽ sơ đồ / mindmap / kiến trúc: Khi người dùng yêu cầu vẽ mindmap, "
+                    "kiến trúc, sơ đồ hoặc flowchart (hoặc khi cần trực quan hóa luồng dữ liệu), "
+                    "hãy sử dụng khối mã code ```mermaid ... ``` với cú pháp Mermaid chuẩn (ví dụ: "
+                    "graph TD, flowchart LR, mindmap, sequenceDiagram) để hệ thống tự động vẽ "
+                    "sơ đồ trực quan tương tác.\n"
+                    "5. Phản biện Socratic: Nếu câu hỏi có tiền đề sai hoặc ngộ nhận kiến trúc, "
                     "hãy giải thích lịch thiệp, chỉ rõ điểm sai và hướng dẫn đối chiếu bài báo.\n"
-                    "4. Phong cách: Khoa học, sư phạm, Markdown rõ ràng bằng tiếng Việt "
-                    "(hoặc ngôn ngữ câu hỏi)."
+                    "6. Phong cách: Khoa học, sư phạm, Markdown rõ ràng bằng tiếng Việt "
+                    "(hoặc ngôn ngữ câu hỏi).\n"
+                    "7. Ranh giới học thuật (Academic Boundary): Luôn giữ vững vai trò Socratic "
+                    "học thuật. Tuyệt đối không giải đáp các chủ đề đời sống, thời tiết, "
+                    "nấu ăn, tán gẫu, giải trí hoặc không liên quan đến bài báo hay phương pháp "
+                    "nghiên cứu. Nếu câu hỏi ngoài luồng lọt qua bộ lọc, hãy lịch thiệp từ chối "
+                    "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu."
                 )
 
                 evidence_blocks: list[dict[str, Any]] = []
@@ -1143,6 +1223,7 @@ class SessionChatService:
         full_thought = "".join(thought_parts) if thought_parts else None
         reasoning_tokens = len(full_thought.split()) * 2 if full_thought else 0
         done_payload = {
+            "type": "done",
             "finish_reason": finish_reason,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
@@ -1170,10 +1251,6 @@ class SessionChatService:
         )
         gen_span.__exit__(None, None, None)
 
-        evt_done = emit("done", done_payload)
-        if evt_done:
-            yield evt_done
-
         # Persist turn into database for session history restore
         turn_model = SessionTurnModel(
             id=turn_id,
@@ -1188,7 +1265,16 @@ class SessionChatService:
             created_at=datetime.now(UTC),
         )
         self.db.add(turn_model)
-        await self.db.commit()
+        try:
+            await self.db.commit()
+        except Exception as db_err:
+            logger.error("failed_to_persist_session_turn", error=str(db_err))
+            await self.db.rollback()
+
+        evt_done = emit("done", done_payload)
+        if evt_done:
+            yield evt_done
+        yield "data: [DONE]\n\n"
 
         trace_span.set_output(final_answer)
         trace_span.set_metadata(

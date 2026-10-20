@@ -12,8 +12,11 @@ interface DashboardState {
   isModelModalOpen: boolean;
   isUploadModalOpen: boolean;
   isVoiceModalOpen: boolean;
+  isReasoningEnabled: boolean;
 
   // Actions
+  toggleReasoning: () => void;
+  setReasoningEnabled: (enabled: boolean) => void;
   toggleSidebar: () => void;
   setSidebarState: (state: SidebarState) => void;
   setAppMode: (mode: AppMode) => void;
@@ -63,6 +66,12 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isModelModalOpen: false,
   isUploadModalOpen: false,
   isVoiceModalOpen: false,
+  isReasoningEnabled: true,
+
+  toggleReasoning: () =>
+    set((state) => ({ isReasoningEnabled: !state.isReasoningEnabled })),
+
+  setReasoningEnabled: (isReasoningEnabled) => set({ isReasoningEnabled }),
 
   toggleSidebar: () =>
     set((state) => {
@@ -94,7 +103,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       activeBbox: null,
       isModelModalOpen: false,
       isUploadModalOpen: false,
-      isVoiceModalOpen: false
+      isVoiceModalOpen: false,
+      isReasoningEnabled: true,
     })
 }));
 

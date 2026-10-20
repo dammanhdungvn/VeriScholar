@@ -246,6 +246,7 @@ async def test_post_session_message_sse_streaming_success(
     assert "event: citations" in body_text
     assert "event: token" in body_text
     assert "event: done" in body_text
+    assert "data: [DONE]" in body_text
     assert len(chat_db.session_turns) == 1
     assert chat_db.session_turns[0].question == payload["question"]
 
@@ -552,11 +553,44 @@ async def test_post_session_message_blocked_by_prompt_injection_guardrail(
     assert "SYSTEM_OVERRIDE" in sse_text or "Academic Abstention" in sse_text
     assert "event: token" in sse_text
     assert "event: done" in sse_text
+    assert "data: [DONE]" in sse_text
     assert '"finish_reason": "blocked_by_guardrail"' in sse_text
 
     last_turn = chat_db.session_turns[-1]
     assert last_turn.finish_reason == "blocked_by_guardrail"
     assert "chỉ thị thay đổi hành vi hệ thống" in last_turn.answer
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_blocked_by_academic_scope_guardrail(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Non-academic queries must be intercepted by Academic Scope Guardrail immediately."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    payload = {
+        "question": "Thời tiết hôm nay thế nào?",
+        "stream": True,
+        "scope": "multi_paper",
+    }
+    resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp.status_code == 200
+
+    sse_text = resp.text
+    assert "event: reasoning" in sse_text
+    assert "OUT_OF_ACADEMIC_SCOPE" in sse_text
+    assert "event: token" in sse_text
+    assert "Socratic Copilot là trợ lý chuyên sâu cho nghiên cứu khoa học" in sse_text
+    assert "nằm ngoài phạm vi học thuật" in sse_text
+    assert "event: done" in sse_text
+    assert "data: [DONE]" in sse_text
+    assert '"finish_reason": "blocked_by_guardrail"' in sse_text
+
+    last_turn = chat_db.session_turns[-1]
+    assert last_turn.finish_reason == "blocked_by_guardrail"
+    assert "nằm ngoài phạm vi học thuật" in last_turn.answer
 
 
 @pytest.mark.asyncio
@@ -657,3 +691,34 @@ async def test_post_session_message_global_token_budget_enforced(
     # Check that it did not select all 12 chunks
     last_turn = chat_db.session_turns[-1]
     assert len(last_turn.citations) <= 7
+
+
+@pytest.mark.asyncio
+async def test_post_session_message_sse_clean_terminal_done_and_order(
+    client: AsyncClient, chat_db: InMemoryAsyncChatStore
+) -> None:
+    """Verify SSE chat generator ends with event: done followed by data: [DONE]."""
+    s_id = uuid4()
+    sess = _create_mock_session(s_id, DEFAULT_DEV_USER_ID)
+    chat_db.add(sess)
+
+    payload = {
+        "question": "Mô tả cơ chế Scaled Dot-Product Attention",
+        "stream": True,
+    }
+    resp = await client.post(f"/api/v1/sessions/{s_id}/messages", json=payload)
+    assert resp.status_code == 200
+
+    raw_text = resp.text
+    assert "event: done" in raw_text
+    assert "data: [DONE]" in raw_text
+
+    # data: [DONE] must be at the very end of the stream after event: done
+    done_event_pos = raw_text.rfind("event: done")
+    terminal_pos = raw_text.rfind("data: [DONE]")
+    assert terminal_pos > done_event_pos, "Terminal [DONE] sentinel must come after event: done"
+
+    # Verify done event contains type: done and finish_reason: stop
+    done_segment = raw_text[done_event_pos:terminal_pos]
+    assert '"type": "done"' in done_segment
+    assert '"finish_reason": "stop"' in done_segment

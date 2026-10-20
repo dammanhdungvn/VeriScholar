@@ -549,9 +549,7 @@ async def test_github_auth_unconfigured_client_credentials_rejected_with_401() -
 async def test_github_auth_network_failure_rejected_with_401() -> None:
     """Verify network connection timeout or failure to GitHub API returns HTTP 401."""
     async with github_test_context() as (client, _):
-        p_get, p_post = patch_github_http(
-            get_handler=httpx.ConnectTimeout("Connection timed out")
-        )
+        p_get, p_post = patch_github_http(get_handler=httpx.ConnectTimeout("Connection timed out"))
         with p_get, p_post:
             res = await client.post(
                 "/api/v1/auth/github",

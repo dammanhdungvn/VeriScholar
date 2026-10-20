@@ -73,7 +73,7 @@ export function HeroSection() {
             style={{ transform: "translateZ(24px)" }}
           >
             {/* Monumental Headline */}
-            <h1 className="font-quote text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] font-normal leading-[1.12] text-ink tracking-tight">
+            <h1 className="font-quote text-3xl sm:text-5xl md:text-6xl lg:text-[4.25rem] text-[clamp(1.75rem,5.5vw,4.25rem)] font-normal leading-[1.14] sm:leading-[1.12] text-ink tracking-tight max-w-full">
               <span className="block text-ink dark:text-[#f4f2eb] drop-shadow-2xs">
                 “What I cannot create,
               </span>{" "}
@@ -83,13 +83,13 @@ export function HeroSection() {
             </h1>
 
             {/* Author Attribution with Engraved Hairline Rules & Caltech Historical Inscription */}
-            <footer className="flex flex-col items-center justify-center gap-2.5 pt-3 sm:pt-4">
-              <div className="flex items-center justify-center gap-3.5 text-xs sm:text-sm font-mono text-[#4a453c] dark:text-[#c4bdb2] uppercase tracking-[0.25em] font-medium">
-                <span className="w-8 sm:w-16 h-[1px] bg-gradient-to-r from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50" />
-                <span className="font-semibold text-[#322e28] dark:text-[#eae6de]">Richard Feynman</span>
-                <span className="w-8 sm:w-16 h-[1px] bg-gradient-to-l from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50" />
+            <footer className="flex flex-col items-center justify-center gap-2 sm:gap-2.5 pt-3 sm:pt-4 max-w-full">
+              <div className="flex items-center justify-center gap-2 sm:gap-3.5 text-xs sm:text-sm font-mono text-[#4a453c] dark:text-[#c4bdb2] uppercase tracking-[0.18em] sm:tracking-[0.25em] font-medium max-w-full">
+                <span className="w-4 sm:w-16 h-[1px] bg-gradient-to-r from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50 shrink-0" />
+                <span className="font-semibold text-[#322e28] dark:text-[#eae6de] whitespace-nowrap">Richard Feynman</span>
+                <span className="w-4 sm:w-16 h-[1px] bg-gradient-to-l from-transparent to-[#cc785c]/60 dark:to-[#cc785c]/50 shrink-0" />
               </div>
-              <span className="text-[10px] sm:text-[11px] font-mono text-muted/80 dark:text-zinc-400 uppercase tracking-[0.2em]">
+              <span className="text-[10px] sm:text-[11px] font-mono text-muted/80 dark:text-zinc-400 uppercase tracking-[0.16em] sm:tracking-[0.2em] text-center px-2">
                 Caltech, 1988 • Di bút trên bảng đen
               </span>
             </footer>

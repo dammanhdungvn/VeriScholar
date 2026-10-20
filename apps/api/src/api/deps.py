@@ -1,5 +1,6 @@
 """Dependencies for FastAPI endpoints."""
 
+import os
 from uuid import UUID
 
 from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIdempotencyAdapter
@@ -277,37 +278,40 @@ async def get_current_user(
             )
         return user
 
-    # Fallback compatibility for unit tests (X-User-Id)
-    custom_uid_header = request.headers.get("x-user-id") or request.headers.get("X-User-Id")
-    if custom_uid_header:
-        try:
-            user_id = UUID(custom_uid_header)
-        except (ValueError, TypeError):
-            user_id = DEFAULT_DEV_USER_ID
+    # Restricted fallback compatibility strictly for isolated unit test harness (X-User-Id).
+    # Completely blocked in network/live/staging/prod to prevent auth bypass (OWASP BOLA/IDOR).
+    is_unit_test_harness = bool(os.environ.get("PYTEST_CURRENT_TEST"))
+    if is_unit_test_harness:
+        custom_uid_header = request.headers.get("x-user-id") or request.headers.get("X-User-Id")
+        if custom_uid_header:
+            try:
+                user_id = UUID(custom_uid_header)
+            except (ValueError, TypeError):
+                user_id = DEFAULT_DEV_USER_ID
 
-        stmt = select(UserModel).where(UserModel.id == user_id)
-        result = await db.execute(stmt)
-        user = result.scalar_one_or_none()
-        if user is None:
-            user = UserModel(
-                id=user_id,
-                email=f"user_{user_id.hex[:8]}@verischolar.org"
-                if user_id != DEFAULT_DEV_USER_ID
-                else "developer@verischolar.org",
-                full_name="VeriScholar User"
-                if user_id != DEFAULT_DEV_USER_ID
-                else "VeriScholar Developer",
-                hashed_password="dev_dummy_password",
-                is_active=True,
-                role="researcher",
-                institution="VeriScholar Lab",
-                academic_rank="Core Developer",
-                is_verified=True,
-            )
-            db.add(user)
-            await db.commit()
-            await db.refresh(user)
-        return user
+            stmt = select(UserModel).where(UserModel.id == user_id)
+            result = await db.execute(stmt)
+            user = result.scalar_one_or_none()
+            if user is None:
+                user = UserModel(
+                    id=user_id,
+                    email=f"user_{user_id.hex[:8]}@verischolar.org"
+                    if user_id != DEFAULT_DEV_USER_ID
+                    else "developer@verischolar.org",
+                    full_name="VeriScholar User"
+                    if user_id != DEFAULT_DEV_USER_ID
+                    else "VeriScholar Developer",
+                    hashed_password="dev_dummy_password",
+                    is_active=True,
+                    role="researcher",
+                    institution="VeriScholar Lab",
+                    academic_rank="Core Developer",
+                    is_verified=True,
+                )
+                db.add(user)
+                await db.commit()
+                await db.refresh(user)
+            return user
 
     # Neither Authorization nor X-User-Id provided -> reject with 401 Unauthorized
     raise HTTPException(

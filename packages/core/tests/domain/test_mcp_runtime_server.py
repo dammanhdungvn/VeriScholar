@@ -1,14 +1,15 @@
 """Unit tests for VeriScholar Runtime Diagnostics MCP Server."""
 
 import json
+
 import pytest
 from core.mcp.runtime_server import (
     check_services_health,
-    query_database_readonly,
+    inspect_github_ci_status,
     inspect_redis,
     probe_api,
+    query_database_readonly,
     read_service_logs,
-    inspect_github_ci_status,
 )
 
 

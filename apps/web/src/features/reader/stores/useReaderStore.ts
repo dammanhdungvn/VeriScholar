@@ -38,6 +38,7 @@ export interface ReaderState {
   setReadingMode: (mode: ReadingMode) => void;
   setColorTheme: (theme: ReaderColorTheme) => void;
   setFitMode: (mode: FitMode) => void;
+  toggleFitWidth: () => void;
   toggleThumbnails: () => void;
   setIsThumbnailsOpen: (open: boolean) => void;
   resetReader: () => void;
@@ -54,7 +55,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   activeBbox: null,
   readingMode: "continuous",
   colorTheme: "default",
-  fitMode: "custom",
+  fitMode: "width",
   isThumbnailsOpen: false,
 
   setActiveDocumentId: (id) =>
@@ -117,7 +118,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       fitMode: "custom",
     })),
 
-  resetZoom: () => set({ zoomRatio: 1.0, fitMode: "custom" }),
+  resetZoom: () => set({ zoomRatio: 1.0, fitMode: "width" }),
 
   setCurrentPage: (page) =>
     set((state) => ({
@@ -161,6 +162,11 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   setReadingMode: (mode) => set({ readingMode: mode }),
   setColorTheme: (theme) => set({ colorTheme: theme }),
   setFitMode: (mode) => set({ fitMode: mode }),
+  toggleFitWidth: () =>
+    set((s) => ({
+      fitMode: s.fitMode === "width" ? "custom" : "width",
+      ...(s.fitMode !== "width" ? { zoomRatio: 1.0 } : {}),
+    })),
   toggleThumbnails: () => set((s) => ({ isThumbnailsOpen: !s.isThumbnailsOpen })),
   setIsThumbnailsOpen: (open) => set({ isThumbnailsOpen: open }),
 
@@ -176,7 +182,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       activeBbox: null,
       readingMode: "continuous",
       colorTheme: "default",
-      fitMode: "custom",
+      fitMode: "width",
       isThumbnailsOpen: false,
     }),
 }));

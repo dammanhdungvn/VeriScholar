@@ -65,15 +65,15 @@ describe("useWorkspaceStore (Lazy Session & Ingestion State)", () => {
     expect(initialState.zenMode).toBe("none");
     expect(initialState.activeContextChip).toBeNull();
 
-    // Split ratio clamped within 20 - 80%
-    useWorkspaceStore.getState().setSplitRatio(65);
-    expect(useWorkspaceStore.getState().splitRatio).toBe(65);
+    // Split ratio clamped strictly within 35 - 65%
+    useWorkspaceStore.getState().setSplitRatio(60);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(60);
 
     useWorkspaceStore.getState().setSplitRatio(10);
-    expect(useWorkspaceStore.getState().splitRatio).toBe(20);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(35);
 
     useWorkspaceStore.getState().setSplitRatio(95);
-    expect(useWorkspaceStore.getState().splitRatio).toBe(80);
+    expect(useWorkspaceStore.getState().splitRatio).toBe(65);
 
     // Zen mode toggles
     useWorkspaceStore.getState().setZenMode("pdf");

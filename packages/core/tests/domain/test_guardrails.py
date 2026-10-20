@@ -228,3 +228,53 @@ def test_verify_output_detects_system_prompt_leak() -> None:
     assert res.is_grounded is False
     assert res.warning is not None
     assert "rò rỉ chỉ thị hệ thống" in res.warning
+
+
+def test_check_academic_scope_blocks_non_academic_queries() -> None:
+    """Non-academic questions about weather, food, chit-chat, and gaming must be blocked."""
+    non_academic_queries = [
+        "Thời tiết hôm nay thế nào?",
+        "Hôm nay trời có mưa không?",
+        "What is the weather forecast today?",
+        "Cách nấu phở bò truyền thống",
+        "Hôm nay ăn gì đây?",
+        "How to cook spaghetti pasta?",
+        "Bạn có người yêu chưa?",
+        "Kể cho tôi một câu chuyện cười đi",
+        "Bạn bao nhiêu tuổi?",
+        "Tell me a joke",
+        "Chỉ tôi mẹo chơi game và cách leo rank",
+        "Hóng tin tức scandal showbiz mới nhất",
+        "Xem bói tử vi hôm nay cho tôi",
+        "Nên mua điện thoại gì năm nay?",
+    ]
+
+    for q in non_academic_queries:
+        is_academic, refusal = AIGuardrailsService.check_academic_scope(q)
+        assert is_academic is False, f"Expected '{q}' to be rejected by academic scope guardrail"
+        assert refusal == AIGuardrailsService.ACADEMIC_SCOPE_REFUSAL_MESSAGE
+
+
+def test_check_academic_scope_allows_academic_queries_with_overlapping_terms() -> None:
+    """Academic queries mentioning weather/food/game in scientific context must pass."""
+    academic_queries = [
+        "Mô hình dự báo thời tiết bằng mạng nơ-ron sâu trong bài báo đạt độ chính xác bao nhiêu?",
+        "Thuật toán lý thuyết trò chơi game theory được tác giả phân tích ở mục nào?",
+        "Đánh giá công nghệ thực phẩm và sinh hóa học trong tài liệu nghiên cứu.",
+        "So sánh bảng kết quả thực nghiệm giữa hai phương pháp đề xuất.",
+        "What is the BLEU score achieved by the model on the test dataset?",
+    ]
+
+    for q in academic_queries:
+        is_academic, refusal = AIGuardrailsService.check_academic_scope(q)
+        assert is_academic is True, f"Expected '{q}' to be permitted as academic research"
+        assert refusal is None
+
+
+def test_scan_user_input_blocks_out_of_academic_scope() -> None:
+    """scan_user_input should classify out-of-scope queries with OUT_OF_ACADEMIC_SCOPE."""
+    result = AIGuardrailsService.scan_user_input("Thời tiết hôm nay thế nào?")
+    assert result.is_safe is False
+    assert result.violation_type == "OUT_OF_ACADEMIC_SCOPE"
+    assert "nằm ngoài phạm vi học thuật" in (result.refusal_reason or "")
+    assert "Socratic Copilot" in (result.refusal_reason or "")

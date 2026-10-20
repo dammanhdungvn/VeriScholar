@@ -61,6 +61,130 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = structlog.get_logger("api.services.draft")
 
 
+DEFAULT_TEMPLATE_TITLE_PLACEHOLDER = (
+    r"\title{\textbf{\Large KIẾN TRÚC MÔ HÌNH SOCRATIC COPILOT: \\ "
+    r"TỰ ĐỘNG PHẢN BIỆN VÀ ĐỐI CHIẾU DẪN CHỨNG HỌC THUẬT}}"
+)
+
+DEFAULT_STARTER_LATEX_TEMPLATE = (
+    r"\documentclass[10pt,twocolumn,a4paper]{article}" + "\n"
+    r"\usepackage[utf8]{inputenc}" + "\n"
+    r"\usepackage[top=2.2cm,bottom=2.2cm,left=1.8cm,right=1.8cm,columnsep=0.8cm]{geometry}" + "\n"
+    r"\usepackage{amsmath,amsfonts,amssymb}" + "\n"
+    r"\usepackage{graphicx}" + "\n"
+    r"\usepackage{booktabs}" + "\n"
+    r"\usepackage{xcolor}" + "\n"
+    r"\usepackage{microtype}" + "\n"
+    r"\usepackage{hyperref}" + "\n\n"
+    r"\hypersetup{" + "\n"
+    r"    colorlinks=true," + "\n"
+    r"    linkcolor=blue," + "\n"
+    r"    citecolor=teal," + "\n"
+    r"    urlcolor=blue" + "\n"
+    r"}" + "\n\n" + DEFAULT_TEMPLATE_TITLE_PLACEHOLDER + "\n" + r"\author{" + "\n"
+    r"  \textbf{Học giả VeriScholar}$^{1,2}$, \textbf{Ban Nghiên cứu Khoa học}$^{1}$ \\" + "\n"
+    r"  $^{1}$Viện Trí tuệ Nhân tạo Tiên tiến, Đại học Quốc gia \\" + "\n"
+    r"  $^{2}$Phòng Thí nghiệm Khoa học Dữ liệu \& Hệ thống Phân tán \\" + "\n"
+    r"  \texttt{\{scholar, research\}@verischolar.org}" + "\n"
+    r"}" + "\n"
+    r"\date{\today}" + "\n\n"
+    r"\begin{document}" + "\n\n"
+    r"\twocolumn[" + "\n"
+    r"  \begin{@twocolumnfalse}" + "\n"
+    r"    \maketitle" + "\n"
+    r"    \begin{abstract}" + "\n"
+    r"    \noindent" + "\n"
+    r"    Nghiên cứu này đề xuất kiến trúc \textbf{Socratic Copilot}---hệ thống trợ lý học "
+    r"thuật thông minh thế hệ mới kết hợp mô hình suy luận đa bước (\textit{Multi-step Reasoning}) "
+    r"và cơ chế đối chiếu dẫn chứng không gian hai chiều (\textit{2D Bounding Box Verification}). "
+    r"Khác với các mô hình sinh văn bản thông thường dễ mắc lỗi ảo giác (\textit{hallucination}), "
+    r"hệ thống của chúng tôi bám sát từng đoạn trích từ bài báo gốc, tự động phát hiện tiền đề "
+    r"sai lệch và cung cấp bảo chứng minh bạch đến từng tọa độ trang tài liệu. Thực nghiệm trên "
+    r"1.000 bài báo khoa học chuẩn mực cho thấy phương pháp đạt độ chính xác 95.8\% và giảm "
+    r"thiểu tỷ lệ ảo giác xuống dưới 0.7\%." + "\n"
+    r"    \vspace{0.8em}" + "\n\n"
+    r"    \noindent" + "\n"
+    r"    \textbf{Từ khóa:} Socratic Copilot, Kiểm chứng trích dẫn, Phản biện học thuật, "
+    r"Bounding Box, Không ảo giác, Trí tuệ nhân tạo." + "\n"
+    r"    \vspace{1.2em}" + "\n"
+    r"    \end{abstract}" + "\n"
+    r"  \end{@twocolumnfalse}" + "\n"
+    r"]" + "\n\n"
+    r"\section{Giới thiệu (Introduction)}" + "\n"
+    r"Trong kỷ nguyên bùng nổ của xuất bản khoa học, việc nắm bắt và thẩm định tính xác thực "
+    r"của các bài báo đặt ra thách thức lớn cho cộng đồng nghiên cứu quốc tế \cite{vaswani2017}. "
+    r"Các mô hình ngôn ngữ lớn (LLMs) tuy có khả năng tóm tắt nhanh nhưng thường xuyên mắc lỗi "
+    r"bịa đặt trích dẫn (\textit{citation hallucination}) và không thể chỉ ra được vị trí chính "
+    r"xác của dữ liệu trong văn bản gốc \cite{devlin2018}." + "\n\n"
+    r"Để giải quyết triệt để vấn đề này, bài báo giới thiệu mô hình Socratic Copilot với "
+    r"ba đóng góp cốt lõi:" + "\n"
+    r"\begin{enumerate}" + "\n"
+    r"  \item \textbf{Cơ chế truy xuất đa tầng:} Kết hợp Content-Addressable Storage (CAS) và "
+    r"giải thuật bóc tách tọa độ không gian chính xác ($x_0, y_0, x_1, y_1, \text{page}$)." + "\n"
+    r"  \item \textbf{Thuật toán phản biện Socrates:} Tự động phân tích các tiền đề ngụy biện "
+    r"trong câu hỏi của người dùng và hướng dẫn đối chiếu trực tiếp với bài báo." + "\n"
+    r"  \item \textbf{Không gian soạn thảo Overleaf:} Tích hợp quy trình biên dịch \LaTeX{} "
+    r"song song với đồng bộ hóa thời gian thực và kiểm chứng sự thật SAFE Fact-Checking." + "\n"
+    r"\end{enumerate}" + "\n\n"
+    r"\section{Phương pháp Nghiên cứu (Methodology)}" + "\n"
+    r"Hệ thống mô hình hóa quá trình phản biện khoa học như một bài toán tối ưu hóa đa mục tiêu "
+    r"giữa tính trung thực của bằng chứng (\textit{Faithfulness}) và độ sâu sắc của phản biện "
+    r"(\textit{Critique Depth}):" + "\n\n"
+    r"\begin{equation}" + "\n"
+    r"\mathcal{L}_{\text{total}} = \alpha \mathcal{L}_{\text{faith}}(E, C) + \beta "
+    r"\mathcal{L}_{\text{crit}}(Q, P) - \gamma \mathcal{R}_{\text{halluc}}" + "\n"
+    r"\end{equation}" + "\n\n"
+    r"\noindent" + "\n"
+    r"Trong đó $E$ là tập các đoạn trích dẫn chứng (evidence chunks), $C$ là luận điểm được "
+    r"đưa ra (claim), và $Q$ là câu hỏi của nhà nghiên cứu." + "\n\n"
+    r"Cơ chế phân giải trích dẫn được chuẩn hóa thông qua hàm ánh xạ tọa độ không gian:" + "\n"
+    r"\begin{equation}" + "\n"
+    r"\mathbf{B}(c) = [x_{\min}, y_{\min}, x_{\max}, y_{\max}, p] \in "
+    r"\mathbb{R}^4 \times \mathbb{N}^+" + "\n"
+    r"\end{equation}" + "\n\n"
+    r"\section{Kết quả Thực nghiệm (Results)}" + "\n"
+    r"Chúng tôi tiến hành thử nghiệm toàn diện trên tập dữ liệu gồm 1.000 bài báo khoa học "
+    r"chất lượng cao. Kết quả so sánh định lượng được thể hiện chi tiết tại "
+    r"Bảng~\ref{tab:benchmark}." + "\n\n"
+    r"\begin{table}[htbp]" + "\n"
+    r"\centering" + "\n"
+    r"\caption{Đánh giá định lượng hiệu năng và độ tin cậy trích dẫn}" + "\n"
+    r"\label{tab:benchmark}" + "\n"
+    r"\vspace{0.4em}" + "\n"
+    r"\resizebox{\columnwidth}{!}{%" + "\n"
+    r"\begin{tabular}{lcccc}" + "\n"
+    r"\toprule" + "\n"
+    r"\textbf{Phương pháp} & \textbf{Độ chính xác} & \textbf{F1} & "
+    r"\textbf{Ảo giác} & \textbf{Thời gian} \\" + "\n"
+    r"\midrule" + "\n"
+    r"Vanilla LLM          & 71.4\% & 0.68 & 19.8\% & 1.25s \\" + "\n"
+    r"Standard RAG         & 82.6\% & 0.81 & 8.4\%  & 1.84s \\" + "\n"
+    r"CoT Reasoning        & 87.2\% & 0.86 & 4.9\%  & 2.45s \\" + "\n"
+    r"\textbf{VeriScholar} & \textbf{95.8\%} & \textbf{0.95} & "
+    r"\textbf{0.7\%} & \textbf{0.92s} \\" + "\n"
+    r"\bottomrule" + "\n"
+    r"\end{tabular}%" + "\n"
+    r"}" + "\n"
+    r"\end{table}" + "\n\n"
+    r"\section{Thảo luận (Discussion)}" + "\n"
+    r"Kết quả cho thấy việc hiển thị Bounding Box trực quan kết hợp với phản biện Socrates giúp "
+    r"tăng 42\% độ tin cậy của nhà nghiên cứu đối với các câu trả lời do AI tổng hợp, đồng thời "
+    r"loại bỏ hoàn toàn hiện tượng dẫn chứng sai nguồn." + "\n\n"
+    r"\section{Kết luận (Conclusion)}" + "\n"
+    r"Hệ thống VeriScholar thiết lập chuẩn mực mới cho công cụ hỗ trợ nghiên cứu khoa học: "
+    r"minh bạch, chính xác và có thể đối chứng tức thì." + "\n\n"
+    r"\begin{thebibliography}{9}" + "\n"
+    r"\bibitem{vaswani2017}" + "\n"
+    r"A. Vaswani et al., ``Attention is all you need,'' in \textit{NeurIPS}, "
+    r"2017, pp. 5998--6008." + "\n\n"
+    r"\bibitem{devlin2018}" + "\n"
+    r"J. Devlin et al., ``BERT: Pre-training of deep bidirectional transformers,'' "
+    r"\textit{arXiv:1810.04805}, 2018." + "\n"
+    r"\end{thebibliography}" + "\n\n"
+    r"\end{document}" + "\n"
+)
+
+
 class DraftService:
     """Service managing academic writing drafts with strict tenant isolation and OCC."""
 
@@ -82,10 +206,25 @@ class DraftService:
     async def create_draft(self, user_id: UUID, request: CreateDraftRequest) -> DraftModel:
         """Create a new research writing draft."""
         now = datetime.now(UTC)
+        title = request.title.strip() if request.title else "Untitled Draft"
+        content = request.content
+        if not content or not content.strip():
+            safe_title = (
+                title.replace("\\", "").replace("{", "").replace("}", "").replace("_", "\\_")
+                if title and title != "Untitled Draft"
+                else None
+            )
+            content = DEFAULT_STARTER_LATEX_TEMPLATE
+            if safe_title:
+                content = content.replace(
+                    DEFAULT_TEMPLATE_TITLE_PLACEHOLDER,
+                    rf"\title{{\textbf{{\Large {safe_title}}}}}",
+                )
+
         draft = DraftModel(
             user_id=user_id,
-            title=request.title.strip() if request.title else "Untitled Draft",
-            content=request.content,
+            title=title,
+            content=content,
             format=request.format,
             version=1,
             created_at=now,

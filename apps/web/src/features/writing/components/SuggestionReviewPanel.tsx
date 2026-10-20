@@ -3,7 +3,6 @@ import {
   Sparkles,
   X,
   Check,
-  AlertCircle,
   FileDiff,
   Loader2,
   HelpCircle,
@@ -118,7 +117,8 @@ export function SuggestionReviewPanel({
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-coral-600 dark:text-coral-400" />
             <span className="font-semibold text-sm text-ink dark:text-zinc-100 font-anthropic-serif">
-              Xem xét đề xuất AI Assistant
+              <span aria-hidden="true">Đề xuất AI</span>
+              <span className="sr-only">Xem xét đề xuất AI Assistant</span>
             </span>
           </div>
 
@@ -157,7 +157,7 @@ export function SuggestionReviewPanel({
             <div className="flex items-center justify-between text-[11px] font-semibold text-muted dark:text-zinc-400">
               <span className="flex items-center gap-1">
                 <HelpCircle className="w-3.5 h-3.5 text-coral-500" />
-                <span>Yêu cầu ban đầu:</span>
+                <span>Yêu cầu:</span>
               </span>
               {effectiveSuggestion.created_at && (
                 <span className="text-[10px] font-mono flex items-center gap-1 text-zinc-400">
@@ -173,7 +173,7 @@ export function SuggestionReviewPanel({
             {effectiveSuggestion.explanation && (
               <div className="mt-2 pt-2 border-t border-[#ece8df] dark:border-[#2a2824] text-[11px] text-zinc-600 dark:text-zinc-400">
                 <span className="font-semibold text-ink dark:text-zinc-300">
-                  Ghi chú tối ưu:{" "}
+                  Ghi chú:{" "}
                 </span>
                 {effectiveSuggestion.explanation}
               </div>
@@ -194,7 +194,7 @@ export function SuggestionReviewPanel({
                 )}
               >
                 <FileDiff className="w-3.5 h-3.5" />
-                <span>So sánh trực quan (Diff)</span>
+                <span>So sánh (Diff)</span>
               </button>
               <button
                 type="button"
@@ -206,11 +206,14 @@ export function SuggestionReviewPanel({
                     : "text-muted hover:text-ink dark:text-zinc-400"
                 )}
               >
-                <span>Văn bản đề xuất hoàn chỉnh</span>
+                <span>
+                  <span aria-hidden="true">Văn bản mới</span>
+                  <span className="sr-only">Văn bản đề xuất hoàn chỉnh</span>
+                </span>
               </button>
             </div>
             <span className="text-[11px] text-zinc-400 font-mono">
-              Phiên bản nháp bảo vệ: v{effectiveSuggestion.expected_version}
+              v{effectiveSuggestion.expected_version}
             </span>
           </div>
 
@@ -257,11 +260,8 @@ export function SuggestionReviewPanel({
             </div>
           )}
 
-          <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <AlertCircle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-            <span>
-              Chấp nhận sẽ chèn nội dung vào vị trí con trỏ và lưu với cơ chế OCC ETag (If-Match) để bảo vệ toàn vẹn dữ liệu.
-            </span>
+          <div className="text-[11px] text-muted dark:text-zinc-400">
+            Chèn nội dung tại vị trí con trỏ.
           </div>
         </div>
 
@@ -274,7 +274,7 @@ export function SuggestionReviewPanel({
             data-testid="reject-suggestion-btn"
             className="px-4 py-2 rounded-lg border border-[#e2dcd2] dark:border-[#2e2b26] bg-white dark:bg-[#252320] text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 font-medium transition-colors cursor-pointer disabled:opacity-50"
           >
-            Từ chối (Hủy bỏ)
+            Từ chối
           </button>
 
           <div className="flex items-center gap-2">
@@ -297,12 +297,15 @@ export function SuggestionReviewPanel({
               {isBusy ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang lưu bản nháp...</span>
+                  <span>
+                    <span aria-hidden="true">Đang lưu...</span>
+                    <span className="sr-only">Đang lưu bản nháp...</span>
+                  </span>
                 </>
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  <span>Chấp nhận & Chèn</span>
+                  <span>Chấp nhận</span>
                 </>
               )}
             </button>

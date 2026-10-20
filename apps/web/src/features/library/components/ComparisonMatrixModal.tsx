@@ -193,12 +193,13 @@ export function ComparisonMatrixModal({
             </div>
             <div>
               <h3 className="font-serif font-bold text-sm leading-tight text-ink dark:text-zinc-100">
-                Ma Trận So Sánh Đối Chiếu Học Thuật (Literature Matrix)
+                <span aria-hidden="true">Ma trận so sánh</span>
+                <span className="sr-only">Ma Trận So Sánh Đối Chiếu Học Thuật (Literature Matrix)</span>
               </h3>
               <p className="text-[11px] text-muted dark:text-zinc-400">
                 {folderName
-                  ? `Phân tích thư mục: ${folderName}`
-                  : "Phân tích toàn thư viện tài liệu nghiên cứu"}
+                  ? `Thư mục: ${folderName}`
+                  : "Toàn bộ tài liệu"}
               </p>
             </div>
           </div>
@@ -233,17 +234,18 @@ export function ComparisonMatrixModal({
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <h4 className="font-serif font-bold text-base text-ink dark:text-zinc-100">
-                  Tổng hợp & So sánh Đa Bài báo Tự động
+                  <span aria-hidden="true">So sánh đa bài báo</span>
+                  <span className="sr-only">Tổng hợp & So sánh Đa Bài báo Tự động</span>
                 </h4>
                 <p className="text-xs text-muted max-w-md mx-auto">
-                  Nhập chủ đề hoặc bài toán nghiên cứu. Hệ thống AI sẽ trích xuất phương pháp cốt lõi, bộ dữ liệu thử nghiệm, chỉ số đo lường, điểm mạnh và hạn chế của các bài báo.
+                  Trích xuất và đối chiếu phương pháp, dữ liệu, chỉ số và hạn chế của các bài báo.
                 </p>
               </div>
 
               <form onSubmit={handleGenerate} className="space-y-4">
                 <div className="space-y-1.5">
                   <label className="font-medium text-xs text-ink dark:text-zinc-300">
-                    Chủ đề / Câu hỏi nghiên cứu cần đối chiếu:
+                    Chủ đề nghiên cứu đối chiếu:
                   </label>
                   <input
                     type="text"
@@ -299,12 +301,13 @@ export function ComparisonMatrixModal({
                     {matrixMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Đang phân tích & tổng hợp ma trận...</span>
+                        <span>Đang phân tích...</span>
                       </>
                     ) : (
                       <>
                         <Sparkles className="w-4 h-4" />
-                        <span>Sinh Ma Trận Đối Chiếu</span>
+                        <span aria-hidden="true">Tạo ma trận</span>
+                        <span className="sr-only">Sinh Ma Trận Đối Chiếu</span>
                         <ArrowRight className="w-3.5 h-3.5" />
                       </>
                     )}
@@ -368,7 +371,8 @@ export function ComparisonMatrixModal({
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-hairline bg-surface-card hover:bg-surface-cream dark:bg-[#201e1b] dark:hover:bg-[#282622] text-xs font-medium cursor-pointer shadow-2xs transition-colors"
                   >
                     <Download className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-                    <span>Xuất CSV / Excel</span>
+                    <span aria-hidden="true">Xuất CSV</span>
+                    <span className="sr-only">Xuất CSV / Excel</span>
                   </button>
                   <button
                     type="button"
@@ -378,7 +382,7 @@ export function ComparisonMatrixModal({
                     {copied ? (
                       <>
                         <Check className="w-3 h-3 text-emerald-500" />
-                        <span>Đã chép Markdown!</span>
+                        <span>Đã chép!</span>
                       </>
                     ) : (
                       <>
@@ -402,7 +406,7 @@ export function ComparisonMatrixModal({
                         : "text-muted hover:text-ink"
                     }`}
                   >
-                    Bảng ma trận đối chiếu
+                    Bảng đối chiếu
                   </button>
                   <button
                     type="button"
@@ -413,7 +417,7 @@ export function ComparisonMatrixModal({
                         : "text-muted hover:text-ink"
                     }`}
                   >
-                    Tổng quan luận giải (Synthesis)
+                    Tổng quan luận giải
                   </button>
                   <button
                     type="button"
@@ -424,7 +428,8 @@ export function ComparisonMatrixModal({
                         : "text-muted hover:text-ink"
                     }`}
                   >
-                    Mã nguồn Markdown
+                    <span aria-hidden="true">Markdown</span>
+                    <span className="sr-only">Mã nguồn Markdown</span>
                   </button>
                 </div>
               </div>

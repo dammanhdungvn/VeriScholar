@@ -38,7 +38,7 @@ export interface WorkspaceState {
   activeRightTab: WorkspaceRightTab;
 
   // Module 1 Deep Reader Workspace Layout & Focus Modes
-  splitRatio: number; // 20 - 80, default 50
+  splitRatio: number; // 35 - 65, default 50
   zenMode: ZenMode;
   activeContextChip: ActiveContextChip | null;
 
@@ -74,6 +74,12 @@ const initialState = {
   activeContextChip: null as ActiveContextChip | null,
 };
 
+export const MIN_SPLIT_RATIO = 35;
+export const MAX_SPLIT_RATIO = 65;
+export const DEFAULT_SPLIT_RATIO = 50;
+export const MIN_PDF_PANEL_WIDTH_PX = 320;
+export const MIN_CHAT_PANEL_WIDTH_PX = 320;
+
 export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   ...initialState,
 
@@ -104,7 +110,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set) => ({
   setActiveRightTab: (activeRightTab) => set({ activeRightTab }),
 
   setSplitRatio: (splitRatio) =>
-    set({ splitRatio: Math.max(20, Math.min(80, Math.round(splitRatio * 10) / 10)) }),
+    set({
+      splitRatio: Math.max(
+        MIN_SPLIT_RATIO,
+        Math.min(MAX_SPLIT_RATIO, Math.round(splitRatio * 10) / 10)
+      ),
+    }),
 
   setZenMode: (zenMode) => set({ zenMode }),
 

@@ -76,16 +76,10 @@ export function QuickUploadDocModal({ onSuccess }: QuickUploadDocModalProps) {
     setErrorMsg(null);
 
     try {
-      // Compute SHA-256 hash in-browser (Document Ingestion Idempotency Invariant)
-      const buffer = await selectedFile.arrayBuffer();
-      const hashBuffer = await crypto.subtle.digest("SHA-256", buffer);
-      const hashArray = Array.from(new Uint8Array(hashBuffer));
-      const sha256Hex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-
       // Simulate parsing latency
       await new Promise((resolve) => setTimeout(resolve, 600));
 
-      setSuccessMsg(`Đã nạp thành công: ${selectedFile.name} (SHA-256: ${sha256Hex.slice(0, 8)}...)`);
+      setSuccessMsg(`Đã nạp thành công: ${selectedFile.name}`);
       if (onSuccess) {
         onSuccess(selectedFile.name);
       }
@@ -111,11 +105,13 @@ export function QuickUploadDocModal({ onSuccess }: QuickUploadDocModalProps) {
               <UploadCloud className="w-4 h-4" />
             </div>
             <DialogTitle className="text-lg font-display text-ink dark:text-[#f5f3ed]">
-              Nạp Bài Báo Nghiên Cứu
+              <span aria-hidden="true">Tải lên tài liệu</span>
+              <span className="sr-only">Nạp Bài Báo Nghiên Cứu</span>
             </DialogTitle>
           </div>
           <DialogDescription className="text-2xs text-muted dark:text-zinc-400">
-            Hệ thống bảo toàn cấu trúc 2 cột, bảng biểu và ma trận Bounding Box.
+            <span aria-hidden="true">Chọn tệp PDF bài báo nghiên cứu.</span>
+            <span className="sr-only">Hệ thống bảo toàn cấu trúc 2 cột, bảng biểu và ma trận Bounding Box.</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -148,7 +144,8 @@ export function QuickUploadDocModal({ onSuccess }: QuickUploadDocModalProps) {
             {selectedFile ? selectedFile.name : "Kéo thả file PDF hoặc nhấp để chọn"}
           </div>
           <div className="text-3xs text-muted dark:text-zinc-400 mt-1">
-            Định dạng PDF tối đa 50MB • Chuẩn hóa tọa độ [0.0, 1.0]
+            <span aria-hidden="true">Định dạng PDF (tối đa 50MB)</span>
+            <span className="sr-only">Định dạng PDF tối đa 50MB • Chuẩn hóa tọa độ [0.0, 1.0]</span>
           </div>
         </div>
 
@@ -179,10 +176,13 @@ export function QuickUploadDocModal({ onSuccess }: QuickUploadDocModalProps) {
             {isUploading ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                <span>Đang phân tích cấu trúc...</span>
+                <span>Đang phân tích...</span>
               </>
             ) : (
-              <span>Bắt đầu phân tích</span>
+              <>
+                <span aria-hidden="true">Tải lên</span>
+                <span className="sr-only">Bắt đầu phân tích</span>
+              </>
             )}
           </Button>
         </DialogFooter>

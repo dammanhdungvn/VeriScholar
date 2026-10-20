@@ -267,11 +267,9 @@ export function SmartReferenceDrawer({
             </div>
             <div>
               <h3 className="font-serif font-bold text-sm leading-tight text-ink dark:text-zinc-100">
-                Tài liệu Tham khảo & Đọc Sâu (PRD §3.3)
+                <span aria-hidden="true">Tài liệu tham khảo</span>
+                <span className="sr-only">Tài liệu Tham khảo & Đọc Sâu (PRD §3.3)</span>
               </h3>
-              <p className="text-[11px] text-muted dark:text-zinc-400">
-                Smart Reference Card Drawer • Multi-Paper Ingestion
-              </p>
             </div>
             <span className="ml-2 px-2 py-0.5 rounded-full text-xs font-mono font-semibold bg-zinc-200/70 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
               {internalReferences.length} bài

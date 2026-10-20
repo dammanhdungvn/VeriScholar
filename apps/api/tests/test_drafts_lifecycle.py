@@ -156,6 +156,34 @@ async def test_draft_crud_lifecycle() -> None:
 
 
 @pytest.mark.asyncio
+async def test_draft_create_default_starter_template() -> None:
+    """Verify that creating a draft with empty content automatically populates compilable academic LaTeX starter template."""
+    async with drafts_test_context() as (client, session_maker):
+        _, token = await create_test_user(session_maker, "author_template@verischolar.org")
+        headers = {"Authorization": f"Bearer {token}"}
+
+        # 1. Create with empty content string
+        res = await client.post(
+            "/api/v1/drafts",
+            json={"title": "Attention Exploration", "content": ""},
+            headers=headers,
+        )
+        assert res.status_code == 201
+        draft = res.json()["data"]
+        content = draft["content"]
+
+        # Verify required LaTeX elements
+        assert r"\documentclass[10pt,twocolumn,a4paper]{article}" in content
+        assert r"\usepackage{amsmath,amsfonts,amssymb}" in content
+        assert r"\author{" in content
+        assert r"\begin{document}" in content
+        assert r"\maketitle" in content
+        assert r"\begin{abstract}" in content
+        assert r"\section{" in content
+        assert r"\end{document}" in content
+
+
+@pytest.mark.asyncio
 async def test_draft_occ_conflict_detection() -> None:
     """Verify OCC conflict returns HTTP 412 when stale version is provided."""
     async with drafts_test_context() as (client, session_maker):

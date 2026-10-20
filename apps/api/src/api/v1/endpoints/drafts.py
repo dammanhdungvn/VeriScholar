@@ -255,6 +255,23 @@ async def get_draft(
         },
     },
 )
+@router.patch(
+    "/{id}",
+    response_model=SingleResponseEnvelope[DraftResponse],
+    summary="Cập nhật bản thảo với OCC (Update Draft - PATCH)",
+    description=UPDATE_DRAFT_DESCRIPTION,
+    responses={
+        200: {"description": "Bản thảo đã cập nhật thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {"model": ErrorResponse, "description": "Vai trò không có quyền sửa đổi."},
+        404: {"model": ErrorResponse, "description": "Bản thảo không tồn tại."},
+        412: {"model": ErrorResponse, "description": "Xung đột phiên bản (OCC Conflict)."},
+        428: {
+            "model": ErrorResponse,
+            "description": "Thiếu thông tin phiên bản (If-Match hoặc version trong body).",
+        },
+    },
+)
 async def update_draft(
     id: UUID,
     request: UpdateDraftRequest,
@@ -530,8 +547,9 @@ async def compile_draft(
     return SingleResponseEnvelope(data=response_data)
 
 
-@router.get(
+@router.api_route(
     "/{id}/preview.pdf",
+    methods=["GET", "HEAD"],
     summary="Tải bản xem trước PDF trực tiếp (Live PDF Preview)",
     description="Truy xuất file PDF đã biên dịch của bản thảo để hiển thị trên PDF.js Canvas.",
     responses={

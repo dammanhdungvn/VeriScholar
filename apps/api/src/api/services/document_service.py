@@ -72,7 +72,7 @@ from core.ports.summary import IDocumentSummarizerPort
 from core.services.document_validator import AcademicPaperValidator
 from core.services.exa_resolver import InMemoryAcademicResolverAdapter
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -324,6 +324,8 @@ class DocumentService:
         page: int = 1,
         per_page: int = 20,
         status_filter: str | None = None,
+        search: str | None = None,
+        star: bool | None = None,
     ) -> DocumentListPaginatedEnvelope:
         """Retrieve paginated list of user documents conforming to RFC 8288.
 
@@ -333,6 +335,8 @@ class DocumentService:
             page: 1-based page index.
             per_page: Number of documents per page.
             status_filter: Optional status filter.
+            search: Optional search keyword matching title or filename.
+            star: Optional boolean filter for persistent/starred documents.
 
         Returns:
             DocumentListPaginatedEnvelope with data, meta, and navigation links.
@@ -340,6 +344,16 @@ class DocumentService:
         where_clauses = [DocumentModel.user_id == user_id]
         if status_filter:
             where_clauses.append(DocumentModel.status == status_filter)
+        if star is not None:
+            where_clauses.append(DocumentModel.is_persistent == star)
+        if search and search.strip():
+            term = f"%{search.strip()}%"
+            where_clauses.append(
+                or_(
+                    DocumentModel.title.ilike(term),
+                    DocumentModel.filename.ilike(term),
+                )
+            )
 
         # 1. Total count query
         count_stmt = select(func.count(DocumentModel.id)).where(*where_clauses)
@@ -375,9 +389,14 @@ class DocumentService:
 
         # 3. Construct RFC 8288 pagination links
         def _build_url(p: int) -> str:
+            url = f"/api/v1/documents?page={p}&per_page={per_page}"
             if status_filter:
-                return f"/api/v1/documents?page={p}&per_page={per_page}&status={status_filter}"
-            return f"/api/v1/documents?page={p}&per_page={per_page}"
+                url += f"&status={status_filter}"
+            if search and search.strip():
+                url += f"&search={search.strip()}"
+            if star is not None:
+                url += f"&star={str(star).lower()}"
+            return url
 
         first_link = _build_url(1)
         last_link = _build_url(total_pages)
@@ -821,6 +840,7 @@ class DocumentService:
         user_id: UUID,
         db: AsyncSession,
         folder_id: UUID | None = None,
+        toggle: bool = False,
     ) -> DocumentStarResponseData:
         """Promote a document to persistent library retention in an atomic ACID transaction.
 
@@ -829,9 +849,11 @@ class DocumentService:
             user_id: Authenticated user identifier (enforces multi-tenant isolation).
             db: Active async database session.
             folder_id: Optional folder identifier to associate the starred document with.
+            toggle: If True, toggles persistent star status
+                (starred -> unstarred, unstarred -> starred).
 
         Returns:
-            DocumentStarResponseData with is_persistent=True and assigned folder_id.
+            DocumentStarResponseData with current is_persistent state and assigned folder_id.
 
         Raises:
             HTTPException(404): If folder does not exist or document does not exist/belong to user.
@@ -876,8 +898,16 @@ class DocumentService:
 
         # 3. Update persistence and folder association atomically
         now = datetime.now(UTC)
-        doc.is_persistent = True
-        doc.folder_id = folder_id
+        if toggle:
+            doc.is_persistent = not doc.is_persistent
+            if not doc.is_persistent:
+                doc.folder_id = None
+            elif folder_id is not None:
+                doc.folder_id = folder_id
+        else:
+            doc.is_persistent = True
+            doc.folder_id = folder_id
+
         doc.updated_at = now
         await db.flush()
 
@@ -889,6 +919,21 @@ class DocumentService:
             is_persistent=doc.is_persistent,
             folder_id=doc.folder_id,
             updated_at=doc.updated_at,
+        )
+
+    async def toggle_star(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentStarResponseData:
+        """Toggle persistent library retention status of a document."""
+        return await self.star_document(
+            document_id=document_id,
+            user_id=user_id,
+            db=db,
+            folder_id=None,
+            toggle=True,
         )
 
     async def delete_document(

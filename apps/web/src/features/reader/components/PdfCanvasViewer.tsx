@@ -44,10 +44,18 @@ export function PdfCanvasViewer({
   onAddToChat,
   onAskChat,
 }: PdfCanvasViewerProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(null);
+
+  const setContainerRefs = useCallback((el: HTMLDivElement | null) => {
+    containerRef.current = el;
+    setScrollContainer(el);
+  }, []);
+
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [retryKey, setRetryKey] = useState<number>(0);
   const isLoadingPdf = loadedUrl !== fileUrl && !loadError;
 
   // Track whether currentPage was updated by IntersectionObserver scroll or programmatic click
@@ -68,13 +76,67 @@ export function PdfCanvasViewer({
   const [selectionPage, setSelectionPage] = useState<number>(currentPage);
   const [selectionBbox, setSelectionBbox] = useState<BoundingBox | null>(null);
 
-  // 1. Load PDF Document via cached PDF.js loader
+  // Floating Pagination HUD Auto-hide states (5s inactive timer)
+  const [isHudVisible, setIsHudVisible] = useState(true);
+  const hudTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isHudHoveredRef = useRef(false);
+
+  const resetHudTimer = useCallback(() => {
+    setIsHudVisible(true);
+    if (hudTimerRef.current) {
+      clearTimeout(hudTimerRef.current);
+      hudTimerRef.current = null;
+    }
+    if (!isHudHoveredRef.current) {
+      hudTimerRef.current = setTimeout(() => {
+        setIsHudVisible(false);
+      }, 5000);
+    }
+  }, []);
+
+  // Automatic reset when currentPage or readingMode changes
+  useEffect(() => {
+    resetHudTimer();
+    return () => {
+      if (hudTimerRef.current) {
+        clearTimeout(hudTimerRef.current);
+        hudTimerRef.current = null;
+      }
+    };
+  }, [currentPage, readingMode, resetHudTimer]);
+
+  const handleHudMouseEnter = useCallback(() => {
+    isHudHoveredRef.current = true;
+    if (hudTimerRef.current) {
+      clearTimeout(hudTimerRef.current);
+      hudTimerRef.current = null;
+    }
+    setIsHudVisible(true);
+  }, []);
+
+  const handleHudMouseLeave = useCallback(() => {
+    isHudHoveredRef.current = false;
+    resetHudTimer();
+  }, [resetHudTimer]);
+
+  // 1. Load PDF Document via cached PDF.js loader with 12s timeout guard
   useEffect(() => {
     let isCancelled = false;
+
+    // 12s timeout guard to eliminate infinite hanging loading skeleton
+    const timeoutId = window.setTimeout(() => {
+      if (isCancelled) return;
+      console.warn("[PDF.js] Load timeout exceeded (12s) for:", fileUrl);
+      setLoadError(
+        "Đã quá thời gian nạp tài liệu PDF (12s). Vui lòng thử tải lại hoặc kiểm tra kết nối mạng."
+      );
+      setLoadedUrl(fileUrl);
+    }, 12000);
 
     getCachedPdfDocument(fileUrl)
       .then((doc) => {
         if (isCancelled) return;
+        window.clearTimeout(timeoutId);
         setPdfDoc(doc);
         setLoadedUrl(fileUrl);
         setLoadError(null);
@@ -84,6 +146,7 @@ export function PdfCanvasViewer({
       })
       .catch((err: unknown) => {
         if (isCancelled) return;
+        window.clearTimeout(timeoutId);
         console.error("[PDF.js] Failed to load document:", err);
         setLoadError(
           err instanceof Error
@@ -95,8 +158,9 @@ export function PdfCanvasViewer({
 
     return () => {
       isCancelled = true;
+      window.clearTimeout(timeoutId);
     };
-  }, [fileUrl, onPageCountDetected]);
+  }, [fileUrl, onPageCountDetected, retryKey]);
 
   // Total pages from PDF document or metadata fallback
   const totalPages = pdfDoc?.numPages || documentDetail?.page_count || 1;
@@ -180,13 +244,33 @@ export function PdfCanvasViewer({
   // 3. Scroll to Target Page ONLY on programmatic jumps or citation clicks
   // (Never interrupt natural user scrolling velocity)
   useEffect(() => {
-    if (readingMode !== "continuous") return;
-
-    // A. Citation Highlight Clicked: Always scroll into view
+    // A. Citation Highlight Clicked: Always scroll into view and center on bounding box
     if (activeBbox && activeBbox[4]) {
-      const pageEl = document.getElementById(`pdf-page-${activeBbox[4]}`);
-      if (pageEl && containerRef.current) {
-        pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+      const pageNum = activeBbox[4];
+      const pageEl = document.getElementById(`pdf-page-${pageNum}`);
+      if (pageEl && scrollContainer) {
+        const scrollToBbox = () => {
+          const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
+          const target = bboxOverlay || pageEl;
+          if (typeof target.scrollIntoView === "function") {
+            target.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const targetRect = target.getBoundingClientRect();
+          const relativeTop = targetRect.top - containerRect.top + scrollContainer.scrollTop;
+          const centeredTop = Math.max(
+            0,
+            relativeTop - containerRect.height / 2 + targetRect.height / 2
+          );
+          if (typeof scrollContainer.scrollTo === "function") {
+            scrollContainer.scrollTo({ top: centeredTop, behavior: "smooth" });
+          } else {
+            scrollContainer.scrollTop = centeredTop;
+          }
+        };
+        scrollToBbox();
+        const timer = setTimeout(scrollToBbox, 150);
+        return () => clearTimeout(timer);
       }
       return;
     }
@@ -198,10 +282,18 @@ export function PdfCanvasViewer({
 
     // C. User explicitly jumped via controls or sidebar
     const pageEl = document.getElementById(`pdf-page-${currentPage}`);
-    if (pageEl && containerRef.current) {
-      pageEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (pageEl && scrollContainer) {
+      const containerRect = scrollContainer.getBoundingClientRect();
+      const pageRect = pageEl.getBoundingClientRect();
+      const relativeTop = pageRect.top - containerRect.top + scrollContainer.scrollTop;
+      const targetTop = relativeTop - 16;
+      if (typeof scrollContainer.scrollTo === "function") {
+        scrollContainer.scrollTo({ top: targetTop, behavior: "smooth" });
+      } else {
+        scrollContainer.scrollTop = targetTop;
+      }
     }
-  }, [currentPage, activeBbox, readingMode]);
+  }, [currentPage, activeBbox, readingMode, pdfDoc, scrollContainer]);
 
   // Metadata dimensions lookup map
   const pageDimensionsMap = useMemo(() => {
@@ -212,52 +304,83 @@ export function PdfCanvasViewer({
     return map;
   }, [documentDetail?.pages_metadata]);
 
-  // Track container width for responsive scaling
-  const [containerWidth, setContainerWidth] = useState<number>(() => {
-    return typeof window !== "undefined" ? window.innerWidth : 1024;
-  });
+  // Track container width for responsive scaling (measured purely from PDF container, never window.innerWidth)
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
+    if (!scrollContainer) return;
 
-    if (el.clientWidth > 0) {
-      setContainerWidth(el.clientWidth);
+    const measureWidth = () => {
+      const clientW = scrollContainer.clientWidth;
+      if (clientW > 0) {
+        setContainerWidth((prev) => (Math.abs(prev - clientW) >= 1 ? clientW : prev));
+      }
+    };
+
+    // Immediate initial measurement of container clientWidth when mounted
+    measureWidth();
+
+    if (typeof ResizeObserver === "undefined") {
+      return;
     }
+
+    let rafId: number | null = null;
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
-      if (entry && entry.contentRect.width > 0) {
-        setContainerWidth(entry.contentRect.width);
-      }
+      if (!entry) return;
+      const newWidth = Math.round(entry.contentRect.width || scrollContainer.clientWidth);
+      if (newWidth <= 0) return;
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+
+      // Debounce slightly (16ms) combined with requestAnimationFrame for smooth 60fps responsive scaling
+      debounceTimer = setTimeout(() => {
+        rafId = requestAnimationFrame(() => {
+          setContainerWidth((prev) => (Math.abs(prev - newWidth) >= 1 ? newWidth : prev));
+        });
+      }, 16);
     });
 
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
+    ro.observe(scrollContainer);
+    return () => {
+      ro.disconnect();
+      if (debounceTimer) clearTimeout(debounceTimer);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
+  }, [scrollContainer, pdfDoc]);
 
-  // Responsive base scale:
-  // - On desktop & tablet (container >= 650px): fixed at developer baseline 1.44 (100% UI = 144% width)
-  // - On mobile (< 650px): smoothly fits mobile screen width so paper is never cut off
-  const responsiveBaseScale = useMemo(() => {
-    if (containerWidth >= 650) {
-      return BASE_PDF_RENDER_SCALE;
-    }
+  // Dynamic Fit-to-Width Base Scale:
+  // Dynamically computes the exact scale ensuring the PDF page fills available panel width
+  // Edge-to-Edge without huge empty bars on sides, and without right-edge clipping.
+  const fitWidthBaseScale = useMemo(() => {
     const standardWidth = pageDimensionsMap.get(currentPage)?.[0] || 595.32;
-    const available = Math.max(260, containerWidth - 20);
+    // Measured width of the PDF container; fallback to scrollContainer clientWidth or standard fallback
+    const effectiveWidth =
+      containerWidth > 0
+        ? containerWidth
+        : (scrollContainer?.clientWidth || (typeof window !== "undefined" ? (window.innerWidth < 768 ? window.innerWidth : window.innerWidth * 0.5) : 595.32));
+
+    // Full screen edge-to-edge on mobile (< 640px) with 0 padding; 20px on desktop (>= 640px)
+    // Edge-to-Edge display eliminates huge black bars
+    const padding = effectiveWidth < 640 ? 0 : 20;
+    const available = Math.max(220, effectiveWidth - padding);
     return Number((available / standardWidth).toFixed(3));
-  }, [containerWidth, currentPage, pageDimensionsMap]);
+  }, [containerWidth, currentPage, pageDimensionsMap, scrollContainer]);
 
-  // The UI displays 100% when zoomRatio = 1.0.
-  // Every +5% increments zoomRatio by +0.05, and -5% decrements by -0.05.
+  // Responsive Effective Zoom:
+  // - Default is always fitWidthBaseScale (page auto-scales 100% to fit container width)
+  // - When user clicks Zoom (+/-), zoomRatio scales proportionally relative to fit width
   const effectiveZoom = useMemo(() => {
-    return Number((zoomRatio * responsiveBaseScale).toFixed(3));
-  }, [zoomRatio, responsiveBaseScale]);
+    return Number((zoomRatio * fitWidthBaseScale).toFixed(3));
+  }, [fitWidthBaseScale, zoomRatio]);
 
-  // Two-page spread zoom to ensure both pages fit comfortably side by side
+  // Two-page spread zoom: fits both pages comfortably side by side without clipping
   const twoPageZoom = useMemo(() => {
-    return Number((zoomRatio * responsiveBaseScale * 0.52).toFixed(3));
-  }, [zoomRatio, responsiveBaseScale]);
+    return Number((zoomRatio * fitWidthBaseScale * 0.49).toFixed(3));
+  }, [fitWidthBaseScale, zoomRatio]);
 
   // Pages array for rendering
   const pagesToRender = useMemo(() => {
@@ -317,6 +440,8 @@ export function PdfCanvasViewer({
             clearCachedPdfDocument(fileUrl);
             setLoadError(null);
             setLoadedUrl(null);
+            setPdfDoc(null);
+            setRetryKey((prev) => prev + 1);
           }}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-white hover:bg-primary/90 transition-colors shadow-xs cursor-pointer"
         >
@@ -357,10 +482,11 @@ export function PdfCanvasViewer({
 
       {/* 2. Main PDF Scroll Canvas Area */}
       <div
-        ref={containerRef}
+        ref={setContainerRefs}
         onMouseUp={handleMouseUp}
+        onMouseMove={resetHudTimer}
         className={cn(
-          "flex-1 relative overflow-y-auto overflow-x-auto px-2 sm:px-3 py-4 flex justify-center scrollbar-none transition-colors duration-200 [contain:layout_style]",
+          "flex-1 relative overflow-y-auto overflow-x-hidden px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           containerThemeBg
         )}
       >
@@ -384,8 +510,8 @@ export function PdfCanvasViewer({
         {/* Pages Container: Stack for Continuous, Side-by-Side Book for Two-Page, Centered for Single */}
         <div
           className={cn(
-            "w-full max-w-full pb-20 flex flex-col items-center",
-            readingMode === "continuous" && "gap-4",
+            "w-full mx-auto pb-16 flex flex-col items-center",
+            readingMode === "continuous" && "gap-2 sm:gap-3",
             readingMode === "single" && "justify-center min-h-[calc(100vh-140px)]",
             readingMode === "two-page" && "gap-2"
           )}
@@ -432,7 +558,17 @@ export function PdfCanvasViewer({
 
           {/* Floating Navigation HUD for Single Page Mode */}
           {readingMode === "single" && totalPages > 1 && (
-            <div className="sticky bottom-4 z-20 mt-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#e2ded6] dark:border-[#38332c] shadow-lg select-none text-xs">
+            <div
+              data-testid="floating-pagination-hud"
+              onMouseEnter={handleHudMouseEnter}
+              onMouseLeave={handleHudMouseLeave}
+              className={cn(
+                "sticky bottom-4 z-20 mt-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#e2ded6] dark:border-[#38332c] shadow-lg select-none text-xs transition-all duration-300 ease-out",
+                isHudVisible
+                  ? "opacity-100 translate-y-0 pointer-events-auto"
+                  : "opacity-0 translate-y-2 pointer-events-none"
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setCurrentPage(currentPage - 1)}
@@ -459,7 +595,17 @@ export function PdfCanvasViewer({
 
           {/* Floating Navigation HUD for Two-Page Spread Mode */}
           {readingMode === "two-page" && totalPages > 1 && (
-            <div className="sticky bottom-4 z-20 mt-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#e2ded6] dark:border-[#38332c] shadow-lg select-none text-xs">
+            <div
+              data-testid="floating-pagination-hud"
+              onMouseEnter={handleHudMouseEnter}
+              onMouseLeave={handleHudMouseLeave}
+              className={cn(
+                "sticky bottom-4 z-20 mt-6 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#e2ded6] dark:border-[#38332c] shadow-lg select-none text-xs transition-all duration-300 ease-out",
+                isHudVisible
+                  ? "opacity-100 translate-y-0 pointer-events-auto"
+                  : "opacity-0 translate-y-2 pointer-events-none"
+              )}
+            >
               <button
                 type="button"
                 onClick={() => setCurrentPage(Math.max(1, currentPage - 2))}

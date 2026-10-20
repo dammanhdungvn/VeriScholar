@@ -14,6 +14,31 @@ interface UseStreamingChatOptions {
   onSessionCreated?: (sessionId: string) => void;
 }
 
+function normalizeCitation(raw: unknown): CitationBadgeData {
+  const item = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
+  const page = Number(item.page ?? item.page_number ?? 1);
+  let bbox: [number, number, number, number, number] = [0, 0, 1, 1, page];
+
+  if (Array.isArray(item.bbox) && item.bbox.length === 5) {
+    bbox = item.bbox as [number, number, number, number, number];
+  } else if (
+    Array.isArray(item.bounding_boxes) &&
+    item.bounding_boxes.length > 0 &&
+    Array.isArray(item.bounding_boxes[0]) &&
+    item.bounding_boxes[0].length === 5
+  ) {
+    bbox = item.bounding_boxes[0] as [number, number, number, number, number];
+  }
+
+  return {
+    citation_id: typeof item.citation_id === "string" ? item.citation_id : undefined,
+    paper_id: String(item.paper_id ?? item.document_id ?? ""),
+    paper_title: String(item.paper_title ?? item.document_title ?? "Tài liệu trích dẫn"),
+    page,
+    bbox,
+  };
+}
+
 export function useStreamingChat({
   activeSessionId,
   onSessionCreated,
@@ -176,6 +201,39 @@ export function useStreamingChat({
         }
       };
 
+      let streamFinished = false;
+
+      const finishStream = () => {
+        if (streamFinished) return;
+        streamFinished = true;
+
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        if (tokenQueue.length > 0) {
+          accumulatedContent += tokenQueue.join("");
+          tokenQueue = [];
+        }
+        isFlushing = false;
+
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: accumulatedContent || msg.content,
+                  is_streaming: false,
+                  citations: citationsList.length > 0 ? citationsList : msg.citations,
+                }
+              : msg.is_streaming
+              ? { ...msg, is_streaming: false }
+              : msg
+          )
+        );
+        setIsGenerating(false);
+      };
+
       const token = typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null;
       const url = `${API_BASE_URL}${API_PREFIX}/sessions/${effectiveSessionId}/messages`;
       const finalRequestId = generateRequestId(customRequestId);
@@ -199,27 +257,31 @@ export function useStreamingChat({
             throw new Error(`SSE stream connection failed (${response.status}): ${errorText}`);
           },
           onmessage(ev) {
-            if (isCancelledRef.current) return;
+            if (isCancelledRef.current || streamFinished) return;
+
+            // Direct check for [DONE] token or done event
+            if (
+              ev.event === "done" ||
+              ev.data === "[DONE]" ||
+              ev.data === "DONE"
+            ) {
+              finishStream();
+              controller.abort();
+              return;
+            }
 
             try {
-              if (ev.data === "[DONE]") {
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId
-                      ? {
-                          ...msg,
-                          content: accumulatedContent,
-                          is_streaming: false,
-                          citations: citationsList.length > 0 ? citationsList : msg.citations,
-                        }
-                      : msg
-                  )
-                );
-                setIsGenerating(false);
+              const parsed = JSON.parse(ev.data);
+
+              if (
+                parsed.type === "done" ||
+                parsed.finish_reason ||
+                parsed.status === "completed"
+              ) {
+                finishStream();
+                controller.abort();
                 return;
               }
-
-              const parsed = JSON.parse(ev.data);
 
               if (parsed.type === "thinking" || parsed.type === "thought") {
                 const thoughtToken = parsed.token || parsed.thought || parsed.content || "";
@@ -234,11 +296,12 @@ export function useStreamingChat({
                 const tokenText = parsed.token || parsed.text || parsed.content || "";
                 queueToken(tokenText);
               } else if (parsed.type === "citation" || parsed.type === "citations") {
-                const newCites: CitationBadgeData[] = Array.isArray(parsed.citations)
+                const rawCites = Array.isArray(parsed.citations)
                   ? parsed.citations
                   : parsed.citation
                   ? [parsed.citation]
                   : [];
+                const newCites: CitationBadgeData[] = rawCites.map(normalizeCitation);
                 citationsList = [...citationsList, ...newCites];
                 setMessages((prev) =>
                   prev.map((msg) =>
@@ -259,12 +322,20 @@ export function useStreamingChat({
                 queueToken(parsed.token || parsed.text);
               }
             } catch {
-              if (ev.data && ev.data !== "[DONE]") {
+              if (ev.data && ev.data !== "[DONE]" && ev.data !== "DONE") {
                 queueToken(ev.data);
               }
             }
           },
+          async onclose() {
+            // Server closed connection normally
+            finishStream();
+            controller.abort();
+          },
           onerror(err) {
+            if (controller.signal.aborted || streamFinished) {
+              return;
+            }
             console.error("SSE stream error:", err);
             if (!isCancelledRef.current) {
               setMessages((prev) =>
@@ -286,7 +357,7 @@ export function useStreamingChat({
           },
         });
       } catch {
-        if (!isCancelledRef.current && !accumulatedContent) {
+        if (!controller.signal.aborted && !isCancelledRef.current && !accumulatedContent) {
           setMessages((prev) =>
             prev.map((msg) =>
               msg.id === assistantMsgId
@@ -300,6 +371,31 @@ export function useStreamingChat({
           );
           setIsGenerating(false);
         }
+      } finally {
+        // Enforce state transition to idle regardless of what happened
+        finishStream();
+        if (animFrameRef.current) {
+          cancelAnimationFrame(animFrameRef.current);
+          animFrameRef.current = null;
+        }
+        tokenQueue = [];
+        isFlushing = false;
+        setIsGenerating(false);
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantMsgId
+              ? {
+                  ...msg,
+                  content: accumulatedContent || msg.content || (isCancelledRef.current ? "" : "Đã hoàn tất kết nối."),
+                  is_streaming: false,
+                  citations: citationsList.length > 0 ? citationsList : msg.citations,
+                }
+              : msg.is_streaming
+              ? { ...msg, is_streaming: false }
+              : msg
+          )
+        );
+        abortControllerRef.current = null;
       }
     },
     [inputText, isGenerating, activeSessionId, onSessionCreated]
@@ -337,12 +433,7 @@ export function useStreamingChat({
               session_id: turn.session_id,
               role: "assistant",
               content: turn.answer,
-              citations: turn.citations?.map((c) => ({
-                paper_id: c.document_id,
-                paper_title: c.document_title,
-                page: c.page_number,
-                bbox: c.bounding_boxes[0] || [0, 0, 1, 1, c.page_number],
-              })),
+              citations: turn.citations?.map(normalizeCitation),
               created_at: turn.created_at,
             });
           }

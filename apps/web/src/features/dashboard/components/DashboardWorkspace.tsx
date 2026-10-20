@@ -21,19 +21,25 @@ import {
   FileText,
   Maximize2,
   Minimize2,
-  BrainCircuit,
+  Brain,
 } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
 import type { BoundingBox } from "@/types/api";
 import { useTheme } from "@/hooks/useTheme";
 import { useDashboardStore } from "../stores/useDashboardStore";
-import { useWorkspaceStore } from "../stores/useWorkspaceStore";
+import {
+  useWorkspaceStore,
+  MIN_SPLIT_RATIO,
+  MAX_SPLIT_RATIO,
+  DEFAULT_SPLIT_RATIO,
+  MIN_PDF_PANEL_WIDTH_PX,
+  MIN_CHAT_PANEL_WIDTH_PX,
+} from "../stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
-import { MathRenderer } from "@/components/shared/MathRenderer";
+import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
 import { DocumentGroundedSummaryCard } from "./DocumentGroundedSummaryCard";
 import { PresuppositionBanner } from "./PresuppositionBanner";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
-import { CitationBadge } from "./CitationBadge";
 import { DocumentTabBar } from "@/features/reader/components/DocumentTabBar";
 import { ViewportControls } from "@/features/reader/components/ViewportControls";
 import { PdfCanvasViewer } from "@/features/reader/components/PdfCanvasViewer";
@@ -45,6 +51,7 @@ import { CreateNoteDialog } from "@/features/notes/components/CreateNoteDialog";
 import { AddDocumentModal } from "@/features/sessions/components/AddDocumentModal";
 import { SessionSettingsModal } from "@/features/sessions/components/SessionSettingsModal";
 import { ExportBundleDialog } from "@/features/sessions/components/ExportBundleDialog";
+import { WorkspaceToolsMenu } from "./WorkspaceToolsMenu";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useQueryClient } from "@tanstack/react-query";
@@ -89,62 +96,7 @@ interface DashboardWorkspaceProps {
   onDeletedSession?: () => void;
 }
 
-/**
- * Formats assistant message markdown into paragraphs with KaTeX support
- */
-function FormattedAssistantMessage({ content }: { content: string }) {
-  const renderedContent = useMemo(() => {
-    const blocks = content.split("$$");
 
-    return blocks.map((chunk, idx) => {
-      if (idx % 2 === 1) {
-        return (
-          <div
-            key={idx}
-            className="my-3 p-3.5 rounded-2xl bg-[#f7f4ee] dark:bg-[#21201d] border border-[#e5dfd4] dark:border-[#38332c] text-center overflow-x-auto text-coral-600 dark:text-amber-400 shadow-2xs"
-          >
-            <MathRenderer math={chunk.trim()} block />
-          </div>
-        );
-      }
-
-      const lines = chunk.split("\n").filter((l) => l.length > 0);
-      return (
-        <div key={idx} className="space-y-2.5">
-          {lines.map((line, lIdx) => {
-            const tokens = line.split(/(\*\*[^*]+\*\*|\$[^$]+\$)/g);
-
-            return (
-              <p key={lIdx} className="leading-relaxed text-xs sm:text-sm text-ink dark:text-zinc-200">
-                {tokens.map((token, tIdx) => {
-                  if (token.startsWith("**") && token.endsWith("**")) {
-                    return (
-                      <strong key={tIdx} className="font-semibold text-ink dark:text-zinc-100">
-                        {token.slice(2, -2)}
-                      </strong>
-                    );
-                  }
-                  if (token.startsWith("$") && token.endsWith("$") && token.length > 2) {
-                    return (
-                      <MathRenderer
-                        key={tIdx}
-                        math={token.slice(1, -1)}
-                        className="text-coral-600 dark:text-amber-400 px-0.5"
-                      />
-                    );
-                  }
-                  return token;
-                })}
-              </p>
-            );
-          })}
-        </div>
-      );
-    });
-  }, [content]);
-
-  return <div className="space-y-3 font-anthropic-sans leading-relaxed">{renderedContent}</div>;
-}
 
 export function DashboardWorkspace({
   messages,
@@ -197,9 +149,24 @@ export function DashboardWorkspace({
     const handlePointerMove = (e: PointerEvent) => {
       if (!workspaceContainerRef.current) return;
       const rect = workspaceContainerRef.current.getBoundingClientRect();
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+
       const currentX = e.clientX - rect.left;
-      const ratio = (currentX / rect.width) * 100;
-      setSplitRatio(Math.max(20, Math.min(80, Math.round(ratio * 10) / 10)));
+      const rawRatio = (currentX / totalWidth) * 100;
+
+      // Enforce both pixel minimums (PDF >= 400px, Chat >= 360px) and percentage bounds [35%, 65%]
+      const minPdfRatio = Math.max(MIN_SPLIT_RATIO, (MIN_PDF_PANEL_WIDTH_PX / totalWidth) * 100);
+      const maxPdfRatio = Math.min(
+        MAX_SPLIT_RATIO,
+        ((totalWidth - MIN_CHAT_PANEL_WIDTH_PX) / totalWidth) * 100
+      );
+
+      const effectiveMin = Math.min(DEFAULT_SPLIT_RATIO, minPdfRatio);
+      const effectiveMax = Math.max(DEFAULT_SPLIT_RATIO, maxPdfRatio);
+
+      const clampedRatio = Math.max(effectiveMin, Math.min(effectiveMax, rawRatio));
+      setSplitRatio(Math.round(clampedRatio * 10) / 10);
     };
 
     const handlePointerUp = () => {
@@ -217,13 +184,13 @@ export function DashboardWorkspace({
   const handleDividerKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowLeft") {
       e.preventDefault();
-      setSplitRatio(splitRatio - 2);
+      setSplitRatio(Math.max(MIN_SPLIT_RATIO, splitRatio - 2));
     } else if (e.key === "ArrowRight") {
       e.preventDefault();
-      setSplitRatio(splitRatio + 2);
+      setSplitRatio(Math.min(MAX_SPLIT_RATIO, splitRatio + 2));
     } else if (e.key === "Home" || e.key === "Enter") {
       e.preventDefault();
-      setSplitRatio(50);
+      setSplitRatio(DEFAULT_SPLIT_RATIO);
     }
   };
 
@@ -727,19 +694,41 @@ export function DashboardWorkspace({
   };
 
   // Debounced Viewport OCC auto-save (RFC 9110 If-Match)
+  const lastSavedViewportRef = useRef<{ page: number; zoom: number; tab: string; docId: string } | null>(null);
+
   useEffect(() => {
     if (!activeSessionId || !activeDocumentId || activeDocumentId === "doc-default") return;
     const sessionDocs = sessionDetail?.data?.documents;
     if (sessionDocs && !sessionDocs.some((d) => d.id === activeDocumentId)) return;
+
+    const currentTab = (activeRightTab === "chat" || activeRightTab === "notes" || activeRightTab === "summary")
+      ? activeRightTab
+      : "chat";
+
+    if (
+      lastSavedViewportRef.current &&
+      lastSavedViewportRef.current.page === currentPage &&
+      lastSavedViewportRef.current.zoom === zoomRatio &&
+      lastSavedViewportRef.current.tab === currentTab &&
+      lastSavedViewportRef.current.docId === activeDocumentId
+    ) {
+      return;
+    }
+
     const timer = setTimeout(() => {
+      lastSavedViewportRef.current = {
+        page: currentPage,
+        zoom: zoomRatio,
+        tab: currentTab,
+        docId: activeDocumentId,
+      };
+
       updateViewportMutation.mutate({
         sessionId: activeSessionId,
         etag: `v${sessionVersion}`,
         data: {
           active_document_id: activeDocumentId,
-          active_tab: (activeRightTab === "chat" || activeRightTab === "notes" || activeRightTab === "summary")
-            ? activeRightTab
-            : "chat",
+          active_tab: currentTab,
           viewport_state: {
             page: currentPage,
             zoom_ratio: zoomRatio,
@@ -757,12 +746,12 @@ export function DashboardWorkspace({
       ref={workspaceContainerRef}
       onContextMenu={handleContextMenu}
       className={cn(
-        "flex-1 flex flex-col lg:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
+        "flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
         isDraggingSplit && "select-none cursor-col-resize"
       )}
     >
-      {/* Mobile Top Navigation & Segmented View Switcher (Visible only on < lg screens) */}
-      <div className="lg:hidden h-11 px-3 border-b border-[#e6dfd8] dark:border-[#2a2824] bg-white/80 dark:bg-[#181715]/80 backdrop-blur-md flex items-center justify-between shrink-0 select-none z-20">
+      {/* Mobile Top Navigation & Segmented View Switcher (Visible only on < md screens) */}
+      <div className="md:hidden h-12 px-3 border-b border-[#e6dfd8] dark:border-[#2a2824] bg-white/80 dark:bg-[#181715]/80 backdrop-blur-md flex items-center justify-between shrink-0 select-none z-10">
         {/* Left: Mobile Sidebar Menu Toggle & Title */}
         <div className="flex items-center gap-2 min-w-0">
           <button
@@ -770,23 +759,23 @@ export function DashboardWorkspace({
             onClick={toggleSidebar}
             aria-label="Mở danh sách phiên nghiên cứu"
             title="Mở menu phiên nghiên cứu"
-            className="p-1.5 rounded-lg hover:bg-surface-soft dark:hover:bg-[#252320] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer"
+            className="p-1.5 rounded-lg hover:bg-surface-soft dark:hover:bg-[#252320] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
-            <PanelLeft className="w-4 h-4 text-coral-600 dark:text-coral-400" />
+            <PanelLeft className="w-5 h-5 text-coral-600 dark:text-coral-400" />
           </button>
           <span className="text-xs font-serif font-medium text-ink dark:text-zinc-200 truncate max-w-[130px] sm:max-w-[220px]">
             {displayTitle}
           </span>
         </div>
 
-        {/* Center/Right: Segmented Switcher Pill [ 📄 Tài liệu ] [ 💬 Trợ lý ] */}
-        <div className="inline-flex p-0.5 rounded-lg bg-[#eee9df] dark:bg-[#24221f] text-xs font-medium">
+        {/* Center/Right: Segmented Switcher Pill [ 📄 Xem Bài Báo ] [ 💬 Socratic Copilot ] */}
+        <div className="inline-flex p-0.5 rounded-lg bg-[#eee9df] dark:bg-[#24221f] text-xs font-medium border border-hairline/60">
           <button
             type="button"
             onClick={() => setMobileActiveView("reader")}
             aria-label="Chuyển sang chế độ xem tài liệu PDF"
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition-all cursor-pointer text-[11px]",
+              "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[44px] rounded-md transition-all cursor-pointer text-xs font-medium select-none",
               mobileActiveView === "reader"
                 ? "bg-white dark:bg-[#322f2b] text-primary dark:text-coral-400 font-semibold shadow-xs"
                 : "text-muted hover:text-ink dark:text-zinc-400"
@@ -800,7 +789,7 @@ export function DashboardWorkspace({
             onClick={() => setMobileActiveView("workspace")}
             aria-label="Chuyển sang chế độ xem trợ lý đối thoại và sổ tay"
             className={cn(
-              "inline-flex items-center gap-1 px-2.5 py-1 rounded-md transition-all cursor-pointer text-[11px]",
+              "inline-flex items-center justify-center gap-1.5 px-3 py-1.5 min-h-[44px] rounded-md transition-all cursor-pointer text-xs font-medium select-none",
               mobileActiveView === "workspace"
                 ? "bg-white dark:bg-[#322f2b] text-primary dark:text-coral-400 font-semibold shadow-xs"
                 : "text-muted hover:text-ink dark:text-zinc-400"
@@ -821,27 +810,30 @@ export function DashboardWorkspace({
             ? { width: "100%" }
             : zenMode === "workspace"
             ? { display: "none" }
-            : { width: `${splitRatio}%` }
+            : ({
+                "--split-ratio": `${splitRatio}%`,
+              } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full border-b-0 lg:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden transition-[width] duration-75",
-          zenMode === "workspace" && "hidden lg:hidden",
+          "flex flex-col h-full w-full md:w-[var(--split-ratio)] md:min-w-[320px] border-b-0 md:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden transition-[width] duration-75",
+          zenMode === "workspace" && "hidden md:hidden",
           zenMode === "pdf" && "w-full",
-          zenMode === "none" && "w-full lg:w-auto",
-          mobileActiveView === "reader" ? "flex" : "hidden lg:flex"
+          mobileActiveView === "reader" ? "flex" : "hidden md:flex"
         )}
       >
-        {/* Multi-Paper Tab Bar */}
-        <DocumentTabBar
-          documents={effectiveDocuments}
-          openDocumentIds={effectiveOpenIds}
-          activeDocumentId={activeDocumentId || effectiveOpenIds[0] || null}
-          onSelectDocument={handleSelectDoc}
-          onCloseDocument={handleCloseDoc}
-          onAddDocument={() => setIsAddDocOpen(true)}
-          onToggleStar={handleToggleStar}
-          onDeleteDocument={handleDeleteDoc}
-        />
+        {/* Multi-Paper Tab Bar (Desktop / Tablet only; mobile uses header & switcher) */}
+        <div className="hidden md:block">
+          <DocumentTabBar
+            documents={effectiveDocuments}
+            openDocumentIds={effectiveOpenIds}
+            activeDocumentId={activeDocumentId || effectiveOpenIds[0] || null}
+            onSelectDocument={handleSelectDoc}
+            onCloseDocument={handleCloseDoc}
+            onAddDocument={() => setIsAddDocOpen(true)}
+            onToggleStar={handleToggleStar}
+            onDeleteDocument={handleDeleteDoc}
+          />
+        </div>
 
         {/* Viewport & Navigation Controls */}
         <ViewportControls
@@ -904,12 +896,7 @@ export function DashboardWorkspace({
                     height: bboxStyle.height,
                   }}
                   className="absolute z-20 pointer-events-none rounded-md border-2 border-[#cc785c] bg-[#cc785c]/10 shadow-[0_0_12px_rgba(204,120,92,0.35)] animate-in fade-in zoom-in-95 duration-250"
-                >
-                  <div className="absolute -top-3.5 left-2 px-1.5 py-0.5 rounded bg-[#cc785c] text-white text-[10px] font-mono font-medium tracking-wide flex items-center gap-1 shadow-xs">
-                    <span>⚑</span>
-                    <span>Dẫn chứng • Tr. {activeBbox[4]}</span>
-                  </div>
-                </div>
+                />
               )}
 
               {/* Clean Studio Paper Loading State (No Mock Text) */}
@@ -917,13 +904,13 @@ export function DashboardWorkspace({
                 <header className="text-center pb-5 border-b border-[#e5e1d8] dark:border-[#353027] space-y-2">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-xs font-medium font-sans">
                     <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                    <span>Đang nạp tài liệu nghiên cứu...</span>
+                    <span>Đang nạp tài liệu...</span>
                   </div>
                   <h2 className="font-serif font-bold text-base sm:text-lg text-[#11100f] dark:text-[#fbf9f5] leading-snug line-clamp-2">
                     {displayTitle}
                   </h2>
                   <p className="text-2xs font-mono text-ink-muted dark:text-zinc-400">
-                    Phân tích học thuật bảo chứng tọa độ Bounding Box • Trang {currentPage}
+                    Trang {currentPage}
                   </p>
                 </header>
 
@@ -999,7 +986,7 @@ export function DashboardWorkspace({
         />
       </section>
 
-      {/* Draggable Divider (Desktop Only, Hidden in Zen Modes) */}
+      {/* Draggable Divider (Tablet & Desktop, Hidden in Zen Modes and Mobile) */}
       {zenMode === "none" && (
         <div
           role="separator"
@@ -1007,14 +994,14 @@ export function DashboardWorkspace({
           data-testid="split-pane-divider"
           aria-orientation="vertical"
           aria-valuenow={Math.round(splitRatio)}
-          aria-valuemin={20}
-          aria-valuemax={80}
+          aria-valuemin={MIN_SPLIT_RATIO}
+          aria-valuemax={MAX_SPLIT_RATIO}
           aria-label="Kéo để điều chỉnh kích thước hai khung làm việc"
           onPointerDown={handleDividerPointerDown}
-          onDoubleClick={() => setSplitRatio(50)}
+          onDoubleClick={() => setSplitRatio(DEFAULT_SPLIT_RATIO)}
           onKeyDown={handleDividerKeyDown}
           className={cn(
-            "hidden lg:flex w-2 -mx-1 z-30 cursor-col-resize items-center justify-center select-none hover:bg-primary/25 active:bg-primary/40 transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40",
+            "hidden md:flex w-2 -mx-1 z-30 cursor-col-resize items-center justify-center select-none hover:bg-primary/25 active:bg-primary/40 transition-colors focus:outline-none focus:ring-1 focus:ring-primary/40",
             isDraggingSplit && "bg-primary/30"
           )}
         >
@@ -1032,14 +1019,15 @@ export function DashboardWorkspace({
             ? { width: "100%" }
             : zenMode === "pdf"
             ? { display: "none" }
-            : { width: `${100 - splitRatio}%` }
+            : ({
+                "--split-ratio-right": `${100 - splitRatio}%`,
+              } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
-          zenMode === "pdf" && "hidden lg:hidden",
+          "flex flex-col h-full w-full md:w-[var(--split-ratio-right)] md:min-w-[320px] bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
+          zenMode === "pdf" && "hidden md:hidden",
           zenMode === "workspace" && "w-full",
-          zenMode === "none" && "w-full lg:w-auto",
-          mobileActiveView === "workspace" ? "flex" : "hidden lg:flex"
+          mobileActiveView === "workspace" ? "flex" : "hidden md:flex"
         )}
       >
         {/* Floating Zen Mode Restore Button */}
@@ -1059,12 +1047,12 @@ export function DashboardWorkspace({
           </div>
         )}
         {/* Right Pane Navigation Tab Bar */}
-        <header className="h-11 px-3 bg-white/70 dark:bg-[#1c1b18]/70 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2">
-          {/* 5 Tab Switchers */}
+        <header className="h-11 px-2.5 sm:px-3 bg-white/70 dark:bg-[#1c1b18]/70 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-1.5 sm:gap-2">
+          {/* 5 Tab Switchers with horizontal scroll and no shrink */}
           <nav
             role="tablist"
             aria-label="Các khung tính năng học thuật"
-            className="flex items-center gap-1 overflow-x-auto scrollbar-none shrink"
+            className="flex items-center gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1 touch-pan-x"
           >
             <button
               type="button"
@@ -1072,14 +1060,15 @@ export function DashboardWorkspace({
               aria-selected={activeRightTab === "chat"}
               onClick={() => setActiveRightTab("chat")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
                 activeRightTab === "chat"
                   ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
                   : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
               )}
             >
               <MessageSquare className="w-3.5 h-3.5" />
-              <span>Đối thoại</span>
+              <span className="sr-only">Đối thoại</span>
+              <span className="whitespace-nowrap">Chat</span>
             </button>
 
             <button
@@ -1088,14 +1077,15 @@ export function DashboardWorkspace({
               aria-selected={activeRightTab === "notes"}
               onClick={() => setActiveRightTab("notes")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
                 activeRightTab === "notes"
                   ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
                   : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
               )}
             >
               <BookMarked className="w-3.5 h-3.5" />
-              <span>Sổ tay</span>
+              <span className="sr-only">Sổ tay</span>
+              <span className="whitespace-nowrap">Notes</span>
             </button>
 
             <button
@@ -1104,14 +1094,15 @@ export function DashboardWorkspace({
               aria-selected={activeRightTab === "summary"}
               onClick={() => setActiveRightTab("summary")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
                 activeRightTab === "summary"
                   ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
                   : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
               )}
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Tóm tắt</span>
+              <span className="sr-only">Tóm tắt</span>
+              <span className="whitespace-nowrap">Summary</span>
             </button>
 
             <button
@@ -1120,14 +1111,15 @@ export function DashboardWorkspace({
               aria-selected={activeRightTab === "structure"}
               onClick={() => setActiveRightTab("structure")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
                 activeRightTab === "structure"
                   ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
                   : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
               )}
             >
               <ListTree className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Mục lục</span>
+              <span className="sr-only">Mục lục</span>
+              <span className="hidden sm:inline whitespace-nowrap">Outline</span>
             </button>
 
             <button
@@ -1136,41 +1128,70 @@ export function DashboardWorkspace({
               aria-selected={activeRightTab === "references"}
               onClick={() => setActiveRightTab("references")}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer",
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
                 activeRightTab === "references"
                   ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
                   : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
               )}
             >
               <Quote className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Tham khảo</span>
+              <span className="sr-only">Tham khảo</span>
+              <span className="hidden sm:inline whitespace-nowrap">References</span>
             </button>
           </nav>
 
           {/* Right Actions: Xuất ZIP, Cài đặt phiên, Mode Dark/Light, Làm mới hội thoại */}
-          <div className="flex items-center gap-1.5 shrink-0">
-            {/* Export Bundle Button */}
-            <button
-              type="button"
-              onClick={() => setIsExportOpen(true)}
-              aria-label="Xuất gói nghiên cứu ngoại tuyến (.zip)"
-              title="Xuất gói nghiên cứu ngoại tuyến (.zip)"
-              className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 transition-colors cursor-pointer text-[11px] font-sans shadow-2xs"
-            >
-              <Archive className="w-3.5 h-3.5 text-primary" />
-              <span className="hidden sm:inline font-medium">Xuất ZIP</span>
-            </button>
+          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+            {/* Desktop wide tools: Xuất ZIP, Cài đặt, Theme */}
+            <div className="hidden md:flex items-center gap-1.5 shrink-0">
+              {/* Export Bundle Button */}
+              <button
+                type="button"
+                onClick={() => setIsExportOpen(true)}
+                aria-label="Xuất ZIP"
+                title="Xuất ZIP"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Archive className="w-3.5 h-3.5 text-primary" />
+                <span className="sr-only">Xuất ZIP</span>
+              </button>
 
-            {/* Session Settings Button */}
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              aria-label="Cài đặt phiên nghiên cứu"
-              title="Cài đặt phiên nghiên cứu"
-              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-            >
-              <Settings className="w-3.5 h-3.5" />
-            </button>
+              {/* Session Settings Button */}
+              <button
+                type="button"
+                onClick={() => setIsSettingsOpen(true)}
+                aria-label="Cài đặt phiên nghiên cứu"
+                title="Cài đặt phiên nghiên cứu"
+                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Theme Toggle Button (Dark / Light Mode) */}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
+                title={isDark ? "Chế độ sáng" : "Chế độ tối"}
+                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
+              >
+                {isDark ? (
+                  <Sun className="w-3.5 h-3.5 text-amber-400" />
+                ) : (
+                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
+                )}
+              </button>
+            </div>
+
+            {/* Mobile / Narrow Pane Dropdown */}
+            <div className="flex md:hidden items-center shrink-0">
+              <WorkspaceToolsMenu
+                onExport={() => setIsExportOpen(true)}
+                onOpenSettings={() => setIsSettingsOpen(true)}
+                isDark={isDark}
+                onToggleTheme={toggleTheme}
+              />
+            </div>
 
             {/* Zen Workspace Toggle (Hide PDF) */}
             <button
@@ -1190,21 +1211,6 @@ export function DashboardWorkspace({
                 <Minimize2 className="w-3.5 h-3.5" />
               ) : (
                 <Maximize2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-
-            {/* Theme Toggle Button (Dark / Light Mode) */}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-              title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-            >
-              {isDark ? (
-                <Sun className="w-3.5 h-3.5 text-amber-400" />
-              ) : (
-                <Moon className="w-3.5 h-3.5 text-zinc-600" />
               )}
             </button>
 
@@ -1239,9 +1245,6 @@ export function DashboardWorkspace({
                     <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
                       Socratic Copilot
                     </h2>
-                    <span className="text-[10px] text-ink-muted dark:text-zinc-400 font-mono">
-                      Trợ lý phản biện &amp; bảo chứng trích dẫn
-                    </span>
                   </div>
                 </div>
               </div>
@@ -1264,8 +1267,8 @@ export function DashboardWorkspace({
                     </h3>
                     <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
                       {isRealDocument
-                        ? `Đã sẵn sàng phân tích bài báo "${displayTitle}". Đặt câu hỏi hoặc chọn gợi ý bên dưới để đối thoại phản biện.`
-                        : "Chưa có tài liệu nghiên cứu nào được nạp. Hãy tải lên tệp PDF để kích hoạt trích xuất Bounding Box hoặc đặt câu hỏi học thuật tổng quát."}
+                        ? `Đã nạp bài báo "${displayTitle}". Đặt câu hỏi hoặc chọn gợi ý để đối thoại.`
+                        : "Chưa có tài liệu nghiên cứu nào được nạp. Hãy tải lên tệp PDF để kích hoạt trích xuất Bounding Box."}
                     </p>
                   </div>
 
@@ -1279,6 +1282,44 @@ export function DashboardWorkspace({
                       <span>+ Tải lên bài báo PDF</span>
                     </button>
                   )}
+
+                  {/* Empty state hint chips grid */}
+                  <div className="w-full pt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-left relative z-20 pointer-events-auto">
+                    {[
+                      {
+                        label: "Tóm tắt paper",
+                        prompt: "Hãy tóm tắt ngắn gọn và toàn diện nội dung bài báo này (mục tiêu, phương pháp chính và kết luận).",
+                      },
+                      {
+                        label: "Đóng góp chính",
+                        prompt: "Những đóng góp và điểm mới cốt lõi (key contributions) của nghiên cứu này là gì?",
+                      },
+                      {
+                        label: "Phương pháp & Kiến trúc",
+                        prompt: "Giải thích chi tiết phương pháp nghiên cứu và kiến trúc mô hình được đề xuất trong bài báo.",
+                      },
+                      {
+                        label: "Hạn chế & Thách thức",
+                        prompt: "Những hạn chế và thách thức chính của nghiên cứu này là gì, và các tác giả gợi ý hướng phát triển ra sao?",
+                      },
+                    ].map((item, idx) => (
+                      <button
+                        key={idx}
+                        type="button"
+                        data-testid={`empty-hint-chip-${idx}`}
+                        onClick={() => {
+                          onChangeText(item.prompt);
+                          onSend(item.prompt);
+                        }}
+                        className="flex items-center gap-2 p-2.5 rounded-xl border border-[#e5dfd4] dark:border-[#38332c] bg-white dark:bg-[#201e1a] hover:border-coral-500/60 hover:bg-coral-500/5 transition-all cursor-pointer shadow-2xs text-left group active:scale-95 select-none"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400 shrink-0" />
+                        <span className="text-xs font-semibold text-ink dark:text-zinc-200 group-hover:text-coral-600 dark:group-hover:text-coral-400">
+                          {item.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -1333,8 +1374,9 @@ export function DashboardWorkspace({
                         >
                           <summary className="cursor-pointer font-medium select-none flex items-center justify-between text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
                             <div className="flex items-center gap-1.5">
-                              <BrainCircuit className="w-3.5 h-3.5 text-coral-500" />
-                              <span>Suy luận học thuật</span>
+                              <Brain className="w-3.5 h-3.5 text-coral-500" />
+                              <span aria-hidden="true">Suy luận</span>
+                              <span className="sr-only">Suy luận học thuật</span>
                             </div>
                             {message.is_streaming && !message.content && (
                               <span className="text-3xs text-coral-600 dark:text-coral-400 animate-pulse">
@@ -1348,21 +1390,52 @@ export function DashboardWorkspace({
                         </details>
                       )}
 
-                      {/* Formatted Assistant Body */}
-                      <FormattedAssistantMessage content={message.content} />
-
-                      {/* Interactive Citation Badges */}
-                      {message.citations && message.citations.length > 0 && (
-                        <div className="pt-2 flex flex-wrap items-center gap-1.5">
-                          {message.citations.map((cite, cIdx) => (
-                            <CitationBadge
-                              key={cIdx}
-                              citation={cite}
-                              onOpenReferences={() => setIsRefModalOpen(true)}
-                            />
-                          ))}
-                        </div>
-                      )}
+                      {/* Formatted Assistant Body with Inline Citations */}
+                      <AcademicMarkdownRenderer
+                        content={message.content}
+                        citations={message.citations}
+                        onCitationClick={(citationOrId, maybeCitId) => {
+                          const citId = typeof citationOrId === "string" ? citationOrId : (maybeCitId || "");
+                          let matched = typeof citationOrId === "object" ? citationOrId : null;
+                          if (!matched && message.citations && message.citations.length > 0) {
+                            matched = message.citations.find(
+                              (c) => c.citation_id === citId || c.citation_id === `cit_${citId}`
+                            ) || null;
+                            if (!matched && citId) {
+                              const numericPart = citId.replace(/\D/g, "");
+                              if (numericPart) {
+                                const idx = parseInt(numericPart, 10) - 1;
+                                if (!isNaN(idx) && message.citations[idx]) {
+                                  matched = message.citations[idx];
+                                }
+                              }
+                            }
+                            if (!matched && message.citations.length === 1) {
+                              matched = message.citations[0];
+                            }
+                          }
+                          if (
+                            matched?.paper_id &&
+                            matched.paper_id !== activeDocumentId &&
+                            openDocumentIds.includes(matched.paper_id)
+                          ) {
+                            setActiveDocumentId(matched.paper_id);
+                          }
+                          if (matched?.bbox) {
+                            setActiveBboxStore(matched.bbox);
+                            setActiveCitation(matched.paper_id, matched.bbox, matched.page);
+                            const targetPage = matched.bbox[4] || matched.page || 1;
+                            setCurrentPage(targetPage);
+                            useReaderStore.getState().setCurrentPage(targetPage);
+                            setMobileActiveView("reader");
+                          } else if (matched?.page) {
+                            const targetPage = matched.page;
+                            setCurrentPage(targetPage);
+                            useReaderStore.getState().setCurrentPage(targetPage);
+                            setMobileActiveView("reader");
+                          }
+                        }}
+                      />
 
                       {/* Action Toolbar */}
                       {!message.is_streaming && (
@@ -1405,8 +1478,8 @@ export function DashboardWorkspace({
             <div className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10">
               {/* Short Prompt Suggestions - Sleek Horizontal Pills at the Bottom */}
               {messages.length === 0 && !isGenerating && (
-                <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 mb-2.5">
-                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none py-0.5">
+                <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 mb-2.5 relative z-20 pointer-events-auto">
+                  <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-none flex-nowrap touch-pan-x py-1">
                     {[
                       {
                         label: "Tóm tắt paper",
@@ -1428,8 +1501,12 @@ export function DashboardWorkspace({
                       <button
                         key={idx}
                         type="button"
-                        onClick={() => onSend(item.prompt)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans border border-[#e5dfd4] dark:border-[#38342e] bg-white/90 dark:bg-[#22211e] text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-100 hover:border-primary/50 hover:bg-[#f6f2ea] dark:hover:bg-[#2b2722] transition-colors cursor-pointer shrink-0 shadow-2xs"
+                        data-testid={`bottom-hint-chip-${idx}`}
+                        onClick={() => {
+                          onChangeText(item.prompt);
+                          onSend(item.prompt);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-sans border border-[#e5dfd4] dark:border-[#38342e] bg-white/90 dark:bg-[#22211e] text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-100 hover:border-primary/50 hover:bg-[#f6f2ea] dark:hover:bg-[#2b2722] transition-all cursor-pointer shrink-0 shadow-2xs whitespace-nowrap active:scale-95 select-none"
                       >
                         <Sparkles className="w-3 h-3 text-primary shrink-0" />
                         <span>{item.label}</span>

@@ -1,8 +1,11 @@
-import { useEffect, useCallback, useState } from "react";
+import { useEffect, useCallback, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { WritingHeaderBar } from "./WritingHeaderBar";
 import { WritingEditorPane } from "./WritingEditorPane";
 import { WritingPreviewPane } from "./WritingPreviewPane";
 import { WritingAssistantPane } from "./WritingAssistantPane";
+import { WritingSidebar } from "./WritingSidebar";
+import { DashboardTaskbar } from "@/features/dashboard/components/DashboardTaskbar";
 import { SourceEvidenceModal } from "./SourceEvidenceModal";
 import { SuggestionReviewPanel } from "./SuggestionReviewPanel";
 import { DraftAssetManagementModal } from "./DraftAssetManagementModal";
@@ -12,9 +15,16 @@ import { AssociativeMemoryCard } from "./AssociativeMemoryCard";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
 import { calculateRebasedRange } from "../lib/diffUtils";
+import { cn } from "@/lib/utils";
+import { X, Sparkles } from "lucide-react";
 import type { PendingSuggestion } from "../types";
+import type { SessionItem } from "@/types/dashboard";
 
-export function WritingWorkspace() {
+interface WritingWorkspaceProps {
+  sessions?: SessionItem[];
+}
+
+export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
 
   const {
     activeDraftId,
@@ -23,13 +33,17 @@ export function WritingWorkspace() {
     editorContent,
     setEditorContent,
     workspaceMode,
+    mobileActiveTab,
+    setMobileActiveTab,
     isDirty,
     markSaved,
     setSaving,
+    isCompiling,
     setCompiling,
     setVerifying,
     setCompileResult,
     setVerifyResult,
+    previewPdfBlobUrl,
     setPreviewPdfBlobUrl,
     setWorkspaceMode,
     setAssistantPrompt,
@@ -38,9 +52,65 @@ export function WritingWorkspace() {
     setAssisting,
     isCommentsPaneOpen,
     setComments,
+    isFileTreeOpen,
+    toggleFileTree,
+    openAssetModal,
   } = useWritingStore();
 
+  const navigate = useNavigate();
+
   const [conflictMessage, setConflictMessage] = useState<string | null>(null);
+
+  // Overleaf-style draggable splitters & navigation
+  const [sidebarWidth, setSidebarWidth] = useState(240);
+  const [isDraggingSidebar, setIsDraggingSidebar] = useState(false);
+  const [editorRatio, setEditorRatio] = useState(50);
+  const [isDraggingEditor, setIsDraggingEditor] = useState(false);
+  const [targetScrollLine, setTargetScrollLine] = useState<number | null>(null);
+  const mainWorkspaceRef = useRef<HTMLDivElement>(null);
+  const workspaceContainerRef = useRef<HTMLDivElement>(null);
+
+  // Drag handler for Sidebar Width relative to workspace container
+  useEffect(() => {
+    if (!isDraggingSidebar) return;
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!workspaceContainerRef.current) return;
+      const rect = workspaceContainerRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const newWidth = Math.max(160, Math.min(420, currentX));
+      setSidebarWidth(newWidth);
+    };
+    const handlePointerUp = () => setIsDraggingSidebar(false);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDraggingSidebar]);
+
+  // Drag handler for Editor / Preview split ratio
+  useEffect(() => {
+    if (!isDraggingEditor) return;
+    const handlePointerMove = (e: PointerEvent) => {
+      if (!mainWorkspaceRef.current) return;
+      const rect = mainWorkspaceRef.current.getBoundingClientRect();
+      const currentX = e.clientX - rect.left;
+      const totalWidth = rect.width;
+      if (totalWidth <= 0) return;
+      const ratio = Math.max(25, Math.min(75, (currentX / totalWidth) * 100));
+      setEditorRatio(Math.round(ratio));
+    };
+    const handlePointerUp = () => setIsDraggingEditor(false);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDraggingEditor]);
 
   // Fetch peer review comments on draft load
   useEffect(() => {
@@ -98,6 +168,9 @@ export function WritingWorkspace() {
         const blob = await draftsApi.getPreviewPdfBlob(activeDraftId);
         const url = URL.createObjectURL(blob);
         setPreviewPdfBlobUrl(url);
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+          setMobileActiveTab("preview");
+        }
       }
     } catch (err) {
       console.error("Compile draft failed:", err);
@@ -111,6 +184,24 @@ export function WritingWorkspace() {
     setCompiling,
     setCompileResult,
     setPreviewPdfBlobUrl,
+    setMobileActiveTab,
+  ]);
+
+  // Auto-compile on initial mount if preview is not loaded and content is present
+  const hasAutoCompiledRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!activeDraftId) return;
+
+    if (!previewPdfBlobUrl && !isCompiling && hasAutoCompiledRef.current !== activeDraftId && editorContent?.trim()) {
+      hasAutoCompiledRef.current = activeDraftId;
+      handleCompile();
+    }
+  }, [
+    activeDraftId,
+    previewPdfBlobUrl,
+    isCompiling,
+    editorContent,
+    handleCompile,
   ]);
 
   // SAFE Fact-Checking trigger
@@ -395,82 +486,255 @@ export function WritingWorkspace() {
   }, [closeSuggestionPanel]);
 
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
-      {/* 1. Header Bar with Controls */}
-      <WritingHeaderBar
-        onSave={handleSave}
-        onCompile={handleCompile}
-        onExportBundle={handleExportBundle}
-        onSyncOverleaf={handleSyncOverleaf}
-        isSyncingOverleaf={isSyncingOverleaf}
+    <div className="flex h-screen w-screen overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
+      {/* 1. Left Navigation Taskbar (Inherited from Dashboard) */}
+      <DashboardTaskbar
+        sessions={sessions}
+        onSelectSession={(id) => navigate(`/dashboard/${id}`)}
+        onNewSession={() => navigate("/dashboard")}
       />
 
-      {/* OCC Conflict Alert Banner */}
-      {conflictMessage && (
-        <div
-          data-testid="occ-conflict-alert"
-          className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-amber-700 dark:text-amber-300 text-xs font-medium z-20"
-        >
-          <span>{conflictMessage}</span>
-          <button
-            type="button"
-            data-testid="close-conflict-alert-btn"
-            onClick={() => setConflictMessage(null)}
-            className="hover:underline ml-4 cursor-pointer text-amber-800 dark:text-amber-200"
+      {/* 2. Main Writing Area */}
+      <div
+        ref={workspaceContainerRef}
+        className="flex-1 flex flex-col h-screen overflow-hidden relative min-w-0"
+      >
+        {/* Header Bar with Controls */}
+        <WritingHeaderBar
+          onSave={handleSave}
+          onCompile={handleCompile}
+          onExportBundle={handleExportBundle}
+          onSyncOverleaf={handleSyncOverleaf}
+          isSyncingOverleaf={isSyncingOverleaf}
+          onInsertLatexSnippet={(snippet) => {
+            setEditorContent(editorContent + "\n" + snippet);
+          }}
+        />
+
+        {/* OCC Conflict Alert Banner */}
+        {conflictMessage && (
+          <div
+            data-testid="occ-conflict-alert"
+            className="bg-amber-500/10 border-b border-amber-500/30 px-4 py-2 flex items-center justify-between text-amber-700 dark:text-amber-300 text-xs font-medium z-20"
           >
-            Đóng
-          </button>
-        </div>
-      )}
-
-      {/* 2. Workspace Adaptive Grid / Flex */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {/* Column 1: Code & Text Editor */}
-        {showCode && (
-          <div className="flex-1 flex flex-col relative min-w-0">
-            <WritingEditorPane
-              onSelectionVerify={(selectedText) => {
-                if (activeDraftId) {
-                  draftsApi
-                    .verifyFacts(activeDraftId, { text: selectedText })
-                    .then(setVerifyResult);
-                }
-              }}
-              onSelectionAddToChat={handleSelectionAddToChat}
-            />
-
-            {/* Proactive Associative Memory Card floating on editor margin */}
-            {activeMemorySuggestion && (
-              <div className="absolute bottom-4 right-4 z-20 max-w-sm">
-                <AssociativeMemoryCard
-                  title={activeMemorySuggestion.title}
-                  page={activeMemorySuggestion.page}
-                  citationKey={activeMemorySuggestion.citationKey}
-                  noteSnippet={activeMemorySuggestion.noteSnippet}
-                  similarityScore={activeMemorySuggestion.similarityScore}
-                  onInsertCitation={handleInsertAssociativeCitation}
-                  onViewNote={handleViewAssociativeNote}
-                  onDismiss={() => setActiveMemorySuggestion(null)}
-                />
-              </div>
-            )}
+            <span>{conflictMessage}</span>
+            <button
+              type="button"
+              data-testid="close-conflict-alert-btn"
+              onClick={() => setConflictMessage(null)}
+              className="hover:underline ml-4 cursor-pointer text-amber-800 dark:text-amber-200"
+            >
+              Đóng
+            </button>
           </div>
         )}
 
-        {/* Column 2: Live Compiled PDF Preview */}
-        {showPdf && <WritingPreviewPane />}
+        {/* Workspace Adaptive Grid / Flex */}
+        <div className="flex-1 flex overflow-hidden relative">
+          {/* Collapsible Overleaf-style Sidebar (File Tree & Outline) */}
+          {isFileTreeOpen && (
+          <>
+            {/* Mobile backdrop */}
+            <div
+              data-testid="mobile-sidebar-backdrop"
+              onClick={toggleFileTree}
+              className="md:hidden fixed inset-0 bg-black/50 backdrop-blur-2xs z-40 transition-opacity animate-in fade-in"
+            />
 
-        {/* Column 3: AI Assistant & SAFE Fact-Checking */}
-        {showAi && (
-          <WritingAssistantPane
-            onVerifyFacts={handleVerifyFacts}
-            onSendAssistantPrompt={handleSendAssistantPrompt}
-          />
+            {/* Unified Sidebar Container: Drawer on mobile, inline resizable panel on desktop */}
+            <div
+              data-testid="sidebar-container"
+              style={{ width: `${sidebarWidth}px` }}
+              className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] h-full shadow-2xl md:relative md:inset-auto md:z-auto md:shadow-none md:w-auto md:h-full shrink-0 overflow-hidden bg-[#fbf9f5] dark:bg-[#181715] border-r border-[#e5dfd4] dark:border-[#2a2824] flex flex-col animate-in slide-in-from-left duration-200 md:animate-none"
+            >
+              {/* Mobile Drawer Header with Close Button */}
+              <div className="md:hidden h-11 px-3 border-b border-[#e5dfd4] dark:border-[#2a2824] flex items-center justify-between bg-[#f4eee5] dark:bg-[#1e1c19] text-xs font-semibold shrink-0">
+                <span className="font-serif">Tệp & Dàn ý Bài Báo</span>
+                <button
+                  type="button"
+                  data-testid="close-mobile-sidebar-btn"
+                  onClick={toggleFileTree}
+                  className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
+                  title="Đóng thanh bên"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Sidebar Content */}
+              <div className="flex-1 overflow-hidden">
+                <WritingSidebar
+                  onSelectOutlineItem={(line) => {
+                    setTargetScrollLine(line);
+                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                      setMobileActiveTab("editor");
+                      toggleFileTree();
+                    }
+                  }}
+                  onUploadAsset={() => {
+                    if (typeof window !== "undefined" && window.innerWidth < 768) {
+                      toggleFileTree();
+                    }
+                    openAssetModal();
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Draggable Resizable Splitter 1: Sidebar | Workspace (Desktop only) */}
+            <div
+              data-testid="sidebar-resizable-splitter"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                setIsDraggingSidebar(true);
+              }}
+              title="Kéo chuột để co giãn danh sách tệp"
+              className={cn(
+                "hidden md:flex w-1.5 shrink-0 bg-[#f0eae1] dark:bg-[#252320] hover:bg-coral-500/60 transition-colors cursor-col-resize relative items-center justify-center select-none group z-10",
+                isDraggingSidebar && "bg-coral-500"
+              )}
+            >
+              <div className="w-0.5 h-6 rounded-full bg-zinc-300 dark:bg-zinc-600 group-hover:bg-coral-500 transition-colors" />
+            </div>
+          </>
         )}
 
-        {/* Column 4: Peer Review Comments & Annotations */}
-        {isCommentsPaneOpen && <DraftCommentsPane />}
+        {/* Main Work Columns (Editor | Preview | AI | Comments) */}
+        <div
+          ref={mainWorkspaceRef}
+          className="flex-1 flex overflow-hidden relative min-w-0 h-full w-full"
+        >
+          {/* Column 1: Code & Text Editor */}
+          {showCode && (
+            <div
+              style={showPdf ? { flex: `${editorRatio} 1 0%` } : undefined}
+              className={cn(
+                "flex-col relative min-w-0 h-full",
+                mobileActiveTab === "editor" ? "flex w-full" : "hidden md:flex",
+                !showPdf && "flex-1"
+              )}
+            >
+              <WritingEditorPane
+                scrollToLine={targetScrollLine}
+                onSelectionVerify={(selectedText) => {
+                  if (activeDraftId) {
+                    draftsApi
+                      .verifyFacts(activeDraftId, { text: selectedText })
+                      .then(setVerifyResult);
+                  }
+                }}
+                onSelectionAddToChat={(buffer) => {
+                  handleSelectionAddToChat(buffer);
+                  if (typeof window !== "undefined" && window.innerWidth < 768) {
+                    setMobileActiveTab("assistant");
+                  }
+                }}
+              />
+
+              {/* Proactive Associative Memory Card floating on editor margin */}
+              {activeMemorySuggestion && (
+                <div className="absolute bottom-4 right-4 z-20 max-w-sm">
+                  <AssociativeMemoryCard
+                    title={activeMemorySuggestion.title}
+                    page={activeMemorySuggestion.page}
+                    citationKey={activeMemorySuggestion.citationKey}
+                    noteSnippet={activeMemorySuggestion.noteSnippet}
+                    similarityScore={activeMemorySuggestion.similarityScore}
+                    onInsertCitation={handleInsertAssociativeCitation}
+                    onViewNote={handleViewAssociativeNote}
+                    onDismiss={() => setActiveMemorySuggestion(null)}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Draggable Resizable Splitter 2: Editor | Preview (Desktop only) */}
+          {showCode && showPdf && (
+            <div
+              data-testid="editor-preview-splitter"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                setIsDraggingEditor(true);
+              }}
+              title="Kéo chuột để co giãn Editor và Preview"
+              className={cn(
+                "hidden md:flex w-1.5 shrink-0 bg-[#f0eae1] dark:bg-[#252320] hover:bg-coral-500/60 transition-colors cursor-col-resize relative items-center justify-center select-none group z-10",
+                isDraggingEditor && "bg-coral-500"
+              )}
+            >
+              <div className="w-0.5 h-6 rounded-full bg-zinc-300 dark:bg-zinc-600 group-hover:bg-coral-500 transition-colors" />
+            </div>
+          )}
+
+          {/* Column 2: Live Compiled PDF Preview */}
+          {showPdf && (
+            <div
+              style={showCode ? { flex: `${100 - editorRatio} 1 0%` } : undefined}
+              className={cn(
+                "flex-col relative min-w-0 h-full",
+                mobileActiveTab === "preview" ? "flex w-full" : "hidden md:flex",
+                !showCode && "flex-1"
+              )}
+            >
+              <WritingPreviewPane
+                onRecompile={handleCompile}
+                showDoAnything={false}
+              />
+            </div>
+          )}
+
+          {/* Column 3: AI Assistant & SAFE Fact-Checking */}
+          {showAi && (
+            <div
+              className={cn(
+                "flex-col relative min-w-0 h-full",
+                mobileActiveTab === "assistant" ? "flex w-full" : "hidden md:flex"
+              )}
+            >
+              <WritingAssistantPane
+                onVerifyFacts={handleVerifyFacts}
+                onSendAssistantPrompt={handleSendAssistantPrompt}
+                onClose={() => {
+                  setWorkspaceMode("dual-code");
+                  if (mobileActiveTab === "assistant") {
+                    setMobileActiveTab("editor");
+                  }
+                }}
+              />
+            </div>
+          )}
+
+          {/* Column 4: Peer Review Comments & Annotations */}
+          {isCommentsPaneOpen && (
+            <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-96 md:relative md:inset-auto md:w-auto h-full shadow-2xl md:shadow-none">
+              <DraftCommentsPane />
+            </div>
+          )}
+        </div>
       </div>
+      </div>
+
+      {/* Floating AI Chat Bubble when Assistant is closed */}
+      {!showAi && (
+        <div className="fixed bottom-5 right-5 z-30 pointer-events-auto">
+          <button
+            type="button"
+            data-testid="floating-ai-chat-bubble"
+            onClick={() => {
+              setWorkspaceMode("tri-pane");
+              if (typeof window !== "undefined" && window.innerWidth < 768) {
+                setMobileActiveTab("assistant");
+              }
+            }}
+            className="h-10 px-4 rounded-full bg-white dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#38332c] hover:border-coral-500/50 hover:bg-coral-500/10 text-ink dark:text-zinc-100 shadow-xl flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+            title="Mở Trợ lý AI & Kiểm chứng (Chat AI)"
+          >
+            <Sparkles className="w-4 h-4 text-coral-500 group-hover:rotate-12 transition-transform" />
+            <span>Chat AI</span>
+          </button>
+        </div>
+      )}
 
       {/* 3. Source Document Evidence Modal (with Bounding Box Overlay on Source Paper) */}
       <SourceEvidenceModal />
