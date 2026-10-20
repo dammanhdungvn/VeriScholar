@@ -196,8 +196,7 @@ export function ComparisonMatrixPage() {
                 onChange={(e) => setTopic(e.target.value)}
                 placeholder="Topic (e.g. Attention mechanisms, Reasoning benchmarks)..."
                 className="w-full px-3 py-1.5 rounded-xl bg-white dark:bg-[#22201c] border border-hairline focus:border-[#c15f3e] outline-none text-xs text-ink dark:text-zinc-100 font-sans shadow-xs"
-              >
-              </input>
+              />
             </div>
 
             {/* Submit button */}

@@ -96,10 +96,10 @@ Hệ thống VeriScholar thiết lập chuẩn mực mới cho công cụ hỗ t
 
 \\begin{thebibliography}{9}
 \\bibitem{vaswani2017}
-A. Vaswani et al., \`\`Attention is all you need,''\ in \\textit{NeurIPS}, 2017, pp. 5998--6008.
+A. Vaswani et al., \`\`Attention is all you need,'' in \\textit{NeurIPS}, 2017, pp. 5998--6008.
 
 \\bibitem{devlin2018}
-J. Devlin et al., \`\`BERT: Pre-training of deep bidirectional transformers,''\ \\textit{arXiv:1810.04805}, 2018.
+J. Devlin et al., \`\`BERT: Pre-training of deep bidirectional transformers,'' \\textit{arXiv:1810.04805}, 2018.
 \\end{thebibliography}
 
 \\end{document}

@@ -355,4 +355,3 @@ E = mc^2 + \int_0^1 f(x) dx
         assert r"\includegraphics" not in c
         assert "E = mc^2" not in c
         assert "draft comment" not in c
-

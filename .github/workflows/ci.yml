@@ -218,6 +218,9 @@ jobs:
 
       - name: Validate Enterprise Docker Compose Configuration (.env.enterprise)
         run: |
+          if [ ! -f deploy/.env.enterprise ]; then
+            cp deploy/.env.enterprise.example deploy/.env.enterprise
+          fi
           docker compose --env-file deploy/.env.enterprise -f deploy/docker-compose.enterprise.yml config -q
           echo "Enterprise docker-compose configuration (.env.enterprise) is valid."
 
