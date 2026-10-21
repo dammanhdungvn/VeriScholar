@@ -3,10 +3,11 @@ import { render, screen, fireEvent } from "@testing-library/react";
 import { SocialAuthButtons } from "./SocialAuthButtons";
 
 describe("SocialAuthButtons component", () => {
-  it("renders Google and ORCID SSO buttons", () => {
+  it("renders Google, GitHub and ORCID SSO buttons", () => {
     render(<SocialAuthButtons />);
 
     expect(screen.getByRole("button", { name: "Google" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "GitHub" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "ORCID" })).toBeInTheDocument();
   });
 
@@ -16,6 +17,14 @@ describe("SocialAuthButtons component", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Google" }));
     expect(handleSocialAuth).toHaveBeenCalledWith("google");
+  });
+
+  it("calls onSocialAuth with 'github' when clicking GitHub button", () => {
+    const handleSocialAuth = vi.fn();
+    render(<SocialAuthButtons onSocialAuth={handleSocialAuth} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "GitHub" }));
+    expect(handleSocialAuth).toHaveBeenCalledWith("github");
   });
 
   it("calls onSocialAuth with 'orcid' when clicking ORCID button", () => {
@@ -33,16 +42,20 @@ describe("SocialAuthButtons component", () => {
     );
 
     const googleBtn = screen.getByRole("button", { name: "Google" });
+    const githubBtn = screen.getByRole("button", { name: "GitHub" });
     const orcidBtn = screen.getByRole("button", { name: "ORCID" });
 
     expect(googleBtn).toBeDisabled();
+    expect(githubBtn).toBeDisabled();
     expect(orcidBtn).toBeDisabled();
 
     fireEvent.click(googleBtn);
+    fireEvent.click(githubBtn);
     expect(handleSocialAuth).not.toHaveBeenCalled();
 
     rerender(<SocialAuthButtons onSocialAuth={handleSocialAuth} isLoading={true} />);
     expect(googleBtn).toBeDisabled();
+    expect(githubBtn).toBeDisabled();
     expect(orcidBtn).toBeDisabled();
   });
 });

@@ -41,7 +41,7 @@ export function RegisterForm() {
 
   // Modals state
   const [socialModalOpen, setSocialModalOpen] = React.useState(false);
-  const [selectedSocialProvider, setSelectedSocialProvider] = React.useState<"google" | "orcid" | null>(null);
+  const [selectedSocialProvider, setSelectedSocialProvider] = React.useState<"google" | "github" | "orcid" | null>(null);
   const [otpModalOpen, setOtpModalOpen] = React.useState(false);
 
   const passwordStrength = React.useMemo(() => evaluatePasswordStrength(password), [password]);
@@ -136,7 +136,7 @@ export function RegisterForm() {
     });
   };
 
-  const handleSocialAuth = (provider: "google" | "orcid") => {
+  const handleSocialAuth = (provider: "google" | "github" | "orcid") => {
     setSelectedSocialProvider(provider);
     setSocialModalOpen(true);
   };

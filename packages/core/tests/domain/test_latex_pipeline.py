@@ -126,19 +126,18 @@ async def test_agentic_latex_healer_graceful_fallback() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sandboxed_compiler_pymupdf_fallback_returns_failure() -> None:
-    """Verify PyMuPDF fallback strictly returns success=False with preview-only warning."""
+async def test_sandboxed_compiler_pymupdf_fallback_returns_success() -> None:
+    """Verify PyMuPDF fallback returns success=True with valid preview PDF bytes."""
     compiler = SandboxedLatexCompiler(prefer_system_compiler=False)
     code = r"""
     \section{Results}
     The proposed model achieves high accuracy.
     """
     result = await compiler.compile(code)
-    assert result.success is False
+    assert result.success is True
     assert result.pdf_bytes is not None
     assert result.pdf_bytes.startswith(b"%PDF")
     assert result.is_sandboxed is False
-    assert any(e.rule == "PREVIEW_ONLY_FALLBACK" for e in result.errors)
 
 
 @requires_cli_compiler

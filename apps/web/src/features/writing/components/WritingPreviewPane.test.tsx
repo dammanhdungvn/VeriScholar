@@ -87,4 +87,65 @@ describe("WritingPreviewPane", () => {
 
     expect(screen.getByText(/Đang biên dịch bản thảo trong sandbox/i)).toBeInTheDocument();
   });
+
+  it("renders prominent green [Recompile] button, download PDF, page navigation, and [+ Do anything] button", () => {
+    const handleRecompile = vi.fn();
+    const handleDownload = vi.fn();
+    const handleDoAnything = vi.fn();
+
+    render(
+      <WritingPreviewPane
+        onRecompile={handleRecompile}
+        onDownloadPdf={handleDownload}
+        onDoAnything={handleDoAnything}
+      />
+    );
+
+    // Green Recompile button
+    const recompileBtn = screen.getByTestId("preview-recompile-btn");
+    expect(recompileBtn).toBeInTheDocument();
+    expect(recompileBtn).toHaveTextContent(/Recompile/i);
+    fireEvent.click(recompileBtn);
+    expect(handleRecompile).toHaveBeenCalledTimes(1);
+
+    // Download PDF button
+    const downloadBtn = screen.getByTestId("preview-download-btn");
+    expect(downloadBtn).toBeInTheDocument();
+    fireEvent.click(downloadBtn);
+    expect(handleDownload).toHaveBeenCalledTimes(1);
+
+    // Page navigation < 1 / 3 >
+    expect(screen.getByTestId("preview-page-nav")).toHaveTextContent("1 / 3");
+    const nextBtn = screen.getByTitle("Trang tiếp");
+    fireEvent.click(nextBtn);
+    expect(screen.getByTestId("preview-page-nav")).toHaveTextContent("2 / 3");
+
+    // Floating [+ Do anything] button
+    const doAnythingBtn = screen.getByTestId("preview-do-anything-btn");
+    expect(doAnythingBtn).toBeInTheDocument();
+    expect(doAnythingBtn).toHaveTextContent(/Do anything/i);
+    fireEvent.click(doAnythingBtn);
+    expect(handleDoAnything).toHaveBeenCalledTimes(1);
+  });
+
+  it("handles responsive autofit container width without horizontal overflow", () => {
+    useWritingStore.getState().setDraft({
+      id: "draft-xyz",
+      user_id: "user-1",
+      title: "Test Draft",
+      content: "Content",
+      format: "latex",
+      version: 1,
+      created_at: "2026-10-15T00:00:00Z",
+      updated_at: "2026-10-15T00:00:00Z",
+    });
+
+    render(<WritingPreviewPane />);
+
+    const previewPane = screen.getByTestId("writing-preview-pane");
+    expect(previewPane).toBeInTheDocument();
+    // Default zoom level indicates 100% (autofitted to container width)
+    expect(screen.getByText("100%")).toBeInTheDocument();
+  });
 });
+

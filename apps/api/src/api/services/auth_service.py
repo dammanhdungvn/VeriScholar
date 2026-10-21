@@ -492,6 +492,301 @@ class AuthService:
         tokens = self.create_tokens_for_user(user, remember_me=True)
         return user, tokens
 
+    async def authenticate_github(
+        self,
+        code: str | None = None,
+        redirect_uri: str | None = None,
+        access_token: str | None = None,
+    ) -> tuple[UserModel, AuthTokensResponse]:
+        """Verify GitHub OAuth credentials and authenticate or provision scholar.
+
+        Accepts either an authorization code (exchanged via GitHub OAuth API)
+        or a pre-obtained GitHub access_token.
+        Fetches scholar profile from https://api.github.com/user (and /user/emails
+        if primary email is private), validates against trusted scholarly domains,
+        and provisions or links user record with persistent JWT tokens.
+        """
+        github_token = access_token.strip() if (access_token and access_token.strip()) else None
+
+        if not github_token:
+            if not code or not code.strip():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Vui lòng cung cấp mã code hoặc access_token từ GitHub.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            client_id = settings.GITHUB_CLIENT_ID.strip() if settings.GITHUB_CLIENT_ID else ""
+            client_secret = (
+                settings.GITHUB_CLIENT_SECRET.get_secret_value().strip()
+                if hasattr(settings.GITHUB_CLIENT_SECRET, "get_secret_value")
+                else str(settings.GITHUB_CLIENT_SECRET or "").strip()
+            )
+
+            if not client_id or not client_secret:
+                logger.warning(
+                    "github_oauth_unconfigured_client_credentials",
+                    has_client_id=bool(client_id),
+                    has_client_secret=bool(client_secret),
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=(
+                        "GitHub OAuth chưa được cấu hình hoặc thông tin xác thực "
+                        "ứng dụng không hợp lệ."
+                    ),
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            token_url = "https://github.com/login/oauth/access_token"
+            exchange_data: dict[str, str] = {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "code": code.strip(),
+            }
+            if redirect_uri and redirect_uri.strip():
+                exchange_data["redirect_uri"] = redirect_uri.strip()
+
+            exchange_headers = {
+                "Accept": "application/json",
+                "User-Agent": "VeriScholar-Backend/1.0",
+            }
+
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post(
+                        token_url, json=exchange_data, headers=exchange_headers
+                    )
+            except Exception as exc:
+                logger.warning("github_token_exchange_network_error", error=str(exc))
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Không thể kết nối đến GitHub OAuth để đổi mã xác thực.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from exc
+
+            if resp.status_code != 200:
+                logger.warning(
+                    "github_token_exchange_invalid_status",
+                    status_code=resp.status_code,
+                    body=resp.text,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Mã xác thực GitHub không hợp lệ hoặc đã hết hạn",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            try:
+                token_data = resp.json()
+            except Exception as exc:
+                logger.warning("github_token_exchange_json_error", error=str(exc))
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Phản hồi từ GitHub OAuth không hợp lệ.",
+                    headers={"WWW-Authenticate": "Bearer"},
+                ) from exc
+
+            if "error" in token_data:
+                err_desc = (
+                    token_data.get("error_description")
+                    or "Mã xác thực GitHub không hợp lệ hoặc đã hết hạn"
+                )
+                logger.warning(
+                    "github_token_exchange_error_response",
+                    error=token_data.get("error"),
+                    description=err_desc,
+                )
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail=err_desc,
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            github_token = token_data.get("access_token")
+            if not github_token and "access_token=" in resp.text:
+                from urllib.parse import parse_qs
+
+                parsed = parse_qs(resp.text)
+                if "access_token" in parsed and parsed["access_token"]:
+                    github_token = parsed["access_token"][0]
+
+            if not github_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Không thể lấy access token từ GitHub",
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+        # 2. Fetch User Profile from https://api.github.com/user
+        user_url = "https://api.github.com/user"
+        user_headers = {
+            "Authorization": f"Bearer {github_token.strip()}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "VeriScholar-Backend/1.0",
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                user_resp = await client.get(user_url, headers=user_headers)
+        except Exception as exc:
+            logger.warning("github_user_api_network_error", error=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Không thể kết nối đến GitHub API để lấy thông tin người dùng.",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        if user_resp.status_code != 200:
+            logger.warning(
+                "github_user_api_invalid_status",
+                status_code=user_resp.status_code,
+                body=user_resp.text,
+            )
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Token GitHub không hợp lệ hoặc đã hết hạn",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
+        try:
+            user_data = user_resp.json()
+        except Exception as exc:
+            logger.warning("github_user_json_error", error=str(exc))
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Phản hồi từ GitHub API không đúng định dạng.",
+                headers={"WWW-Authenticate": "Bearer"},
+            ) from exc
+
+        if user_data.get("email_verified") is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email GitHub chưa được xác thực bởi nhà cung cấp.",
+            )
+
+        # 3. Extract verified email (querying /user/emails if needed)
+        email = user_data.get("email")
+        if not email or not isinstance(email, str) or not email.strip():
+            emails_url = "https://api.github.com/user/emails"
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    emails_resp = await client.get(emails_url, headers=user_headers)
+                if emails_resp.status_code == 200:
+                    emails_list = emails_resp.json()
+                    if isinstance(emails_list, list) and emails_list:
+                        verified_emails = [
+                            e
+                            for e in emails_list
+                            if isinstance(e, dict) and e.get("verified") is True
+                        ]
+                        if verified_emails:
+                            primary_email = next(
+                                (
+                                    e.get("email")
+                                    for e in verified_emails
+                                    if e.get("primary") is True and e.get("email")
+                                ),
+                                None,
+                            )
+                            email = primary_email or verified_emails[0].get("email")
+                        else:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail="Email GitHub chưa được xác thực bởi nhà cung cấp.",
+                            )
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.warning("github_user_emails_api_error", error=str(exc))
+
+        if not email or not isinstance(email, str) or not email.strip():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Không tìm thấy email hợp lệ gắn với tài khoản GitHub.",
+            )
+
+        normalized_email = email.strip().lower()
+
+        is_valid, err_msg = validate_academic_or_trusted_email(normalized_email)
+        if not is_valid:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                detail={
+                    "code": "INVALID_EMAIL_DOMAIN",
+                    "message": err_msg or "Email không thuộc nguồn học thuật hoặc uy tín hợp lệ.",
+                    "action": (
+                        "Vui lòng sử dụng tài khoản GitHub có email học thuật "
+                        "(.edu, .edu.vn, .ac.*) hoặc nhà cung cấp uy tín (Gmail, Outlook, Proton)."
+                    ),
+                },
+            )
+
+        # 4. Lookup existing user
+        stmt = select(UserModel).where(func.lower(UserModel.email) == normalized_email)
+        res = await self.db.execute(stmt)
+        user = res.scalar_one_or_none()
+
+        github_name = (
+            user_data.get("name") or user_data.get("login") or normalized_email.split("@")[0]
+        )
+        full_name = " ".join(str(github_name).strip().split()) or "Nhà nghiên cứu GitHub"
+        github_avatar = user_data.get("avatar_url")
+
+        if user is None:
+            random_pw = secrets.token_urlsafe(32)
+            user = UserModel(
+                id=uuid4(),
+                email=normalized_email,
+                full_name=full_name,
+                hashed_password=self.hash_password(random_pw),
+                role="researcher",
+                is_active=True,
+                is_verified=True,
+                academic_rank="Nhà nghiên cứu Khoa học",
+                avatar_url=str(github_avatar).strip() if github_avatar else None,
+            )
+            self.db.add(user)
+            await self.db.commit()
+            await self.db.refresh(user)
+            logger.info(
+                "github_auth_provisioned_new_user",
+                user_id=str(user.id),
+                email=normalized_email,
+            )
+        else:
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail={
+                        "code": "ACCOUNT_INACTIVE",
+                        "message": "Tài khoản của bạn hiện đang bị vô hiệu hóa.",
+                        "action": "Contact system administrator.",
+                    },
+                    headers={"WWW-Authenticate": "Bearer"},
+                )
+
+            updated = False
+            if not user.is_verified:
+                user.is_verified = True
+                updated = True
+            if not user.avatar_url and github_avatar:
+                user.avatar_url = str(github_avatar).strip()
+                updated = True
+
+            if updated:
+                await self.db.commit()
+                await self.db.refresh(user)
+
+            logger.info(
+                "github_auth_authenticated_existing_user",
+                user_id=str(user.id),
+                email=normalized_email,
+            )
+
+        tokens = self.create_tokens_for_user(user, remember_me=True)
+        return user, tokens
+
     async def refresh_tokens(self, refresh_token: str) -> AuthTokensResponse:
         """Renew access token pair using a valid refresh token."""
         try:

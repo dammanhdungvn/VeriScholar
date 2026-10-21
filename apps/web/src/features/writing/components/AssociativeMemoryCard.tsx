@@ -60,7 +60,10 @@ export function AssociativeMemoryCard({
       <div className="flex items-center justify-between text-2xs font-medium text-coral-600 dark:text-coral-400">
         <div className="flex items-center gap-1.5">
           <Sparkles className="w-3.5 h-3.5" />
-          <span className="font-semibold uppercase tracking-wider">Proactive Associative Memory</span>
+          <span className="font-semibold uppercase tracking-wider">
+            <span aria-hidden="true">Liên kết tri thức</span>
+            <span className="sr-only">Proactive Associative Memory</span>
+          </span>
         </div>
 
         {onDismiss && (
@@ -96,7 +99,8 @@ export function AssociativeMemoryCard({
       {/* Similarity score indicator if provided */}
       {similarityScore !== undefined && (
         <div className="flex items-center gap-1.5 text-2xs text-muted dark:text-zinc-400 font-mono">
-          <span>Độ tương quan ngữ nghĩa:</span>
+          <span aria-hidden="true">Tương quan:</span>
+          <span className="sr-only">Độ tương quan ngữ nghĩa:</span>
           <span className="px-1.5 py-0.2 rounded bg-coral-500/10 text-coral-700 dark:text-coral-300 font-bold">
             {(similarityScore * 100).toFixed(0)}%
           </span>

@@ -157,6 +157,7 @@ class DocumentStarRequest(BaseModel):
             "examples": [
                 {"folder_id": None},
                 {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
+                {"toggle": True},
             ]
         }
     )
@@ -165,6 +166,13 @@ class DocumentStarRequest(BaseModel):
         default=None,
         description="Optional folder UUID to organize the starred document into (default: null)",
         examples=[None],
+    )
+    toggle: bool | None = Field(
+        default=None,
+        description=(
+            "Optional boolean to toggle star state instead of setting it permanently to True."
+        ),
+        examples=[False],
     )
 
 

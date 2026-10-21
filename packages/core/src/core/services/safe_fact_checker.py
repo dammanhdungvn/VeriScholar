@@ -56,6 +56,85 @@ CONTRADICTION_PAIRS = [
 ]
 
 
+def clean_latex_for_fact_checking(text: str) -> str:
+    """Extract and sanitize verifiable academic prose from raw LaTeX source code.
+
+    Strips LaTeX preambles, comments, environments, math formulas, citations,
+    and command markup so that only genuine factual prose claims are evaluated.
+    """
+    if not text:
+        return ""
+
+    cleaned = text
+
+    # 1. Preamble & postamble: if \begin{document} is present, discard everything before it.
+    if r"\begin{document}" in cleaned:
+        cleaned = cleaned.split(r"\begin{document}", 1)[1]
+    if r"\end{document}" in cleaned:
+        cleaned = cleaned.split(r"\end{document}", 1)[0]
+
+    # 2. Strip comments (% to end of line)
+    cleaned = re.sub(r"(?<!\\)%.*$", "", cleaned, flags=re.MULTILINE)
+
+    # 3. Strip environments that are non-prose or code/math/figures
+    cleaned = re.sub(
+        r"\\begin\{(?:equation|align|gather|multline|tabular|table|figure|lstlisting|verbatim|tikzpicture|array)\*?\}.*?\\end\{(?:equation|align|gather|multline|tabular|table|figure|lstlisting|verbatim|tikzpicture|array)\*?\}",
+        " ",
+        cleaned,
+        flags=re.DOTALL,
+    )
+
+    # 4. Strip display & inline math ($...$, $$...$$, \[...\], \(...\))
+    cleaned = re.sub(r"\$\$.*?\$\$", " ", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"\\\[.*?\\\]", " ", cleaned, flags=re.DOTALL)
+    cleaned = re.sub(r"\$.*?\$", " ", cleaned)
+    cleaned = re.sub(r"\\\(.*?\\\)", " ", cleaned)
+
+    # 5. Remove citations and refs
+    cleaned = re.sub(
+        r"\\(?:cite|citep|citet|nocite|ref|eqref|pageref|label)\{[^}]*\}",
+        " ",
+        cleaned,
+    )
+
+    # 6. Unwrap formatting commands (\textbf{text} -> text, etc.)
+    for _ in range(3):
+        cleaned = re.sub(
+            r"\\(?:textbf|textit|textsl|textsc|textsf|texttt|underline|emph)\{([^{}]+)\}",
+            r"\1",
+            cleaned,
+        )
+
+    # 7. Convert headings (\section{...}) into sentence delimiters
+    cleaned = re.sub(
+        r"\\(?:section|subsection|subsubsection|paragraph|subparagraph)\*?\{([^{}]+)\}",
+        r". \1. ",
+        cleaned,
+    )
+
+    # 8. Strip preamble commands in case \begin{document} was missing
+    cleaned = re.sub(
+        r"\\(?:documentclass|usepackage|geometry|hypersetup|title|author|date|affiliation|affil|bibliographystyle|bibliography)(?:\[[^\]]*\])?\{[^{}]*\}",
+        " ",
+        cleaned,
+    )
+
+    # 9. Strip standalone formatting commands
+    cleaned = re.sub(
+        r"\\(?:item|centering|raggedright|raggedleft|noindent|newpage|clearpage|maketitle|tableofcontents|appendix)",
+        " ",
+        cleaned,
+    )
+
+    # 10. Strip any remaining generic LaTeX macros
+    cleaned = re.sub(r"\\[a-zA-Z]+\*?(?:\[[^\]]*\])?(?:\{[^{}]*\})*", " ", cleaned)
+
+    # 11. Clean up residual LaTeX syntax characters and normalize whitespace
+    cleaned = cleaned.replace("{", " ").replace("}", " ").replace("\\", " ")
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned
+
+
 class SafeFactChecker:
     """Production in-memory implementation of SAFE Fact-Checking Port."""
 
@@ -75,13 +154,30 @@ class SafeFactChecker:
 
         Splits on sentence boundaries, semicolon, and coordinating conjunctions
         with independent clauses. Filters out trivial or non-factual fragments.
+        Strips LaTeX commands, preamble, and math to keep only verifiable prose.
         """
-        raw_sentences = re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+        # If text contains LaTeX markup, sanitize it first
+        if "\\" in text or "{" in text or "%" in text:
+            cleaned_text = clean_latex_for_fact_checking(text)
+        else:
+            cleaned_text = text.strip()
+
+        raw_sentences = re.split(r"(?<=[.!?])\s+|\n+", cleaned_text)
         claims: list[str] = []
 
         for sentence in raw_sentences:
-            s_clean = sentence.strip()
+            s_clean = sentence.strip().rstrip(".!?,")
+            # Discard short fragments
             if not s_clean or len(s_clean) < 15:
+                continue
+
+            # Must contain at least 3 natural language words
+            words = re.findall(r"\b[a-zA-Z\u00C0-\u1EF9]{2,}\b", s_clean)
+            if len(words) < 3:
+                continue
+
+            # Discard any fragments that look like stray code/markup
+            if s_clean.startswith("\\") or s_clean.endswith("{") or s_clean.endswith("}"):
                 continue
 
             # Check for multi-clause split (e.g. "..., and ...", "..., whereas ...")
@@ -92,12 +188,22 @@ class SafeFactChecker:
             if len(sub_clauses) > 1:
                 for sub in sub_clauses:
                     sub_strip = sub.strip().rstrip(".!?,")
-                    if len(sub_strip) >= 15:
+                    sub_words = re.findall(r"\b[a-zA-Z\u00C0-\u1EF9]{2,}\b", sub_strip)
+                    if len(sub_strip) >= 15 and len(sub_words) >= 3:
                         claims.append(sub_strip)
             else:
-                claims.append(s_clean.rstrip(".!?,"))
+                claims.append(s_clean)
 
-        return claims if claims else ([text.strip()] if text.strip() else [])
+        return (
+            claims
+            if claims
+            else (
+                [cleaned_text.strip()]
+                if cleaned_text.strip()
+                and len(re.findall(r"\b[a-zA-Z\u00C0-\u1EF9]{2,}\b", cleaned_text)) >= 3
+                else []
+            )
+        )
 
     # --------------------------------------------------------------------------
     # 2. Entity & Context Normalization

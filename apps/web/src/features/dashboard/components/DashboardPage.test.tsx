@@ -139,7 +139,7 @@ describe("DashboardPage component - Lazy Session & Dynamic Workspace Flow", () =
       ).toBeGreaterThan(0);
 
       // Socratic Copilot Pane
-      expect(screen.getByText(/Socratic Copilot/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/Socratic Copilot/i).length).toBeGreaterThan(0);
 
       // Bottom-docked Chat Input appears in Workspace
       expect(

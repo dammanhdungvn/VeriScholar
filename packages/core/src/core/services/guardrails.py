@@ -95,11 +95,154 @@ class AIGuardrailsService:
         re.compile(r"<\s*/?\s*system\s*>", re.IGNORECASE),
     ]
 
+    # Academic Scope Guardrail: Refusal message for non-academic casual queries
+    ACADEMIC_SCOPE_REFUSAL_MESSAGE = (
+        "Socratic Copilot là trợ lý chuyên sâu cho nghiên cứu khoa học và phản biện bài báo. "
+        "Câu hỏi của bạn nằm ngoài phạm vi học thuật. "
+        "Vui lòng đặt câu hỏi liên quan đến tài liệu đang đọc hoặc phương pháp nghiên cứu khoa học."
+    )
+
+    # Heuristic patterns identifying non-academic / lifestyle / casual chit-chat queries
+    NON_ACADEMIC_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+        (
+            "WEATHER",
+            re.compile(
+                r"\b("
+                r"thời tiết( hôm nay| ngày mai| hiện tại| thế nào)?|"
+                r"dự báo thời tiết|"
+                r"(hôm nay|ngày mai|chiều nay|tối nay|sáng nay) trời có (mưa|nắng|lạnh|nóng)|"
+                r"trời (hôm nay|ngày mai) (mưa|nắng|thế nào|sao)|"
+                r"nhiệt độ ngoài trời|"
+                r"what('?s| is) the weather|"
+                r"weather (today|forecast|tomorrow|outside)|"
+                r"will it rain|is it raining"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            "COOKING_AND_RECIPES",
+            re.compile(
+                r"\b("
+                r"cách (nấu|làm|chế biến|kho|xào|luộc|nướng|hầm|pha|rán|chiên)|"
+                r"công thức (nấu|làm|pha chế)|"
+                r"hướng dẫn (nấu|làm bánh|pha chế)|"
+                r"hôm nay (ăn|nấu) gì|trưa nay ăn gì|tối nay ăn gì|món gì ngon|"
+                r"món ngon mỗi ngày|"
+                r"how to (cook|bake|make (a |the )?(cake|soup|pizza|pasta|bread|dish|meal))|"
+                r"recipe for|what should i (eat|cook)"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            "CASUAL_CHITCHAT",
+            re.compile(
+                r"\b("
+                r"bạn có (người yêu|bạn gái|bạn trai) chưa|"
+                r"bạn bao nhiêu tuổi|bạn sinh năm bao nhiêu|"
+                r"bạn (ở đâu|sống ở đâu)|"
+                r"kể (cho tôi )?(nghe )?(một )?(câu )?chuyện (cười|ma|hài)|"
+                r"hát (cho tôi |một )?bài|"
+                r"(bạn có thích|sở thích của bạn|thích làm gì khi rảnh)|"
+                r"(tán gẫu|nói chuyện phiếm|buồn quá nói chuyện|tâm sự với tôi)|"
+                r"do you have a (girlfriend|boyfriend)|"
+                r"how old are you|where do you live|"
+                r"tell me a (joke|funny story)|sing (me )?a song|"
+                r"what are your hobbies|talk to me about your life"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            "GAMING_AND_ENTERTAINMENT",
+            re.compile(
+                r"\b("
+                r"cách leo rank|mẹo chơi game|hướng dẫn chơi game|"
+                r"build đồ (cho|tướng)|tướng nào mạnh nhất|"
+                r"(tin tức|scandal) showbiz|(scandal|drama) nghệ sĩ|"
+                r"(hóng drama|bóc phốt)|"
+                r"phim gì đang hot|phim chiếu rạp hay|xem phim gì hay|"
+                r"how to rank up in|walkthrough for|cheat codes for|"
+                r"celebrity gossip|showbiz drama"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            "HOROSCOPE_AND_FORTUNE",
+            re.compile(
+                r"\b("
+                r"xem bói|bói tử vi|tử vi hôm nay|bói bài tarot|bói tình duyên|"
+                r"cung hoàng đạo hôm nay|số đề hôm nay|kết quả xổ số|"
+                r"xổ số hôm nay|con số may mắn hôm nay|"
+                r"horoscope (today|tomorrow)|fortune telling|tarot reading|"
+                r"zodiac sign prediction|lucky lottery numbers"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+        (
+            "CASUAL_SHOPPING",
+            re.compile(
+                r"\b("
+                r"nên mua (điện thoại|laptop|xe|quần áo) gì|"
+                r"tư vấn mua (điện thoại|laptop chơi game)|"
+                r"quán ăn nào ngon|quán cafe nào đẹp|chỗ nào bán đồ rẻ|"
+                r"which (phone|laptop) should i buy|best laptop for gaming"
+                r")\b",
+                re.IGNORECASE,
+            ),
+        ),
+    ]
+
+    # Explicit academic keywords overriding non-academic false positives
+    ACADEMIC_INDICATOR_PATTERN = re.compile(
+        r"\b("
+        r"bài báo|paper|tài liệu|document|tác giả|author|nghiên cứu|research|"
+        r"trích dẫn|citation|đoạn trích|chunk|trang \d+|page \d+|mục|section|chương|chapter|"
+        r"phương pháp|method|phương pháp luận|methodology|thuật toán|algorithm|"
+        r"công thức|formula|equation|mô hình|model|kiến trúc|architecture|"
+        r"bảng|table|hình|figure|sơ đồ|diagram|kết quả|result|"
+        r"thực nghiệm|experiment|benchmark|baseline|dữ liệu|dataset|"
+        r"giả thuyết|hypothesis|định lý|theorem|chứng minh|proof|"
+        r"độ chính xác|accuracy|f1|bleu|loss|gradient|nli|transformer|attention|"
+        r"katex|latex|học thuật|academic|khoa học|scientific"
+        r")\b",
+        re.IGNORECASE,
+    )
+
     # Citations extraction regex: [^cit_1], [^cit_abc], [cit_1]
     CITATION_REGEX = re.compile(r"\[\^?(cit_[a-zA-Z0-9_\-]+)\]")
 
     # Maximum allowed user query length to prevent DoS / Context explosion
     MAX_QUESTION_LENGTH = 4000
+
+    @classmethod
+    def check_academic_scope(cls, question: str) -> tuple[bool, str | None]:
+        """Check if user question is within academic research scope.
+
+        Identifies non-academic questions (lifestyle, casual chit-chat, cooking,
+        weather, gaming, gossip, horoscope, etc.).
+
+        Returns:
+            (True, None) if in scope, or (False, refusal_message) if out of scope.
+        """
+        if not question or not question.strip():
+            return True, None
+
+        trimmed = question.strip()
+
+        # If question contains explicit academic markers, permit it as valid research
+        if cls.ACADEMIC_INDICATOR_PATTERN.search(trimmed):
+            return True, None
+
+        # Check against non-academic patterns
+        for _category, pattern in cls.NON_ACADEMIC_PATTERNS:
+            if pattern.search(trimmed):
+                return False, cls.ACADEMIC_SCOPE_REFUSAL_MESSAGE
+
+        return True, None
 
     @classmethod
     def scan_user_input(cls, question: str) -> InputGuardrailResult:
@@ -155,6 +298,17 @@ class AIGuardrailsService:
                     ),
                     matched_pattern=match.group(0),
                 )
+
+        # 4. Academic scope guardrail (lifestyle, casual chit-chat, cooking, weather, gaming, etc.)
+        is_academic, refusal = cls.check_academic_scope(trimmed)
+        if not is_academic:
+            return InputGuardrailResult(
+                is_safe=False,
+                violation_type="OUT_OF_ACADEMIC_SCOPE",
+                sanitized_input=trimmed,
+                refusal_reason=refusal or cls.ACADEMIC_SCOPE_REFUSAL_MESSAGE,
+                matched_pattern="ACADEMIC_SCOPE_VIOLATION",
+            )
 
         return InputGuardrailResult(
             is_safe=True,

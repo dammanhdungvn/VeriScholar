@@ -109,14 +109,15 @@
   --color-warning: #d4a017;
   --color-error: #c64545;
 
-  --font-display: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-quote: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-sans: "Plus Jakarta Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --font-serif: "Anthropic Serif", "Newsreader", "Lora", "Tiempos Headline", "Georgia", serif;
+  --font-display: "Anthropic Serif", "Newsreader", "Lora", "Tiempos Headline", "Georgia", serif;
+  --font-quote: "Anthropic Serif", "Newsreader", "Lora", "Georgia", serif;
+  --font-sans: "Anthropic Sans", "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "Anthropic Mono", "JetBrains Mono", ui-monospace, monospace;
 
   /* Scoped Anthropic Typefaces: Strictly for Dashboard features */
   --font-anthropic-serif: "Anthropic Serif", "Newsreader", "Lora", "Tiempos Headline", "Georgia", serif;
-  --font-anthropic-sans: "Anthropic Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-anthropic-sans: "Anthropic Sans", "Inter", "Plus Jakarta Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
   --radius-xs: 4px;
   --radius-sm: 6px;
@@ -131,6 +132,8 @@
 :root {
   color-scheme: light;
   font-family: var(--font-sans);
+  line-height: 1.55;
+  letter-spacing: -0.011em;
   background-color: var(--color-canvas);
   color: var(--color-ink);
   text-rendering: optimizeLegibility;
@@ -214,6 +217,34 @@ body {
 
 .scrollbar-dark::-webkit-scrollbar-thumb:hover {
   background: #cc785c;
+}
+
+/* Academic Paper Subtle Scrollbar */
+.paper-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d6cfc4 transparent;
+}
+.paper-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+.paper-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.paper-scrollbar::-webkit-scrollbar-thumb {
+  background: #d6cfc4;
+  border-radius: 4px;
+}
+.paper-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cc785c;
+}
+.dark .paper-scrollbar {
+  scrollbar-color: #3d372e transparent;
+}
+.dark .paper-scrollbar::-webkit-scrollbar-thumb {
+  background: #3d372e;
+}
+.dark .paper-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #d97757;
 }
 
 /* Typography Utility Helper Classes */

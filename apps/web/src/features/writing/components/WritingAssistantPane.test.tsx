@@ -88,4 +88,25 @@ describe("WritingAssistantPane", () => {
     expect(input.value).toBe("");
     expect(useWritingStore.getState().assistantPrompt).toBe("");
   });
+
+  it("calls onClose when close button is clicked", () => {
+    const onClose = vi.fn();
+    render(<WritingAssistantPane onClose={onClose} />);
+
+    const closeBtn = screen.getByTestId("close-assistant-pane-btn");
+    expect(closeBtn).toBeInTheDocument();
+    fireEvent.click(closeBtn);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("filters claims when filter chip is clicked", () => {
+    render(<WritingAssistantPane />);
+
+    expect(screen.getByText(/Tất cả \(1\)/i)).toBeInTheDocument();
+    expect(screen.getByText(/Có dẫn chứng \(1\)/i)).toBeInTheDocument();
+
+    // Click supported chip
+    fireEvent.click(screen.getByText(/Có dẫn chứng \(1\)/i));
+    expect(screen.getByText(new RegExp(mockClaim.claim_text, "i"))).toBeInTheDocument();
+  });
 });

@@ -36,8 +36,15 @@ interface WritingState {
   comments: DraftComment[];
   activeCommentId: string | null;
   isCommentsPaneOpen: boolean;
+  isFileTreeOpen: boolean;
+  activeSidebarTab: "files" | "outline";
+  mobileActiveTab: "editor" | "preview" | "assistant";
 
   // Actions
+  toggleFileTree: () => void;
+  setFileTreeOpen: (open: boolean) => void;
+  setActiveSidebarTab: (tab: "files" | "outline") => void;
+  setMobileActiveTab: (tab: "editor" | "preview" | "assistant") => void;
   setDraft: (draft: Draft) => void;
   setEditorContent: (content: string) => void;
   setEditorTitle: (title: string) => void;
@@ -132,6 +139,18 @@ export const useWritingStore = create<WritingState>((set) => ({
   comments: [],
   activeCommentId: null,
   isCommentsPaneOpen: false,
+  isFileTreeOpen: true,
+  activeSidebarTab: "files",
+  mobileActiveTab: "editor",
+
+  toggleFileTree: () =>
+    set((state) => ({ isFileTreeOpen: !state.isFileTreeOpen })),
+
+  setFileTreeOpen: (isFileTreeOpen) => set({ isFileTreeOpen }),
+
+  setActiveSidebarTab: (activeSidebarTab) => set({ activeSidebarTab }),
+
+  setMobileActiveTab: (mobileActiveTab) => set({ mobileActiveTab }),
 
   setDraft: (draft) =>
     set({
@@ -299,5 +318,8 @@ export const useWritingStore = create<WritingState>((set) => ({
       comments: [],
       activeCommentId: null,
       isCommentsPaneOpen: false,
+      isFileTreeOpen: true,
+      activeSidebarTab: "files",
+      mobileActiveTab: "editor",
     }),
 }));

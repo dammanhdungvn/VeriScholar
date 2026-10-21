@@ -107,4 +107,47 @@ describe("WritingEditorPane", () => {
 
     expect(onSelectionVerify).toHaveBeenCalledWith("Attention");
   });
+
+  it("renders Overleaf file tabs, [Code | Visual] toggle, and rich formatting toolbar buttons", () => {
+    useWritingStore.getState().setEditorContent("\\section{Intro}\nHello world");
+
+    render(<WritingEditorPane />);
+
+    // File tabs
+    expect(screen.getByTestId("editor-tab-main")).toBeInTheDocument();
+    expect(screen.getByTestId("editor-tab-bib")).toBeInTheDocument();
+
+    // View mode switch
+    expect(screen.getByTestId("editor-view-code")).toBeInTheDocument();
+    const visualBtn = screen.getByTestId("editor-view-visual");
+    expect(visualBtn).toBeInTheDocument();
+
+    // Toggle to visual view
+    fireEvent.click(visualBtn);
+    expect(screen.getByText("Chế độ Visual Preview")).toBeInTheDocument();
+
+    // Toggle back to code view
+    fireEvent.click(screen.getByTestId("editor-view-code"));
+
+    // Formatting buttons
+    const boldBtn = screen.getByTestId("format-bold-btn");
+    const italicBtn = screen.getByTestId("format-italic-btn");
+    const mathBtn = screen.getByTestId("format-math-btn");
+    const tableBtn = screen.getByTestId("format-table-btn");
+    const listBtn = screen.getByTestId("format-list-btn");
+    const orderedBtn = screen.getByTestId("format-ordered-btn");
+    const sectionBtn = screen.getByTestId("format-section-btn");
+
+    expect(boldBtn).toBeInTheDocument();
+    expect(italicBtn).toBeInTheDocument();
+    expect(mathBtn).toBeInTheDocument();
+    expect(tableBtn).toBeInTheDocument();
+    expect(listBtn).toBeInTheDocument();
+    expect(orderedBtn).toBeInTheDocument();
+    expect(sectionBtn).toBeInTheDocument();
+
+    // Click bold button
+    fireEvent.click(boldBtn);
+    expect(useWritingStore.getState().editorContent).toContain("\\textbf{");
+  });
 });

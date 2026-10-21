@@ -243,17 +243,37 @@ async def list_documents(
             "('uploaded', 'pending', 'processing', 'completed', 'failed')"
         ),
     ),
+    search: str | None = Query(
+        None,
+        description="Tìm kiếm bài báo theo tiêu đề hoặc tên tệp",
+    ),
+    q: str | None = Query(
+        None,
+        description="Từ khóa tìm kiếm (alias)",
+    ),
+    star: bool | None = Query(
+        None,
+        description="Lọc theo trạng thái đã lưu vào thư viện (is_persistent = true/false)",
+    ),
+    is_starred: bool | None = Query(
+        None,
+        description="Lọc theo trạng thái đã lưu vào thư viện (alias của star)",
+    ),
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: DocumentService = Depends(get_document_service),
 ) -> DocumentListPaginatedEnvelope:
     """Retrieve paginated documents collection for current user."""
+    search_term = search or q
+    star_filter = star if star is not None else is_starred
     return await service.list_documents(
         user_id=current_user.id,
         db=db,
         page=page,
         per_page=per_page,
         status_filter=status_filter,
+        search=search_term,
+        star=star_filter,
     )
 
 
@@ -288,8 +308,9 @@ async def get_document_detail(
     )
 
 
-@router.get(
+@router.api_route(
     "/{document_id}/file",
+    methods=["GET", "HEAD"],
     response_class=StreamingResponse,
     summary="Stream PDF nhị phân cho Canvas (HTTP 206 Partial Content)",
     description=FILE_DESCRIPTION,
@@ -398,19 +419,63 @@ async def star_document(
                 "description": "Lưu bài báo và phân loại vào thư mục nghiên cứu cụ thể",
                 "value": {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
             },
+            "toggle": {
+                "summary": "Đảo ngược trạng thái star",
+                "description": "Chuyển đổi trạng thái lưu trữ giữa starred và unstarred",
+                "value": {"toggle": True},
+            },
         },
+    ),
+    toggle: bool = Query(
+        False,
+        description="Nếu True, đảo ngược trạng thái star (đã star -> unstar, chưa star -> star)",
     ),
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: DocumentService = Depends(get_document_service),
 ) -> DocumentStarEnvelope:
-    """Promote a document to persistent user library retention (Star)."""
+    """Promote a document to persistent user library retention (Star) or toggle status."""
     folder_id = payload.folder_id if payload else None
+    should_toggle = toggle or (payload.toggle if payload and payload.toggle is not None else False)
     data = await service.star_document(
         document_id=document_id,
         user_id=current_user.id,
         db=db,
         folder_id=folder_id,
+        toggle=should_toggle,
+    )
+    return DocumentStarEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
+
+
+@router.post(
+    "/{document_id}:toggle-star",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentStarEnvelope,
+    summary="Đảo ngược trạng thái lưu bài báo (Toggle Star)",
+    description="Chuyển đổi trạng thái lưu trữ giữa starred và unstarred.",
+    responses={
+        200: {"description": "Đảo ngược trạng thái star bài báo thành công."},
+        404: {"description": "Không tìm thấy bài báo."},
+    },
+)
+async def toggle_star_document(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần đảo ngược trạng thái star",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentStarEnvelope:
+    """Toggle persistent library retention status of a document."""
+    data = await service.toggle_star(
+        document_id=document_id,
+        user_id=current_user.id,
+        db=db,
     )
     return DocumentStarEnvelope(
         success=True,
@@ -1076,8 +1141,9 @@ async def generate_document_summary(
     )
 
 
-@router.get(
+@router.api_route(
     "/{document_id}/export-pdf",
+    methods=["GET", "HEAD"],
     summary="15. Xuất file PDF kèm Native Annotations chuẩn ISO",
     description=EXPORT_PDF_DESCRIPTION,
     responses={

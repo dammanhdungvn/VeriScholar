@@ -49,4 +49,10 @@ describe("useLandingStore", () => {
     expect(useLandingStore.getState().activeCitationId).toBe("custom-cite-1");
     expect(useLandingStore.getState().activeCitation?.quote_text).toBe("Test quote");
   });
+
+  it("increments citationFocusTick on setActiveCitation to trigger re-focus effects", () => {
+    const initialTick = useLandingStore.getState().citationFocusTick;
+    useLandingStore.getState().setActiveCitation(null);
+    expect(useLandingStore.getState().citationFocusTick).toBe(initialTick + 1);
+  });
 });

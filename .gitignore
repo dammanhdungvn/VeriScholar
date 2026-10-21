@@ -25,6 +25,7 @@ wheels/
 .env
 .env.*
 !.env.example
+!deploy/.env.enterprise.example
 *.env
 
 # Virtual Environment
@@ -90,3 +91,7 @@ playwright-screenshots/
 # Evaluation Artifacts (Raw Payloads & JSON fixtures)
 tests/.artifacts/
 test-results.xml
+
+# Teamwork scratch
+.agents/teamwork/
+

@@ -151,7 +151,19 @@ class EmailService:
         self, recipient: str, subject: str, html_content: str, text_content: str
     ) -> bool:
         """Dispatch email according to priority: Resend API -> SMTP -> Audit Log Fallback."""
-        # 1. Ưu tiên 1: Resend API
+        # 1. Ưu tiên 1: SMTP nếu được cấu hình đầy đủ (như Google App Password)
+        if self.smtp_host and self.smtp_user:
+            ok = await asyncio.to_thread(
+                self._send_smtp_sync, recipient, subject, html_content, text_content
+            )
+            if ok:
+                return True
+            logger.warning(
+                "smtp_delivery_failed_falling_back_to_resend",
+                recipient=recipient,
+            )
+
+        # 2. Ưu tiên 2: Resend API
         if self.resend_api_key:
             ok = await self._send_resend(recipient, subject, html_content, text_content)
             if ok:
@@ -159,19 +171,6 @@ class EmailService:
             logger.info(
                 "resend_failed_or_restricted_falling_back",
                 recipient=recipient,
-            )
-            # Nếu Resend trả về lỗi (ví dụ hạn chế recipient ở môi trường dev),
-            # thử SMTP nếu có cấu hình
-            if self.smtp_host and self.smtp_user:
-                return await asyncio.to_thread(
-                    self._send_smtp_sync, recipient, subject, html_content, text_content
-                )
-            return True
-
-        # 2. Ưu tiên 2: SMTP
-        if self.smtp_host and self.smtp_user:
-            return await asyncio.to_thread(
-                self._send_smtp_sync, recipient, subject, html_content, text_content
             )
 
         # 3. Fallback: Ghi audit log

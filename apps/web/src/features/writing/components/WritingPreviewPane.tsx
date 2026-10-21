@@ -1,31 +1,229 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
   FileText,
   ZoomIn,
   ZoomOut,
   RefreshCw,
   AlertCircle,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Sparkles,
+  Play,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
+import { pdfjsLib } from "@/features/reader/lib/pdfjs-init";
+import { cn } from "@/lib/utils";
 
 interface WritingPreviewPaneProps {
   onSelectionAddToChat?: (selectedText: string) => void;
+  onRecompile?: () => void;
+  onDownloadPdf?: () => void;
+  onDoAnything?: () => void;
+  showDoAnything?: boolean;
+}
+
+interface PaperPageCanvasProps {
+  pdfDoc: PDFDocumentProxy;
+  pageNumber: number;
+  zoomLevel: number;
+  containerWidth?: number;
+  onInView?: (pageNum: number) => void;
+}
+
+function PaperPageCanvas({
+  pdfDoc,
+  pageNumber,
+  zoomLevel,
+  containerWidth,
+  onInView,
+}: PaperPageCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+  // Intersection observer to track current visible page
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !onInView) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && entry.intersectionRatio > 0.4) {
+          onInView(pageNumber);
+        }
+      },
+      { threshold: [0.4] }
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [pageNumber, onInView]);
+
+  // Render PDF page to HTML5 canvas with dynamic autofit scaling
+  useEffect(() => {
+    let isCancelled = false;
+    let renderTask: ReturnType<typeof page.render> | null = null;
+    let page: any = null;
+
+    async function renderPage() {
+      try {
+        page = await pdfDoc.getPage(pageNumber);
+        if (isCancelled) return;
+
+        // Get unscaled page size (standard A4 is 595.32 x 841.92 pt)
+        const unscaledViewport = page.getViewport({ scale: 1.0 });
+        const standardWidth = unscaledViewport.width || 595.32;
+
+        // Calculate dynamic Autofit baseScale:
+        // On mobile (< 640px), 4px padding ensures full-screen edge-to-edge without horizontal overflow
+        // On desktop (>= 640px), 24px padding and capped to 880px for optimal reading
+        let baseScale = 1.0;
+        if (containerWidth && containerWidth > 0) {
+          const padding = containerWidth < 640 ? 4 : 24;
+          const availableWidth = Math.max(220, containerWidth - padding);
+          const targetWidth = containerWidth >= 640 ? Math.min(availableWidth, 880) : availableWidth;
+          baseScale = targetWidth / standardWidth;
+        } else if (typeof window !== "undefined") {
+          const winW = window.innerWidth;
+          const isMobile = winW < 640;
+          const available = isMobile ? winW - 4 : Math.min(winW * 0.5 - 24, 880);
+          baseScale = Math.max(0.4, available / standardWidth);
+        }
+
+        const scale = baseScale * (zoomLevel / 100);
+        const viewport = page.getViewport({ scale });
+        setDimensions({ width: viewport.width, height: viewport.height });
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${viewport.width}px`;
+        canvas.style.height = `${viewport.height}px`;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.scale(dpr, dpr);
+
+        renderTask = page.render({
+          canvasContext: ctx,
+          viewport: viewport,
+        });
+        await renderTask.promise;
+      } catch (err: unknown) {
+        if ((err as { name?: string })?.name !== "RenderingCancelledException") {
+          // Handled cancellation cleanly
+        }
+      }
+    }
+
+    renderPage();
+
+    return () => {
+      isCancelled = true;
+      if (renderTask) {
+        try {
+          renderTask.cancel();
+        } catch {
+          // ignore
+        }
+      }
+    };
+  }, [pdfDoc, pageNumber, zoomLevel, containerWidth]);
+
+  return (
+    <div
+      ref={containerRef}
+      data-testid={`preview-page-${pageNumber}`}
+      className="relative bg-white shadow-[0_2px_8px_rgba(0,0,0,0.16)] border border-[#ded8cc] dark:border-[#38332c] rounded-xs select-text overflow-hidden transition-all duration-150"
+      style={{
+        width: dimensions ? `${dimensions.width}px` : "auto",
+        height: dimensions ? `${dimensions.height}px` : "auto",
+        maxWidth: zoomLevel <= 100 ? "100%" : undefined,
+        minWidth: dimensions ? undefined : "220px",
+        minHeight: dimensions ? undefined : "320px",
+      }}
+    >
+      <canvas ref={canvasRef} className="block max-w-full h-auto" />
+    </div>
+  );
 }
 
 export function WritingPreviewPane({
   onSelectionAddToChat: _onSelectionAddToChat,
+  onRecompile,
+  onDownloadPdf,
+  onDoAnything,
+  showDoAnything = true,
 }: WritingPreviewPaneProps) {
   const {
     activeDraftId,
     previewPdfBlobUrl,
     setPreviewPdfBlobUrl,
     isCompiling,
+    setWorkspaceMode,
+    setAssistantPrompt,
   } = useWritingStore();
 
   const [zoomLevel, setZoomLevel] = useState(100);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(3);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
+  const [pdfJsError, setPdfJsError] = useState(false);
 
+  const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      return window.innerWidth < 768 ? window.innerWidth : Math.round(window.innerWidth * 0.5);
+    }
+    return 595.32;
+  });
+
+  // Track preview container width to dynamically autofit PDF full screen
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    let timer: any = null;
+    const updateWidth = () => {
+      if (el.clientWidth > 0) {
+        setContainerWidth(el.clientWidth);
+      }
+    };
+
+    updateWidth();
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const width = entry.contentRect.width;
+        if (width > 0) {
+          if (timer) clearTimeout(timer);
+          timer = setTimeout(() => {
+            setContainerWidth(width);
+          }, 80);
+        }
+      }
+    });
+
+    observer.observe(el);
+    window.addEventListener("resize", updateWidth);
+
+    return () => {
+      if (timer) clearTimeout(timer);
+      observer.disconnect();
+      window.removeEventListener("resize", updateWidth);
+    };
+  }, []);
 
   // Load preview PDF when activeDraftId changes or after compile
   useEffect(() => {
@@ -45,7 +243,6 @@ export function WritingPreviewPane({
           setLoadError("Chưa có bản xem trước. Hãy bấm 'Biên dịch' để tạo PDF.");
         }
       }
-
     }
 
     loadPdf();
@@ -55,25 +252,156 @@ export function WritingPreviewPane({
     };
   }, [activeDraftId, setPreviewPdfBlobUrl]);
 
-  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 15, 200));
-  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 15, 50));
-  const handleResetZoom = () => setZoomLevel(100);
-
   const effectivePdfUrl =
     previewPdfBlobUrl ||
     (activeDraftId ? draftsApi.getPreviewPdfUrl(activeDraftId) : null);
 
+  // Load PDF with PDF.js when effectivePdfUrl is available
+  useEffect(() => {
+    let isCancelled = false;
+    if (!effectivePdfUrl) {
+      setPdfDoc(null);
+      return;
+    }
+
+    async function loadPdfDoc() {
+      try {
+        setPdfJsError(false);
+        const loadingTask = pdfjsLib.getDocument({
+          url: effectivePdfUrl!,
+          withCredentials: false,
+        });
+        const doc = await loadingTask.promise;
+        if (!isCancelled) {
+          setPdfDoc(doc);
+          setTotalPages(doc.numPages);
+          setCurrentPage(1);
+        }
+      } catch {
+        if (!isCancelled) {
+          setPdfJsError(true);
+        }
+      }
+    }
+
+    loadPdfDoc();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [effectivePdfUrl]);
+
+  const handleZoomIn = () => setZoomLevel((z) => Math.min(z + 15, 200));
+  const handleZoomOut = () => setZoomLevel((z) => Math.max(z - 15, 50));
+  const handleResetZoom = () => setZoomLevel(100);
+
+  const handlePageChange = (newPage: number) => {
+    const clamped = Math.max(1, Math.min(totalPages, newPage));
+    setCurrentPage(clamped);
+    const targetEl = pageRefs.current[clamped];
+    if (targetEl) {
+      targetEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const handleDownload = () => {
+    if (onDownloadPdf) {
+      onDownloadPdf();
+      return;
+    }
+    if (previewPdfBlobUrl) {
+      const link = document.createElement("a");
+      link.href = previewPdfBlobUrl;
+      link.download = `preview_${activeDraftId || "draft"}.pdf`;
+      link.click();
+    }
+  };
+
+  const handleDoAnythingClick = () => {
+    if (onDoAnything) {
+      onDoAnything();
+    } else {
+      // Default: ensure tri-pane is active and focus assistant prompt
+      setWorkspaceMode("tri-pane");
+      setAssistantPrompt("Hỗ trợ tôi hoàn thiện bản thảo này:");
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#f4f2ed] dark:bg-[#121110] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
-      {/* Sub-header Controls */}
-      <div className="h-9 px-4 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1e1c19] flex items-center justify-between text-xs text-muted dark:text-zinc-400 select-none">
-        <div className="flex items-center gap-2 font-mono">
-          <FileText className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-          <span>Bản Dựng PDF Trực Tiếp</span>
+    <div
+      data-testid="writing-preview-pane"
+      className="flex-1 flex flex-col h-full bg-[#ebe7df] dark:bg-[#121110] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative"
+    >
+      {/* 1. Sub-header Controls with Overleaf-style green [Recompile] button, Download, Page Nav, Zoom */}
+      <div className="h-10 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1e1c19] flex items-center justify-between text-xs text-muted dark:text-zinc-400 select-none shrink-0 gap-2">
+        {/* Left: Prominent Green [Recompile] button & Download */}
+        <div className="flex items-center gap-2">
+          {/* Prominent Green Recompile Button */}
+          <button
+            type="button"
+            data-testid="preview-recompile-btn"
+            onClick={onRecompile}
+            disabled={isCompiling}
+            className="h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            title="Biên dịch lại bản thảo LaTeX (Recompile)"
+          >
+            {isCompiling ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Play className="w-3.5 h-3.5 fill-current" />
+            )}
+            <span>Recompile</span>
+          </button>
+
+          {/* Download PDF button */}
+          <button
+            type="button"
+            data-testid="preview-download-btn"
+            onClick={handleDownload}
+            className="h-7 w-7 rounded-lg flex items-center justify-center hover:bg-[#ece8df] dark:hover:bg-[#282623] text-ink dark:text-zinc-200 transition-colors cursor-pointer"
+            title="Tải xuống tệp PDF"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+
+          <div className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500 hidden sm:flex">
+            <FileText className="w-3 h-3 text-coral-600 dark:text-coral-400" />
+            <span>Bản Dựng PDF Trực Tiếp</span>
+          </div>
         </div>
 
-        {/* Zoom Controls */}
-        <div className="flex items-center gap-1.5">
+        {/* Center: Page Navigation < 1 / 3 > */}
+        <div
+          data-testid="preview-page-nav"
+          className="flex items-center bg-[#eae5db] dark:bg-[#262420] px-1.5 py-0.5 rounded-lg border border-[#ded8cc] dark:border-[#302d28] gap-1 text-[11px] font-mono"
+        >
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage - 1)}
+            disabled={currentPage <= 1}
+            className="p-1 rounded hover:bg-white dark:hover:bg-[#1a1916] disabled:opacity-30 transition-colors cursor-pointer"
+            title="Trang trước"
+          >
+            <ChevronLeft className="w-3 h-3" />
+          </button>
+
+          <span className="px-1 text-ink dark:text-zinc-200 font-semibold">
+            {currentPage} / {totalPages}
+          </span>
+
+          <button
+            type="button"
+            onClick={() => handlePageChange(currentPage + 1)}
+            disabled={currentPage >= totalPages}
+            className="p-1 rounded hover:bg-white dark:hover:bg-[#1a1916] disabled:opacity-30 transition-colors cursor-pointer"
+            title="Trang tiếp"
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Right: Zoom Controls - 100% + */}
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={handleZoomOut}
@@ -101,8 +429,11 @@ export function WritingPreviewPane({
         </div>
       </div>
 
-      {/* Main Preview Container */}
-      <div className="flex-1 overflow-auto flex items-center justify-center p-4 relative">
+      {/* 2. Main Preview Container */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 overflow-auto flex items-center justify-center relative bg-[#ebe7df] dark:bg-[#121110]"
+      >
         {isCompiling ? (
           <div className="flex flex-col items-center gap-2 text-muted dark:text-zinc-400">
             <RefreshCw className="w-6 h-6 animate-spin text-coral-500" />
@@ -113,25 +444,44 @@ export function WritingPreviewPane({
             <AlertCircle className="w-8 h-8 text-amber-500 mb-1" />
             <span className="text-xs font-medium text-ink dark:text-zinc-200">{loadError}</span>
             <span className="text-[11px] text-muted dark:text-zinc-400">
-              Biên dịch mã nguồn LaTeX sang PDF để kích hoạt đồng bộ hiển thị và trích dẫn.
+              Biên dịch mã nguồn LaTeX để xem trước PDF.
             </span>
+          </div>
+        ) : pdfDoc && !pdfJsError ? (
+          <div
+            className={cn(
+              "w-full h-full overflow-y-auto flex flex-col items-center px-0 sm:px-3 pt-2 sm:pt-3 pb-16 gap-2 scroll-smooth",
+              zoomLevel > 100 ? "overflow-x-auto" : "overflow-x-hidden"
+            )}
+          >
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <div
+                key={pageNum}
+                ref={(el) => {
+                  pageRefs.current[pageNum] = el;
+                }}
+                className="w-full flex justify-center shrink-0 px-0.5 sm:px-0"
+              >
+                <PaperPageCanvas
+                  pdfDoc={pdfDoc}
+                  pageNumber={pageNum}
+                  zoomLevel={zoomLevel}
+                  containerWidth={containerWidth}
+                  onInView={(p) => setCurrentPage(p)}
+                />
+              </div>
+            ))}
           </div>
         ) : effectivePdfUrl ? (
           <div
-            className="w-full h-full relative flex items-center justify-center transition-all duration-200"
+            className="w-full h-full relative flex items-center justify-center transition-all duration-200 p-4"
             style={{ transform: `scale(${zoomLevel / 100})`, transformOrigin: "top center" }}
           >
-            <object
-              data={effectivePdfUrl}
-              type="application/pdf"
+            <iframe
+              src={`${effectivePdfUrl}#toolbar=0&navpanes=0`}
+              title="Draft PDF Preview"
               className="w-full h-full rounded shadow-md border border-[#e2dcd2] dark:border-[#2e2b26]"
-            >
-              <iframe
-                src={effectivePdfUrl}
-                title="Draft PDF Preview"
-                className="w-full h-full rounded border-0"
-              />
-            </object>
+            />
           </div>
         ) : (
           <div className="text-xs text-muted dark:text-zinc-500">
@@ -139,6 +489,22 @@ export function WritingPreviewPane({
           </div>
         )}
       </div>
+
+      {/* 3. Floating Bottom-Right [ + Do anything ] Action Pill */}
+      {showDoAnything && (
+        <div className="absolute bottom-5 right-5 z-20 pointer-events-auto">
+          <button
+            type="button"
+            data-testid="preview-do-anything-btn"
+            onClick={handleDoAnythingClick}
+            className="h-10 px-4 rounded-full bg-white dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#38332c] hover:border-coral-500/50 hover:bg-coral-500/10 text-ink dark:text-zinc-100 shadow-lg flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+            title="Hỏi AI bất cứ điều gì về bản thảo hoặc bổ sung nội dung (+ Do anything)"
+          >
+            <Sparkles className="w-4 h-4 text-coral-500 group-hover:rotate-12 transition-transform" />
+            <span>+ Do anything</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

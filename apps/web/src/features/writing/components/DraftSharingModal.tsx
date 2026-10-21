@@ -513,13 +513,13 @@ export function DraftSharingModal({
             ) : (
               <ExternalLink className="w-3.5 h-3.5" />
             )}
-            <span>Đồng bộ Overleaf (1-Click)</span>
+            <span>Overleaf Git</span>
           </button>
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-1.5 text-[11px] text-zinc-400">
               <Lock className="w-3.5 h-3.5 text-zinc-400" />
-              <span>Mã hóa bảo vệ phiên bản cộng tác</span>
+              <span>Mã hóa E2E</span>
             </div>
 
             <button

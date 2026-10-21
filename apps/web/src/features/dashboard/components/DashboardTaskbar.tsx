@@ -1,59 +1,64 @@
 import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
   MessageSquare,
   Library,
   FolderKanban,
   PenTool,
-  LogOut,
-
   PanelLeftClose,
   PanelLeft,
   Search,
   Archive,
-  Sun,
-  Moon,
-  Settings,
+  TableProperties,
+  FileText,
+  Network,
+  BookOpen,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { AccountSettingsModal } from "@/features/auth/components/AccountSettingsModal";
+import { AvatarDropdownPopover } from "@/features/auth/components/AvatarDropdownPopover";
+import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { useTheme } from "@/hooks/useTheme";
 import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
-
 interface DashboardTaskbarProps {
-  sessions: SessionItem[];
+  sessions?: SessionItem[];
   activeSessionId?: string;
-  onSelectSession: (sessionId: string) => void;
-  onNewSession: () => void;
+  onSelectSession?: (sessionId: string) => void;
+  onNewSession?: () => void;
   onOpenLibrary?: () => void;
   onOpenProjects?: () => void;
 }
 
 export function DashboardTaskbar({
-  sessions,
+  sessions: propSessions,
   activeSessionId,
-  onSelectSession,
-  onNewSession,
+  onSelectSession: propOnSelectSession,
+  onNewSession: propOnNewSession,
   onOpenLibrary,
   onOpenProjects
 }: DashboardTaskbarProps) {
   const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
+  const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user, logout } = useAuthStore();
+  const { user } = useAuthStore();
   const sidebarState = useDashboardStore((s) => s.sidebarState);
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
+
+  const sessions = useMemo(() => propSessions ?? [], [propSessions]);
+  const onSelectSession = propOnSelectSession ?? ((id: string) => navigate(`/dashboard/${id}`));
+  const onNewSession = propOnNewSession ?? (() => navigate("/dashboard"));
 
   const isExpanded = sidebarState === "expanded";
   const [searchQuery, setSearchQuery] = useState("");
   const [filterArchived, setFilterArchived] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
 
   const displayedSessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -68,14 +73,98 @@ export function DashboardTaskbar({
     });
   }, [sessions, searchQuery, filterArchived]);
 
-  const handleLogout = () => {
-    logout();
-    navigate("/login");
+  const handleItemClick = (callback?: () => void) => {
+    if (callback) callback();
+    if (typeof window !== "undefined" && window.innerWidth < 768 && isExpanded) {
+      toggleSidebar();
+    }
   };
 
-  const userInitial = user?.full_name
-    ? user.full_name.charAt(0).toUpperCase()
-    : "V";
+  const userInitials = getScholarInitials(user?.full_name, user?.email);
+
+  const pathname = location.pathname;
+  const isMatrix = pathname === "/matrix" || pathname === "/library/matrix";
+  const isLibrary = pathname.startsWith("/library") && !isMatrix;
+  const isNotes = pathname.startsWith("/notes");
+  const isWriting = pathname.startsWith("/writing");
+  const isDiscovery = pathname === "/discovery" || pathname === "/citations";
+  const isProjects = pathname.startsWith("/projects");
+  const isResearch =
+    !isLibrary &&
+    !isMatrix &&
+    !isNotes &&
+    !isWriting &&
+    !isDiscovery &&
+    !isProjects &&
+    (pathname === "/dashboard" ||
+      pathname.startsWith("/dashboard/") ||
+      pathname.startsWith("/research") ||
+      pathname === "/");
+
+  const navItems = [
+    {
+      id: "research",
+      label: "Đọc & Nghiên cứu",
+      title: "Đọc & Nghiên cứu (Module 1)",
+      icon: BookOpen,
+      isActive: isResearch,
+      onClick: () => navigate("/dashboard"),
+    },
+    {
+      id: "library",
+      label: "Thư viện",
+      title: "Thư viện tài liệu nghiên cứu",
+      icon: Library,
+      isActive: isLibrary,
+      onClick: () => {
+        onOpenLibrary?.();
+        navigate("/library");
+      },
+    },
+    {
+      id: "matrix",
+      label: "Ma trận đối chiếu",
+      title: "Ma trận đối chiếu 100+",
+      icon: TableProperties,
+      isActive: isMatrix,
+      onClick: () => navigate("/matrix"),
+    },
+    {
+      id: "notes",
+      label: "Sổ tay tri thức",
+      title: "Sổ tay tri thức & Tổng hợp",
+      icon: FileText,
+      isActive: isNotes,
+      onClick: () => navigate("/notes"),
+    },
+    {
+      id: "writing",
+      label: "Soạn thảo",
+      title: "Soạn thảo & Kiểm chứng (Module 2)",
+      icon: PenTool,
+      isActive: isWriting,
+      onClick: () => navigate("/writing"),
+    },
+    {
+      id: "discovery",
+      label: "Khám phá & Trích dẫn",
+      title: "Khám phá & Đồ thị trích dẫn (Module 3)",
+      icon: Network,
+      isActive: isDiscovery,
+      onClick: () => navigate("/discovery"),
+    },
+    {
+      id: "projects",
+      label: "Dự án",
+      title: "Dự án nghiên cứu",
+      icon: FolderKanban,
+      isActive: isProjects,
+      onClick: () => {
+        onOpenProjects?.();
+        navigate("/projects");
+      },
+    },
+  ];
 
   return (
     <>
@@ -85,7 +174,8 @@ export function DashboardTaskbar({
           role="presentation"
           onClick={toggleSidebar}
           aria-hidden="true"
-          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 md:hidden animate-in fade-in duration-200"
+          data-testid="mobile-drawer-backdrop"
+          className="fixed inset-0 bg-black/40 backdrop-blur-xs z-[55] md:hidden animate-in fade-in duration-200"
         />
       )}
 
@@ -94,8 +184,8 @@ export function DashboardTaskbar({
         className={cn(
           "h-screen border-r border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fbf9f5] dark:bg-[#1c1b18] flex flex-col justify-between select-none transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shrink-0 overflow-hidden",
           isExpanded
-            ? "w-64 fixed inset-y-0 left-0 z-50 shadow-2xl md:relative md:shadow-none"
-            : "w-14 hidden md:flex md:relative z-30"
+            ? "w-72 lg:w-60 fixed inset-y-0 left-0 z-[60] shadow-2xl md:relative md:shadow-none"
+            : "w-14 md:w-16 hidden md:flex md:relative z-30"
         )}
       >
       {/* 1. Top Section */}
@@ -104,7 +194,7 @@ export function DashboardTaskbar({
         <div className="h-14 px-2 flex items-center border-b border-[#ece8df] dark:border-[#2a2824] relative overflow-hidden shrink-0">
           {/* Collapsed State: Logo Button (Hover reveals Expand icon) */}
           <div
-            className={`absolute left-2 top-2 bottom-2 w-10 flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+            className={`absolute inset-y-2 left-0 right-0 flex items-center justify-center transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
               isExpanded
                 ? "opacity-0 pointer-events-none scale-90 -translate-x-2"
                 : "opacity-100 scale-100 translate-x-0"
@@ -115,20 +205,20 @@ export function DashboardTaskbar({
               onClick={toggleSidebar}
               aria-label="Mở rộng thanh điều hướng"
               title="Mở rộng sidebar"
-              className="group w-10 h-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer relative text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] focus:outline-none"
+              className="group min-h-[44px] min-w-[44px] w-10 h-10 flex items-center justify-center rounded-xl transition-colors cursor-pointer relative text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] focus:outline-none"
             >
               <span className="flex items-center justify-center transition-transform group-hover:hidden">
                 <AcademicLogo size="sm" showWordmark={false} inverted={isDark} />
               </span>
               <span className="hidden items-center justify-center transition-transform group-hover:flex">
-                <PanelLeft className="w-4.5 h-4.5 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+                <PanelLeft className="w-5 h-5 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
               </span>
             </button>
           </div>
 
           {/* Expanded State: Logo Wordmark & Collapse Button */}
           <div
-            className={`w-60 px-1 flex items-center justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+            className={`w-full px-1 flex items-center justify-between transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
               isExpanded
                 ? "opacity-100 translate-x-0"
                 : "opacity-0 -translate-x-6 pointer-events-none"
@@ -142,7 +232,7 @@ export function DashboardTaskbar({
               onClick={toggleSidebar}
               aria-label="Thu gọn thanh điều hướng"
               title="Thu gọn sidebar"
-              className="w-8 h-8 flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-cream-strong dark:hover:bg-[#282623] rounded-lg transition-colors cursor-pointer focus:outline-none"
+              className="min-h-[44px] min-w-[44px] w-9 h-9 flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-cream-strong dark:hover:bg-[#282623] rounded-xl transition-colors cursor-pointer focus:outline-none"
             >
               <PanelLeftClose className="w-4 h-4" />
             </button>
@@ -150,15 +240,15 @@ export function DashboardTaskbar({
         </div>
 
         {/* Action Controls - Fixed Axis Icons, Fluid Animated Text */}
-        <div className="p-2 space-y-1.5 shrink-0">
+        <div className="p-2 space-y-1 shrink-0 overflow-y-auto max-h-[calc(48vh)] scrollbar-none">
           {/* 1. New Chat Button */}
           <button
             type="button"
-            onClick={onNewSession}
+            onClick={() => handleItemClick(onNewSession)}
             title="Đoạn chat mới"
-            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none"
+            className="w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1"
           >
-            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
+            <div className="w-10 min-h-[44px] md:min-h-0 md:h-9 shrink-0 flex items-center justify-center">
               <Plus className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div
@@ -174,74 +264,39 @@ export function DashboardTaskbar({
             </div>
           </button>
 
-          {/* 2. Library Button */}
-          <button
-            type="button"
-            onClick={onOpenLibrary}
-            title="Thư viện tài liệu nghiên cứu"
-            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
-          >
-            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-              <Library className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
-            </div>
-            <div
-              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
-                isExpanded
-                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
-                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
-              }`}
-            >
-              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                Thư viện
-              </span>
-            </div>
-          </button>
-
-          {/* 3. Projects Button */}
-          <button
-            type="button"
-            onClick={onOpenProjects}
-            title="Dự án nghiên cứu"
-            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
-          >
-            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-              <FolderKanban className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
-            </div>
-            <div
-              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
-                isExpanded
-                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
-                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
-              }`}
-            >
-              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                Dự án
-              </span>
-            </div>
-          </button>
-
-          {/* 4. Writing & Drafts Button (Module 2) */}
-          <button
-            type="button"
-            onClick={() => navigate("/writing")}
-            title="Soạn thảo & Kiểm chứng (Module 2)"
-            className="w-full h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none"
-          >
-            <div className="w-10 h-9 shrink-0 flex items-center justify-center">
-              <PenTool className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
-            </div>
-            <div
-              className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
-                isExpanded
-                  ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
-                  : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
-              }`}
-            >
-              <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
-                Soạn thảo
-              </span>
-            </div>
-          </button>
+          {/* Module Nav Items */}
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => handleItemClick(item.onClick)}
+                title={item.title}
+                className={cn(
+                  "w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none",
+                  item.isActive
+                    ? "bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-500/25 font-bold"
+                    : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420]"
+                )}
+              >
+                <div className="w-10 min-h-[44px] md:min-h-0 md:h-9 shrink-0 flex items-center justify-center">
+                  <Icon className="w-4 h-4 text-coral-600 dark:text-coral-400 stroke-[2.2]" />
+                </div>
+                <div
+                  className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+                    isExpanded
+                      ? "max-w-[160px] opacity-100 translate-x-0 pr-3"
+                      : "max-w-0 opacity-0 -translate-x-2 pointer-events-none"
+                  }`}
+                >
+                  <span className="truncate whitespace-nowrap font-anthropic-serif font-semibold">
+                    {item.label}
+                  </span>
+                </div>
+              </button>
+            );
+          })}
         </div>
 
 
@@ -302,9 +357,9 @@ export function DashboardTaskbar({
                   <button
                     key={session.id}
                     type="button"
-                    onClick={() => onSelectSession(session.id)}
+                    onClick={() => handleItemClick(() => onSelectSession(session.id))}
                     title={session.title}
-                    className={`w-full text-left flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
+                    className={`w-full text-left flex items-center gap-2.5 px-3 py-2 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
                       isActive
                         ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
                         : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
@@ -334,98 +389,62 @@ export function DashboardTaskbar({
         </div>
       </div>
 
-      {/* 2. Bottom Rail: Theme Switcher & User Profile */}
-      <div className="p-2 border-t border-[#ece8df] dark:border-[#2a2824] shrink-0 flex flex-col gap-1.5">
-        {/* Collapsed Theme Button */}
-        {!isExpanded && (
-          <button
-            type="button"
-            onClick={toggleTheme}
-            aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-            title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-            className="w-10 h-10 mx-auto flex items-center justify-center rounded-xl text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420] transition-colors cursor-pointer"
-          >
-            {isDark ? (
-              <Sun className="w-4 h-4 text-amber-400" />
-            ) : (
-              <Moon className="w-4 h-4 text-zinc-600" />
-            )}
-          </button>
-        )}
-
-        <div
-          className={`w-full h-11 flex items-center rounded-xl transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden ${
+      {/* 2. Bottom Rail: Unified User Profile Button (Cabinet Principle) */}
+      <div className="p-2 border-t border-[#ece8df] dark:border-[#2a2824] shrink-0 relative">
+        <button
+          type="button"
+          onClick={() => setIsAvatarDropdownOpen((prev) => !prev)}
+          data-testid="taskbar-avatar-btn"
+          title={user?.full_name ? `${user.full_name} — Tùy chọn tài khoản` : "Tùy chọn tài khoản"}
+          aria-label="Tùy chọn tài khoản"
+          className={cn(
+            "w-full min-h-[44px] flex items-center rounded-xl transition-all duration-200 cursor-pointer text-left group",
             isExpanded
-              ? "bg-white dark:bg-[#23211e] border border-[#e8e4dc] dark:border-[#38332c] px-2 shadow-2xs"
-              : "bg-transparent border-transparent justify-center p-0"
-          }`}
+              ? "px-2.5 py-1.5 hover:bg-[#eae4d8] dark:hover:bg-[#252320]"
+              : "justify-center p-0 hover:bg-[#eae4d8] dark:hover:bg-[#252320]"
+          )}
         >
-          {/* Avatar box - Fixed size, perfectly centered in collapsed mode */}
-          <button
-            type="button"
-            onClick={() => setIsSettingsOpen(true)}
-            title={user?.full_name ? `${user.full_name} — Cài đặt tài khoản` : "Cài đặt tài khoản"}
-            aria-label="Cài đặt tài khoản"
-            className="w-7 h-7 rounded-lg bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center font-anthropic-serif font-bold text-xs shrink-0 cursor-pointer hover:bg-coral-500/20 transition-colors"
-          >
-            {userInitial}
-          </button>
+          {/* Avatar tròn DU */}
+          <div className="w-8 h-8 rounded-full overflow-hidden border border-hairline dark:border-[#38332c] shrink-0 flex items-center justify-center bg-coral-500/10 text-coral-600 dark:text-coral-400 font-serif font-bold text-xs">
+            {user?.avatar_url ? (
+              <img
+                src={user.avatar_url}
+                alt={user.full_name || "Scholar avatar"}
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <span>{userInitials}</span>
+            )}
+          </div>
 
-          {/* User Details & Controls - Smooth Width & Opacity Transition */}
+          {/* User Details (when expanded): Dam Manh Dung • Tài khoản cá nhân */}
           <div
-            className={`flex items-center justify-between min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] ${
+            className={cn(
+              "flex flex-col min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden",
               isExpanded
                 ? "flex-1 opacity-100 max-w-[170px] ml-2.5"
                 : "max-w-0 opacity-0 ml-0 pointer-events-none"
-            }`}
+            )}
           >
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              className="flex flex-col truncate pr-1 text-left cursor-pointer hover:opacity-80 transition-opacity"
-              title="Cài đặt tài khoản"
-            >
-              <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-anthropic-serif">
-                {user?.full_name ?? "Nhà nghiên cứu"}
-              </span>
-            </button>
-
-            <div className="flex items-center gap-0.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                title="Cài đặt tài khoản"
-                aria-label="Cài đặt tài khoản"
-                className="text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 p-1.5 rounded-lg hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-                title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-                className="text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 p-1.5 rounded-lg hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
-              >
-                {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                ) : (
-                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="Đăng xuất"
-                className="text-muted hover:text-coral-600 p-1.5 rounded-lg hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer shrink-0"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </div>
+            <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-serif leading-tight">
+              {user?.full_name ?? "Dam Manh Dung"}
+            </span>
+            <span className="text-3xs text-muted dark:text-zinc-400 truncate font-sans leading-tight mt-0.5">
+              Tài khoản cá nhân
+            </span>
           </div>
-        </div>
+        </button>
+
+        {/* Avatar Dropdown Popover */}
+        <AvatarDropdownPopover
+          isOpen={isAvatarDropdownOpen}
+          onClose={() => setIsAvatarDropdownOpen(false)}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          side="top"
+          align="left"
+          className="bottom-full mb-2 left-2"
+        />
       </div>
     </aside>
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { LandingNavbar } from "./LandingNavbar";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
@@ -60,5 +60,42 @@ describe("LandingNavbar component", () => {
     expect(dashboardBtn).toBeInTheDocument();
     expect(dashboardBtn).toHaveTextContent("Dashboard");
     expect(dashboardBtn.closest("a")).toHaveAttribute("href", "/dashboard");
+  });
+
+  it("opens elegant dropdown popover with 'Hồ sơ cá nhân' and 'Cài đặt' when clicking Avatar", () => {
+    useAuthStore.getState().login({
+      user: {
+        id: "demo-user-1",
+        email: "nguyen.scholar@hcmut.edu.vn",
+        full_name: "GS.TS. Nguyễn Văn Scholar",
+        role: "researcher",
+        is_verified: true,
+        created_at: new Date().toISOString(),
+      },
+      tokens: {
+        access_token: "token-xyz",
+        refresh_token: "refresh-xyz",
+        token_type: "bearer",
+        expires_in: 3600,
+      },
+    });
+
+    render(
+      <MemoryRouter>
+        <LandingNavbar />
+      </MemoryRouter>
+    );
+
+    const avatarBtn = screen.getByTestId("nav-settings-btn");
+    expect(avatarBtn).toBeInTheDocument();
+
+    // Popover is initially closed
+    expect(screen.queryByTestId("avatar-dropdown-popover")).not.toBeInTheDocument();
+
+    // Click Avatar opens popover with the 2 required options
+    fireEvent.click(avatarBtn);
+    expect(screen.getByTestId("avatar-dropdown-popover")).toBeInTheDocument();
+    expect(screen.getByText("Hồ sơ cá nhân")).toBeInTheDocument();
+    expect(screen.getByText("Cài đặt")).toBeInTheDocument();
   });
 });

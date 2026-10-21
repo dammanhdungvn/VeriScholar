@@ -1,25 +1,33 @@
 import { FileText, ArrowUpRight } from "lucide-react";
 import type { CitationBadgeData } from "@/types/dashboard";
 import { useDashboardStore } from "../stores/useDashboardStore";
+import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 
 interface CitationBadgeProps {
   citation: CitationBadgeData;
   onOpenReferences?: () => void;
 }
 
-export function CitationBadge({ citation, onOpenReferences }: CitationBadgeProps) {
+export function CitationBadge({ citation, onOpenReferences: _onOpenReferences }: CitationBadgeProps) {
   const setActiveBbox = useDashboardStore((s) => s.setActiveBbox);
   const activeBbox = useDashboardStore((s) => s.activeBbox);
 
-  const isSelected =
+  const isSelected = Boolean(
     activeBbox &&
+    citation.bbox &&
     activeBbox[0] === citation.bbox[0] &&
     activeBbox[1] === citation.bbox[1] &&
-    activeBbox[4] === citation.bbox[4];
+    activeBbox[4] === citation.bbox[4]
+  );
 
   const handleClick = () => {
-    setActiveBbox(citation.bbox);
-    onOpenReferences?.();
+    if (citation.bbox) {
+      setActiveBbox(citation.bbox);
+      const targetPage = citation.bbox[4] || citation.page || 1;
+      useReaderStore.getState().setCurrentPage(targetPage);
+    } else if (citation.page) {
+      useReaderStore.getState().setCurrentPage(citation.page);
+    }
   };
 
   return (

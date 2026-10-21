@@ -9,6 +9,7 @@ from api.schemas.auth import (
     AuthResponse,
     AuthTokensResponse,
     ChangePasswordRequest,
+    GitHubAuthRequest,
     GoogleAuthRequest,
     LoginRequest,
     PasswordResetConfirmRequest,
@@ -133,7 +134,40 @@ async def google_auth(
 
 
 # ==============================================================================
-# 4. POST /api/v1/auth/logout
+# 4. POST /api/v1/auth/github
+# ==============================================================================
+@router.post(
+    "/github",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[AuthResponse],
+    summary="Xác thực GitHub OAuth (GitHub Sign-In)",
+    description=(
+        "Xác thực tài khoản GitHub bằng OAuth authorization code hoặc access token. "
+        "Tự động cấp tài khoản học thuật hoặc liên kết tài khoản hiện có, cấp cặp JWT tokens."
+    ),
+)
+async def github_auth(
+    payload: GitHubAuthRequest,
+    auth_service: AuthService = Depends(get_auth_service),
+) -> SingleResponseEnvelope[AuthResponse]:
+    """Authenticate scholar using GitHub OAuth code or access token."""
+    user, tokens = await auth_service.authenticate_github(
+        code=payload.code,
+        redirect_uri=payload.redirect_uri,
+        access_token=payload.access_token,
+    )
+    return SingleResponseEnvelope(
+        data=AuthResponse(
+            user=UserProfileResponse.model_validate(user),
+            tokens=tokens,
+            message="Xác thực GitHub thành công! Chào mừng bạn đến với VeriScholar.",
+        ),
+        meta=ResponseMeta(),
+    )
+
+
+# ==============================================================================
+# 5. POST /api/v1/auth/logout
 # ==============================================================================
 @router.post(
     "/logout",

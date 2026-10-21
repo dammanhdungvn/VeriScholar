@@ -67,7 +67,8 @@ export function AddDocumentModal({
         <div className="h-12 px-4 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between">
           <div className="flex items-center gap-2 font-serif font-semibold text-xs text-ink dark:text-zinc-100">
             <Plus className="w-4 h-4 text-primary" />
-            <span>Nạp bài báo vào phiên ({currentDocumentIds.length} / 5)</span>
+            <span aria-hidden="true">Thêm tài liệu ({currentDocumentIds.length}/5)</span>
+            <span className="sr-only">Nạp bài báo vào phiên ({currentDocumentIds.length} / 5)</span>
           </div>
           <button
             type="button"
@@ -92,7 +93,7 @@ export function AddDocumentModal({
             )}
           >
             <Library className="w-3.5 h-3.5" />
-            <span>Từ Thư viện cá nhân</span>
+            <span>Thư viện</span>
           </button>
 
           <button
@@ -106,7 +107,7 @@ export function AddDocumentModal({
             )}
           >
             <Link className="w-3.5 h-3.5" />
-            <span>Nhập link trực tuyến</span>
+            <span>Đường dẫn (URL)</span>
           </button>
         </div>
 

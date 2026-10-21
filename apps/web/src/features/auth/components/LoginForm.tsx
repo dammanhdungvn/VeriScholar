@@ -2,6 +2,8 @@ import * as React from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useLogin } from "../hooks/useLogin";
 import { useGoogleAuth } from "../hooks/useGoogleAuth";
+import { authApi } from "../api/authApi";
+import { useAuthStore } from "../stores/useAuthStore";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -21,9 +23,11 @@ import {
 export function LoginForm() {
   const navigate = useNavigate();
   const loginMutation = useLogin();
+  const login = useAuthStore((s) => s.login);
   const { loginWithGoogleToken, isLoading: isGoogleLoading } = useGoogleAuth({
     onError: (err) => setErrorMessage(err.message),
   });
+  const [isGitHubLoading, setIsGitHubLoading] = React.useState(false);
 
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
@@ -33,7 +37,25 @@ export function LoginForm() {
   const [emailFieldError, setEmailFieldError] = React.useState<string | null>(null);
   const [forgotModalOpen, setForgotModalOpen] = React.useState(false);
   const [socialModalOpen, setSocialModalOpen] = React.useState(false);
-  const [selectedSocialProvider, setSelectedSocialProvider] = React.useState<"google" | "orcid" | null>(null);
+  const [selectedSocialProvider, setSelectedSocialProvider] = React.useState<"google" | "github" | "orcid" | null>(null);
+
+  const loginWithGitHubToken = async (tokenOrCode: string) => {
+    setIsGitHubLoading(true);
+    setErrorMessage(null);
+    try {
+      const isToken = tokenOrCode.startsWith("gho_") || tokenOrCode.startsWith("ghp_");
+      const authResponse = await authApi.githubLogin(
+        isToken ? { access_token: tokenOrCode } : { code: tokenOrCode }
+      );
+      login(authResponse, true);
+      navigate("/dashboard");
+    } catch (err: unknown) {
+      const errorObj = err instanceof Error ? err : new Error("Đăng nhập GitHub thất bại.");
+      setErrorMessage(errorObj.message);
+    } finally {
+      setIsGitHubLoading(false);
+    }
+  };
 
   const handleEmailBlur = () => {
     if (!email.trim()) return;
@@ -75,7 +97,7 @@ export function LoginForm() {
     );
   };
 
-  const handleSocialAuth = (provider: "google" | "orcid") => {
+  const handleSocialAuth = (provider: "google" | "github" | "orcid") => {
     setSelectedSocialProvider(provider);
     setSocialModalOpen(true);
   };
@@ -93,8 +115,8 @@ export function LoginForm() {
       <SocialAuthButtons
         onSocialAuth={handleSocialAuth}
         onGoogleSuccess={loginWithGoogleToken}
-        isLoading={isGoogleLoading}
-        disabled={loginMutation.isPending || isGoogleLoading}
+        isLoading={isGoogleLoading || isGitHubLoading}
+        disabled={loginMutation.isPending || isGoogleLoading || isGitHubLoading}
       />
 
       {/* 3. Subtle Hairline Divider */}
@@ -238,7 +260,8 @@ export function LoginForm() {
         onOpenChange={setSocialModalOpen}
         provider={selectedSocialProvider}
         onGoogleTokenSubmit={loginWithGoogleToken}
-        isLoading={isGoogleLoading}
+        onGitHubTokenSubmit={loginWithGitHubToken}
+        isLoading={isGoogleLoading || isGitHubLoading}
       />
     </div>
   );

@@ -202,48 +202,38 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
     contrast: "contrast-[1.28] brightness-[0.96]",
   }[colorTheme];
 
-  const hasMatchingBbox = activeBbox && activeBbox[4] === pageNumber;
-
   return (
     <div
       ref={containerRef}
       id={`pdf-page-${pageNumber}`}
       data-page-number={pageNumber}
       className={cn(
-        "relative flex flex-col items-center select-text [contain:layout_paint] [will-change:transform] [transform:translateZ(0)] transition-all duration-150",
-        readingMode === "two-page" ? "mx-0 my-0" : "mx-auto my-2",
+        "relative flex flex-col items-center select-text [contain:layout_paint] [will-change:transform] [transform:translateZ(0)] transition-all duration-150 w-full sm:w-auto",
+        readingMode === "two-page" ? "mx-0 my-0" : "mx-auto my-0",
         positionInSpread === "left" && "shadow-[2px_0_10px_rgba(0,0,0,0.08)]",
         positionInSpread === "right" && "shadow-[-2px_0_10px_rgba(0,0,0,0.08)]"
       )}
       style={{
         width: `${containerWidth}px`,
+        maxWidth: "100%",
         minHeight: `${containerHeight}px`,
       }}
     >
-      {/* Clean Academic Page Header Indicator */}
-      <div className="w-full flex items-center justify-between pb-1 px-1 select-none text-[11px] font-mono text-zinc-400 dark:text-zinc-500">
-        <span className="tracking-tight text-[10px]">Trang {pageNumber}</span>
-        {hasMatchingBbox && (
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-amber-500 text-white shadow-xs animate-pulse">
-            <span className="w-1 h-1 rounded-full bg-white animate-ping" />
-            Dẫn chứng cốt lõi
-          </span>
-        )}
-      </div>
-
       {/* Main Page Container */}
       <div
         className={cn(
-          "relative overflow-hidden bg-white dark:bg-[#1a1917] shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border border-[#ded8cc] dark:border-[#2f2b26] rounded-xs transition-colors duration-150",
+          "relative overflow-hidden bg-white dark:bg-[#1a1917] sm:shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:sm:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-y sm:border border-[#ded8cc] dark:border-[#2f2b26] sm:rounded-xs transition-colors duration-150 w-full sm:w-auto",
           themeFilterClass,
           positionInSpread === "left" && "rounded-r-none border-r-[#dfd8cc] dark:border-r-[#24211d]",
           positionInSpread === "right" && "rounded-l-none border-l-0"
         )}
         style={{
           width: `${containerWidth}px`,
+          maxWidth: "100%",
           height: `${containerHeight}px`,
         }}
       >
+
         {/* HTML5 PDF.js Canvas */}
         <canvas
           ref={canvasRef}

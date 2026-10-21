@@ -79,4 +79,30 @@ describe("useReaderStore", () => {
     expect(state.activeBbox).toEqual([0.1, 0.2, 0.8, 0.4, 5]);
     expect(state.currentPage).toBe(5);
   });
+
+  it("manages fitMode (default width), toggleFitWidth, and resets to width", () => {
+    expect(useReaderStore.getState().fitMode).toBe("width");
+
+    // Zooming in sets fitMode to custom
+    useReaderStore.getState().zoomIn();
+    expect(useReaderStore.getState().fitMode).toBe("custom");
+
+    // Toggling returns to width
+    useReaderStore.getState().toggleFitWidth();
+    expect(useReaderStore.getState().fitMode).toBe("width");
+    expect(useReaderStore.getState().zoomRatio).toBe(1.0);
+
+    // Toggling again switches back to custom
+    useReaderStore.getState().toggleFitWidth();
+    expect(useReaderStore.getState().fitMode).toBe("custom");
+
+    // Explicit setFitMode
+    useReaderStore.getState().setFitMode("width");
+    expect(useReaderStore.getState().fitMode).toBe("width");
+
+    // resetReader restores fitMode to width
+    useReaderStore.getState().setFitMode("custom");
+    useReaderStore.getState().resetReader();
+    expect(useReaderStore.getState().fitMode).toBe("width");
+  });
 });

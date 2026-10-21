@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, act } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { WritingHeaderBar } from "./WritingHeaderBar";
 import { useWritingStore } from "../stores/useWritingStore";
@@ -22,6 +22,10 @@ describe("WritingHeaderBar", () => {
     useWritingStore.getState().setDraft(mockDraft);
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("renders draft title, version tag, and saved status", () => {
     render(
       <BrowserRouter>
@@ -34,20 +38,27 @@ describe("WritingHeaderBar", () => {
     expect(screen.getByText("Đã lưu")).toBeInTheDocument();
   });
 
-  it("triggers layout mode switch when clicking mode button", () => {
+  it("opens layout pocket popover and switches mode on option click", () => {
     render(
       <BrowserRouter>
         <WritingHeaderBar />
       </BrowserRouter>
     );
 
-    const dualCodeBtn = screen.getByTitle("Code & PDF");
+    // Click layout dropdown trigger
+    const layoutTrigger = screen.getByTestId("header-layout-dropdown");
+    fireEvent.click(layoutTrigger);
+
+    // Popover content should be open
+    expect(screen.getByTestId("layout-popover-content")).toBeInTheDocument();
+
+    const dualCodeBtn = screen.getByTestId("mode-dual-code");
     fireEvent.click(dualCodeBtn);
 
     expect(useWritingStore.getState().workspaceMode).toBe("dual-code");
   });
 
-  it("calls onSave, onCompile, and onExportBundle callbacks", () => {
+  it("calls onSave and onCompile directly from prominent buttons, and onExportBundle from tools popover", () => {
     const onSave = vi.fn();
     const onCompile = vi.fn();
     const onExportBundle = vi.fn();
@@ -65,20 +76,26 @@ describe("WritingHeaderBar", () => {
       </BrowserRouter>
     );
 
+    // 1. Save button is prominent
     const saveBtn = screen.getByText("Lưu");
     fireEvent.click(saveBtn);
     expect(onSave).toHaveBeenCalledTimes(1);
 
+    // 2. Compile button is prominent
     const compileBtn = screen.getByText("Biên dịch");
     fireEvent.click(compileBtn);
     expect(onCompile).toHaveBeenCalledTimes(1);
 
-    const exportBtn = screen.getByText("Xuất Gói Nộp Bài");
+    // 3. Export bundle is inside tools popover
+    const toolsTrigger = screen.getByTestId("header-tools-dropdown");
+    fireEvent.click(toolsTrigger);
+
+    const exportBtn = screen.getByTestId("header-export-bundle-btn");
     fireEvent.click(exportBtn);
     expect(onExportBundle).toHaveBeenCalledTimes(1);
   });
 
-  it("opens Asset modal when clicking Assets button", () => {
+  it("opens Asset modal from tools pocket dropdown", () => {
     render(
       <BrowserRouter>
         <WritingHeaderBar />
@@ -86,13 +103,16 @@ describe("WritingHeaderBar", () => {
     );
 
     expect(useWritingStore.getState().isAssetModalOpen).toBe(false);
+
+    // Open tools dropdown
+    fireEvent.click(screen.getByTestId("header-tools-dropdown"));
     const assetsBtn = screen.getByTestId("header-assets-btn");
     fireEvent.click(assetsBtn);
 
     expect(useWritingStore.getState().isAssetModalOpen).toBe(true);
   });
 
-  it("opens Share modal when clicking Share button", () => {
+  it("opens Share modal from tools pocket dropdown", () => {
     render(
       <BrowserRouter>
         <WritingHeaderBar />
@@ -100,6 +120,9 @@ describe("WritingHeaderBar", () => {
     );
 
     expect(useWritingStore.getState().isShareModalOpen).toBe(false);
+
+    // Open tools dropdown
+    fireEvent.click(screen.getByTestId("header-tools-dropdown"));
     const shareBtn = screen.getByTestId("header-share-btn");
     fireEvent.click(shareBtn);
 
@@ -107,7 +130,6 @@ describe("WritingHeaderBar", () => {
   });
 
   it("toggles comments pane and displays badge count for unresolved comments", () => {
-    // Add 2 unresolved comments and 1 resolved comment
     useWritingStore.getState().setComments([
       {
         id: "c-1",
@@ -156,6 +178,9 @@ describe("WritingHeaderBar", () => {
       </BrowserRouter>
     );
 
+    // Open tools dropdown
+    fireEvent.click(screen.getByTestId("header-tools-dropdown"));
+
     // Verify unresolved count badge is displayed
     const badge = screen.getByTestId("unresolved-comments-badge");
     expect(badge).toHaveTextContent("2");
@@ -178,6 +203,9 @@ describe("WritingHeaderBar", () => {
         />
       </BrowserRouter>
     );
+
+    // Open tools dropdown
+    fireEvent.click(screen.getByTestId("header-tools-dropdown"));
 
     const overleafBtn = screen.getByTestId("header-overleaf-btn");
     expect(overleafBtn).toBeInTheDocument();
@@ -204,6 +232,9 @@ describe("WritingHeaderBar", () => {
       </BrowserRouter>
     );
 
+    // Open tools dropdown
+    fireEvent.click(screen.getByTestId("header-tools-dropdown"));
+
     const overleafBtn = screen.getByTestId("header-overleaf-btn");
     expect(overleafBtn).toBeInTheDocument();
     expect(overleafBtn).not.toBeDisabled();
@@ -215,5 +246,38 @@ describe("WritingHeaderBar", () => {
     // Click triggers onSyncOverleaf
     fireEvent.click(overleafBtn);
     expect(onSyncOverleaf).toHaveBeenCalledTimes(1);
+  });
+
+  it("toggles secondary toolbar ribbon and auto-hides after 5 seconds of inactivity", () => {
+    vi.useFakeTimers();
+
+    render(
+      <BrowserRouter>
+        <WritingHeaderBar />
+      </BrowserRouter>
+    );
+
+    // Initially secondary ribbon is not visible
+    expect(screen.queryByTestId("secondary-toolbar-ribbon")).not.toBeInTheDocument();
+
+    // Toggle ribbon open
+    const toggleBtn = screen.getByTestId("toggle-secondary-toolbar-btn");
+    fireEvent.click(toggleBtn);
+
+    // Ribbon should now be in the document
+    expect(screen.getByTestId("secondary-toolbar-ribbon")).toBeInTheDocument();
+    expect(screen.getByText(/Tự ẩn sau 5s/)).toBeInTheDocument();
+
+    // Advance 3 seconds - still visible
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(screen.getByTestId("secondary-toolbar-ribbon")).toBeInTheDocument();
+
+    // Advance remaining 2 seconds (total 5s) - ribbon auto-hides
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.queryByTestId("secondary-toolbar-ribbon")).not.toBeInTheDocument();
   });
 });

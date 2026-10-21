@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { AccountSettingsModal } from "@/features/auth/components/AccountSettingsModal";
+import { AvatarDropdownPopover } from "@/features/auth/components/AvatarDropdownPopover";
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 
 export function LandingNavbar() {
@@ -13,6 +14,7 @@ export function LandingNavbar() {
   const isDark = theme === "dark";
   const { isAuthenticated, user } = useAuthStore();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
 
 
   return (
@@ -21,20 +23,20 @@ export function LandingNavbar() {
         {/* Logo - Wider & Clearly Visible */}
         <Link
           to="/"
-          className="flex items-center focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
+          className="flex items-center min-h-[44px] focus:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded-md py-1"
           aria-label="VeriScholar Trang chủ"
         >
           <AcademicLogo size="xl" inverted={isDark} />
         </Link>
 
         {/* Action Cluster - GitHub, User / "Dùng thử ngay", & Theme Toggle */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
           <a
             href="https://github.com/dammanhdungvn/VeriScholar"
             target="_blank"
             rel="noopener noreferrer"
             data-testid="nav-github-link"
-            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="hidden sm:inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-9 sm:min-h-9 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
             aria-label="GitHub Repository"
             title="GitHub Repository"
           >
@@ -53,7 +55,7 @@ export function LandingNavbar() {
               variant="primary"
               size="sm"
               data-testid="nav-try-btn"
-              className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
+              className="group min-h-[44px] px-3 sm:px-3.5 text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
             >
               <Link to="/dashboard">
                 <LayoutDashboard className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
@@ -67,7 +69,7 @@ export function LandingNavbar() {
               variant="primary"
               size="sm"
               data-testid="nav-try-btn"
-              className="group text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
+              className="group min-h-[44px] px-3 sm:px-3.5 text-xs sm:text-sm cursor-pointer shadow-xs whitespace-nowrap shrink-0 rounded-lg"
             >
               <Link to="/login">
                 <Sparkles className="w-3.5 h-3.5 text-on-primary transition-transform group-hover:scale-110" />
@@ -79,27 +81,36 @@ export function LandingNavbar() {
 
           {/* User Settings Button (When Authenticated) */}
           {isAuthenticated && (
-            <button
-              type="button"
-              onClick={() => setIsSettingsOpen(true)}
-              data-testid="nav-settings-btn"
-              aria-label="Cài đặt tài khoản"
-              title={user?.full_name ? `${user.full_name} — Cài đặt tài khoản` : "Cài đặt tài khoản"}
-              className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0 overflow-hidden"
-            >
-              {user?.avatar_url ? (
-                <img
-                  src={user.avatar_url}
-                  alt={user.full_name || "Scholar avatar"}
-                  className="w-full h-full object-cover rounded-lg"
-                  referrerPolicy="no-referrer"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center font-serif font-bold text-xs bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 text-amber-100 dark:from-amber-600 dark:to-amber-800">
-                  {getScholarInitials(user?.full_name, user?.email)}
-                </div>
-              )}
-            </button>
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setIsAvatarDropdownOpen((prev) => !prev)}
+                data-testid="nav-settings-btn"
+                aria-label="Tùy chọn tài khoản"
+                title={user?.full_name ? `${user.full_name} — Tùy chọn tài khoản` : "Tùy chọn tài khoản"}
+                className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-9 sm:min-h-9 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0 overflow-hidden"
+              >
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.full_name || "Scholar avatar"}
+                    className="w-full h-full object-cover rounded-lg"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center font-serif font-bold text-xs bg-gradient-to-br from-amber-700 via-amber-800 to-amber-950 text-amber-100 dark:from-amber-600 dark:to-amber-800">
+                    {getScholarInitials(user?.full_name, user?.email)}
+                  </div>
+                )}
+              </button>
+
+              <AvatarDropdownPopover
+                isOpen={isAvatarDropdownOpen}
+                onClose={() => setIsAvatarDropdownOpen(false)}
+                side="bottom"
+                align="right"
+              />
+            </div>
           )}
 
           {/* Theme Toggle Button (Light/Dark Mode) — Strictly positioned to the right of "Dùng thử ngay" */}
@@ -109,7 +120,7 @@ export function LandingNavbar() {
             data-testid="theme-toggle-btn"
             aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
             title={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-            className="inline-flex items-center justify-center w-8 h-8 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
+            className="inline-flex items-center justify-center min-w-[44px] min-h-[44px] sm:min-w-9 sm:min-h-9 sm:w-9 sm:h-9 rounded-lg border border-hairline dark:border-[#423c34] bg-canvas dark:bg-[#2d2924] hover:bg-surface-soft dark:hover:bg-[#38332c] text-body hover:text-ink dark:text-zinc-200 dark:hover:text-white transition-colors shadow-2xs cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary shrink-0"
           >
             {isDark ? (
               <Sun className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-amber-400 transition-transform hover:rotate-45" />

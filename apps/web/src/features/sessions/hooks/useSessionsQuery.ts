@@ -138,6 +138,26 @@ export function useUpdateSessionViewportMutation() {
       data: SessionUpdateViewportRequest;
       etag: string;
     }) => sessionsApi.updateSessionViewport(sessionId, data, etag),
+    onSuccess: (response, { sessionId }) => {
+      if (response?.data) {
+        queryClient.setQueryData<ApiResponseWithHeaders<SessionResponseData>>(
+          SESSION_QUERY_KEYS.detail(sessionId),
+          (prev) => {
+            if (!prev) return response;
+            return {
+              ...prev,
+              data: {
+                ...prev.data,
+                ...response.data,
+                version: response.data.version,
+                viewport_state: response.data.viewport_state,
+              },
+              headers: response.headers || prev.headers,
+            };
+          }
+        );
+      }
+    },
     onError: (err: unknown, { sessionId }) => {
       // If 412 Precondition Failed, quietly refresh session details to synchronize ETag
       const errorObj = err as { status?: number; response?: { status?: number } };

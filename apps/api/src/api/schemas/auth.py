@@ -221,6 +221,35 @@ class GoogleAuthRequest(BaseModel):
     id_token: str = Field(min_length=1, description="Google OAuth 2.0 ID Token (JWT)")
 
 
+class GitHubAuthRequest(BaseModel):
+    """Request payload for GitHub OAuth authentication.
+
+    Accepts either an authorization code (with optional redirect_uri)
+    or a pre-obtained GitHub access_token.
+    """
+
+    code: str | None = Field(
+        default=None,
+        description="GitHub OAuth authorization code",
+    )
+    redirect_uri: str | None = Field(
+        default=None,
+        description="Optional OAuth redirect URI",
+    )
+    access_token: str | None = Field(
+        default=None,
+        description="GitHub OAuth access token",
+    )
+
+    @model_validator(mode="after")
+    def validate_code_or_token(self) -> "GitHubAuthRequest":
+        has_code = bool(self.code and self.code.strip())
+        has_token = bool(self.access_token and self.access_token.strip())
+        if not has_code and not has_token:
+            raise ValueError("Vui lòng cung cấp 'code' hoặc 'access_token' từ GitHub.")
+        return self
+
+
 class AuthMessageResponse(BaseModel):
     """Generic message response envelope."""
 

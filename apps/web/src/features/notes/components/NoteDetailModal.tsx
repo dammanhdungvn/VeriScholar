@@ -54,7 +54,8 @@ export function NoteDetailModal({
         <div className="h-12 px-5 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between shrink-0 bg-surface-soft/40 dark:bg-[#1f1d1a]">
           <div className="flex items-center gap-2 font-serif font-semibold text-sm text-ink dark:text-zinc-100">
             <FileText className="w-4 h-4 text-coral-600 dark:text-coral-400" />
-            <span>Chi tiết ghi chú & Bản sao bằng chứng đóng băng (Frozen Snapshot)</span>
+            <span aria-hidden="true">Chi tiết ghi chú</span>
+            <span className="sr-only">Chi tiết ghi chú & Bản sao bằng chứng đóng băng (Frozen Snapshot)</span>
           </div>
           <button
             type="button"
@@ -84,7 +85,7 @@ export function NoteDetailModal({
                 <div className="flex items-center justify-between text-muted text-[11px]">
                   <span className="flex items-center gap-1 font-semibold text-ink dark:text-zinc-200">
                     <Quote className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-                    <span>Trích dẫn gốc từ tài liệu</span>
+                    <span>Trích dẫn gốc</span>
                   </span>
                   <div className="flex items-center gap-2">
                     <button
@@ -109,7 +110,7 @@ export function NoteDetailModal({
               {note.user_note && (
                 <div className="p-4 rounded-xl bg-surface-card dark:bg-[#201e1b] border border-hairline dark:border-[#332f29] space-y-1.5">
                   <span className="text-[11px] font-semibold text-ink dark:text-zinc-200 block">
-                    Ghi chú suy ngẫm của nhà nghiên cứu:
+                    Ghi chú cá nhân:
                   </span>
                   <p className="font-sans text-xs text-ink dark:text-zinc-200 leading-relaxed whitespace-pre-wrap">
                     {note.user_note}
@@ -137,23 +138,25 @@ export function NoteDetailModal({
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-1.5 font-semibold text-ink dark:text-zinc-200">
                     <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                    <span>Bản sao bằng chứng đóng băng (Frozen Snapshot)</span>
+                    <span aria-hidden="true">Bản sao bằng chứng</span>
+                    <span className="sr-only">Bản sao bằng chứng đóng băng (Frozen Snapshot)</span>
                   </span>
                   {note.is_source_detached ? (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20 font-mono">
                       <AlertTriangle className="w-3 h-3" />
-                      <span>Nguồn đã tách rời (Detached)</span>
+                      <span aria-hidden="true">Nguồn đã gỡ</span>
+                      <span className="sr-only">Nguồn đã tách rời (Detached)</span>
                     </span>
                   ) : (
                     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                       <ShieldCheck className="w-3 h-3" />
-                      <span>Bảo toàn toàn vẹn</span>
+                      <span>Đã bảo chứng</span>
                     </span>
                   )}
                 </div>
 
                 <p className="text-[11px] text-muted leading-relaxed">
-                  Nguyên tắc bất biến: Dữ liệu snapshot được đóng băng vĩnh viễn tại thời điểm tạo ghi chú. Ngay cả khi bài báo gốc bị xóa hoặc chỉnh sửa, chứng cứ học thuật này vẫn tồn tại độc lập.
+                  Dữ liệu bằng chứng được bảo toàn độc lập với bài báo gốc.
                 </p>
 
                 {/* Bounding Box Coordinates */}
@@ -161,7 +164,7 @@ export function NoteDetailModal({
                   <div className="p-2.5 rounded-lg bg-surface-soft/60 dark:bg-[#161513] border border-hairline font-mono text-[10px] space-y-1">
                     <div className="flex items-center gap-1 text-muted">
                       <Layers className="w-3 h-3" />
-                      <span>Tọa độ Bounding Box chuẩn hóa [x0, y0, x1, y1]:</span>
+                      <span>Tọa độ trích dẫn:</span>
                     </div>
                     {note.bounding_boxes.map((box, idx) => (
                       <div key={idx} className="text-coral-600 dark:text-coral-400">
@@ -176,7 +179,7 @@ export function NoteDetailModal({
                   <details className="text-[10px] font-mono text-muted">
                     <summary className="cursor-pointer hover:text-ink flex items-center gap-1">
                       <Code className="w-3 h-3" />
-                      <span>Xem dữ liệu snapshot thô (Raw JSON)</span>
+                      <span>Dữ liệu thô (JSON)</span>
                     </summary>
                     <pre className="mt-2 p-2 rounded bg-black/5 dark:bg-black/40 overflow-x-auto text-[10px]">
                       {JSON.stringify(note.frozen_snapshot, null, 2)}
@@ -188,7 +191,7 @@ export function NoteDetailModal({
               {/* Metadata Footer */}
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-hairline dark:border-[#2f2b26] text-[11px] text-muted font-mono">
                 <div>
-                  <span className="block text-[10px]">Phiên bản ETag:</span>
+                  <span className="block text-[10px]">Phiên bản:</span>
                   <span className="text-ink dark:text-zinc-200 font-semibold">v{note.version}</span>
                 </div>
                 <div>

@@ -86,3 +86,56 @@ Lead Quality Gatekeeper tiến hành kiểm toán độc lập toàn bộ cú ph
 - [ ] Quy trình migration CSDL bảo đảm Zero-Downtime (idempotent DDL).
 - [ ] Cơ chế tự động kiểm tra sức khỏe endpoint `/health` và kích hoạt Rollback tự động nếu dịch vụ không khởi động thành công.
 - [ ] Môi trường Production Live tại `https://verischolar.duckdns.org` hoạt động ổn định và nhận được chứng chỉ nghiệm thu Quality Gate Pass.
+
+
+## 2026-10-18T09:59:57Z
+
+Fix 4 critical UI/UX bugs in the VeriScholar academic copilot interface (markdown rendering, chat reasoning state hang, Claude-inspired typography styling, and PDF viewer auto-zoom/fit-to-width), and atomically build and deploy the verified web bundle to https://verischolar.duckdns.org/dashboard.
+
+Working directory: /home/VeriScholar/Workspace/VeriScholar
+Integrity mode: development
+
+## Requirements
+
+### R1. Academic Rich-Text & Interactive Citation Markdown Rendering
+The Socratic Copilot chat interface must render AI responses as formatted rich text instead of raw Markdown syntax. All Markdown headers (h2/h3), bold text (`**...**`), italic text (`*...*`), bulleted/numbered lists with proper indents, and citation tags (`[^cit_x]`) must be rendered into interactive citation badges/chips that navigate directly to the cited bounding box when clicked.
+
+### R2. Chat Streaming State Machine & Input Unlock
+When the AI finishes streaming its response (or when the SSE connection terminates/completes), the chat state machine must immediately reset to `idle`. The "Socratic • Đang suy luận..." status header and the "Dừng suy luận" button must disappear instantly, and the chat input textarea must be unlocked so users can immediately submit follow-up queries without refreshing the browser.
+
+### R3. Claude-Style Warm Typography Alignment (DESIGN.md)
+Align interface typography with the specifications in `DESIGN.md`. Incorporate high-quality Google Fonts:
+- Serif Editorial headline font (`Newsreader` or `Lora` with weights 400, 500, 600) for academic headings and paper display titles.
+- Humanist Sans font (`Inter` or `Plus Jakarta Sans`) for body text, chat messages, and UI controls with comfortable line-height (1.55) and warm color tokens (`#141413` / `#3d3d3a`).
+
+### R4. Continuous Dynamic Auto-Fit Width for PDF Paper Viewer
+Implement continuous auto-fit zoom scaling for the PDF paper viewer using a debounced `ResizeObserver`. Whenever the user drags the split pane or resizes the viewport, the PDF canvas must dynamically rescale so that 100% of the paper page width remains fully visible within the available panel container without horizontal clipping or overflow. The split pane must also enforce a minimum panel constraint preventing accidental collapse of the PDF viewer.
+
+### R5. Verification, Production Build & Atomic Deployment
+Verify all changes against existing type checks and test suites, execute the production build pipeline (`deploy_web.sh`), sync assets to `/var/www/verischolar/web`, reload Nginx, and verify HTTP 200 live status at `https://verischolar.duckdns.org/dashboard`.
+
+## Acceptance Criteria
+
+### Rich-Text & Citations
+- [ ] AI responses in chat contain no unparsed raw markdown syntax (`##`, `**`, `*`, `[^cit_x]`).
+- [ ] Citations render as interactive clickable chips linked to document pages/bounding boxes.
+
+### Streaming Lifecycle
+- [ ] Upon stream completion or abort, `isStreaming` and `isReasoning` flags are reset to `false`.
+- [ ] The "Dừng suy luận" button disappears immediately when generation finishes.
+- [ ] Chat input is enabled and accepts new submissions without page reload.
+
+### Typography
+- [ ] Editorial serif font is loaded and applied to headings and titles.
+- [ ] Clean sans-serif font is applied to body text and chat bubbles with appropriate letter-spacing and line-height.
+
+### PDF Dynamic Scaling
+- [ ] Resizing the split pane causes the PDF page to scale smoothly and stay 100% visible across its width.
+- [ ] No horizontal clipping of page text occurs when the chat panel is expanded.
+- [ ] The split pane enforces min-width bounds so the PDF panel cannot be hidden completely.
+
+### Verification & Deployment
+- [ ] `pnpm --prefix apps/web exec tsc -b` exits with code 0 (zero errors).
+- [ ] `pnpm --prefix apps/web test:run` exits with code 0 (100% pass rate).
+- [ ] Web bundle built and deployed to `/var/www/verischolar/web`.
+- [ ] Live endpoint `https://verischolar.duckdns.org/dashboard` returns HTTP 200 with new assets active.

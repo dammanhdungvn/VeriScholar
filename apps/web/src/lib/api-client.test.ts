@@ -17,8 +17,10 @@ describe("api-client and buildHeaders correlation tracing", () => {
   });
 
   it("resolves API URL with endpoint prefix", () => {
-    expect(resolveApiUrl("/documents")).toBe("/api/v1/documents");
-    expect(resolveApiUrl("documents")).toBe("/api/v1/documents");
+    const base = import.meta.env.VITE_API_BASE_URL || "";
+    const prefix = import.meta.env.VITE_API_PREFIX || "/api/v1";
+    expect(resolveApiUrl("/documents")).toBe(`${base}${prefix}/documents`);
+    expect(resolveApiUrl("documents")).toBe(`${base}${prefix}/documents`);
   });
 
   it("automatically generates and attaches X-Request-ID header via crypto.randomUUID", async () => {

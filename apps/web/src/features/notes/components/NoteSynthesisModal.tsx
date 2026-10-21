@@ -21,25 +21,25 @@ const MODES: {
   {
     id: "concept_lesson",
     label: "Bài học khái niệm",
-    desc: "Đúc kết các định nghĩa, công thức toán và giải thích cơ chế hoạt động cốt lõi.",
+    desc: "Đúc kết định nghĩa và cơ chế cốt lõi.",
     icon: BookOpen,
   },
   {
     id: "literature_review",
     label: "Tổng quan tài liệu",
-    desc: "Xâu chuỗi các luận điểm thành một bức tranh tổng thể so sánh các phương pháp.",
+    desc: "Xâu chuỗi và so sánh các phương pháp.",
     icon: Layers,
   },
   {
     id: "research_gap",
     label: "Khoảng trống nghiên cứu",
-    desc: "Phân tích các giới hạn, giả định chưa kiểm chứng và gợi mở hướng đi mới.",
+    desc: "Phân tích giới hạn và hướng đi mới.",
     icon: Target,
   },
   {
     id: "active_recall_quiz",
     label: "Tự vấn & Flashcard",
-    desc: "Tạo bộ câu hỏi phản biện Socratic và thẻ ghi nhớ để củng cố kiến thức sâu.",
+    desc: "Tạo câu hỏi phản biện và thẻ nhớ.",
     icon: HelpCircle,
   },
 ];
@@ -83,7 +83,8 @@ export function NoteSynthesisModal({
         <div className="h-12 px-5 border-b border-hairline dark:border-[#2f2b26] flex items-center justify-between">
           <div className="flex items-center gap-2 font-serif font-semibold text-sm text-ink dark:text-zinc-100">
             <Sparkles className="w-4 h-4 text-primary" />
-            <span>AI Tổng Hợp Tri Thức ({notesToUseCount} ghi chú)</span>
+            <span aria-hidden="true">Tổng hợp ({notesToUseCount} ghi chú)</span>
+            <span className="sr-only">AI Tổng Hợp Tri Thức ({notesToUseCount} ghi chú)</span>
           </div>
           <button
             type="button"
@@ -100,7 +101,7 @@ export function NoteSynthesisModal({
           {/* Mode Selector */}
           <div className="space-y-2">
             <label className="block text-[11px] font-sans font-medium text-ink dark:text-zinc-200">
-              Mục tiêu đúc kết tri thức
+              Mục tiêu tổng hợp
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {MODES.map((mode) => {
@@ -134,13 +135,13 @@ export function NoteSynthesisModal({
           {/* Title Input */}
           <div className="space-y-1">
             <label className="block text-[11px] font-sans font-medium text-ink dark:text-zinc-200">
-              Tiêu đề bài đúc kết (Tùy chọn)
+              Tiêu đề (tùy chọn)
             </label>
             <input
               type="text"
               value={targetTitle}
               onChange={(e) => setTargetTitle(e.target.value)}
-              placeholder="ví dụ: Bản Đúc Kết Cơ Chế Self-Attention..."
+              placeholder="Ví dụ: Cơ chế Self-Attention..."
               className="w-full px-3 py-2 rounded-md bg-canvas dark:bg-[#141311] border border-hairline focus:border-primary outline-none font-sans text-xs"
             />
           </div>
@@ -191,7 +192,7 @@ export function NoteSynthesisModal({
               className="px-4 py-2 rounded-md bg-primary hover:bg-primary/90 text-white font-medium flex items-center gap-1.5 shadow-xs disabled:opacity-50"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{isLoading ? "Đang tổng hợp..." : "Bắt đầu tổng hợp"}</span>
+              <span>{isLoading ? "Đang xử lý..." : "Tổng hợp"}</span>
             </button>
           </div>
         </form>

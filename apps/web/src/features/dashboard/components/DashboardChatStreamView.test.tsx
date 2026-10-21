@@ -129,4 +129,30 @@ describe("DashboardChatStreamView component", () => {
       screen.getByText("Phân tích giả thiết và đối chiếu tài liệu trích dẫn...")
     ).toBeInTheDocument();
   });
+
+  it("renders empty state with hint chips when messages is empty, and clicking hint sends message", () => {
+    const handleSend = vi.fn();
+    const handleChangeText = vi.fn();
+
+    render(
+      <DashboardChatStreamView
+        messages={[]}
+        inputText=""
+        onChangeText={handleChangeText}
+        onSend={handleSend}
+        isGenerating={false}
+        onStopGeneration={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("chat-empty-state")).toBeInTheDocument();
+    expect(screen.getByText("Socratic Copilot sẵn sàng đối thoại")).toBeInTheDocument();
+
+    const summaryChips = screen.getAllByText("Tóm tắt paper");
+    expect(summaryChips.length).toBeGreaterThanOrEqual(1);
+
+    fireEvent.click(summaryChips[0]);
+    expect(handleChangeText).toHaveBeenCalledWith(expect.stringContaining("tóm tắt ngắn gọn"));
+    expect(handleSend).toHaveBeenCalledWith(expect.stringContaining("tóm tắt ngắn gọn"));
+  });
 });

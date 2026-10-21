@@ -33,20 +33,29 @@ export interface SessionIngestResponse {
 export interface CitationGraphNode {
   id: string;
   title: string;
-  is_session_doc?: boolean;
+  authors?: string[];
   year?: number | null;
+  doi?: string | null;
+  arxiv_id?: string | null;
+  depth?: number;
+  is_session_doc?: boolean;
+  is_session_document?: boolean;
   citation_count?: number | null;
 }
 
 export interface CitationGraphEdge {
   source: string;
   target: string;
-  relationship: "CITES" | "EXTENDS" | "BENCHMARKS_ON" | string;
+  relationship?: "CITES" | "EXTENDS" | "BENCHMARKS_ON" | string;
+  relation?: "CITES" | "EXTENDS" | "BENCHMARKS_ON" | string;
   confidence?: number;
 }
 
 export interface CitationGraphData {
+  session_id?: string;
   nodes: CitationGraphNode[];
   edges: CitationGraphEdge[];
   topological_order?: string[];
+  reading_path?: string[];
 }
+

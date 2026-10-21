@@ -72,33 +72,33 @@ export function InteractiveDemo() {
           />
 
           {/* Mac Studio Window Top Bar - Clean & Dignified */}
-          <div className="flex items-center justify-between px-4 py-2.5 bg-[#e4dfd6] dark:bg-[#2a2722] border-b border-[#d8d3c7] dark:border-[#383229] transition-colors duration-300 relative z-10">
+          <div className="flex items-center justify-between px-3 sm:px-4 py-2.5 bg-[#e4dfd6] dark:bg-[#2a2722] border-b border-[#d8d3c7] dark:border-[#383229] transition-colors duration-300 relative z-10">
             {/* macOS Window Control Dots */}
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]" />
-              <div className="w-3 h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]" />
-              <div className="w-3 h-3 rounded-full bg-[#27c93f] border border-[#1aab29]" />
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#ffbd2e] border border-[#dea123]" />
+              <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#27c93f] border border-[#1aab29]" />
             </div>
 
             {/* Dynamic Document Name Pill */}
-            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-[#f6f3ed] dark:bg-[#1f1d19] border border-[#dcd7cc] dark:border-[#383229] text-xs font-mono text-[#3d3a35] dark:text-zinc-300 transition-colors duration-300">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#d97757]" />
-              <span>{activePaper.title}</span>
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-full bg-[#f6f3ed] dark:bg-[#1f1d19] border border-[#dcd7cc] dark:border-[#383229] text-2xs sm:text-xs font-mono text-[#3d3a35] dark:text-zinc-300 transition-colors duration-300 truncate max-w-[200px] sm:max-w-sm">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#d97757] shrink-0" />
+              <span className="truncate">{activePaper.title}</span>
             </div>
 
-            <div className="w-12" />
+            <div className="w-8 sm:w-12 shrink-0" />
           </div>
 
           {/* Dual-Pane Studio Body: Expansive 50/50 Split with Ample Space */}
-          <div className="p-3 sm:p-4 lg:p-5 bg-[#dfdad0] dark:bg-[#1c1a17] transition-colors duration-300 relative z-10 select-text">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 min-h-[640px] lg:h-[760px]">
+          <div className="p-4 sm:p-5 bg-[#dfdad0] dark:bg-[#1c1a17] transition-colors duration-300 relative z-10 select-text overflow-hidden max-w-full">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 min-h-[560px] lg:h-[760px] max-w-full">
               {/* Left Column: PDF Paper Canvas Viewer */}
-              <div className="h-[540px] lg:h-full min-h-0">
+              <div className="h-[480px] sm:h-[540px] lg:h-full min-h-0 max-w-full overflow-hidden">
                 <DemoPaperViewer />
               </div>
 
               {/* Right Column: Socratic AI Chat Workspace */}
-              <div className="h-[540px] lg:h-full min-h-0">
+              <div className="h-[520px] sm:h-[540px] lg:h-full min-h-0 max-w-full overflow-hidden">
                 <DemoChatPanel />
               </div>
             </div>

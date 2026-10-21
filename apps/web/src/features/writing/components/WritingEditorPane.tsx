@@ -1,12 +1,20 @@
-import { useState, useRef, useMemo } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import {
   AlertTriangle,
   Wand2,
   Copy,
   Check,
   FileCode,
+  Bold,
+  Italic,
+  Code as CodeIcon,
+  Table as TableIcon,
+  List as ListIcon,
+  ListOrdered,
+  Heading,
+  Eye,
+  BookMarked,
 } from "lucide-react";
-
 import { useWritingStore } from "../stores/useWritingStore";
 import { buildSelectionContextBuffer } from "../lib/contextBuffer";
 import { cn } from "@/lib/utils";
@@ -15,12 +23,14 @@ interface WritingEditorPaneProps {
   onSelectionVerify?: (selectedText: string) => void;
   onSelectionAddToChat?: (contextBuffer: string) => void;
   onSelectionAddComment?: (selection: { start: number; end: number; text: string }) => void;
+  scrollToLine?: number | null;
 }
 
 export function WritingEditorPane({
   onSelectionVerify,
   onSelectionAddToChat,
   onSelectionAddComment,
+  scrollToLine,
 }: WritingEditorPaneProps) {
   const {
     editorContent,
@@ -34,10 +44,30 @@ export function WritingEditorPane({
   const [copied, setCopied] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
+  const [viewMode, setViewMode] = useState<"code" | "visual">("code");
+  const [activeTab, setActiveTab] = useState<"main.tex" | "sample.bib">("main.tex");
 
   const lineCount = useMemo(() => {
     return editorContent.split("\n").length;
   }, [editorContent]);
+
+  // Jump to specific line when requested by Outline click
+  useEffect(() => {
+    if (scrollToLine && textareaRef.current && viewMode === "code") {
+      const lines = editorContent.split("\n");
+      let charIndex = 0;
+      for (let i = 0; i < Math.min(scrollToLine - 1, lines.length); i++) {
+        charIndex += lines[i].length + 1;
+      }
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(
+        charIndex,
+        charIndex + (lines[scrollToLine - 1]?.length || 0)
+      );
+      const lineHeightPx = 20;
+      textareaRef.current.scrollTop = Math.max(0, (scrollToLine - 4) * lineHeightPx);
+    }
+  }, [scrollToLine, editorContent, viewMode]);
 
   // Handle Tab key in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -78,6 +108,27 @@ export function WritingEditorPane({
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Helper for inserting formatting snippets around cursor or selection
+  const handleInsertFormat = (prefix: string, suffix: string = "", placeholder: string = "văn bản") => {
+    if (!textareaRef.current) return;
+    const start = textareaRef.current.selectionStart;
+    const end = textareaRef.current.selectionEnd;
+    const selected = editorContent.substring(start, end);
+    const replacement = `${prefix}${selected || placeholder}${suffix}`;
+    const newContent =
+      editorContent.substring(0, start) + replacement + editorContent.substring(end);
+    setEditorContent(newContent);
+
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.focus();
+        textareaRef.current.selectionStart = start + prefix.length;
+        textareaRef.current.selectionEnd =
+          start + prefix.length + (selected ? selected.length : placeholder.length);
+      }
+    }, 10);
+  };
+
   const handleAddToChatClick = () => {
     if (!onSelectionAddToChat) return;
 
@@ -112,51 +163,80 @@ export function WritingEditorPane({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#ffffff] dark:bg-[#1a1917] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
-      {/* Sub-header toolbar */}
-      <div className="h-9 px-4 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1e1c19] flex items-center justify-between text-xs text-muted dark:text-zinc-400 select-none">
-        <div className="flex items-center gap-2 font-mono">
-          <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-          <span>main.tex</span>
-          <span className="text-[11px] text-zinc-400">({lineCount} dòng)</span>
+      {/* 1. File Tabs Strip & [Code | Visual] View Switcher */}
+      <div className="h-9 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
+        {/* Tabs: main.tex / sample.bib */}
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            data-testid="editor-tab-main"
+            onClick={() => setActiveTab("main.tex")}
+            className={cn(
+              "px-3 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
+              activeTab === "main.tex"
+                ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
+                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
+            )}
+          >
+            <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
+            <span>main.tex</span>
+            <span className="text-[10px] text-zinc-400 font-sans">({lineCount} dòng)</span>
+          </button>
+
+          <button
+            type="button"
+            data-testid="editor-tab-bib"
+            onClick={() => setActiveTab("sample.bib")}
+            className={cn(
+              "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
+              activeTab === "sample.bib"
+                ? "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
+                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
+            )}
+          >
+            <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+            <span>sample.bib</span>
+          </button>
         </div>
 
+        {/* Right side: [Code | Visual] View Switcher & Copy */}
         <div className="flex items-center gap-2">
-          {selectedText && (
-            <div className="flex items-center gap-1 bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 rounded text-[11px] animate-in fade-in">
-              <span>Đã chọn {selectedText.length} ký tự</span>
-              {onSelectionVerify && (
-                <button
-                  type="button"
-                  onClick={() => onSelectionVerify(selectedText)}
-                  className="font-medium hover:underline ml-1 cursor-pointer"
-                >
-                  [Kiểm chứng]
-                </button>
+          {/* Code / Visual View Mode Switcher */}
+          <div className="flex items-center bg-[#eae5db] dark:bg-[#282622] p-0.5 rounded-lg border border-[#ded8cc] dark:border-[#33302a] text-[11px] font-sans">
+            <button
+              type="button"
+              data-testid="editor-view-code"
+              onClick={() => setViewMode("code")}
+              className={cn(
+                "px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer",
+                viewMode === "code"
+                  ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold shadow-2xs"
+                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
               )}
-              {onSelectionAddToChat && (
-                <button
-                  type="button"
-                  onClick={handleAddToChatClick}
-                  className="font-medium hover:underline ml-1 cursor-pointer"
-                >
-                  [Thêm vào Chat]
-                </button>
+            >
+              <CodeIcon className="w-3 h-3" />
+              <span>Code</span>
+            </button>
+            <button
+              type="button"
+              data-testid="editor-view-visual"
+              onClick={() => setViewMode("visual")}
+              className={cn(
+                "px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer",
+                viewMode === "visual"
+                  ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold shadow-2xs"
+                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
               )}
-              <button
-                type="button"
-                data-testid="editor-add-comment-btn"
-                onClick={handleAddCommentClick}
-                className="font-medium hover:underline ml-1 cursor-pointer text-coral-700 dark:text-coral-300"
-              >
-                [💬 Nhận xét]
-              </button>
-            </div>
-          )}
+            >
+              <Eye className="w-3 h-3" />
+              <span>Visual</span>
+            </button>
+          </div>
 
           <button
             type="button"
             onClick={handleCopy}
-            className="p-1 rounded hover:bg-[#ece8df] dark:hover:bg-[#282623] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors"
+            className="p-1 rounded hover:bg-[#ece8df] dark:hover:bg-[#282623] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer"
             title="Sao chép toàn bộ code"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
@@ -164,40 +244,184 @@ export function WritingEditorPane({
         </div>
       </div>
 
-      {/* Editor Body: Line numbers + Textarea */}
-      <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
-        {/* Line numbers gutter */}
-        <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
-          {Array.from({ length: lineCount }).map((_, i) => {
-            const lineNum = i + 1;
-            const hasError = errors.some((e) => e.line === lineNum);
-            return (
-              <div
-                key={lineNum}
-                className={cn(
-                  "h-5",
-                  hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
-                )}
-              >
-                {lineNum}
-              </div>
-            );
-          })}
+      {/* 2. Overleaf-style Rich Formatting Toolbar */}
+      <div className="h-8 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1c1b18] flex items-center justify-between text-xs text-muted dark:text-zinc-400 select-none overflow-x-auto">
+        <div className="flex items-center gap-1">
+          {/* Bold */}
+          <button
+            type="button"
+            data-testid="format-bold-btn"
+            onClick={() => handleInsertFormat("\\textbf{", "}", "văn bản in đậm")}
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Định dạng in đậm \\textbf{...}"
+          >
+            <Bold className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Italic */}
+          <button
+            type="button"
+            data-testid="format-italic-btn"
+            onClick={() => handleInsertFormat("\\textit{", "}", "văn bản in nghiêng")}
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Định dạng in nghiêng \\textit{...}"
+          >
+            <Italic className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Math */}
+          <button
+            type="button"
+            data-testid="format-math-btn"
+            onClick={() => handleInsertFormat("$", "$", "E = mc^2")}
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer font-serif italic text-xs font-semibold px-1.5"
+            title="Chèn công thức toán học inline $...$"
+          >
+            Math
+          </button>
+
+          {/* Table */}
+          <button
+            type="button"
+            data-testid="format-table-btn"
+            onClick={() =>
+              handleInsertFormat(
+                "\n\\begin{table}[h]\n\\centering\n\\begin{tabular}{|c|c|}\n\\hline\nCột 1 & Cột 2 \\\\\n\\hline\nDữ liệu A & Dữ liệu B \\\\\n\\hline\n\\end{tabular}\n\\caption{Bảng thông số thực nghiệm}\n\\label{tab:results}\n\\end{table}\n",
+                "",
+                ""
+              )
+            }
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Chèn bảng biểu học thuật \\begin{table}..."
+          >
+            <TableIcon className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Itemize List */}
+          <button
+            type="button"
+            data-testid="format-list-btn"
+            onClick={() =>
+              handleInsertFormat("\n\\begin{itemize}\n  \\item ", "\n\\end{itemize}\n", "Luận điểm thứ nhất")
+            }
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Chèn danh sách đầu dòng \\begin{itemize}..."
+          >
+            <ListIcon className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Enumerate List */}
+          <button
+            type="button"
+            data-testid="format-ordered-btn"
+            onClick={() =>
+              handleInsertFormat("\n\\begin{enumerate}\n  \\item ", "\n\\end{enumerate}\n", "Bước thực hiện 1")
+            }
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Chèn danh sách đánh số \\begin{enumerate}..."
+          >
+            <ListOrdered className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Section Heading */}
+          <button
+            type="button"
+            data-testid="format-section-btn"
+            onClick={() => handleInsertFormat("\n\\section{", "}\n", "Tiêu đề mục mới")}
+            className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#252320] text-ink dark:text-zinc-200 cursor-pointer"
+            title="Chèn đề mục \\section{...}"
+          >
+            <Heading className="w-3.5 h-3.5" />
+          </button>
         </div>
 
-        {/* Textarea */}
-        <textarea
-          ref={textareaRef}
-          value={editorContent}
-          onChange={(e) => setEditorContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          onKeyUp={handleSelect}
-          onClick={handleSelect}
-          onSelect={handleSelect}
-          spellCheck={false}
-          className="flex-1 p-3 bg-transparent text-ink dark:text-zinc-200 outline-none resize-none leading-5 overflow-auto font-mono text-xs selection:bg-coral-500/20"
-        />
+        {/* Selected text contextual tools */}
+        {selectedText && (
+          <div className="flex items-center gap-1 bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 rounded text-[11px] animate-in fade-in shrink-0">
+            <span>Đã chọn {selectedText.length} ký tự</span>
+            {onSelectionVerify && (
+              <button
+                type="button"
+                onClick={() => onSelectionVerify(selectedText)}
+                className="font-medium hover:underline ml-1 cursor-pointer"
+              >
+                [Kiểm chứng]
+              </button>
+            )}
+            {onSelectionAddToChat && (
+              <button
+                type="button"
+                onClick={handleAddToChatClick}
+                className="font-medium hover:underline ml-1 cursor-pointer"
+              >
+                [Thêm vào Chat]
+              </button>
+            )}
+            <button
+              type="button"
+              data-testid="editor-add-comment-btn"
+              onClick={handleAddCommentClick}
+              className="font-medium hover:underline ml-1 cursor-pointer text-coral-700 dark:text-coral-300"
+            >
+              [💬 Nhận xét]
+            </button>
+          </div>
+        )}
       </div>
+
+      {/* 3. Editor Body: Code View or Visual View */}
+      {viewMode === "code" ? (
+        <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
+          {/* Line numbers gutter */}
+          <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
+            {Array.from({ length: lineCount }).map((_, i) => {
+              const lineNum = i + 1;
+              const hasError = errors.some((e) => e.line === lineNum);
+              return (
+                <div
+                  key={lineNum}
+                  className={cn(
+                    "h-5",
+                    hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
+                  )}
+                >
+                  {lineNum}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Textarea */}
+          <textarea
+            ref={textareaRef}
+            data-testid="writing-editor-textarea"
+            aria-label="Soạn thảo mã nguồn LaTeX"
+            value={editorContent}
+            onChange={(e) => setEditorContent(e.target.value)}
+            onKeyDown={handleKeyDown}
+            onKeyUp={handleSelect}
+            onClick={handleSelect}
+            onSelect={handleSelect}
+            spellCheck={false}
+            className="flex-1 p-3 bg-transparent text-ink dark:text-zinc-200 outline-none resize-none leading-5 overflow-auto font-mono text-xs selection:bg-coral-500/20"
+          />
+        </div>
+      ) : (
+        /* Visual Mode: Formatted Render View */
+        <div className="flex-1 p-6 overflow-y-auto bg-white dark:bg-[#1c1b18] text-ink dark:text-zinc-100 font-serif leading-relaxed text-sm">
+          <div className="max-w-2xl mx-auto space-y-4">
+            <div className="border-b border-[#e5dfd4] dark:border-[#2e2b26] pb-3 mb-4">
+              <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-coral-600 dark:text-coral-400">
+                Chế độ Visual Preview
+              </span>
+              <h2 className="text-lg font-bold mt-1">Bản xem trước nội dung trực quan</h2>
+            </div>
+            <div className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
+              {editorContent}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Compile Diagnostics / Errors Panel */}
       {errors.length > 0 && (

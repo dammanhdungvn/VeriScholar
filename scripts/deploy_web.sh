@@ -20,7 +20,11 @@ sudo chown -R VeriScholar:www-data /var/www/verischolar
 sudo chmod -R 755 /var/www/verischolar
 
 echo "=== [5/6] Configuring Nginx Site ==="
-sudo cp "${REPO_ROOT}/deploy/nginx/verischolar.conf" /etc/nginx/sites-available/verischolar.conf
+if [ -f "${REPO_ROOT}/deploy/nginx/production-host.conf" ]; then
+    sudo cp "${REPO_ROOT}/deploy/nginx/production-host.conf" /etc/nginx/sites-available/verischolar.conf
+else
+    sudo cp "${REPO_ROOT}/deploy/nginx/verischolar.conf" /etc/nginx/sites-available/verischolar.conf
+fi
 sudo ln -sf /etc/nginx/sites-available/verischolar.conf /etc/nginx/sites-enabled/verischolar.conf
 if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
     echo "Removing default nginx site..."
