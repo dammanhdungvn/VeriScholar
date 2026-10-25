@@ -61,6 +61,12 @@ Qua rà soát toàn bộ kho mã nguồn hiện tại:
 ### 4.1. Quyết định từ Người dùng (User Decisions)
 - **Môi trường máy chủ Production/Demo:** Sử dụng máy ảo **Azure Ubuntu VM** (Ubuntu 22.04/24.04 LTS).
 - **Cấu trúc tài liệu:** Chọn **Phương án 1** (tách `PRD-08`, `Spec-09`, `Plan-09` và `docs/THESIS_OUTLINE_MAPPING.md`).
+- **Kiến trúc GitHub Actions CI (`ci.yml`):** Chọn **Phương án A — Kiến trúc 2 Tầng Fast-Fail + Service Containers (`pgvector/pgvector:0.8.6-pg18` & `redis:7-alpine`)**:
+  - **Tầng 1 (Chạy song song tức thì, bỏ `detect-changes` gây trễ):**
+    1. `backend-quality-gates`: Gắn sẵn `services: postgres` (`pgvector/pgvector:0.8.6-pg18` trên cổng `5432`, khởi tạo `CREATE EXTENSION IF NOT EXISTS vector`) và `services: redis` (`redis:7-alpine` trên cổng `6379`); loại bỏ hoàn toàn bước cài `Tectonic LaTeX` và đoạn script inline trùng lặp; chạy `uv run ruff check .`, `uv run ruff format --check .` và `uv run pytest -v --junitxml=test-results.xml`.
+    2. `frontend-quality-gates`: Chạy `pnpm lint` (Oxlint), `pnpm exec tsc -b`, `pnpm test:run --passWithNoTests`, và `pnpm build` (loại bỏ `pnpm audit --prod` gây đỏ ngẫu nhiên).
+    3. `security-scan`: Chạy `gitleaks/gitleaks-action@v2`.
+  - **Tầng 2 (`docker-validation` — `needs: [backend-quality-gates, frontend-quality-gates]`):** Chỉ chạy build thử `deploy/Dockerfile.api`, `deploy/Dockerfile.web` và kiểm tra `bash -n scripts/deploy_*.sh` sau khi Tầng 1 đã XANH 100%.
 - **Quyền tự quyết chi tiết hạ tầng:** Giao cho Kiến trúc sư (Agent) quyết định cấu hình chuẩn cho Nginx, Docker, Systemd và CI/CD.
 
 ### 4.2. Quyết định Kỹ thuật Mặc định Hợp lý (Architect Calls)
