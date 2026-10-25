@@ -12,8 +12,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import os
-import shutil
 import sys
 from pathlib import Path
 from uuid import UUID, uuid4
@@ -29,7 +27,7 @@ from api.db.models.document import DocumentModel
 from api.db.models.draft import DraftModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.db.models.user import UserModel
-from api.db.session import AsyncSessionLocal, engine
+from api.db.session import AsyncSessionLocal
 from api.services.auth_service import AuthService
 from sqlalchemy import select
 
