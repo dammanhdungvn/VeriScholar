@@ -29,7 +29,7 @@ Trước khi bắt đầu tác vụ chuyên biệt, nạp hướng dẫn kỹ th
 | **Backend / API / DB** | `verischolar-backend` | [`.agents/skills/verischolar-backend/SKILL.md`](./skills/verischolar-backend/SKILL.md) |
 | **Frontend / PDF / SSE** | `verischolar-frontend` | [`.agents/skills/verischolar-frontend/SKILL.md`](./skills/verischolar-frontend/SKILL.md) |
 | **Unit & Integration Test** | `verischolar-tdd` | [`.agents/skills/verischolar-tdd/SKILL.md`](./skills/verischolar-tdd/SKILL.md) |
-| **Bảo trì / Sửa quy tắc** | `agent-maintenance` | [`.agents/skills/agent-maintenance/SKILL.md`](./skills/agent-maintenance/SKILL.md) |
+| **Bảo trì / Sửa quy tắc / Học từ lỗi (`/learn`)** | `agent-maintenance` | [`.agents/skills/agent-maintenance/SKILL.md`](./skills/agent-maintenance/SKILL.md) |
 | **UI/UX & Design** | `ui-ux-pro-max`, `ui-styling` | [`.agents/skills/ui-ux-pro-max/SKILL.md`](./skills/ui-ux-pro-max/SKILL.md) |
 
 Nguyên tắc kiến trúc tối thượng: Đọc [`.agents/ARCHITECTURE_PRINCIPLES.md`](./ARCHITECTURE_PRINCIPLES.md).

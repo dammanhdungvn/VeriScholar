@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import ast
 import os
+import re
 from pathlib import Path
+from urllib.parse import unquote
 
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
@@ -155,6 +157,13 @@ def test_agent_harness_integrity():
         skill_doc = ROOT_DIR / ".agents" / "skills" / skill / "SKILL.md"
         assert skill_doc.exists(), f"Core skill '{skill}' is missing at {skill_doc}"
 
+    maint_doc = (ROOT_DIR / ".agents" / "skills" / "agent-maintenance" / "SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    assert "Locked Anti-Recurrence Registry" in maint_doc, (
+        "agent-maintenance/SKILL.md must include Locked Anti-Recurrence Registry (/learn protocol)"
+    )
+
     # 5. Developer scripts check
     setup_sh = ROOT_DIR / "scripts" / "dev" / "setup.sh"
     seed_py = ROOT_DIR / "scripts" / "dev" / "seed.py"
@@ -199,4 +208,76 @@ def test_no_absolute_file_urls_in_markdown():
                     )
 
     assert not violations, "Forbidden absolute file:/// URLs found in markdown documents:\n" + "\n".join(violations)
+
+
+def test_no_broken_relative_links_in_markdown():
+    """Validates that all relative markdown links in docs/, .agents/, and root *.md resolve to existing files."""
+    scan_dirs = [ROOT_DIR / "docs", ROOT_DIR / ".agents"]
+    markdown_files: list[Path] = []
+    for sdir in scan_dirs:
+        if sdir.exists():
+            markdown_files.extend(sdir.rglob("*.md"))
+    markdown_files.extend(ROOT_DIR.glob("*.md"))
+
+    link_re = re.compile(r"\[[^\]]+\]\(([^)]+)\)")
+    violations: list[str] = []
+
+    for md_file in markdown_files:
+        text = md_file.read_text(encoding="utf-8")
+        text_no_code = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+        for match in link_re.finditer(text_no_code):
+            target = match.group(1).strip()
+            if target.startswith(("http://", "https://", "mailto:", "#", "conversation://")):
+                continue
+            target_path = unquote(target.split("#")[0].strip())
+            if not target_path:
+                continue
+            resolved = (md_file.resolve().parent / target_path).resolve()
+            if not resolved.exists():
+                violations.append(
+                    f"{md_file.relative_to(ROOT_DIR)} -> broken relative link '{target}'"
+                )
+
+    assert not violations, "Broken relative markdown links detected:\n" + "\n".join(violations)
+
+
+def test_prd_conciseness_and_structure_invariants():
+    """Prevents PRD bloat and scope creep by enforcing line limits and required BA sections."""
+    prd_dir = ROOT_DIR / "docs" / "PRD"
+    prd_files = sorted(prd_dir.glob("0*.md"))
+    assert len(prd_files) == 8, f"Expected 8 PRD files in docs/PRD/, found {len(prd_files)}"
+
+    violations: list[str] = []
+    for prd_file in prd_files:
+        text = prd_file.read_text(encoding="utf-8")
+        lines = text.splitlines()
+        if not (120 <= len(lines) <= 210):
+            violations.append(
+                f"{prd_file.name}: line count {len(lines)} outside allowed [120, 210] range"
+            )
+        for sec in ("## 1.", "## 2.", "## 3.", "## 4."):
+            if sec not in text:
+                violations.append(f"{prd_file.name}: missing required section prefix '{sec}'")
+
+    assert not violations, "PRD structure or conciseness invariant violated:\n" + "\n".join(violations)
+
+
+def test_no_code_placeholders_in_superpowers_plans():
+    """Ensures implementation plans in docs/superpowers/plans/ do not contain standalone '...' placeholders."""
+    plans_dir = ROOT_DIR / "docs" / "superpowers" / "plans"
+    plan_files = sorted(plans_dir.glob("*.md"))
+    code_block_re = re.compile(r"```[a-zA-Z0-9_-]*\n(.*?)```", re.DOTALL)
+    violations: list[str] = []
+
+    for plan_file in plan_files:
+        text = plan_file.read_text(encoding="utf-8")
+        for block_idx, match in enumerate(code_block_re.finditer(text), 1):
+            for line in match.group(1).splitlines():
+                if line.strip() in ("...", "# TODO"):
+                    violations.append(
+                        f"{plan_file.relative_to(ROOT_DIR)} (code block #{block_idx}): contains placeholder '{line.strip()}'"
+                    )
+
+    assert not violations, "Placeholder lines found in superpowers plans:\n" + "\n".join(violations)
+
 
