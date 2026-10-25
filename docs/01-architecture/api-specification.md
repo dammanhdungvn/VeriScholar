@@ -1,6 +1,6 @@
 # Thiết Kế Chi Tiết Toàn Bộ API - Nền Tảng VeriScholar (RESTful & SSE Specification)
 
-Tài liệu này định nghĩa chi tiết toàn bộ các điểm cuối (REST Endpoints & SSE Streaming), hợp đồng dữ liệu (API Contracts), ranh giới bảo mật, cơ chế kiểm soát đồng thời và bảng mã lỗi cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Sharing & Collaboration)** của hệ thống **VeriScholar** dựa trên chuẩn mực [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md).
+Tài liệu này định nghĩa chi tiết toàn bộ các điểm cuối (REST Endpoints & SSE Streaming), hợp đồng dữ liệu (API Contracts), ranh giới bảo mật, cơ chế kiểm soát đồng thời và bảng mã lỗi cho **toàn bộ 4 Module cốt lõi và Quản lý Phiên nghiên cứu (Session Persistence)** của hệ thống **VeriScholar** dựa trên bộ tài liệu chuẩn Single Source of Truth tại [`docs/PRD/`](../PRD/00-overview-and-cleanup.md).
 
 Tài liệu tuân thủ nghiêm ngặt các nguyên lý thiết kế API chuẩn mực quốc tế:
 - **RESTful Resource Modeling & Google Cloud AIP-136 / AIP-151 Standards** (Custom Methods chuẩn cú pháp `:<verb>`, Long-Running Operations & Real-time SSE Streams).
@@ -122,7 +122,6 @@ Thống nhất với Pydantic schema [`ErrorResponse`](apps/api/src/api/schemas/
 | `LATEX_SELF_HEALING_FAILED`| `422 Unprocessable Entity` | `patch_history` | Vòng lặp tự vá lỗi biên dịch LaTeX thất bại sau 3 lần thử. Chuyển sang can thiệp thủ công. |
 | `RATE_LIMIT_EXCEEDED` | `429 Too Many Requests` | `null` | Vượt quá hạn ngạch gọi API ngoài hoặc Sandbox. Trả về kèm header `Retry-After`. |
 | `RESOURCE_NOT_FOUND` | `404 Not Found` | `id` | Không tìm thấy tài liệu, chunk, note, draft hoặc session tương ứng trên URI. |
-| `SHARE_LINK_REVOKED` | `410 Gone` | `token` | Liên kết chia sẻ công khai đã bị chủ sở hữu thu hồi hoặc xóa bỏ. |
 | `VALIDATION_ERROR` | `422 Unprocessable Content` | `<field_loc>` | Dữ liệu đầu vào không hợp lệ theo OpenAPI Schema. Chi tiết mảng lỗi chứa trong `meta.errors`. |
 | `INTERNAL_SERVER_ERROR` | `500 Internal Server Error` | `null` | Lỗi máy chủ ngoài dự kiến được bọc kín, không để lộ stack trace nội bộ (hành động: liên hệ hỗ trợ). |
 | `ENTITY_NOT_FOUND` | `404 Not Found` | `id` | Vi phạm bất biến thực thể cốt lõi (Domain Entity) không tồn tại. |
@@ -160,69 +159,59 @@ POST   /api/v1/documents/{id}/summary:generate    # 14. Custom Method: Sinh mớ
 GET    /api/v1/documents/{id}/export-pdf          # 15. Xuất file PDF kèm Native Annotations chuẩn ISO
 
 --------------------------------------------------------------------------------------------------------
-SỔ TAY NGHIÊN CỨU & AI TỔNG HỢP (SMART NOTEBOOK & KNOWLEDGE DIGEST)
+SỔ TAY NGHIÊN CỨU (SMART NOTEBOOK)
 --------------------------------------------------------------------------------------------------------
 POST   /api/v1/notes                              # 16. Lưu trích dẫn & ghi chú cá nhân (Add to Note)
 GET    /api/v1/notes                              # 17. Danh sách ghi chú (lọc theo document_id, tag, folder_id)
 GET    /api/v1/notes/{id}                         # 18. Chi tiết ghi chú kèm Frozen Evidence Snapshot
 PATCH  /api/v1/notes/{id}                         # 19. Sửa ghi chú / tag (Kiểm soát đồng thời OCC If-Match)
 DELETE /api/v1/notes/{id}                         # 20. Xóa ghi chú khỏi sổ tay
-POST   /api/v1/notes:synthesize                   # 21. AI Tổng hợp ghi chú thành bài học (3 modes + Badges)
 
 ========================================================================================================
-MODULE 2: HỖ TRỢ VIẾT BÀI, BIÊN DỊCH SANDBOX & KIỂM CHỨNG SỰ THẬT (SAFE)
+MODULE 2: HỖ TRỢ VIẾT BÀI & BIÊN DỊCH SANDBOX (DRAFTING & COMPILER)
 ========================================================================================================
-POST   /api/v1/drafts                             # 22. Khởi tạo bản thảo LaTeX / Markdown mới
-GET    /api/v1/drafts                             # 23. Danh sách bản thảo người dùng (phân trang)
-GET    /api/v1/drafts/{id}                        # 24. Chi tiết bản thảo kèm mã nguồn và version OCC
-PUT    /api/v1/drafts/{id}                        # 25. Cập nhật toàn bộ mã nguồn bản thảo (OCC If-Match)
-PATCH  /api/v1/drafts/{id}                        # 26. Cập nhật từng phần (tiêu đề, metadata)
-DELETE /api/v1/drafts/{id}                        # 27. Xóa bản thảo
-POST   /api/v1/drafts/{id}:compile                # 28. Biên dịch Sandbox 2 tầng & Vòng lặp Agentic (SSE Stream)
-GET    /api/v1/drafts/{id}/preview-pdf            # 29. Stream file PDF kết quả biên dịch Live Preview
-POST   /api/v1/drafts/{id}:verify-claims          # 30. Custom Method: Quy trình 4 bước SAFE kiểm chứng sự thật
-GET    /api/v1/drafts/{id}/bundle                 # 31. Xuất Camera-Ready Bundle (.zip đầy đủ hoặc .pdf)
-POST   /api/v1/drafts/{id}/comments               # 32. Phản biện nhóm: để lại bình luận trên từng câu/dòng
-GET    /api/v1/drafts/{id}/comments               # 33. Lấy danh sách bình luận phản biện (phân trang)
+POST   /api/v1/drafts                             # 21. Khởi tạo bản thảo LaTeX / Markdown mới
+GET    /api/v1/drafts                             # 22. Danh sách bản thảo người dùng (phân trang)
+GET    /api/v1/drafts/{id}                        # 23. Chi tiết bản thảo kèm mã nguồn và version OCC
+PUT    /api/v1/drafts/{id}                        # 24. Cập nhật toàn bộ mã nguồn bản thảo (OCC If-Match)
+PATCH  /api/v1/drafts/{id}                        # 25. Cập nhật từng phần (tiêu đề, metadata)
+DELETE /api/v1/drafts/{id}                        # 26. Xóa bản thảo
+POST   /api/v1/drafts/{id}:compile                # 27. Biên dịch Sandbox 2 tầng & Vòng lặp Agentic (SSE Stream)
+GET    /api/v1/drafts/{id}/preview-pdf            # 28. Stream file PDF kết quả biên dịch Live Preview
+GET    /api/v1/drafts/{id}/bundle                 # 29. Xuất Camera-Ready Bundle (.zip đầy đủ hoặc .pdf)
 
 ========================================================================================================
-MODULE 3: KHAI THÁC TÀI LIỆU THAM KHẢO & ĐỒ THỊ TRI THỨC
+MODULE 3: KHAI THÁC TÀI LIỆU THAM KHẢO & ĐỒ THỊ TRI THỨC (GRAPHRAG POSTGRESQL + PGVECTOR)
 ========================================================================================================
-POST   /api/v1/references:resolve                 # 34. Batch Resolving & Leaky Bucket qua Global Academic Cache
-GET    /api/v1/documents/{id}/graph               # 35. Khai thác Đồ thị Trích dẫn (Cycle Breaking, k-hop <= 2)
+POST   /api/v1/references:resolve                 # 30. Batch Resolving & Leaky Bucket qua Global Academic Cache
+GET    /api/v1/documents/{id}/graph               # 31. Khai thác Đồ thị Trích dẫn (Cycle Breaking, k-hop <= 2)
 
 ========================================================================================================
 MODULE 4: QUẢN LÝ THƯ VIỆN BÀI BÁO CÁ NHÂN & TỔNG HỢP ĐA BÀI
 ========================================================================================================
-GET    /api/v1/folders                            # 36. Danh sách thư mục đề tài nghiên cứu
-POST   /api/v1/folders                            # 37. Tạo thư mục đề tài mới
-PATCH  /api/v1/folders/{id}                       # 38. Đổi tên / Di chuyển thư mục
-DELETE /api/v1/folders/{id}                       # 39. Xóa thư mục đề tài
-GET    /api/v1/library/documents                  # 40. Danh sách bài báo trong thư viện cá nhân (đã Star)
-POST   /api/v1/library/documents:bulk-import      # 41. Nạp hàng loạt 10 - 50 bài báo (.bib hoặc DOI list)
-POST   /api/v1/folders/{id}:synthesize            # 42. Agentic Hierarchical RAG trên thư mục (Sufficiency Gate)
-POST   /api/v1/library:synthesize                 # 43. Agentic Hierarchical RAG trên toàn bộ thư viện
-POST   /api/v1/library:compare                    # 44. Custom Method: Dựng bảng so sánh tự động giữa các bài báo
+GET    /api/v1/folders                            # 32. Danh sách thư mục đề tài nghiên cứu
+POST   /api/v1/folders                            # 33. Tạo thư mục đề tài mới
+PATCH  /api/v1/folders/{id}                       # 34. Đổi tên / Di chuyển thư mục
+DELETE /api/v1/folders/{id}                       # 35. Xóa thư mục đề tài
+GET    /api/v1/library/documents                  # 36. Danh sách bài báo trong thư viện cá nhân (đã Star)
+POST   /api/v1/library/documents:bulk-import      # 37. Nạp hàng loạt 10 - 50 bài báo (.bib hoặc DOI list)
+POST   /api/v1/folders/{id}:synthesize            # 38. Agentic Hierarchical RAG trên thư mục (Sufficiency Gate)
+POST   /api/v1/library:synthesize                 # 39. Agentic Hierarchical RAG trên toàn bộ thư viện
 
 ========================================================================================================
-QUẢN LÝ PHIÊN NGHIÊN CỨU & CHIA SẺ CỘNG TÁC (SESSION PERSISTENCE & SHARING)
+QUẢN LÝ PHIÊN NGHIÊN CỨU (SESSION PERSISTENCE)
 ========================================================================================================
-POST   /api/v1/sessions                           # 45. Khởi tạo phiên nghiên cứu đa bài mới (Research Session)
-GET    /api/v1/sessions                           # 46. Lấy lịch sử các phiên nghiên cứu (Sidebar History)
-GET    /api/v1/sessions/{id}                      # 47. Khôi phục nguyên vẹn phiên (Snapshots, Tabs, Viewport)
-PATCH  /api/v1/sessions/{id}                      # 48. Cập nhật tiêu đề / metadata phiên nghiên cứu (OCC If-Match)
-PATCH  /api/v1/sessions/{id}/viewport             # 49. Tự động lưu vị trí cuộn trang PDF và Tab đang mở (OCC)
-DELETE /api/v1/sessions/{id}                      # 50. Xóa phiên nghiên cứu
-POST   /api/v1/sessions/{id}/documents            # 51. Nạp bài vào phiên (Pure JSON: url hoặc document_id)
-POST   /api/v1/sessions/{id}/messages             # 52. Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)
-GET    /api/v1/sessions/{id}/messages             # 53. Lấy lịch sử hội thoại của phiên (phân trang)
-DELETE /api/v1/sessions/{id}/messages             # 54. Xóa lịch sử hội thoại của phiên (Idempotent 204)
-POST   /api/v1/sessions/{id}:restore-archived     # 55. Tải lại file PDF gốc để kích hoạt lại phiên quá hạn TTL
-POST   /api/v1/sessions/{id}:export-bundle        # 56. Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle .zip)
-POST   /api/v1/shares                             # 57. Tạo liên kết chia sẻ công khai (Note, Draft, Collection)
-GET    /api/v1/shares/{token}                     # 58. Xem tài nguyên chia sẻ (Public Read-only, No Auth)
-GET    /api/v1/shares/{token}/file                # 59. Stream PDF cho khách xem chia sẻ (No Auth, HTTP 206)
-DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tức thời (Instant Revocation -> 410 Gone)
+POST   /api/v1/sessions                           # 40. Khởi tạo phiên nghiên cứu đa bài mới (Research Session)
+GET    /api/v1/sessions                           # 41. Lấy lịch sử các phiên nghiên cứu (Sidebar History)
+GET    /api/v1/sessions/{id}                      # 42. Khôi phục nguyên vẹn phiên (Snapshots, Tabs, Viewport)
+PATCH  /api/v1/sessions/{id}                      # 43. Cập nhật tiêu đề / metadata phiên nghiên cứu (OCC If-Match)
+PATCH  /api/v1/sessions/{id}/viewport             # 44. Tự động lưu vị trí cuộn trang PDF và Tab đang mở (OCC)
+DELETE /api/v1/sessions/{id}                      # 45. Xóa phiên nghiên cứu
+POST   /api/v1/sessions/{id}/documents            # 46. Nạp bài vào phiên (Pure JSON: url hoặc document_id)
+POST   /api/v1/sessions/{id}/messages             # 47. Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)
+GET    /api/v1/sessions/{id}/messages             # 48. Lấy lịch sử hội thoại của phiên (phân trang)
+DELETE /api/v1/sessions/{id}/messages             # 49. Xóa lịch sử hội thoại của phiên (Idempotent 204)
+POST   /api/v1/sessions/{id}:restore-archived     # 50. Tải lại file PDF gốc để kích hoạt lại phiên quá hạn TTL
 ```
 
 ---
@@ -571,27 +560,9 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
 - **Method:** `DELETE`
 - **Response (`204 No Content`).**
 
-### 3.21. `POST /api/v1/notes:synthesize` (AI Tổng Hợp Ghi Chú Thành Bản Đúc Kết)
-- **Method:** `POST`
-- **URI:** `/api/v1/notes:synthesize`
-- **Headers:** `Idempotency-Key: <UUID>`
-- **Request Body (JSON):**
-  ```json
-  {
-    "note_ids": [
-      "3d10c24e-7212-40f9-b883-cf3da8490a15",
-      "4e21d35f-8323-41a0-c994-df4eb9501b26"
-    ],
-    "mode": "concept_lesson",
-    "language": "vi",
-    "target_title": "Bản Đúc Kết Kiến Trúc Scaled Dot-Product Attention"
-  }
-  ```
-- **Response (`200 OK`):** Trả về nội dung tổng hợp Markdown kèm danh sách `interactive_badges`.
-
 ---
 
-## 4. MODULE 2: HỖ TRỢ VIẾT BÀI, BIÊN DỊCH SANDBOX & KIỂM CHỨNG SAFE (DRAFTING API)
+## 4. MODULE 2: HỖ TRỢ VIẾT BÀI & BIÊN DỊCH SANDBOX (DRAFTING API)
 
 ### 4.1. `POST /api/v1/drafts` (Khởi tạo bản thảo mới)
 - **Method:** `POST`
@@ -684,53 +655,10 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
 - **Method:** `GET`
 - **Response Headers:** `Content-Type: application/pdf`, `Accept-Ranges: bytes`.
 
-### 4.9. `POST /api/v1/drafts/{id}:verify-claims` (Quy trình SAFE Fact-Checking 4 Bước)
-- **Method:** `POST`
-- **URI:** `/api/v1/drafts/{id}:verify-claims`
-- **Request Body (JSON):**
-  ```json
-  {
-    "selected_text": "Mô hình Transformer chuẩn đạt 28.4 BLEU trên tập dữ liệu WMT 2014 English-to-German, vượt qua tất cả các mô hình ensemble trước đó.",
-    "document_ids": ["c7a2e8c5-9231-419b-a0eb-4a1796d8e05c"]
-  }
-  ```
-- **Phản hồi (`200 OK`):** Trả về mảng mệnh đề phân rã, nhãn NLI (`entailment`, `contradiction`, `neutral`) kèm dẫn chứng trích đoạn và Bounding Box.
-
-### 4.10. `GET /api/v1/drafts/{id}/bundle` (Xuất Camera-Ready Bundle)
+### 4.9. `GET /api/v1/drafts/{id}/bundle` (Xuất Camera-Ready Bundle)
 - **Method:** `GET`
 - **Query Params:** `format=zip` (`zip` hoặc `pdf`).
 - **Response Headers:** `Content-Type: application/zip`, `Content-Disposition: attachment; filename="camera_ready_bundle.zip"`.
-
-### 4.11. `POST /api/v1/drafts/{id}/comments` (Phản Biện Nhóm / Reviewer Mode)
-- **Method:** `POST`
-- **Request Body (JSON):**
-  ```json
-  {
-    "line_number": 42,
-    "start_offset": 100,
-    "end_offset": 150,
-    "selected_text": "Mô hình Transformer chuẩn đạt 28.4 BLEU...",
-    "comment_text": "Chỗ này cần bổ sung so sánh thêm với mô hình MoE mới nhất của năm 2025.",
-    "parent_id": null
-  }
-  ```
-- **Ràng buộc RBAC:** Yêu cầu tối thiểu quyền `commenter`. Bị chặn `403 FORBIDDEN_ROLE_RESTRICTED` đối với `viewer`.
-- **Response (`201 Created`):** `SingleResponse<DraftComment>`.
-
-### 4.12. `GET /api/v1/drafts/{id}/comments` (Lấy Danh Sách Bình Luận & Phân Cấp Replies)
-- **Method:** `GET`
-- **Query Params:** `page` (int, default 1), `per_page` (int, default 50).
-- **Quyền:** Yêu cầu tối thiểu quyền `viewer`.
-- **Response (`200 OK` - Paginated Collection Envelope):** Trả về mảng bình luận với cấu trúc cây `replies`.
-
-### 4.13. `PATCH /api/v1/drafts/{id}/comments/{comment_id}` (Cập Nhật / Giải Quyết Bình Luận)
-- **Method:** `PATCH`
-- **Request Body (JSON):** `{"is_resolved": true}` hoặc `{"comment_text": "Nội dung cập nhật"}`.
-- **Response (`200 OK`):** `SingleResponse<DraftComment>`.
-
-### 4.14. `DELETE /api/v1/drafts/{id}/comments/{comment_id}` (Xóa Bình Luận)
-- **Method:** `DELETE`
-- **Response (`204 No Content`).**
 
 ---
 
@@ -854,24 +782,9 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
   }
   ```
 
-### 6.8. `POST /api/v1/library:compare` (Dựng Bảng So Sánh Tự Động)
-- **Method:** `POST`
-- **URI:** `/api/v1/library:compare`
-- **Request Body (JSON):**
-  ```json
-  {
-    "document_ids": [
-      "c7a2e8c5-9231-419b-a0eb-4a1796d8e05c",
-      "d1e2f3a4-5678-49ab-cdef-1234567890ab"
-    ],
-    "columns": ["Method", "Dataset", "Top-1 Accuracy", "Limitation"]
-  }
-  ```
-- **Response (`200 OK`):** Trả về bảng so sánh đối chiếu đa chiều, trong đó mỗi ô số liệu đều kèm tọa độ Bounding Box dẫn chứng trực tiếp về trang bài báo gốc.
-
 ---
 
-## 7. QUẢN LÝ PHIÊN NGHIÊN CỨU & CHIA SẺ (SESSION & SHARING API)
+## 7. QUẢN LÝ PHIÊN NGHIÊN CỨU (SESSION PERSISTENCE API)
 
 ### 7.1. `POST /api/v1/sessions` (Khởi tạo phiên nghiên cứu mới)
 - **Method:** `POST`
@@ -1073,98 +986,6 @@ DELETE /api/v1/shares/{token}                     # 60. Thu hồi chia sẻ tứ
   - `400 Bad Request` (`INVALID_PDF_HEADER`): Tệp tải lên không phải là định dạng PDF hợp lệ (%PDF).
   - `404 Not Found` (`SESSION_NOT_FOUND`): Phiên nghiên cứu không tồn tại hoặc không thuộc quyền sở hữu.
   - `422 Unprocessable Content` (`VALIDATION_ERROR`): Định danh UUID không đúng chuẩn.
-
-### 7.12. `POST /api/v1/sessions/{id}:export-bundle` (Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói Full Bundle .zip)
-- **Method:** `POST`
-- **URI:** `/api/v1/sessions/{id}:export-bundle`
-- **Headers:** `Authorization: Bearer <token>`
-- **Response (`200 OK`):** Luồng nhị phân MIME `application/zip` kèm header `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`.
-  - **Cấu trúc tệp ZIP (`application/zip`):**
-    1. `documents/`: Toàn bộ các tệp PDF gốc trong phiên đã được nhúng sẵn Native PDF Annotations (chuẩn ISO 32000-1) tại các vị trí highlight.
-    2. `master_lesson.md`: Bài học tổng hợp tri thức chuẩn Markdown tích hợp YAML frontmatter, danh mục tài liệu và các luận điểm nghiên cứu.
-    3. `chat_transcript.html`: Bản ghi lịch sử hỏi đáp độc lập tự chứa CSS/JS (self-contained viewer) cho phép tra cứu câu hỏi và đối chiếu trích dẫn ngoại tuyến.
-- **Error Responses:**
-  - `404 Not Found` (`SESSION_NOT_FOUND`): Phiên nghiên cứu không tồn tại hoặc không thuộc quyền sở hữu.
-  - `422 Unprocessable Content` (`VALIDATION_ERROR`): Định danh UUID không đúng chuẩn.
-
-### 7.13. `POST /api/v1/shares` (Tạo Liên Kết Chia Sẻ Công Khai)
-- **Method:** `POST`
-- **Request Body (JSON):**
-  ```json
-  {
-    "resource_type": "note_synthesis",
-    "resource_id": "5f32e46a-9434-42b1-da05-ef5fc0612c37",
-    "allow_comments": false
-  }
-  ```
-- **Response (`201 Created`):**
-  ```json
-  {
-    "success": true,
-    "data": {
-      "share_token": "sh_7b9a1c2d3e4f5a6b",
-      "share_url": "https://verischolar.app/s/sh_7b9a1c2d3e4f5a6b",
-      "resource_type": "note_synthesis",
-      "created_at": "2026-09-12T10:20:00.000Z"
-    },
-    "meta": { ... }
-  }
-  ```
-
-### 7.14. `GET /api/v1/shares/{token}` (Xem Tài Nguyên Chia Sẻ Công Khai - No Auth)
-- **Method:** `GET`
-- **Headers:** Không yêu cầu `Authorization` Header (công khai).
-- **Phản hồi:**
-  - `200 OK` (Khi liên kết hợp lệ):
-    ```json
-    {
-      "success": true,
-      "data": {
-        "resource_type": "note_synthesis",
-        "resource_title": "Bản Đúc Kết Kiến Trúc Scaled Dot-Product Attention",
-        "owner_name": "Đàm Mạnh Dũng",
-        "payload": {
-          "markdown_content": "### 1. Bản chất Toán học\nCơ chế Attention...",
-          "interactive_badges": [
-            {
-              "badge_text": "Vaswani et al., 2017 • Tr. 4",
-              "page_number": 4,
-              "bounding_boxes": [[0.21, 0.52, 0.79, 0.58, 4]]
-            }
-          ]
-        },
-        "pdf_stream_url": "/api/v1/shares/sh_7b9a1c2d3e4f5a6b/file",
-        "allow_comments": false,
-        "expires_at": null
-      },
-      "meta": { ... }
-    }
-    ```
-  - `410 Gone` (Khi liên kết đã bị thu hồi qua `DELETE /shares/{token}`):
-    ```json
-    {
-      "success": false,
-      "error": {
-        "code": "SHARE_LINK_REVOKED",
-        "message": "Liên kết chia sẻ này đã bị chủ sở hữu thu hồi quyền truy cập.",
-        "field": "token",
-        "action": "Vui lòng liên hệ chủ sở hữu để nhận liên kết chia sẻ mới."
-      },
-      "meta": { ... }
-    }
-    ```
-
-### 7.15. `GET /api/v1/shares/{token}/file` (Stream PDF cho Khách Xem Chia Sẻ - No Auth)
-- **Method:** `GET`
-- **Headers Hỗ trợ:** `Range: bytes=0-1024` (HTTP 206 Partial Content).
-- **Bảo mật:** Xác thực quyền đọc dựa trên `share_token` hợp lệ (không đòi hỏi Bearer Token).
-- **Phản hồi:**
-  - `200 OK` hoặc `206 Partial Content`: Stream nhị phân PDF phục vụ PDF.js Canvas trên màn hình người nhận chia sẻ để vẽ khung highlight viền vàng khớp chính xác tuyệt đối.
-  - `410 Gone`: Nếu liên kết chia sẻ đã bị chủ sở hữu thu hồi.
-
-### 7.16. `DELETE /api/v1/shares/{token}` (Thu Hồi Quyền Chia Sẻ Tức Thời - Instant Revocation)
-- **Method:** `DELETE`
-- **Response (`204 No Content`):** Vô hiệu hóa ngay lập tức. Mọi truy cập sau đó vào `GET /api/v1/shares/{token}` và `GET /api/v1/shares/{token}/file` lập tức trả về `410 Gone`.
 
 ---
 

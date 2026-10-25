@@ -1,6 +1,6 @@
 # Chiến Lược Kiểm Thử Toàn Diện & Đảm Bảo Chất Lượng (Comprehensive Testing Strategy & QA)
 
-Tài liệu này định nghĩa chiến lược kiểm thử đa tầng, quy chuẩn an toàn phần mềm và kiến trúc kiểm thử tự động đạt chuẩn **Enterprise Production Grade** cho nền tảng **VeriScholar**.
+Tài liệu này định nghĩa chiến lược kiểm thử đa tầng, quy chuẩn an toàn phần mềm và kiến trúc kiểm thử tự động cho nền tảng **VeriScholar**, đồng bộ với **[`docs/PRD/`](../PRD/00-overview-and-cleanup.md)**.
 
 ---
 
@@ -8,17 +8,17 @@ Tài liệu này định nghĩa chiến lược kiểm thử đa tầng, quy chu
 
 ```mermaid
 flowchart TD
-    subgraph E2E_TIER ["Tầng 3: Kiểm Thử Đầu-Cuối (End-to-End E2E)"]
-        Playwright["Playwright Browser Automation<br/>(Full User Journey: Upload -> Deep Read -> Write LaTeX -> Overleaf 1-Click -> Export)"]
+    subgraph E2E_TIER ["Tầng 3: Kiểm Thử Đầu-Cuối (End-to-End User Journeys)"]
+        E2E["Full User Journey Verification<br/>(Upload PDF -> Deep Read & Hybrid/GraphRAG Chat -> Smart Notes -> LaTeX Studio -> Export ZIP)"]
     end
 
     subgraph INTEGRATION_TIER ["Tầng 2: Kiểm Thử Tích Hợp & An Ninh (Integration & Security)"]
-        PytestBackend["Pytest Backend Integration Suite (apps/api/tests)<br/>- 27 Tests (Auth v2, Isolation, Security Penetration, Concurrency SSE)<br/>- 100% Mock Network Telemetry (Không rò rỉ mạng)"]
-        VitestFrontend["Vitest Client Integration Suite (apps/web)<br/>- 63 Test Files / 378 Unit & Integration Tests<br/>- React Components, Custom Hooks, Zustand Stores, Modals"]
+        PytestBackend["Pytest Backend Integration Suite (apps/api/tests & packages/core/tests)<br/>- Auth v2, Multi-tenant Isolation, Security Penetration, Concurrency SSE<br/>- 100% Mock Network Telemetry (LANGFUSE_ENABLED=false)"]
+        VitestFrontend["Vitest Client Integration Suite (apps/web)<br/>- 71 Test Files (100% Pass)<br/>- React Components, Custom Hooks, Zustand Stores, Modals"]
     end
 
     subgraph STATIC_TIER ["Tầng 1: Phân Tích Tĩnh & Kiểm Soát Ranh Giới (Static & Architecture)"]
-        HexGate["Hexagonal Architecture Boundary Gate (No I/O in packages/core)"]
+        HexGate["Hexagonal Architecture Boundary Gate (No I/O in packages/core/domain)"]
         RuffOxlint["Ruff Python Linter & Oxlint TypeScript Linter"]
         SecretGitleaks["Gitleaks Secret Leak Detection (Zero API Keys in Git)"]
         DockerValidate["Docker Compose & Buildx Image Compilation Gate"]
@@ -32,7 +32,7 @@ flowchart TD
 
 ## 2. BỘ KIỂM THỬ BACKEND (PYTEST INTEGRATION & SECURITY)
 
-Toàn bộ 27 bài kiểm thử trong `apps/api/tests/` vận hành trên môi trường kiểm thử cô lập (`ENVIRONMENT=test`), triệt tiêu 100% rủi ro phụ thuộc mạng ngoài:
+Toàn bộ các bài kiểm thử trong `apps/api/tests/` và `packages/core/tests/` vận hành trên môi trường kiểm thử cô lập (`ENVIRONMENT=test`), triệt tiêu 100% rủi ro phụ thuộc mạng ngoài:
 
 ### 2.1. 4 Bài Kiểm Thử An Ninh Thâm Nhập Chuyên Sâu (`test_auth_isolation.py`)
 1. **Kiểm thử Chống SQL Injection (`test_profile_sql_injection_resilience`):**
@@ -49,32 +49,24 @@ Toàn bộ 27 bài kiểm thử trong `apps/api/tests/` vận hành trên môi t
    - Kết quả: Hệ thống từ chối ngay với mã lỗi `HTTP 401 Unauthorized`.
 
 ### 2.2. Kiểm Thử Cách Ly Mạng Langfuse Telemetry
-- Thiết lập `LANGFUSE_HOST=http://localhost:9999` và cấm hoàn toàn các kết nối mạng thật khi chạy test, ngăn chặn hiện tượng bài test bị chậm (flaky) hoặc thất bại do mạng internet.
+- Thiết lập `LANGFUSE_ENABLED=false` và cấm hoàn toàn các kết nối mạng thật khi chạy test, ngăn chặn hiện tượng bài test bị chậm (flaky) hoặc thất bại do mạng internet.
 
 ---
 
 ## 3. BỘ KIỂM THỬ FRONTEND (VITEST CLIENT SUITE)
 
-Bộ kiểm thử phía client trong `apps/web` gồm **63 tệp kiểm thử** và **378 bài test** thực thi tự động qua lệnh:
+Bộ kiểm thử phía client trong `apps/web` gồm **71 tệp kiểm thử** thực thi tự động qua lệnh:
 ```bash
-pnpm --dir apps/web test:run
+npm --prefix apps/web run test
 ```
 
 ### Các Khối Kiểm Thử Trọng Yếu:
-1. **Thành phần & Luồng Đăng Nhập:** `LoginForm.test.tsx`, `RegisterForm.test.tsx`, `OtpVerificationModal.test.tsx`, `SocialAuthButtons.test.tsx`.
+1. **Thành phần & Luồng Đăng Nhập / Hồ sơ Học giả:** `LoginForm.test.tsx`, `RegisterForm.test.tsx`, `OtpVerificationModal.test.tsx`, `SocialAuthButtons.test.tsx`, `AccountSettingsModal.test.tsx`.
 2. **Custom Hook Xác Thực Google GIS:** `useGoogleAuth.test.tsx` (cô lập biến môi trường với `vi.stubEnv("VITE_GOOGLE_CLIENT_ID", ...)`).
-3. **Không Gian Đọc & Trình Diễn Bounding Box:** `ViewportControls.test.tsx`, `DashboardChatStreamView.test.tsx`, `bounding-box-scaler.test.ts`.
-4. **Không Gian Soạn Thảo & So sánh Bản thảo:** `WritingWorkspace.test.tsx`, `diffUtils.test.ts`.
-5. **Ma Trận So Sánh Thư Viện Quy Mô Lớn:** `ComparisonMatrixModal.test.tsx` (kiểm thử chịu tải mô phỏng **120 bài báo** với phân trang DOM mượt mà, lọc cột và xuất CSV chuẩn RFC 4180).
-6. **Quản Lý Trạng Thái Zustand:** `useAuthStore.test.ts`, `useReaderStore.test.ts`, `useWorkspaceStore.test.ts`, `useLandingStore.test.ts`.
+3. **Không Gian Đọc, Taskbar 4 Mục & Trình Diễn Bounding Box:** `DashboardTaskbar.test.tsx`, `ModularRoutesNavigation.test.tsx`, `ViewportControls.test.tsx`, `DashboardChatStreamView.test.tsx`, `bounding-box-scaler.test.ts`.
+4. **Không Gian Soạn Thảo LaTeX 3 Cột & Trợ Lý AI:** `WritingWorkspace.test.tsx`, `WritingHeaderBar.test.tsx`, `WritingSidebar.test.tsx`, `WritingEditorPane.test.tsx`, `WritingAssistantPane.test.tsx`, `draftsApi.test.ts`.
+5. **Thư Viện Cá Nhân & Khám Phá Bài Báo:** `FolderTreeView.test.tsx`, `DocumentLibraryModal.test.tsx`, `DiscoveryPage.test.tsx`.
+6. **Quản Lý Trạng Thái Zustand:** `useAuthStore.test.ts`, `useReaderStore.test.ts`, `useDashboardStore.test.ts`, `useWritingStore.test.ts`.
 
 ---
-
-## 4. CHIẾN DỊCH TINH GỌN BỘ TEST (PURGE OF REDUNDANT TESTS)
-
-Tuân thủ chỉ thị khắt khe của Founder & CEO về việc loại bỏ các test case thừa thãi gây tốn thời gian chạy vô ích:
-- **Đã xóa bỏ hoàn toàn 4 tệp challenge tests trùng lặp** (`*.challenge.test.tsx`) với tổng cộng **2.105 dòng mã dư thừa**, từng làm tăng thời gian chạy test thêm hơn 2 phút mà không đóng góp giá trị bảo vệ chất lượng mới.
-- Sau khi thanh lọc, toàn bộ test suite hoạt động nhanh, chính xác và đạt tỷ lệ thành công 100%.
-
----
-*Thuộc Bộ Tài Liệu Kỹ Thuật VeriScholar Enterprise.*
+*Thuộc Bộ Tài Liệu Kỹ Thuật VeriScholar MVP.*

@@ -29,11 +29,9 @@ Tài liệu quy định kiến trúc quản lý **Prompts-as-Code (PromptOps)** 
 ```
 packages/core/src/core/prompts/
 ├── base_scholarly_rules.jinja           # Quy tắc học thuật dùng chung
-├── documents/
-│   ├── summary_grounded.v1.prompt.md     # Prompt tóm tắt 3 ý v1
-│   └── extract_structure.v1.prompt.md    # Prompt trích xuất mục lục/cấu trúc v1
-└── verification/
-    └── claim_check.v1.prompt.md          # Prompt kiểm chứng sự thật (Module 2)
+└── documents/
+    ├── summary_grounded.v1.prompt.md     # Prompt tóm tắt 3 ý v1
+    └── extract_structure.v1.prompt.md    # Prompt trích xuất mục lục/cấu trúc v1
 ```
 
 ### 2.1. Định Dạng Chuẩn: `.prompt.md` (Dotprompt Inspired)

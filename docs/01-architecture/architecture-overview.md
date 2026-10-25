@@ -1,6 +1,6 @@
 # Thiết Kế Kiến Trúc Hệ Thống & Phần Mềm Toàn Diện (Full System & Software Architecture Specification)
 
-Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống (**System Architecture**), kiến trúc phần mềm lục giác (**Hexagonal / Ports & Adapters Architecture**), thiết kế thành phần chi tiết (**Software Component Design**), các luồng dữ liệu đầu-cuối (**End-to-End Data Flow Pipelines**), cấu trúc tổ chức mã nguồn (**Monorepo Blueprint**), và các chốt chặn an ninh hạ tầng phân tán (**Distributed Infrastructure Hardening & Invariants**) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của nền tảng **VeriScholar** dựa trên [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md), [design-api.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md), và [design-database.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-database.md).
+Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống (**System Architecture**), kiến trúc phần mềm lục giác (**Hexagonal / Ports & Adapters Architecture**), thiết kế thành phần chi tiết (**Software Component Design**), các luồng dữ liệu đầu-cuối (**End-to-End Data Flow Pipelines**), cấu trúc tổ chức mã nguồn (**Monorepo Blueprint**), và các chốt chặn an ninh hạ tầng phân tán (**Distributed Infrastructure Hardening & Invariants**) cho **toàn bộ 4 Module cốt lõi và Quản lý Phiên nghiên cứu (Session Persistence)** của nền tảng **VeriScholar** dựa trên bộ tài liệu chuẩn Single Source of Truth tại [`docs/PRD/`](../PRD/00-overview-and-cleanup.md), [api-specification.md](./api-specification.md), và [database-design.md](./database-design.md).
 
 ---
 
@@ -16,7 +16,7 @@ Tài liệu này định nghĩa chi tiết toàn bộ kiến trúc hệ thống 
 | **gVisor (`runsc`)** | Application Kernel Sandbox | Công nghệ ảo hóa an toàn của Google: Tạo ra một lớp bảo vệ bao bọc lấy mã lệnh chạy thử (mã LaTeX, script lạ), ngăn không cho mã độc can thiệp vào nhân hệ điều hành máy chủ. |
 | **Early Connection Release** | Early Database Session Release | Cơ chế giải phóng sớm kết nối cơ sở dữ liệu: Khi truyền luồng chữ thời gian thực (SSE) kéo dài 20-30 giây, máy chủ chỉ mượn kết nối cơ sở dữ liệu trong 50 mili-giây đầu để đọc thông tin rồi trả ngay lại bể kết nối (Pool), giúp hệ thống phục vụ hàng ngàn người cùng lúc mà không bị cạn kiệt kết nối. |
 | **Multi-Tenant CAS** | Content-Addressable Storage Blob | Lưu trữ tệp theo mã băm SHA-256 kết hợp đếm tham chiếu (`ref_count`): Cho phép nhiều người dùng cùng chia sẻ 1 file PDF vật lý giống nhau trên ổ cứng, nhưng mỗi người vẫn có quyền sở hữu riêng biệt; khi người cuối cùng xóa bài báo thì file vật lý mới bị xóa vĩnh viễn (Zero-Retention). |
-| **NLI** | Natural Language Inference | Suy luận ngôn ngữ tự nhiên: Kỹ thuật AI dùng trong thuật toán kiểm chứng sự thật SAFE, so sánh đối chiếu câu viết của người dùng với đoạn văn gốc trong bài báo để xác định câu đó là đúng (Entailment), sai (Contradiction) hay không có bằng chứng (Neutral). |
+| **GraphRAG (PostgreSQL + pgvector)** | Relational & Vector Knowledge Graph | Lưu trữ và truy vấn đồ thị tri thức học thuật (`graph_nodes`, `graph_edges`, `citation_edges`) trực tiếp trên PostgreSQL kết hợp `pgvector` HNSW và đệ quy CTE 2-hop mà không cần hệ quản trị đồ thị rời bên ngoài. |
 | **Cycle Breaking** | Graph Loop Prevention | Thuật toán cắt chu trình trong đồ thị trích dẫn: Ngăn chặn vòng lặp vô tận khi duyệt cây tài liệu tham khảo (ví dụ bài báo A trích dẫn bài báo B, và bài báo B lại trích dẫn ngược lại bài báo A). |
 | **Sufficiency Gate** | Evidence Completeness Gate | Cổng kiểm tra tính đầy đủ của bằng chứng: Thuật toán AI tự động đánh giá xem các tài liệu được chọn trong thư mục đã đủ thông tin và dữ kiện để trả lời câu hỏi tổng hợp hay chưa trước khi tiến hành viết bài. |
 | **Top-Left Normalized Coordinates** | Spatial Coordinate Invariant | Hệ tọa độ chuẩn hóa: Gốc `(0.0, 0.0)` luôn nằm ở góc trên cùng bên trái của trang giấy, tọa độ các góc nằm trong khoảng từ `0.0` đến `1.0`, giúp hiển thị khung highlight chính xác bất kể trang giấy to hay nhỏ. |
@@ -43,7 +43,7 @@ flowchart TB
     end
 
     subgraph HexagonalCoreTier ["🧠 TẦNG NGHIỆP VỤ CỐT LÕI (HEXAGONAL APPLICATION CORE - packages/core)"]
-        DomainCore["Application Use Cases & Domain Logic (packages/core)<br/>- Pillar 1: Multi-Tenant CAS Ingestion, Visual Grounding, Hybrid RAG RRF, Socratic Mentor<br/>- Pillar 2: LaTeX Collaborative Drafting, 1-Click Overleaf Sync, Two-Tier Compiler, SAFE Fact-Checking<br/>- Pillar 3: Reference Extractor, GraphRAG 2-hop Engine, Proactive Associative Memory, Frozen Evidence<br/>- Pillar 4: Scalable 100+ Paper Matrix with Server Pagination, Redis Query Cache, Folder Management<br/>- Pillar 5: Enterprise On-Premise Stack, Zero-Downtime Migration, Auto-Rollback CD, Google GIS OAuth 2.0 & Scholar Identity"]
+        DomainCore["Application Use Cases & Domain Logic (packages/core)<br/>- Module 1: Multi-Tenant CAS Ingestion, Visual Grounding, Hybrid RAG RRF, Socratic Mentor<br/>- Module 2: LaTeX/Markdown Drafting, Two-Tier Sandbox Compiler, Agentic Self-Healing, Grounded Copilot<br/>- Module 3: Reference Extractor, GraphRAG 2-hop Engine (PostgreSQL + pgvector), Citation Graph<br/>- Module 4: Hierarchical Folders, Bulk Import, Hierarchical RAG Synthesis & Sufficiency Gate"]
     end
 
     subgraph StoragePersistenceTier ["💾 TẦNG LƯU TRỮ & TÌM KIẾM DỮ LIỆU (PERSISTENCE TIER)"]
@@ -109,7 +109,6 @@ flowchart LR
         RefRouter["References & Graph Router"]
         LibraryRouter["Library & Folders Router"]
         SessionRouter["Session & Message Router"]
-        ShareRouter["Public Share Router"]
         SSEStreamer["SSE Event Streamer"]
     end
 
@@ -118,13 +117,10 @@ flowchart LR
         ParseDocUC["ParseDocumentUseCase"]
         AskSessionUC["AskSessionQuestionUseCase"]
         CompileDraftUC["CompileDraftSandboxUseCase"]
-        VerifyClaimsUC["VerifyDraftClaimsUseCase"]
         ResolveRefsUC["ResolveReferencesUseCase"]
         QueryGraphUC["QueryCitationGraphUseCase"]
         SynthesizeLibUC["SynthesizeLibraryUseCase"]
-        CompareMatrixUC["GenerateCompareMatrixUseCase"]
         SyncViewportUC["SyncSessionViewportUseCase"]
-        AccessShareUC["AccessSharedResourceUseCase"]
     end
 
     subgraph PureDomainCore ["💎 Pure Domain Entities & Value Objects (packages/core/domain)"]
@@ -134,9 +130,8 @@ flowchart LR
         TurnEntity["SessionTurn Entity (1NF)"]
         DraftEntity["Draft Entity (OCC version)"]
         RefEntity["ReferenceItem Entity"]
-        EdgeEntity["CitationEdge Entity"]
+        EdgeEntity["CitationEdge / GraphEdge Entity"]
         NoteEntity["ResearchNote Entity (Frozen Snapshot)"]
-        ShareEntity["Share Entity (Tokenized)"]
         BBoxVO["BoundingBox Value Object<br/>[x0, y0, x1, y1, page]"]
         PageDimVO["PageDimensions Value Object<br/>[width_pt, height_pt, rotation_deg]"]
     end
@@ -148,7 +143,6 @@ flowchart LR
         DraftRepoPort["IDraftRepository"]
         NoteRepoPort["IResearchNoteRepository"]
         RefRepoPort["IReferenceRepository"]
-        ShareRepoPort["IShareRepository"]
         TaskQueuePort["ITaskQueueProducer (Redis Streams)"]
         PDFParserPort["IPDFParser (Two-Tier Parser Interface)"]
         SandboxPort["ISandboxBrokerClient (gRPC)"]
@@ -180,12 +174,9 @@ flowchart LR
     SessionRouter --> AskSessionUC
     SessionRouter --> SyncViewportUC
     DraftRouter --> CompileDraftUC
-    DraftRouter --> VerifyClaimsUC
     RefRouter --> ResolveRefsUC
     RefRouter --> QueryGraphUC
     LibraryRouter --> SynthesizeLibUC
-    LibraryRouter --> CompareMatrixUC
-    ShareRouter --> AccessShareUC
 
     IngestDocUC --> DocEntity
     IngestDocUC --> StoragePort
@@ -200,9 +191,6 @@ flowchart LR
     CompileDraftUC --> DraftEntity
     CompileDraftUC --> SandboxPort
     CompileDraftUC --> DraftRepoPort
-
-    VerifyClaimsUC --> ChunkRepoPort
-    VerifyClaimsUC --> LLMGatewayPort
 
     SQLDocRepo -.->|Implements| DocRepoPort
     SQLChunkRepo -.->|Implements| ChunkRepoPort
@@ -246,7 +234,7 @@ flowchart LR
 
 ---
 
-### 3.2. Module 2: Hỗ Trợ Viết Bài, Biên Dịch Sandbox & Kiểm Chứng SAFE
+### 3.2. Module 2: Hỗ Trợ Viết Bài, Biên Dịch Sandbox & Grounded AI Copilot
 1. **Kiểm Soát Tài Nguyên Kết Nối Cơ Sở Dữ Liệu Khi Stream SSE (Early Connection Release):**
    - Các tác vụ stream SSE kéo dài (10 đến 60 giây) như hỏi đáp đa bài hoặc biên dịch Sandbox tiềm ẩn nguy cơ làm cạn kiệt Connection Pool cơ sở dữ liệu (`max_connections`) nếu giữ kết nối mở xuyên suốt vòng lặp sinh token.
    - Hệ thống áp dụng quy tắc **Ngắt Kết Nối Sớm (Early Connection Release Invariant)** gồm 3 giai đoạn phân lập:
@@ -263,15 +251,12 @@ flowchart LR
    - Khi biên dịch thất bại, bộ điều phối trích xuất log lỗi của trình biên dịch và truyền vào mô hình ngôn ngữ chuyên sâu để sinh bản vá lỗi (Patch).
    - Khống chế tối đa **3 lần thử** (`max_heal_attempts = 3`).
    - **Anti-Oscillation Patching Memory:** Lưu vết toàn bộ mã nguồn và mã lỗi của các lượt thử trước. Nếu bản vá mới tạo ra lỗi trùng lặp hoặc lặp lại vòng xoay trạng thái trước đó, cơ chế ngay lập tức dừng sửa tự động, phục hồi bản gần nhất và trả về log chi tiết cho người dùng.
-4. **Quy Trình Kiểm Chứng Sự Thật Học Thuật 4 Bước SAFE:**
-   - **Bước 1 (Claim Decomposition):** Phân tách văn bản thành các mệnh đề sự thật nguyên tử (Atomic Claims).
-   - **Bước 2 (Evidence Retrieval):** Truy xuất các đoạn văn bản chứng cứ liên quan thông qua Hybrid RRF.
-   - **Bước 3 (NLI Entailment Classification):** Suy luận logic Natural Language Inference để gán nhãn trạng thái: `Supported`, `Contradicted`, hoặc `Not Enough Info`.
-   - **Bước 4 (Audit Trail Logging):** Lưu trữ kết quả kiểm chứng vào bảng `draft_verifications` kèm tọa độ Bounding Box dẫn chứng.
+4. **Trợ Lý Học Thuật Grounded AI Copilot & Kho Trích Dẫn (Citation Picker):**
+   - Hỗ trợ viết lại học thuật (Paraphrase), mở rộng luận điểm (Expand), sinh đoạn nháp dựa trên bằng chứng từ thư viện bài báo và chèn trực tiếp khóa `\cite{citation_key}` chuẩn BibTeX.
 
 ---
 
-### 3.3. Module 3: Khai Thác Tài Liệu Tham Khảo & Đồ Thị Tri Thức (GraphRAG)
+### 3.3. Module 3: Khai Thác Tài Liệu Tham Khảo & Đồ Thị Tri Thức (GraphRAG trên PostgreSQL + pgvector)
 1. **Bóc Tách & Chuẩn Hóa Trích Dẫn (Reference Extraction):**
    - Trích xuất danh mục tài liệu tham khảo cuối bài báo bằng mô hình phân tích mẫu (Regex + Layout Analysis).
    - Phân tích cú pháp bóc tách `title`, `authors`, `year`, `doi`, `arxiv_id`.
@@ -280,8 +265,8 @@ flowchart LR
      - Crossref: Tối đa 5 requests/giây.
      - Semantic Scholar: Tối đa 1 request/giây (No Key) hoặc 10 requests/giây (Partner Key).
      - PubMed / NCBI: Tối đa 3 requests/giây.
-3. **Đồ Thị Tri Thức Trích Dẫn & Bẻ Gãy Chu Trình (Cycle Breaking):**
-   - Đồ thị được lưu trong bảng `citation_edges` với các quan hệ: `CITES`, `EXTENDS`, `BENCHMARKS_ON`, `CONTRADICTS`.
+3. **Đồ Thị Tri Thức Trích Dẫn & Bẻ Gãy Chu Trình (GraphRAG trên PostgreSQL + pgvector):**
+   - Đồ thị thực thể và trích dẫn được lưu trực tiếp trên PostgreSQL + `pgvector` thông qua các bảng `graph_nodes`, `graph_edges`, và `citation_edges` với các quan hệ: `CITES`, `EXTENDS`, `BENCHMARKS_ON`, `CONTRADICTS`.
    - Khống chế tối đa 2 bước nhảy (`max_depth <= 2`).
    - Thuật toán đệ quy CTE kiểm tra mảng `visited_nodes` để loại bỏ hoàn toàn liên kết vòng tròn (Cycle Breaking) và ngăn ngừa tự trích dẫn (Self-loop).
 4. **Bộ Đệm Siêu Dữ Liệu Học Thuật Dùng Chung (Global Academic Cache):**
@@ -298,13 +283,10 @@ flowchart LR
    - **Tầng 1 (Document Summaries Retrieval):** Truy xuất trên bảng `document_summaries` (tóm tắt 3 ý cốt lõi) của toàn bộ các bài báo trong thư mục hoặc thư viện để tạo bức tranh toàn cảnh mà không gây quá tải Token Budget.
    - **Sufficiency Verification Gate:** Mô hình đánh giá độ đầy đủ thông tin (`sufficiency_score`). Nếu `sufficiency_score >= 0.85`, câu trả lời được sinh trực tiếp từ Tầng 1 (tiết kiệm 70% chi phí và độ trễ).
    - **Tầng 2 (Deep Chunk Fallback):** Nếu `sufficiency_score < 0.85`, hệ thống tự động rơi xuống Tầng 2 để truy xuất các đoạn chunks chi tiết thông qua Hybrid Search RRF.
-3. **Dựng Bảng So Sánh Tự Động (Compare Matrix Generation):**
-   - Người dùng chọn từ 2 đến 10 bài báo và danh sách các tiêu chí.
-   - Hệ thống trích xuất thông tin có cấu trúc và tổng hợp thành bảng Markdown/JSON đối sánh trực quan.
 
 ---
 
-### 3.5. Quản Lý Phiên Nghiên Cứu & Chia Sẻ Cộng Tác (Session & Sharing)
+### 3.5. Quản Lý Phiên Nghiên Cứu (Session Persistence)
 1. **Quản Lý Phiên Làm Việc (Research Sessions):**
    - Một phiên làm việc quản lý cụm từ 1 đến 5 bài báo liên quan (`session_documents`).
    - Trigger `enforce_session_capacity()` sử dụng lệnh khóa dòng cha `FOR UPDATE` trên `research_sessions` để tuần tự hóa các yêu cầu nạp bài đồng thời, triệt tiêu hoàn toàn lỗi Write Skew và Phantom Reads.
@@ -313,10 +295,6 @@ flowchart LR
    - Phiên không có tương tác trong 30 ngày được chuyển sang trạng thái lưu trữ mềm (`is_archived = TRUE`).
    - Người dùng có thể khôi phục phiên bất kỳ lúc nào qua `POST /sessions/{id}:restore-archived`.
    - Worker chạy ngầm định kỳ quét dọn các tài liệu chưa Starred (`is_persistent = FALSE`) quá hạn 30 ngày nhờ Partial Index `idx_documents_ttl_purge`.
-3. **Chia Sẻ Tài Nguyên Công Khai (Public Sharing Engine):**
-   - Tạo liên kết chia sẻ công khai không cần đăng nhập qua token ngẫu nhiên không thể đoán trước (`sh_{random_token}`).
-   - Hỗ trợ endpoint stream PDF nhị phân cho khách xem (`GET /shares/{token}/file`) để PDF.js Canvas hiển thị và vẽ Bounding Box trực tiếp.
-   - Thu hồi quyền chia sẻ tức thời (`DELETE /shares/{token}`): Cờ `is_revoked = TRUE` lập tức khiến mọi truy cập công khai trả về mã lỗi `410 Gone`.
 
 ---
 
@@ -492,42 +470,6 @@ sequenceDiagram
 
 ---
 
-### 4.4. Luồng 4: Kiểm Chứng Sự Thật 4 Bước SAFE (Fact-Checking Pipeline)
-
-```mermaid
-sequenceDiagram
-    autonumber
-    actor User as Người dùng (Editor)
-    participant API as FastAPI Controller
-    participant Core as SAFEUseCase
-    participant LLM as LLM Decomposer & NLI Model
-    participant DB as PostgreSQL 18 (Hybrid Search RRF)
-
-    User->>API: POST /api/v1/drafts/{id}:verify-claims (selected_text, document_ids)
-    API->>Core: Tiếp nhận văn bản cần kiểm chứng
-    
-    Note over Core,LLM: Bước 1: Phân rã mệnh đề nguyên tử (Claim Decomposition)
-    Core->>LLM: Trích xuất các Atomic Claims từ văn bản
-    LLM-->>Core: Mảng [Claim 1, Claim 2, Claim 3]
-    
-    loop Xử lý từng Mệnh đề (Atomic Claim)
-        Note over Core,DB: Bước 2: Truy xuất bằng chứng đối chiếu
-        Core->>DB: match_document_chunks_rrf(document_ids, claim_embedding, claim_text)
-        DB-->>Core: Top 3 Chunks liên quan kèm Bounding Boxes
-        
-        Note over Core,LLM: Bước 3: Phân loại suy diễn NLI (Entailment)
-        Core->>LLM: Đối chiếu Claim với Evidence Chunks
-        LLM-->>Core: Gán nhãn NLI (Supported / Contradicted / Not Enough Info) + Trích dẫn
-    end
-    
-    Note over Core,DB: Bước 4: Lưu vết nhật ký kiểm chứng
-    Core->>DB: INSERT INTO draft_verifications (claims_result, supported_count, ...)
-    Core-->>API: Trả về Báo cáo Kiểm chứng Hoàn chỉnh
-    API-->>User: HTTP 200 OK (Chi tiết từng Claim, nhãn màu, tọa độ dẫn chứng)
-```
-
----
-
 ## 5. PHÂN RÃ CẤU TRÚC MÃ NGUỒN (MONOREPO BLUEPRINT & BOUNDARIES)
 
 Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phân tách nghiêm ngặt:
@@ -539,14 +481,13 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │   │   ├── src/
 │   │   │   ├── api/
 │   │   │   │   ├── middleware/               # Pure ASGI Tracing, TTFB, Client Disconnect (HTTP 499)
-│   │   │   │   ├── routes/                   # 59 RESTful Endpoints (AIP-136 Custom Methods)
+│   │   │   │   ├── routes/                   # RESTful Endpoints (AIP-136 Custom Methods)
 │   │   │   │   │   ├── v1/
 │   │   │   │   │   │   ├── documents.py      # Module 1: Upload, Chunks, Summaries, Notes
-│   │   │   │   │   │   ├── drafts.py         # Module 2: Drafting, Sandbox Compile SSE, SAFE Fact-Check
-│   │   │   │   │   │   ├── references.py     # Module 3: Reference Resolve, Citation Graph
-│   │   │   │   │   │   ├── library.py        # Module 4: Folders, Hierarchical RAG, Matrix
-│   │   │   │   │   │   ├── sessions.py       # Sessions: Viewport Sync, Turns, OCC, 30-day TTL
-│   │   │   │   │   │   └── shares.py         # Sharing: Unguessable tokens, No-auth stream, Revocation
+│   │   │   │   │   │   ├── drafts.py         # Module 2: Drafting, Sandbox Compile SSE, Bundle Export
+│   │   │   │   │   │   ├── references.py     # Module 3: Reference Resolve, Citation Graph (PostgreSQL + pgvector)
+│   │   │   │   │   │   ├── library.py        # Module 4: Folders, Bulk Import, Hierarchical RAG Synthesis
+│   │   │   │   │   │   └── sessions.py       # Sessions: Viewport Sync, Turns, OCC, 30-day TTL
 │   │   │   │   ├── schemas/                  # Pydantic v2 Request / Response Envelopes
 │   │   │   │   └── main.py                   # FastAPI Application Entrypoint & CORS
 │   │   └── tests/                            # API Integration & E2E Test Suite
@@ -568,12 +509,12 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │       ├── src/
 │       │   ├── components/
 │       │   │   ├── viewer/                   # PDF.js Canvas, Normalized BoundingBox Overlays
-│       │   │   ├── editor/                   # TipTap / Monaco LaTeX Collaborative Editor
+│       │   │   ├── editor/                   # TipTap / Monaco LaTeX Editor
 │       │   │   ├── graph/                    # Cytoscape / 2D Canvas Citation Graph Viewer
 │       │   │   ├── chat/                     # Fail-safe SSE Markdown Chat with Citation Badges
-│       │   │   └── notebook/                 # Smart Notebook & Knowledge Digest UI
+│       │   │   └── notebook/                 # Smart Notebook UI
 │       │   ├── hooks/                        # Custom React Hooks (useSSE, useViewportSync, useOCC)
-│       │   └── pages/                        # Module Views (Workspace, Library, Drafting, Share)
+│       │   └── pages/                        # Module Views (Dashboard, Workspace, Library, Writing)
 │
 ├── packages/
 │   └── core/                                 # Pure Business Domain & Ports & Adapters
@@ -586,10 +527,10 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │               ├── application/              # Inbound Ports & Use Cases (Business Workflows)
 │               │   ├── ingestion/            # IngestDocument, ParsePDF, ExtractStructure
 │               │   ├── qa/                   # AskSessionQuestion, StreamSSEHandler
-│               │   ├── drafting/             # CompileDraft, SelfHealingLoop, VerifyClaimsSAFE
+│               │   ├── drafting/             # CompileDraft, SelfHealingLoop, CopilotAssist
 │               │   ├── citation/             # ResolveReferences, QueryCitationGraph2Hop
-│               │   ├── library/              # HierarchicalSynthesis, GenerateCompareMatrix
-│               │   └── session/              # SyncViewport, RestoreArchivedSession, ManageShares
+│               │   ├── library/              # HierarchicalSynthesis, BulkImportPapers
+│               │   └── session/              # SyncViewport, RestoreArchivedSession
 │               │
 │               ├── ports/                    # Abstract Interfaces (Dependency Inversion)
 │               │   ├── repositories.py       # IDocumentRepo, IChunkRepo, ISessionRepo, IDraftRepo
@@ -608,19 +549,13 @@ Hệ thống được cấu trúc theo mô hình Monorepo với ranh giới phâ
 │                   ├── llm/                  # LLM Gateway Router (5.6-luna / OpenAI Compatible)
 │                   └── storage/              # Local CAS File Storage with Ref-Counted Unlink
 │
-├── infra/                                    # Infrastructure as Code
-│   ├── docker/
-│   │   ├── Dockerfile.api                    # FastAPI Backend Container (No docker.sock)
-│   │   ├── Dockerfile.sandbox                # gVisor / MicroVM Hardened TeX Container
-│   │   └── Dockerfile.web                    # Nginx + React 19 Frontend Container
-│   └── docker-compose.yml                    # Local Dev Stack (API, Worker, Broker, Postgres, Redis)
+├── deploy/                                   # Docker Build Configurations
+│   ├── Dockerfile.api                        # FastAPI Backend Container (No docker.sock)
+│   └── Dockerfile.web                        # Nginx + React 19 Frontend Container
+├── docker-compose.yml                        # Local Dev & MVP Stack (API, Web, Postgres, Redis)
 │
 ├── docs/                                     # Architecture & Engineering Specifications
-│   └── vi/
-│       ├── PRD.md                            # Product Requirements Document
-│       ├── design-api.md                     # 59 Endpoints REST / SSE Specification
-│       ├── design-database.md                # PostgreSQL 18 + pgvector DDL Schema
-│       └── design-architecture.md            # System & Software Architecture Blueprint
+│   └── PRD/                                  # Single Source of Truth (00..07 MVP Specifications)
 │
 ├── pyproject.toml                            # uv Workspace Root Configuration
 └── AGENTS.md                                 # Agent & Engineering Protocol

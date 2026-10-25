@@ -178,7 +178,7 @@ flowchart TD
 - **Tiêu chuẩn đỗ:** Trả về thông báo `Hexagonal boundary verification: PASSED` với mã thoát `0`.
 
 ### 3.8. Chốt chặn 8: Kiểm Thử Đơn Vị & Tích Hợp Giao Diện Frontend (Vitest Suite)
-- **Mục đích:** Khắc phục triệt để lỗ hổng thiếu sót bài kiểm thử giao diện trong CI. Tự động thực thi toàn bộ bài test unit và integration trên client (`apps/web`), kiểm tra các thành phần React, Custom Hooks (`useGoogleAuth`, `useNotes`), xử lý Store trạng thái Zustand, và các Modal quan trọng (`ComparisonMatrixModal`, `ScholarProfileModal`).
+- **Mục đích:** Khắc phục triệt để lỗ hổng thiếu sót bài kiểm thử giao diện trong CI. Tự động thực thi toàn bộ bài test unit và integration trên client (`apps/web`), kiểm tra các thành phần React, Custom Hooks (`useGoogleAuth`, `useNotes`), xử lý Store trạng thái Zustand, và các Modal quan trọng (`DocumentLibraryModal`, `ScholarProfileModal`).
 - **Lệnh thực thi trong CI:**
   ```bash
   pnpm --prefix apps/web test:run
@@ -186,10 +186,10 @@ flowchart TD
 - **Tiêu chuẩn đỗ:** 100% các tệp test đỗ với trạng thái `PASSED`. Bất kỳ bài test nào bị lỗi đều kích hoạt cảnh báo đỏ và chặn đứng hành động hợp nhất (merge) Pull Request.
 
 ### 3.9. Chốt chặn 9: Xác Thực Cấu Hình & Đóng Gói Container Docker (Docker Infrastructure Gate)
-- **Mục đích:** Bảo đảm tính toàn vẹn của gói triển khai On-Premise Enterprise. Tự động kiểm tra cú pháp tệp `deploy/docker-compose.enterprise.yml` và kiểm tra khả năng đóng gói (build testing) của cả hai Dockerfile sản xuất (`deploy/Dockerfile.api` và `deploy/Dockerfile.web`) bằng Docker Buildx.
+- **Mục đích:** Bảo đảm tính toàn vẹn của gói triển khai Docker. Tự động kiểm tra cú pháp tệp `docker-compose.yml` và kiểm tra khả năng đóng gói (build testing) của cả hai Dockerfile sản xuất (`deploy/Dockerfile.api` và `deploy/Dockerfile.web`) bằng Docker Buildx.
 - **Lệnh thực thi trong CI:**
   ```bash
-  docker compose -f deploy/docker-compose.enterprise.yml config -q
+  docker compose -f docker-compose.yml config -q
   docker build -f deploy/Dockerfile.api .
   docker build -f deploy/Dockerfile.web .
   ```
@@ -396,10 +396,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Validate Enterprise Docker Compose Configuration
+      - name: Validate Docker Compose Configuration
         run: |
-          docker compose -f deploy/docker-compose.enterprise.yml config -q
-          echo "Enterprise docker-compose configuration is valid."
+          docker compose -f docker-compose.yml config -q
+          echo "Docker-compose configuration is valid."
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -525,5 +525,5 @@ pnpm --prefix apps/web build
 - [x] **Kiểm toán lỗ hổng bảo mật phụ thuộc (Vulnerability Audit):** Tích hợp `pnpm audit --prod` trong luồng Frontend.
 - [x] **Khả năng quan sát kiểm thử (Test Observability):** Xuất báo cáo `test-results.xml` và độ phủ mã nguồn, lưu trữ dạng GitHub Artifacts trong 7 ngày.
 - [x] **Kiểm thử tự động giao diện (Frontend Vitest Suite):** Tích hợp `pnpm test:run` chạy toàn diện unit và integration test, bảo đảm 100% pass trước khi build.
-- [x] **Xác thực hạ tầng & đóng gói Container (Docker Gate):** Xác thực cú pháp `docker-compose.enterprise.yml` và kiểm tra khả năng build cả API và Web image với Docker Buildx.
+- [x] **Xác thực hạ tầng & đóng gói Container (Docker Gate):** Xác thực cú pháp `docker-compose.yml` và kiểm tra khả năng build cả API và Web image với Docker Buildx.
 - [x] **Tài liệu hướng dẫn hoàn chỉnh:** Cung cấp giải thích chi tiết song ngữ kèm bảng thuật ngữ trực quan cho Fresher.

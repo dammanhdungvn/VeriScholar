@@ -1,6 +1,6 @@
 # Thiết Kế Chi Tiết Toàn Bộ Cơ Sở Dữ Liệu - Nền Tảng VeriScholar (PostgreSQL 18 + pgvector)
 
-Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở dữ liệu (Database Schema DDL), chiến lược phân vùng và lập chỉ mục (Indexing Strategy), tối ưu hóa truy vấn Hybrid Search (Dense + Lexical RRF), cơ chế Khóa Lạc Quan (OCC), kiểm soát tranh chấp đồng thời (Concurrency Control & Row Locks), ràng buộc toàn vẹn đồ thị tri thức (Graph Integrity), phân tách lưu trữ đa người thuê Content-Addressable Storage (CAS), và cam kết bảo mật xóa sổ dữ liệu (Zero-Retention Guarantee) cho **toàn bộ 4 Module cốt lõi, Quản lý Phiên nghiên cứu (Session Persistence) và Chia sẻ cộng tác (Public Sharing)** của dự án **VeriScholar** dựa trên [PRD.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/PRD.md) và [design-api.md](file:///home/VeriScholar/Workspace/VeriScholar/docs/vi/design-api.md).
+Tài liệu này định nghĩa chi tiết toàn bộ lược đồ cơ sở dữ liệu (Database Schema DDL), chiến lược phân vùng và lập chỉ mục (Indexing Strategy), tối ưu hóa truy vấn Hybrid Search (Dense + Lexical RRF), cơ chế Khóa Lạc Quan (OCC), kiểm soát tranh chấp đồng thời (Concurrency Control & Row Locks), ràng buộc toàn vẹn đồ thị tri thức (GraphRAG trên PostgreSQL + `pgvector`), phân tách lưu trữ đa người thuê Content-Addressable Storage (CAS), và cam kết bảo mật xóa sổ dữ liệu (Zero-Retention Guarantee) cho **toàn bộ 4 Module cốt lõi và Quản lý Phiên nghiên cứu (Session Persistence)** của dự án **VeriScholar** dựa trên bộ tài liệu chuẩn Single Source of Truth tại [`docs/PRD/06-database-and-storage.md`](../PRD/06-database-and-storage.md) và [api-specification.md](./api-specification.md).
 
 ---
 
@@ -36,7 +36,6 @@ erDiagram
     users ||--o{ research_notes : "owns"
     users ||--o{ drafts : "owns"
     users ||--o{ folders : "owns"
-    users ||--o{ shares : "creates"
 
     folders ||--o{ folders : "parent-child"
     folders ||--o{ documents : "contains"
@@ -45,6 +44,8 @@ erDiagram
     documents ||--o| document_summaries : "has one"
     documents ||--o{ reference_items : "cites"
     documents ||--o{ citation_edges : "source / target"
+    documents ||--o{ graph_nodes : "extracts entities"
+    graph_nodes ||--o{ graph_edges : "relates to"
 
     research_sessions ||--o{ session_documents : "includes (max 5)"
     documents ||--o{ session_documents : "included in"
@@ -52,10 +53,6 @@ erDiagram
 
     research_notes }o--|| documents : "references (nullable)"
     research_notes }o--|| document_chunks : "references (nullable)"
-    note_syntheses ||--o{ research_notes : "synthesizes (array)"
-
-    drafts ||--o{ draft_comments : "has many"
-    drafts ||--o{ draft_verifications : "audited by"
 ```
 
 ---
@@ -302,25 +299,6 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_research_notes_detached
 BEFORE UPDATE OF document_id ON research_notes
 FOR EACH ROW EXECUTE FUNCTION handle_note_source_detached();
-
--- Bảng note_syntheses: AI Tổng hợp ghi chú thành bài học / đúc kết tri thức
-CREATE TABLE note_syntheses (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title VARCHAR(255) NOT NULL,
-    mode VARCHAR(50) NOT NULL CHECK (mode IN ('concept_lesson', 'literature_review', 'research_gap')),
-    language VARCHAR(10) NOT NULL DEFAULT 'vi',
-    markdown_content TEXT NOT NULL,
-    interactive_badges JSONB NOT NULL DEFAULT '[]'::jsonb,
-    source_note_ids UUID[] NOT NULL DEFAULT '{}',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_note_syntheses_user ON note_syntheses(user_id, created_at DESC);
-CREATE TRIGGER trg_note_syntheses_updated_at
-BEFORE UPDATE ON note_syntheses
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 ```
 
 ---
@@ -407,7 +385,7 @@ CREATE INDEX idx_session_turns_session_created ON session_turns(session_id, crea
 
 ---
 
-### 3.5. Module 2: Hỗ Trợ Viết Bài, Kiểm Chứng Fact-Checking SAFE & Phản Biện Nhóm
+### 3.5. Module 2: Hỗ Trợ Viết Bài & Biên Dịch Sandbox (Drafts)
 
 ```sql
 -- Bảng drafts: Quản lý bản thảo bài báo (LaTeX / Markdown)
@@ -432,45 +410,11 @@ CREATE INDEX idx_drafts_user_updated ON drafts(user_id, updated_at DESC);
 CREATE TRIGGER trg_drafts_occ
 BEFORE UPDATE ON drafts
 FOR EACH ROW EXECUTE FUNCTION handle_occ_and_timestamp();
-
--- Bảng draft_comments: Bình luận phản biện nhóm trên từng dòng/câu (Reviewer Mode)
-CREATE TABLE draft_comments (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    draft_id UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    author_name VARCHAR(100) NOT NULL,
-    line_number INT NOT NULL CHECK (line_number >= 1),
-    selected_text TEXT NOT NULL,
-    comment TEXT NOT NULL,
-    status VARCHAR(20) NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'resolved')),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_draft_comments_draft_line ON draft_comments(draft_id, line_number);
-CREATE TRIGGER trg_draft_comments_updated_at
-BEFORE UPDATE ON draft_comments
-FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
--- Bảng draft_verifications: Nhật ký kiểm chứng sự thật SAFE (Fact-Checking Audit Trail)
-CREATE TABLE draft_verifications (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    draft_id UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
-    selected_text TEXT NOT NULL,
-    claims_result JSONB NOT NULL DEFAULT '[]'::jsonb, -- Mảng mệnh đề phân rã, NLI status, Bounding Box dẫn chứng
-    total_claims INT NOT NULL DEFAULT 0,
-    supported_count INT NOT NULL DEFAULT 0,
-    contradicted_count INT NOT NULL DEFAULT 0,
-    not_enough_info_count INT NOT NULL DEFAULT 0,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX idx_draft_verifications_draft ON draft_verifications(draft_id, created_at DESC);
 ```
 
 ---
 
-### 3.6. Module 3: Khai Thác Tài Liệu Tham Khảo, Đồ Thị Tri Thức & Cache Học Thuật
+### 3.6. Module 3: Khai Thác Tài Liệu Tham Khảo, Đồ Thị Tri Thức (GraphRAG trên PostgreSQL + pgvector) & Cache Học Thuật
 
 ```sql
 -- Bảng reference_items: Danh mục tài liệu tham khảo bóc tách từ bài báo gốc
@@ -493,7 +437,37 @@ CREATE INDEX idx_reference_items_doc ON reference_items(document_id);
 CREATE INDEX idx_reference_items_doi ON reference_items(doi) WHERE doi IS NOT NULL;
 CREATE INDEX idx_reference_items_arxiv ON reference_items(arxiv_id) WHERE arxiv_id IS NOT NULL;
 
--- Bảng citation_edges: Đồ thị tri thức trích dẫn (Khống chế k-hop <= 2, Cycle Breaking)
+-- Bảng graph_nodes: Nút thực thể đồ thị tri thức học thuật trên PostgreSQL + pgvector
+CREATE TABLE graph_nodes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    entity_type VARCHAR(50) NOT NULL CHECK (entity_type IN ('PAPER', 'METHOD', 'DATASET', 'METRIC', 'TASK')),
+    canonical_name TEXT NOT NULL,
+    description TEXT NULL,
+    embedding vector(1536) NULL,
+    metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX idx_graph_nodes_doc ON graph_nodes(document_id);
+CREATE INDEX idx_graph_nodes_embedding_hnsw ON graph_nodes USING hnsw (embedding vector_cosine_ops);
+
+-- Bảng graph_edges: Cạnh quan hệ giữa các nút đồ thị tri thức trên PostgreSQL
+CREATE TABLE graph_edges (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    source_node_id UUID NOT NULL REFERENCES graph_nodes(id) ON DELETE CASCADE,
+    target_node_id UUID NOT NULL REFERENCES graph_nodes(id) ON DELETE CASCADE,
+    relation_type VARCHAR(50) NOT NULL,
+    weight FLOAT NOT NULL DEFAULT 1.0,
+    evidence_chunk_id UUID NULL REFERENCES document_chunks(id) ON DELETE SET NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CHECK (source_node_id <> target_node_id)
+);
+
+CREATE INDEX idx_graph_edges_source ON graph_edges(source_node_id);
+CREATE INDEX idx_graph_edges_target ON graph_edges(target_node_id);
+
+-- Bảng citation_edges: Đồ thị tri thức trích dẫn giữa các bài báo (Khống chế k-hop <= 2, Cycle Breaking)
 CREATE TABLE citation_edges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     source_document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
@@ -528,29 +502,6 @@ CREATE TABLE global_academic_cache (
 );
 
 CREATE INDEX idx_academic_cache_expires ON global_academic_cache(expires_at);
-```
-
----
-
-### 3.7. Phân Hệ Chia Sẻ Cộng Tác Công Khai (Public Sharing)
-
-```sql
--- Bảng shares: Quản lý liên kết chia sẻ công khai không cần đăng nhập (No Auth)
-CREATE TABLE shares (
-    token VARCHAR(64) PRIMARY KEY, -- Token ngẫu nhiên unguessable: sh_...
-    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    resource_type VARCHAR(30) NOT NULL 
-        CHECK (resource_type IN ('note_synthesis', 'draft', 'document', 'folder')),
-    resource_id UUID NOT NULL,
-    allow_comments BOOLEAN NOT NULL DEFAULT FALSE,
-    is_revoked BOOLEAN NOT NULL DEFAULT FALSE, -- TRUE: Thu hồi chia sẻ tức thời -> Trả về 410 Gone
-    expires_at TIMESTAMPTZ NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    revoked_at TIMESTAMPTZ NULL
-);
-
-CREATE INDEX idx_shares_resource ON shares(resource_type, resource_id);
-CREATE INDEX idx_shares_user ON shares(user_id, created_at DESC);
 ```
 
 ---
@@ -693,7 +644,7 @@ $$ LANGUAGE plpgsql;
 ## 6. QUẢN TRỊ BẢO MẬT, TOÀN VẸN GIAO DỊCH & ZERO-RETENTION
 
 1. **Cam Kết Xóa Sổ Tuyệt Đối (Zero-Retention Guarantee):**
-   - Mọi liên kết từ `documents` tới `document_chunks`, `document_summaries`, `session_documents`, `draft_verifications` đều sử dụng ràng buộc `ON DELETE CASCADE`.
+   - Mọi liên kết từ `documents` tới `document_chunks`, `document_summaries`, `session_documents`, `graph_nodes`, `citation_edges` đều sử dụng ràng buộc `ON DELETE CASCADE`.
    - Bổ sung các chỉ mục khóa ngoại tiền tố (`idx_research_notes_doc_fk`, `idx_research_notes_chunk_fk`) giúp việc thực thi `ON DELETE SET NULL` diễn ra tức thì thông qua Index Lookup, loại bỏ hoàn toàn nguy cơ Sequential Scan và Table Lock contention trên API `DELETE /documents/{id}`.
 2. **Bảo Tồn Dữ Liệu Sổ Tay Thông Minh (Non-destructive Note Decoupling):**
    - Trong bảng `research_notes`, khóa ngoại `document_id` và `chunk_id` được cấu hình `ON DELETE SET NULL`.

@@ -213,19 +213,17 @@ pnpm --prefix apps/web build
 
 ## 📚 Documentation
 
-Deep-dive architecture specifications and engineering guides are maintained in [`docs/vi/`](docs/vi/):
-- **[PRD & Product Vision](docs/vi/PRD.md):** 4 core functional modules, user personas, session lifecycle, and SLAs.
-- **[System & Software Architecture](docs/vi/design-architecture.md):** Hexagonal architecture, Redis Streams task queue, Dedicated Sandbox Broker, and Early Connection Release.
-- **[REST & SSE API Specification](docs/vi/design-api.md):** 59 endpoints, Google Cloud AIP-136, RFC 9110 / RFC 7232 OCC (`412 Precondition Failed`).
-- **[Database Schema & pgvector Specification](docs/vi/design-database.md):** PostgreSQL 18 + pgvector DDL, Multi-Tenant CAS blobs, and HNSW iterative scan.
-- **[PostgreSQL & Docker Infrastructure Guide](docs/vi/guide-docker.md):** Production Docker Compose setup, pgvector verification, data persistence, and Docker Model Runner.
-- **[Production Logging Architecture Guide](docs/vi/guide-logging-system.md):** Detailed guide on Structlog, Pure ASGI Streaming, TTFB metrics, and Eval test suites.
-- **[Continuous Integration (CI) Guide](docs/vi/guide-ci.md):** GitHub Actions Quality Gates, hermetic monorepo caching with uv and pnpm, and security invariants.
-- **[Backend Monorepo Directory Structure](docs/vi/backend-directory-structure.md):** Hexagonal architecture directory mapping across `apps/` and `packages/core`.
-- **[Module 1 Tech Decisions & Trade-offs](docs/vi/techstack-backend-module-01.md):** Ingestion, storage, and retrieval stack trade-offs.
-- **[AI Observability & Langfuse Tracing Guide](docs/vi/guide-ai-observability.md):** Production tracing architecture, Zero Data Retention (ZDR), HMAC-SHA256 pseudonymization, and CLI tooling suite.
-- **[Authentication & Multi-Tenant Data Isolation](docs/vi/decided/frontend/auth.md):** User authentication, RBAC, session management, and tenant isolation policies.
-- **[Engineering & Agent Protocol](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
+The authoritative **Single Source of Truth** for VeriScholar MVP specifications and engineering guides is maintained in [`docs/PRD/`](docs/PRD/) and [`docs/`](docs/README.md):
+- **[MVP Master Overview & Scope (`docs/PRD/00-overview-and-cleanup.md`)](docs/PRD/00-overview-and-cleanup.md):** 4 MVP routes, core product vision, and out-of-scope pruning rules.
+- **[Authentication & Account Settings (`docs/PRD/01-authentication-and-profile.md`)](docs/PRD/01-authentication-and-profile.md):** JWT + Google GIS OAuth 2.0, ORCID iD, and 3-tab Account Settings modal.
+- **[Dashboard & Discovery (`docs/PRD/02-dashboard-and-discovery.md`)](docs/PRD/02-dashboard-and-discovery.md):** 4-item left navigation taskbar (`Đoạn chat mới`, `Tìm kiếm bài báo`, `Thư viện`, `Soạn thảo LaTeX`), Session history, and External Academic Search (`/discovery`).
+- **[Deep Reading, Hybrid RAG & GraphRAG (`docs/PRD/03-deep-reading-rag-and-graphrag.md`)](docs/PRD/03-deep-reading-rag-and-graphrag.md):** Multi-tab PDF.js canvas with normalized `[x0, y0, x1, y1, page]` bounding boxes, Hybrid RAG + GraphRAG strictly on **PostgreSQL + `pgvector`** (`graph_nodes` and `graph_edges`), Smart Notes, and Reference Drawer.
+- **[Personal Library & Folders (`docs/PRD/04-personal-library.md`)](docs/PRD/04-personal-library.md):** Hierarchical folders and starred documents management (`/library`).
+- **[LaTeX Studio & AI Writing Assistant (`docs/PRD/05-latex-writing-studio.md`)](docs/PRD/05-latex-writing-studio.md):** Tri-pane LaTeX code editor, Tectonic sandbox compiler with self-healing, and AI Writing Assistant (`/writing`).
+- **[Database Schema & Storage (`docs/PRD/06-database-and-storage.md`)](docs/PRD/06-database-and-storage.md):** PostgreSQL + `pgvector` schema (`users`, `folders`, `document_storage_blobs`, `documents`, `document_chunks`, `document_summaries`, `graph_nodes`, `graph_edges`, `reference_items`, `global_academic_cache`, `research_sessions`, `session_documents`, `session_turns`, `research_notes`, `drafts`).
+- **[Monitoring, Observability & Langfuse (`docs/PRD/07-monitoring-and-langfuse.md`)](docs/PRD/07-monitoring-and-langfuse.md):** Structlog JSON, `trace_id`, Langfuse Cloud (`verischolar-dev` / `verischolar-prod`), Sentry, and Alert Webhooks.
+- **[Architecture & Operations Portal (`docs/README.md`)](docs/README.md):** Detailed architecture, frontend engineering, CI/CD, and QA guides.
+- **[Engineering & Agent Protocol (`AGENTS.md`)](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
 
 ---
 

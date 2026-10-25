@@ -139,10 +139,18 @@ curl -i http://127.0.0.1:8000/non-existent-route
 
 ---
 
-## 6. KIỂM SOÁT NHẬT KÝ TRUY VẤN SQL (DATABASE QUERY LOG HYGIENE)
+## 6. KIỂM SOÁT NHẬT KÝ TRUY VẤN SQL & QUAN SÁT AI ĐA TẦNG (LANGFUSE + SENTRY + WEBHOOK)
 
-| Biến cấu hình | Mặc định | Ý nghĩa & Khuyến nghị vận hành |
-| :--- | :--- | :--- |
-| `SQL_ECHO` | `false` | Điều khiển in câu lệnh SQL thô của SQLAlchemy Engine ra terminal. Thiết lập `false` trong môi trường phát triển và chạy test để ngăn ngừa ngập lụt màn hình (terminal flooding); chỉ bật `true` khi cần điều tra câu lệnh SQL cấp ORM chi tiết. |
+Theo đúng chuẩn **[`docs/PRD/07-monitoring-and-langfuse.md`](../PRD/07-monitoring-and-langfuse.md)**, hệ thống quan sát của VeriScholar vận hành đồng bộ trên 3 tầng gắn kết qua cùng một mã định danh `trace_id` (`X-Request-ID`):
 
-- Trong các kịch bản chạy kịch bản kiểm thử API tự động (`scripts/eval_api.py`), logger `sqlalchemy.engine` được mặc định cấu hình ở mức `WARNING` để bảo đảm màn hình terminal hiển thị ma trận kết quả sạch và trực quan. Kỹ sư có thể truyền cờ `--debug-sql` khi cần hiển thị toàn bộ câu lệnh SQL thô.
+1. **Tầng 1 — Nhật ký có cấu trúc (Structlog JSON) & Kiểm soát SQL:**
+   - Biến `SQL_ECHO=false` mặc định tắt log SQL thô để tránh ngập màn hình terminal.
+   - Mọi bản ghi log đều tự động đính kèm `trace_id` và qua bộ lọc che giấu thông tin nhạy cảm (`***REDACTED***`).
+2. **Tầng 2 — Quan sát AI & Quản lý Chi phí Token (Langfuse Cloud):**
+   - Tách biệt hoàn toàn dữ liệu giữa 2 môi trường qua 2 dự án độc lập trên Langfuse Cloud:
+     - **`verischolar-dev`**: Phục vụ phát triển cục bộ (`APP_ENV=development`).
+     - **`verischolar-prod`**: Phục vụ vận hành thực tế (`APP_ENV=production`).
+   - Ghi nhận toàn bộ Spans của tiến trình Hybrid RAG + GraphRAG (Query Rewrite, Hybrid Vector + BM25 Search, Graph Traversal, Reranker, LLM Generation) kèm thống kê Token Usage và chi phí USD.
+   - Khi chạy `pytest` (`APP_ENV=test`), SDK Langfuse tự động vô hiệu hóa (`LANGFUSE_ENABLED=false`) để đảm bảo bài test chạy nhanh và cô lập mạng 100%.
+3. **Tầng 3 — Bắt lỗi Tức thời & Cảnh báo Sự cố (Sentry + Discord/Telegram Webhook):**
+   - Mọi lỗi `500 Internal Server Error`, lỗi biên dịch LaTeX Sandbox hoặc lỗi kết nối CSDL đều được gửi tự động kèm `trace_id` về Sentry và kênh Webhook cảnh báo cho đội ngũ kỹ thuật.
