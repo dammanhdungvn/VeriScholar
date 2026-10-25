@@ -94,6 +94,6 @@ test-results.xml
 
 # Teamwork scratch
 .agents/teamwork/
+.agents/runtime/
 
-.agents/
 .claude/
