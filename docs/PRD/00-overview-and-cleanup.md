@@ -1,5 +1,5 @@
-# VERISCHOLAR MVP — TỔNG QUAN KIẾN TRÚC, RÀNG BUỘC & DANH SÁCH DỌN DẸP CODEBASE
-# (FILE 00: OVERVIEW, ARCHITECTURE & OUT-OF-SCOPE CLEANUP)
+# VERISCHOLAR MVP — TỔNG QUAN KIẾN TRÚC, LUỒNG GIÁ TRỊ & RANH GIỚI PHẠM VI
+# (FILE 00: OVERVIEW, ARCHITECTURE & SCOPE BOUNDARIES)
 
 ---
 
@@ -73,17 +73,15 @@
 
 ---
 
-## 5. Danh Sách Các Tính Năng & File Dư Thừa Cần XÓA BỎ Khỏi Codebase (Cleanup List)
+## 5. Ranh Giới Phạm Vi Nghiêm Ngặt & Tiêu Chuẩn Kiến Trúc MVP (Scope Boundaries & Architectural Integrity)
 
-Do trước đây hệ thống có một số tính năng phát triển tràn lan ngoài phạm vi MVP, các thành phần dưới đây **bắt buộc phải được dọn dẹp và xóa bỏ** để codebase gọn sạch, chuẩn mực:
+Để bảo đảm tính ổn định, tốc độ phản hồi cao và sự tập trung tối đa vào trải nghiệm cốt lõi của sinh viên/nghiên cứu sinh, toàn bộ nền tảng VeriScholar MVP tuân thủ nghiêm ngặt các ranh giới phạm vi sau:
 
-| Nhóm cần xóa | Các API / File / Component cụ thể cần loại bỏ | Lý do xóa |
+| Lĩnh vực | Phạm vi chuẩn mực MVP (In-Scope) | Ranh giới tuyệt đối không đưa vào (Strictly Out-of-Scope) |
 | :--- | :--- | :--- |
-| **1. Các file cấu hình môi trường thừa** | `apps/api/.env.uat`, `deploy/.env.enterprise.example`, cấu hình `uat`/`staging` trong `config.py` | Dự án cá nhân chỉ dùng 2 môi trường `development` và `production`. |
-| **2. Chia sẻ Draft đa người dùng & Bình luận Peer-Review** | API `/drafts/{id}/share`, `/drafts/{id}/comments`, bảng `DraftCommentModel`, `DraftSharingModal.tsx`, `DraftCommentsPane.tsx` | Không nằm trong luồng MVP cá nhân, gây phức tạp không cần thiết. |
-| **3. Xuất nhảy sang web Overleaf bên ngoài** | API `/drafts/{id}:export-overleaf`, `/drafts/{id}/overleaf`, `/overleaf-launch` | Bản thân màn hình Writing 3 cột của VeriScholar đã là không gian Overleaf tích hợp E2B. |
-| **4. Ký ức liên tưởng (Associative Memory Card)** | API `/drafts/{id}/associative-suggestions`, `associative_memory_service.py`, `AssociativeMemoryCard.tsx` | Thay thế bằng công cụ `query_library_graph_rag` trực tiếp trong LangGraph Agent. |
-| **5. Giao diện Kiểm chứng SAFE tĩnh kiểu cũ** | API `/drafts/{id}/verify-facts`, `SourceEvidenceModal.tsx`, giao diện `WritingAssistantPane.tsx` kiểu danh sách claim cũ | Thay thế hoàn toàn Cột 3 bằng **Khung Chat Hội Thoại LangGraph Agent**. |
-| **6. Ma trận So sánh 100+ bài báo kiểu cũ** | API `/folders/comparison-matrix`, `/folders/{id}/comparison-matrix`, `ComparisonMatrixModal.tsx`, `ComparisonMatrixPage.tsx` | Thay thế bằng Kho Yêu thích + Truy vấn GraphRAG 4 Thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`). |
-| **7. Các màn hình phụ & API xuất gói thừa** | `DashboardCoworkView.tsx`, `DashboardProjectView.tsx`, `ProjectsPage.tsx`, API `/sessions/{id}:export-bundle`, `/documents/{id}/export-pdf` | Giao diện thừa không gắn với hành trình nghiên cứu cốt lõi. |
-| **8. Các file tài liệu PRD cũ gây nhiễu** | `docs/02-modules-and-features/pillar-1..5.md` (hoặc cập nhật trỏ hết về `./PRD/`) | Tránh để AI đọc nhầm thiết kế cũ khi lập trình. |
+| **1. Cấu hình Môi trường** | Duy nhất 2 môi trường: `development` (`LANGFUSE_ENVIRONMENT=verischolar-dev`) và `production` (`LANGFUSE_ENVIRONMENT=verischolar-prod`). | Cấm tạo thêm các môi trường `uat`, `staging`, `sit` hay `enterprise`. |
+| **2. CSDL & Lưu trữ** | Thuần **PostgreSQL 16+ kèm extension `pgvector`** (`Vector(1536)`), **Redis 7** (OTP, rate-limiting, idempotency) và lưu file CAS (`SHA-256`) tại `storage/blobs/`. | Tuyệt đối cấm sử dụng cơ sở dữ liệu đồ thị rời (Neo4j) và không dùng SQLite fallback (`aiosqlite` đã loại bỏ hoàn toàn). |
+| **3. Không gian Soạn thảo** | Soạn thảo LaTeX nội bộ 3 cột với trình biên dịch cô lập E2B Sandbox và trợ lý đàm thoại LangGraph Co-Author Agent. | Cấm các tính năng cộng tác nhóm phức tạp (chia sẻ draft, bình luận peer-review, phân quyền tổ chức) và không nhảy sang web Overleaf ngoài. |
+| **4. Tra cứu & Tổng hợp Tri thức** | Kho Yêu thích cá nhân kết hợp **4-Entity GraphRAG** (`Paper`, `Method`, `Dataset`, `MetricResult`) trên PostgreSQL + `pgvector`. | Không làm Ma trận So sánh 100+ bài báo (Comparison Matrix) và không dùng mô hình cục bộ nặng nề (SAFE NLI / DeBERTa ONNX). |
+| **5. Ranh giới Kiến trúc Lục giác** | `packages/core` là miền nghiệp vụ thuần Python (không dính FastAPI, SQLAlchemy, HTTPX, PyMuPDF, Redis, E2B, Langfuse). | Cấm vi phạm quy tắc phụ thuộc một chiều từ Adapters (`apps/api`) vào Core Domain (`packages/core`). |
+| **6. Quản lý File Vật lý** | Tiêu hủy file vật lý đồng bộ ngay khi `blob.ref_count <= 0` (Zero-Retention Guarantee). | Không duy trì file rác mồ côi hay background worker quét rác bất đồng bộ. |
