@@ -105,6 +105,49 @@ Mục tiêu cốt lõi của bộ `docs/specs/` là để bất kỳ kỹ sư ho
    - Thêm `POST /api/v1/sessions/{session_id}/messages/{message_id}/feedback` nhận `{ score: 1 | 0, comment?: str }` đẩy điểm `user_feedback` gắn với `trace_id` của lượt chat đó lên Langfuse.
    - Bổ sung `AlertWebhookDispatcher` gửi cảnh báo bất đồng bộ (timeout 3s, chống bão cảnh báo trùng lặp theo cooldown 60s) tới Telegram/Discord qua `ALERT_WEBHOOK_URL` khi xảy ra lỗi `500` hoặc lỗi kết nối hạ tầng trên môi trường `production`.
 
+### C. Kiểm Kê Toàn Diện CSDL (16 Bảng) & 6 Giải Pháp Khóa Rủi Ro Kỹ Thuật Ngầm (`[Rủi ro & Biện pháp giảm thiểu]`)
+
+#### 1. Kiểm kê chính xác 16 bảng CSDL PostgreSQL MVP
+Toàn bộ hệ thống VeriScholar MVP gồm đúng **16 bảng PostgreSQL** (12 bảng hiện có + 4 bảng tạo mới trong `Delta`), xóa bỏ hoàn toàn rủi ro thiếu bảng khi chia task:
+- **12 Bảng hiện có** (`apps/api/src/api/db/models/`):
+  1. `users` (`user.py`): Tài khoản học giả, mật khẩu bcrypt, BYOK AES-256-GCM.
+  2. `documents` (`document.py`): Metadata tài liệu PDF, số trang, dung lượng, trạng thái parse.
+  3. `document_chunks` (`chunk.py`): Các đoạn văn trích xuất, tọa độ bbox, nâng cấp cột `embedding` sang `Vector(1536)`.
+  4. `document_storage_blobs` (`blob.py`): Quản lý file CAS theo mã băm SHA-256.
+  5. `document_summaries` (`summary.py`): Tóm tắt cấu trúc và takeaways của tài liệu.
+  6. `reference_items` (`reference.py`): Danh mục trích dẫn đã trích xuất/xác thực của bài báo.
+  7. `research_sessions` (`session.py`): Phiên đọc sâu học thuật.
+  8. `session_documents` (`session.py`): Bảng liên kết đa bài báo trong phiên (tối đa 5 bài đồng thời).
+  9. `session_turns` (`session.py`): Lịch sử hội thoại hỏi đáp trong phiên đọc.
+  10. `research_notes` (`note.py`): Sổ tay ghi chú học thuật gắn phiên đọc.
+  11. `folders` (`folder.py`): Cây thư mục đề tài phân cấp trong Kho Yêu thích.
+  12. `drafts` (`draft.py`): Không gian soạn thảo LaTeX; nâng cấp thêm `bib_content` và `source_session_id`.
+- **4 Bảng tạo mới (`Delta`)**:
+  13. `graph_nodes` (`graph.py`): Đỉnh tri thức 4 nhãn (`Paper`, `Method`, `Dataset`, `MetricResult`) kèm `Vector(1536)`.
+  14. `graph_edges` (`graph.py`): Cạnh quan hệ 4 loại (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`).
+  15. `draft_assets` (`draft.py` hoặc `draft_asset.py`): Quản lý hình ảnh/file tài sản đính kèm trong thư mục `figures/`.
+  16. `draft_messages` (`draft.py` hoặc `draft_message.py`): Lịch sử hội thoại và phản hồi của LangGraph Co-Author Agent.
+
+#### 2. Sáu (6) Rủi ro kỹ thuật ngầm & Giải pháp kiến trúc bắt buộc
+1. **Rủi ro 1 — E2B `"base"` Template thiếu LaTeX & Fallback PyMuPDF giả lập:**
+   - *Thực trạng:* `E2B_LATEX_TEMPLATE="base"` không có `pdflatex`/`bibtex`/`tectonic` và tắt internet. Hàm `_generate_in_memory_pdf_preview()` dùng PyMuPDF vẽ chữ thô lên trang trắng rồi trả về `success=True`, làm vô hiệu hóa cơ chế tự sửa lỗi 3 lần của LangGraph.
+   - *Giải pháp:* Đặc tả `deploy/e2b.Dockerfile` dựng sẵn TeX Live / `tectonic`. Nâng cấp `ILatexCompilerPort` nhận trọn bộ `(main_tex, bib_content, figures/*)` với `--no-shell-escape`, timeout 15s. **Xóa vĩnh viễn `_generate_in_memory_pdf_preview()`**. Ở môi trường `development` chưa cấu hình `E2B_API_KEY`: Cho phép fallback sang CLI `tectonic` / `pdflatex` cài cục bộ; nếu máy local cũng không có CLI thì trả về lỗi rõ ràng (`success=False`, thông báo cấu hình E2B hoặc cài CLI) thay vì vẽ PDF giả.
+2. **Rủi ro 2 — `document_chunks.embedding` là `JSONType` & lệ thuộc `LLM_PROVIDER`:**
+   - *Thực trạng:* Hiện cột embedding lưu JSON text và truy vấn rank chunks trong RAM bằng Python. Gắn model embedding chung với `LLM_PROVIDER="docker-model-runner"` gây lỗi số chiều.
+   - *Giải pháp:* Chuyển đổi cột sang `pgvector.sqlalchemy.Vector(1536)` + `content_tsv TSVECTOR` + chỉ mục `HNSW` & `GIN`. Viết truy vấn Hybrid Search (Cosine Vector + Full-Text Search + RRF `k=60`) trực tiếp trong PostgreSQL. Tách riêng biến cấu hình: `EMBEDDING_PROVIDER="openai"`, `EMBEDDING_MODEL="text-embedding-3-small"`, `EMBEDDING_DIM=1536`.
+3. **Rủi ro 3 — Thiếu Alembic DDL & `init_sqlite_fallback()` crash runtime:**
+   - *Thực trạng:* Không có Alembic khiến cột mới không tự cập nhật trên database cũ. `api/__init__.py` và `session.py` vẫn gọi `init_sqlite_fallback()` gây lỗi `ModuleNotFoundError: aiosqlite`. `draft_service.py` còn sót cache chia sẻ cũ.
+   - *Giải pháp:* Đặc tả hàm `ensure_database_schema()` chạy các câu lệnh DDL idempotent (`CREATE EXTENSION IF NOT EXISTS vector`, `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`). Xóa hoàn toàn `init_sqlite_fallback()` (báo lỗi kết nối ngay nếu PostgreSQL chưa sẵn sàng) và xóa bỏ `_draft_share_cache`.
+4. **Rủi ro 4 — Phân mảnh RAM đa worker Uvicorn & vòng đời `BackgroundTasks`:**
+   - *Thực trạng:* `Dockerfile.api` chạy `--workers 4` khiến bộ nhớ cache và metrics bị chia cắt; `docker-compose.yml` thiếu Redis; `BackgroundTasks` nếu dùng chung `AsyncSession` của HTTP request sẽ lỗi khi request đóng.
+   - *Giải pháp:* Lưu PDF biên dịch của Draft xuống đĩa CAS qua `drafts.pdf_preview_storage_path` (bỏ `_draft_pdf_cache` trong RAM); bổ sung `redis:7-alpine` vào `docker-compose.yml`; chuẩn hóa 1 async Uvicorn worker cho MVP; bắt buộc mọi tác vụ ngầm tự mở `AsyncSessionLocal()` độc lập; khi server khởi động tự động quét và chuyển các tài liệu kẹt `status="parsing"` quá 10 phút về `failed`.
+5. **Rủi ro 5 — Ghi đè snapshot Undo & xung đột OCC `version` trong LangGraph retry:**
+   - *Thực trạng:* Nếu LangGraph retry 3 lần mà mỗi lần đều ghi đè `previous_snapshot`, nút Undo sẽ khôi phục về bản lỗi của lần retry trước; thiếu `new_version` trong SSE khiến lần lưu tay tiếp theo bị lỗi `409 Conflict`.
+   - *Giải pháp:* Chụp `previous_snapshot` **đúng 1 lần duy nhất trước Attempt 1** của mỗi phiên Agent. Đính kèm `new_version` trong sự kiện SSE `file_patch` / `done` để Frontend cập nhật state ngay lập tức.
+6. **Rủi ro 6 — GitHub Actions CI thiếu service containers PostgreSQL & Redis:**
+   - *Thực trạng:* Job `backend-checks` trong `.github/workflows/ci.yml` chưa khai báo container dịch vụ nên Integration Test với PostgreSQL thật sẽ thất bại trên CI.
+   - *Giải pháp:* Bổ sung cấu hình `services: postgres (pgvector/pgvector:0.8.6-pg18)` và `redis (redis:7-alpine)` trong `.github/workflows/ci.yml`.
+
 ---
 
 ## 6. Cấu Trúc Thư Mục & Khuôn Mẫu Chuẩn Của Từng File Trong `docs/specs/`
@@ -132,7 +175,7 @@ docs/
     ├── 06-agentic-overleaf-writing-spec.md
     └── 07-monitoring-and-langfuse-spec.md
 ```
-*(Đồng thời xóa sạch `docs/PRD/audit-backend-member2.md`, `docs/PRD/audit-frontend-member3.md` nếu không còn cần thiết hoặc giữ trong `docs/superpowers/`, và xóa toàn bộ `docs/01-architecture/`, `docs/03-frontend-engineering/`, `docs/04-operations-and-cicd/`, `docs/05-testing-and-qa/`).*
+*(Đã hoàn tất xóa sạch `docs/PRD/audit-backend-member2.md`, `docs/PRD/audit-frontend-member3.md`, và xóa toàn bộ 4 thư mục tài liệu cũ `docs/01-architecture/`, `docs/03-frontend-engineering/`, `docs/04-operations-and-cicd/`, `docs/05-testing-and-qa/`).*
 
 ### B. Khuôn mẫu 7 mục bắt buộc cho mỗi file `docs/specs/01..07`
 Mỗi file `01..07` phải tuân thủ đúng cấu trúc chuẩn sau để kỹ sư/agent đọc và lập trình được ngay:

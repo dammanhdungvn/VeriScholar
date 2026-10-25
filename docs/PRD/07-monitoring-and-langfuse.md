@@ -77,7 +77,7 @@ Mỗi khi người dùng gửi một câu hỏi (Query) hoặc thực hiện m�
 Không cần cài đặt thêm cụm Docker Prometheus/Grafana nặng nề, hệ thống cung cấp trực tiếp 2 điểm kiểm tra giám sát:
 1. **Kiểm tra Sức khỏe Sâu (`GET /health/ready`):**
    * Kiểm tra và trả về trạng thái sống/chết + độ trễ (`latency_ms`) của:
-     * **Database** (PostgreSQL / SQLite fallback).
+     * **Database** (PostgreSQL 16+ với extension `pgvector` và Redis 7).
      * **Ổ cứng lưu trữ (`storage/blobs`)**: Kiểm tra quyền đọc/ghi và dung lượng MB đang sử dụng.
      * **Trạng thái cấu hình các dịch vụ ngoài**: OpenAI API, Exa AI, E2B Sandbox, Langfuse, Sentry.
    * Dùng để gắn vào **UptimeRobot / Uptime Kuma** ping tự động mỗi 1 phút (báo động ngay nếu sập server).

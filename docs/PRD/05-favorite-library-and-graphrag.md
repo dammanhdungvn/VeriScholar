@@ -38,7 +38,7 @@ Giúp người dùng lưu trữ các bài báo tâm đắc vào **Kho Paper Yêu
 ### A. Tại sao dùng 4 Thực thể cố định trên PostgreSQL?
 * Không cài đặt thêm cơ sở dữ liệu đồ thị rời (như Neo4j) để tránh nặng máy và phức tạp hóa việc triển khai.
 * Không cho AI tự sinh nhãn thực thể tự do (tránh việc cùng một khái niệm lúc thì AI đặt là `Model`, lúc lại đặt là `Algorithm` gây lệch truy vấn).
-* Sử dụng bảng quan hệ chuẩn trên **PostgreSQL + `pgvector`** (và tương thích hoàn toàn với **SQLite fallback** thông qua kiểu `JSONType` khi chạy máy cá nhân chưa bật Docker).
+* Sử dụng bảng quan hệ chuẩn trên **PostgreSQL + `pgvector`** (`graph_nodes` và `graph_edges` với chỉ mục `HNSW` và `GIN`), đảm bảo tốc độ truy vấn cao và không sử dụng SQLite fallback.
 
 ### B. Cấu trúc 4 Loại Đỉnh (`graph_nodes`) và 4 Loại Cạnh (`graph_edges`)
 

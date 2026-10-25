@@ -48,7 +48,7 @@
 ### B. Phi mục tiêu (Non-Goals — Không làm trong MVP)
 1. **Không làm chế độ hiển thị toàn văn PDF/HTML Tiếng Việt ở khung đọc bên trái:** Để tập trung tối đa cho chất lượng MVP, khung bên trái chỉ hiển thị bản gốc PDF (`PdfCanvasViewer.tsx`). Việc dịch đoạn văn hoặc giải thích bằng Tiếng Việt được thực hiện trực tiếp qua khung Chat AI bên phải (khi người dùng hỏi hoặc bấm `[💬 Đưa vào Chat]` từ đoạn bôi đen).
 2. **Không dùng Prompt Management đám mây của Langfuse:** Toàn bộ Prompts được lưu trực tiếp trong mã nguồn Python của dự án.
-3. **Không cài đặt thêm Neo4j hoặc cụm Docker Prometheus/Grafana nặng nề:** GraphRAG chạy trực tiếp trên PostgreSQL + `pgvector` (tương thích SQLite fallback); Monitoring hệ thống tích hợp trực tiếp qua API `/health/ready`, `/api/v1/system/status`, Langfuse và Sentry/Webhook.
+3. **Không cài đặt thêm Neo4j hoặc cụm Docker Prometheus/Grafana nặng nề:** GraphRAG chạy trực tiếp trên PostgreSQL + `pgvector`; Monitoring hệ thống tích hợp trực tiếp qua API `/health/ready`, `/api/v1/system/status`, Langfuse và Sentry/Webhook.
 4. **Không duy trì các môi trường `.env` thừa (`uat`, `staging`, `sit`, `enterprise`):** Chỉ sử dụng duy nhất 2 môi trường là `development` và `production`.
 
 ### C. Chống mục tiêu (Anti-Goals — Nếu xảy ra coi như lỗi nghiêm trọng)
@@ -63,7 +63,7 @@
 * **Giới hạn file PDF tải lên:** Dung lượng tối đa `50 MB`, tối đa `100 trang` / bài báo, định dạng Digital PDF có lớp văn bản.
 * **Giới hạn phiên đọc sâu:** Tối đa `5 bài báo` mở đồng thời trong 1 phiên để giữ độ chính xác cao nhất cho ngữ cảnh RAG.
 * **Giới hạn biên dịch E2B Sandbox:** Timeout cứng `15 giây` / lượt biên dịch; tối đa `3 vòng lặp` tự sửa lỗi liên tiếp.
-* **Cơ sở dữ liệu:** Ưu tiên PostgreSQL + `pgvector`, tự động chuyển sang SQLite fallback khi chạy cục bộ chưa bật Docker.
+* **Cơ sở dữ liệu:** Thuần **PostgreSQL 16+ kèm extension `pgvector`** (`Vector(1536)`) và **Redis 7** (OTP, rate-limiting, idempotency); không sử dụng SQLite fallback.
 * **Thanh Menu Điều Hướng Chính của Ứng Dụng (Global Sidebar Navigation):**
   Sau khi dọn dẹp các trang thừa, toàn bộ ứng dụng thống nhất đúng **4 mục điều hướng chính**:
   1. **`🔍 Khám phá & Phiên đọc`** (`/` và `/discovery`): Tìm bài báo mới theo chủ đề, tải PDF lên và quản lý danh sách các Phiên đọc sâu (`Sessions`).
