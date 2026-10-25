@@ -1,0 +1,95 @@
+% ==============================================================================
+% CONFIGURATION PREAMBLE: BÁO CÁO ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR
+% Tuân thủ 100% quy chuẩn Huong-dan-viet-DATN.md (HUMG)
+% ==============================================================================
+
+% 1. Thiết lập khổ giấy và căn lề trang chuẩn xác (HUMG: 2.5 - 2.5 - 3.5 - 2.5 cm)
+\usepackage[
+    a4paper,
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3.5cm,
+    right=2.5cm,
+    headheight=15pt
+]{geometry}
+
+% 2. Chuẩn hóa cỡ chữ 13pt (Word standard) và dãn dòng 1.5 lines
+\usepackage[fontsize=13pt]{scrextend}
+\usepackage{setspace}
+\onehalfspacing
+
+% 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}[
+    Path = /usr/share/fonts/truetype/liberation/,
+    UprightFont = LiberationSerif-Regular.ttf,
+    BoldFont = LiberationSerif-Bold.ttf,
+    ItalicFont = LiberationSerif-Italic.ttf,
+    BoldItalicFont = LiberationSerif-BoldItalic.ttf
+]
+\usepackage[provide=*,vietnamese]{babel}
+
+% 4. Các gói toán học, bảng biểu và đồ họa
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{enumitem}
+
+% 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI)
+\usepackage{caption}
+\captionsetup[table]{
+    position=top,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Bảng}
+}
+\captionsetup[figure]{
+    position=bottom,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Hình}
+}
+
+% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header)
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Xóa sạch cấu hình mặc định
+\renewcommand{\headrulewidth}{0pt} % Không kẻ đường ngang ở đầu trang
+\fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng -- Ngành Công nghệ thông tin}}
+\fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}
+
+% Áp dụng phong cách trang trống cho trang mở đầu chương
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \renewcommand{\headrulewidth}{0pt}
+    \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng -- Ngành Công nghệ thông tin}}
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}
+}
+
+% 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+
+% Định dạng tiêu đề chương không bị cách khoảng quá xa
+\titleformat{\chapter}[display]
+  {\normalfont\bfseries\centering}
+  {\MakeUppercase{\chaptertitlename}\ \thechapter}{10pt}{\Large\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+
+% 8. Liên kết siêu văn bản PDF học thuật
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    pdfauthor={Đàm Mạnh Dũng},
+    pdftitle={Báo cáo Đồ án Tốt nghiệp - VeriScholar}
+}
