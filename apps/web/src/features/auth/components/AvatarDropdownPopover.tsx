@@ -1,17 +1,13 @@
 import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  User,
   Settings,
   Sparkles,
   HelpCircle,
   LogOut,
-  Sun,
-  Moon,
   ChevronRight,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
-import { useTheme } from "@/hooks/useTheme";
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { cn } from "@/lib/utils";
 
@@ -34,8 +30,6 @@ export function AvatarDropdownPopover({
 }: AvatarDropdownPopoverProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape or click outside
@@ -139,30 +133,10 @@ export function AvatarDropdownPopover({
               navigate("/settings");
             }
           }}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
-        >
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Nâng cấp gói</span>
-          </div>
-          <span className="text-3xs px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium font-mono">
-            Upgrade
-          </span>
-        </button>
-
-        {/* Hồ sơ cá nhân */}
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="popover-profile-btn"
-          onClick={() => {
-            onClose();
-            navigate("/profile");
-          }}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
         >
-          <User className="w-4 h-4 text-coral-600 dark:text-coral-400 shrink-0" />
-          <span>Hồ sơ cá nhân</span>
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>Nâng cấp gói</span>
         </button>
 
         {/* Cài đặt */}
@@ -183,24 +157,6 @@ export function AvatarDropdownPopover({
           <Settings className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
           <span>Cài đặt</span>
         </button>
-
-        {/* Chế độ giao diện: Sáng / Tối */}
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="popover-theme-btn"
-          onClick={toggleTheme}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
-        >
-          <div className="flex items-center gap-2.5">
-            {isDark ? (
-              <Sun className="w-4 h-4 text-amber-400 shrink-0" />
-            ) : (
-              <Moon className="w-4 h-4 text-zinc-600 dark:text-zinc-400 shrink-0" />
-            )}
-            <span>Chế độ giao diện: {isDark ? "Tối" : "Sáng"}</span>
-          </div>
-        </button>
       </div>
 
       {/* Divider */}
@@ -208,7 +164,7 @@ export function AvatarDropdownPopover({
 
       {/* 3. Footer List */}
       <div className="space-y-0.5">
-        {/* Trợ giúp & Tài liệu */}
+        {/* Trợ giúp */}
         <button
           type="button"
           role="menuitem"
@@ -219,7 +175,7 @@ export function AvatarDropdownPopover({
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
         >
           <HelpCircle className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-          <span>Trợ giúp & Tài liệu</span>
+          <span>Trợ giúp</span>
         </button>
 
         {/* Đăng xuất */}
