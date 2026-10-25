@@ -90,7 +90,7 @@ Mọi tọa độ trích dẫn trong hệ thống VeriScholar tuân thủ các q
 - Trong vòng 24 giờ, mọi request gửi lại cùng khóa sẽ nhận lại ngay lập tức phản hồi ban đầu từ Redis cache (kèm header `X-Cache: Idempotent-Hit`) mà không tái thực thi pipeline tốn kém.
 
 ### 1.5. Chuẩn Phản Hồi Thất Bại & Bảng Mã Lỗi Toàn Hệ Thống
-Thống nhất với Pydantic schema [`ErrorResponse`](apps/api/src/api/schemas/error.py):
+Thống nhất với Pydantic schema [`ErrorResponse`](../../apps/api/src/api/schemas/error.py):
 ```json
 {
   "success": false,

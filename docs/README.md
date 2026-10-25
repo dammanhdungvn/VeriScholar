@@ -24,13 +24,13 @@ flowchart TD
 ### 0. Đặc Tả Yêu Cầu Sản Phẩm Chuẩn MVP ([`docs/PRD/`](PRD/00-overview-and-cleanup.md))
 | Tài liệu | Mô tả tóm tắt nội dung |
 | :--- | :--- |
-| **[00-overview-and-cleanup.md](PRD/00-overview-and-cleanup.md)** | Tổng quan kiến trúc MVP, 4 trang cốt lõi (`/dashboard`, `/discovery`, `/library`, `/writing`), và danh mục dọn dẹp các tính năng ngoài phạm vi. |
-| **[01-authentication-and-profile.md](PRD/01-authentication-and-profile.md)** | Xác thực JWT, Google Identity Services (GIS OAuth 2.0), và Modal Cài đặt Tài khoản & Hồ sơ Học giả 3 Tabs. |
-| **[02-dashboard-and-discovery.md](PRD/02-dashboard-and-discovery.md)** | Taskbar 4 mục chuẩn, Quản lý lịch sử phiên đọc, và Tìm kiếm bài báo học thuật ngoài (`/discovery`). |
-| **[03-deep-reading-rag-and-graphrag.md](PRD/03-deep-reading-rag-and-graphrag.md)** | Không gian Đọc sâu đa bài báo (1–5 PDF), Hybrid RAG + **GraphRAG trên PostgreSQL + `pgvector`** (`graph_nodes`, `graph_edges`), Smart Notes và Reference Drawer. |
-| **[04-personal-library.md](PRD/04-personal-library.md)** | Quản lý Thư viện Cá nhân (`/library`), cây thư mục phân cấp và bài báo đã Star. |
-| **[05-latex-writing-studio.md](PRD/05-latex-writing-studio.md)** | Không gian Soạn thảo LaTeX 3 cột (`/writing`), biên dịch Tectonic Sandbox, tự sửa lỗi AI và xuất gói `.zip`. |
-| **[06-database-and-storage.md](PRD/06-database-and-storage.md)** | Thiết kế CSDL hợp nhất trên **PostgreSQL + `pgvector`** (15 bảng cốt lõi) và lưu trữ CAS. |
+| **[00-overview-and-cleanup.md](PRD/00-overview-and-cleanup.md)** | Tổng quan kiến trúc MVP, Taskbar 4 mục cốt lõi, lược đồ PostgreSQL + `pgvector`, và danh mục dọn dẹp các tính năng ngoài phạm vi. |
+| **[01-auth-and-user.md](PRD/01-auth-and-user.md)** | Xác thực JWT, OTP qua Redis, Google Identity Services (GIS OAuth 2.0), và Modal Tài khoản & Giao diện. |
+| **[02-discovery-and-documents-crud.md](PRD/02-discovery-and-documents-crud.md)** | Tìm kiếm bài báo học thuật ngoài, tải lên PDF, trích xuất cấu trúc/chunks và quản lý tài liệu. |
+| **[03-sessions-and-deep-reading-crud.md](PRD/03-sessions-and-deep-reading-crud.md)** | Không gian Đọc sâu đa bài báo (1–5 PDF), Hybrid RAG SSE chat, đối chiếu Bounding Box, Smart Notes và Reference Drawer. |
+| **[04-context-table-and-roadmap.md](PRD/04-context-table-and-roadmap.md)** | Bảng tổng hợp ngữ cảnh (Context Table) và lộ trình đọc bài báo học thuật trong phiên đọc. |
+| **[05-favorite-library-and-graphrag.md](PRD/05-favorite-library-and-graphrag.md)** | Kho Yêu thích (`/library`), cây thư mục phân cấp và **4-Entity GraphRAG trên PostgreSQL + `pgvector`**. |
+| **[06-agentic-overleaf-writing.md](PRD/06-agentic-overleaf-writing.md)** | Không gian Soạn thảo LaTeX nội bộ (`/writing`), biên dịch E2B/Tectonic Sandbox, trợ lý AI và xuất gói `.zip`. |
 | **[07-monitoring-and-langfuse.md](PRD/07-monitoring-and-langfuse.md)** | Kiến trúc giám sát 3 tầng: Structlog JSON (`trace_id`), Langfuse Cloud (`verischolar-dev`, `verischolar-prod`), Sentry & Webhook. |
 
 ---
@@ -39,7 +39,7 @@ flowchart TD
 | Tài liệu | Mô tả tóm tắt nội dung |
 | :--- | :--- |
 | **[architecture-overview.md](01-architecture/architecture-overview.md)** | Kiến trúc lục giác (Hexagonal Architecture), phân tầng Ingress/Core/Persistence/Sandbox, và ranh giới nghiệp vụ bất biến. |
-| **[backend-techstack.md](01-architecture/backend-techstack.md)** | Toàn cảnh công nghệ Backend: Python 3.12, `uv` Monorepo, FastAPI, PostgreSQL + `pgvector`, Redis 7, ARQ Worker, PyMuPDF, Langfuse. |
+| **[backend-techstack.md](01-architecture/backend-techstack.md)** | Toàn cảnh công nghệ Backend: Python 3.12, `uv` Monorepo, FastAPI, PostgreSQL + `pgvector`, Redis 7, PyMuPDF, E2B Sandbox, Langfuse. |
 | **[database-design.md](01-architecture/database-design.md)** | Thiết kế CSDL PostgreSQL + `pgvector`: Lược đồ quan hệ, bảng đồ thị `graph_nodes` & `graph_edges`, triggers OCC (`handle_occ_and_timestamp`), chỉ mục HNSW và Full-Text. |
 | **[api-specification.md](01-architecture/api-specification.md)** | Quy chuẩn giao tiếp API: RESTful AIP-136, Unbuffered SSE Streaming, phân trang server-side, chuẩn xử lý lỗi. |
 | **[ai-guardrails-and-rag.md](01-architecture/ai-guardrails-and-rag.md)** | Hàng rào an toàn AI: Hybrid RAG + GraphRAG, trích xuất tọa độ Bounding Box, đóng băng ngữ cảnh XML CDATA. |
@@ -71,9 +71,7 @@ flowchart TD
 ### 4. Phân Hệ 05: Chiến Lược Kiểm Thử & Đảm Bảo Chất Lượng ([`docs/05-testing-and-qa/`](05-testing-and-qa/README.md))
 | Tài liệu | Mô tả tóm tắt nội dung |
 | :--- | :--- |
-| **[testing-strategy.md](05-testing-and-qa/testing-strategy.md)** | Chiến lược kiểm thử đa tầng: Pytest backend, kiểm thử bảo mật (SQLi, XSS, Role Escalation, JWT Tampering), và Vitest client (`apps/web`). |
-| **[quality-gates-certification.md](05-testing-and-qa/quality-gates-certification.md)** | Báo cáo kiểm toán độc lập chính thức chứng nhận Quality Gate Pass. |
-| **[api-eval-snapshots.md](05-testing-and-qa/api-eval-snapshots.md)** | Bộ ảnh chụp kiểm thử AI và đánh giá API ngoại tuyến (Offline Snapshot & Evaluation Datasets). |
+| **[testing-strategy.md](05-testing-and-qa/testing-strategy.md)** | Khung kiểm thử sạch cho MVP: Pytest (`ENVIRONMENT=test`, PostgreSQL + `pgvector`), Vitest + `jsdom` (`apps/web`), và cổng chất lượng CI. |
 
 ---
 *Bản quyền © 2026 VeriScholar Platform. Mọi quyền được bảo lưu.*
