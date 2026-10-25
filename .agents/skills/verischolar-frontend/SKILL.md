@@ -72,14 +72,17 @@ Tài liệu này là cẩm nang bắt buộc khi phát triển giao diện ngư�
 
 ---
 
-## 5. Quy Chuẩn Ngôn Từ Giao Diện (Product-Grade Minimalist Copy)
-* **Tuyệt đối cấm "khoe công nghệ kỹ thuật" (Engineering-centered UI):** Người dùng không quan tâm đến tên chuẩn kỹ thuật (ISO 32000-1, RFC), thuật toán mã hóa (AES-256-GCM, HMAC), hoặc cơ chế nội bộ (RAM Zero-Retention, Token TTL, UUID, Trace ID). Bảo mật là điều đương nhiên sản phẩm phải đảm bảo.
-* **Nguyên tắc copywriting chuẩn các sản phẩm lớn (Apple, Stripe, Linear, Claude):**
-  * Gãy gọn, tối giản, tôn trọng sự tập trung của học giả.
-  * Mỗi câu chú thích không quá 10–12 từ, tập trung vào lợi ích (benefit-driven) thay vì kể công năng kỹ thuật (feature-bragging).
-  * **Bảng chuyển đổi chuẩn mực:**
-    * ❌ `Học giả đã xác thực (ISO 32000-1 / DOI Ready)` $\rightarrow$ ✅ `Đã xác thực` (icon tích xanh nhỏ).
-    * ❌ `Két sắt Khóa AI Cá nhân (BYOK AES-256-GCM Vault)` $\rightarrow$ ✅ `Khóa API cá nhân`.
-    * ❌ `Nguyên tắc Zero-Retention: Khóa chỉ lưu trữ dạng mã hóa và giải mã tạm thời trên RAM.` $\rightarrow$ ✅ `Khóa của bạn được mã hóa và chỉ dùng khi gửi yêu cầu.`
-    * ❌ `Phiên làm việc hiện tại (Active Session) • Thời hạn 30 ngày (Remember Me token)` $\rightarrow$ ✅ `Thiết bị này • Đang hoạt động`.
-    * ❌ Banner `Quản lý Khóa AI cá nhân (BYOK AES-256-GCM)...` $\rightarrow$ ✅ Loại bỏ hoàn toàn.
+## 5. Quy Chuẩn Ngôn Từ & Bố Cục Tối Giản 80/20 (Product-Grade Radical Minimalism)
+* **Tuyệt đối cấm "khoe công nghệ kỹ thuật" & văn mẫu:** Người dùng không quan tâm đến tên chuẩn kỹ thuật (ISO 32000-1, RFC), thuật toán mã hóa (AES-256-GCM, HMAC), mã màu kỹ thuật (`#hex`), hay cơ chế nội bộ (RAM Zero-Retention, Token TTL, UUID, Trace ID). Bảo mật và trích dẫn chuẩn xác là điều đương nhiên sản phẩm phải đảm bảo.
+* **Nguyên tắc 80/20 - Ít chữ nhất có thể:**
+  * Tiêu đề trang gãy gọn (Ví dụ: `Cài đặt`, không slogan hay subtitle).
+  * Loại bỏ hoàn toàn danh xưng thừa ("Nhà nghiên cứu Khoa học", "Nhà Nghiên Cứu", v.v.).
+  * Huy hiệu cồng kềnh $\rightarrow$ Icon tích xanh nhỏ gọn (`CheckCircle2`) nằm ngay bên cạnh họ và tên người dùng.
+  * Tùy chọn giao diện $\rightarrow$ 3 nút sạch (`☀️ Sáng`, `🌙 Tối`, `💻 Tự động`), tuyệt đối không show mã màu (`#181715`) hay câu thuyết minh dài dòng.
+  * Icon thay thế chữ một cách tinh tế: Khi icon đủ nghĩa (có tooltip/accessible label), ưu tiên icon để giữ không gian tĩnh lặng, không lạm dụng làm thô giao diện.
+* **Bảng chuyển đổi chuẩn mực:**
+  * ❌ `Học giả đã xác thực (ISO 32000-1 / DOI Ready)` / `<span ...>Đã xác thực</span>` $\rightarrow$ ✅ `<CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 inline-block" title="Đã xác thực" />` cạnh tên.
+  * ❌ `Két sắt Khóa AI Cá nhân (BYOK AES-256-GCM Vault)` $\rightarrow$ ✅ `Khóa API cá nhân`.
+  * ❌ `Chế độ Hiển thị & Bảng màu Học thuật` / `Obsidian đen ấm (#181715)` $\rightarrow$ ✅ `Tùy chọn giao diện` / 3 nút `☀️ Sáng`, `🌙 Tối`, `💻 Tự động`.
+  * ❌ `Quy trình Zero-Retention Cascade Purge` $\rightarrow$ ✅ `Xóa tài liệu và dữ liệu liên quan`.
+  * ❌ `Phiên làm việc hiện tại (Active Session) • Thời hạn 30 ngày (Remember Me token)` $\rightarrow$ ✅ `Thiết bị này • Đang hoạt động`.

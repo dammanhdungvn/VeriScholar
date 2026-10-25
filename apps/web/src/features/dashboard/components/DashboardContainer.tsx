@@ -272,7 +272,7 @@ export function DashboardContainer() {
         {/* Expired / Archived Session Re-activation Alert Banner */}
         {activeSession?.is_archived && (
           <div className="h-9 px-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400 shrink-0 select-none">
-            <span>Phiên nghiên cứu này đã hết hạn lưu trữ theo chính sách Zero-Retention (30 ngày).</span>
+            <span>Phiên nghiên cứu này đã hết hạn lưu trữ (30 ngày).</span>
             <button
               type="button"
               onClick={() => setIsRestoreOpen(true)}

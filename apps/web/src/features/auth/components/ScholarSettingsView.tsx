@@ -365,21 +365,11 @@ export function ScholarSettingsView({
       )}
       onClick={(e) => e.stopPropagation()}
     >
-      {/* 1. Header Bar: Editorial Aesthetic */}
-      <div className="h-16 px-6 border-b border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between shrink-0 bg-[#f4efe6]/80 dark:bg-[#201e1b]/80 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#cc785c]/15 text-[#cc785c] border border-[#cc785c]/30 flex items-center justify-center shadow-inner">
-            <User className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-serif font-bold text-base sm:text-lg text-[#1a1918] dark:text-[#f4f1ea] tracking-tight">
-              Cài đặt tài khoản
-            </h1>
-            <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] font-sans">
-              Thông tin cá nhân &amp; Khóa AI
-            </p>
-          </div>
-        </div>
+      {/* 1. Header Bar: Minimalist */}
+      <div className="h-14 px-6 border-b border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between shrink-0 bg-[#f4efe6]/80 dark:bg-[#201e1b]/80 backdrop-blur-md">
+        <h1 className="font-serif font-bold text-base text-[#1a1918] dark:text-[#f4f1ea] tracking-tight">
+          Cài đặt
+        </h1>
         {onClose && (
           <button
             type="button"
@@ -393,53 +383,48 @@ export function ScholarSettingsView({
       </div>
 
       {/* 2. Scholar Identity Card Showcase */}
-      <div className="px-6 py-5 bg-gradient-to-b from-[#f4efe6] to-[#faf8f5] dark:from-[#201e1b] dark:to-[#181715] border-b border-[#e7e2da] dark:border-[#2e2b26]">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="relative group shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-[#cc785c]/40 shadow-lg flex items-center justify-center bg-[#e7e2da] dark:bg-[#282521]">
-                {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={fullName || "Scholar avatar"}
-                    className="w-full h-full object-cover"
-                    referrerPolicy="no-referrer"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center font-serif font-bold text-xl text-[#f4efe6] bg-gradient-to-br from-[#8a422d] via-[#ad593f] to-[#cc785c]">
-                    {initials}
-                  </div>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowAvatarEdit(!showAvatarEdit)}
-                title="Đổi URL ảnh đại diện"
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] text-[#706a60] dark:text-[#a09a8e] hover:text-[#cc785c] flex items-center justify-center shadow-md cursor-pointer transition-colors"
-              >
-                <Camera className="w-3 h-3" />
-              </button>
+      <div className="px-6 py-4 bg-gradient-to-b from-[#f4efe6] to-[#faf8f5] dark:from-[#201e1b] dark:to-[#181715] border-b border-[#e7e2da] dark:border-[#2e2b26]">
+        <div className="flex items-center gap-4">
+          <div className="relative group shrink-0">
+            <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-[#cc785c]/40 shadow-sm flex items-center justify-center bg-[#e7e2da] dark:bg-[#282521]">
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt={fullName || "Scholar avatar"}
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center font-serif font-bold text-lg text-[#f4efe6] bg-gradient-to-br from-[#8a422d] via-[#ad593f] to-[#cc785c]">
+                  {initials}
+                </div>
+              )}
             </div>
+            <button
+              type="button"
+              onClick={() => setShowAvatarEdit(!showAvatarEdit)}
+              title="Đổi URL ảnh đại diện"
+              className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] text-[#706a60] dark:text-[#a09a8e] hover:text-[#cc785c] flex items-center justify-center shadow-xs cursor-pointer transition-colors"
+            >
+              <Camera className="w-2.5 h-2.5" />
+            </button>
+          </div>
 
-            <div className="space-y-1">
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="font-serif font-bold text-lg text-[#1a1918] dark:text-[#f4f1ea] leading-tight">
-                  {fullName || effectiveUser?.full_name || "Nhà Nghiên Cứu"}
+          <div className="space-y-0.5 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="font-serif font-bold text-base text-[#1a1918] dark:text-[#f4f1ea] leading-tight truncate">
+                {fullName || effectiveUser?.full_name || effectiveUser?.email?.split("@")[0] || "Học giả"}
+              </span>
+              <span title="Đã xác thực" className="inline-flex items-center">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-label="Đã xác thực" />
+              </span>
+              {academicRank && (
+                <span className="text-3xs px-2 py-0.5 rounded-full bg-[#cc785c]/15 text-[#cc785c] font-medium border border-[#cc785c]/25 font-sans">
+                  {academicRank}
                 </span>
-                {academicRank && (
-                  <span className="text-3xs px-2 py-0.5 rounded-full bg-[#cc785c]/15 text-[#cc785c] font-medium border border-[#cc785c]/25 font-sans">
-                    {academicRank}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-[#706a60] dark:text-[#a09a8e] font-mono">{effectiveUser?.email}</p>
-              <div className="flex items-center gap-2 pt-0.5">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-sans">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  Đã xác thực
-                </span>
-              </div>
+              )}
             </div>
+            <p className="text-xs text-[#706a60] dark:text-[#a09a8e] font-mono truncate">{effectiveUser?.email}</p>
           </div>
         </div>
 
@@ -667,23 +652,13 @@ export function ScholarSettingsView({
           <div className="space-y-6">
             {/* Part 1: Khóa API cá nhân */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
-                    <KeyRound className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
-                      Khóa API cá nhân
-                    </h3>
-                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
-                      Sử dụng khóa riêng để kết nối trực tiếp với các mô hình AI
-                    </p>
-                  </div>
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
+                  <KeyRound className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-3xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
-                  Được bảo vệ
-                </span>
+                <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
+                  Khóa API cá nhân
+                </h3>
               </div>
 
               {byokSuccess && (
@@ -774,10 +749,7 @@ export function ScholarSettingsView({
                       {showApiKeyText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
-                  <div className="flex items-center justify-between pt-1">
-                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
-                      Khóa của bạn được mã hóa an toàn và chỉ dùng khi gửi yêu cầu AI.
-                    </p>
+                  <div className="flex items-center justify-end pt-1">
                     <Button
                       type="submit"
                       disabled={isSavingByok}
@@ -800,13 +772,10 @@ export function ScholarSettingsView({
             {/* Part 2: Mật khẩu dự phòng */}
             <form onSubmit={handleChangePassword} className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-4">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
-                  <Shield className="w-4 h-4" />
+                <div className="w-7 h-7 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
+                  <Shield className="w-3.5 h-3.5" />
                 </div>
-                <div>
-                  <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">Thiết lập Mật khẩu dự phòng</h3>
-                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Dùng để đăng nhập trực tiếp khi không sử dụng Google OAuth</p>
-                </div>
+                <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">Thiết lập Mật khẩu dự phòng</h3>
               </div>
 
               {passwordSuccessMsg && (
@@ -904,15 +873,12 @@ export function ScholarSettingsView({
               </div>
             </form>
 
-            {/* Part 3: Phiên làm việc (Active Sessions) */}
+            {/* Part 3: Thiết bị này */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Laptop className="w-4 h-4 text-[#706a60] dark:text-[#a09a8e]" />
-                  <div>
-                    <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Thiết bị này</h3>
-                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Trình duyệt web hiện tại</p>
-                  </div>
+                  <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Thiết bị này</h3>
                 </div>
                 <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
                   • Đang hoạt động
@@ -934,15 +900,12 @@ export function ScholarSettingsView({
               </div>
             </div>
 
-            {/* Part 4: Tài khoản liên kết (Connected Accounts) */}
+            {/* Part 4: Tài khoản liên kết */}
             <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <Globe className="w-4 h-4 text-[#706a60] dark:text-[#a09a8e]" />
-                  <div>
-                    <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Tài khoản liên kết</h3>
-                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Đăng nhập nhanh qua dịch vụ liên kết</p>
-                  </div>
+                  <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Tài khoản liên kết</h3>
                 </div>
               </div>
               <div className="p-3.5 rounded-xl bg-[#fbf9f6] dark:bg-[#181715] border border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between">
@@ -968,17 +931,12 @@ export function ScholarSettingsView({
           </div>
         )}
 
-        {/* ================= TAB 3: GIAO DIỆN & THẨM MỸ ================= */}
+        {/* ================= TAB 3: GIAO DIỆN ================= */}
         {activeTab === "appearance" && (
-          <div className="space-y-6">
-            <div className="space-y-1">
-              <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
-                Chế độ Hiển thị &amp; Bảng màu Học thuật
-              </h3>
-              <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
-                Chọn bảng màu phù hợp với môi trường nghiên cứu và giảm mệt mỏi thị giác
-              </p>
-            </div>
+          <div className="space-y-4">
+            <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
+              Tùy chọn giao diện
+            </h3>
 
             {themeSuccessMsg && (
               <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
@@ -987,30 +945,25 @@ export function ScholarSettingsView({
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               {/* Option 1: Light */}
               <button
                 type="button"
                 onClick={() => handleThemeChange("light")}
                 className={cn(
-                  "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
+                  "p-4 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer",
                   themePreference === "light"
-                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
+                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-xs"
                     : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
-                    <Sun className="w-4 h-4" />
-                  </div>
-                  {themePreference === "light" && (
-                    <CheckCircle2 className="w-4 h-4 text-[#cc785c]" />
-                  )}
+                <div className="flex items-center gap-2.5">
+                  <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">☀️ Sáng</span>
                 </div>
-                <div>
-                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">☀️ Sáng</p>
-                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Giấy ngà ấm (Scholarly Parchment)</p>
-                </div>
+                {themePreference === "light" && (
+                  <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />
+                )}
               </button>
 
               {/* Option 2: Dark */}
@@ -1018,24 +971,19 @@ export function ScholarSettingsView({
                 type="button"
                 onClick={() => handleThemeChange("dark")}
                 className={cn(
-                  "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
+                  "p-4 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer",
                   themePreference === "dark"
-                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
+                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-xs"
                     : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-                    <Moon className="w-4 h-4" />
-                  </div>
-                  {themePreference === "dark" && (
-                    <CheckCircle2 className="w-4 h-4 text-[#cc785c]" />
-                  )}
+                <div className="flex items-center gap-2.5">
+                  <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">🌙 Tối</span>
                 </div>
-                <div>
-                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">🌙 Tối</p>
-                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Obsidian đen ấm (#181715)</p>
-                </div>
+                {themePreference === "dark" && (
+                  <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />
+                )}
               </button>
 
               {/* Option 3: System */}
@@ -1043,24 +991,19 @@ export function ScholarSettingsView({
                 type="button"
                 onClick={() => handleThemeChange("system")}
                 className={cn(
-                  "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
+                  "p-4 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer",
                   themePreference === "system"
-                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
+                    ? "border-[#cc785c] bg-[#cc785c]/10 shadow-xs"
                     : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
-                    <Monitor className="w-4 h-4" />
-                  </div>
-                  {themePreference === "system" && (
-                    <CheckCircle2 className="w-4 h-4 text-[#cc785c]" />
-                  )}
+                <div className="flex items-center gap-2.5">
+                  <Monitor className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">💻 Tự động</span>
                 </div>
-                <div>
-                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">💻 Tự động</p>
-                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Theo thiết lập hệ điều hành</p>
-                </div>
+                {themePreference === "system" && (
+                  <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />
+                )}
               </button>
             </div>
           </div>

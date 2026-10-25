@@ -73,7 +73,7 @@ export function RestoreArchivedModal({
 
         <form onSubmit={handleRestoreSubmit} className="p-5 space-y-4">
           <p className="text-muted leading-relaxed">
-            Phiên nghiên cứu ({sessionId.slice(0, 8)}...) này đã quá hạn lưu trữ 30 ngày (Zero-Retention Policy). Vui lòng tải lại tệp PDF gốc của bài báo để hệ thống tự động bóc tách và khôi phục toàn vẹn phiên.
+            Phiên nghiên cứu ({sessionId.slice(0, 8)}...) này đã quá hạn lưu trữ 30 ngày. Vui lòng tải lại tệp PDF gốc để khôi phục phiên làm việc.
           </p>
 
           <label className="border-2 border-dashed border-hairline dark:border-[#332f29] hover:border-primary rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer transition-colors bg-surface-soft/40 dark:bg-[#1f1d1a]">

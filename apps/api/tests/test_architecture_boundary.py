@@ -406,3 +406,45 @@ def test_mermaid_diagrams_are_human_centric_paper_grade():
     assert not violations, (
         "Mermaid diagrams violated human-centric paper-grade standards:\n" + "\n".join(violations)
     )
+
+
+def test_no_engineering_brag_or_forbidden_copy_in_frontend():
+    """Enforces ERR-05 & AGENTS.md Rule 6: Absolute prohibition of engineering brag,
+
+    internal technical jargon (AES-256, ISO 32000-1, Zero-Retention), or bulky title badges
+    in user-facing frontend code (apps/web/src).
+    """
+    web_src = ROOT_DIR / "apps" / "web" / "src"
+    if not web_src.exists():
+        return
+
+    banned_ui_terms = (
+        "ISO 32000-1",
+        "AES-256",
+        "Zero-Retention",
+        "Zero Data Retention",
+        "Học giả đã xác thực",
+        "Nhà Nghiên Cứu",
+        "Nhà nghiên cứu Khoa học",
+    )
+
+    violations: list[str] = []
+    for code_file in web_src.rglob("*"):
+        if code_file.suffix not in (".tsx", ".ts"):
+            continue
+        # Skip node_modules or dist if any
+        if any(part in code_file.parts for part in ("node_modules", "dist", ".cache")):
+            continue
+
+        text = code_file.read_text(encoding="utf-8")
+        for term in banned_ui_terms:
+            if term in text:
+                rel_path = code_file.relative_to(ROOT_DIR)
+                violations.append(
+                    f"{rel_path}: contains banned engineering-brag/verbose copy '{term}'"
+                )
+
+    assert not violations, (
+        "Forbidden engineering-centric or verbose UI copy detected in apps/web/src:\n"
+        + "\n".join(violations)
+    )

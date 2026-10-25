@@ -149,7 +149,7 @@ export const documentsApi = {
 
   /**
    * 7. DELETE /api/v1/documents/{id}
-   * Xóa bài báo theo đồ thị phụ thuộc (Zero-Retention Cascade Purge)
+   * Xóa bài báo theo đồ thị phụ thuộc (Cascade Purge)
    */
   async deleteDocument(documentId: string): Promise<void> {
     return apiClient<void>(`/documents/${documentId}`, {
