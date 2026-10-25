@@ -7,12 +7,10 @@ import {
   FileCode,
   Bold,
   Italic,
-  Code as CodeIcon,
   Table as TableIcon,
   List as ListIcon,
   ListOrdered,
   Heading,
-  Eye,
   BookMarked,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
@@ -20,16 +18,12 @@ import { buildSelectionContextBuffer } from "../lib/contextBuffer";
 import { cn } from "@/lib/utils";
 
 interface WritingEditorPaneProps {
-  onSelectionVerify?: (selectedText: string) => void;
   onSelectionAddToChat?: (contextBuffer: string) => void;
-  onSelectionAddComment?: (selection: { start: number; end: number; text: string }) => void;
   scrollToLine?: number | null;
 }
 
 export function WritingEditorPane({
-  onSelectionVerify,
   onSelectionAddToChat,
-  onSelectionAddComment,
   scrollToLine,
 }: WritingEditorPaneProps) {
   const {
@@ -37,14 +31,12 @@ export function WritingEditorPane({
     setEditorContent,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
-    setCommentsPaneOpen,
   } = useWritingStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
-  const [viewMode, setViewMode] = useState<"code" | "visual">("code");
   const [activeTab, setActiveTab] = useState<"main.tex" | "sample.bib">("main.tex");
 
   const lineCount = useMemo(() => {
@@ -53,7 +45,7 @@ export function WritingEditorPane({
 
   // Jump to specific line when requested by Outline click
   useEffect(() => {
-    if (scrollToLine && textareaRef.current && viewMode === "code") {
+    if (scrollToLine && textareaRef.current) {
       const lines = editorContent.split("\n");
       let charIndex = 0;
       for (let i = 0; i < Math.min(scrollToLine - 1, lines.length); i++) {
@@ -67,7 +59,7 @@ export function WritingEditorPane({
       const lineHeightPx = 20;
       textareaRef.current.scrollTop = Math.max(0, (scrollToLine - 4) * lineHeightPx);
     }
-  }, [scrollToLine, editorContent, viewMode]);
+  }, [scrollToLine, editorContent]);
 
   // Handle Tab key in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -147,23 +139,11 @@ export function WritingEditorPane({
     onSelectionAddToChat(contextBuffer);
   };
 
-  const handleAddCommentClick = () => {
-    let start = selectionRange?.start ?? -1;
-    let end = selectionRange?.end ?? -1;
-    if (start === -1 || start === end) {
-      start = editorContent.indexOf(selectedText);
-      end = start !== -1 ? start + selectedText.length : 0;
-    }
-    setStoreSelectionRange({ start, end });
-    setCommentsPaneOpen(true);
-    onSelectionAddComment?.({ start, end, text: selectedText });
-  };
-
   const errors = lastCompileResult?.errors || [];
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#ffffff] dark:bg-[#1a1917] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
-      {/* 1. File Tabs Strip & [Code | Visual] View Switcher */}
+      {/* 1. File Tabs Strip & Copy */}
       <div className="h-9 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
         {/* Tabs: main.tex / sample.bib */}
         <div className="flex items-center gap-1">
@@ -199,40 +179,8 @@ export function WritingEditorPane({
           </button>
         </div>
 
-        {/* Right side: [Code | Visual] View Switcher & Copy */}
+        {/* Right side: Copy */}
         <div className="flex items-center gap-2">
-          {/* Code / Visual View Mode Switcher */}
-          <div className="flex items-center bg-[#eae5db] dark:bg-[#282622] p-0.5 rounded-lg border border-[#ded8cc] dark:border-[#33302a] text-[11px] font-sans">
-            <button
-              type="button"
-              data-testid="editor-view-code"
-              onClick={() => setViewMode("code")}
-              className={cn(
-                "px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer",
-                viewMode === "code"
-                  ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold shadow-2xs"
-                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-              )}
-            >
-              <CodeIcon className="w-3 h-3" />
-              <span>Code</span>
-            </button>
-            <button
-              type="button"
-              data-testid="editor-view-visual"
-              onClick={() => setViewMode("visual")}
-              className={cn(
-                "px-2 py-0.5 rounded-md flex items-center gap-1 transition-colors cursor-pointer",
-                viewMode === "visual"
-                  ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold shadow-2xs"
-                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-              )}
-            >
-              <Eye className="w-3 h-3" />
-              <span>Visual</span>
-            </button>
-          </div>
-
           <button
             type="button"
             onClick={handleCopy}
@@ -339,15 +287,6 @@ export function WritingEditorPane({
         {selectedText && (
           <div className="flex items-center gap-1 bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 rounded text-[11px] animate-in fade-in shrink-0">
             <span>Đã chọn {selectedText.length} ký tự</span>
-            {onSelectionVerify && (
-              <button
-                type="button"
-                onClick={() => onSelectionVerify(selectedText)}
-                className="font-medium hover:underline ml-1 cursor-pointer"
-              >
-                [Kiểm chứng]
-              </button>
-            )}
             {onSelectionAddToChat && (
               <button
                 type="button"
@@ -357,71 +296,46 @@ export function WritingEditorPane({
                 [Thêm vào Chat]
               </button>
             )}
-            <button
-              type="button"
-              data-testid="editor-add-comment-btn"
-              onClick={handleAddCommentClick}
-              className="font-medium hover:underline ml-1 cursor-pointer text-coral-700 dark:text-coral-300"
-            >
-              [💬 Nhận xét]
-            </button>
           </div>
         )}
       </div>
 
-      {/* 3. Editor Body: Code View or Visual View */}
-      {viewMode === "code" ? (
-        <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
-          {/* Line numbers gutter */}
-          <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
-            {Array.from({ length: lineCount }).map((_, i) => {
-              const lineNum = i + 1;
-              const hasError = errors.some((e) => e.line === lineNum);
-              return (
-                <div
-                  key={lineNum}
-                  className={cn(
-                    "h-5",
-                    hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
-                  )}
-                >
-                  {lineNum}
-                </div>
-              );
-            })}
-          </div>
+      {/* 3. Editor Body: Code View */}
+      <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
+        {/* Line numbers gutter */}
+        <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
+          {Array.from({ length: lineCount }).map((_, i) => {
+            const lineNum = i + 1;
+            const hasError = errors.some((e) => e.line === lineNum);
+            return (
+              <div
+                key={lineNum}
+                className={cn(
+                  "h-5",
+                  hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
+                )}
+              >
+                {lineNum}
+              </div>
+            );
+          })}
+        </div>
 
-          {/* Textarea */}
-          <textarea
-            ref={textareaRef}
-            data-testid="writing-editor-textarea"
-            aria-label="Soạn thảo mã nguồn LaTeX"
-            value={editorContent}
-            onChange={(e) => setEditorContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onKeyUp={handleSelect}
-            onClick={handleSelect}
-            onSelect={handleSelect}
-            spellCheck={false}
-            className="flex-1 p-3 bg-transparent text-ink dark:text-zinc-200 outline-none resize-none leading-5 overflow-auto font-mono text-xs selection:bg-coral-500/20"
-          />
-        </div>
-      ) : (
-        /* Visual Mode: Formatted Render View */
-        <div className="flex-1 p-6 overflow-y-auto bg-white dark:bg-[#1c1b18] text-ink dark:text-zinc-100 font-serif leading-relaxed text-sm">
-          <div className="max-w-2xl mx-auto space-y-4">
-            <div className="border-b border-[#e5dfd4] dark:border-[#2e2b26] pb-3 mb-4">
-              <span className="text-2xs font-mono font-semibold uppercase tracking-wider text-coral-600 dark:text-coral-400">
-                Chế độ Visual Preview
-              </span>
-              <h2 className="text-lg font-bold mt-1">Bản xem trước nội dung trực quan</h2>
-            </div>
-            <div className="whitespace-pre-wrap font-sans text-xs sm:text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">
-              {editorContent}
-            </div>
-          </div>
-        </div>
-      )}
+        {/* Textarea */}
+        <textarea
+          ref={textareaRef}
+          data-testid="writing-editor-textarea"
+          aria-label="Soạn thảo mã nguồn LaTeX"
+          value={editorContent}
+          onChange={(e) => setEditorContent(e.target.value)}
+          onKeyDown={handleKeyDown}
+          onKeyUp={handleSelect}
+          onClick={handleSelect}
+          onSelect={handleSelect}
+          spellCheck={false}
+          className="flex-1 p-3 bg-transparent text-ink dark:text-zinc-200 outline-none resize-none leading-5 overflow-auto font-mono text-xs selection:bg-coral-500/20"
+        />
+      </div>
 
       {/* Compile Diagnostics / Errors Panel */}
       {errors.length > 0 && (

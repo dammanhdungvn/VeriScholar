@@ -24,7 +24,7 @@ describe("WritingSidebar", () => {
 
     // Toolbar buttons
     expect(screen.getByTestId("sidebar-new-file-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("sidebar-new-folder-btn")).toBeInTheDocument();
+    expect(screen.queryByTestId("sidebar-new-folder-btn")).not.toBeInTheDocument();
     const uploadBtn = screen.getByTestId("sidebar-upload-btn");
     expect(uploadBtn).toBeInTheDocument();
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Save,
@@ -14,17 +14,9 @@ import {
   AlertCircle,
   Loader2,
   FolderArchive,
-  Share2,
-  MessageSquare,
-  ExternalLink,
   ChevronDown,
   Wrench,
   Sparkles,
-  Bold,
-  Italic,
-  Code,
-  Heading,
-  Clock,
   PanelLeft,
   FileText,
 } from "lucide-react";
@@ -36,24 +28,14 @@ interface WritingHeaderBarProps {
   onSave?: () => Promise<void>;
   onCompile?: () => Promise<void>;
   onExportBundle?: () => Promise<void>;
-  onSyncOverleaf?: () => Promise<void>;
-  isSyncingOverleaf?: boolean;
   onOpenAssets?: () => void;
-  onOpenShare?: () => void;
-  onToggleComments?: () => void;
-  onInsertLatexSnippet?: (snippet: string) => void;
 }
 
 export function WritingHeaderBar({
   onSave,
   onCompile,
   onExportBundle,
-  onSyncOverleaf,
-  isSyncingOverleaf = false,
   onOpenAssets,
-  onOpenShare,
-  onToggleComments,
-  onInsertLatexSnippet,
 }: WritingHeaderBarProps) {
   const {
     draft,
@@ -65,29 +47,18 @@ export function WritingHeaderBar({
     isSaving,
     isCompiling,
     openAssetModal,
-    openShareModal,
-    comments,
-    isCommentsPaneOpen,
-    setCommentsPaneOpen,
     mobileActiveTab,
     setMobileActiveTab,
     isFileTreeOpen,
     toggleFileTree,
   } = useWritingStore();
 
-  const unresolvedCount = comments.filter((c) => !c.parent_id && !c.is_resolved).length;
-
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isLayoutOpen, setIsLayoutOpen] = useState(false);
   const [isToolsOpen, setIsToolsOpen] = useState(false);
-  const [isSecondaryRibbonOpen, setIsSecondaryRibbonOpen] = useState(false);
-  const [remainingSeconds, setRemainingSeconds] = useState(5);
 
   const layoutRef = useRef<HTMLDivElement | null>(null);
   const toolsRef = useRef<HTMLDivElement | null>(null);
-  const ribbonRef = useRef<HTMLDivElement | null>(null);
-  const autoHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Close dropdowns on click outside
   useEffect(() => {
@@ -103,42 +74,6 @@ export function WritingHeaderBar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 5s Auto-hide logic for secondary toolbar ribbon
-  const resetAutoHideTimer = useCallback(() => {
-    if (autoHideTimerRef.current) {
-      clearTimeout(autoHideTimerRef.current);
-    }
-    if (countdownIntervalRef.current) {
-      clearInterval(countdownIntervalRef.current);
-    }
-
-    setRemainingSeconds(5);
-
-    countdownIntervalRef.current = setInterval(() => {
-      setRemainingSeconds((prev) => (prev > 1 ? prev - 1 : 1));
-    }, 1000);
-
-    autoHideTimerRef.current = setTimeout(() => {
-      setIsSecondaryRibbonOpen(false);
-      if (countdownIntervalRef.current) {
-        clearInterval(countdownIntervalRef.current);
-      }
-    }, 5000);
-  }, []);
-
-  useEffect(() => {
-    if (isSecondaryRibbonOpen) {
-      resetAutoHideTimer();
-    } else {
-      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    }
-    return () => {
-      if (autoHideTimerRef.current) clearTimeout(autoHideTimerRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-    };
-  }, [isSecondaryRibbonOpen, resetAutoHideTimer]);
-
   const modeButtons: { mode: WorkspaceMode; label: string; icon: typeof Columns3 }[] = [
     { mode: "tri-pane", label: "3-Pane", icon: Columns3 },
     { mode: "dual-code", label: "Code & PDF", icon: SplitSquareVertical },
@@ -153,13 +88,6 @@ export function WritingHeaderBar({
   const handleSelectMode = (mode: WorkspaceMode) => {
     setWorkspaceMode(mode);
     setIsLayoutOpen(false);
-  };
-
-  const handleSnippetClick = (snippet: string) => {
-    resetAutoHideTimer();
-    if (onInsertLatexSnippet) {
-      onInsertLatexSnippet(snippet);
-    }
   };
 
   return (
@@ -330,11 +258,6 @@ export function WritingHeaderBar({
             >
               <Wrench className="w-3.5 h-3.5 text-[#c15f3e]" />
               <span className="hidden sm:inline">Tools</span>
-              {unresolvedCount > 0 && (
-                <span className="px-1.5 py-0.2 bg-[#c15f3e] text-white rounded-full text-[10px] font-bold font-mono">
-                  {unresolvedCount}
-                </span>
-              )}
               <ChevronDown className="w-3 h-3 text-muted dark:text-zinc-400" />
             </button>
 
@@ -344,7 +267,7 @@ export function WritingHeaderBar({
                 className="absolute right-0 top-10 w-56 bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#33302b] rounded-xl shadow-xl z-50 p-1.5 text-xs space-y-1 animate-in fade-in zoom-in-95 duration-100"
               >
                 <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted dark:text-zinc-400 uppercase tracking-wider">
-                  Collaboration
+                  Assets & Export
                 </div>
 
                 {/* Assets button */}
@@ -363,53 +286,6 @@ export function WritingHeaderBar({
                   <span>Assets</span>
                 </button>
 
-                {/* Share button */}
-                <button
-                  type="button"
-                  data-testid="header-share-btn"
-                  onClick={() => {
-                    setIsToolsOpen(false);
-                    if (onOpenShare) onOpenShare();
-                    else openShareModal();
-                  }}
-                  className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
-                  title="Share"
-                >
-                  <Share2 className="w-3.5 h-3.5 text-[#c15f3e]" />
-                  <span>Share</span>
-                </button>
-
-                {/* Comments button */}
-                <button
-                  type="button"
-                  data-testid="header-comments-btn"
-                  onClick={() => {
-                    setIsToolsOpen(false);
-                    if (onToggleComments) onToggleComments();
-                    else setCommentsPaneOpen(!isCommentsPaneOpen);
-                  }}
-                  className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center justify-between hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
-                  title="Comments"
-                >
-                  <div className="flex items-center gap-2">
-                    <MessageSquare className="w-3.5 h-3.5 text-[#c15f3e]" />
-                    <span>Comments</span>
-                  </div>
-                  {unresolvedCount > 0 && (
-                    <span
-                      data-testid="unresolved-comments-badge"
-                      className="px-1.5 py-0.2 bg-[#c15f3e] text-white rounded-full text-[10px] font-bold font-mono"
-                    >
-                      {unresolvedCount}
-                    </span>
-                  )}
-                </button>
-
-                <div className="border-t border-[#ece8df] dark:border-[#2e2b26] my-1" />
-                <div className="px-2 py-1 text-[10px] font-mono font-semibold text-muted dark:text-zinc-400 uppercase tracking-wider">
-                  Publish & Export
-                </div>
-
                 {/* Export submission bundle (.zip) */}
                 <button
                   type="button"
@@ -424,45 +300,9 @@ export function WritingHeaderBar({
                   <Download className="w-3.5 h-3.5 text-[#c15f3e]" />
                   <span>Export ZIP</span>
                 </button>
-
-                {/* Sync Overleaf button */}
-                <button
-                  type="button"
-                  data-testid="header-overleaf-btn"
-                  onClick={() => {
-                    setIsToolsOpen(false);
-                    if (onSyncOverleaf) onSyncOverleaf();
-                  }}
-                  disabled={isSyncingOverleaf}
-                  className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer disabled:opacity-50"
-                  title="Overleaf"
-                >
-                  {isSyncingOverleaf ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin text-[#c15f3e]" />
-                  ) : (
-                    <ExternalLink className="w-3.5 h-3.5 text-[#c15f3e]" />
-                  )}
-                  <span>Overleaf</span>
-                </button>
               </div>
             )}
           </div>
-
-          {/* Toggle Secondary Ribbon Button (hidden on mobile) */}
-          <button
-            type="button"
-            data-testid="toggle-secondary-toolbar-btn"
-            onClick={() => setIsSecondaryRibbonOpen(!isSecondaryRibbonOpen)}
-            className={cn(
-              "h-8 px-2 rounded-lg text-xs font-medium hidden sm:flex items-center gap-1 transition-colors cursor-pointer border",
-              isSecondaryRibbonOpen
-                ? "bg-stone-500/10 text-ink dark:text-zinc-100 border-[#c15f3e]"
-                : "bg-[#ece8df] dark:bg-[#262420] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#e4dfd4] dark:hover:bg-[#2d2a26]"
-            )}
-            title="Formatting tools"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-[#c15f3e]" />
-          </button>
 
           <div className="h-4 w-px bg-[#e2dcd2] dark:border-[#2e2b26] mx-0.5 sm:mx-1 hidden sm:block" />
 
@@ -551,67 +391,6 @@ export function WritingHeaderBar({
           </button>
         </div>
       </div>
-
-      {/* 2. Secondary Toolbar Ribbon (with 5-second Auto-Hide) */}
-      {isSecondaryRibbonOpen && (
-        <div
-          ref={ribbonRef}
-          data-testid="secondary-toolbar-ribbon"
-          onMouseMove={resetAutoHideTimer}
-          onClick={resetAutoHideTimer}
-          className="h-10 px-4 bg-[#f4eee5] dark:bg-[#181715] border-t border-[#e8e4dc] dark:border-[#2a2824] flex items-center justify-between gap-3 text-xs animate-in slide-in-from-top-1 duration-150"
-        >
-          {/* Quick LaTeX Formatting Chips */}
-          <div className="flex items-center gap-1.5 overflow-x-auto">
-            <span className="text-[11px] font-mono font-medium text-muted dark:text-zinc-400 mr-1 hidden sm:inline">
-              Format:
-            </span>
-            <button
-              type="button"
-              onClick={() => handleSnippetClick("\\textbf{bold text}")}
-              className="px-2 py-1 rounded bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#302d28] hover:border-[#c15f3e] text-ink dark:text-zinc-200 flex items-center gap-1 text-[11px] font-mono cursor-pointer"
-              title="Bold \textbf{...}"
-            >
-              <Bold className="w-3 h-3" />
-              <span>Bold</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSnippetClick("\\textit{italic text}")}
-              className="px-2 py-1 rounded bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#302d28] hover:border-[#c15f3e] text-ink dark:text-zinc-200 flex items-center gap-1 text-[11px] font-mono cursor-pointer"
-              title="Italic \textit{...}"
-            >
-              <Italic className="w-3 h-3" />
-              <span>Italic</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSnippetClick("$E = mc^2$")}
-              className="px-2 py-1 rounded bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#302d28] hover:border-[#c15f3e] text-ink dark:text-zinc-200 flex items-center gap-1 text-[11px] font-mono cursor-pointer"
-              title="Math formula $...$"
-            >
-              <Code className="w-3 h-3" />
-              <span>Math $...$</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleSnippetClick("\\section{Section Title}")}
-              className="px-2 py-1 rounded bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#302d28] hover:border-[#c15f3e] text-ink dark:text-zinc-200 flex items-center gap-1 text-[11px] font-mono cursor-pointer"
-              title="Section \section{...}"
-            >
-              <Heading className="w-3 h-3" />
-              <span>Section</span>
-            </button>
-          </div>
-
-          {/* 5-second Auto-hide Indicator Badge */}
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted dark:text-zinc-400 shrink-0">
-            <Clock className="w-3 h-3 text-[#c15f3e]" />
-            <span className="sr-only">Tự ẩn sau {remainingSeconds}s</span>
-            <span>Auto-hide in {remainingSeconds}s</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -278,15 +278,7 @@ export const documentsApi = {
   },
 
   /**
-   * 15. GET /api/v1/documents/{id}/export-pdf
-   * Xuất file PDF kèm Native Annotations chuẩn ISO
-   */
-  async exportAnnotatedPdf(documentId: string, includeHighlights = true): Promise<Blob> {
-    return apiClientBlob(`/documents/${documentId}/export-pdf?include_highlights=${includeHighlights}`);
-  },
-
-  /**
-   * 16. POST /api/v1/documents/{id}/summary:stream
+   * 15. POST /api/v1/documents/{id}/summary:stream
    * Stream tóm tắt 3 ý cốt lõi luồng động SSE (Real-Time Grounded Summary Stream)
    */
   async streamSummary(

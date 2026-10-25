@@ -87,31 +87,6 @@ describe("useWritingStore", () => {
     expect(state.isSaving).toBe(false);
   });
 
-  it("handles openEvidenceModal and closeEvidenceModal", () => {
-    const claim = {
-      id: "claim-1",
-      claim_text: "Transformers use self-attention.",
-      normalized_entities: ["transformer", "self-attention"],
-      status: "supported" as const,
-      confidence_score: 0.95,
-      evidence_document_id: "doc-1",
-      evidence_page: 3,
-      evidence_bounding_boxes: [[0.1, 0.2, 0.9, 0.5]],
-    };
-
-    useWritingStore.getState().openEvidenceModal(claim);
-    let state = useWritingStore.getState();
-    expect(state.isEvidenceModalOpen).toBe(true);
-    expect(state.selectedEvidenceClaim).toEqual(claim);
-    expect(state.activePage).toBe(3);
-    expect(state.activeBoundingBoxes).toEqual([[0.1, 0.2, 0.9, 0.5]]);
-
-    useWritingStore.getState().closeEvidenceModal();
-    state = useWritingStore.getState();
-    expect(state.isEvidenceModalOpen).toBe(false);
-    expect(state.selectedEvidenceClaim).toBeNull();
-  });
-
   it("sets and resets assistant prompt buffer", () => {
     const buffer = "<pre_context>intro</pre_context><target_selection>test</target_selection><post_context>end</post_context>";
     useWritingStore.getState().setAssistantPrompt(buffer);
@@ -119,36 +94,6 @@ describe("useWritingStore", () => {
 
     useWritingStore.getState().reset();
     expect(useWritingStore.getState().assistantPrompt).toBe("");
-  });
-
-  it("handles suggestion panel state and actions", () => {
-    const mockSuggestion = {
-      id: "sugg-1",
-      draft_id: "draft-1",
-      prompt: "Improve intro",
-      original_text: "Old text",
-      suggested_text: "New improved text",
-      confidence_score: 0.92,
-      cursor_start: 10,
-      cursor_end: 18,
-      expected_version: 1,
-      created_at: "2026-10-15T12:00:00Z",
-    };
-
-    expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(false);
-    expect(useWritingStore.getState().pendingSuggestion).toBeNull();
-    expect(useWritingStore.getState().isAssisting).toBe(false);
-
-    useWritingStore.getState().setAssisting(true);
-    expect(useWritingStore.getState().isAssisting).toBe(true);
-
-    useWritingStore.getState().openSuggestionPanel(mockSuggestion);
-    expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(true);
-    expect(useWritingStore.getState().pendingSuggestion).toEqual(mockSuggestion);
-
-    useWritingStore.getState().closeSuggestionPanel();
-    expect(useWritingStore.getState().isSuggestionPanelOpen).toBe(false);
-    expect(useWritingStore.getState().pendingSuggestion).toBeNull();
   });
 
   it("tracks selection range and resets properly", () => {
@@ -161,9 +106,8 @@ describe("useWritingStore", () => {
     expect(useWritingStore.getState().selectionRange).toBeNull();
   });
 
-  it("handles asset and share modal state and actions", () => {
+  it("handles asset modal state and actions", () => {
     expect(useWritingStore.getState().isAssetModalOpen).toBe(false);
-    expect(useWritingStore.getState().isShareModalOpen).toBe(false);
 
     useWritingStore.getState().openAssetModal();
     expect(useWritingStore.getState().isAssetModalOpen).toBe(true);
@@ -171,91 +115,9 @@ describe("useWritingStore", () => {
     useWritingStore.getState().closeAssetModal();
     expect(useWritingStore.getState().isAssetModalOpen).toBe(false);
 
-    useWritingStore.getState().openShareModal();
-    expect(useWritingStore.getState().isShareModalOpen).toBe(true);
-
-    useWritingStore.getState().closeShareModal();
-    expect(useWritingStore.getState().isShareModalOpen).toBe(false);
-
     // Verify reset restores initial false
     useWritingStore.getState().openAssetModal();
-    useWritingStore.getState().openShareModal();
     useWritingStore.getState().reset();
     expect(useWritingStore.getState().isAssetModalOpen).toBe(false);
-    expect(useWritingStore.getState().isShareModalOpen).toBe(false);
-  });
-
-  it("handles peer review comments state and threaded actions", () => {
-    expect(useWritingStore.getState().comments).toEqual([]);
-    expect(useWritingStore.getState().activeCommentId).toBeNull();
-    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(false);
-
-    // Toggle comments pane
-    useWritingStore.getState().setCommentsPaneOpen(true);
-    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(true);
-
-    // Set active comment id
-    useWritingStore.getState().setActiveCommentId("comm-1");
-    expect(useWritingStore.getState().activeCommentId).toBe("comm-1");
-
-    // Add top-level comment
-    const comment1 = {
-      id: "comm-1",
-      draft_id: "draft-1",
-      author_id: "user-1",
-      author_name: "Dr. Turing",
-      start_offset: 10,
-      end_offset: 25,
-      selected_text: "transformers",
-      comment_text: "Clarify model architecture.",
-      is_resolved: false,
-      created_at: "2026-10-15T00:00:00Z",
-      updated_at: "2026-10-15T00:00:00Z",
-      replies: [],
-    };
-
-    useWritingStore.getState().addComment(comment1);
-    expect(useWritingStore.getState().comments).toHaveLength(1);
-    expect(useWritingStore.getState().comments[0].id).toBe("comm-1");
-
-    // Add threaded reply
-    const reply1 = {
-      id: "reply-1",
-      draft_id: "draft-1",
-      author_id: "user-2",
-      author_name: "Ada Lovelace",
-      start_offset: 10,
-      end_offset: 25,
-      selected_text: "transformers",
-      comment_text: "Added Section 3 references.",
-      parent_id: "comm-1",
-      is_resolved: false,
-      created_at: "2026-10-15T01:00:00Z",
-      updated_at: "2026-10-15T01:00:00Z",
-    };
-
-    useWritingStore.getState().addComment(reply1);
-    expect(useWritingStore.getState().comments[0].replies).toHaveLength(1);
-    expect(useWritingStore.getState().comments[0].replies?.[0].id).toBe("reply-1");
-
-    // Update comment
-    useWritingStore.getState().updateCommentInStore({
-      ...comment1,
-      is_resolved: true,
-    });
-    expect(useWritingStore.getState().comments[0].is_resolved).toBe(true);
-
-    // Remove comment
-    useWritingStore.getState().removeCommentFromStore("comm-1");
-    expect(useWritingStore.getState().comments).toHaveLength(0);
-    expect(useWritingStore.getState().activeCommentId).toBeNull();
-
-    // Verify reset restores default state
-    useWritingStore.getState().setCommentsPaneOpen(true);
-    useWritingStore.getState().setActiveCommentId("some-id");
-    useWritingStore.getState().reset();
-    expect(useWritingStore.getState().comments).toEqual([]);
-    expect(useWritingStore.getState().activeCommentId).toBeNull();
-    expect(useWritingStore.getState().isCommentsPaneOpen).toBe(false);
   });
 });

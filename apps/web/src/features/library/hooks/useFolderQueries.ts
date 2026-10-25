@@ -1,16 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { foldersApi } from "../api/foldersApi";
-import { synthesisApi } from "../api/synthesisApi";
 import type {
   FolderItem,
   FolderTreeItem,
   FolderCreatePayload,
   FolderUpdatePayload,
   FolderDocumentAssignPayload,
-  ComparisonMatrixRequest,
-  ComparisonMatrixResponse,
-  HierarchicalRagRequest,
-  HierarchicalRagResponse,
 } from "../types";
 
 export const FOLDER_QUERY_KEYS = {
@@ -120,23 +115,5 @@ export function useAssignDocumentsToFolderMutation() {
       queryClient.invalidateQueries({ queryKey: FOLDER_QUERY_KEYS.detail(variables.folderId) });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
     },
-  });
-}
-
-/**
- * Hook to generate Literature Comparison Matrix
- */
-export function useComparisonMatrixMutation() {
-  return useMutation<ComparisonMatrixResponse, Error, ComparisonMatrixRequest>({
-    mutationFn: (payload) => foldersApi.generateComparisonMatrix(payload),
-  });
-}
-
-/**
- * Hook to execute 2-tier Hierarchical RAG synthesis query
- */
-export function useHierarchicalRagMutation() {
-  return useMutation<HierarchicalRagResponse, Error, HierarchicalRagRequest>({
-    mutationFn: (payload) => synthesisApi.hierarchicalRagQuery(payload),
   });
 }

@@ -74,6 +74,7 @@ describe("WritingEditorPane", () => {
     expect(screen.getByText(`Đã chọn ${target.length} ký tự`)).toBeInTheDocument();
     const addToChatBtn = screen.getByRole("button", { name: /Thêm vào Chat/i });
     expect(addToChatBtn).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Kiểm chứng/i })).not.toBeInTheDocument();
 
     // Click [Thêm vào Chat]
     fireEvent.click(addToChatBtn);
@@ -88,27 +89,7 @@ describe("WritingEditorPane", () => {
     expect(passedBuffer).toContain("Future work will explore sparsity.");
   });
 
-  it("triggers onSelectionVerify when clicking [Kiểm chứng]", () => {
-    const onSelectionVerify = vi.fn();
-    const content = "Attention is all you need for sequence translation.";
-    useWritingStore.getState().setEditorContent(content);
-
-    render(
-      <WritingEditorPane onSelectionVerify={onSelectionVerify} />
-    );
-
-    const textarea = screen.getByRole("textbox") as HTMLTextAreaElement;
-    textarea.selectionStart = 0;
-    textarea.selectionEnd = 9; // "Attention"
-    fireEvent.select(textarea);
-
-    const verifyBtn = screen.getByRole("button", { name: /Kiểm chứng/i });
-    fireEvent.click(verifyBtn);
-
-    expect(onSelectionVerify).toHaveBeenCalledWith("Attention");
-  });
-
-  it("renders Overleaf file tabs, [Code | Visual] toggle, and rich formatting toolbar buttons", () => {
+  it("renders file tabs and rich formatting toolbar buttons without Visual Mode toggle", () => {
     useWritingStore.getState().setEditorContent("\\section{Intro}\nHello world");
 
     render(<WritingEditorPane />);
@@ -117,17 +98,8 @@ describe("WritingEditorPane", () => {
     expect(screen.getByTestId("editor-tab-main")).toBeInTheDocument();
     expect(screen.getByTestId("editor-tab-bib")).toBeInTheDocument();
 
-    // View mode switch
-    expect(screen.getByTestId("editor-view-code")).toBeInTheDocument();
-    const visualBtn = screen.getByTestId("editor-view-visual");
-    expect(visualBtn).toBeInTheDocument();
-
-    // Toggle to visual view
-    fireEvent.click(visualBtn);
-    expect(screen.getByText("Chế độ Visual Preview")).toBeInTheDocument();
-
-    // Toggle back to code view
-    fireEvent.click(screen.getByTestId("editor-view-code"));
+    // Visual mode toggle is removed in MVP
+    expect(screen.queryByTestId("editor-view-visual")).not.toBeInTheDocument();
 
     // Formatting buttons
     const boldBtn = screen.getByTestId("format-bold-btn");

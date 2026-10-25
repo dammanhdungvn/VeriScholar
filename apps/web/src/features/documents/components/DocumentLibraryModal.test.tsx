@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DocumentLibraryModal } from "./DocumentLibraryModal";
 import { documentsApi } from "../api/documentsApi";
@@ -51,7 +51,7 @@ describe("DocumentLibraryModal Component Integration", () => {
     },
   ];
 
-  it("renders DocumentLibraryModal with FolderTreeView and Matrix button", () => {
+  it("renders DocumentLibraryModal with FolderTreeView without Matrix button", () => {
     vi.mocked(documentsApi.listDocuments).mockResolvedValueOnce({
       data: mockDocuments,
       meta: {
@@ -81,37 +81,7 @@ describe("DocumentLibraryModal Component Integration", () => {
     expect(screen.getByText("Thư mục đề tài")).toBeInTheDocument();
     expect(screen.getByText("Tất cả bài báo (Root)")).toBeInTheDocument();
 
-    // Matrix button in header
-    expect(screen.getByText("Tạo Ma Trận Đối Chiếu")).toBeInTheDocument();
-  });
-
-  it("opens ComparisonMatrixModal when clicking Tạo Ma Trận Đối Chiếu", () => {
-    vi.mocked(documentsApi.listDocuments).mockResolvedValueOnce({
-      data: mockDocuments,
-      meta: {
-        total: 1,
-        page: 1,
-        per_page: 10,
-        total_pages: 1,
-        request_id: "req-1",
-        timestamp: "2026-10-16T00:00:00Z",
-      },
-      links: { first: "/documents", prev: null, self: "/documents", next: null, last: "/documents" },
-    });
-    vi.mocked(foldersApi.getFolderTree).mockResolvedValueOnce([]);
-
-    renderWithClient(
-      <DocumentLibraryModal
-        isOpen={true}
-        onClose={vi.fn()}
-        onSelectDocument={vi.fn()}
-      />
-    );
-
-    const matrixBtn = screen.getByText("Tạo Ma Trận Đối Chiếu");
-    fireEvent.click(matrixBtn);
-
-    // Should open ComparisonMatrixModal dialog
-    expect(screen.getByRole("dialog", { name: "Ma trận so sánh đối chiếu học thuật" })).toBeInTheDocument();
+    // Matrix button is removed per PRD MVP
+    expect(screen.queryByText("Tạo Ma Trận Đối Chiếu")).not.toBeInTheDocument();
   });
 });

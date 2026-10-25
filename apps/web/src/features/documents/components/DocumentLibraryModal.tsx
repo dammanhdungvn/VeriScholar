@@ -14,14 +14,12 @@ import {
   CheckCircle2,
   Clock,
   AlertCircle,
-  TableProperties,
 } from "lucide-react";
 import { useDocumentsList, useDeleteDocumentMutation } from "../hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
 import { ParseConfigModal } from "./ParseConfigModal";
 import { StarDocumentModal } from "./StarDocumentModal";
 import { FolderTreeView } from "@/features/library/components/FolderTreeView";
-import { ComparisonMatrixModal } from "@/features/library/components/ComparisonMatrixModal";
 
 interface DocumentLibraryModalProps {
   isOpen: boolean;
@@ -42,7 +40,6 @@ export function DocumentLibraryModal({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-  const [isMatrixModalOpen, setIsMatrixModalOpen] = useState<boolean>(false);
 
   // Sub-modal states
   const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
@@ -147,14 +144,6 @@ export function DocumentLibraryModal({
               )}
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setIsMatrixModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-coral-500 hover:bg-coral-600 text-white font-medium shadow-2xs transition-colors cursor-pointer text-xs"
-              >
-                <TableProperties className="w-3.5 h-3.5" />
-                <span>Tạo Ma Trận Đối Chiếu</span>
-              </button>
               <button
                 type="button"
                 onClick={onClose}
@@ -448,15 +437,6 @@ export function DocumentLibraryModal({
             </div>
           </div>
         </div>
-      )}
-
-      {/* Submodal 4: Comparison Matrix Modal */}
-      {isMatrixModalOpen && (
-        <ComparisonMatrixModal
-          isOpen={isMatrixModalOpen}
-          onClose={() => setIsMatrixModalOpen(false)}
-          folderId={selectedFolderId}
-        />
       )}
     </>
   );

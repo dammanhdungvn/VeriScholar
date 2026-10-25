@@ -5,14 +5,12 @@ import {
   LayoutGrid,
   List as ListIcon,
   Plus,
-  TableProperties,
   Star,
   MoreVertical,
   FileText,
   CheckCircle2,
   Clock,
   Folder,
-  Network,
   Sparkles,
   Trash2,
   Sliders,
@@ -27,7 +25,6 @@ import {
   useDeleteDocumentMutation
 } from "@/features/documents/hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
-import { ComparisonMatrixModal } from "./ComparisonMatrixModal";
 import { FolderTreeView } from "./FolderTreeView";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
@@ -38,7 +35,7 @@ interface LibraryWorkspaceViewProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
 }
 
-type LibraryFilterTab = "all" | "suggestions" | "favorites" | "folders" | "graph";
+type LibraryFilterTab = "all" | "suggestions" | "favorites" | "folders";
 type ViewLayout = "grid" | "list";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
@@ -49,7 +46,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   // Modals state
-  const [isMatrixOpen, setIsMatrixOpen] = useState(false);
   const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
   const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
   const [activeMenuDocId, setActiveMenuDocId] = useState<string | null>(null);
@@ -199,17 +195,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             </button>
           </div>
 
-          {/* Matrix Button */}
-          <button
-            type="button"
-            onClick={() => setIsMatrixOpen(true)}
-            className="h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-hairline hover:bg-surface-cream dark:hover:bg-[#262420] text-ink dark:text-zinc-200 transition-colors cursor-pointer"
-            title="Comparison Matrix"
-          >
-            <TableProperties className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Matrix</span>
-          </button>
-
           {/* + Upload PDF Button */}
           <button
             type="button"
@@ -237,7 +222,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             { id: "suggestions" as const, label: "Suggested", icon: Sparkles },
             { id: "favorites" as const, label: "Starred", icon: Star },
             { id: "folders" as const, label: "Folders", icon: Folder },
-            { id: "graph" as const, label: "Graph", icon: Network },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -278,26 +262,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
                 onDelete={handleDelete}
               />
-            </div>
-          </div>
-        ) : activeTab === "graph" ? (
-          <div className="max-w-4xl mx-auto p-8 text-center bg-white dark:bg-[#1f1d1a] rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
-            <Network className="w-10 h-10 text-[#c15f3e] mx-auto mb-3 stroke-[1.8]" />
-            <h3 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
-              Knowledge Graph
-            </h3>
-            <p className="text-xs text-muted dark:text-zinc-400 max-w-md mx-auto mt-1">
-              Document nodes, co-citations, and methodological relations.
-            </p>
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {documents.slice(0, 8).map((doc, idx) => (
-                <div
-                  key={doc.id}
-                  className="px-2.5 py-1 rounded-full bg-stone-500/10 border border-stone-500/20 text-[11px] font-mono text-ink dark:text-zinc-200"
-                >
-                  Node #{idx + 1}: {doc.title?.slice(0, 24) || doc.filename}
-                </div>
-              ))}
             </div>
           </div>
         ) : (
@@ -342,12 +306,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           </div>
         )}
       </div>
-
-      {/* Comparison Matrix Modal */}
-      <ComparisonMatrixModal
-        isOpen={isMatrixOpen}
-        onClose={() => setIsMatrixOpen(false)}
-      />
 
       {/* Parse Config Modal */}
       {selectedParseDoc && (

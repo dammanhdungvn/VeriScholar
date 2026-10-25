@@ -5,8 +5,6 @@ import type {
   FolderCreatePayload,
   FolderUpdatePayload,
   FolderDocumentAssignPayload,
-  ComparisonMatrixRequest,
-  ComparisonMatrixResponse,
 } from "../types";
 
 export const foldersApi = {
@@ -82,22 +80,6 @@ export const foldersApi = {
   ): Promise<{ removed_count?: number; [key: string]: unknown }> {
     return apiClient<{ removed_count?: number }>(`/folders/${id}/documents`, {
       method: "DELETE",
-      body: JSON.stringify(payload),
-    });
-  },
-
-  /**
-   * Generate Literature Comparison Matrix
-   */
-  async generateComparisonMatrix(
-    payload: ComparisonMatrixRequest
-  ): Promise<ComparisonMatrixResponse> {
-    const endpoint = payload.folder_id
-      ? `/folders/${payload.folder_id}/comparison-matrix`
-      : "/folders/comparison-matrix";
-
-    return apiClient<ComparisonMatrixResponse>(endpoint, {
-      method: "POST",
       body: JSON.stringify(payload),
     });
   },

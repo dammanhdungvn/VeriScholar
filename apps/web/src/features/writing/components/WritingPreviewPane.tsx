@@ -238,9 +238,9 @@ export function WritingPreviewPane({
           const url = URL.createObjectURL(blob);
           setPreviewPdfBlobUrl(url);
         }
-      } catch {
+      } catch (err) {
         if (active) {
-          setLoadError("Chưa có bản xem trước. Hãy bấm 'Biên dịch' để tạo PDF.");
+          setLoadError(err instanceof Error ? err.message : "Chưa có bản xem trước. Hãy bấm 'Biên dịch' để tạo PDF.");
         }
       }
     }
@@ -277,9 +277,10 @@ export function WritingPreviewPane({
           setTotalPages(doc.numPages);
           setCurrentPage(1);
         }
-      } catch {
+      } catch (err) {
         if (!isCancelled) {
           setPdfJsError(true);
+          setLoadError(err instanceof Error ? err.message : "Không thể hiển thị bản xem trước PDF.");
         }
       }
     }

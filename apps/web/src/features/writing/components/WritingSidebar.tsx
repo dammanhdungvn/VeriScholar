@@ -2,7 +2,6 @@ import { useState, useMemo } from "react";
 import {
   FileCode,
   Folder,
-  FolderPlus,
   Upload,
   ListTree,
   FilePlus,
@@ -77,10 +76,6 @@ export function WritingSidebar({
     }
   };
 
-  const handleAddNewFolder = () => {
-    window.prompt("Nhập tên thư mục mới:", "data");
-  };
-
   return (
     <div
       data-testid="writing-sidebar"
@@ -140,7 +135,7 @@ export function WritingSidebar({
       {/* 2. File Tree Tab View */}
       {activeSidebarTab === "files" && (
         <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Action buttons toolbar: + File, + Folder, Upload */}
+          {/* Action buttons toolbar: + File, Upload */}
           <div className="p-2 border-b border-[#ece8df] dark:border-[#2a2824] flex items-center gap-1 text-[11px] text-muted dark:text-zinc-400">
             <button
               type="button"
@@ -151,17 +146,6 @@ export function WritingSidebar({
             >
               <FilePlus className="w-3.5 h-3.5 text-[#c15f3e]" />
               <span>+ File</span>
-            </button>
-
-            <button
-              type="button"
-              data-testid="sidebar-new-folder-btn"
-              onClick={handleAddNewFolder}
-              className="p-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#282622] text-ink dark:text-zinc-200 flex items-center gap-1 cursor-pointer transition-colors"
-              title="Add Folder"
-            >
-              <FolderPlus className="w-3.5 h-3.5 text-zinc-500" />
-              <span>+ Folder</span>
             </button>
 
             <button
