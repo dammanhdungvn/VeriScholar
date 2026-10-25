@@ -21,6 +21,7 @@ flowchart TD
     PRD --> PRD5["05-favorite-library-and-graphrag.md"]
     PRD --> PRD6["06-agentic-overleaf-writing.md"]
     PRD --> PRD7["07-monitoring-and-langfuse.md"]
+    PRD --> PRD8["08-deployment-and-system-evaluation.md"]
 
     SPECS --> SPEC0["00-foundation-architecture-and-db.md"]
     SPECS --> SPEC1["01-auth-and-user-spec.md"]
@@ -30,6 +31,8 @@ flowchart TD
     SPECS --> SPEC5["05-favorite-library-and-graphrag-spec.md"]
     SPECS --> SPEC6["06-agentic-overleaf-writing-spec.md"]
     SPECS --> SPEC7["07-monitoring-and-langfuse-spec.md"]
+    SPECS --> SPEC8["08-universal-agent-harness-spec.md"]
+    SPECS --> SPEC9["09-deployment-cicd-and-evaluation-spec.md"]
 ```
 
 ---
@@ -50,6 +53,7 @@ Nguồn chân lý xác định phạm vi sản phẩm (Scope), bài toán ngư�
 | **[`05-favorite-library-and-graphrag.md`](PRD/05-favorite-library-and-graphrag.md)** | Kho Yêu thích (`/library`), cây thư mục phân cấp và **4-Entity GraphRAG thuần PostgreSQL + `pgvector`**. |
 | **[`06-agentic-overleaf-writing.md`](PRD/06-agentic-overleaf-writing.md)** | Không gian Soạn thảo LaTeX nội bộ (`/writing`), biên dịch E2B Sandbox an toàn, trợ lý LangGraph và xuất gói `.zip`. |
 | **[`07-monitoring-and-langfuse.md`](PRD/07-monitoring-and-langfuse.md)** | Kiến trúc giám sát 3 tầng: Structlog JSON (`trace_id`), Langfuse Cloud (`verischolar-dev`, `verischolar-prod`), Sentry & Webhook. |
+| **[`08-deployment-and-system-evaluation.md`](PRD/08-deployment-and-system-evaluation.md)** | Triển khai máy chủ Azure Ubuntu VM, Nginx Unbuffered SSE, CI/CD 2 tầng và Bộ Thực nghiệm Định lượng (E1, E2, E3) cho Đồ án Tốt nghiệp. |
 
 ---
 
@@ -67,6 +71,8 @@ Hợp đồng kỹ thuật chi tiết làm căn cứ trực tiếp để lập t
 | **[`05-favorite-library-and-graphrag-spec.md`](specs/05-favorite-library-and-graphrag-spec.md)** | Phân Hệ Thư Viện Yêu Thích & Mạng Tri Thức: Lược đồ bảng `graph_nodes` & `graph_edges`, thuật toán trích xuất 4 Thực thể & 4 Cạnh và truy vấn GraphRAG. |
 | **[`06-agentic-overleaf-writing-spec.md`](specs/06-agentic-overleaf-writing-spec.md)** | Phân Hệ Soạn Thảo & Agentic LaTeX: Quản lý bản thảo `drafts`/`draft_assets`/`draft_messages`, kiến trúc LangGraph StateGraph, vòng lặp tự sửa lỗi E2B và 1-Click Undo. |
 | **[`07-monitoring-and-langfuse-spec.md`](specs/07-monitoring-and-langfuse-spec.md)** | Phân Hệ Giám Sát, Vận Hành & Đo Lường: Triển khai Structlog JSON, `PureASGITracingMiddleware`, tích hợp Langfuse Tracing, Sentry SDK và Alert Webhook. |
+| **[`08-universal-agent-harness-spec.md`](specs/08-universal-agent-harness-spec.md)** | Phân Hệ Agent Harness & Kỷ Luật Kiến Trúc: Hiến pháp `.agents/AGENTS.md`, 4 Core Skills, kịch bản seed offline và cổng kiểm thử AST. |
+| **[`09-deployment-cicd-and-evaluation-spec.md`](specs/09-deployment-cicd-and-evaluation-spec.md)** | Phân Hệ Triển Khai Azure Ubuntu, CI/CD 2 Tầng & Khung Thực Nghiệm Đồ Án: Cấu hình Nginx 5 tuyến SSE, Docker/Systemd, GitHub Actions CI/CD và 3 Thực nghiệm Định lượng (E1, E2, E3). |
 
 ---
 *Bản quyền © 2026 VeriScholar Platform. Mọi quyền được bảo lưu.*

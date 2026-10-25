@@ -159,19 +159,20 @@ git commit -m "docs(thesis): add 5-chapter graduation thesis outline mapping gui
 
 ---
 
-### Task 3: Synchronize Azure Ubuntu Nginx SSE Routes, `Dockerfile.api`, and CD Deployment Scripts (`scripts/deploy_*.sh`)
+### Task 3: Synchronize Azure Ubuntu Nginx SSE Routes, `Dockerfile.api`, 2-Tier Fast-Fail `ci.yml`, and CD Deployment Scripts (`scripts/deploy_*.sh`)
 
 **Files:**
 - Modify: `deploy/nginx/production-host.conf`
 - Modify: `deploy/nginx/verischolar.conf`
 - Modify: `deploy/Dockerfile.api`
+- Modify: `.github/workflows/ci.yml`
 - Create: `scripts/deploy_web.sh`
 - Create: `scripts/deploy_production.sh`
 - Test: `apps/api/tests/test_architecture_boundary.py`
 
 **Interfaces:**
 - Consumes: `docs/specs/09-deployment-cicd-and-evaluation-spec.md`, `.github/workflows/cd.yml`
-- Produces: Synchronized `deploy/` configs and executable `scripts/deploy_production.sh` & `scripts/deploy_web.sh` verified by `test_deployment_configs_and_nginx_sse_routes()`
+- Produces: Synchronized `deploy/` configs, 2-tier `.github/workflows/ci.yml` with `pgvector` + `redis` services, and executable `scripts/deploy_production.sh` & `scripts/deploy_web.sh` verified by `test_deployment_configs_and_nginx_sse_routes()`
 
 - [ ] **Step 1: Write the failing test in `apps/api/tests/test_architecture_boundary.py`**
 
@@ -179,7 +180,7 @@ Add `test_deployment_configs_and_nginx_sse_routes()` to `apps/api/tests/test_arc
 
 ```python
 def test_deployment_configs_and_nginx_sse_routes():
-    """Validates Nginx SSE unbuffered routing, Dockerfile.api uv sync/CAS volume, and CD deploy scripts."""
+    """Validates Nginx SSE unbuffered routing, Dockerfile.api uv sync/CAS volume, 2-tier CI, and CD deploy scripts."""
     nginx_files = [
         ROOT_DIR / "deploy" / "nginx" / "production-host.conf",
         ROOT_DIR / "deploy" / "nginx" / "verischolar.conf",
@@ -203,6 +204,12 @@ def test_deployment_configs_and_nginx_sse_routes():
     assert "uv sync" in df_text, "deploy/Dockerfile.api must use 'uv sync' for deterministic builds"
     assert "/app/data/cas" in df_text, "deploy/Dockerfile.api must declare /app/data/cas volume"
 
+    ci_yml = ROOT_DIR / ".github" / "workflows" / "ci.yml"
+    ci_text = ci_yml.read_text(encoding="utf-8")
+    assert "pgvector/pgvector:0.8.6-pg18" in ci_text, "ci.yml must include pgvector service container"
+    assert "redis:7-alpine" in ci_text, "ci.yml must include redis:7-alpine service container"
+    assert "tectonic" not in ci_text.lower(), "ci.yml must not install legacy Tectonic compiler"
+
     for script_name in ("deploy_production.sh", "deploy_web.sh"):
         script_path = ROOT_DIR / "scripts" / script_name
         assert script_path.exists(), f"Missing deployment script: scripts/{script_name}"
@@ -214,20 +221,22 @@ def test_deployment_configs_and_nginx_sse_routes():
 Run: `uv run pytest apps/api/tests/test_architecture_boundary.py::test_deployment_configs_and_nginx_sse_routes -v`
 Expected: FAIL with `AssertionError: deploy/nginx/production-host.conf missing required SSE fragment 'context-table:stream'`
 
-- [ ] **Step 3: Update `deploy/nginx/*.conf`, `deploy/Dockerfile.api`, and create executable `scripts/deploy_web.sh` & `scripts/deploy_production.sh`**
+- [ ] **Step 3: Update `deploy/nginx/*.conf`, `deploy/Dockerfile.api`, `.github/workflows/ci.yml`, and create executable `scripts/deploy_web.sh` & `scripts/deploy_production.sh`**
 
 1. In `deploy/nginx/production-host.conf` (both HTTPS port 443 and HTTP port 80 server blocks) and `deploy/nginx/verischolar.conf`, update the SSE location block regex to:
    `location ~* ^/api/v1/(sessions/.*/(chat|messages|messages:stream|context-table:stream)|documents/.*/summary:stream|library/graph:query|drafts/.*/chat:stream)`
    with `proxy_buffering off;`, `proxy_cache off;`, and `add_header X-Accel-Buffering "no" always;`.
 2. In `deploy/Dockerfile.api`, use `ghcr.io/astral-sh/uv:python3.12-bookworm-slim`, run `uv sync --all-packages --frozen --no-dev`, create `/app/data/cas`, declare `VOLUME ["/app/data/cas"]`, and start `uv run uvicorn api:app --host 0.0.0.0 --port 8000 --workers 2`.
-3. Create `scripts/deploy_web.sh` and `scripts/deploy_production.sh` with `set -euo pipefail`, mark both `chmod +x`, and verify with `bash -n scripts/deploy_production.sh scripts/deploy_web.sh`.
+3. In `.github/workflows/ci.yml`, implement the 2-Tier Fast-Fail pipeline (`backend-quality-gates` with `services: postgres` (`pgvector/pgvector:0.8.6-pg18`) + `redis` (`redis:7-alpine`), `frontend-quality-gates` without `pnpm audit --prod`, `security-scan` with `gitleaks`, and `docker-validation` gated by `needs: [backend-quality-gates, frontend-quality-gates]`), and format all Python files with `uv run ruff format .`.
+4. Create `scripts/deploy_web.sh` and `scripts/deploy_production.sh` with `set -euo pipefail`, mark both `chmod +x`, and verify with `bash -n scripts/deploy_production.sh scripts/deploy_web.sh`.
 
-- [ ] **Step 4: Run all 4 Mandatory Verification Gates**
+- [ ] **Step 4: Run all Mandatory Verification Gates + `ruff format --check .`**
 
 Run:
 ```bash
 bash -n scripts/deploy_production.sh scripts/deploy_web.sh
 uv run ruff check .
+uv run ruff format --check .
 uv run pytest -v
 npm --prefix apps/web run test
 npm --prefix apps/web run build
@@ -237,6 +246,6 @@ Expected: 100% PASS (exit code 0 across all commands)
 - [ ] **Step 5: Commit**
 
 ```bash
-git add deploy/ scripts/deploy_production.sh scripts/deploy_web.sh apps/api/tests/test_architecture_boundary.py
-git commit -m "feat(deploy): align Azure Ubuntu Nginx SSE routes, Dockerfile.api, and CD deploy scripts"
+git add deploy/ .github/workflows/ci.yml scripts/ apps/api/tests/test_architecture_boundary.py
+git commit -m "feat(deploy,ci): align Azure Ubuntu Nginx SSE routes, 2-tier CI with pgvector/redis, and CD deploy scripts"
 ```

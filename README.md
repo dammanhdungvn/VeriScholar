@@ -220,7 +220,8 @@ The authoritative **Single Source of Truth** for VeriScholar MVP specifications 
 - **[Favorite Library & 4-Entity GraphRAG (`docs/PRD/05-favorite-library-and-graphrag.md`)](docs/PRD/05-favorite-library-and-graphrag.md):** Hierarchical folders, Canonical Hub Merging (`Paper`, `Method`, `Dataset`, `MetricResult`), and cross-paper synthesis.
 - **[Agentic Overleaf Writing Workspace (`docs/PRD/06-agentic-overleaf-writing.md`)](docs/PRD/06-agentic-overleaf-writing.md):** 3-column LaTeX workspace, E2B Cloud Sandbox compilation, 3-attempt ReAct self-healing, and 1-Click Undo.
 - **[Monitoring, Observability & Langfuse (`docs/PRD/07-monitoring-and-langfuse.md`)](docs/PRD/07-monitoring-and-langfuse.md):** Structlog JSON, `trace_id`, Langfuse Cloud telemetry, and Alert Webhooks.
-- **[Architecture & Technical Specs Portal (`docs/README.md`)](docs/README.md):** Complete index of BA PRDs (`00..07`) and Senior Technical Specs (`00..08`).
+- **[Azure Ubuntu Deployment, CI/CD & System Evaluation (`docs/PRD/08-deployment-and-system-evaluation.md`)](docs/PRD/08-deployment-and-system-evaluation.md):** Azure Ubuntu VM deployment, Nginx unbuffered SSE proxy, 2-tier Fast-Fail CI/CD, and Graduation Thesis quantitative evaluation benchmarks (`docs/specs/09-deployment-cicd-and-evaluation-spec.md`).
+- **[Architecture & Technical Specs Portal (`docs/README.md`)](docs/README.md):** Complete index of BA PRDs (`00..08`) and Senior Technical Specs (`00..09`).
 - **[Engineering & Agent Protocol (`AGENTS.md`)](AGENTS.md):** Mandatory behavioral laws, Hexagonal isolation, and 4 Verification Gates.
 
 ---

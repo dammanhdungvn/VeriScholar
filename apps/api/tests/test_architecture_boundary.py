@@ -245,7 +245,7 @@ def test_prd_conciseness_and_structure_invariants():
     """Prevents PRD bloat and scope creep by enforcing line limits and required BA sections."""
     prd_dir = ROOT_DIR / "docs" / "PRD"
     prd_files = sorted(prd_dir.glob("0*.md"))
-    assert len(prd_files) == 8, f"Expected 8 PRD files in docs/PRD/, found {len(prd_files)}"
+    assert len(prd_files) == 9, f"Expected 9 PRD files in docs/PRD/, found {len(prd_files)}"
 
     violations: list[str] = []
     for prd_file in prd_files:
@@ -260,6 +260,12 @@ def test_prd_conciseness_and_structure_invariants():
                 violations.append(f"{prd_file.name}: missing required section prefix '{sec}'")
 
     assert not violations, "PRD structure or conciseness invariant violated:\n" + "\n".join(violations)
+
+    spec_09 = ROOT_DIR / "docs" / "specs" / "09-deployment-cicd-and-evaluation-spec.md"
+    assert spec_09.exists(), "docs/specs/09-deployment-cicd-and-evaluation-spec.md is missing"
+    spec_09_text = spec_09.read_text(encoding="utf-8")
+    for marker in ("Azure Ubuntu", "proxy_buffering off", "Thực Nghiệm 1", "Thực Nghiệm 2", "Thực Nghiệm 3"):
+        assert marker in spec_09_text, f"Spec-09 missing required section marker: {marker}"
 
 
 def test_no_code_placeholders_in_superpowers_plans():
