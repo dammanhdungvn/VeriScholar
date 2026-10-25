@@ -134,6 +134,7 @@ Ghi nhận toàn bộ hoạt động trí tuệ nhân tạo trên Langfuse Cloud
      • Timestamp: 2026-10-25T10:45:00Z
      ```
    - Thực thi dưới dạng tác vụ nền ngầm qua `asyncio.create_task` với timeout 3 giây, cam kết không gây trễ hoặc làm gián đoạn luồng phản hồi cho người dùng.
+   - **Chống bão cảnh báo (Alert Storm Cooldown / Deduplication):** Duy trì bộ nhớ đệm `dict[tuple[str, str], float]` theo cặp khóa `(endpoint_path, error_type)` với thời gian hồi (cooldown) **60 giây** trong RAM để ngăn chặn việc gửi hàng trăm tin nhắn trùng lặp vào Telegram/Discord khi một dịch vụ phụ trợ bị ngắt kết nối tạm thời.
 
 ### C. Tầng 3: Giám Sát Sức Khỏe & Hiệu Năng Tích Hợp Sẵn
 Không cần thiết lập cụm Prometheus hay Grafana tốn hàng GB RAM, hệ thống tích hợp sẵn 2 điểm giám sát siêu nhẹ:
@@ -282,6 +283,15 @@ Mọi yêu cầu HTTP gửi đến hệ thống đều tuân thủ luồng truy�
     }
   }
   ```
+
+### D. Ma Trận Mã Lỗi Chuẩn Hóa Phân Hệ Giám Sát (Deterministic Monitoring Error Codes Matrix)
+
+| HTTP Status | Mã lỗi chuẩn (`error.code`) | Điều kiện kích hoạt (Trigger Condition) | Cấu trúc Payload JSON trả về | Hành vi xử lý tại Frontend / Hệ thống |
+| :--- | :--- | :--- | :--- | :--- |
+| `404 Not Found` | `FEEDBACK_MESSAGE_NOT_FOUND` | Người dùng gửi đánh giá cho `message_id` hoặc `session_id` không tồn tại hoặc thuộc quyền sở hữu của học giả khác. | `{"error": {"code": "FEEDBACK_MESSAGE_NOT_FOUND", "message": "Không tìm thấy lượt phản hồi cần đánh giá.", "trace_id": "..."}}` | Hoàn tác trạng thái sáng của nút 👍/👎 và hiển thị thông báo nhẹ. |
+| `422 Unprocessable Entity` | `INVALID_FEEDBACK_SCORE` | Giá trị `score` gửi lên nằm ngoài tập hợp hợp lệ `{0.0, 1.0}` hoặc bình luận vượt quá 1.000 ký tự. | `{"error": {"code": "INVALID_FEEDBACK_SCORE", "message": "Điểm đánh giá chỉ chấp nhận giá trị 0.0 hoặc 1.0.", "trace_id": "..."}}` | Chặn yêu cầu tại client và giữ nguyên trạng thái nút hiện hành. |
+| `500 Internal Server Error` | `UNHANDLED_SERVER_EXCEPTION` | Ngoại lệ không lường trước phát sinh tại bất kỳ endpoint nghiệp vụ nào, được bắt bởi `PureASGITracingMiddleware`. | `{"error": {"code": "UNHANDLED_SERVER_EXCEPTION", "message": "Hệ thống tạm thời chưa thể xử lý yêu cầu này. Dữ liệu nghiên cứu của bạn đã được bảo vệ an toàn.", "trace_id": "tr_9c1fa8fe"}}` | Hiển thị hộp thông báo thân thiện Tiếng Việt kèm mã tham chiếu `#9c1f` (4 ký tự cuối của `trace_id`) và nút `[🔄 Thử lại]`. |
+| `503 Service Unavailable` | `DEPENDENCY_UNREADY` | Một trong các thành phần bắt buộc (`database`, `redis`, `storage`) trả về trạng thái lỗi khi gọi `GET /health/ready`. | `{"status": "unready", "checks": {"database": {"status": "error", "detail": "Connection refused"}}, "trace_id": "..."}` | Báo động cho hệ thống giám sát ngoài (UptimeRobot / Docker Healthcheck) để khởi động lại dịch vụ phụ trợ. |
 
 ---
 

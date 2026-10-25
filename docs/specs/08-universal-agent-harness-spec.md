@@ -274,6 +274,18 @@ VeriScholar/
      * `scripts/dev/seed.py`
   3. Kiểm tra số dòng của `.agents/AGENTS.md`: Báo lỗi nếu số dòng $> 200$ dòng để duy trì độ tinh gọn tối thượng.
 
+### D. Ma Trận Lỗi Gác Cổng Kiến Trúc Cơ Học (Deterministic Harness Gate Error Matrix)
+
+Mọi vi phạm quy chuẩn kiến trúc khi chạy `uv run pytest apps/api/tests/test_architecture_boundary.py` sẽ kích hoạt mã lỗi cơ học xác định để bất kỳ AI Agent nào cũng tự động nhận biết và sửa chữa:
+
+| Mã Lỗi Gác Cổng (`Gate Code`) | Bài Kiểm Thử Kích Hoạt | Điều Kiện Phát Hiện Vi Phạm (AST / Regex Rule) | Thông Điệp Chẩn Đoán Đầu Ra (Assertion Diagnostic) | Hành Động Khắc Phục Bắt Buộc Cho AI Agent |
+| :--- | :--- | :--- | :--- | :--- |
+| `HEXAGONAL_IMPORT_VIOLATION` | `test_hexagonal_boundary_pure_domain` | File trong `packages/core/src/core/{domain,ports}` có lệnh `import` hoặc `from ... import` thuộc tập cấm (`fastapi`, `sqlalchemy`, `redis`, `fitz`, `httpx`, `apps.api`, v.v.). | `Hexagonal Boundary Violation in {file}:{line} -> Forbidden import '{module}'` | Di chuyển đoạn code I/O sang `apps/api/` hoặc `packages/core/src/core/adapters/` và giao tiếp qua `Protocol` trong `ports/`. |
+| `BANNED_LEGACY_ARTIFACT` | `test_banned_legacy_artifacts` | File `.py` trong `apps/api/src/` hoặc `packages/core/src/` chứa chuỗi cấm (`aiosqlite`, `sqlite3`, `neo4j`, `ComparisonMatrix`, `DeBERTa`). | `Banned legacy artifact '{keyword}' found in {file}:{line}` | Xóa bỏ hoàn toàn đoạn mã fallback/di sản; sử dụng PostgreSQL 16+ `pgvector` thuần khiết. |
+| `ABSOLUTE_FILE_URL_VIOLATION` | `test_no_absolute_file_urls_in_markdown` | File `.md` trong `docs/`, `.agents/` hoặc thư mục gốc chứa liên kết tuyệt đối máy chủ (`file://` kèm đường dẫn cục bộ). | `Absolute file URL violation in {file}:{line}` | Chuyển đổi toàn bộ liên kết Markdown sang đường dẫn tương đối (`./...`, `../...`, `../../...`). |
+| `HARNESS_CONSTITUTION_OVERFLOW` | `test_agent_harness_integrity` | Tệp `.agents/AGENTS.md` vượt quá ngưỡng trần 200 dòng (mục tiêu chuẩn `< 150` dòng). | `.agents/AGENTS.md exceeds 200 lines ({count} lines). Move detailed guidance into .agents/skills/` | Tách nội dung hướng dẫn chi tiết sang tệp `SKILL.md` chuyên biệt trong `.agents/skills/`. |
+| `MISSING_HARNESS_ASSET` | `test_agent_harness_integrity` | Thiếu symlink `AGENTS.md`, thiếu 1 trong 4 core skills, hoặc script `scripts/dev/{setup.sh,seed.py}` mất quyền thực thi `+x`. | `Missing required harness file or executable flag: {path}` | Khôi phục tệp bị thiếu hoặc cấp lại quyền thực thi `chmod +x scripts/dev/*.sh`. |
+
 ---
 
 ## 5. Quy Chuẩn Vận Hành & Bảo Trì Hệ Thống (Operations & Maintenance Protocol)

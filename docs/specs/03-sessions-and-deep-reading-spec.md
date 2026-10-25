@@ -170,6 +170,16 @@ Khi người dùng mở lại phiên đọc, giao diện khôi phục chính xá
 - **Mục đích:** Xóa toàn bộ bản ghi `session_turns` thuộc `session_id` đó.
 - **Response (HTTP 204 No Content).**
 
+### C. Ma Trận Mã Lỗi Chuẩn Hóa Phiên Đọc Sâu (Deterministic Deep Reading Error Codes Matrix)
+
+| HTTP Status / SSE Event | Mã lỗi chuẩn (`error.code`) | Điều kiện kích hoạt (Trigger Condition) | Cấu trúc Payload JSON / SSE trả về | Hành vi xử lý tại Frontend / Hệ thống |
+| :--- | :--- | :--- | :--- | :--- |
+| `404 Not Found` | `SESSION_OR_DOCUMENT_NOT_FOUND` | Truy cập `session_id`, `document_id` hoặc `note_id` không tồn tại hoặc thuộc quyền sở hữu của `user_id` khác. | `{"error": {"code": "SESSION_OR_DOCUMENT_NOT_FOUND", "message": "Không tìm thấy phiên đọc hoặc tài liệu yêu cầu.", "trace_id": "..."}}` | Chuyển hướng người dùng về trang danh sách phiên đọc `/dashboard`. |
+| `409 Conflict` | `MAX_SESSION_DOCUMENTS_REACHED` | Thêm bài báo mới vào `session_documents` khi phiên đọc đã mở đủ 5/5 bài báo. | `{"error": {"code": "MAX_SESSION_DOCUMENTS_REACHED", "message": "Phiên đọc đã đạt giới hạn tối đa 5 tab bài báo.", "current_count": 5, "max_limit": 5, "trace_id": "..."}}` | Mở hộp thoại **Tab Eviction Dialog** cho phép học giả chọn đóng nhanh 1 bài báo đang mở rồi tự động nạp bài mới. |
+| `422 Unprocessable Entity` | `SESSION_NO_ACTIVE_DOCUMENTS` | Gửi tin nhắn hỏi đáp `POST /api/v1/sessions/{id}/messages` khi phiên đọc chưa có bài báo nào được gắn vào (`count == 0`). | `{"error": {"code": "SESSION_NO_ACTIVE_DOCUMENTS", "message": "Vui lòng thêm ít nhất 1 bài báo vào phiên trước khi đặt câu hỏi.", "trace_id": "..."}}` | Hiển thị thông báo nhắc chọn bài báo trên khung Chat và mở modal chọn tài liệu. |
+| `SSE event: error` | `GROUNDED_CITATIONS_NOT_FOUND` | Truy vấn Hybrid RAG không tìm thấy đoạn trích nào vượt ngưỡng liên quan tối thiểu đối với câu hỏi số liệu cụ thể. | `event: error\ndata: {"code": "GROUNDED_CITATIONS_NOT_FOUND", "message": "Thông tin này không được đề cập trong các tài liệu đang mở."}` | Hiển thị bong bóng phản hồi trung thực báo rõ tài liệu không đề cập, tuyệt đối không sinh huy hiệu trích dẫn giả. |
+| `SSE event: error` | `LLM_STREAM_INTERRUPTED` | Kết nối tới nhà cung cấp LLM bị đứt giữa chừng hoặc khóa BYOK của người dùng hết hạn mức khi đang truyền luồng SSE. | `event: error\ndata: {"code": "LLM_STREAM_INTERRUPTED", "message": "Luồng phản hồi AI bị gián đoạn. Vui lòng thử lại.", "trace_id": "..."}` | Giữ lại phần văn bản đã hiển thị, đính kèm nút `[🔄 Thử gửi lại câu hỏi]` ngay dưới tin nhắn. |
+
 ---
 
 ## 5. Thiết Kế Thuật Toán Hybrid RAG & Hàng Rào Chống Ảo Giác (Grounding Guardrail)
@@ -179,14 +189,14 @@ Thay vì xếp hạng từ khóa bằng Python trong RAM, `SessionChatService` t
 
 ```sql
 WITH vector_ranks AS (
-    SELECT id, document_id, page_number, content, bounding_boxes,
+    SELECT id, document_id, page_number, text_content, bounding_boxes,
            ROW_NUMBER() OVER (ORDER BY embedding <=> :query_vector) AS rank_vec
     FROM document_chunks
     WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
     LIMIT 20
 ),
 fts_ranks AS (
-    SELECT id, document_id, page_number, content, bounding_boxes,
+    SELECT id, document_id, page_number, text_content, bounding_boxes,
            ROW_NUMBER() OVER (ORDER BY ts_rank_cd(content_tsv, to_tsquery('simple', :fts_query)) DESC) AS rank_fts
     FROM document_chunks
     WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
@@ -196,7 +206,7 @@ fts_ranks AS (
 SELECT COALESCE(v.id, f.id) AS chunk_id,
        COALESCE(v.document_id, f.document_id) AS document_id,
        COALESCE(v.page_number, f.page_number) AS page_number,
-       COALESCE(v.content, f.content) AS content,
+       COALESCE(v.text_content, f.text_content) AS text_content,
        COALESCE(v.bounding_boxes, f.bounding_boxes) AS bounding_boxes,
        (COALESCE(1.0 / (60 + v.rank_vec), 0.0) + COALESCE(1.0 / (60 + f.rank_fts), 0.0)) AS rrf_score
 FROM vector_ranks v

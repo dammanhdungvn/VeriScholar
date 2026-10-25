@@ -104,16 +104,16 @@ erDiagram
 
 | # | Bảng PostgreSQL | File Model | Nâng cấp kỹ thuật cần thực hiện |
 |---|---|---|---|
-| **1** | `users` | [`user.py`](../../apps/api/src/api/db/models/user.py) | Thêm `theme_preference VARCHAR(20) DEFAULT 'system'`, `byok_api_key_encrypted TEXT NULL`. |
+| **1** | `users` | [`user.py`](../../apps/api/src/api/db/models/user.py) | Thêm `theme_preference VARCHAR(20) DEFAULT 'system'`, `byok_api_key_encrypted TEXT NULL` (hoặc bảng `user_api_keys` chuẩn hóa có `UNIQUE(user_id, provider)`). |
 | **2** | `documents` | [`document.py`](../../apps/api/src/api/db/models/document.py) | Thêm `is_starred BOOLEAN DEFAULT FALSE INDEX`, `folder_id UUID FK folders.id SET NULL`. |
-| **3** | `document_chunks` | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`, chuyển `embedding` sang `Vector(1536)` (HNSW `vector_cosine_ops`), thêm `content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED` (GIN index). |
-| **4** | `document_storage_blobs` | [`blob.py`](../../apps/api/src/api/db/models/blob.py) | Quản lý mã băm SHA-256 (`content_hash`), kích thước byte, đường dẫn lưu file, và bộ đếm `ref_count`. |
-| **5** | `document_summaries` | [`summary.py`](../../apps/api/src/api/db/models/summary.py) | Tóm tắt 3 phần (Problem, Contribution, Limitations) gắn trích dẫn Bounding Box. |
-| **6** | `reference_items` | [`reference.py`](../../apps/api/src/api/db/models/reference.py) | Danh mục trích dẫn cuối bài (DOI, arXiv, title, authors, year, resolution_status). |
+| **3** | `document_chunks` | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`, chuyển `embedding` sang `Vector(1536)` (HNSW `vector_cosine_ops`), thêm `content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', text_content)) STORED` (GIN index). |
+| **4** | `document_storage_blobs` | [`blob.py`](../../apps/api/src/api/db/models/blob.py) | Quản lý mã băm SHA-256 (`content_hash`), kích thước byte, đường dẫn lưu file, và bộ đếm `ref_count` (xử lý tại tầng Repository PostgreSQL, giữ `IBlobStoragePort` hoàn toàn phi trạng thái). |
+| **5** | `document_summaries` | [`summary.py`](../../apps/api/src/api/db/models/summary.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`; lưu tóm tắt 3 phần (`problem_statement`, `core_contributions`, `limitations`, kèm `key_findings JSONB`) gắn trích dẫn Bounding Box. |
+| **6** | `reference_items` | [`reference.py`](../../apps/api/src/api/db/models/reference.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`; lưu danh mục trích dẫn cuối bài (DOI, arXiv, title, authors, year, `resolution_status`). |
 | **7** | `research_sessions` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Phiên đọc sâu đa bài báo (1–5 PDF đồng thời), lưu trạng thái viewport và active tab. |
 | **8** | `session_documents` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Bảng junction Many-to-Many giữa `research_sessions` và `documents`, kiểm soát giới hạn tối đa 5 bài. |
-| **9** | `session_turns` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Thêm `trace_id VARCHAR(64) NULL` để đồng bộ giám sát trực tiếp với Langfuse trace. Export tường minh trong `models/__init__.py`. |
-| **10** | `research_notes` | [`note.py`](../../apps/api/src/api/db/models/note.py) | Ghi chú học thuật nhúng trong phiên đọc, gắn trích dẫn Bounding Box và bản chụp chứng cứ `frozen_snapshot`. |
+| **9** | `session_turns` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Thêm `user_id UUID FK users.id CASCADE INDEX` và `trace_id VARCHAR(64) NULL` để đồng bộ giám sát trực tiếp với Langfuse trace. Export tường minh trong `models/__init__.py`. |
+| **10** | `research_notes` | [`note.py`](../../apps/api/src/api/db/models/note.py) | Ghi chú học thuật nhúng trong phiên đọc, gắn trích dẫn Bounding Box và bản chụp chứng cứ `frozen_snapshot` (tự động đóng băng qua trigger `BEFORE UPDATE` `trg_freeze_note_citation_on_detach` khi `chunk_id` chuyển từ `NOT NULL` sang `NULL`). |
 | **11** | `folders` | [`folder.py`](../../apps/api/src/api/db/models/folder.py) | Cây thư mục đề tài phân cấp trong Kho Yêu thích (`parent_id FK folders.id CASCADE`). |
 | **12** | `drafts` | [`draft.py`](../../apps/api/src/api/db/models/draft.py) | Thêm `bib_content TEXT DEFAULT ''`, `source_session_id UUID FK research_sessions.id SET NULL`, `pdf_preview_storage_path TEXT NULL`, `previous_snapshot JSONB NULL`. |
 
@@ -245,8 +245,20 @@ Hệ thống sử dụng hàm `ensure_database_schema(conn: AsyncConnection)` ch
 1. Tạo extension `vector` (`CREATE EXTENSION IF NOT EXISTS vector;`).
 2. Chạy `Base.metadata.create_all` tạo đủ 16 bảng.
 3. Áp dụng các lệnh `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` cho các volume CSDL cũ (Idempotent DDL Patches).
-4. Tạo chỉ mục HNSW và GIN nếu chưa có.
+4. Tạo chỉ mục HNSW (`idx_document_chunks_embedding_hnsw`, `idx_graph_nodes_embedding`) và GIN (`idx_document_chunks_content_tsv`), cùng trigger `trg_freeze_note_citation_on_detach` trên `research_notes` nếu chưa có.
 5. **Fail-Fast Policy:** Nếu không kết nối được PostgreSQL lúc khởi động, API bắt buộc phải fail-fast và báo lỗi rõ ràng. Tuyệt đối cấm fallback sang SQLite.
+
+### 5.1. Ma Trận Mã Lỗi Hệ Thống Nền Tảng (Deterministic Foundation Error Codes Matrix)
+
+Mọi ngoại lệ phát sinh ở tầng nền tảng (CSDL, Lưu trữ CAS, Cô lập đa người dùng) bắt buộc phải ánh xạ về cấu trúc JSON lỗi chuẩn mực của nền tảng:
+
+| HTTP Status | Mã lỗi chuẩn (`error.code`) | Điều kiện kích hoạt (Trigger Condition) | Cấu trúc Payload JSON trả về | Hành vi xử lý tại Frontend / Hệ thống |
+| :--- | :--- | :--- | :--- | :--- |
+| `404 Not Found` | `RESOURCE_NOT_FOUND_OR_FORBIDDEN` | Người dùng truy vấn bản ghi (`document`, `session`, `folder`, `draft`, `note`) không tồn tại hoặc thuộc quyền sở hữu của `user_id` khác (ngăn chặn dò quét ID giữa các học giả). | `{"error": {"code": "RESOURCE_NOT_FOUND_OR_FORBIDDEN", "message": "Tài nguyên không tồn tại hoặc bạn không có quyền truy cập.", "trace_id": "..."}}` | Chuyển hướng về trang danh sách phân hệ tương ứng và hiển thị thông báo cảnh báo nhẹ. |
+| `409 Conflict` | `CAS_INTEGRITY_MISMATCH` | Mã băm SHA-256 tính toán lại từ luồng tệp tải lên không khớp với chữ ký hoặc bản ghi `document_storage_blobs` hiện hành. | `{"error": {"code": "CAS_INTEGRITY_MISMATCH", "message": "Tệp tải lên bị hỏng hoặc không toàn vẹn trong quá trình truyền tải.", "trace_id": "..."}}` | Hủy giao dịch tải lên, xóa tệp tạm và hiển thị nút "Thử tải lên lại". |
+| `413 Payload Too Large` | `STORAGE_PAYLOAD_TOO_LARGE` | Dung lượng luồng byte vượt quá ngưỡng giới hạn an toàn của tầng lưu trữ CAS (50MB đối với PDF tài liệu, 10MB đối với ảnh bản thảo). | `{"error": {"code": "STORAGE_PAYLOAD_TOO_LARGE", "message": "Kích thước tệp vượt quá giới hạn cho phép.", "max_bytes": 52428800, "trace_id": "..."}}` | Ngắt luồng tải lên ngay tại trình duyệt và báo rõ dung lượng tối đa cho phép. |
+| `500 Internal Server Error` | `CAS_DISK_IO_FAILURE` | Lỗi đọc/ghi hoặc xóa tệp vật lý trên phân vùng `storage/blobs/` (đầy ổ đĩa hoặc lỗi quyền tệp hệ thống). | `{"error": {"code": "CAS_DISK_IO_FAILURE", "message": "Lỗi truy xuất hệ thống lưu trữ tệp vật lý.", "trace_id": "..."}}` | Rollback toàn bộ giao dịch PostgreSQL trong cùng chu kỳ request để đảm bảo không sinh bản ghi mồ côi. |
+| `503 Service Unavailable` | `DATABASE_UNAVAILABLE` | Mất kết nối tới cụm PostgreSQL 16+ hoặc extension `vector` chưa sẵn sàng khi gọi `/api/v1/health` hoặc khởi động ứng dụng. | `{"error": {"code": "DATABASE_UNAVAILABLE", "message": "Hệ thống cơ sở dữ liệu đang bảo trì hoặc mất kết nối.", "trace_id": "..."}}` | Tiến trình khởi động dừng ngay lập tức (Fail-fast) hoặc hiển thị màn hình bảo trì kèm mã `trace_id`. |
 
 ---
 

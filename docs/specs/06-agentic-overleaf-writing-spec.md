@@ -11,7 +11,7 @@
 ## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
 ### A. Usecase 1: Cầu Nối "Đọc Sang Viết" Khung Sườn Học Thuật Liền Mạch (Reading-to-Writing Bridge)
-- **Bối cảnh & Vấn đề thực tế:** Khi một học giả hay sinh viên vừa hoàn thành phiên đọc sâu 3–5 bài báo trong Phân hệ Đọc Sâu, họ chuẩn bị bước vào giai đoạn viết báo cáo luận văn hoặc bài báo khoa học. Thông thường, họ phải mở Overleaf hoặc MS Word từ con số không, lên Google Scholar tìm kiếm thủ công từng đoạn mã BibTeX của từng bài báo, tạo file `references.bib`, dán vào, rồi tự gõ cấu trúc khung `\documentclass{...}`, `\section{Introduction}`, `\section{Related Work}`. Quá trình chuyển đổi thủ công này thường làm đứt gãy mạch tư duy, tốn hàng giờ đồng hồ và gây ra hội chứng "sợ trang giấy trắng".
+- **Bối cảnh & Vấn đề thực tế:** Khi một học giả hay sinh viên vừa hoàn thành phiên đọc sâu 3–5 bài báo trong Phân hệ Đọc Sâu, họ chuẩn bị bước vào giai đoạn viết báo cáo luận văn hoặc bài báo khoa học. Thông thường, họ phải mở Overleaf hoặc MS Word từ con số không, lên Google Scholar tìm kiếm thủ công từng đoạn mã BibTeX của từng bài báo, tạo file `references.bib`, dán vào, rồi tự gõ cấu trúc khung `\documentclass{...}`, `\section{Introduction}`, `\section{Related Work}`. Quá trình chuyển đổi thủ công này thường làm đứt gãy mạch tư duy, tốn 2–4 giờ đồng hồ và gây ra hội chứng "sợ trang giấy trắng".
 - **Giải pháp của phân hệ:**
   - Trên thanh công cụ của Phiên đọc có nút **`[✍️ Bắt đầu viết bài từ phiên đọc này]`**.
   - Khi nhấp chuột, hệ thống tự động khởi tạo một bản thảo mới (`Draft`) kèm **Khung Sườn Học Thuật Chuẩn (Academic Skeleton)**:
@@ -28,7 +28,7 @@
     - **Cột 3 (Phải):** Khung hội thoại AI Agentic (`WritingAssistantPane.tsx`) lưu trữ toàn bộ lịch sử trao đổi vào CSDL.
 
 ### C. Usecase 3: Trợ Lý Agentic ReAct Tự Sửa Lỗi Biên Dịch Không Cần Can Thiệp (Zero-Click Self-Healing)
-- **Bối cảnh & Vấn đề thực tế:** Ngôn ngữ LaTeX nổi tiếng là khó tính với các thông báo lỗi trừu tượng như `Missing $ inserted`, `Undefined control sequence`, `Runaway argument`. Người dùng không muốn phải bấm duyệt hay xác nhận từng bước trung gian. Khi gặp lỗi, họ muốn AI tự động tiếp quản, đọc log lỗi và tự sửa chữa cho đến khi biên dịch thành công.
+- **Bối cảnh & Vấn đề thực tế:** Ngôn ngữ LaTeX nổi tiếng là khó tính với các thông báo lỗi trừu tượng như `Missing $ inserted`, `Undefined control sequence`, `Runaway argument`, hiển thị dấu hỏi chấm `[?]` do undefined citations hoặc xung đột gói macro toán học (`Command already defined`). Người dùng không muốn phải bấm duyệt hay xác nhận từng bước trung gian. Khi gặp lỗi, họ muốn AI tự động tiếp quản, đọc log lỗi và tự sửa chữa cho đến khi biên dịch thành công.
 - **Giải pháp của phân hệ:**
   - Khi người dùng bấm `[⚙️ Biên dịch PDF]` hoặc nhấn phím tắt `Ctrl+S`: E2B Sandbox MicroVM thực thi biên dịch.
   - Nếu gặp lỗi cú pháp: **LangGraph ReAct Agent** lập tức tự động tiếp quản:
@@ -284,6 +284,44 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
 
 ---
 
+### G. Ma Trận Mã Lỗi Chuẩn Hóa (Deterministic Error Codes Matrix)
+
+Bảng ma trận dưới đây quy định toàn bộ các mã lỗi tất định của Phân hệ Soạn Thảo & Agentic LaTeX, đảm bảo bất kỳ mô hình AI hoặc lập trình viên nào cũng có thể cài đặt logic xử lý lỗi chính xác 100% mà không bị sai lệch:
+
+| HTTP Status | Mã Lỗi (`error_code`) | Điều Kiện Kích Hoạt (Trigger Condition) | Thông Điệp Tiếng Việt Chuẩn Hóa (`message`) | Trường Lỗi (`field`) & Hành Động Khắc Phục (`action`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `400 Bad Request` | `INVALID_DRAFT_TITLE` | Tiêu đề bản thảo rỗng, chỉ chứa khoảng trắng hoặc vượt quá 255 ký tự | `"Tiêu đề bản thảo không hợp lệ. Vui lòng nhập từ 1 đến 255 ký tự."` | `field: "title"` — Nhập tiêu đề bản thảo hợp lệ. |
+| `400 Bad Request` | `INVALID_ASSET_FILENAME` | Tên file ảnh chứa ký tự điều khiển, dấu phân cách đường dẫn (`..`, `/`, `\`) vi phạm quy tắc an toàn Path Traversal / Zip Slip | `"Tên tệp hình ảnh không hợp lệ. Chỉ chấp nhận chữ cái, số, dấu gạch dưới, gạch ngang và dấu chấm."` | `field: "filename"` — Đổi tên file theo quy chuẩn an toàn. |
+| `400 Bad Request` | `UNSUPPORTED_ASSET_MIME_TYPE` | Tải lên file vào `figures/` có MIME type ngoài danh mục `image/png`, `image/jpeg`, `image/webp`, `application/pdf` | `"Định dạng tệp không được hỗ trợ. Chỉ chấp nhận PNG, JPEG, WebP hoặc PDF vector."` | `field: "file"` — Chọn tệp đúng định dạng cho phép. |
+| `400 Bad Request` | `ASSET_FILE_TOO_LARGE` | Dung lượng của một tệp ảnh tải lên vượt quá giới hạn đơn tệp `10MB` | `"Dung lượng tệp hình ảnh vượt quá giới hạn cho phép (tối đa 10MB/tệp)."` | `field: "file"` — Giảm dung lượng ảnh hoặc nén trước khi tải. |
+| `400 Bad Request` | `DRAFT_ASSETS_QUOTA_EXCEEDED` | Tổng dung lượng các tệp trong thư mục `figures/` của bản thảo vượt quá hạn mức `50MB` | `"Tổng dung lượng thư mục hình ảnh của bản thảo vượt quá hạn mức cho phép (tối đa 50MB)."` | `field: "figures"` — Xóa bớt hình ảnh cũ không sử dụng trong bản thảo. |
+| `400 Bad Request` | `EMPTY_PROMPT_CONTENT` | Yêu cầu prompt gửi tới trợ lý Agent qua endpoint `/assist` rỗng hoặc chỉ chứa khoảng trắng | `"Yêu cầu gửi tới trợ lý AI không được để trống."` | `field: "prompt"` — Nhập nội dung chỉ dẫn soạn thảo cụ thể. |
+| `401 Unauthorized` | `AUTH_TOKEN_INVALID` | Token JWT thiếu trong header `Authorization`, hết hạn hoặc chữ ký không hợp lệ | `"Phiên làm việc đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại."` | `field: null` — Điều hướng về trang đăng nhập hoặc làm mới token. |
+| `403 Forbidden` | `DRAFT_ACCESS_DENIED` | Người dùng cố tình truy cập hoặc chỉnh sửa bản thảo thuộc quyền sở hữu của tài khoản khác | `"Bạn không có quyền thao tác trên bản thảo này."` | `field: null` — Chỉ thao tác trên các bản thảo cá nhân. |
+| `404 Not Found` | `DRAFT_NOT_FOUND` | `draft_id` không tồn tại trong hệ thống hoặc không thuộc về người dùng (ID Enumeration Defense) | `"Không tìm thấy bản thảo nghiên cứu yêu cầu."` | `field: "id"` — Kiểm tra ID bản thảo từ danh mục hợp lệ. |
+| `404 Not Found` | `DRAFT_ASSET_NOT_FOUND` | `asset_id` không tồn tại trong thư mục `figures/` của bản thảo này | `"Không tìm thấy tệp hình ảnh đính kèm yêu cầu."` | `field: "asset_id"` — Kiểm tra danh mục hình ảnh của bản thảo. |
+| `404 Not Found` | `SOURCE_SESSION_NOT_FOUND` | `source_session_id` khi tạo bản thảo từ phiên đọc không tồn tại hoặc không thuộc quyền sở hữu của người dùng | `"Không tìm thấy phiên nghiên cứu nguồn tương ứng."` | `field: "source_session_id"` — Chọn phiên nghiên cứu nguồn hợp lệ. |
+| `409 Conflict` | `DUPLICATE_ASSET_FILENAME` | Tải lên file ảnh có tên trùng với một file ảnh đã tồn tại trong thư mục `figures/` của bản thảo | `"Tên tệp hình ảnh đã tồn tại trong dự án. Vui lòng đổi tên hoặc xóa tệp cũ trước."` | `field: "filename"` — Đổi tên file hoặc ghi đè có chủ đích. |
+| `409 Conflict` | `NO_UNDO_SNAPSHOT_AVAILABLE` | Người dùng gọi `POST :undo` khi chưa từng có thao tác sửa đổi nào của AI hoặc `previous_snapshot` là null | `"Không có bản sao lưu trước đó để thực hiện thao tác hoàn tác."` | `field: null` — Nút hoàn tác chỉ khả dụng sau khi AI đã can thiệp. |
+| `412 Precondition Failed` | `DRAFT_CONCURRENCY_CONFLICT` | Phiên bản `version` (hoặc `If-Match` ETag) từ client gửi lên không khớp với phiên bản hiện tại trong CSDL do có cập nhật đồng thời (OCC) | `"Bản thảo đã bị sửa đổi bởi một phiên làm việc khác. Vui lòng tải lại trang để cập nhật phiên bản mới nhất."` | `field: "version"` — Nạp lại bản thảo mới nhất và áp dụng lại thay đổi. |
+| `422 Unprocessable Entity` | `LATEX_COMPILATION_TIMEOUT` | Quá trình biên dịch trong E2B Sandbox MicroVM vượt quá giới hạn thời gian an toàn `15 giây` (do hình ảnh quá nặng hoặc macro lồng nhau) | `"Thời gian biên dịch bản thảo vượt quá giới hạn an toàn 15 giây. Vui lòng tối ưu hóa hình ảnh hoặc kiểm tra vòng lặp macro."` | `field: null` — Chuyển sang chế độ phác thảo nháp hoặc giảm độ phân giải ảnh. |
+| `422 Unprocessable Entity` | `LATEX_SELF_HEAL_EXHAUSTED` | Vòng lặp ReAct tự sửa lỗi biên dịch đã dùng hết ngân sách 3 lần thử mà mã nguồn vẫn còn lỗi cú pháp không thể xuất PDF | `"AI đã thử tự vá lỗi 3 lần nhưng chưa thể giải quyết triệt để lỗi cú pháp. Vui lòng kiểm tra nhật ký lỗi để xử lý thủ công."` | `field: null` — Mở nhật ký lỗi chi tiết để chỉnh sửa thủ công dòng bị lỗi. |
+| `503 Service Unavailable` | `SANDBOX_SERVICE_UNAVAILABLE` | Dịch vụ E2B Sandbox MicroVM không thể khởi tạo, quá tải hoặc mất kết nối mạng | `"Hạ tầng biên dịch đám mây tạm thời không khả dụng. Vui lòng thử lại sau giây lát."` | `field: null` — Thử lại sau ít phút khi sandbox phục hồi. |
+
+**Cấu Trúc Phong Bì Phản Hồi Lỗi Chuẩn (Standard Error Envelope):**
+```json
+{
+  "error": {
+    "code": "DRAFT_CONCURRENCY_CONFLICT",
+    "message": "Bản thảo đã bị sửa đổi bởi một phiên làm việc khác. Vui lòng tải lại trang để cập nhật phiên bản mới nhất.",
+    "field": "version",
+    "trace_id": "trace-draft-89c2"
+  }
+}
+```
+
+---
+
 ## 5. Kiến Trúc LangGraph Agent & Vòng Lặp ReAct Tự Vá Lỗi
 
 Agent soạn thảo được xây dựng dựa trên `StateGraph` của **LangGraph** theo mô hình **ReAct (Reasoning + Acting)** với bộ 4 công cụ (Tools) chuyên trách:
@@ -402,4 +440,5 @@ flowchart TD
 - [ ] Cầu nối từ Đọc sang Viết tự động khởi tạo sẵn `main.tex` và `references.bib` hợp lệ 100% cú pháp, hiển thị bản dựng PDF xem trước tức thì trên Cột 2 mà không gặp lỗi.
 - [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`.
 - [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click.
+- [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.G được cài đặt đầy đủ theo chuẩn Error Envelope.
 - [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

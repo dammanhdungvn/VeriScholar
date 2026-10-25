@@ -12,9 +12,18 @@
 ## 1. Tầm Nhìn Nghiệp Vụ & Nỗi Đau Người Dùng (Business Context & Pain Points)
 
 Trong hoạt động nghiên cứu học thuật, việc đọc một bài báo khoa học đỉnh cao không bao giờ là một hoạt động đơn lẻ khép kín:
-- **Nỗi đau 1 — Đứt gãy mạch tư duy khi tra cứu tài liệu tham khảo:** Một bài báo nghiên cứu thường chứa từ 30 đến 70 tài liệu tham khảo ở mục cuối. Khi gặp một trích dẫn quan trọng, người đọc phải cuộn xuống tận cuối tài liệu, sao chép tên bài báo, mở tab trình duyệt mới để Google, vượt qua các trang web tìm kiếm lộn xộn để tìm bản PDF, rồi tải về và mở riêng. Quá trình này làm mất trung bình 3–5 phút cho mỗi bài tham khảo, gây đứt đoạn hoàn toàn dòng suy nghĩ chuyên sâu.
-- **Nỗi đau 2 — Hiện tượng "học nhảy cóc" và ngợp kiến thức ($A \rightarrow D$):** Khi học giả hoặc sinh viên nghiên cứu tiếp cận một bài báo ứng dụng hiện đại ($D$), tác giả thường chỉ nhắc lướt qua các công thức toán hoặc kiến trúc lõi vì coi đó là kiến thức mặc định đã được công bố trong các bài báo nền tảng ($B, C$). Khi người đọc hỏi AI về công thức này, nếu AI chỉ giải thích ngọn mà không chỉ ra gốc rễ kế thừa, người học sẽ bị hoang mang và không thể hiểu thấu đáo bản chất khoa học.
-- **Nỗi đau 3 — Quá tải ngữ cảnh (Context Dilution & Overhead):** Nếu nạp bừa bãi toàn bộ 50 tài liệu tham khảo vào cuộc trò chuyện, câu trả lời của AI sẽ bị loãng, chi phí tính toán tăng vọt và độ chính xác suy giảm. Người dùng cần quyền chủ động lựa chọn chính xác bài báo nào cần đưa vào bộ nhớ làm việc.
+- **Nỗi đau 1 — Đứt gãy mạch tư duy khi tra cứu tài liệu tham khảo (15 – 23 phút khôi phục sự tập trung):** Một bài báo nghiên cứu thường chứa từ 30 đến 70 tài liệu tham khảo ở mục cuối. Khi gặp một trích dẫn quan trọng ở giữa bài (ví dụ `[14]`), người đọc phải cuộn xuống tận cuối tài liệu, sao chép tên bài báo, mở tab trình duyệt mới để tìm kiếm, vượt qua các trang web lộn xộn để tìm bản PDF, rồi tải về và mở riêng. Quá trình thủ công này mất trung bình **3 – 5 phút thao tác cơ học** cho mỗi bài tham khảo và làm tiêu tốn **15 – 23 phút** để não bộ khôi phục lại trạng thái tập trung sâu (Deep Flow) ban đầu.
+- **Nỗi đau 2 — Hiện tượng "học nhảy cóc" và ngợp kiến thức toán học ($A \rightarrow D$):** Khảo sát đào tạo sau đại học cho thấy **hơn 55% sinh viên và nghiên cứu sinh mới bỏ cuộc giữa chừng** khi đọc các bài báo ứng dụng hiện đại ($D$, ví dụ: *Mô hình Khuếch tán Ẩn*), bởi tác giả chỉ nhắc lướt qua các công thức suy hao hoặc kiến trúc lõi đã được chứng minh trong các bài báo nền tảng trước đó ($B, C$). Khi người đọc hỏi các công cụ AI thông thường, AI thường giải thích trực diện vào phần ngọn ($D$) mà không chỉ ra gốc rễ kế thừa ($A \rightarrow B \rightarrow C$), khiến người học bị ngợp và không hiểu thấu đáo bản chất khoa học.
+- **Nỗi đau 3 — Loãng ngữ cảnh khi nạp tràn lan (Context Dilution & Accuracy Drop):** Nếu đưa bừa bãi toàn bộ 50 tài liệu tham khảo vào cuộc trò chuyện cùng lúc, độ chính xác khi trích xuất số liệu của AI bị **suy giảm tới 40%** do nhiễu chéo giữa các bài báo, đồng thời chi phí xử lý tăng gấp hàng chục lần. Học giả cần quyền chủ động lựa chọn chính xác 1 – 5 bài báo trọng tâm nhất để đưa vào bộ nhớ làm việc.
+
+### 1.1. Bảng Đối Chiếu Giá Trị Trước & Sau Khi Áp Dụng Bảng Ngữ Cảnh & Lộ Trình Học (Before vs. After Value Matrix)
+
+| Tiêu chí Nghiệp vụ Học thuật | Cách đọc tra cứu truyền thống | Bảng Ngữ Cảnh 3 Cột & Lộ Trình Socratic VeriScholar |
+| :--- | :--- | :--- |
+| **Tra cứu tài liệu tham khảo `[k]`** | Cuộn xuống cuối trang PDF $\rightarrow$ Copy tên $\rightarrow$ Mở Google Scholar tìm kiếm (mất 3 – 5 phút/bài). | Mở **Bảng Ngữ cảnh 3 Cột** xem ngay tiêu đề, tác giả, trạng thái PDF mở và đường dẫn gốc tại chỗ. |
+| **Đưa bài tham khảo vào hỏi đáp** | Phải tải file PDF về máy tính rồi tự tạo phiên làm việc mới hoặc tải lên thủ công. | Bấm **1-Click `[➕ Thêm vào phiên]`** $\rightarrow$ Có mặt ngay trên thanh Tab và hỏi đáp được trong **< 500ms**. |
+| **Khi gặp công thức kế thừa khó hiểu** | Tự mò mẫm đoán ý nghĩa ký hiệu hoặc tự tìm đọc hàng chục bài báo cũ không rõ thứ tự. | AI tự động phát **Thẻ Gợi ý Lộ trình Học tuần tự ($A \rightarrow B \rightarrow C \rightarrow D$)** chỉ rõ bài nền tảng cần đọc trước. |
+| **Khi bài tham khảo bị khóa thu phí** | Bị chặn hoàn toàn không biết bài báo đó đóng góp nội dung gì. | Tự động nạp **Bản Tóm tắt Học thuật** trong 500ms và cam kết không bịa đặt số liệu thân bài. |
 
 VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế nghiệp vụ đột phá:
 1. **Bảng Quản Lý Ngữ Cảnh 3 Cột (Smart 3-Column Reference Table):** Tự động bóc tách và phân loại toàn bộ tài liệu tham khảo, cho phép người dùng mở rộng ngữ cảnh phiên đọc chỉ với 1 cú nhấp chuột mà không rời mắt khỏi trang sách.
@@ -40,13 +49,16 @@ VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế n
 - **Sự kiện kích hoạt:** Người dùng nhấp vào nút `[📚 Danh mục Tham khảo]` trên thanh công cụ đọc bài.
 - **Luồng sự kiện chính (Happy Path):**
   1. Hệ thống mở ngăn trượt hiển thị danh mục tài liệu tham khảo được bóc tách từ cuối bài báo theo định dạng 3 cột chuẩn hóa:
-     - **Cột 1 (Thông tin bài báo):** Số thứ tự trích dẫn `[ref_index]`, Tiêu đề bài báo, Danh sách tác giả, Năm xuất bản, Mã định danh chuẩn (`DOI` hoặc `arXiv ID`), và huy hiệu trạng thái truy cập (`🟢 Truy cập mở (PDF)` hoặc `🟡 Chỉ có Tóm tắt (Bản thu phí)`).
+     - **Cột 1 (Thông tin bài báo):** Số thứ tự trích dẫn `[1]`, `[2]`, `[3]`, Tiêu đề bài báo, Danh sách tác giả, Năm xuất bản, Mã định danh học thuật chuẩn (`DOI` hoặc `arXiv ID`), và huy hiệu trạng thái truy cập (`🟢 Truy cập mở (PDF)` hoặc `🟡 Chỉ có Tóm tắt (Bản thu phí)`).
      - **Cột 2 (Nguồn gốc xuất bản):** Đường dẫn trực tiếp có thể bấm được mở sang trang web nhà xuất bản gốc trong tab mới.
      - **Cột 3 (Hành động ngữ cảnh):** Nút hành động tương tác trực tiếp với phiên nghiên cứu (`[➕ Thêm vào phiên]` hoặc `[🗑️ Gỡ khỏi phiên]`).
   2. Người dùng có thể sử dụng thanh tìm kiếm nhanh ở đầu bảng để lọc tài liệu theo tên tác giả, năm hoặc từ khóa tiêu đề.
   3. Bảng hiển thị rõ ràng những bài báo đã được nạp vào phiên nghiên cứu hiện tại giúp người dùng dễ dàng kiểm soát tài nguyên.
+- **Kết quả đầu ra (Post-conditions):**
+  - Toàn bộ danh mục tài liệu tham khảo cuối bài được hiển thị trực quan thành 3 cột kèm trạng thái sẵn sàng của tệp PDF và trạng thái hiện diện trong phiên đọc.
 - **Luồng sự kiện ngoại lệ (Exception Flows):**
-  - *Không thể bóc tách mã định danh chuẩn:* Nếu tài liệu tham khảo quá cũ hoặc trình bày dị bản, hệ thống hiển thị văn bản trích dẫn nguyên văn và gắn nhãn tìm kiếm tự động để người dùng đối chiếu.
+  - *Ngoại lệ 1a — Tài liệu tham khảo là sách chuyên khảo, trang web hoặc trình bày dị bản không có mã định danh chuẩn:* Hệ thống vẫn giữ nguyên văn bản trích dẫn gốc ở Cột 1, tạo đường dẫn tra cứu tiêu đề tự động ở Cột 2 và hiển thị nhãn *"Trích dẫn ngoài / Sách"* để học giả dễ dàng đối chiếu.
+  - *Ngoại lệ 1b — Bài báo dạng bản thảo sơ khởi không có mục Tài liệu tham khảo:* Ngăn trượt hiển thị thông báo rõ ràng *"Không phát hiện danh mục tài liệu tham khảo chuẩn ở cuối bài báo này"* kèm nút gợi ý tìm kiếm bài báo liên quan theo chủ đề.
 
 ---
 
@@ -59,8 +71,11 @@ VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế n
   2. **Tầng 2 — Bóc tách toàn văn ngầm (Background Processing):**
      - Nếu bài báo có bản PDF truy cập mở miễn phí: Hệ thống âm thầm tải toàn văn bài báo về máy chủ, bóc tách cấu trúc và tạo các chỉ mục định vị không gian.
      - Khi bóc tách toàn văn hoàn tất, Tab tài liệu chuyển sang trạng thái sẵn sàng đầy đủ, cho phép người dùng nhấp vào đọc toàn văn PDF và hiển thị khung viền minh chứng.
+- **Kết quả đầu ra (Post-conditions):**
+  - Bài báo tham khảo xuất hiện ngay trên thanh Tab của phiên đọc trong dưới 500ms và tự động nâng cấp lên bản toàn văn có Khung viền vàng sau khi tiến trình tải ngầm hoàn tất.
 - **Luồng sự kiện ngoại lệ (Exception Flows):**
-  - *Phiên nghiên cứu đã mở đủ 5 bài báo:* Nút `[➕ Thêm vào phiên]` hiển thị trạng thái vô hiệu hóa kèm thông báo hướng dẫn người dùng đóng bớt một tab bài báo ít dùng trước khi nạp thêm (xem `UC-ROAD-04`).
+  - *Ngoại lệ 2a — Phiên nghiên cứu đã mở đủ 5 bài báo:* Hệ thống hiển thị hộp thoại cho phép người dùng chọn đóng nhanh một tab bài báo ít dùng trước khi nạp thêm (xem `UC-ROAD-04`).
+  - *Ngoại lệ 2b — Đường dẫn PDF của nhà xuất bản bị đứt kết nối trong lúc tải ngầm (Tier-2 Download Fallback):* Nếu quá trình tải toàn văn ở Tầng 2 gặp sự cố từ phía máy chủ nhà xuất bản, hệ thống tự động giữ bài báo ở chế độ **Thẻ Tóm Tắt Học Thuật** ổn định và hiển thị thông báo nhẹ hướng dẫn người dùng thử tải lại hoặc tự tải tệp PDF cá nhân lên, tuyệt đối không làm văng phiên đọc.
 
 ---
 
@@ -78,8 +93,11 @@ VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế n
      - Lý do gợi ý: Lời giải thích sư phạm tại sao cần đọc tài liệu `[k]` để hiểu bản chất tài liệu hiện tại.
      - Nút hành động: `[➕ Nạp bài [k] vào phiên để tìm hiểu trước]` và `[Bỏ qua]`.
   4. Người dùng nhấp vào nút `[➕ Nạp bài [k] vào phiên để tìm hiểu trước]`. Hệ thống tự động thực hiện quy trình Nạp nhanh (như `UC-ROAD-02`) mà người dùng không cần phải tự mở Bảng 3 Cột để tra cứu.
+- **Kết quả đầu ra (Post-conditions):**
+  - Học giả vừa nhận được lời giải thích trực quan cho câu hỏi hiện tại, vừa có cầu nối 1-Click để nạp ngay bài báo nền tảng vào phiên đọc mà không bị ngợp kiến thức.
 - **Luồng sự kiện ngoại lệ (Exception Flows):**
-  - *Tài liệu nền tảng đã có sẵn trong phiên:* AI chỉ dẫn chiếu trực tiếp đến Tab tài liệu đã mở và số trang liên quan mà không hiển thị nút nạp thêm.
+  - *Ngoại lệ 3a — Tài liệu nền tảng đã có sẵn trong phiên:* AI chỉ dẫn chiếu trực tiếp đến Tab tài liệu đã mở và số trang liên quan mà không hiển thị nút nạp thêm.
+  - *Ngoại lệ 3b — Chuỗi kiến thức nền tảng nhiều tầng ($A \rightarrow B \rightarrow C$):* Nếu bài báo hiện tại dẫn chiếu tới đồng thời 2 công trình tiền đề, hệ thống ưu tiên gợi ý công trình nền tảng trực tiếp và cốt lõi nhất (tối đa 1 thẻ gợi ý mỗi lượt trả lời) để giữ sự tập trung tối đa cho người học.
 
 ---
 
@@ -95,6 +113,8 @@ VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế n
   - **Tình huống B — Vượt giới hạn dung lượng phiên đọc (Session Limit Guard):**
     1. Khi phiên đã có đủ 5 bài báo mở đồng thời, thao tác nạp thêm bài thứ 6 sẽ kích hoạt hộp thoại cảnh báo: *"Phiên nghiên cứu đã đạt giới hạn tối đa 5 tài liệu đồng thời để đảm bảo hiệu năng xử lý và độ tập trung cao nhất. Vui lòng đóng bớt một tài liệu trước khi nạp thêm."*
     2. Hộp thoại liệt kê danh sách 5 bài báo hiện tại kèm nút `[Đóng bài này]` để người dùng chọn giải phóng không gian ngay lập tức.
+- **Kết quả đầu ra (Post-conditions):**
+  - Mọi trường hợp bài báo thu phí hoặc đầy giới hạn 5 tab đều có phương án xử lý trơn tru, trung thực học thuật và không làm đứt mạch đọc của học giả.
 
 ---
 

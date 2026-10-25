@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, PostgreSQL 16+, `pgvector` 0.8.0+, SQLAlchemy 2.0 Async, `asyncpg`, `pydantic` v2, `structlog`.
 
-**Spec:** [`docs/superpowers/specs/2026-10-25-foundation-architecture-and-db-design.md`](../superpowers/specs/2026-10-25-foundation-architecture-and-db-design.md) & [`docs/specs/00-foundation-architecture-and-db.md`](../specs/00-foundation-architecture-and-db.md).
+**Spec:** [`docs/superpowers/specs/2026-10-25-foundation-architecture-and-db-design.md`](../specs/2026-10-25-foundation-architecture-and-db-design.md) & [`docs/specs/00-foundation-architecture-and-db.md`](../../specs/00-foundation-architecture-and-db.md).
 
 ---
 

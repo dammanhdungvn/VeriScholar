@@ -62,7 +62,7 @@ flowchart TD
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
 | **API Endpoints** | [`apps/api/src/api/v1/endpoints/auth.py`](../../apps/api/src/api/v1/endpoints/auth.py) | **KEEP** | 13 endpoints đầy đủ: Register, Login, Google, GitHub, Logout, Refresh, Forgot-Password, Reset-Password, Verify-Email, Resend-Verification, Me (GET/PATCH), Change-Password. |
-| **Logic Service** | [`apps/api/src/api/services/auth_service.py`](../../apps/api/src/api/services/auth_service.py) | **MODIFY** | Đã có sẵn mã hóa mật khẩu, sinh JWT HMAC-SHA256, OTP Redis. Cần bổ sung hàm mã hóa/giải mã khóa cá nhân **BYOK AES-256-GCM**. |
+| **Logic Service** | [`apps/api/src/api/services/auth_service.py`](../../apps/api/src/api/services/auth_service.py) | **MODIFY** | Đã có sẵn mã hóa mật khẩu, sinh JWT HMAC-SHA256, OTP Redis. Bổ sung hàm mã hóa/giải mã khóa cá nhân **BYOK AES-256-GCM**. |
 | **Model CSDL** | [`apps/api/src/api/db/models/user.py`](../../apps/api/src/api/db/models/user.py) | **MODIFY** | Bổ sung 2 cột: `theme_preference` (mặc định `'system'`) và `byok_api_key_encrypted` (TEXT nullable). |
 | **Pydantic Schemas** | [`apps/api/src/api/schemas/auth.py`](../../apps/api/src/api/schemas/auth.py) | **MODIFY** | Bổ sung trường `theme_preference` và `byok_api_key` vào `UserProfileResponse` và `UpdateProfileRequest`. |
 | **Domain Entity** | `packages/core/src/core/domain/entities/user.py` | **KEEP** | Thực thể User thuần Python không phụ thuộc ORM. |
@@ -118,9 +118,27 @@ CREATE INDEX idx_users_role_active ON users (role, is_active);
 
 ## 4. Hợp Đồng API REST & Bảng Mã Lỗi (REST Contracts & Error Schemas)
 
-Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (Response Envelope) và trả về mã `trace_id` trong headers.
+Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (`SingleResponseEnvelope`) và phong bì lỗi (`ErrorResponse`).
 
-### A. Danh Mục Endpoints Chi Tiết
+### A. Chuẩn Phong Bì Phản Hồi Lỗi Chuẩn Hóa (`ErrorResponse`)
+Khi xảy ra lỗi, backend trả về cấu trúc JSON đồng nhất tuân thủ [`apps/api/src/api/schemas/error.py`](../../apps/api/src/api/schemas/error.py):
+```json
+{
+  "success": false,
+  "error": {
+    "code": "EMAIL_ALREADY_EXISTS",
+    "message": "Địa chỉ email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng tính năng quên mật khẩu.",
+    "field": "email",
+    "action": "Vui lòng đăng nhập bằng tài khoản này hoặc sử dụng chức năng quên mật khẩu."
+  },
+  "meta": {
+    "request_id": "req_892a01bf23cd",
+    "timestamp": "2026-10-25T09:12:00Z"
+  }
+}
+```
+
+### B. Danh Mục Endpoints Chi Tiết
 
 #### 1. Đăng ký tài khoản (`POST /api/v1/auth/register`)
 - **Headers:** `Content-Type: application/json`
@@ -135,18 +153,25 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
 - **Response (HTTP 201 Created):**
   ```json
   {
-    "user": {
-      "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
-      "email": "scholar@university.edu.vn",
-      "full_name": "TS. Nguyễn Văn A",
-      "role": "researcher",
-      "is_verified": false
+    "success": true,
+    "data": {
+      "user": {
+        "id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+        "email": "scholar@university.edu.vn",
+        "full_name": "TS. Nguyễn Văn A",
+        "role": "researcher",
+        "is_verified": false
+      },
+      "tokens": {
+        "access_token": "eyJhbGciOi...",
+        "refresh_token": "eyJhbGciOi...",
+        "token_type": "bearer",
+        "expires_in": 900
+      }
     },
-    "tokens": {
-      "access_token": "eyJhbGciOi...",
-      "refresh_token": "eyJhbGciOi...",
-      "token_type": "bearer",
-      "expires_in": 3600
+    "meta": {
+      "request_id": "req_892a01bf23cd",
+      "timestamp": "2026-10-25T09:12:00Z"
     }
   }
   ```
@@ -160,24 +185,41 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
     "remember_me": true
   }
   ```
-- **Response (HTTP 200 OK):** Trả về cấu trúc tương tự `register` kèm thời hạn token mở rộng (nếu `remember_me=true`, refresh token có hạn 30 ngày).
+- **Response (HTTP 200 OK):** Trả về cấu trúc tương tự `register` kèm thời hạn refresh token mở rộng (nếu `remember_me=true`, refresh token có hạn 30 ngày; mặc định 7 ngày).
 
 #### 3. Đăng nhập Google OAuth 2.0 (`POST /api/v1/auth/google`)
 - **Request Body:** `{ "credential": "<Google_ID_Token_JWT>" }`
 - **Xử lý:** Backend xác minh token qua Google API certs, tự động trích xuất `email`, `name`, `picture`. Nếu user chưa có tài khoản $\rightarrow$ tự động tạo tài khoản với cờ `is_verified=true`.
 
-#### 4. Khôi phục mật khẩu (`POST /api/v1/auth/forgot-password`)
+#### 4. Đăng nhập GitHub OAuth (`POST /api/v1/auth/github`)
+- **Request Body:** `{ "code": "<GitHub_Auth_Code>" }`
+- **Xử lý:** Trao đổi auth code lấy access token từ GitHub API, lấy email chính và thông tin người dùng. Tự động liên kết hoặc tạo tài khoản mới với cờ `is_verified=true`.
+
+#### 5. Đăng xuất thu hồi phiên (`POST /api/v1/auth/logout`)
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Request Body:** `{ "refresh_token": "eyJhbGciOi..." }`
+- **Xử lý:** Đưa `refresh_token` và `access_token` vào danh sách đen (Blacklist) trong Redis với thời gian TTL bằng thời gian sống còn lại của token.
+
+#### 6. Làm mới Access Token (`POST /api/v1/auth/refresh`)
+- **Request Body:** `{ "refresh_token": "eyJhbGciOi..." }`
+- **Response (HTTP 200 OK):** Cấp cặp access token và refresh token mới (áp dụng cơ chế Refresh Token Rotation).
+
+#### 7. Khôi phục mật khẩu (`POST /api/v1/auth/forgot-password`)
 - **Request Body:** `{ "email": "scholar@university.edu.vn" }`
 - **Response (HTTP 200 OK):**
   ```json
   {
-    "message": "Nếu email tồn tại, mã xác thực OTP đã được gửi.",
-    "expires_in_seconds": 300
+    "success": true,
+    "data": {
+      "message": "Nếu email tồn tại trên hệ thống, mã xác thực OTP đã được gửi.",
+      "expires_in_seconds": 300
+    },
+    "meta": { "request_id": "req_892a01bf23cd" }
   }
   ```
 - **Fallback Môi trường Dev:** Nếu `SMTP_HOST` chưa cấu hình, mã OTP được ghi ra file log [`storage/logs/auth-emails.log`](../../storage/logs/auth-emails.log) để lập trình viên copy kiểm thử.
 
-#### 5. Đặt lại mật khẩu (`POST /api/v1/auth/reset-password`)
+#### 8. Đặt lại mật khẩu (`POST /api/v1/auth/reset-password`)
 - **Request Body:**
   ```json
   {
@@ -187,9 +229,21 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
   }
   ```
 
-#### 6. Xem & Cập nhật Hồ sơ (`GET / PATCH /api/v1/auth/me`)
+#### 9. Xác thực tài khoản email (`POST /api/v1/auth/verify-email`)
+- **Request Body:** `{ "email": "scholar@university.edu.vn", "otp_code": "849201" }`
+- **Response (HTTP 200 OK):** Cập nhật `is_verified = true` trong cơ sở dữ liệu.
+
+#### 10. Gửi lại mã xác thực email (`POST /api/v1/auth/resend-verification`)
+- **Request Body:** `{ "email": "scholar@university.edu.vn" }`
+- **Xử lý:** Áp dụng rate limit 3 lần / 15 phút, sinh mã OTP 6 chữ số mới vào Redis.
+
+#### 11. Xem hồ sơ cá nhân (`GET /api/v1/auth/me`)
 - **Headers:** `Authorization: Bearer <access_token>`
-- **PATCH Request Body:**
+- **Response (HTTP 200 OK):** Trả về đầy đủ thông tin hồ sơ `UserProfileResponse`. Trường `byok_api_key_encrypted` được chuyển thành `has_byok: true` và `byok_masked: "sk-proj-...4f8A"`.
+
+#### 12. Cập nhật hồ sơ & BYOK (`PATCH /api/v1/auth/me`)
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Request Body:**
   ```json
   {
     "full_name": "PGS. TS. Nguyễn Văn A",
@@ -200,7 +254,52 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
     "byok_api_key": "sk-proj-custom-openai-key"
   }
   ```
-- **Response (HTTP 200 OK):** Trả về thông tin đã cập nhật. Lưu ý: trường `byok_api_key` không bao giờ được trả về nguyên văn; Backend chỉ trả về `has_byok: true` và `byok_masked: "sk-proj-...4f8A"`.
+- **Response (HTTP 200 OK):** Trả về thông tin đã cập nhật. Khóa BYOK không bao giờ được trả về nguyên văn thô.
+
+#### 13. Đổi mật khẩu chủ động (`POST /api/v1/auth/change-password`)
+- **Headers:** `Authorization: Bearer <access_token>`
+- **Request Body:**
+  ```json
+  {
+    "current_password": "OldPassword123!",
+    "new_password": "NewSecurePassword456!"
+  }
+  ```
+
+---
+
+### C. Ma Trận Mã Lỗi Chuẩn Hóa (Deterministic Error Codes Matrix)
+
+Bảng ma trận dưới đây quy định toàn bộ các mã lỗi tất định của Phân hệ Xác thực và Hồ sơ Học giả, đảm bảo bất kỳ mô hình AI hoặc lập trình viên nào cũng có thể cài đặt logic xử lý lỗi chính xác tuyệt đối mà không bị sai lệch:
+
+| HTTP Status | Mã Lỗi (`error_code`) | Điều Kiện Kích Hoạt (Trigger Condition) | Thông Điệp Tiếng Việt Chuẩn Hóa (`message`) | Trường Lỗi (`field`) & Hành Động Khắc Phục (`action`) |
+| :--- | :--- | :--- | :--- | :--- |
+| `400 Bad Request` | `INVALID_PAYLOAD` | Body yêu cầu rỗng, sai định dạng JSON hoặc thiếu các trường bắt buộc | `"Dữ liệu yêu cầu không hợp lệ hoặc thiếu trường bắt buộc."` | `field: null` — Kiểm tra cấu trúc body request theo schema. |
+| `400 Bad Request` | `WEAK_PASSWORD` | Mật khẩu ngắn hơn 8 ký tự hoặc thiếu ít nhất 1 chữ cái và 1 chữ số | `"Mật khẩu phải chứa ít nhất 8 ký tự bao gồm cả chữ cái và chữ số."` | `field: "password"` — Yêu cầu người dùng tăng cường độ phức tạp mật khẩu. |
+| `400 Bad Request` | `INVALID_EMAIL_FORMAT` | Email sai định dạng RFC 5322 hoặc sử dụng tên miền email rác dùng 1 lần | `"Địa chỉ email không đúng định dạng học thuật hoặc thuộc miền tạm thời bị hạn chế."` | `field: "email"` — Nhập email học thuật hoặc cá nhân hợp lệ. |
+| `400 Bad Request` | `INVALID_ORCID_FORMAT` | Trường `orcid_id` không khớp biểu thức chính quy `^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$` | `"Mã định danh ORCID phải tuân thủ định dạng chuẩn quốc tế 16 ký tự (ví dụ: 0000-0002-1825-0097)."` | `field: "orcid_id"` — Nhập mã ORCID chuẩn gồm 16 chữ số chia 4 nhóm. |
+| `400 Bad Request` | `INVALID_THEME_PREFERENCE` | Trường `theme_preference` nhận giá trị khác với bộ ba `['light', 'dark', 'system']` | `"Tùy chọn giao diện không hợp lệ. Chỉ chấp nhận các giá trị: light, dark hoặc system."` | `field: "theme_preference"` — Chọn một trong 3 giá trị cho phép. |
+| `400 Bad Request` | `INVALID_OTP_FORMAT` | Mã OTP gửi lên không phải là chuỗi đúng 6 chữ số nguyên | `"Mã xác thực OTP phải là chuỗi 6 chữ số."` | `field: "otp_code"` — Nhập đủ 6 số nhận được từ hòm thư. |
+| `400 Bad Request` | `PASSWORD_MISMATCH` | Mật khẩu hiện tại cung cấp trong endpoint đổi mật khẩu không khớp với bản băm lưu trong CSDL | `"Mật khẩu hiện tại không chính xác. Vui lòng kiểm tra lại."` | `field: "current_password"` — Nhập đúng mật khẩu đang sử dụng. |
+| `401 Unauthorized` | `INVALID_CREDENTIALS` | Đăng nhập thất bại do sai email hoặc sai mật khẩu PBKDF2 (thông điệp trung tính chống dò quét) | `"Email hoặc mật khẩu không chính xác."` | `field: null` — Kiểm tra lại thông tin hoặc bấm Quên mật khẩu. |
+| `401 Unauthorized` | `TOKEN_EXPIRED` | Access Token JWT đã quá hạn 15 phút (`exp < current_time`) | `"Phiên làm việc đã hết hạn. Vui lòng làm mới phiên."` | `field: null` — Client tự động gọi endpoint `/auth/refresh` bằng refresh token. |
+| `401 Unauthorized` | `TOKEN_INVALID` | Chữ ký HMAC-SHA256 của JWT không khớp, token bị giả mạo hoặc giải mã lỗi | `"Mã xác thực không hợp lệ hoặc đã bị can thiệp."` | `field: null` — Xóa bỏ token và điều hướng về trang đăng nhập. |
+| `401 Unauthorized` | `REFRESH_TOKEN_EXPIRED` | Refresh token JWT đã quá hạn (7 ngày hoặc 30 ngày) | `"Phiên đăng nhập dài hạn đã hết hạn. Vui lòng đăng nhập lại."` | `field: "refresh_token"` — Xóa phiên lưu trữ và đưa về màn hình Đăng nhập. |
+| `401 Unauthorized` | `REFRESH_TOKEN_REVOKED` | Refresh token nằm trong danh sách đen Redis (Blacklist) do đã đăng xuất trước đó | `"Phiên đăng nhập đã bị thu hồi. Vui lòng đăng nhập lại."` | `field: "refresh_token"` — Xóa phiên đăng nhập cục bộ. |
+| `401 Unauthorized` | `USER_INACTIVE` | Tài khoản học giả có cờ `is_active = False` do vi phạm điều khoản hoặc bị khóa | `"Tài khoản học giả này đã bị tạm khóa. Vui lòng liên hệ ban quản trị."` | `field: null` — Liên hệ bộ phận hỗ trợ kỹ thuật. |
+| `403 Forbidden` | `ACCOUNT_NOT_VERIFIED` | Học giả chưa xác thực email (`is_verified = False`) nhưng truy cập tính năng yêu cầu kích hoạt | `"Tài khoản chưa được kích hoạt qua email. Vui lòng hoàn tất xác thực để tiếp tục."` | `field: null` — Mở modal nhắc xác thực email hoặc gửi lại mã. |
+| `404 Not Found` | `RESOURCE_NOT_FOUND` | Học giả A cố truy cập tài nguyên của học giả B (trả về 404 thay vì 403 để chống ID Enumeration) | `"Không tìm thấy tài nguyên yêu cầu hoặc bạn không có quyền truy cập."` | `field: null` — Điều hướng người dùng về trang chủ an toàn. |
+| `404 Not Found` | `USER_NOT_FOUND` | Không tìm thấy bản ghi người dùng tương ứng với ID trong token | `"Không tìm thấy thông tin tài khoản người dùng."` | `field: null` — Thực hiện đăng xuất và xóa cache client. |
+| `409 Conflict` | `EMAIL_ALREADY_EXISTS` | Đăng ký tài khoản mới với địa chỉ email đã tồn tại trong bảng `users` | `"Địa chỉ email này đã được sử dụng. Vui lòng đăng nhập hoặc sử dụng tính năng quên mật khẩu."` | `field: "email"` — Điều hướng người dùng sang form Đăng nhập. |
+| `422 Unprocessable Entity` | `BYOK_KEY_INVALID` | Khóa OpenAI API cá nhân gửi lên không vượt qua bước kiểm tra kết nối với nhà cung cấp (lỗi 401 upstream) | `"Khóa API không hợp lệ hoặc đã bị thu hồi bởi nhà cung cấp. Vui lòng kiểm tra lại."` | `field: "byok_api_key"` — Nhập khóa API hợp lệ từ OpenAI Platform. |
+| `422 Unprocessable Entity` | `BYOK_QUOTA_EXCEEDED` | Khóa OpenAI API hợp lệ nhưng tài khoản bên thứ ba đã cạn số dư tín dụng (`insufficient_quota`) | `"Khóa API hợp lệ nhưng tài khoản của bạn tại nhà cung cấp AI đã hết số dư tín dụng."` | `field: "byok_api_key"` — Nạp thêm tín dụng vào tài khoản OpenAI của bạn. |
+| `429 Too Many Requests` | `OTP_RATE_LIMITED` | Yêu cầu gửi lại OTP quá 3 lần trong vòng 15 phút cho cùng một địa chỉ email | `"Bạn đã yêu cầu gửi mã xác thực quá nhiều lần. Vui lòng thử lại sau 15 phút."` | `field: "email"` — Khóa nút gửi mã và kích hoạt đồng hồ đếm ngược. |
+| `429 Too Many Requests` | `OTP_MAX_ATTEMPTS_EXCEEDED` | Nhập sai mã OTP quá 5 lần liên tiếp; Redis tự động hủy mã OTP và khóa tạm thời | `"Bạn đã nhập sai mã xác thực quá số lần cho phép. Mã OTP đã bị hủy. Vui lòng thử lại sau 15 phút."` | `field: "otp_code"` — Vô hiệu hóa ô nhập OTP và yêu cầu chờ hết thời gian. |
+| `429 Too Many Requests` | `AUTH_RATE_LIMITED` | Thử đăng nhập sai mật khẩu quá 10 lần liên tục từ cùng một địa chỉ mạng | `"Quá nhiều lần đăng nhập không thành công. Vui lòng thử lại sau 5 phút."` | `field: null` — Tạm khóa form đăng nhập trong 5 phút. |
+| `500 Internal Server Error` | `BYOK_ENCRYPTION_FAILED` | Không thể mã hóa khóa BYOK bằng AES-256-GCM do cấu hình thiếu biến môi trường `BYOK_ENCRYPTION_KEY` | `"Lỗi hệ thống trong quá trình mã hóa bảo mật khóa cá nhân. Vui lòng liên hệ ban quản trị."` | `field: null` — Kiểm tra lại biến môi trường server. |
+| `500 Internal Server Error` | `INTERNAL_SERVER_ERROR` | Lỗi ngoại lệ hệ thống chưa xác định phát sinh trong quá trình xử lý | `"Đã xảy ra sự cố nội bộ trong quá trình xử lý yêu cầu. Vui lòng thử lại sau."` | `field: null` — Báo cáo sự cố kèm mã `request_id` cho kỹ thuật. |
+| `502 Bad Gateway` | `OAUTH_PROVIDER_UNAVAILABLE` | Không thể kết nối xác minh chứng thư số với máy chủ Google hoặc GitHub OAuth | `"Không thể kết nối đến nhà cung cấp xác thực bên thứ ba. Vui lòng thử lại sau."` | `field: null` — Đề xuất đăng nhập tạm thời bằng Email/Mật khẩu. |
+| `504 Gateway Timeout` | `UPSTREAM_TIMEOUT` | Yêu cầu xác thực khóa BYOK tới máy chủ OpenAI vượt quá thời gian chờ (> 10 giây) | `"Quá thời gian chờ phản hồi từ máy chủ nhà cung cấp AI. Vui lòng thử lại sau."` | `field: "byok_api_key"` — Thử lại thao tác lưu khóa sau vài giây. |
 
 ---
 
@@ -269,6 +368,7 @@ Mọi thay đổi kỹ thuật của phân hệ Xác thực và Hồ sơ phải 
 | **Business Logic Service** | [`apps/api/src/api/services/auth_service.py`](../../apps/api/src/api/services/auth_service.py) | Bổ sung hàm mã hóa/giải mã AES-256-GCM dùng `cryptography.hazmat.primitives.ciphers.aead.AESGCM`. |
 | **Database Model** | [`apps/api/src/api/db/models/user.py`](../../apps/api/src/api/db/models/user.py) | Bổ sung cột `theme_preference` và `byok_api_key_encrypted`. |
 | **Pydantic Schemas** | [`apps/api/src/api/schemas/auth.py`](../../apps/api/src/api/schemas/auth.py) | Cập nhật request/response schema với validation chặt chẽ. |
+| **Error Handling Schema** | [`apps/api/src/api/schemas/error.py`](../../apps/api/src/api/schemas/error.py) | Chuẩn hóa cấu trúc phong bì lỗi `ErrorResponse` và `ErrorDetail`. |
 
 ---
 
@@ -312,7 +412,7 @@ flowchart TD
 ## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Lược đồ bảng `users` được cập nhật đầy đủ các trường `theme_preference` và `byok_api_key_encrypted`.
-- [ ] 13 endpoint trong `auth.py` hoạt động ổn định, có rate-limiting qua Redis và xử lý lỗi đồng nhất.
+- [ ] 13 endpoint trong `auth.py` hoạt động ổn định, có rate-limiting qua Redis và xử lý lỗi đồng nhất theo đúng Ma Trận Mã Lỗi Chuẩn Hóa.
 - [ ] Cơ chế mã hóa khóa cá nhân BYOK sử dụng thuật toán AES-256-GCM an toàn, không bao giờ để lộ khóa thô ra log hoặc response.
 - [ ] Mọi thao tác truy vấn dữ liệu học giả đều được cô lập triệt để theo `user_id`.
 - [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 8 đạt `100% PASS`.

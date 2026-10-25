@@ -89,7 +89,7 @@ Khi gọi `POST /api/v1/sessions/{session_id}/references:ingest`:
 - Nếu `count >= 5`: Trả về lỗi `HTTP 409 CONFLICT` kèm payload gợi ý:
   ```json
   {
-    "code": "SESSION_TAB_LIMIT_EXCEEDED",
+    "code": "MAX_SESSION_DOCUMENTS_REACHED",
     "message": "Phiên đọc đã đạt giới hạn tối đa 5 bài báo. Vui lòng đóng bớt một bài báo trên thanh Tab trước khi nạp thêm.",
     "current_count": 5,
     "max_limit": 5
@@ -186,6 +186,15 @@ data: {
   "can_ingest": true
 }
 ```
+
+### D. Ma Trận Mã Lỗi Chuẩn Hóa Bảng Ngữ Cảnh & Lộ Trình Học (Deterministic Error Codes Matrix)
+
+| HTTP Status | Mã lỗi chuẩn (`error.code`) | Điều kiện kích hoạt (Trigger Condition) | Cấu trúc Payload JSON trả về | Hành vi xử lý tại Frontend / Hệ thống |
+| :--- | :--- | :--- | :--- | :--- |
+| `404 Not Found` | `REFERENCE_ITEM_NOT_FOUND` | Chỉ mục `ref_index` yêu cầu nạp không tồn tại trong danh mục `reference_items` của bài báo nguồn. | `{"error": {"code": "REFERENCE_ITEM_NOT_FOUND", "message": "Không tìm thấy mục tài liệu tham khảo tương ứng.", "ref_index": 99, "trace_id": "..."}}` | Vô hiệu hóa nút nạp tại dòng tương ứng và hiển thị thông báo nhẹ. |
+| `409 Conflict` | `MAX_SESSION_DOCUMENTS_REACHED` | Phiên đọc đã mở đủ 5/5 bài báo khi người dùng bấm nạp bài từ Bảng 3 Cột hoặc từ thẻ `BridgeHintCard`. | `{"error": {"code": "MAX_SESSION_DOCUMENTS_REACHED", "message": "Phiên đọc đã đạt giới hạn tối đa 5 bài báo.", "current_count": 5, "max_limit": 5, "trace_id": "..."}}` | Mở hộp thoại **Tab Eviction Dialog** để người dùng chọn đóng 1 bài cũ và tự động nạp tiếp bài tham khảo vừa chọn. |
+| `409 Conflict` | `REFERENCE_ALREADY_IN_SESSION` | Bài báo tham khảo (`resolved_document_id`) đã có mặt trong `session_documents` của phiên đọc hiện tại. | `{"error": {"code": "REFERENCE_ALREADY_IN_SESSION", "message": "Bài báo tham khảo này đã được mở sẵn trong phiên đọc.", "document_id": "...", "trace_id": "..."}}` | Tự động chuyển tab active trên `DocumentTabBar.tsx` sang bài báo đó. |
+| `201 Created (Fallback)` | `TIER2_PAYWALL_ABSTRACT_ONLY` | Bài báo tham khảo thuộc diện thu phí (`access_status == "paywalled"`) hoặc tải PDF Tầng 2 bị từ chối bởi nhà xuất bản. | `{"session_id": "...", "document_id": "...", "status": "abstract_only", "fallback_reason": "TIER2_PAYWALL_ABSTRACT_ONLY"}` | Mở Tab tài liệu ở chế độ `AbstractCardViewer.tsx` kèm nút cho phép người dùng tự tải file PDF bản quyền cá nhân lên. |
 
 ---
 
