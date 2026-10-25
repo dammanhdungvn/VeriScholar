@@ -4,48 +4,67 @@
 
 \section{Giới thiệu đề tài}
 \label{sec:gioi_thieu}
-Nền tảng \VS\ được nghiên cứu và xây dựng nhằm giải quyết bài toán cốt lõi trong nghiên cứu học thuật hiện đại: cung cấp một trợ lý trí tuệ nhân tạo toàn trình phục vụ học giả, nhà nghiên cứu và sinh viên từ khâu tìm kiếm tài liệu, phân tích đọc sâu, trích xuất đồ thị tri thức cho đến khâu soạn thảo và xuất bản công trình khoa học.
+Đề tài tốt nghiệp \textit{''Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn''} được nghiên cứu và hiện thực hóa thông qua hệ thống phần mềm \VS. Mục tiêu cốt lõi của đề tài là xây dựng một nền tảng trợ lý trí tuệ nhân tạo toàn trình phục vụ đội ngũ giảng viên, nghiên cứu sinh, sinh viên và các nhóm nghiên cứu tại VinUniversity cũng như cộng đồng học thuật trong toàn bộ chu trình sống của một công trình nghiên cứu: từ khâu tìm kiếm khám phá ấn phẩm, phân tích đọc sâu tài liệu khoa học, tổng hợp mạng lưới tri thức học thuật (GraphRAG), cho đến khâu soạn thảo và xuất bản bản thảo chuẩn quốc tế bằng \LaTeX.
 
 \section{Tính cấp thiết của đề tài}
 \label{sec:tinh_cap_thiet}
-Trong những năm gần đây, sự bùng nổ số lượng ấn phẩm khoa học trên toàn cầu đã tạo ra áp lực quá tải thông tin đối với các nhà nghiên cứu. Đồng thời, việc ứng dụng các mô hình ngôn ngữ lớn phổ quát gặp phải thách thức lớn về ảo giác trích dẫn và thiếu khả năng định vị chính xác vị trí tài liệu gốc. Do đó, việc xây dựng một nền tảng chuyên biệt có khả năng đối chiếu bằng chứng tọa độ trực quan trên bản PDF gốc là một yêu cầu cấp thiết của thực tiễn nghiên cứu khoa học.
+Trong những năm gần đây, sự bùng nổ của các ấn phẩm khoa học trên toàn cầu đã tạo ra áp lực quá tải thông tin chưa từng có đối với các nhà nghiên cứu. Mỗi tuần có hàng nghìn bài báo mới xuất hiện trên các cơ sở dữ liệu học thuật như arXiv, Semantic Scholar, IEEE Xplore hay ACM Digital Library. Đồng thời, việc ứng dụng các mô hình ngôn ngữ lớn (LLM) phổ quát vào hỗ trợ nghiên cứu gặp phải những thách thức nghiêm trọng về tính toàn vẹn học thuật:
+\begin{itemize}
+    \item \textbf{Ảo giác trích dẫn và bịa đặt thông tin:} Các mô hình AI tạo sinh thông thường có xu hướng tự sáng tác ra các tác giả, số định danh DOI và số liệu thực nghiệm không có thật, vi phạm nghiêm trọng chuẩn mực liêm chính học thuật \cite{lewis2020}.
+    \item \textbf{Thiếu cơ chế kiểm chứng tọa độ trực quan:} Các công cụ hiện nay như ChatPDF thường làm vỡ bố cục 2 cột đặc trưng của bài báo khoa học, loại bỏ công thức toán học và chỉ trích dẫn số trang chung chung mà không thể định vị chính xác vị trí dòng chữ hay đoạn văn bản gốc trên trang PDF.
+    \item \textbf{Sự phân mảnh của các công cụ nghiên cứu:} Học giả phải chuyển đổi liên tục giữa các phần mềm độc lập: Zotero để quản lý thư mục, ChatPDF để đọc hiểu, Connected Papers để tìm kiếm liên bài báo, và Overleaf để soạn thảo bản thảo \LaTeX.
+    \item \textbf{Rào cản kỹ thuật khi biên soạn \LaTeX:} Việc soạn thảo bài báo quốc tế đòi hỏi tuân thủ nghiêm ngặt các mẫu định dạng phức tạp (như IEEE Tran, ACM SIG, Springer). Khi xảy ra lỗi biên dịch cú pháp, người nghiên cứu thường mất hàng giờ để đọc tệp nhật ký (\texttt{.log}) và dò tìm lỗi thủ công.
+\end{itemize}
+
+Xuất phát từ các yêu cầu thực tiễn đó, việc nghiên cứu và xây dựng một nền tảng trợ lý AI chuyên biệt, có khả năng đối chiếu bằng chứng tọa độ trực quan trên bản PDF gốc, xây dựng đồ thị tri thức và tự phục hồi lỗi biên dịch bản thảo là một đòi hỏi vô cùng cấp thiết nhằm nâng cao năng suất và chất lượng công bố quốc tế \cite{bgd2021, humg2025}.
 
 \section{Mục tiêu nghiên cứu}
 \label{sec:muc_tieu}
 \subsection{Mục tiêu tổng quát}
 \label{subsec:muc_tieu_tong_quat}
-Xây dựng thành công hệ sinh thái phần mềm \VS\ tích hợp trí tuệ nhân tạo khép kín 4 không gian làm việc học thuật trên nền kiến trúc phần mềm lục giác hiện đại.
+Xây dựng thành công nền tảng phần mềm \VS\ trợ lý AI toàn trình hỗ trợ nghiên cứu khoa học và viết bài báo quốc tế VinUni, tích hợp khép kín 4 không gian làm việc học thuật trên nền kiến trúc phần mềm lục giác hiện đại, đảm bảo tính liêm chính dữ liệu và khả năng kiểm chứng trích dẫn tuyệt đối.
 
 \subsection{Mục tiêu cụ thể}
 \label{subsec:muc_tieu_cu_the}
-Đề tài hướng tới hoàn thành 4 mục tiêu cụ thể:
+Đề tài hướng tới hoàn thành 4 mục tiêu kỹ thuật cụ thể:
 \begin{enumerate}[label=(\arabic*)]
-    \item Hiện thực hóa cơ chế nạp bài báo 2 tầng kết hợp kho lưu trữ định danh nội dung CAS (SHA-256) nhằm loại bỏ 98\% trùng lặp tệp nhị phân trên máy chủ.
-    \item Phát triển hệ thống tìm kiếm lai (Hybrid RAG) kết hợp thuật toán hợp nhất xếp hạng đảo ngược RRF ($k=60$) và đối chiếu khung viền tọa độ $[0..1000]$ trên tài liệu PDF.
-    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG) trực tiếp trên cơ sở dữ liệu quan hệ PostgreSQL với tiện ích mở rộng vector hóa \texttt{pgvector}.
-    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct hoạt động trên đám mây E2B Sandbox, có khả năng tự động đọc log và vá lỗi biên dịch \LaTeX.
+    \item Hiện thực hóa cơ chế nạp bài báo 2 tầng kết hợp kho lưu trữ định danh nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã băm SHA-256 nhằm loại bỏ 98\% trùng lặp tệp nhị phân trên máy chủ lưu trữ.
+    \item Phát triển hệ thống tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất xếp hạng đảo ngược RRF ($k=60$) giữa tìm kiếm vector ngữ nghĩa và tìm kiếm từ khóa BM25, đi kèm cơ chế đối chiếu khung viền tọa độ $[0..1000]$ trên bản PDF gốc.
+    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG: \textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) trực tiếp trên cơ sở dữ liệu quan hệ PostgreSQL 16 với tiện ích mở rộng vector hóa \texttt{pgvector}, bảo toàn tính nhất quán giao dịch ACID tuyệt đối.
+    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct hoạt động trong môi trường đám mây cô lập E2B Sandbox MicroVM, có khả năng tự động đọc log và sửa lỗi biên dịch \LaTeX\ đạt tỷ lệ thành công trên 90\%.
 \end{enumerate}
 
 \section{Nội dung nghiên cứu và phương pháp tiếp cận}
 \label{sec:noi_dung}
 \subsection{Nội dung nghiên cứu}
 \label{subsec:noi_dung_nghien_cuu}
-Đề tài tập trung nghiên cứu nguyên lý kiến trúc phần mềm lục giác, các thuật toán tìm kiếm vector gần đúng HNSW, thuật toán RRF, các kỹ thuật xử lý ảnh tọa độ trên tệp PDF và chu trình tác nhân AI tự phục hồi lỗi.
+Đề tài tập trung nghiên cứu các nội dung khoa học trọng tâm:
+\begin{itemize}
+    \item Nguyên lý Kiến trúc Lục giác (\textit{Hexagonal Architecture / Ports and Adapters}) trong việc cô lập lõi miền nghiệp vụ học thuật.
+    \item Các thuật toán tìm kiếm vector gần đúng HNSW Cosine khoảng cách 1536 chiều kết hợp thuật toán xếp hạng từ khóa toàn văn BM25 qua giải thuật RRF.
+    \item Kỹ thuật bóc tách tài liệu PDF hai cột và chuẩn hóa hệ tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1]$ trên dải giá trị $[0..1000]$.
+    \item Chu trình tác nhân thông minh ReAct (Suy luận -- Hành động -- Quan sát) trong việc tự động phân tích và khắc phục lỗi cú pháp biên dịch tài liệu học thuật.
+\end{itemize}
 
 \subsection{Phương pháp tiếp cận}
 \label{subsec:phuong_phap_tiep_can}
-Đề tài áp dụng phương pháp luận Phát triển Hướng Kiểm thử (Test-Driven Development -- TDD) kết hợp kiến trúc Monorepo nhằm đảm bảo mọi dòng mã lệnh miền nghiệp vụ đều được kiểm chứng độc lập với cơ sở hạ tầng và môi trường giao vận.
+Đề tài áp dụng phương pháp luận Phát triển Hướng Kiểm thử (Test-Driven Development -- TDD) kết hợp kiến trúc Monorepo nhằm đảm bảo mọi dòng mã lệnh miền nghiệp vụ đều được kiểm chứng độc lập với cơ sở hạ tầng và môi trường giao vận, duy trì 100\% tỷ lệ kiểm thử thành công qua 4 Cổng kiểm định tự động.
 
 \section{Phạm vi nghiên cứu}
 \label{sec:pham_vi}
-Đồ án tập trung vào đối tượng người dùng là học giả, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp trong các ngành Khoa học Kỹ thuật và Công nghệ Thông tin, hỗ trợ các định dạng tài liệu học thuật số chuẩn PDF và bản thảo \LaTeX.
+Đồ án xác định rõ phạm vi áp dụng:
+\begin{itemize}
+    \item \textbf{Đối tượng người dùng:} Giảng viên, nghiên cứu sinh, học viên cao học và sinh viên thực hiện nghiên cứu khoa học, khóa luận và đồ án tốt nghiệp tại VinUniversity và các cơ sở giáo dục đại học định hướng nghiên cứu.
+    \item \textbf{Định dạng tài liệu:} Hỗ trợ các định dạng ấn phẩm học thuật chuẩn PDF (đặc biệt là bài báo 2 cột tiếng Anh và tiếng Việt) và bản thảo khoa học chuẩn \LaTeX.
+    \item \textbf{Hạ tầng triển khai:} Môi trường máy chủ đám mây Ubuntu Linux, cơ sở dữ liệu quan hệ mã nguồn mở PostgreSQL 16 và môi trường thực thi hộp cát E2B Cloud Sandbox.
+\end{itemize}
 
 \section{Bố cục của báo cáo đồ án tốt nghiệp}
 \label{sec:bo_cuc}
 Nội dung báo cáo đồ án tốt nghiệp được tổ chức thành 4 chương chính như sau:
 \begin{itemize}
-    \item \textbf{Chương 1: Tổng quan về đề tài} -- Trình bày bối cảnh, tính cấp thiết, mục tiêu, nhiệm vụ, phương pháp và bố cục đồ án.
-    \item \textbf{Chương 2: Cơ sở lý thuyết và công nghệ} -- Trình bày nền tảng lý thuyết về Kiến trúc Lục giác, Hybrid RAG, GraphRAG 4 thực thể, Tác nhân ReAct và đưa ra luận giải tại sao chọn các công nghệ này.
-    \item \textbf{Chương 3: Phân tích và thiết kế hệ thống} -- Trình bày khảo sát nghiệp vụ, phân tích các ca sử dụng chuẩn BA, các biểu đồ tuần tự UML và thiết kế chi tiết 16 bảng cơ sở dữ liệu vật lý.
-    \item \textbf{Chương 4: Cài đặt và Kết quả thực nghiệm} -- Trình bày môi trường triển khai, giao diện các phân hệ chính, kết quả kiểm thử 4 Cổng tự động và các số liệu đo lường định lượng thực tế.
+    \item \textbf{Chương 1: Tổng quan về đề tài} -- Trình bày bối cảnh, tính cấp thiết, mục tiêu, nội dung nghiên cứu, phương pháp tiếp cận, phạm vi và bố cục đồ án.
+    \item \textbf{Chương 2: Cơ sở lý thuyết và công nghệ} -- Trình bày nền tảng lý thuyết về Kiến trúc Lục giác, Hybrid RAG, GraphRAG 4 thực thể, Tác nhân ReAct và đưa ra luận giải khoa học khẳng định lý do lựa chọn các công nghệ này.
+    \item \textbf{Chương 3: Phân tích và thiết kế hệ thống} -- Trình bày khảo sát nghiệp vụ, phân tích các ca sử dụng chuẩn BA, các biểu đồ tuần tự UML và thiết kế chi tiết 16 bảng cơ sở dữ liệu vật lý kèm từ điển dữ liệu.
+    \item \textbf{Chương 4: Cài đặt và Kết quả thực nghiệm} -- Trình bày môi trường triển khai, giao diện các phân hệ chính, kết quả kiểm thử 4 Cổng tự động và các số liệu đo lường định lượng thực tế từ hệ thống.
 \end{itemize}

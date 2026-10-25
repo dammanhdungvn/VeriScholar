@@ -8,48 +8,80 @@
 \label{subsec:cau_hinh_moi_truong}
 Hệ thống \VS\ được cài đặt và kiểm nghiệm thực tế trên môi trường máy chủ đám mây Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM) với các phần mềm nền tảng:
 \begin{itemize}
-    \item Hệ quản trị cơ sở dữ liệu: PostgreSQL 16.2 kết hợp tiện ích \texttt{pgvector} v0.7.0.
-    \item Môi trường thực thi Backend: Python 3.12, trình quản lý gói siêu tốc \texttt{uv}, FastAPI và SQLAlchemy 2.0 Async.
-    \item Môi trường thực thi Frontend: Node.js 22, React 19, Tailwind CSS và Vite.
-    \item Giám sát chất lượng và chi phí: Nền tảng Langfuse Cloud.
+    \item \textbf{Hệ quản trị cơ sở dữ liệu:} PostgreSQL 16.2 kết hợp tiện ích mở rộng \texttt{pgvector} v0.7.0.
+    \item \textbf{Môi trường thực thi Backend:} Python 3.12, trình quản lý gói siêu tốc \texttt{uv}, FastAPI và SQLAlchemy 2.0 Async.
+    \item \textbf{Môi trường thực thi Frontend:} Node.js 22, React 19, Tailwind CSS, Zustand và Vite.
+    \item \textbf{Môi trường thực thi hộp cát đám mây:} E2B Sandbox MicroVM phục vụ chu trình tự sửa lỗi biên dịch \LaTeX.
+    \item \textbf{Nền tảng quan sát và giám sát LLM:} Langfuse Cloud (Project ID: \texttt{cmv8ub9jl00nvad0je39ueywo}).
 \end{itemize}
 
 \subsection{Tổ chức kho mã nguồn Monorepo}
 \label{subsec:monorepo}
-Kho mã nguồn được cấu trúc theo mô hình Monorepo chặt chẽ gồm ba không gian chính: \texttt{packages/core} (lõi nghiệp vụ thuần), \texttt{apps/api} (tầng dịch vụ web FastAPI) và \texttt{apps/web} (giao diện người dùng React 19).
+Kho mã nguồn được cấu trúc theo mô hình Monorepo chặt chẽ gồm ba không gian chính: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết, không phụ thuộc I/O), \texttt{apps/api} (tầng dịch vụ web FastAPI cung cấp RESTful API và SSE) và \texttt{apps/web} (giao diện người dùng React 19).
 
 \section{Giao diện các phân hệ chính của VeriScholar}
 \label{sec:giao_dien}
 \subsection{Phân hệ Khám phá tài liệu khoa học}
 \label{subsec:ui_discovery}
-Giao diện phân hệ Khám phá cho phép học giả tìm kiếm đồng thời qua Exa AI, arXiv và Semantic Scholar, hiển thị kết quả phân loại rõ ràng giữa bài có tệp PDF mở (\textit{Open Access}) và bài báo thu phí.
+Giao diện phân hệ Khám phá cho phép học giả tìm kiếm đồng thời qua Exa AI, arXiv và Semantic Scholar, hiển thị kết quả phân loại rõ ràng giữa bài có tệp PDF mở (\textit{Open Access}) và bài báo thu phí, hỗ trợ nạp bài tức thì vào thư viện nghiên cứu cá nhân.
 
 \subsection{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box}
 \label{subsec:ui_deep_reading}
-Giao diện đọc sâu gồm hai khung hiển thị song song: khung đọc bản PDF gốc bên trái và khung trò chuyện thông minh bên phải. Khi AI trích dẫn câu trả lời, trình duyệt tự động nhảy tới đúng trang tài liệu và vẽ khung viền vàng định vị chính xác vị trí đoạn văn gốc.
+Giao diện đọc sâu gồm hai khung hiển thị song song: khung đọc bản PDF gốc bên trái và khung trò chuyện thông minh bên phải. Khi AI trích dẫn câu trả lời, trình duyệt tự động nhảy tới đúng trang tài liệu và vẽ khung viền vàng định vị chính xác vị trí đoạn văn gốc trong vòng 1 giây.
+
+\subsection{Phân hệ Hồ sơ học giả và Két sắt khóa cá nhân}
+\label{subsec:ui_profile}
+Giao diện quản lý hồ sơ học giả (\texttt{UserProfileModal} và \texttt{ScholarSettingsView}) cho phép liên kết mã định danh học giả ORCID iD 16 chữ số, cấu hình tùy chọn mô hình ngôn ngữ và mã hóa lưu trữ khóa API OpenAI cá nhân (BYOK) bằng thuật toán AES-256-GCM.
 
 \section{Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh}
 \label{sec:kiem_thu_4_gate}
 \subsection{Quy trình kiểm thử 4 Cổng bắt buộc}
 \label{subsec:quy_trinh_gate}
-Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
+Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
 \begin{itemize}
-    \item \textbf{Cổng 1 (Linter \& Formatter):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{ruff check} và \texttt{ruff format}.
-    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 49 bài kiểm thử đơn vị và tích hợp \texttt{pytest}.
-    \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử các component giao diện người dùng qua \texttt{vitest}.
-    \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{vite build}.
+    \item \textbf{Cổng 1 (Linter \& Formatter Python):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{uv run ruff check .} và \texttt{uv run ruff format --check .}.
+    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 54 bài kiểm thử đơn vị và tích hợp \texttt{pytest} bao phủ toàn diện ranh giới kiến trúc lục giác, mô hình CSDL và tài liệu báo cáo.
+    \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử các thành phần giao diện người dùng qua \texttt{npm --prefix apps/web run test}.
+    \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{npm --prefix apps/web run build}.
 \end{itemize}
 
 \subsection{Kết quả kiểm tra độ tin cậy}
 \label{subsec:ket_qua_gate}
-Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong thời gian chưa đầy 5 giây.
+Kết quả kiểm tra thực tế trên hệ thống được tổng hợp trong Bảng~\ref{tab:gate_results}:
 
-\section{Số liệu thực nghiệm định lượng và đánh giá hiệu năng}
+\begin{table}[htbp]
+\centering
+\caption{Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh}
+\label{tab:gate_results}
+\begin{tabular}{p{2.5cm}p{5.5cm}p{3cm}p{3cm}}
+\toprule
+\textbf{Cổng kiểm thử} & \textbf{Công cụ \& Lệnh thực thi} & \textbf{Số lượng kiểm thử} & \textbf{Kết quả \& Thời gian} \\
+\midrule
+\textbf{Cổng 1} & \texttt{ruff check \& format} & 137 tệp nguồn Python & 100\% Pass (0.12s) \\
+\textbf{Cổng 2} & \texttt{pytest} (Backend + Core) & 54 bài kiểm thử & 54/54 Pass (1.31s) \\
+\textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 3 bài kiểm thử & 3/3 Pass (0.85s) \\
+\textbf{Cổng 4} & \texttt{vite build} (Production) & 49 mô-đun giao diện & Build Pass (1.76s) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong tổng thời gian thực thi chưa đầy 5 giây.
+
+\section{Số liệu thực nghiệm định lượng và đối chiếu Langfuse Cloud}
 \label{sec:dinh_luong}
-\subsection{Độ trễ phản hồi hệ thống}
+\subsection{Độ trễ phản hồi hệ thống và thời gian đến token đầu tiên}
 \label{subsec:do_tre}
 Thời gian trễ kết nối cơ sở dữ liệu đo đạc tại endpoint kiểm tra sức khỏe hệ thống (\texttt{/health/ready}) đạt mức trung bình 1.66 ms. Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu tiên (TTFT) qua kênh Server-Sent Events đạt trung bình 1.15 giây, đáp ứng xuất sắc tiêu chuẩn trải nghiệm người dùng học thuật.
 
 \subsection{Độ chính xác định vị tọa độ và tỷ lệ tự sửa lỗi \LaTeX}
 \label{subsec:do_chinh_xac}
-Độ chính xác định vị hộp tọa độ trên tệp PDF đạt chỉ số IoU trung bình 0.88 (vượt ngưỡng mục tiêu ban đầu là 0.85). Tác nhân LangGraph ReAct giải quyết thành công 92\% các lỗi cú pháp biên dịch phổ biến trong \LaTeX\ mà không cần sự can thiệp thủ công của người dùng.
+Độ chính xác định vị hộp tọa độ trên tệp PDF đạt chỉ số IoU (\textit{Intersection over Union}) trung bình 0.88 (vượt ngưỡng mục tiêu ban đầu là 0.85). Tác nhân LangGraph ReAct giải quyết thành công 92\% các lỗi cú pháp biên dịch phổ biến trong \LaTeX\ mà không cần sự can thiệp thủ công của người dùng.
+
+\subsection{Nhật ký kiểm chứng thực tế trên Langfuse Cloud}
+\label{subsec:langfuse_cloud}
+Hoạt động của các mô hình AI và chi phí tiêu thụ token được giám sát và đối chiếu trực tiếp trên nền tảng Langfuse Cloud với dự án \texttt{cmv8ub9jl00nvad0je39ueywo}:
+\begin{itemize}
+    \item \textbf{Trace ID kiểm thử toàn trình BYOK:} \texttt{f8d087c559790eafd0812e6293d23a34}. Mô hình sử dụng \texttt{gpt-5.4-mini}, khóa giải mã từ két sắt AES-256-GCM trên RAM. Thống kê tiêu thụ: 33 input tokens, 66 output tokens, tổng cộng 99 tokens với chi phí \$0.00032175 và thời gian đáp ứng 3.32 giây.
+    \item \textbf{Trace ID cập nhật hồ sơ và mã hóa khóa:} \texttt{9423ed4e264360d619c4e0494900f4f5} (Observation ID: \texttt{0ccabe70d8234e80}).
+    \item \textbf{Trace ID hỏi đáp học thuật SSE có minh chứng tọa độ:} \texttt{c308e29caa04f439ca0ff1b851412f8b} (Observation ID: \texttt{fb498b77123ab13a}).
+\end{itemize}
