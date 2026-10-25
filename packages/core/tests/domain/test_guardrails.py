@@ -230,6 +230,23 @@ def test_verify_output_detects_system_prompt_leak() -> None:
     assert "rò rỉ chỉ thị hệ thống" in res.warning
 
 
+def test_verify_output_grounding_supports_numeric_citations_and_cleans_broken_latex() -> None:
+    """Numeric citations [1], [2] should be verified, and [^\\text{cit}] sanitized."""
+    output = (
+        "Kiến trúc Transformer [1] gồm encoder và decoder [2]. "
+        "Không thể gắn thẻ [^\\text{cit}] nếu không có bằng chứng."
+    )
+    valid_ids = ["cit_1", "cit_2"]
+
+    res = AIGuardrailsService.verify_output_grounding(output, valid_ids)
+
+    assert res.is_grounded is True
+    assert set(res.valid_citations_used) == {"1", "2"}
+    assert len(res.hallucinated_citations) == 0
+    assert "[^\\text{cit}]" not in res.sanitized_output
+    assert "\\text{cit}" not in res.sanitized_output
+
+
 def test_check_academic_scope_blocks_non_academic_queries() -> None:
     """Non-academic questions about weather, food, chit-chat, and gaming must be blocked."""
     non_academic_queries = [

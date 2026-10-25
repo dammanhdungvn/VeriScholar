@@ -22,6 +22,7 @@ from core.domain.entities.reference import (
     _DOI_PATTERN,
     ExtractedReference,
     ResolvedAcademicReference,
+    has_public_academic_identifier,
 )
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.services.academic_cache import GlobalAcademicCache, normalize_arxiv, normalize_doi
@@ -101,6 +102,7 @@ class InMemoryAcademicResolverAdapter(IAcademicSearchResolverPort):
             landing_url=landing_url,
             is_ingested=False,
             resolved_document_id=None,
+            is_publicly_validated=bool(doi or arxiv_id),
         )
 
     async def resolve_batch(
@@ -154,7 +156,11 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
         if not self.api_key or not self.api_key.strip():
             logger.info("EXA_API_KEY not configured, using fallback adapter.")
             resolved = await self.fallback_adapter.resolve_reference(reference)
-            self.cache.set(resolved, is_public=True)
+            self.cache.set(
+                resolved,
+                is_public=resolved.is_publicly_validated
+                or has_public_academic_identifier(resolved),
+            )
             return resolved
 
         # 3. Construct Exa Search query
@@ -194,7 +200,11 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
                         response.text[:200],
                     )
                     resolved = await self.fallback_adapter.resolve_reference(reference)
-                    self.cache.set(resolved, is_public=True)
+                    self.cache.set(
+                        resolved,
+                        is_public=resolved.is_publicly_validated
+                        or has_public_academic_identifier(resolved),
+                    )
                     return resolved
 
                 data = response.json()
@@ -206,12 +216,20 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
             if not results:
                 logger.info("Exa API returned 0 results for query: '%s'", query)
                 resolved = await self.fallback_adapter.resolve_reference(reference)
-                self.cache.set(resolved, is_public=True)
+                self.cache.set(
+                    resolved,
+                    is_public=resolved.is_publicly_validated
+                    or has_public_academic_identifier(resolved),
+                )
                 return resolved
 
             top_result = results[0]
             resolved = self._parse_exa_result(top_result, reference)
-            self.cache.set(resolved, is_public=True)
+            self.cache.set(
+                resolved,
+                is_public=resolved.is_publicly_validated
+                or has_public_academic_identifier(resolved),
+            )
             return resolved
 
         except Exception as exc:
@@ -221,7 +239,11 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
                 exc,
             )
             resolved = await self.fallback_adapter.resolve_reference(reference)
-            self.cache.set(resolved, is_public=True)
+            self.cache.set(
+                resolved,
+                is_public=resolved.is_publicly_validated
+                or has_public_academic_identifier(resolved),
+            )
             return resolved
 
     def _parse_exa_result(
@@ -310,6 +332,7 @@ class ExaAcademicResolverAdapter(IAcademicSearchResolverPort):
             landing_url=landing_url,
             is_ingested=False,
             resolved_document_id=None,
+            is_publicly_validated=bool(doi or arxiv_id),
         )
 
     async def resolve_batch(

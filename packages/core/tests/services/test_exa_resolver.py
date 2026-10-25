@@ -328,6 +328,7 @@ async def test_exa_resolver_zero_results_fallback() -> None:
     resolved = await adapter.resolve_reference(ref)
     assert resolved.title == "Obscure Unpublished Work"
     assert "Deterministic" in resolved.sources
+    assert adapter.cache.size() == 0
 
     await client.aclose()
 

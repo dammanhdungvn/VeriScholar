@@ -12,11 +12,6 @@ from core.domain.entities.folder import (
 )
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
 from core.domain.entities.note import FrozenSnapshot, ResearchNote
-from core.domain.entities.note_synthesis import (
-    InteractiveBadge,
-    NoteSynthesis,
-    SynthesisMode,
-)
 from core.domain.entities.reference import (
     ExtractedReference,
     ParsedReferenceInfo,
@@ -24,18 +19,12 @@ from core.domain.entities.reference import (
     extract_references_from_text,
     parse_reference_item,
 )
-from core.domain.entities.safe_claim import (
-    AtomicClaim,
-    FactVerificationReport,
-    FactVerificationStatus,
-)
 from core.domain.entities.session import ResearchSession
 from core.domain.entities.session_turn import CitationItem, SessionTurn
 from core.domain.entities.structure import DocumentSection, DocumentStructure
 from core.domain.entities.summary import DocumentSummary, SummaryPoint
 
 __all__ = [
-    "AtomicClaim",
     "CitationItem",
     "ComparisonMatrixResult",
     "ComparisonMatrixRow",
@@ -47,14 +36,10 @@ __all__ = [
     "DocumentSummary",
     "Draft",
     "ExtractedReference",
-    "FactVerificationReport",
-    "FactVerificationStatus",
     "FolderEntity",
     "FrozenSnapshot",
-    "InteractiveBadge",
     "LatexCompilationResult",
     "LatexSyntaxError",
-    "NoteSynthesis",
     "ParsedReferenceInfo",
     "ResearchNote",
     "ResearchSession",
@@ -62,7 +47,6 @@ __all__ = [
     "SessionTurn",
     "SufficiencyEvaluation",
     "SummaryPoint",
-    "SynthesisMode",
     "extract_references_from_text",
     "parse_reference_item",
 ]

@@ -23,7 +23,7 @@ class ILatexCompilerPort(Protocol):
     async def compile(
         self,
         code: str,
-        timeout_seconds: int = 15,
+        timeout_seconds: float = 15,
     ) -> LatexCompilationResult:
         """Compile LaTeX code into PDF binary in a hardened sandbox.
 

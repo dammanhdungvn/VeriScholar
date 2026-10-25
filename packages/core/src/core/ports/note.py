@@ -1,10 +1,9 @@
-"""Port interfaces for Research Notes and AI Syntheses."""
+"""Port interfaces for Research Notes."""
 
 from abc import ABC, abstractmethod
 from uuid import UUID
 
 from core.domain.entities.note import ResearchNote
-from core.domain.entities.note_synthesis import NoteSynthesis
 
 
 class INoteRepositoryPort(ABC):
@@ -44,15 +43,3 @@ class INoteRepositoryPort(ABC):
     @abstractmethod
     async def delete_note(self, note_id: UUID, user_id: UUID) -> bool:
         """Delete a research note."""
-
-
-class INoteSynthesisRepositoryPort(ABC):
-    """Port for persisting AI note syntheses."""
-
-    @abstractmethod
-    async def save_synthesis(self, synthesis: NoteSynthesis) -> NoteSynthesis:
-        """Save a generated synthesis result."""
-
-    @abstractmethod
-    async def get_synthesis_by_id(self, synthesis_id: UUID, user_id: UUID) -> NoteSynthesis | None:
-        """Retrieve a synthesis by ID and user ownership."""

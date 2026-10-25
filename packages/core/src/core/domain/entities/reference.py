@@ -48,6 +48,23 @@ class ResolvedAcademicReference(BaseModel):
     landing_url: str | None = None
     is_ingested: bool = False
     resolved_document_id: UUID | None = None
+    is_publicly_validated: bool = Field(
+        default=False,
+        description=(
+            "Whether the resolver returned a canonical DOI or arXiv identity suitable "
+            "for public academic graph promotion"
+        ),
+    )
+
+
+def has_public_academic_identifier(reference: ResolvedAcademicReference) -> bool:
+    """Return whether a resolved reference has a canonical public identifier.
+
+    A title-only deterministic fallback is useful for display but is not strong enough
+    to create a durable graph entity. DOI and arXiv identifiers are the minimum
+    promotion evidence available in the current schema.
+    """
+    return bool(reference.doi or reference.arxiv_id)
 
 
 _ARXIV_PATTERN = re.compile(

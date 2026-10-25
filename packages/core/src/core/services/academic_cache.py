@@ -27,9 +27,9 @@ def normalize_doi(raw_doi: str | None) -> str | None:
     cleaned = re.sub(r"^doi:\s*", "", cleaned)
     cleaned = cleaned.rstrip("./")
     # Validate basic DOI structure 10.xxxx/...
-    if re.match(r"^10\.\d{4,9}/[-._;()/:a-z0-9]+$", cleaned):
-        return cleaned
-    return cleaned if cleaned else None
+    if not re.match(r"^10\.\d{4,9}/[-._;()/:a-z0-9]+$", cleaned):
+        return None
+    return cleaned
 
 
 def normalize_arxiv(raw_arxiv: str | None) -> str | None:

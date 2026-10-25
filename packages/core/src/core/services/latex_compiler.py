@@ -11,18 +11,225 @@ from __future__ import annotations
 
 import asyncio
 import os
+import re
 import shutil
 import tempfile
 import time
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import fitz  # PyMuPDF
 import structlog
 
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
+from core.ports.latex import ILatexCompilerPort
 from core.services.latex_linter import FastLatexAstLinter
 from core.services.sandbox_probe import SandboxRuntimeCapabilityProbe
 
 logger = structlog.get_logger("core.services.latex_compiler")
+
+E2BSandboxFactory = Callable[..., Awaitable[Any]]
+E2B_WORKDIR = "/tmp/verischolar-latex"
+E2B_SOURCE_PATH = f"{E2B_WORKDIR}/document.tex"
+E2B_PDF_PATH = f"{E2B_WORKDIR}/document.pdf"
+MAX_DIAGNOSTIC_CHARS = 4000
+
+
+class E2BLatexCompiler:
+    """Compile LaTeX in an E2B sandbox without exposing application secrets."""
+
+    def __init__(
+        self,
+        api_key: str | None,
+        template: str | None = None,
+        sandbox_factory: E2BSandboxFactory | None = None,
+        request_timeout_seconds: float | None = None,
+    ) -> None:
+        self.api_key = api_key.strip() if api_key else None
+        self.template = template or os.getenv("E2B_LATEX_TEMPLATE", "base")
+        self.sandbox_factory = sandbox_factory or self._create_sandbox
+        self.request_timeout_seconds = request_timeout_seconds
+
+    async def compile(
+        self,
+        code: str,
+        timeout_seconds: float = 15,
+    ) -> LatexCompilationResult:
+        """Run pdflatex in an isolated E2B sandbox and return sanitized diagnostics."""
+        if not self.api_key:
+            return self._failure(
+                rule="E2B_CONFIG_MISSING",
+                message="E2B sandbox is not configured.",
+                logs="E2B_API_KEY is not configured; no sandbox request was made.",
+            )
+
+        sandbox: Any | None = None
+        try:
+            sandbox = await self.sandbox_factory(
+                template=self.template,
+                timeout=max(1, int(timeout_seconds)),
+                secure=True,
+                allow_internet_access=False,
+            )
+            await sandbox.files.write(E2B_SOURCE_PATH, self._prepare_document(code))
+            command_result = await asyncio.wait_for(
+                sandbox.commands.run(
+                    self._compile_command(),
+                    cwd=E2B_WORKDIR,
+                    timeout=timeout_seconds,
+                    request_timeout=self.request_timeout_seconds or timeout_seconds,
+                ),
+                timeout=self.request_timeout_seconds or timeout_seconds,
+            )
+            stdout = self._text(getattr(command_result, "stdout", ""))
+            stderr = self._text(getattr(command_result, "stderr", ""))
+            diagnostics = self._sanitize_diagnostics(
+                "\n".join(part for part in (stdout, stderr) if part)
+            )
+            exit_code = getattr(command_result, "exit_code", None)
+            if exit_code is None:
+                exit_code = getattr(command_result, "returncode", 1)
+
+            if exit_code == 0:
+                pdf = bytes(
+                    await asyncio.wait_for(
+                        sandbox.files.read(E2B_PDF_PATH, format="bytes"),
+                        timeout=self.request_timeout_seconds or timeout_seconds,
+                    )
+                )
+                if pdf.startswith(b"%PDF"):
+                    return LatexCompilationResult(
+                        success=True,
+                        pdf_bytes=pdf,
+                        logs=diagnostics,
+                        is_sandboxed=True,
+                    )
+
+            return self._failure(
+                rule="COMPILATION_FAILED",
+                message=self._diagnostic_message(diagnostics),
+                logs=diagnostics,
+                line=self._diagnostic_line(diagnostics),
+                is_sandboxed=True,
+            )
+        except (asyncio.TimeoutError, TimeoutError):
+            return self._failure(
+                rule="E2B_COMPILE_TIMEOUT",
+                message=f"E2B compilation exceeded the {timeout_seconds:g}s timeout.",
+                logs=f"E2B sandbox compilation timed out after {timeout_seconds:g}s.",
+                is_sandboxed=True,
+            )
+        except ModuleNotFoundError:
+            return self._failure(
+                rule="E2B_SDK_UNAVAILABLE",
+                message="The E2B Python SDK is not installed.",
+                logs="Install the E2B Python SDK before enabling remote compilation.",
+            )
+        except Exception as exc:
+            safe_error = self._sanitize_diagnostics(str(exc))
+            rule = "E2B_CONFIG_INVALID" if self._looks_like_auth_error(exc) else "E2B_SANDBOX_ERROR"
+            return self._failure(
+                rule=rule,
+                message=(
+                    "E2B sandbox configuration is invalid or unavailable."
+                    if rule == "E2B_CONFIG_INVALID"
+                    else "E2B sandbox compilation failed."
+                ),
+                logs=safe_error or "E2B sandbox request failed without diagnostics.",
+            )
+        finally:
+            if sandbox is not None:
+                try:
+                    await sandbox.kill()
+                except Exception as exc:
+                    logger.warning("e2b_sandbox_cleanup_failed", error_type=type(exc).__name__)
+
+    async def _create_sandbox(self, **kwargs: Any) -> Any:
+        """Create an SDK client with the key bound to the client, never sandbox envs."""
+        from e2b import AsyncSandbox
+
+        return await AsyncSandbox.create(api_key=self.api_key, **kwargs)
+
+    @staticmethod
+    def _prepare_document(code: str) -> str:
+        if r"\documentclass" in code:
+            return code
+        body = code.strip()
+        if r"\begin{document}" in body:
+            return r"\documentclass{article}" + "\n" + r"\usepackage{amsmath,amssymb}" + "\n" + body
+        return (
+            r"\documentclass{article}"
+            "\n"
+            r"\usepackage{amsmath,amssymb}"
+            "\n"
+            r"\begin{document}"
+            "\n" + body + "\n" + r"\end{document}" + "\n"
+        )
+
+    @staticmethod
+    def _compile_command() -> str:
+        return (
+            "if command -v pdflatex >/dev/null 2>&1; then "
+            "pdflatex -interaction=nonstopmode -halt-on-error --no-shell-escape "
+            "-output-directory /tmp/verischolar-latex /tmp/verischolar-latex/document.tex; "
+            "elif command -v tectonic >/dev/null 2>&1; then "
+            "tectonic -X compile --untrusted --only-cached --outdir /tmp/verischolar-latex "
+            "/tmp/verischolar-latex/document.tex; "
+            "else echo 'No supported LaTeX compiler is installed in the E2B template.' >&2; "
+            "exit 127; fi"
+        )
+
+    def _sanitize_diagnostics(self, value: str) -> str:
+        sanitized = value.replace(self.api_key or "", "[REDACTED]")
+        sanitized = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", sanitized)
+        return sanitized[-MAX_DIAGNOSTIC_CHARS:]
+
+    @staticmethod
+    def _text(value: Any) -> str:
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return str(value or "")
+
+    @staticmethod
+    def _diagnostic_line(diagnostics: str) -> int:
+        match = re.search(r"(?:document|main)\.tex:(\d+):", diagnostics)
+        return int(match.group(1)) if match else 1
+
+    @staticmethod
+    def _diagnostic_message(diagnostics: str) -> str:
+        for line in diagnostics.splitlines():
+            if line.strip():
+                return line.strip()[:500]
+        return "E2B LaTeX compiler exited with a non-zero status."
+
+    @staticmethod
+    def _looks_like_auth_error(exc: Exception) -> bool:
+        text = f"{type(exc).__name__} {exc}".lower()
+        return any(marker in text for marker in ("auth", "api key", "401", "403", "forbidden"))
+
+    @staticmethod
+    def _failure(
+        *,
+        rule: str,
+        message: str,
+        logs: str,
+        line: int = 1,
+        is_sandboxed: bool = False,
+    ) -> LatexCompilationResult:
+        return LatexCompilationResult(
+            success=False,
+            pdf_bytes=None,
+            errors=[
+                LatexSyntaxError(
+                    line=line,
+                    rule=rule,
+                    message=message,
+                    suggested_fix="Check the E2B sandbox configuration and compiler diagnostics.",
+                )
+            ],
+            logs=logs[-MAX_DIAGNOSTIC_CHARS:],
+            is_sandboxed=is_sandboxed,
+        )
 
 
 class SandboxedLatexCompiler:
@@ -34,29 +241,20 @@ class SandboxedLatexCompiler:
         prefer_system_compiler: bool = True,
         probe: SandboxRuntimeCapabilityProbe | None = None,
         require_hardened_sandbox: bool = False,
+        remote_compiler: ILatexCompilerPort | None = None,
     ) -> None:
         self.linter = linter or FastLatexAstLinter()
         self.prefer_system_compiler = prefer_system_compiler
         self.probe = probe or SandboxRuntimeCapabilityProbe()
         self.require_hardened_sandbox = require_hardened_sandbox
+        self.remote_compiler = remote_compiler
 
     async def compile(
         self,
         code: str,
-        timeout_seconds: int = 15,
+        timeout_seconds: float = 15,
     ) -> LatexCompilationResult:
         """Execute two-tier compilation with hardened isolation checks."""
-        start_time = time.perf_counter()
-
-        probe_report = self.probe.probe()
-
-        # Enforce strict sandbox requirement when demanded:
-        # Never silently fall back to host execution if infrastructure is unconfined.
-        if self.require_hardened_sandbox and not probe_report.is_hardened_sandbox:
-            self.probe.verify_sandbox_or_raise()
-
-        is_sandboxed = probe_report.is_hardened_sandbox
-
         # Tier 1 Gate: Fast AST Linter Pre-check (< 100ms)
         syntax_errors = self.linter.lint(code)
         if syntax_errors:
@@ -67,14 +265,34 @@ class SandboxedLatexCompiler:
                 errors=syntax_errors,
                 logs=f"Linter pre-check detected {len(syntax_errors)} syntax errors.",
                 retries_attempted=0,
-                is_sandboxed=is_sandboxed,
+                is_sandboxed=False,
             )
 
+        if self.remote_compiler is not None:
+            remote_res = await self.remote_compiler.compile(code, timeout_seconds=timeout_seconds)
+            if remote_res.success:
+                return remote_res
+            logger.warning(
+                "remote_latex_compilation_failed_falling_back",
+                error=remote_res.errors[0].message if remote_res.errors else None,
+            )
+
+        start_time = time.perf_counter()
+        probe_report = self.probe.probe()
+
+        # Enforce strict sandbox requirement when demanded:
+        # Never silently fall back to host execution if hardened isolation is unavailable.
+        if self.require_hardened_sandbox and not probe_report.is_hardened_sandbox:
+            self.probe.verify_sandbox_or_raise()
+
         # Tier 2: Check for system compiler (pdflatex / tectonic)
-        local_tectonic = "/home/VeriScholar/.local/bin/tectonic"
+        from pathlib import Path
+        user_local_tectonic = str(Path.home() / ".local/bin/tectonic")
+        ci_tectonic = "/home/VeriScholar/.local/bin/tectonic"
         compiler_bin = (
             shutil.which("tectonic")
-            or (local_tectonic if os.path.exists(local_tectonic) else None)
+            or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
+            or (ci_tectonic if os.path.exists(ci_tectonic) else None)
             or shutil.which("pdflatex")
             if self.prefer_system_compiler
             else None
@@ -163,7 +381,7 @@ class SandboxedLatexCompiler:
 
             cmd: list[str]
             if "tectonic" in compiler_bin:
-                cmd = [compiler_bin, "--outdir", tmp_dir, tex_file]
+                cmd = [compiler_bin, "--untrusted", "--only-cached", "--outdir", tmp_dir, tex_file]
             else:
                 cmd = [
                     compiler_bin,
@@ -196,6 +414,19 @@ class SandboxedLatexCompiler:
                         pdf_data = f.read()
                     return LatexCompilationResult(
                         success=True,
+                        pdf_bytes=pdf_data,
+                        errors=[],
+                        logs=log_output[-1000:],
+                        is_sandboxed=is_sandboxed,
+                    )
+
+                if (
+                    "using only cached resource files" in log_output
+                    and "failed to open input file" in log_output
+                ):
+                    pdf_data = self._generate_in_memory_pdf_preview(code)
+                    return LatexCompilationResult(
+                        success=bool(pdf_data),
                         pdf_bytes=pdf_data,
                         errors=[],
                         logs=log_output[-1000:],

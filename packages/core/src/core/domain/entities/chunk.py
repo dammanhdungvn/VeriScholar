@@ -28,6 +28,10 @@ class DocumentChunk(BaseModel):
     chunk_index: int = Field(ge=0, description="0-indexed sequence order in the document")
     page_number: int = Field(ge=1, description="Primary document page number where chunk begins")
     content: str = Field(min_length=1, description="Raw textual content of the chunk")
+    formula_text: str | None = Field(
+        default=None,
+        description="Deterministic LaTeX-like representation when the chunk contains a formula",
+    )
     bounding_boxes: list[BoundingBox] = Field(
         default_factory=list,
         description="Non-null invariant: list of normalized bounding boxes across pages",
