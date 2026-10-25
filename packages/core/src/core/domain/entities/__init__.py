@@ -21,6 +21,7 @@ from core.domain.entities.session import ResearchSession
 from core.domain.entities.session_turn import CitationItem, SessionTurn
 from core.domain.entities.structure import DocumentSection, DocumentStructure
 from core.domain.entities.summary import DocumentSummary, SummaryPoint
+from core.domain.entities.user import UserEntity
 
 __all__ = [
     "CitationItem",
@@ -43,6 +44,7 @@ __all__ = [
     "SessionTurn",
     "SufficiencyEvaluation",
     "SummaryPoint",
+    "UserEntity",
     "extract_references_from_text",
     "parse_reference_item",
 ]

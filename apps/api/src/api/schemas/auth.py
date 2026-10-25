@@ -42,6 +42,15 @@ class UserProfileResponse(BaseModel):
     google_scholar_url: str | None = Field(
         default=None, description="Link to Google Scholar profile"
     )
+    theme_preference: str = Field(
+        default="system", description="UI color theme preference (light, dark, system)"
+    )
+    has_byok: bool = Field(
+        default=False, description="Whether the user has configured a personal BYOK API key"
+    )
+    byok_masked: str | None = Field(
+        default=None, description="Masked representation of the user's BYOK API key"
+    )
     created_at: datetime = Field(description="Timestamp when account was created")
 
     model_config = ConfigDict(from_attributes=True)
@@ -207,6 +216,8 @@ class UpdateProfileRequest(BaseModel):
     bio: str | None = Field(default=None, max_length=1000)
     research_interests: str | None = Field(default=None, max_length=500)
     google_scholar_url: str | None = Field(default=None, max_length=500)
+    theme_preference: str | None = Field(default=None, max_length=20)
+    byok_api_key: str | None = Field(default=None, max_length=500)
 
 
 class TokenRefreshRequest(BaseModel):

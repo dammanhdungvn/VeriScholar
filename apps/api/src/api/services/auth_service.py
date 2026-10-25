@@ -15,7 +15,8 @@ from uuid import UUID, uuid4
 import httpx
 import structlog
 from api.core.config import settings
-from api.core.email_validator import validate_academic_or_trusted_email
+from api.core.crypto import CryptoError, encrypt_byok_key
+from api.core.email_validator import validate_academic_or_trusted_email, validate_orcid_id
 from api.db.models.user import UserModel
 from api.schemas.auth import (
     AuthTokensResponse,
@@ -254,9 +255,10 @@ class AuthService:
                 detail={
                     "code": "EMAIL_ALREADY_EXISTS",
                     "message": (
-                        "Email học thuật này đã được đăng ký. "
-                        "Vui lòng đăng nhập hoặc sử dụng email khác."
+                        "Địa chỉ email này đã được sử dụng. "
+                        "Vui lòng đăng nhập hoặc sử dụng tính năng quên mật khẩu."
                     ),
+                    "field": "email",
                     "action": "Use an alternate email address or log in.",
                 },
             )
@@ -321,7 +323,7 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
+                    "message": "Email hoặc mật khẩu không chính xác.",
                     "action": "Verify your email and password or use password reset.",
                 },
                 headers={"WWW-Authenticate": "Bearer"},
@@ -1078,14 +1080,66 @@ class AuthService:
 
     async def update_profile(self, user: UserModel, payload: UpdateProfileRequest) -> UserModel:
         """Update authenticated user's profile details."""
+        if payload.orcid_id is not None:
+            clean_orcid = payload.orcid_id.strip()
+            if not validate_orcid_id(clean_orcid):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_ORCID_FORMAT",
+                        "message": "Định dạng mã ORCID không hợp lệ (chuẩn: 0000-0002-1825-0097).",
+                        "field": "orcid_id",
+                        "action": "Nhập mã ORCID chuẩn gồm 16 chữ số chia 4 nhóm.",
+                    },
+                )
+            user.orcid_id = clean_orcid or None
+
+        if payload.theme_preference is not None:
+            clean_theme = payload.theme_preference.strip().lower()
+            if clean_theme not in ("light", "dark", "system"):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "INVALID_THEME_PREFERENCE",
+                        "message": (
+                            "Tùy chọn giao diện không hợp lệ. "
+                            "Chỉ chấp nhận các giá trị: light, dark hoặc system."
+                        ),
+                        "field": "theme_preference",
+                        "action": "Chọn một trong 3 giá trị cho phép.",
+                    },
+                )
+            user.theme_preference = clean_theme
+
+        if payload.byok_api_key is not None:
+            clean_key = payload.byok_api_key.strip()
+            if clean_key == "":
+                user.byok_api_key_encrypted = None
+            else:
+                try:
+                    user.byok_api_key_encrypted = encrypt_byok_key(
+                        clean_key, settings.BYOK_ENCRYPTION_KEY
+                    )
+                except CryptoError as exc:
+                    logger.error("byok_encryption_failed", error=str(exc))
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail={
+                            "code": "BYOK_ENCRYPTION_FAILED",
+                            "message": (
+                                "Lỗi hệ thống trong quá trình mã hóa bảo mật khóa cá nhân. "
+                                "Vui lòng liên hệ ban quản trị."
+                            ),
+                            "action": "Kiểm tra lại biến môi trường server.",
+                        },
+                    ) from exc
+
         if payload.full_name is not None:
             user.full_name = payload.full_name.strip()
         if payload.institution is not None:
             user.institution = payload.institution.strip()
         if payload.academic_rank is not None:
             user.academic_rank = payload.academic_rank.strip()
-        if payload.orcid_id is not None:
-            user.orcid_id = payload.orcid_id.strip()
         if payload.avatar_url is not None:
             user.avatar_url = payload.avatar_url.strip()
         if payload.department is not None:

@@ -5,6 +5,8 @@
 
 export type UserRole = "researcher" | "faculty" | "postdoc" | "student" | "guest";
 
+export type ThemePreference = "light" | "dark" | "system";
+
 export interface UserProfile {
   id: string; // UUID v4
   email: string;
@@ -17,6 +19,9 @@ export interface UserProfile {
   bio?: string;
   research_interests?: string;
   google_scholar_url?: string;
+  has_byok?: boolean;
+  byok_masked?: string | null;
+  theme_preference?: ThemePreference;
   role: UserRole;
   is_verified: boolean;
   created_at: string;
@@ -75,6 +80,8 @@ export interface UpdateProfilePayload {
   bio?: string;
   research_interests?: string;
   google_scholar_url?: string;
+  theme_preference?: ThemePreference;
+  byok_api_key?: string;
 }
 
 export interface AuthMessageResponse {

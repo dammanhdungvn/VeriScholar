@@ -30,3 +30,23 @@ class UserModel(IdentifiableTimestampedModel):
     __table_args__ = (
         CheckConstraint("theme_preference IN ('light', 'dark', 'system')", name="ck_users_theme"),
     )
+
+    @property
+    def has_byok(self) -> bool:
+        """Return True if the user has an encrypted BYOK key stored."""
+        return bool(self.byok_api_key_encrypted)
+
+    @property
+    def byok_masked(self) -> str | None:
+        """Decrypt BYOK key in memory and return only its masked form."""
+        if not self.byok_api_key_encrypted:
+            return None
+        from api.core.config import settings
+        from api.core.crypto import CryptoError, decrypt_byok_key
+        from core.services.email_validator import mask_api_key
+
+        try:
+            raw_key = decrypt_byok_key(self.byok_api_key_encrypted, settings.BYOK_ENCRYPTION_KEY)
+            return mask_api_key(raw_key)
+        except CryptoError:
+            return None
