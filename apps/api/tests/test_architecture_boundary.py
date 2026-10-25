@@ -426,6 +426,7 @@ def test_no_engineering_brag_or_forbidden_copy_in_frontend():
         "Học giả đã xác thực",
         "Nhà Nghiên Cứu",
         "Nhà nghiên cứu Khoa học",
+        "• Đang hoạt động",
     )
 
     violations: list[str] = []

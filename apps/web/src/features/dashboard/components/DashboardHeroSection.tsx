@@ -24,7 +24,7 @@ export function DashboardHeroSection({
 
   const userGreetingName = user?.full_name
     ? user.full_name.split(" ").slice(-2).join(" ")
-    : "Nhà nghiên cứu";
+    : user?.email?.split("@")[0] || "Học giả";
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-8 select-text overflow-y-auto w-full custom-scrollbar relative z-10">

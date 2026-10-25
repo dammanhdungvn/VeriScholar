@@ -418,11 +418,6 @@ export function ScholarSettingsView({
               <span title="Đã xác thực" className="inline-flex items-center">
                 <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" aria-label="Đã xác thực" />
               </span>
-              {academicRank && (
-                <span className="text-3xs px-2 py-0.5 rounded-full bg-[#cc785c]/15 text-[#cc785c] font-medium border border-[#cc785c]/25 font-sans">
-                  {academicRank}
-                </span>
-              )}
             </div>
             <p className="text-xs text-[#706a60] dark:text-[#a09a8e] font-mono truncate">{effectiveUser?.email}</p>
           </div>
@@ -880,9 +875,6 @@ export function ScholarSettingsView({
                   <Laptop className="w-4 h-4 text-[#706a60] dark:text-[#a09a8e]" />
                   <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Thiết bị này</h3>
                 </div>
-                <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
-                  • Đang hoạt động
-                </span>
               </div>
               <div className="flex justify-end pt-1">
                 <Button
@@ -959,7 +951,7 @@ export function ScholarSettingsView({
               >
                 <div className="flex items-center gap-2.5">
                   <Sun className="w-4 h-4 text-amber-500 shrink-0" />
-                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">☀️ Sáng</span>
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">Sáng</span>
                 </div>
                 {themePreference === "light" && (
                   <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />
@@ -979,7 +971,7 @@ export function ScholarSettingsView({
               >
                 <div className="flex items-center gap-2.5">
                   <Moon className="w-4 h-4 text-indigo-400 shrink-0" />
-                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">🌙 Tối</span>
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">Tối</span>
                 </div>
                 {themePreference === "dark" && (
                   <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />
@@ -999,7 +991,7 @@ export function ScholarSettingsView({
               >
                 <div className="flex items-center gap-2.5">
                   <Monitor className="w-4 h-4 text-emerald-500 shrink-0" />
-                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">💻 Tự động</span>
+                  <span className="font-serif font-medium text-xs text-[#1a1918] dark:text-[#f4f1ea]">Tự động</span>
                 </div>
                 {themePreference === "system" && (
                   <CheckCircle2 className="w-4 h-4 text-[#cc785c] shrink-0" />

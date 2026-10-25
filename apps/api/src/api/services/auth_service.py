@@ -276,7 +276,7 @@ class AuthService:
             is_active=True,
             role="researcher",
             institution=payload.institution.strip() if payload.institution else None,
-            academic_rank="Nhà nghiên cứu Khoa học",
+            academic_rank=None,
             orcid_id=payload.orcid_id.strip() if payload.orcid_id else None,
             avatar_url=None,
             is_verified=False,
@@ -442,7 +442,7 @@ class AuthService:
         google_name = (
             token_data.get("name") or token_data.get("given_name") or normalized_email.split("@")[0]
         )
-        full_name = " ".join(str(google_name).strip().split()) or "Nhà nghiên cứu Google"
+        full_name = " ".join(str(google_name).strip().split()) or "Học giả"
         google_picture = token_data.get("picture")
 
         if user is None:
@@ -455,7 +455,7 @@ class AuthService:
                 role="researcher",
                 is_active=True,
                 is_verified=True,
-                academic_rank="Nhà nghiên cứu Khoa học",
+                academic_rank=None,
                 avatar_url=str(google_picture).strip() if google_picture else None,
             )
             self.db.add(user)
@@ -737,7 +737,7 @@ class AuthService:
         github_name = (
             user_data.get("name") or user_data.get("login") or normalized_email.split("@")[0]
         )
-        full_name = " ".join(str(github_name).strip().split()) or "Nhà nghiên cứu GitHub"
+        full_name = " ".join(str(github_name).strip().split()) or "Học giả"
         github_avatar = user_data.get("avatar_url")
 
         if user is None:
@@ -750,7 +750,7 @@ class AuthService:
                 role="researcher",
                 is_active=True,
                 is_verified=True,
-                academic_rank="Nhà nghiên cứu Khoa học",
+                academic_rank=None,
                 avatar_url=str(github_avatar).strip() if github_avatar else None,
             )
             self.db.add(user)

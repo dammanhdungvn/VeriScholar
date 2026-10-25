@@ -45,10 +45,10 @@ describe("UserProfileModal 3 Tabs Component", () => {
 
     // Switch to Tab 3: Giao diện
     fireEvent.click(screen.getByText(/Giao diện/i));
-    fireEvent.click(screen.getByText(/🌙 Tối/i));
+    fireEvent.click(screen.getByText(/^Tối$/i));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
 
-    fireEvent.click(screen.getByText(/☀️ Sáng/i));
+    fireEvent.click(screen.getByText(/^Sáng$/i));
     expect(document.documentElement.classList.contains("dark")).toBe(false);
   });
 
@@ -101,7 +101,7 @@ describe("UserProfileModal 3 Tabs Component", () => {
 
     // 2. Tab 3: Switch Theme to Dark
     fireEvent.click(screen.getByText(/Giao diện/i));
-    fireEvent.click(screen.getByText(/🌙 Tối/i));
+    fireEvent.click(screen.getByText(/^Tối$/i));
     expect(document.documentElement.classList.contains("dark")).toBe(true);
 
     // 3. Tab 2: Save & Verify BYOK Key
