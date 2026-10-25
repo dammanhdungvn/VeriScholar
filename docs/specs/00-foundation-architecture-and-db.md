@@ -1,13 +1,35 @@
-# ĐẶC TẢ KỸ THUẬT NỀN TẢNG: KIẾN TRÚC HỆ THỐNG, CSDL 16 BẢNG & LƯU TRỮ CAS
-# (FILE 00: FOUNDATION ARCHITECTURE, POSTGRESQL SCHEMA & CAS STORAGE SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ NỀN TẢNG KIẾN TRÚC HỆ THỐNG, CSDL 16 BẢNG & LƯU TRỮ CAS
+# (FOUNDATION ARCHITECTURE, POSTGRESQL SCHEMA & CAS STORAGE SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/00-overview-and-cleanup.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/00-overview-and-cleanup.md)  
-**Module liên đới:** Toàn bộ hệ thống (`specs/01` $\rightarrow$ `specs/07`)
+**Phân hệ kỹ thuật:** Phân Hệ Nền Tảng Kiến Trúc & Dữ Liệu (Foundation Architecture & Storage)  
+**Mục tiêu:** Cung cấp khung kiến trúc lục giác, lược đồ 16 bảng CSDL quan hệ kết hợp vector, và cơ chế lưu trữ nội dung định danh CAS cho toàn bộ hệ thống VeriScholar.
 
 ---
 
-## 1. Ranh Giới Kiến Trúc Lục Giác & Ràng Buộc Toàn Cục (Hexagonal Boundaries & Invariants)
+## 1. Usecase & Bối Cảnh Vận Hành Hệ Thống (Real-World System Use Cases & Value)
+
+### A. Usecase 1: Cô Lập Dữ Liệu Học Thuật Đa Người Dùng Tuyệt Đối (Multi-Tenant Academic Isolation)
+- **Bối cảnh & Vấn đề thực tế:** Trong môi trường nghiên cứu khoa học, các bài báo chưa công bố, ý tưởng luận văn hoặc dữ liệu thí nghiệm là tài sản sở hữu trí tuệ cực kỳ nhạy cảm. Nếu hệ thống để rò rỉ dữ liệu giữa hai người dùng (ví dụ: User A đọc trộm được tài liệu hoặc câu hỏi chat của User B thông qua lỗi ID enumeration), uy tín của nền tảng sẽ bị hủy hoại hoàn toàn.
+- **Giải pháp của phân hệ:**
+  - Mọi bản ghi CSDL từ bảng người dùng, tài liệu, phiên đọc, đến bản thảo đều bắt buộc gán khóa ngoại `user_id FK users.id ON DELETE CASCADE`.
+  - Mọi câu truy vấn bắt buộc có điều kiện lọc `WHERE user_id = :current_user_id`. Khi một người dùng cố tình truy cập ID tài nguyên của người khác, hệ thống luôn trả về `404 NOT_FOUND` đồng nhất, triệt tiêu mọi khả năng dò quét dữ liệu.
+
+### B. Usecase 2: Quyền Riêng Tư & Tiêu Hủy Dữ Liệu Vật Lý Tức Thì (Zero-Retention Guarantee)
+- **Bối cảnh & Vấn đề thực tế:** Khi học giả quyết định xóa một bài báo PDF bí mật hoặc hủy tài khoản, họ yêu cầu file nhị phân vật lý trên đĩa cứng máy chủ phải bị tiêu hủy ngay lập tức, không được phép lưu trữ mồ côi hay trôi nổi trên bộ nhớ đệm máy chủ.
+- **Giải pháp của phân hệ:**
+  - Hệ thống sử dụng cơ chế Content-Addressable Storage (CAS) kết hợp bộ đếm tham chiếu đồng bộ (`ref_count`).
+  - Khi người dùng xóa tài liệu (`DELETE /api/v1/documents/{id}`): hệ thống giảm `ref_count -= 1`. Ngay khi `ref_count <= 0`, lệnh `os.unlink()` xóa vĩnh viễn file nhị phân vật lý trên đĩa cứng ngay trong cùng chu kỳ request, cam kết không tồn đọng file mồ côi.
+
+### C. Usecase 3: Tìm Kiếm Hỗn Hợp Ngữ Nghĩa & Từ Khóa Cực Nhanh (Hybrid Vector & FTS Scaling)
+- **Bối cảnh & Vấn đề thực tế:** Một nhà nghiên cứu lưu trữ hàng trăm bài báo (tương đương hàng vạn đoạn văn chunk). Khi tìm kiếm câu trả lời, họ vừa muốn tìm theo thuật ngữ toán học chính xác (Full-Text Search từ khóa), vừa muốn tìm theo ngữ nghĩa tương đồng (Semantic Vector Search) mà thời gian phản hồi không được vượt quá 300ms.
+- **Giải pháp của phân hệ:**
+  - Tích hợp trực tiếp PostgreSQL 16+ với extension `pgvector` (`vector(1536)`) kèm chỉ mục HNSW (`vector_cosine_ops`) và chỉ mục GIN trên cột `content_tsv`. Không cần duy trì cụm Elasticsearch hay Milvus cồng kềnh, tối ưu hóa tối đa chi phí vận hành VPS.
+
+---
+
+## 2. Ranh Giới Kiến Trúc Lục Giác & Ràng Buộc Toàn Cục (Hexagonal Boundaries & Invariants)
 
 Hệ thống VeriScholar tuân thủ nghiêm ngặt mô hình **Kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters)** trong monorepo `uv workspace`:
 
@@ -65,7 +87,7 @@ flowchart LR
 
 ---
 
-## 2. Kiểm Kê Toàn Diện & Lược Đồ 16 Bảng CSDL PostgreSQL 16+
+## 3. Kiểm Kê Toàn Diện & Lược Đồ 16 Bảng CSDL PostgreSQL 16+
 
 Toàn bộ hệ thống VeriScholar MVP gồm đúng **16 bảng PostgreSQL** (12 bảng hiện có + 4 bảng tạo mới trong `Delta`).
 
@@ -210,7 +232,7 @@ CREATE INDEX idx_draft_messages_user_draft_time ON draft_messages(user_id, draft
 
 ---
 
-## 3. Quản Lý Lưu Trữ File Vật Lý (Content-Addressable Storage — CAS)
+## 4. Quản Lý Lưu Trữ File Vật Lý (Content-Addressable Storage — CAS)
 
 Hệ thống sử dụng cơ chế lưu trữ nội dung định danh theo băm (**Content-Addressable Storage - CAS**) tại `storage/blobs/`:
 
@@ -242,7 +264,7 @@ storage/blobs/
 
 ---
 
-## 4. Cơ Chế Khởi Tạo CSDL Idempotent (`ensure_database_schema`)
+## 5. Cơ Chế Khởi Tạo CSDL Idempotent (`ensure_database_schema`)
 
 Dự án không duy trì hệ thống migration Alembic đa phiên bản phức tạp cho cấu trúc đơn giản của MVP. Thay vào đó, toàn bộ quy trình khởi tạo và vá cột được tự động thực thi khi API khởi động thông qua hàm `ensure_database_schema()` trong [`init_db.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/init_db.py):
 
@@ -302,7 +324,7 @@ async def ensure_database_schema(engine: AsyncEngine) -> None:
 
 ---
 
-## 5. Cấu Hình Môi Trường & Tô Pô Vận Hành (Configuration & Topology)
+## 6. Cấu Hình Môi Trường & Tô Pô Vận Hành (Configuration & Topology)
 
 ### A. Bảng Biến Môi Trường Cốt Lõi (`.env`)
 
@@ -326,9 +348,9 @@ async def ensure_database_schema(engine: AsyncEngine) -> None:
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Nền Tảng (Foundation TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Nền Tảng (Foundation TDD Matrix)
 
-Mọi thay đổi kỹ thuật thuộc Trụ cột 1 phải vượt qua đầy đủ các kịch bản kiểm thử sau:
+Mọi thay đổi kỹ thuật thuộc Phân hệ Nền tảng Kiến trúc & Dữ liệu phải vượt qua đầy đủ các kịch bản kiểm thử sau:
 
 ```mermaid
 flowchart TD
@@ -360,7 +382,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Toàn bộ 16 bảng PostgreSQL và các chỉ mục HNSW/GIN được định nghĩa tường minh bằng SQLAlchemy và DDL SQL.
 - [ ] Không còn bất kỳ tham chiếu hay hàm gọi nào tới `aiosqlite` hoặc SQLite fallback trong toàn bộ codebase.

@@ -1,16 +1,39 @@
-# ĐẶC TẢ KỸ THUẬT: KHÁM PHÁ ĐỀ TÀI & QUẢN LÝ TÀI LIỆU PDF
-# (FILE 02: SCHOLARLY DISCOVERY, 2-TIER INGESTION & DOCUMENTS CRUD SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ KHÁM PHÁ ĐỀ TÀI & NẠP TÀI LIỆU 2 TẦNG
+# (SCHOLARLY DISCOVERY, 2-TIER INGESTION & DOCUMENTS CRUD SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/02-discovery-and-documents-crud.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/02-discovery-and-documents-crud.md)  
-**Phân hệ kỹ thuật:** Trụ cột 2 (Trái tim Đọc sâu — Phần 1)  
+**Phân hệ kỹ thuật:** Phân Hệ Khám Phá & Nạp Tài Liệu (Discovery & Ingestion)  
 **File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
 
 ---
 
-## 1. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
-Module 02 giải quyết bài toán khởi đầu nghiên cứu khoa học từ con số 0 (**Zero-to-Reading**): tìm kiếm bài báo ngoài theo chủ đề (Exa AI, Semantic Scholar, arXiv), nạp bài báo 2 tầng linh hoạt theo 2 trạng thái (**Full PDF** hoặc **Abstract-Only**), tải lên tài liệu PDF cá nhân (`<= 50MB`, `<= 100 trang`), bóc tách khối văn bản gắn tọa độ Bounding Box và lưu trữ vào kho CAS.
+### A. Usecase 1: Khám Phá Đề Tài Từ Con Số Không (Zero-to-Reading Across Open Access & Paywalls)
+- **Bối cảnh & Vấn đề thực tế:** Khi bắt đầu một đề tài nghiên cứu mới, học giả không biết nên tìm bài báo ở đâu ngoài Google Scholar. Tuy nhiên, rất nhiều bài báo quan trọng nằm sau bức tường phí (Paywall) của IEEE, Springer hay Elsevier. Khi người dùng gặp bài bị khóa, đa số các công cụ AI khác sẽ báo lỗi hoặc bỏ cuộc, khiến học giả mất dấu tài liệu quan trọng.
+- **Giải pháp của phân hệ:**
+  - Tích hợp tìm kiếm đa nguồn học thuật (Exa AI, Semantic Scholar, arXiv) với cơ chế phân loại trạng thái linh hoạt 2 chế độ:
+    - **Bài Open Access:** Hiển thị nút `[📖 Mở Đọc Sâu (Full PDF)]` để mở xem toàn văn PDF kèm Bounding Box vàng.
+    - **Bài Paywall:** Không chặn người dùng mà hiển thị nút `[📄 Xem Tóm Tắt (Abstract)]` cho phép đọc tóm tắt, mục tiêu nghiên cứu và trích dẫn, kèm nút `[📤 Tải lên file PDF]` để người dùng tự tải bản PDF có sẵn của mình lên tiếp tục phân tích.
+
+### B. Usecase 2: Trải Nghiệm Nạp 2 Tầng Không Chờ Đợi (Instant Zero-Waiting 2-Tier Ingestion)
+- **Bối cảnh & Vấn đề thực tế:** Một file PDF bài báo khoa học 30–50 trang chứa nhiều hình ảnh, công thức và bảng biểu. Nếu bắt người dùng chờ hệ thống tải file, bóc tách OCR, chia đoạn chunking và tạo vector embedding (thường mất 20–40 giây), người dùng sẽ cảm thấy ứng dụng bị đơ và rời bỏ.
+- **Giải pháp của phân hệ:**
+  - Thiết kế đường ống nạp 2 tầng bất đối xứng:
+    - **Tầng 1 (Tức thì < 500ms):** Lưu ngay tiêu đề, tác giả, DOI và tóm tắt vào CSDL, khởi tạo ngay phiên đọc và đưa người dùng vào màn hình làm việc tức thì.
+    - **Tầng 2 (Chạy ngầm BackgroundTasks):** Hệ thống âm thầm tải file PDF về kho CAS, dùng PyMuPDF bóc tách từng khối văn bản gắn tọa độ hình học (Bounding Box) và tính toán vector embedding `Vector(1536)` mà không làm nghẽn giao diện người dùng.
+
+### C. Usecase 3: Tải Lên & Quản Lý Tài Liệu PDF Cá Nhân (Personal PDF Upload & CAS Dedup)
+- **Bối cảnh & Vấn đề thực tế:** Người dùng có tài liệu nội bộ, báo cáo kỹ thuật riêng tải từ trường đại học muốn đối thoại với AI. Họ cần tải file lên dễ dàng (`<= 50MB`, `<= 100 trang`) và muốn tài liệu của mình được bảo mật, không bị trùng lặp lãng phí dung lượng ổ đĩa.
+- **Giải pháp của phân hệ:**
+  - Hỗ trợ tải file PDF trực tiếp qua `POST /api/v1/documents/upload` với kiểm tra MIME type và giới hạn dung lượng chặt chẽ. Áp dụng Content-Addressable Storage (CAS) tự động khử trùng lặp qua mã băm SHA-256 giúp tiết kiệm tối đa dung lượng máy chủ.
+
+---
+
+## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+
+Phân hệ này giải quyết bài toán khởi đầu nghiên cứu khoa học từ con số 0 (**Zero-to-Reading**): tìm kiếm bài báo ngoài theo chủ đề (Exa AI, Semantic Scholar, arXiv), nạp bài báo 2 tầng linh hoạt theo 2 trạng thái (**Full PDF** hoặc **Abstract-Only**), tải lên tài liệu PDF cá nhân (`<= 50MB`, `<= 100 trang`), bóc tách khối văn bản gắn tọa độ Bounding Box và lưu trữ vào kho CAS.
 
 ```mermaid
 flowchart TD
@@ -52,7 +75,7 @@ flowchart TD
 
 ---
 
-## 2. Mô Hình Dữ Liệu & Ràng Buộc Trạng Thái (`Database Schema & Status Lifecycle`)
+## 3. Mô Hình Dữ Liệu & Ràng Buộc Trạng Thái (`Database Schema & Status Lifecycle`)
 
 ### A. Vòng Đời Trạng Thái Tài Liệu (`documents.status`)
 Bảng `documents` (đã đặc tả ở Spec 00) quản lý trạng thái tài liệu qua 4 giá trị bất biến:
@@ -82,7 +105,7 @@ stateDiagram-v2
 
 ---
 
-## 3. Hợp Đồng API REST & Streaming Events (REST Contracts)
+## 4. Hợp Đồng API REST & Streaming Events (REST Contracts)
 
 ### A. API Khám Phá Bài Báo (`apps/api/src/api/v1/endpoints/discovery.py`)
 
@@ -191,7 +214,7 @@ stateDiagram-v2
 
 ---
 
-## 4. Thiết Kế Đường Ống Bóc Tách Kỹ Thuật (Ingestion & PyMuPDF Chunking)
+## 5. Thiết Kế Đường Ống Bóc Tách Kỹ Thuật (Ingestion & PyMuPDF Chunking)
 
 ### A. Thuật Toán Trích Xuất Khối Văn Bản & Bounding Box
 Trong [`packages/core/src/core/services/pdf_extractor.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/pdf_extractor.py), sử dụng PyMuPDF (`fitz` / `pymupdf`):
@@ -215,7 +238,7 @@ Trong [`packages/core/src/core/services/pdf_extractor.py`](file:///home/dammanhd
 
 ---
 
-## 5. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
+## 6. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
 
 ### A. Giao Diện Khám Phá Bài Báo (`DiscoveryPage.tsx`)
 1. **Thanh tìm kiếm trung tâm lớn:** Ô tìm kiếm với gợi ý từ khóa học thuật phổ biến (Deep Learning, NLP, Quantum Computing, CRISPR...).
@@ -239,7 +262,7 @@ Khi bài báo ở trạng thái `status="abstract_only"`:
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Bắt Buộc (Discovery & Documents TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Discovery & Documents TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -273,7 +296,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] 2 API `POST /api/v1/discovery/search` và `POST /api/v1/discovery/open-reading` được cài đặt hoàn chỉnh và mount vào API router.
 - [ ] Giao diện `DiscoveryPage.tsx` tìm kiếm được bài báo thực tế từ internet và hiển thị đúng 2 loại nút bấm (`Full PDF` vs `Abstract`).

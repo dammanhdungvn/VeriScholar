@@ -1,16 +1,37 @@
-# ĐẶC TẢ KỸ THUẬT: XÁC THỰC, QUẢN LÝ TÀI KHOẢN & PHÂN QUYỀN HỌC GIẢ
-# (FILE 01: AUTHENTICATION, USER PROFILE & MULTI-TENANT ISOLATION SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ XÁC THỰC, QUẢN LÝ TÀI KHOẢN & BẢO MẬT KHÓA RIÊNG HỌC GIẢ
+# (AUTHENTICATION, USER PROFILE & BYOK SECURITY SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/01-auth-and-user.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/01-auth-and-user.md)  
-**Phân hệ kỹ thuật:** Trụ cột 1 (Nền móng & Xác thực)  
+**Phân hệ kỹ thuật:** Phân Hệ Xác Thực & Quản Lý Học Giả (Authentication & Scholar Profile)  
 **File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
 
 ---
 
-## 1. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
-Module 01 chịu trách nhiệm toàn bộ vòng đời xác thực học giả, cấp phát và thu hồi phiên làm việc (JWT), xác thực email/khôi phục mật khẩu qua Redis OTP, quản lý hồ sơ cá nhân và cô lập dữ liệu đa người dùng.
+### A. Usecase 1: Đăng Ký & Đăng Nhập Học Giả Liền Mạch (Seamless Scholar Authentication)
+- **Bối cảnh & Vấn đề thực tế:** Sinh viên và nghiên cứu sinh thường truy cập nền tảng từ máy tính phòng thí nghiệm, thư viện trường, hoặc laptop cá nhân. Quá trình đăng nhập phải an toàn nhưng không được gây phiền toái (như bắt nhập lại mật khẩu liên tục mỗi khi đổi tab hoặc tải lại trang). Khi quên mật khẩu, việc nhận mã OTP khôi phục qua email phải diễn ra trong vài giây mà không bị trễ.
+- **Giải pháp của phân hệ:**
+  - Cung cấp phương thức đăng nhập bằng Email/Password kèm hỗ trợ OAuth (Google, GitHub) nhanh chóng.
+  - Quản lý phiên làm việc bằng cặp JWT Access Token (15 phút) và Refresh Token (7 ngày) kết hợp Redis OTP (hết hạn sau 300s, giới hạn tối đa 5 lần thử sai) nhằm ngăn chặn tấn công dò quét brute-force.
+
+### B. Usecase 2: Quản Lý Khóa Cá Nhân BYOK Tự Chủ Tuyệt Đối (Bring Your Own Key Security)
+- **Bối cảnh & Vấn đề thực tế:** Nhiều nghiên cứu sinh và giảng viên có sẵn tài khoản OpenAI hoặc Claude riêng với hạn mức tín dụng nghiên cứu cao. Họ muốn dùng chính khóa API của mình để tương tác với mô hình cao cấp nhất (GPT-4o, Claude 3.5 Sonnet) mà không bị phụ thuộc vào quota dùng thử của nền tảng. Tuy nhiên, họ rất lo lắng về nguy cơ rò rỉ khóa API cá nhân nếu cơ sở dữ liệu bị lộ.
+- **Giải pháp của phân hệ:**
+  - Cung cấp giao diện cấu hình BYOK trong trang hồ sơ cá nhân. Khóa API gửi lên từ trình duyệt được mã hóa ngay lập tức bằng thuật toán chuẩn quân đội **AES-256-GCM** với khóa chủ bí mật của server (`BYOK_ENCRYPTION_KEY`).
+  - Khi lưu trữ trong PostgreSQL, giá trị chỉ là một chuỗi mã hóa vô nghĩa kèm nonce ngẫu nhiên; khi cần gọi LLM, hệ thống mới giải mã trên bộ nhớ tạm (in-memory) và xóa ngay sau khi request hoàn tất, đảm bảo an toàn tuyệt đối.
+
+### C. Usecase 3: Cá Nhân Hóa Hồ Sơ & Chế Độ Đọc Đêm (Profile Customization & Dark Theme)
+- **Bối cảnh & Vấn đề thực tế:** Nhà nghiên cứu thường xuyên làm việc vào ban đêm để đọc tài liệu. Họ cần giao diện có chế độ nền tối (Dark mode) dịu mắt, đồng thời lưu giữ các thông tin học thuật (tên trường đại học, viện nghiên cứu) đồng bộ trên mọi thiết bị.
+- **Giải pháp của phân hệ:**
+  - Cho phép cập nhật hồ sơ cá nhân, chọn chủ đề giao diện (`light`, `dark`, hoặc `system`) và lưu trữ trực tiếp vào cột `theme_preference` trong bảng `users`, giúp giao diện người dùng đồng bộ tự động ngay khi đăng nhập từ bất kỳ thiết bị nào.
+
+---
+
+## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+
+Phân hệ này chịu trách nhiệm toàn bộ vòng đời xác thực học giả, cấp phát và thu hồi phiên làm việc (JWT), xác thực email/khôi phục mật khẩu qua Redis OTP, quản lý hồ sơ cá nhân và cô lập dữ liệu đa người dùng.
 
 ```mermaid
 flowchart TD
@@ -50,7 +71,7 @@ flowchart TD
 
 ---
 
-## 2. Mô Hình Dữ Liệu & Ràng Buộc PostgreSQL (`Database Schema & Invariants`)
+## 3. Mô Hình Dữ Liệu & Ràng Buộc PostgreSQL (`Database Schema & Invariants`)
 
 ### A. Lược Đồ Bảng `users` Chuẩn Hóa
 ```sql
@@ -95,7 +116,7 @@ CREATE INDEX idx_users_role_active ON users (role, is_active);
 
 ---
 
-## 3. Hợp Đồng API REST & Bảng Mã Lỗi (REST Contracts & Error Schemas)
+## 4. Hợp Đồng API REST & Bảng Mã Lỗi (REST Contracts & Error Schemas)
 
 Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (Response Envelope) và trả về mã `trace_id` trong headers.
 
@@ -183,7 +204,7 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
 
 ---
 
-## 4. Thiết Kế Cơ Chế Bảo Mật & Quản Lý Khóa Cá Nhân (BYOK Encryption)
+## 5. Thiết Kế Cơ Chế Bảo Mật & Quản Lý Khóa Cá Nhân (BYOK Encryption)
 
 ### A. Lưu Trữ Khóa Cá Nhân BYOK An Toàn (AES-256-GCM)
 Học giả có thể đưa API Key OpenAI riêng của họ vào hệ thống để không bị giới hạn quota:
@@ -205,7 +226,7 @@ Học giả có thể đưa API Key OpenAI riêng của họ vào hệ thống �
 
 ---
 
-## 5. Thiết Kế Giao Diện & Quản Lý Trạng Thái (Frontend UI/UX)
+## 6. Thiết Kế Giao Diện & Quản Lý Trạng Thái (Frontend UI/UX)
 
 ### A. Quản Lý Trạng Thái Toàn Cục (`useAuthStore.ts`)
 Sử dụng Zustand v5 kết hợp middleware `persist` lưu `accessToken` và `user` vào `localStorage`:
@@ -238,7 +259,7 @@ interface AuthState {
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Bắt Buộc (Auth TDD Test Matrix)
+## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Auth TDD Test Matrix)
 
 ```mermaid
 flowchart TD
@@ -275,7 +296,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Lược đồ bảng `users` được cập nhật đầy đủ các trường `theme_preference` và `byok_api_key_encrypted`.
 - [ ] 13 endpoint trong `auth.py` hoạt động ổn định, có rate-limiting qua Redis và xử lý lỗi đồng nhất.

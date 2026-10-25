@@ -1,16 +1,38 @@
-# ĐẶC TẢ KỸ THUẬT: KHÔNG GIAN ĐỌC SÂU, QUẢN LÝ TAB & HYBRID RAG CHAT CÓ BOUNDING BOX
-# (FILE 03: DEEP READING SESSIONS, MULTI-TAB PDF, RAG GROUNDING & NOTES SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ PHIÊN ĐỌC SÂU, QUẢN LÝ ĐA TAB & HYBRID RAG CHAT CÓ BOUNDING BOX
+# (DEEP READING SESSIONS, MULTI-TAB PDF, RAG GROUNDING & SCHOLAR NOTES SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/03-sessions-and-deep-reading-crud.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/03-sessions-and-deep-reading-crud.md)  
-**Phân hệ kỹ thuật:** Trụ cột 2 (Trái tim Đọc sâu — Phần 2)  
+**Phân hệ kỹ thuật:** Phân Hệ Đọc Sâu & Đối Thoại Minh Chứng (Deep Reading & Grounded Chat)  
 **File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
 
 ---
 
-## 1. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
-Module 03 là không gian làm việc trung tâm nhất của VeriScholar (`/dashboard/:sessionId`):
+### A. Usecase 1: Đọc Sâu & Đối Chiếu Song Song Nhiều Bài Báo (Multi-Paper Comparative Reading)
+- **Bối cảnh & Vấn đề thực tế:** Khi nghiên cứu một chủ đề (ví dụ: *Cơ chế Attention trong NLP*), người dùng hiếm khi chỉ đọc 1 bài báo duy nhất mà cần mở bài báo gốc (Vaswani et al., 2017) cùng với 2-3 bài báo cải tiến (BERT, RoBERTa) để đối chiếu sự khác biệt. Nếu phải liên tục mở nhiều tab trình duyệt riêng biệt rồi copy paste qua lại, họ sẽ mất mạch tập trung và không thể hỏi AI so sánh đồng thời giữa các tài liệu.
+- **Giải pháp của phân hệ:**
+  - Cung cấp thanh quản lý đa tab học thuật (`DocumentTabBar.tsx`) cho phép mở đồng thời từ 1 đến 5 bài báo trong cùng một phiên nghiên cứu.
+  - Người dùng dễ dàng chuyển đổi tab xem PDF, đóng bớt tài liệu bằng nút `[✕]` mà không xóa mất file, và AI có thể truy xuất ngữ cảnh chéo giữa các bài báo đang mở trong tab để trả lời câu hỏi so sánh.
+
+### B. Usecase 2: Đối Thoại Minh Chứng Tuyệt Đối Chống Ảo Giác Với Bounding Box Vàng (Zero-Hallucination Grounded Chat)
+- **Bối cảnh & Vấn đề thực tế:** Nỗi sợ lớn nhất của các nhà khoa học khi sử dụng AI là hiện tượng ảo giác (Hallucination) — AI tự bịa ra công thức toán hoặc trích dẫn sai số trang. Trong các bài báo khoa học, một câu khẳng định sai có thể làm hỏng toàn bộ luận án.
+- **Giải pháp của phân hệ:**
+  - Mọi câu trả lời của Trợ lý Socratic bắt buộc phải kèm huy hiệu bảo chứng nguồn gốc `[📄 Tên bài • Trang X]`.
+  - Khi người dùng nhấp chuột vào huy hiệu: giao diện tự động chuyển tab (nếu tài liệu ở tab khác), cuộn mượt mà đến đúng trang PDF và vẽ một khung chữ nhật màu vàng nhấp nháy (**Golden Bounding Box**) bao quanh chính xác đoạn văn gốc làm bằng chứng, mang lại niềm tin tuyệt đối cho học giả.
+
+### C. Usecase 3: Trích Xuất & Lưu Trữ Ghi Chú Học Thuật Tại Chỗ (In-Context Scholar Notes)
+- **Bối cảnh & Vấn đề thực tế:** Trong lúc đọc tài liệu, người dùng phát hiện một định lý hoặc công thức hay và muốn ghi chú lại kèm suy nghĩ cá nhân để dùng cho bài viết sau này mà không muốn mở thêm ứng dụng Notion hay Google Docs bên ngoài.
+- **Giải pháp của phân hệ:**
+  - Khi bôi đen bất kỳ đoạn văn bản nào trên trang PDF, menu ngữ cảnh nổi `ScholarSelectionMenu.tsx` xuất hiện với các nút hành động 1 chạm: `[💬 Đưa vào Chat để hỏi thêm]` hoặc `[📝 Lưu vào Sổ tay Ghi chú]`.
+  - Toàn bộ ghi chú được lưu vào bảng `research_notes` kèm số trang và trích dẫn gốc, sẵn sàng chuyển giao sang không gian viết bài.
+
+---
+
+## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+
+Phân hệ này là không gian làm việc trung tâm nhất của VeriScholar (`/dashboard/:sessionId`):
 - **Cột trái:** Trình đọc `PdfCanvasViewer.tsx` render PDF gốc sắc nét, hỗ trợ lớp phủ Bounding Box vàng nhấp nháy khi bấm trích dẫn, và menu nổi khi bôi đen văn bản (`ScholarSelectionMenu.tsx`). Khi bài báo ở trạng thái `status='abstract_only'`, cột trái tự động chuyển sang `AbstractCardViewer.tsx`.
 - **Cột phải:** Trợ lý Socratic Chat Tiếng Việt streaming SSE unbuffered, hiển thị công thức toán KaTeX và các huy hiệu bảo chứng `[📄 Tên bài • Trang X]` bấm vào là cuộn PDF bên trái.
 - **Thanh Tab trên:** Quản lý 1–5 bài báo mở đồng thời trong phiên đọc (`DocumentTabBar.tsx`).
@@ -59,7 +81,7 @@ flowchart LR
 
 ---
 
-## 2. Mô Hình Dữ Liệu & Ràng Buộc Phiên Đọc (`Database Invariants`)
+## 3. Mô Hình Dữ Liệu & Ràng Buộc Phiên Đọc (`Database Invariants`)
 
 ### A. Ràng Buộc Tối Đa 5 Bài Báo Mỗi Phiên (`session_documents`)
 - Khóa chính: `PRIMARY KEY (session_id, document_id)`.
@@ -81,7 +103,7 @@ Khi người dùng mở lại phiên đọc, giao diện khôi phục chính xá
 
 ---
 
-## 3. Hợp Đồng API REST & Luồng Streaming SSE (API & SSE Contracts)
+## 4. Hợp Đồng API REST & Luồng Streaming SSE (API & SSE Contracts)
 
 ### A. Quản Lý Phiên Đọc & Tab Bài Báo (`sessions.py`)
 
@@ -149,7 +171,7 @@ Khi người dùng mở lại phiên đọc, giao diện khôi phục chính xá
 
 ---
 
-## 4. Thiết Kế Thuật Toán Hybrid RAG & Hàng Rào Chống Ảo Giác (Grounding Guardrail)
+## 5. Thiết Kế Thuật Toán Hybrid RAG & Hàng Rào Chống Ảo Giác (Grounding Guardrail)
 
 ### A. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60)
 Thay vì xếp hạng từ khóa bằng Python trong RAM, `SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion (RRF):
@@ -194,7 +216,7 @@ LIMIT 5;
 
 ---
 
-## 5. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
+## 6. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
 
 ### A. Tương Tác Hai Chiều: Chat Huy Hiệu $\leftrightarrow$ PDF Bounding Box
 1. **Từ Chat sang PDF:**
@@ -217,7 +239,7 @@ LIMIT 5;
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Bắt Buộc (Deep Reading TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Deep Reading TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -251,7 +273,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Giới hạn tối đa 5 bài báo / phiên đọc được thực thi nghiêm ngặt cả ở Frontend lẫn Backend API.
 - [ ] Endpoint `DELETE /api/v1/sessions/{id}/documents/{document_id}` cho phép đóng tab an toàn không xóa file gốc.

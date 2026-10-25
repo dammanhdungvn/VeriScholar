@@ -1,16 +1,37 @@
-# ĐẶC TẢ KỸ THUẬT: KHO PAPER YÊU THÍCH & HỆ THỐNG GRAPHRAG 4 THỰC THỂ
-# (FILE 05: FAVORITE PAPERS LIBRARY, FOLDERS CRUD & POSTGRESQL GRAPHRAG SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ KHO PAPER YÊU THÍCH & HỆ THỐNG GRAPHRAG 4 THỰC THỂ
+# (FAVORITE PAPERS LIBRARY, FOLDERS CRUD & POSTGRESQL GRAPHRAG SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/05-favorite-library-and-graphrag.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/05-favorite-library-and-graphrag.md)  
-**Phân hệ kỹ thuật:** Trụ cột 3 (Mạng lưới Tri thức — Phần 2)  
+**Phân hệ kỹ thuật:** Phân Hệ Thư Viện Yêu Thích & Mạng Tri Thức (Library & Knowledge Graph)  
 **File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
 
 ---
 
-## 1. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
-Module 05 quản lý Kho Bài báo Yêu thích cá nhân (`/library`), cấu trúc cây thư mục đề tài (`folders`), và hệ thống **4-Entity GraphRAG thuần PostgreSQL + `pgvector`** (loại bỏ hoàn toàn cơ sở dữ liệu đồ thị rời Neo4j).
+### A. Usecase 1: Quản Lý & Phân Loại Thư Viện Bài Báo Cá Nhân (Personal Paper Library & Folders)
+- **Bối cảnh & Vấn đề thực tế:** Trong suốt quá trình làm nghiên cứu kéo dài nhiều tháng, một học giả đọc hàng trăm bài báo khác nhau. Nếu không có nơi lưu trữ tập trung, họ sẽ quên mất bài báo mình từng đọc nằm ở đâu, thuộc đề tài nào hoặc phải tải lại từ đầu rất mất thời gian.
+- **Giải pháp của phân hệ:**
+  - Cung cấp giao diện Kho Thư Viện Cá Nhân (`/library`) cho phép gắn dấu sao ⭐ để lưu bài báo tâm đắc.
+  - Hỗ trợ tổ chức tài liệu theo cây thư mục đề tài (`folders` — ví dụ: *"Luận văn tốt nghiệp"*, *"Deep Learning y tế"*), giúp tìm kiếm và quản lý tài liệu ngăn nắp.
+
+### B. Usecase 2: Đồ Thị Tri Thức Học Thuật Kết Nối Chéo (Cross-Paper Knowledge Graph)
+- **Bối cảnh & Vấn đề thực tế:** Khi đọc nhiều bài báo độc lập, các khái niệm thường liên quan mật thiết với nhau (ví dụ: Bài báo 1 đề xuất thuật toán *AdamW*, Bài báo 2 và 3 áp dụng *AdamW* trên các tập dữ liệu khác nhau). Người dùng muốn nhìn thấy mạng lưới kết nối này để hiểu bức tranh toàn cảnh của ngành mà không có công cụ nào hỗ trợ kết nối tri thức chéo giữa các file PDF rời rạc.
+- **Giải pháp của phân hệ:**
+  - Tự động trích xuất 4 loại thực thể học thuật chuẩn: **Paper**, **Method**, **Dataset**, **MetricResult**.
+  - Áp dụng kỹ thuật hợp nhất thực thể chuẩn mực (**Canonical Entity Merging**): Khi nhiều bài báo cùng nhắc đến phương pháp *"AdamW"*, hệ thống chỉ tạo duy nhất 1 nút Hub trung tâm và kết nối các cạnh quan hệ tới từng bài báo tương ứng.
+
+### C. Usecase 3: Tổng Hợp Benchmark & So Sánh Đồ Thị Tức Thì (Cross-Paper Benchmark Synthesis)
+- **Bối cảnh & Vấn đề thực tế:** Khi viết phần So sánh Thực nghiệm (Experiments) cho bài báo của mình, học giả phải mở lại 10 bài báo cũ để tìm xem phương pháp nào đạt kết quả cao nhất trên tập dữ liệu *ImageNet* hoặc *GLUE*.
+- **Giải pháp của phân hệ:**
+  - Cung cấp ô tra cứu GraphRAG: người dùng chỉ cần gõ câu hỏi: *"Các bài báo trong kho của tôi đạt độ chính xác bao nhiêu trên ImageNet?"*. Hệ thống dùng thuật toán 2 bước (HNSW Vector Anchor Search $\rightarrow$ 1-Hop Graph Edge Traversal) để duyệt các cạnh `(Paper - EVALUATED_ON -> Dataset)` và `(Paper - ACHIEVES -> MetricResult)`, tổng hợp thành bảng so sánh hoàn chỉnh mà không cần mở lại từng file PDF.
+
+---
+
+## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+
+Phân hệ này quản lý Kho Bài báo Yêu thích cá nhân (`/library`), cấu trúc cây thư mục đề tài (`folders`), và hệ thống **4-Entity GraphRAG thuần PostgreSQL + `pgvector`** (loại bỏ hoàn toàn cơ sở dữ liệu đồ thị rời Neo4j).
 
 ```mermaid
 flowchart TD
@@ -50,7 +71,7 @@ flowchart TD
 
 ---
 
-## 2. Mô Hình Dữ Liệu & Ràng Buộc GraphRAG 4 Thực Thể
+## 3. Mô Hình Dữ Liệu & Ràng Buộc GraphRAG 4 Thực Thể
 
 ### A. Cấu Trúc 4 Loại Đỉnh (`graph_nodes`) & 4 Loại Cạnh (`graph_edges`)
 Tuân thủ nghiêm ngặt PRD 05 §3, đồ thị tri thức chỉ sử dụng đúng 4 nhãn thực thể và 4 kiểu quan hệ cố định:
@@ -91,7 +112,7 @@ Tuân thủ nghiêm ngặt PRD 05 §3, đồ thị tri thức chỉ sử dụng 
 
 ---
 
-## 3. Hợp Đồng API REST (API Contracts)
+## 4. Hợp Đồng API REST (API Contracts)
 
 ### A. Tra Cứu Tri Thức Đồ Thị Tổng Hợp (`POST /api/v1/library/graph-query`)
 - **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
@@ -150,7 +171,7 @@ Tuân thủ nghiêm ngặt PRD 05 §3, đồ thị tri thức chỉ sử dụng 
 
 ---
 
-## 4. Thiết Kế Thuật Toán Trích Xuất & Truy Vấn GraphRAG
+## 5. Thiết Kế Thuật Toán Trích Xuất & Truy Vấn GraphRAG
 
 ### A. Trích Xuất Thực Thể Có Cấu Trúc (Structured Outputs Extraction)
 Khi bài báo được Star, `BackgroundTasks` gọi `GraphExtractorService` truyền toàn văn đoạn tóm tắt và phần giới thiệu/kết luận của bài báo vào mô hình LLM với JSON Schema bắt buộc:
@@ -200,7 +221,7 @@ Khi bài báo được Star, `BackgroundTasks` gọi `GraphExtractorService` tru
 
 ---
 
-## 5. Thiết Kế Giao Diện & Trực Quan Hóa Frontend (`apps/web`)
+## 6. Thiết Kế Giao Diện & Trực Quan Hóa Frontend (`apps/web`)
 
 ### A. Màn Hình Kho Yêu Thích (`LibraryWorkspaceView.tsx`)
 1. **Thanh bên trái (Cây thư mục):**
@@ -215,7 +236,7 @@ Khi bài báo được Star, `BackgroundTasks` gọi `GraphExtractorService` tru
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Bắt Buộc (Library & GraphRAG TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Library & GraphRAG TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -248,7 +269,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Lược đồ `graph_nodes` và `graph_edges` được tạo chuẩn trên PostgreSQL kèm chỉ mục `HNSW`.
 - [ ] Cơ chế gộp đỉnh trùng tên (Canonical Merging) hoạt động chính xác, tạo nên đồ thị liên kết chéo.

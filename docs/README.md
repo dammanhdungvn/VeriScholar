@@ -59,14 +59,14 @@ Hợp đồng kỹ thuật chi tiết làm căn cứ trực tiếp để lập t
 
 | Tài liệu Spec | Phạm vi kỹ thuật & Hợp đồng giao tiếp |
 | :--- | :--- |
-| **`00-foundation-architecture-and-db.md`** | Ranh giới Hexagonal Architecture, lược đồ 16 bảng PostgreSQL (`pgvector`), CAS file storage, Redis cache, chiến lược kiểm thử TDD. |
-| **`01-auth-and-user-spec.md`** | Hợp đồng API Auth/OTP/OAuth, mã hóa BYOK AES-256-GCM, phân quyền và bảo mật JWT. |
-| **`02-discovery-and-documents-spec.md`** | Ingestion pipeline 2 tầng (Exa/arXiv + PDF parser), cơ chế trích xuất cấu trúc và lưu trữ CAS blobs. |
-| **`03-sessions-and-deep-reading-spec.md`** | Luồng Hybrid RAG SSE streaming, tọa độ Bounding Box, quản lý tab tài liệu (tối đa 5 bài) và Smart Notes. |
-| **`04-context-table-and-roadmap-spec.md`** | Khung tổng hợp bảng 3 cột, lộ trình học tuần tự (Socratic Citation Bridge) và hợp đồng tra cứu references. |
-| **`05-favorite-library-and-graphrag-spec.md`** | Lược đồ bảng `graph_nodes` & `graph_edges`, thuật toán trích xuất 4 Thực thể & 4 Cạnh và truy vấn GraphRAG. |
-| **`06-agentic-overleaf-writing-spec.md`** | Quản lý bản thảo `drafts`/`draft_assets`/`draft_messages`, kiến trúc LangGraph StateGraph, vòng lặp tự sửa lỗi E2B và 1-Click Undo. |
-| **`07-monitoring-and-langfuse-spec.md`** | Triển khai Structlog JSON, `PureASGITracingMiddleware`, tích hợp Langfuse Tracing, Sentry SDK và Alert Webhook. |
+| **[`00-foundation-architecture-and-db.md`](specs/00-foundation-architecture-and-db.md)** | Phân Hệ Nền Tảng Kiến Trúc & Dữ Liệu: Ranh giới Hexagonal Architecture, lược đồ 16 bảng PostgreSQL (`pgvector`), CAS file storage, Redis cache, chiến lược kiểm thử TDD. |
+| **[`01-auth-and-user-spec.md`](specs/01-auth-and-user-spec.md)** | Phân Hệ Xác Thực & Quản Lý Học Giả: Hợp đồng API Auth/OTP/OAuth, mã hóa BYOK AES-256-GCM, phân quyền và bảo mật JWT. |
+| **[`02-discovery-and-documents-spec.md`](specs/02-discovery-and-documents-spec.md)** | Phân Hệ Khám Phá & Nạp Tài Liệu: Ingestion pipeline 2 tầng (Exa/arXiv + PDF parser), cơ chế trích xuất cấu trúc và lưu trữ CAS blobs. |
+| **[`03-sessions-and-deep-reading-spec.md`](specs/03-sessions-and-deep-reading-spec.md)** | Phân Hệ Đọc Sâu & Đối Thoại Minh Chứng: Luồng Hybrid RAG SSE streaming, tọa độ Bounding Box, quản lý tab tài liệu (tối đa 5 bài) và Smart Notes. |
+| **[`04-context-table-and-roadmap-spec.md`](specs/04-context-table-and-roadmap-spec.md)** | Phân Hệ Bảng Ngữ Cảnh & Lộ Trình Học: Khung tổng hợp bảng 3 cột, lộ trình học tuần tự (Socratic Citation Bridge) và hợp đồng tra cứu references. |
+| **[`05-favorite-library-and-graphrag-spec.md`](specs/05-favorite-library-and-graphrag-spec.md)** | Phân Hệ Thư Viện Yêu Thích & Mạng Tri Thức: Lược đồ bảng `graph_nodes` & `graph_edges`, thuật toán trích xuất 4 Thực thể & 4 Cạnh và truy vấn GraphRAG. |
+| **[`06-agentic-overleaf-writing-spec.md`](specs/06-agentic-overleaf-writing-spec.md)** | Phân Hệ Soạn Thảo & Agentic LaTeX: Quản lý bản thảo `drafts`/`draft_assets`/`draft_messages`, kiến trúc LangGraph StateGraph, vòng lặp tự sửa lỗi E2B và 1-Click Undo. |
+| **[`07-monitoring-and-langfuse-spec.md`](specs/07-monitoring-and-langfuse-spec.md)** | Phân Hệ Giám Sát, Vận Hành & Đo Lường: Triển khai Structlog JSON, `PureASGITracingMiddleware`, tích hợp Langfuse Tracing, Sentry SDK và Alert Webhook. |
 
 ---
 *Bản quyền © 2026 VeriScholar Platform. Mọi quyền được bảo lưu.*

@@ -1,16 +1,35 @@
-# ĐẶC TẢ KỸ THUẬT: BẢNG NGỮ CẢNH 3 CỘT & LỘ TRÌNH HỌC TUẦN TỰ (A → B → C → D)
-# (FILE 04: 3-COLUMN CONTEXT TABLE, 2-TIER INGESTION & SOCRATIC ROADMAP SPEC)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ BẢNG NGỮ CẢNH 3 CỘT & LỘ TRÌNH HỌC TUẦN TỰ (A → B → C → D)
+# (3-COLUMN CONTEXT TABLE, 2-TIER INGESTION & SOCRATIC ROADMAP SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`docs/PRD/04-context-table-and-roadmap.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/04-context-table-and-roadmap.md)  
-**Phân hệ kỹ thuật:** Trụ cột 3 (Mạng lưới Tri thức — Phần 1)  
+**Phân hệ kỹ thuật:** Phân Hệ Bảng Ngữ Cảnh & Lộ Trình Học (Context Table & Roadmap)  
 **File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
 
 ---
 
-## 1. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+## 1. Usecase & Bối Cảnh Người Dùng (Real-World User Journey & Value)
 
-Module 04 giải quyết 2 bài toán trải nghiệm cốt lõi của học giả:
+### A. Usecase 1: Chọn Lọc Ngữ Cảnh Tinh Gọn Qua Bảng 3 Cột (Selective Context Ingestion)
+- **Bối cảnh & Vấn đề thực tế:** Một bài báo nghiên cứu chuyên sâu thường có từ 30 đến 70 tài liệu tham khảo trong mục References. Nếu nạp bừa bãi toàn bộ 50 tài liệu này vào phiên chat, ngữ cảnh AI sẽ bị loãng (Context Dilution), chi phí token tăng vọt và câu trả lời dễ bị nhiễu. Học giả chỉ muốn chọn đúng 2–3 bài báo thực sự liên quan đến khía cạnh họ đang thắc mắc.
+- **Giải pháp của phân hệ:**
+  - Cung cấp Bảng Ngữ Cảnh 3 Cột trực quan (`SmartReferenceDrawer.tsx`):
+    - Cột 1: Tên bài báo + Tác giả + Mã định danh (DOI/arXiv).
+    - Cột 2: Đường link gốc dẫn đến bài báo (Open Access URL).
+    - Cột 3: Nút hành động trực tiếp `[➕ Thêm vào chat]` hoặc `[🗑️ Xóa khỏi chat]`.
+  - Cho phép người dùng chủ động nạp thêm tài liệu tham khảo vào phiên đọc chỉ với 1 cú nhấp chuột trong `< 500ms`.
+
+### B. Usecase 2: Chống Học Nhảy Cóc Bằng Gợi Ý Bắc Cầu Socratic (Socratic Bridge Hint: A → B → C → D)
+- **Bối cảnh & Vấn đề thực tế:** Sinh viên mới bắt đầu đọc bài báo ứng dụng (ví dụ: *Bài báo D về Khuếch tán hình ảnh Stable Diffusion*). Họ hỏi AI một câu rất sâu về hàm mất mát, nhưng không hiểu được câu trả lời vì hàm mất mát đó kế thừa từ một nguyên lý toán học nền tảng ở *Bài báo B (DDPM 2020)*. Học nhảy cóc ($A \rightarrow D$) khiến người học bị ngợp và mất phương hướng.
+- **Giải pháp của phân hệ:**
+  - AI trong quá trình phân tích sẽ tự động đối chiếu các bài báo nền tảng trong danh mục `reference_items`.
+  - Khi phát hiện lỗ hổng kiến thức, thay vì trả lời dồn dập, AI phát sự kiện `event: bridge_hint` hiển thị thẻ gợi ý **Gợi Ý Lộ Trình Học Tuần Tự (`BridgeHintCard.tsx`)**: *"💡 Để nắm vững phần này, bạn cần hiểu nguyên lý từ bài báo [3] (Ho et al., 2020)."* kèm nút `[➕ Nạp bài này vào phiên chat để tìm hiểu trước]`.
+
+---
+
+## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
+
+Phân hệ này giải quyết 2 bài toán trải nghiệm cốt lõi của học giả:
 1. **Chống học nhảy cóc ($A \rightarrow D$):** Khi người dùng hỏi một khái niệm nâng cao ($D$) mà bài báo chỉ nhắc lướt qua vì kế thừa từ bài báo tham khảo nền tảng ($B$), AI tự động phát hiện và hiển thị thẻ **Gợi ý Lộ trình Học Tuần tự (`BridgeHintCard.tsx`)** kèm nút nạp 1-Click.
 2. **Mở rộng Ngữ cảnh Bảng 3 Cột không đứt mạch đọc:** Bóc tách mục References cuối bài kết hợp Exa AI, hiển thị Bảng 3 Cột trực quan cho phép người dùng nạp thêm bài báo vào phiên chat trong `< 500ms`.
 
@@ -54,7 +73,7 @@ flowchart LR
 
 ---
 
-## 2. Mô Hình Dữ Liệu & Ràng Buộc Kỹ Thuật (`Database Invariants`)
+## 3. Mô Hình Dữ Liệu & Ràng Buộc Kỹ Thuật (`Database Invariants`)
 
 ### A. Ràng Buộc Bảng `reference_items`
 Bảng `reference_items` (đã đặc tả ở Spec 00) lưu danh mục trích dẫn bóc tách từ cuối bài:
@@ -79,7 +98,7 @@ Khi gọi `POST /api/v1/sessions/{session_id}/references:ingest`:
 
 ---
 
-## 3. Hợp Đồng API REST & Cấu Trúc Sự Kiện SSE (API Contracts)
+## 4. Hợp Đồng API REST & Cấu Trúc Sự Kiện SSE (API Contracts)
 
 ### A. Lấy Danh Mục References Đã Trích Xuất (`GET /api/v1/documents/{document_id}/references`)
 - **Headers:** `Authorization: Bearer <token>`
@@ -170,7 +189,7 @@ data: {
 
 ---
 
-## 4. Thiết Kế Thuật Toán Socratic Bridge Hint ($A \rightarrow B \rightarrow C \rightarrow D$)
+## 5. Thiết Kế Thuật Toán Socratic Bridge Hint ($A \rightarrow B \rightarrow C \rightarrow D$)
 
 ### A. Prompt Khung Chỉ Thị Định Dạng Bridge Hint
 Trong prompt hệ thống của `SessionChatService`, nhúng hướng dẫn nhận diện tham chiếu:
@@ -186,7 +205,7 @@ Bộ bóc tách stream của FastAPI chặn tag `<bridge_hint ... />`, trích xu
 
 ---
 
-## 5. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
+## 6. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
 
 ### A. Giao Diện Ngăn Trượt Bảng 3 Cột (`SmartReferenceDrawer.tsx`)
 Khi người dùng bấm nút **`[📚 Bảng References]`** trên thanh công cụ đọc bài:
@@ -219,7 +238,7 @@ Bấm nút `[➕ Nạp bài [3]]` sẽ hiển thị spinner tải và chuyển h
 
 ---
 
-## 6. Ma Trận Kiểm Thử TDD Bắt Buộc (Context Table & Roadmap TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Context Table & Roadmap TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -251,7 +270,7 @@ flowchart TD
 
 ---
 
-## 7. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] API `GET /api/v1/documents/{id}/references` và `POST /api/v1/sessions/{id}/references:ingest` hoạt động ổn định.
 - [ ] Bảng 3 Cột hiển thị đầy đủ thông tin, hỗ trợ nạp bài 1-Click và gỡ bài khỏi chat an toàn.
