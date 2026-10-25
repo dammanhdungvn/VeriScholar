@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { OtpVerificationModal } from "./OtpVerificationModal";
 
 describe("OtpVerificationModal component", () => {
@@ -171,5 +171,49 @@ describe("OtpVerificationModal component", () => {
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("Mật khẩu xác nhận không khớp.");
     });
+  });
+
+  it("counts down and enables resend button, then resets countdown on resend", async () => {
+    vi.useFakeTimers({ toFake: ["setInterval", "clearInterval", "setTimeout", "clearTimeout"] });
+    const handleResend = vi.fn().mockResolvedValue(undefined);
+
+    render(
+      <OtpVerificationModal
+        open={true}
+        onOpenChange={vi.fn()}
+        email="scholar@stanford.edu"
+        mode="registration"
+        onVerify={vi.fn()}
+        onResendOtp={handleResend}
+      />
+    );
+
+    expect(screen.getByText("Gửi lại sau 60s")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    expect(screen.getByText("Gửi lại sau 55s")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(55000);
+    });
+    expect(screen.getByRole("button", { name: /Gửi lại mã/i })).toBeInTheDocument();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Gửi lại mã/i }));
+      await Promise.resolve();
+    });
+
+    expect(handleResend).toHaveBeenCalledTimes(1);
+
+    expect(screen.getByText("Gửi lại sau 60s")).toBeInTheDocument();
+
+    act(() => {
+      vi.advanceTimersByTime(2000);
+    });
+    expect(screen.getByText("Gửi lại sau 58s")).toBeInTheDocument();
+
+    vi.useRealTimers();
   });
 });

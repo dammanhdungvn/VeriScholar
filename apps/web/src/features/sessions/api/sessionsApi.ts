@@ -2,7 +2,6 @@ import {
   apiClient,
   apiClientWithHeaders,
   apiClientWithMeta,
-  apiClientBlob,
   resolveApiUrl,
   generateRequestId,
   type ApiResponseWithHeaders,
@@ -20,7 +19,6 @@ import type {
   SessionTurnItem,
   CitationItemSchema,
   SessionIngestResponse,
-  CitationGraphData,
 } from "@/types/session";
 
 export interface ListSessionsParams {
@@ -286,17 +284,7 @@ export const sessionsApi = {
   },
 
   /**
-   * 56. POST /api/v1/sessions/{id}:export-bundle
-   * Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle .zip)
-   */
-  async exportSessionBundle(sessionId: string): Promise<Blob> {
-    return apiClientBlob(`/sessions/${sessionId}:export-bundle`, {
-      method: "POST",
-    });
-  },
-
-  /**
-   * 57. POST /api/v1/sessions/{id}/references:ingest
+   * 56. POST /api/v1/sessions/{id}/references:ingest
    * Nạp các bài báo tham khảo Open-Access vào phiên đọc sâu (Giới hạn tối đa 5 bài) (Module 3)
    */
   async ingestReferences(
@@ -314,13 +302,5 @@ export const sessionsApi = {
         }),
       }
     );
-  },
-
-  /**
-   * 58. GET /api/v1/sessions/{id}/citation-graph
-   * Lấy đồ thị trích dẫn đa bài của phiên (Cycle Breaking & Max-Hop <= 2) (Module 3)
-   */
-  async getCitationGraph(sessionId: string): Promise<CitationGraphData> {
-    return apiClient<CitationGraphData>(`/sessions/${sessionId}/citation-graph`);
   },
 };

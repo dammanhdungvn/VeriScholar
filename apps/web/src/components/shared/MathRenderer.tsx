@@ -9,15 +9,21 @@ export interface MathRendererProps {
 
 export function MathRenderer({ math, block = false, className }: MathRendererProps) {
   const html = React.useMemo(() => {
+    const cleanMath = math ? math.trim() : "";
+    if (!cleanMath || cleanMath === "undefined") {
+      return "";
+    }
     try {
-      return katex.renderToString(math, {
+      return katex.renderToString(cleanMath, {
         displayMode: block,
         throwOnError: false,
       });
     } catch {
-      return math;
+      return cleanMath;
     }
   }, [math, block]);
+
+  if (!html) return null;
 
   if (block) {
     return (

@@ -10,8 +10,6 @@ import type {
   UpdateNoteRequest,
   NoteResponse,
   NoteListItemResponse,
-  SynthesizeNotesRequest,
-  NoteSynthesisResponse,
 } from "@/types/note";
 
 export interface ListNotesParams {
@@ -101,26 +99,6 @@ export const notesApi = {
   async deleteNote(noteId: string): Promise<void> {
     return apiClient<void>(`/notes/${noteId}`, {
       method: "DELETE",
-    });
-  },
-
-  /**
-   * 21. POST /api/v1/notes:synthesize
-   * AI Tổng hợp ghi chú thành bài học đúc kết (4 modes) kèm Interactive Badges
-   */
-  async synthesizeNotes(
-    data: SynthesizeNotesRequest,
-    idempotencyKey?: string
-  ): Promise<NoteSynthesisResponse> {
-    const headers: Record<string, string> = {};
-    if (idempotencyKey) {
-      headers["Idempotency-Key"] = idempotencyKey;
-    }
-
-    return apiClient<NoteSynthesisResponse>("/notes:synthesize", {
-      method: "POST",
-      headers,
-      body: JSON.stringify(data),
     });
   },
 };

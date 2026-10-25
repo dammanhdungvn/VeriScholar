@@ -31,8 +31,6 @@ interface ViewportControlsProps {
   onZoomOut: () => void;
   onResetZoom: () => void;
   onRotate: () => void;
-  onExportPdf?: () => void;
-  isExportingPdf?: boolean;
   readingMode?: ReadingMode;
   onReadingModeChange?: (mode: ReadingMode) => void;
   isThumbnailsOpen?: boolean;
@@ -51,8 +49,6 @@ export function ViewportControls({
   onZoomOut,
   onResetZoom,
   onRotate,
-  onExportPdf,
-  isExportingPdf,
   readingMode: propReadingMode,
   onReadingModeChange: propOnReadingModeChange,
   isThumbnailsOpen: propIsThumbnailsOpen,
@@ -369,8 +365,6 @@ export function ViewportControls({
           activeReadingMode={activeReadingMode}
           onReadingModeChange={setReadingMode}
           onOpenReferences={onOpenReferences}
-          onExportPdf={onExportPdf}
-          isExportingPdf={isExportingPdf}
           isZenPdf={isZenPdf}
           onToggleZenPdf={onToggleZenPdf}
           zoomRatio={zoomRatio}

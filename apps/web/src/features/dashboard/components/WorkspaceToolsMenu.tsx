@@ -1,16 +1,14 @@
 import { useState, useRef, useEffect } from "react";
-import { MoreHorizontal, Archive, Settings, Sun, Moon } from "lucide-react";
+import { MoreHorizontal, Settings, Sun, Moon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WorkspaceToolsMenuProps {
-  onExport: () => void;
   onOpenSettings: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
 }
 
 export function WorkspaceToolsMenu({
-  onExport,
   onOpenSettings,
   isDark,
   onToggleTheme,
@@ -54,7 +52,7 @@ export function WorkspaceToolsMenu({
         aria-label="Công cụ bổ sung"
         aria-expanded={isOpen}
         aria-haspopup="menu"
-        title="Công cụ bổ sung (Xuất ZIP, Cài đặt, Giao diện)"
+        title="Công cụ bổ sung (Cài đặt, Giao diện)"
         className={cn(
           "inline-flex items-center justify-center w-7 h-7 rounded-lg border text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs",
           isOpen
@@ -74,19 +72,6 @@ export function WorkspaceToolsMenu({
           onClick={(e) => e.stopPropagation()}
         >
           <div className="space-y-0.5">
-            <button
-              type="button"
-              role="menuitem"
-              onClick={() => {
-                setIsOpen(false);
-                onExport();
-              }}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521] hover:text-primary transition-colors cursor-pointer text-left"
-            >
-              <Archive className="w-3.5 h-3.5 text-primary shrink-0" />
-              <span>Xuất ZIP</span>
-            </button>
-
             <button
               type="button"
               role="menuitem"

@@ -72,32 +72,6 @@ describe("ViewportControls Component", () => {
     expect(onReset).toHaveBeenCalled();
   });
 
-  it("handles onExportPdf action through options menu", () => {
-    const onExport = vi.fn();
-    render(
-      <ViewportControls
-        currentPage={1}
-        totalPages={10}
-        zoomRatio={1.0}
-        onPageChange={vi.fn()}
-        onZoomIn={vi.fn()}
-        onZoomOut={vi.fn()}
-        onResetZoom={vi.fn()}
-        onRotate={vi.fn()}
-        onExportPdf={onExport}
-      />
-    );
-
-    // Open options menu
-    const overflowBtn = screen.getByTestId("viewport-overflow-menu-btn");
-    fireEvent.click(overflowBtn);
-
-    const exportBtn = screen.getByTestId("overflow-export-pdf-btn");
-    expect(exportBtn).toBeInTheDocument();
-    fireEvent.click(exportBtn);
-    expect(onExport).toHaveBeenCalledTimes(1);
-  });
-
   it("handles onToggleZenPdf button click for Zen reading mode directly on toolbar", () => {
     const onToggleZen = vi.fn();
     render(
@@ -198,7 +172,6 @@ describe("ViewportControls Component", () => {
 
   it("handles action items in overflow popover menu", () => {
     const onOpenRefs = vi.fn();
-    const onExport = vi.fn();
     const onToggleZen = vi.fn();
 
     render(
@@ -212,7 +185,6 @@ describe("ViewportControls Component", () => {
         onResetZoom={vi.fn()}
         onRotate={vi.fn()}
         onOpenReferences={onOpenRefs}
-        onExportPdf={onExport}
         onToggleZenPdf={onToggleZen}
       />
     );
@@ -224,12 +196,6 @@ describe("ViewportControls Component", () => {
     fireEvent.click(refsBtn);
     expect(onOpenRefs).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId("viewport-overflow-popover")).not.toBeInTheDocument();
-
-    // Reopen and test export
-    fireEvent.click(overflowBtn);
-    const exportBtn = screen.getByTestId("overflow-export-pdf-btn");
-    fireEvent.click(exportBtn);
-    expect(onExport).toHaveBeenCalledTimes(1);
 
     // Reopen and test zen
     fireEvent.click(overflowBtn);

@@ -215,7 +215,7 @@ describe("DashboardWorkspace Split-Pane Component", () => {
     const contextMenu = screen.getByTestId("academic-context-menu");
     expect(contextMenu).toBeInTheDocument();
     expect(screen.getByText("Làm mới hội thoại")).toBeInTheDocument();
-    expect(screen.getByText(/Xuất gói nghiên cứu/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Xuất gói nghiên cứu/i)).not.toBeInTheDocument();
     expect(screen.getByText(/Cài đặt phiên nghiên cứu/i)).toBeInTheDocument();
 
     // Clicking "Làm mới hội thoại" triggers onResetChat and closes menu

@@ -1,8 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { DashboardTaskbar } from "./DashboardTaskbar";
-import { DashboardCoworkView } from "./DashboardCoworkView";
-import { DashboardProjectView } from "./DashboardProjectView";
 import { LibraryWorkspaceView } from "@/features/library/components/LibraryWorkspaceView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { HeroUploadDropzone } from "./HeroUploadDropzone";
@@ -114,7 +112,9 @@ export function DashboardContainer() {
         const matchedDoc = detail.documents?.find((d) => d.id === activeDocId);
         const title = matchedDoc?.title || detail.title;
         setDocument(activeDocId, title);
-        useReaderStore.getState().setActiveDocumentId(activeDocId);
+        if (useReaderStore.getState().activeDocumentId !== activeDocId) {
+          useReaderStore.getState().setActiveDocumentId(activeDocId);
+        }
 
         if (syncedSessionIdRef.current !== detail.id && detail.viewport_state?.page) {
           syncedSessionIdRef.current = detail.id;
@@ -254,7 +254,6 @@ export function DashboardContainer() {
         onSelectSession={handleSelectSession}
         onNewSession={handleNewSession}
         onOpenLibrary={() => navigate("/library")}
-        onOpenProjects={() => navigate("/projects")}
       />
 
       {/* 2. Center Canvas Area */}
@@ -286,28 +285,15 @@ export function DashboardContainer() {
 
         {/* View Switcher based on AppMode, Standby State & Workspace with Error Boundary */}
         <DashboardErrorBoundary onReset={resetChat}>
-          {appMode === "project" ? (
-            <DashboardProjectView
-              onNewSession={handleNewSession}
-              onSelectSession={handleSelectSession}
-              onSelectDocument={(docId) => {
-                setDocument(docId, "Tài liệu dự án");
-                setAppMode("chat");
-              }}
-            />
-          ) : appMode === "library" ? (
+          {appMode === "library" ? (
             <LibraryWorkspaceView
               onSelectDocument={(doc) => {
                 handleSelectDocumentFromLibrary(doc);
                 setAppMode("chat");
               }}
             />
-          ) : appMode === "cowork" ? (
-            <DashboardCoworkView />
           ) : showStandbyHero ? (
-            <div className="flex-1 flex items-center justify-center p-6 overflow-y-auto">
-              <HeroUploadDropzone onIngest={handleFileUpload} />
-            </div>
+            <HeroUploadDropzone onIngest={handleFileUpload} />
           ) : (
             <DashboardWorkspace
               messages={messages}

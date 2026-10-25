@@ -4,15 +4,11 @@ import {
   Plus,
   MessageSquare,
   Library,
-  FolderKanban,
   PenTool,
   PanelLeftClose,
   PanelLeft,
   Search,
   Archive,
-  TableProperties,
-  FileText,
-  Network,
   BookOpen,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
@@ -31,7 +27,6 @@ interface DashboardTaskbarProps {
   onSelectSession?: (sessionId: string) => void;
   onNewSession?: () => void;
   onOpenLibrary?: () => void;
-  onOpenProjects?: () => void;
 }
 
 export function DashboardTaskbar({
@@ -40,7 +35,6 @@ export function DashboardTaskbar({
   onSelectSession: propOnSelectSession,
   onNewSession: propOnNewSession,
   onOpenLibrary,
-  onOpenProjects
 }: DashboardTaskbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -83,36 +77,29 @@ export function DashboardTaskbar({
   const userInitials = getScholarInitials(user?.full_name, user?.email);
 
   const pathname = location.pathname;
-  const isMatrix = pathname === "/matrix" || pathname === "/library/matrix";
-  const isLibrary = pathname.startsWith("/library") && !isMatrix;
-  const isNotes = pathname.startsWith("/notes");
+  const isLibrary = pathname.startsWith("/library");
   const isWriting = pathname.startsWith("/writing");
-  const isDiscovery = pathname === "/discovery" || pathname === "/citations";
-  const isProjects = pathname.startsWith("/projects");
   const isResearch =
     !isLibrary &&
-    !isMatrix &&
-    !isNotes &&
     !isWriting &&
-    !isDiscovery &&
-    !isProjects &&
     (pathname === "/dashboard" ||
       pathname.startsWith("/dashboard/") ||
       pathname.startsWith("/research") ||
+      pathname.startsWith("/discovery") ||
       pathname === "/");
 
   const navItems = [
     {
       id: "research",
-      label: "Đọc & Nghiên cứu",
-      title: "Đọc & Nghiên cứu (Module 1)",
+      label: "Khám phá & Phiên đọc",
+      title: "Khám phá & Phiên đọc (Đọc & Nghiên cứu)",
       icon: BookOpen,
       isActive: isResearch,
       onClick: () => navigate("/dashboard"),
     },
     {
       id: "library",
-      label: "Thư viện",
+      label: "Kho Yêu thích",
       title: "Thư viện tài liệu nghiên cứu",
       icon: Library,
       isActive: isLibrary,
@@ -122,47 +109,12 @@ export function DashboardTaskbar({
       },
     },
     {
-      id: "matrix",
-      label: "Ma trận đối chiếu",
-      title: "Ma trận đối chiếu 100+",
-      icon: TableProperties,
-      isActive: isMatrix,
-      onClick: () => navigate("/matrix"),
-    },
-    {
-      id: "notes",
-      label: "Sổ tay tri thức",
-      title: "Sổ tay tri thức & Tổng hợp",
-      icon: FileText,
-      isActive: isNotes,
-      onClick: () => navigate("/notes"),
-    },
-    {
       id: "writing",
-      label: "Soạn thảo",
-      title: "Soạn thảo & Kiểm chứng (Module 2)",
+      label: "Soạn thảo LaTeX",
+      title: "Soạn thảo LaTeX (Agentic Overleaf)",
       icon: PenTool,
       isActive: isWriting,
       onClick: () => navigate("/writing"),
-    },
-    {
-      id: "discovery",
-      label: "Khám phá & Trích dẫn",
-      title: "Khám phá & Đồ thị trích dẫn (Module 3)",
-      icon: Network,
-      isActive: isDiscovery,
-      onClick: () => navigate("/discovery"),
-    },
-    {
-      id: "projects",
-      label: "Dự án",
-      title: "Dự án nghiên cứu",
-      icon: FolderKanban,
-      isActive: isProjects,
-      onClick: () => {
-        onOpenProjects?.();
-        navigate("/projects");
-      },
     },
   ];
 

@@ -16,10 +16,18 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
   useEffect(() => {
     let isMounted = true;
     const isDark = document.documentElement.classList.contains("dark");
+    const cleanChart = chart ? chart.trim() : "";
+
+    if (!cleanChart || cleanChart === "undefined" || cleanChart.length < 5) {
+      return;
+    }
+
+    const uniqueId = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
 
     try {
       mermaid.initialize({
         startOnLoad: false,
+        suppressErrorRendering: true,
         theme: isDark ? "dark" : "neutral",
         securityLevel: "loose",
         fontFamily: "var(--font-sans, system-ui, sans-serif)",
@@ -45,9 +53,6 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
             },
       });
 
-      const uniqueId = `mermaid-svg-${Math.random().toString(36).substring(2, 10)}`;
-      const cleanChart = chart.trim();
-
       mermaid
         .render(uniqueId, cleanChart)
         .then(({ svg }) => {
@@ -60,15 +65,21 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
           if (isMounted) {
             setRenderError(err?.message || "Không thể vẽ sơ đồ Mermaid");
           }
+          const strayEl = document.getElementById(`d${uniqueId}`);
+          if (strayEl) strayEl.remove();
         });
     } catch (err: unknown) {
       if (isMounted) {
         setRenderError(err instanceof Error ? err.message : "Lỗi khởi tạo sơ đồ");
       }
+      const strayEl = document.getElementById(`d${uniqueId}`);
+      if (strayEl) strayEl.remove();
     }
 
     return () => {
       isMounted = false;
+      const strayEl = document.getElementById(`d${uniqueId}`);
+      if (strayEl) strayEl.remove();
     };
   }, [chart]);
 

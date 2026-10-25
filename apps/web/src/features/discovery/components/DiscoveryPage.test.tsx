@@ -3,43 +3,9 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { DiscoveryPage } from "./DiscoveryPage";
-import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import { dashboardApi } from "@/features/dashboard/api/dashboardApi";
 import { documentsApi } from "@/features/documents/api/documentsApi";
 import { RECENT_SESSIONS } from "@/features/dashboard/data/mockDashboardData";
-import type { CitationGraphData } from "@/features/reader/types/reference";
-
-const MOCK_GRAPH: CitationGraphData = {
-  nodes: [
-    {
-      id: "doc-1",
-      title: "Attention Is All You Need",
-      authors: ["Ashish Vaswani", "Noam Shazeer"],
-      year: 2017,
-      is_session_document: true,
-      depth: 0,
-      citation_count: 112000,
-    },
-    {
-      id: "doc-2",
-      title: "Layer Normalization",
-      authors: ["Jimmy Lei Ba", "Geoffrey E Hinton"],
-      year: 2016,
-      is_session_document: false,
-      depth: 1,
-      citation_count: 24000,
-    },
-  ],
-  edges: [
-    {
-      source: "doc-1",
-      target: "doc-2",
-      relation: "CITES",
-      confidence: 0.9,
-    },
-  ],
-  reading_path: ["doc-2", "doc-1"],
-};
 
 function renderDiscoveryPage() {
   const queryClient = new QueryClient({
@@ -59,63 +25,46 @@ function renderDiscoveryPage() {
   );
 }
 
-describe("DiscoveryPage - Interactive Citation Graph & Academic Resolvers", () => {
+describe("DiscoveryPage - Academic Resolvers", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.spyOn(dashboardApi, "listSessions").mockResolvedValue(RECENT_SESSIONS);
-    vi.spyOn(sessionsApi, "getCitationGraph").mockResolvedValue(MOCK_GRAPH);
+    vi.spyOn(documentsApi, "listDocuments").mockResolvedValue({
+      data: [
+        {
+          id: "doc-1",
+          filename: "attention.pdf",
+          title: "Attention Is All You Need",
+          status: "completed",
+          is_persistent: true,
+          created_at: "2026-01-01T00:00:00Z",
+        },
+      ],
+      meta: {
+        request_id: "test-request",
+        timestamp: "2026-01-01T00:00:00Z",
+        page: 1,
+        per_page: 50,
+        total: 1,
+        total_pages: 1,
+      },
+      links: {
+        first: "/documents?page=1",
+        prev: null,
+        self: "/documents?page=1",
+        next: null,
+        last: "/documents?page=1",
+      },
+    });
   });
 
-  it("renders page header, search input, and view toggles", async () => {
+  it("renders page header and search input without 2-hop SVG graph tabs", async () => {
     renderDiscoveryPage();
 
     expect(screen.getByRole("heading", { name: /Discovery/i })).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Search DOI, arXiv ID, or paper title/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Visual Graph/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Cards/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Resolvers/i })).toBeInTheDocument();
-  });
-
-  it("fetches and displays citation graph nodes on canvas", async () => {
-    renderDiscoveryPage();
-
-    await waitFor(() => {
-      expect(sessionsApi.getCitationGraph).toHaveBeenCalled();
-    });
-
-    // Seed node details should be visible in the inspector
-    await waitFor(() => {
-      expect(screen.getAllByText(/Attention Is All You Need/i).length).toBeGreaterThan(0);
-    });
-
-    expect(screen.getByText(/Seed Document/i)).toBeInTheDocument();
-    expect(screen.getByText(/Ashish Vaswani, Noam Shazeer/i)).toBeInTheDocument();
-  });
-
-  it("displays topological reading path chips", async () => {
-    renderDiscoveryPage();
-
-    await waitFor(() => {
-      expect(screen.getByText(/Reading Path:/i)).toBeInTheDocument();
-    });
-
-    expect(screen.getAllByText(/Layer Normalization/i).length).toBeGreaterThan(0);
-  });
-
-  it("switches to Cards view when clicking Cards tab", async () => {
-    renderDiscoveryPage();
-
-    await waitFor(() => {
-      expect(sessionsApi.getCitationGraph).toHaveBeenCalled();
-    });
-
-    const cardsTab = screen.getByText(/Cards/i);
-    fireEvent.click(cardsTab);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Year: 2017/i)).toBeInTheDocument();
-      expect(screen.getByText(/Year: 2016/i)).toBeInTheDocument();
-    });
+    expect(screen.queryByRole("button", { name: /Visual Graph/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/Academic Resolvers \(Crossref, arXiv, S2\)/i)).toBeInTheDocument();
   });
 
   it("allows searching paper resolvers and displays results", async () => {
@@ -134,39 +83,36 @@ describe("DiscoveryPage - Interactive Citation Graph & Academic Resolvers", () =
 
     renderDiscoveryPage();
 
+    await waitFor(() => {
+      expect(documentsApi.listDocuments).toHaveBeenCalled();
+    });
+
     const searchInput = screen.getByPlaceholderText(/Search DOI, arXiv ID, or paper title/i);
-    fireEvent.change(searchInput, { target: { value: "1706.03762" } });
+    fireEvent.change(searchInput, { target: { value: "Attention Is All You Need" } });
 
     const searchButton = screen.getByRole("button", { name: /^Search$/i });
     fireEvent.click(searchButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Academic Resolvers \(Crossref, arXiv, S2\)/i)).toBeInTheDocument();
       expect(screen.getByText(/10.48550\/arXiv.1706.03762/i)).toBeInTheDocument();
     });
   });
 
-  it("shows clean empty state and allows loading sample graph if session has no nodes", async () => {
-    vi.spyOn(sessionsApi, "getCitationGraph").mockResolvedValue({
-      nodes: [],
-      edges: [],
-    });
-
+  it("shows resolver error when no matching document is found", async () => {
     renderDiscoveryPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/No Citation Graph for this Session/i)).toBeInTheDocument();
+      expect(documentsApi.listDocuments).toHaveBeenCalled();
     });
 
-    const loadSampleBtn = screen.getByRole("button", {
-      name: /Load Sample Graph/i,
-    });
-    expect(loadSampleBtn).toBeInTheDocument();
+    const searchInput = screen.getByPlaceholderText(/Search DOI, arXiv ID, or paper title/i);
+    fireEvent.change(searchInput, { target: { value: "Nonexistent Paper" } });
 
-    fireEvent.click(loadSampleBtn);
+    const searchButton = screen.getByRole("button", { name: /^Search$/i });
+    fireEvent.click(searchButton);
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/Attention Is All You Need/i).length).toBeGreaterThan(0);
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "No matching document was found in this workspace."
+    );
   });
 });

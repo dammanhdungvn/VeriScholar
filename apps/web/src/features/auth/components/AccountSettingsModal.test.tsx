@@ -232,7 +232,7 @@ describe("AccountSettingsModal", () => {
     expect(screen.getByText("Google Workspace SSO")).toBeInTheDocument();
     expect(screen.getByText(/Đã kết nối qua Google GIS/i)).toBeInTheDocument();
     expect(screen.getByText("ORCID Member Registry")).toBeInTheDocument();
-    expect(screen.getByText("Overleaf / LaTeX Cloud Workspace")).toBeInTheDocument();
+    expect(screen.queryByText("Overleaf / LaTeX Cloud Workspace")).not.toBeInTheDocument();
   });
 
   it("switches to Security tab and renders active session card with logout button", () => {

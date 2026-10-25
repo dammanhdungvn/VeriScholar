@@ -4,7 +4,6 @@ import type {
   CreateNoteRequest,
   UpdateNoteRequest,
   NoteResponse,
-  SynthesizeNotesRequest,
 } from "@/types/note";
 import type { ApiResponseWithHeaders } from "@/lib/api-client";
 
@@ -104,11 +103,5 @@ export function useDeleteNoteMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: NOTE_QUERY_KEYS.lists() });
     },
-  });
-}
-
-export function useSynthesizeNotesMutation() {
-  return useMutation({
-    mutationFn: (data: SynthesizeNotesRequest) => notesApi.synthesizeNotes(data),
   });
 }

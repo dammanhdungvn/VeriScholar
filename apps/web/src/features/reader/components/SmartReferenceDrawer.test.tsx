@@ -105,6 +105,20 @@ describe("SmartReferenceDrawer Component", () => {
     expect(screen.getAllByText("Exa").length).toBeGreaterThanOrEqual(1);
   });
 
+  it("shows reference resolution failures in the drawer", async () => {
+    vi.mocked(documentsApi.resolveReferences).mockRejectedValueOnce(new Error("Resolver unavailable"));
+
+    render(
+      <SmartReferenceDrawer
+        isOpen={true}
+        onClose={vi.fn()}
+        documentId="doc-root"
+      />
+    );
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Resolver unavailable");
+  });
+
   it("renders [🟢 Đã tìm thấy PDF Open-Access] badge when open-access PDF is available, and [🟡 Chỉ có Abstract] when not", () => {
     render(
       <SmartReferenceDrawer

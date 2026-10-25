@@ -14,7 +14,6 @@ import {
   Square,
   ExternalLink,
   Settings,
-  Archive,
   Sun,
   Moon,
   PanelLeft,
@@ -50,7 +49,6 @@ import { NotesPanelContainer } from "@/features/notes/components/NotesPanelConta
 import { CreateNoteDialog } from "@/features/notes/components/CreateNoteDialog";
 import { AddDocumentModal } from "@/features/sessions/components/AddDocumentModal";
 import { SessionSettingsModal } from "@/features/sessions/components/SessionSettingsModal";
-import { ExportBundleDialog } from "@/features/sessions/components/ExportBundleDialog";
 import { WorkspaceToolsMenu } from "./WorkspaceToolsMenu";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
@@ -70,7 +68,6 @@ import {
   useSessionDetail,
   useUpdateSessionMetadataMutation,
   useDeleteSessionMutation,
-  useExportSessionBundleMutation,
 } from "@/features/sessions/hooks/useSessionsQuery";
 import { useCreateNoteMutation } from "@/features/notes/hooks/useNotesQuery";
 import { documentsApi, type DocumentSummaryResponse } from "@/features/documents/api/documentsApi";
@@ -251,7 +248,6 @@ export function DashboardWorkspace({
   const [isAddDocOpen, setIsAddDocOpen] = useState(false);
   const [isCreateNoteOpen, setIsCreateNoteOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isExportOpen, setIsExportOpen] = useState(false);
   const [noteInitialText, setNoteInitialText] = useState("");
   const [notePageNumber, setNotePageNumber] = useState(1);
   const [isStructureSheetOpen, setIsStructureSheetOpen] = useState(false);
@@ -330,7 +326,6 @@ export function DashboardWorkspace({
   // Session Mutations
   const updateTitleMutation = useUpdateSessionMetadataMutation();
   const deleteMutation = useDeleteSessionMutation();
-  const exportMutation = useExportSessionBundleMutation();
 
   const handleUpdateTitle = async (newTitle: string, version: number) => {
     if (!sessionId) return;
@@ -345,11 +340,6 @@ export function DashboardWorkspace({
     if (!sessionId) return;
     await deleteMutation.mutateAsync(sessionId);
     onDeletedSession?.();
-  };
-
-  const handleExportBundle = async (): Promise<Blob> => {
-    if (!sessionId) throw new Error("No active session to export");
-    return await exportMutation.mutateAsync(sessionId);
   };
 
   // Real-Time Grounded Summary Stream State
@@ -602,28 +592,7 @@ export function DashboardWorkspace({
   const updateViewportMutation = useUpdateSessionViewportMutation();
   const sessionVersion = sessionDetailQuery.data?.data.version ?? initialSessionVersion;
 
-  const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-
-  const handleExportPdf = async () => {
-    if (!activeDocumentId || activeDocumentId === "doc-default") return;
-    setIsExportingPdf(true);
-    try {
-      const blob = await documentsApi.exportAnnotatedPdf(activeDocumentId);
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = downloadUrl;
-      link.download = `annotated_${currentDocTitle.replace(/\s+/g, "_")}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(downloadUrl);
-    } catch (err) {
-      console.warn("Failed to export annotated PDF:", err);
-    } finally {
-      setIsExportingPdf(false);
-    }
-  };
 
   const handleRegenerateSummary = async () => {
     if (!activeDocumentId || activeDocumentId === "doc-default") return;
@@ -845,8 +814,6 @@ export function DashboardWorkspace({
           onZoomOut={zoomOut}
           onResetZoom={resetZoom}
           onRotate={rotateClockwise}
-          onExportPdf={isRealDocument ? handleExportPdf : undefined}
-          isExportingPdf={isExportingPdf}
           isZenPdf={zenMode === "pdf"}
           onToggleZenPdf={() => setZenMode(zenMode === "pdf" ? "none" : "pdf")}
           onOpenReferences={isRealDocument ? () => setIsRefModalOpen(true) : undefined}
@@ -1140,22 +1107,10 @@ export function DashboardWorkspace({
             </button>
           </nav>
 
-          {/* Right Actions: Xuất ZIP, Cài đặt phiên, Mode Dark/Light, Làm mới hội thoại */}
+          {/* Right Actions: Cài đặt phiên, Mode Dark/Light, Làm mới hội thoại */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Desktop wide tools: Xuất ZIP, Cài đặt, Theme */}
+            {/* Desktop wide tools: Cài đặt, Theme */}
             <div className="hidden md:flex items-center gap-1.5 shrink-0">
-              {/* Export Bundle Button */}
-              <button
-                type="button"
-                onClick={() => setIsExportOpen(true)}
-                aria-label="Xuất ZIP"
-                title="Xuất ZIP"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 transition-colors cursor-pointer shadow-2xs"
-              >
-                <Archive className="w-3.5 h-3.5 text-primary" />
-                <span className="sr-only">Xuất ZIP</span>
-              </button>
-
               {/* Session Settings Button */}
               <button
                 type="button"
@@ -1186,7 +1141,6 @@ export function DashboardWorkspace({
             {/* Mobile / Narrow Pane Dropdown */}
             <div className="flex md:hidden items-center shrink-0">
               <WorkspaceToolsMenu
-                onExport={() => setIsExportOpen(true)}
                 onOpenSettings={() => setIsSettingsOpen(true)}
                 isDark={isDark}
                 onToggleTheme={toggleTheme}
@@ -1814,17 +1768,6 @@ export function DashboardWorkspace({
         />
       )}
 
-      {/* Export Bundle Dialog */}
-      {effectiveSessionId && (
-        <ExportBundleDialog
-          isOpen={isExportOpen}
-          onClose={() => setIsExportOpen(false)}
-          sessionId={effectiveSessionId}
-          sessionTitle={sessionTitle || currentDocTitle || "Phiên nghiên cứu"}
-          onExport={handleExportBundle}
-        />
-      )}
-
       {/* Academic Context Menu Guard (Guarantees right-click never triggers browser back / exits to landing page) */}
       {contextMenu.isOpen && (
         <div
@@ -1888,18 +1831,6 @@ export function DashboardWorkspace({
           >
             <RotateCcw className="w-3.5 h-3.5 text-muted" />
             <span>Làm mới hội thoại</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsExportOpen(true);
-              setContextMenu((prev) => ({ ...prev, isOpen: false }));
-            }}
-            className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-left text-xs hover:bg-[#f3eee5] dark:hover:bg-[#2d2924] hover:text-primary transition-colors cursor-pointer"
-          >
-            <Archive className="w-3.5 h-3.5 text-primary" />
-            <span>Xuất gói nghiên cứu (.zip)</span>
           </button>
 
           <button

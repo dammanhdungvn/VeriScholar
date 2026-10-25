@@ -181,42 +181,4 @@ describe("DashboardChatInputBox component", () => {
     fireEvent.click(toggleBtn);
     expect(useDashboardStore.getState().isReasoningEnabled).toBe(true);
   });
-
-  it("opens reasoning popover and allows selecting different reasoning levels via 4-step slider", () => {
-    render(
-      <DashboardChatInputBox
-        inputText=""
-        onChangeText={vi.fn()}
-        onSend={vi.fn()}
-      />
-    );
-
-    const toggleBtn = screen.getByTestId("toggle-reasoning-btn");
-
-    // Open popover by clicking toggle button
-    fireEvent.click(toggleBtn);
-
-    // Verify popover appears
-    const popover = screen.getByTestId("reasoning-popover");
-    expect(popover).toBeInTheDocument();
-
-    // Select Step 1: Light
-    const step1Btn = screen.getByTestId("reasoning-step-btn-1");
-    fireEvent.click(step1Btn);
-    expect(useDashboardStore.getState().effortLevel).toBe("Thấp");
-    expect(useDashboardStore.getState().isReasoningEnabled).toBe(true);
-    expect(screen.getAllByText("Light").length).toBeGreaterThan(0);
-
-    // Select Step 3: Deep
-    const step3Btn = screen.getByTestId("reasoning-step-btn-3");
-    fireEvent.click(step3Btn);
-    expect(useDashboardStore.getState().effortLevel).toBe("Cao");
-    expect(screen.getAllByText("Deep").length).toBeGreaterThan(0);
-
-    // Select Step 0: Off
-    const step0Btn = screen.getByTestId("reasoning-step-btn-0");
-    fireEvent.click(step0Btn);
-    expect(useDashboardStore.getState().isReasoningEnabled).toBe(false);
-    expect(screen.getAllByText("Tắt").length).toBeGreaterThan(0);
-  });
 });

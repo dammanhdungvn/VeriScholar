@@ -53,7 +53,7 @@ export function clearCachedPdfDocument(url: string): void {
 /**
  * Concurrency-Limited Render Queue for PDF.js HTML5 Canvas Rendering.
  * Guarantees that at most MAX_CONCURRENT_RENDERS (2) canvases render simultaneously.
- * Prevents UI thread saturation and eliminates scroll jank/stuttering.
+ * Prevents UI thread saturation while ensuring smooth page rendering.
  */
 const MAX_CONCURRENT_RENDERS = 2;
 

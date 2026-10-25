@@ -17,7 +17,6 @@ import {
   LogOut,
   Globe,
   Tag,
-  FileText,
   Camera,
 } from "lucide-react";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -617,31 +616,6 @@ export function AccountSettingsContent({
                 </div>
                 <p className="text-2xs text-muted dark:text-zinc-400 leading-relaxed pl-12">
                   Đồng bộ mã định danh học giả quốc tế Open Researcher and Contributor ID để bảo chứng quyền tác giả các bài báo khoa học.
-                </p>
-              </div>
-
-              {/* Overleaf Workspace Card */}
-              <div className="p-4 rounded-xl bg-surface-soft/60 dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#2a2622] border border-hairline dark:border-[#38332c] flex items-center justify-center shrink-0 shadow-2xs text-amber-700 dark:text-amber-500">
-                      <FileText className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-xs text-ink dark:text-zinc-100">
-                        Overleaf / LaTeX Cloud Workspace
-                      </h4>
-                      <p className="text-2xs text-muted dark:text-zinc-400">
-                        Institutional Cloud Bridge
-                      </p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-2xs font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-                    <span>Sẵn sàng kết nối</span>
-                  </span>
-                </div>
-                <p className="text-2xs text-muted dark:text-zinc-400 leading-relaxed pl-12">
-                  Hỗ trợ đồng bộ bản thảo khoa học hai chiều với Overleaf Git Bridge theo quy chuẩn tài liệu bảo chứng ISO 32000-1.
                 </p>
               </div>
             </div>

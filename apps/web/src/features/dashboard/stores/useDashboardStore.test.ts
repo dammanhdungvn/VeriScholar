@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { useDashboardStore } from "./useDashboardStore";
-import { AVAILABLE_MODELS } from "../data/mockDashboardData";
 
 describe("useDashboardStore", () => {
   beforeEach(() => {
@@ -12,8 +11,6 @@ describe("useDashboardStore", () => {
     const state = useDashboardStore.getState();
     expect(state.sidebarState).toBe("collapsed");
     expect(state.appMode).toBe("chat");
-    expect(state.selectedModel.id).toBe(AVAILABLE_MODELS[0].id);
-    expect(state.effortLevel).toBe("Cao");
     expect(state.activeSessionId).toBeUndefined();
     expect(state.activeBbox).toBeNull();
   });
@@ -43,21 +40,12 @@ describe("useDashboardStore", () => {
     expect(useDashboardStore.getState().sidebarState).toBe("collapsed");
   });
 
-  it("switches appMode between chat and cowork", () => {
-    useDashboardStore.getState().setAppMode("cowork");
-    expect(useDashboardStore.getState().appMode).toBe("cowork");
+  it("switches appMode between chat and library", () => {
+    useDashboardStore.getState().setAppMode("library");
+    expect(useDashboardStore.getState().appMode).toBe("library");
 
     useDashboardStore.getState().setAppMode("chat");
     expect(useDashboardStore.getState().appMode).toBe("chat");
-  });
-
-  it("updates selectedModel and effortLevel", () => {
-    const secondModel = AVAILABLE_MODELS[1];
-    useDashboardStore.getState().setSelectedModel(secondModel);
-    useDashboardStore.getState().setEffortLevel("Tiêu chuẩn");
-
-    expect(useDashboardStore.getState().selectedModel.id).toBe(secondModel.id);
-    expect(useDashboardStore.getState().effortLevel).toBe("Tiêu chuẩn");
   });
 
   it("sets active bbox coordinates", () => {
@@ -70,9 +58,6 @@ describe("useDashboardStore", () => {
   });
 
   it("toggles modal states", () => {
-    useDashboardStore.getState().setModelModalOpen(true);
-    expect(useDashboardStore.getState().isModelModalOpen).toBe(true);
-
     useDashboardStore.getState().setUploadModalOpen(true);
     expect(useDashboardStore.getState().isUploadModalOpen).toBe(true);
 

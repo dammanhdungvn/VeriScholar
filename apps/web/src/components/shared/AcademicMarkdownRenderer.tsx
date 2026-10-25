@@ -16,20 +16,33 @@ export interface AcademicMarkdownRendererProps {
 
 /**
  * Normalizes LaTeX display math and bracketed math expressions so KaTeX renders them
- * cleanly in dedicated blocks.
+ * cleanly in dedicated blocks, and sanitizes broken citation artifacts.
  */
 function normalizeMathAndDelimiters(content: string): string {
   if (!content) return "";
   let text = content;
 
-  // 1. Convert standard LaTeX display math \[ ... \] to \n\n$$ ... $$\n\n
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, "\n\n$$$$1$$\n\n");
+  // 0. Sanitize broken LaTeX citation tokens e.g. [^\text{cit}], [^{\text{cit}}], [^\text{cit_1}], [^\text{cit}_1], [^cit]
+  text = text.replace(
+    /\[\^?\{?\\?text\{cit(?:_?(\d+))?\}?\}?(?:_?(\d+))?\]/g,
+    (_, n1, n2) => {
+      const num = n1 || n2;
+      return num ? `[${num}]` : "";
+    }
+  );
+  text = text.replace(/\[\^cit\]/g, "");
 
-  // 2. Convert bracket-enclosed LaTeX math formulas:
+  // 1. Convert standard LaTeX display math \[ ... \] to \n\n$$ ... $$\n\n
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, g) => `\n\n$$${g.trim()}$$\n\n`);
+
+  // 2. Convert standard LaTeX inline math \( ... \) to $ ... $ before markdown stripping
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (_, g) => `$${g.trim()}$`);
+
+  // 3. Convert bracket-enclosed LaTeX math formulas:
   // e.g. [ \mathrm{Attention}(Q,K,V) ... ] or [ \displaystyle ... ]
   text = text.replace(
     /(?:^|\n)\s*\[\s*(\\(?:mathrm|mathbf|mathit|frac|sum|int|prod|begin|sqrt|alpha|beta|gamma|lambda|sigma|theta|omega|nabla|partial)[\s\S]*?)\s*\]\s*(?:\n|$)/g,
-    "\n\n$$$1$$\n\n"
+    (_, g) => `\n\n$$${g.trim()}$$\n\n`
   );
 
   return text;
@@ -41,10 +54,10 @@ function parseInlineCitationsAndMath(
   onCitationClick?: (citation: CitationBadgeData | null | string, citId?: string) => void
 ): React.ReactNode {
   // Regex matches:
-  // 1. [^cit_x] or [cit_x] or [^1]
+  // 1. [1], [2], [^1], [^2], [^cit_x], [cit_x], [^cit-encoder]
   // 2. $...$ (inline math)
   // 3. \(...\) (LaTeX inline math)
-  const regex = /(\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
+  const regex = /(\[\^?\d+\]|\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
   const parts = text.split(regex);
   if (parts.length === 1) return text;
 
@@ -64,6 +77,7 @@ function parseInlineCitationsAndMath(
 
       const pageNumber = matchedCitation?.page ?? (numIndex >= 0 ? numIndex + 1 : 1);
       const docTitle = matchedCitation?.paper_title || "Tài liệu học thuật";
+      const displayLabel = numericPart || rawCitId;
 
       return (
         <button
@@ -80,19 +94,10 @@ function parseInlineCitationsAndMath(
               onCitationClick?.(rawCitId);
             }
           }}
-          title={`Xem đoạn bằng chứng tại trang ${pageNumber} • ${docTitle}`}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-[11px] font-sans font-medium bg-[#f5efe6] hover:bg-amber-100/90 text-amber-900 dark:bg-[#2b2721] dark:hover:bg-amber-950/70 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer align-baseline select-none"
+          title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pageNumber} • ${docTitle} (Bấm để mở Bounding Box trên PDF)`}
+          className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
         >
-          <FileText className="w-3 h-3 text-primary dark:text-coral-400 shrink-0" />
-          {matchedCitation?.paper_title && (
-            <span className="truncate max-w-[140px] font-sans font-medium text-ink dark:text-zinc-200">
-              {matchedCitation.paper_title}
-            </span>
-          )}
-          <span className="font-semibold text-primary dark:text-coral-400">
-            Tr.{pageNumber}
-          </span>
-          <ArrowUpRight className="w-2.5 h-2.5 opacity-60 shrink-0" />
+          [{displayLabel}]
         </button>
       );
     }
@@ -148,22 +153,87 @@ export function AcademicMarkdownRenderer({
   // 1. Split block math ($$...$$) so KaTeX renders blocks cleanly without markdown interference
   const segments = useMemo(() => {
     if (!content) return [];
-    let text = content;
-    // If message has citations but no inline citation tokens exist in text,
-    // append them to the end so inline badges appear seamlessly at the end of the text
-    if (citations && citations.length > 0) {
-      const hasInlineRef = /\[\^?(?:cit_)?\w+\]/.test(text);
-      if (!hasInlineRef) {
-        const appendedCits = citations.map((_, i) => `[^cit_${i + 1}]`).join(" ");
-        text = `${text} ${appendedCits}`;
-      }
-    }
-    const normalized = normalizeMathAndDelimiters(text);
+    const normalized = normalizeMathAndDelimiters(content);
     const parts = normalized.split("$$");
     return parts.map((part, index) => ({
       isMathBlock: index % 2 === 1,
       text: part,
     }));
+  }, [content]);
+
+  // 2. Derive deduplicated list of cited references from content and citations
+  const referenceList = useMemo(() => {
+    if (!citations || citations.length === 0 || !content) return [];
+
+    // Check if the response explicitly indicates absence of evidence / refusal to cite
+    const isRefusalOrNoEvidence =
+      /không\s*(?:thể\s*gắn\s*thẻ|xuất\s*hiện\s*trong\s*tài\s*liệu|tìm\s*thấy\s*trong\s*tài\s*liệu)/i.test(
+        content
+      );
+    if (isRefusalOrNoEvidence) {
+      return [];
+    }
+
+    // Find all citation markers in the content: [1], [2], [^1], [^cit_1], [cit_1]
+    const matches = Array.from(
+      content.matchAll(/\[(?:\^?(\d+)|\^?(?:cit_)?([\w-]+))\]/g)
+    );
+
+    const hasInlineTokens = matches.length > 0;
+
+    // If no inline tokens in text, but citations are provided and not a refusal,
+    // include all citations so references are displayed with [1], [2] etc.
+    if (!hasInlineTokens) {
+      return citations.map((cit, idx) => ({
+        citation: cit,
+        label: String(idx + 1),
+        citId: cit.citation_id || `cit_${idx + 1}`,
+        hasInlineToken: false,
+      }));
+    }
+
+    const seenKeys = new Set<string>();
+    const result: Array<{
+      citation: CitationBadgeData;
+      label: string;
+      citId: string;
+      hasInlineToken: boolean;
+    }> = [];
+
+    for (const match of matches) {
+      const rawCitId = match[1] || match[2];
+      if (!rawCitId) continue;
+
+      const citId = rawCitId.startsWith("cit_") ? rawCitId : `cit_${rawCitId}`;
+      const numPart = rawCitId.replace(/\D/g, "");
+      const numIdx = numPart ? parseInt(numPart, 10) - 1 : -1;
+
+      const matchedCit =
+        citations.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
+        (numIdx >= 0 && citations[numIdx] ? citations[numIdx] : null);
+
+      if (!matchedCit) continue;
+
+      const displayLabel = numPart || rawCitId;
+      const dedupeKey = `${matchedCit.paper_id || ""}_${matchedCit.page}_${displayLabel}`;
+
+      if (!seenKeys.has(dedupeKey)) {
+        seenKeys.add(dedupeKey);
+        result.push({
+          citation: matchedCit,
+          label: displayLabel,
+          citId,
+          hasInlineToken: true,
+        });
+      }
+    }
+
+    return result.sort((a, b) => {
+      const numA = parseInt(a.label, 10);
+      const numB = parseInt(b.label, 10);
+      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+      return a.label.localeCompare(b.label);
+    });
   }, [content, citations]);
 
   return (
@@ -248,7 +318,7 @@ export function AcademicMarkdownRenderer({
               code: ({ className: codeClassName, children, ...props }) => {
                 const match = /language-(\w+)/.exec(codeClassName || "");
                 const language = match ? match[1] : "";
-                const codeString = String(children).replace(/\n$/, "");
+                const codeString = String(children || "").replace(/\n$/, "");
 
                 // Check for Mermaid diagram
                 if (
@@ -259,6 +329,9 @@ export function AcademicMarkdownRenderer({
                       children
                     ))
                 ) {
+                  if (!codeString || codeString.trim() === "undefined" || codeString.trim().length < 5) {
+                    return null;
+                  }
                   return <MermaidRenderer chart={codeString} />;
                 }
 
@@ -280,11 +353,11 @@ export function AcademicMarkdownRenderer({
                   );
                 }
 
-                // Check for citation marker like [^cit_x] or [cit_x]
+                // Check for citation marker like [^cit_x] or [cit_x] or [1]
                 if (
                   isInline &&
                   typeof children === "string" &&
-                  /^(\^?cit_[\w-]+|\^\d+)$/.test(children)
+                  /^(\^?cit_[\w-]+|\^\d+|\d+)$/.test(children)
                 ) {
                   const rawCitId = children.replace(/^\^/, "");
                   const citId = rawCitId.startsWith("cit_") ? rawCitId : `cit_${rawCitId}`;
@@ -294,6 +367,8 @@ export function AcademicMarkdownRenderer({
                     citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
                     (numIdx >= 0 && citations && citations[numIdx] ? citations[numIdx] : null);
                   const pNum = matched?.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
+                  const displayLabel = numPart || rawCitId;
+
                   return (
                     <button
                       type="button"
@@ -308,19 +383,10 @@ export function AcademicMarkdownRenderer({
                           onCitationClick?.(rawCitId);
                         }
                       }}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-[11px] font-sans font-medium bg-[#f5efe6] hover:bg-amber-100/90 text-amber-900 dark:bg-[#2b2721] dark:hover:bg-amber-950/70 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer align-baseline select-none"
-                      title={`Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"}`}
+                      className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
+                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
                     >
-                      <FileText className="w-3 h-3 text-primary dark:text-coral-400 shrink-0" />
-                      {matched?.paper_title && (
-                        <span className="truncate max-w-[140px] font-sans font-medium text-ink dark:text-zinc-200">
-                          {matched.paper_title}
-                        </span>
-                      )}
-                      <span className="font-semibold text-primary dark:text-coral-400">
-                        Tr.{pNum}
-                      </span>
-                      <ArrowUpRight className="w-2.5 h-2.5 opacity-60 shrink-0" />
+                      [{displayLabel}]
                     </button>
                   );
                 }
@@ -388,6 +454,7 @@ export function AcademicMarkdownRenderer({
                     citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
                     (numIdx >= 0 && citations && citations[numIdx] ? citations[numIdx] : null);
                   const pNum = matched?.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
+                  const displayLabel = numPart || rawCitId;
 
                   return (
                     <button
@@ -397,14 +464,10 @@ export function AcademicMarkdownRenderer({
                         e.stopPropagation();
                         onCitationClick?.(matched, citId);
                       }}
-                      className="inline-flex items-center gap-1 px-1.5 py-0.5 mx-1 rounded-md text-[11px] font-sans font-medium bg-[#f5efe6] hover:bg-amber-100/90 text-amber-900 dark:bg-[#2b2721] dark:hover:bg-amber-950/70 dark:text-amber-300 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all hover:scale-105 active:scale-95 cursor-pointer align-baseline select-none"
-                      title={`${matched?.paper_title || "Tài liệu học thuật"} • Trang ${pNum} • Click để mở Bounding Box trên PDF`}
+                      className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
+                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
                     >
-                      <FileText className="w-3 h-3 text-primary dark:text-coral-400 shrink-0" />
-                      <span className="font-semibold text-primary dark:text-coral-400">
-                        Tr.{pNum}
-                      </span>
-                      <ArrowUpRight className="w-2.5 h-2.5 opacity-60 shrink-0" />
+                      [{displayLabel}]
                     </button>
                   );
                 }
@@ -427,6 +490,47 @@ export function AcademicMarkdownRenderer({
           </ReactMarkdown>
         );
       })}
+
+      {/* Structured "Nguồn trích dẫn" (References) Section with Numbered Chips */}
+      {referenceList.length > 0 && (
+        <div
+          data-testid="citation-sources-footer"
+          className="mt-4 pt-3 border-t border-[#e5dfd4] dark:border-[#38332c]/80"
+        >
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#66635c] dark:text-zinc-400 mb-2">
+            <FileText className="w-3.5 h-3.5 text-primary dark:text-coral-400" />
+            <span>Nguồn trích dẫn ({referenceList.length})</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {referenceList.map(({ citation, label, citId, hasInlineToken }) => (
+              <button
+                key={`${citId}_${citation.page}_${label}`}
+                type="button"
+                data-testid={hasInlineToken ? "citation-source-item" : "citation-badge"}
+                data-citation-id={citId}
+                aria-label={`Nguồn [${label}]: ${citation.paper_title || "Tài liệu học thuật"} trang ${citation.page}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onCitationClick?.(citation, citId);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans bg-[#f5efe6] hover:bg-amber-100/90 text-amber-900 dark:bg-[#2b2721] dark:hover:bg-amber-950/70 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-left"
+                title={`[${label}] Xem đoạn bằng chứng tại trang ${citation.page} • ${citation.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
+              >
+                <span className="font-bold text-primary dark:text-coral-400">
+                  [{label}]
+                </span>
+                <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium text-ink dark:text-zinc-200">
+                  {citation.paper_title || "Tài liệu học thuật"}
+                </span>
+                <span className="text-[11px] font-semibold text-primary dark:text-coral-400 opacity-90">
+                  Tr.{citation.page}
+                </span>
+                <ArrowUpRight className="w-3 h-3 opacity-60 shrink-0 text-primary dark:text-coral-400" />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

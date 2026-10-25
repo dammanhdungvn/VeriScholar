@@ -1,15 +1,5 @@
 export type SidebarState = "collapsed" | "expanded";
-export type AppMode = "chat" | "cowork" | "project" | "library";
-
-export interface ModelOption {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  effortLevels: string[];
-  currentEffort?: string;
-  badge?: string;
-}
+export type AppMode = "chat" | "library";
 
 export type BoundingBox = [number, number, number, number, number]; // [x0, y0, x1, y1, page]
 
@@ -165,40 +155,6 @@ export interface SessionTurnItem {
   prompt_tokens?: number;
   completion_tokens?: number;
   created_at: string;
-}
-
-export interface ExecStep {
-  id: string;
-  name: string;
-  status: "pending" | "running" | "completed" | "waiting_approval";
-  details: string;
-}
-
-export interface ContextSource {
-  id: string;
-  name: string;
-  type: "pdf" | "docx" | "code" | "api";
-  size: string;
-}
-
-export interface CoworkArtifact {
-  id: string;
-  title: string;
-  type: "markdown" | "latex" | "json" | "diagram";
-  content: string;
-  version: string;
-  updated_at: string;
-}
-
-export interface CoworkTask {
-  id: string;
-  title: string;
-  goal: string;
-  status: "draft" | "running" | "waiting_approval" | "completed";
-  progress: number;
-  steps: ExecStep[];
-  context_sources: ContextSource[];
-  artifact?: CoworkArtifact;
 }
 
 export interface IdeaPrompt {

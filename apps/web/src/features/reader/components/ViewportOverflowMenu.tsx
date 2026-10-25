@@ -4,7 +4,6 @@ import {
   File,
   Columns2,
   BookMarked,
-  Download,
   Maximize2,
   Minimize2,
   Check,
@@ -22,8 +21,6 @@ export interface ViewportOverflowMenuProps {
   activeReadingMode: ReadingMode;
   onReadingModeChange: (mode: ReadingMode) => void;
   onOpenReferences?: () => void;
-  onExportPdf?: () => void;
-  isExportingPdf?: boolean;
   isZenPdf?: boolean;
   onToggleZenPdf?: () => void;
   zoomRatio?: number;
@@ -43,8 +40,6 @@ export function ViewportOverflowMenu({
   activeReadingMode,
   onReadingModeChange,
   onOpenReferences,
-  onExportPdf,
-  isExportingPdf,
   isZenPdf,
   onToggleZenPdf,
   zoomRatio,
@@ -275,25 +270,6 @@ export function ViewportOverflowMenu({
           >
             <BookMarked className="w-3.5 h-3.5 text-primary shrink-0" />
             <span className="flex-1 font-medium">Trích xuất Tài liệu Tham khảo</span>
-          </button>
-        )}
-
-        {onExportPdf && (
-          <button
-            type="button"
-            role="menuitem"
-            data-testid="overflow-export-pdf-btn"
-            disabled={isExportingPdf}
-            onClick={() => {
-              onClose();
-              onExportPdf();
-            }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521] hover:text-primary transition-colors cursor-pointer text-left disabled:opacity-50"
-          >
-            <Download className="w-3.5 h-3.5 text-primary shrink-0" />
-            <span className="flex-1 font-medium">
-              {isExportingPdf ? "Đang xuất PDF..." : "Xuất PDF kèm ghi chú"}
-            </span>
           </button>
         )}
 

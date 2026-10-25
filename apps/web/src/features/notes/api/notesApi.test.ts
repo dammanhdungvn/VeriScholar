@@ -105,33 +105,4 @@ describe("notesApi", () => {
       notesApi.updateNote("note-1", { user_note: "Conflict text" }, "v1")
     ).rejects.toThrow(ApiError);
   });
-
-  it("calls synthesize notes endpoint with mode", async () => {
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({
-        success: true,
-        data: {
-          id: "synth-1",
-          title: "Synthesized Lesson",
-          mode: "concept_lesson",
-          language: "vi",
-          markdown_content: "# Lesson content",
-          interactive_badges: [],
-          source_note_ids: ["note-1"],
-          created_at: "2026-09-21T00:00:00Z",
-          updated_at: "2026-09-21T00:00:00Z",
-        },
-        meta: { request_id: "req-1", timestamp: "2026-09-21T00:00:00Z" },
-      }),
-    });
-
-    const result = await notesApi.synthesizeNotes({
-      note_ids: ["note-1"],
-      mode: "concept_lesson",
-    });
-
-    expect(result.title).toBe("Synthesized Lesson");
-  });
 });

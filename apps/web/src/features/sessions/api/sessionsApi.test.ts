@@ -87,19 +87,6 @@ describe("sessionsApi", () => {
     expect(result.etag).toBe('"v2"');
   });
 
-  it("exports session bundle as binary zip blob", async () => {
-    const mockBlob = new Blob(["PK zip binary test data"], { type: "application/zip" });
-
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      blob: async () => mockBlob,
-    });
-
-    const result = await sessionsApi.exportSessionBundle("session-1");
-    expect(result.type).toBe("application/zip");
-  });
-
   it("sendSessionMessageStream attaches X-Request-ID header to SSE request", async () => {
     await sessionsApi.sendSessionMessageStream(
       "session-1",
@@ -167,37 +154,6 @@ describe("sessionsApi", () => {
           selected_ref_indices: [1, 3],
         }),
       })
-    );
-  });
-
-  it("fetches citation graph via GET /sessions/{id}/citation-graph (Module 3)", async () => {
-    const mockGraph = {
-      nodes: [
-        { id: "doc-1", title: "Paper 1", is_session_doc: true },
-        { id: "doc-2", title: "Paper 2", is_session_doc: false },
-      ],
-      edges: [
-        { source: "doc-1", target: "doc-2", relationship: "CITES", confidence: 0.95 },
-      ],
-      topological_order: ["doc-2", "doc-1"],
-    };
-
-    globalThis.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      headers: new Headers({ "Content-Type": "application/json" }),
-      json: async () => ({
-        success: true,
-        data: mockGraph,
-      }),
-    });
-
-    const result = await sessionsApi.getCitationGraph("session-1");
-    expect(result.nodes).toHaveLength(2);
-    expect(result.edges[0].relationship).toBe("CITES");
-    expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/sessions/session-1/citation-graph"),
-      expect.anything()
     );
   });
 });

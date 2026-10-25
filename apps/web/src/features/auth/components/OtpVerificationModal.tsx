@@ -54,12 +54,17 @@ export function OtpVerificationModal({
 
   // Timer interval for countdown
   React.useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      setCountdown(60);
+      setCanResend(false);
+      return;
+    }
+
+    if (canResend) return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
           setCanResend(true);
           return 0;
         }
@@ -68,7 +73,7 @@ export function OtpVerificationModal({
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [open]);
+  }, [open, canResend]);
 
   // Focus first input on open
   React.useEffect(() => {

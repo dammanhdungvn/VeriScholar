@@ -66,9 +66,8 @@ describe("DashboardTaskbar component", () => {
     expect(handleNew).toHaveBeenCalledTimes(1);
   });
 
-  it("renders Thư viện and Dự án navigation items", () => {
+  it("renders Kho Yêu thích and Soạn thảo LaTeX navigation items", () => {
     const handleLibrary = vi.fn();
-    const handleProjects = vi.fn();
     render(
       <MemoryRouter>
         <DashboardTaskbar
@@ -76,7 +75,6 @@ describe("DashboardTaskbar component", () => {
           onSelectSession={vi.fn()}
           onNewSession={vi.fn()}
           onOpenLibrary={handleLibrary}
-          onOpenProjects={handleProjects}
         />
       </MemoryRouter>
     );
@@ -90,10 +88,8 @@ describe("DashboardTaskbar component", () => {
     fireEvent.click(libraryBtn);
     expect(handleLibrary).toHaveBeenCalledTimes(1);
 
-    const projectsBtn = screen.getByTitle("Dự án nghiên cứu");
-    expect(projectsBtn).toBeInTheDocument();
-    fireEvent.click(projectsBtn);
-    expect(handleProjects).toHaveBeenCalledTimes(1);
+    const writingBtn = screen.getByTitle(/Soạn thảo LaTeX/i);
+    expect(writingBtn).toBeInTheDocument();
   });
 
   it("opens elegant dropdown popover with 'Hồ sơ cá nhân' and 'Cài đặt' when clicking Taskbar Avatar", () => {
@@ -153,5 +149,23 @@ describe("DashboardTaskbar component", () => {
 
     // Modal is opened
     expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("renders only the 4 MVP global navigation items and excludes Matrix, Projects, and standalone Notes", () => {
+    render(
+      <MemoryRouter>
+        <DashboardTaskbar
+          sessions={RECENT_SESSIONS}
+          onSelectSession={vi.fn()}
+          onNewSession={vi.fn()}
+        />
+      </MemoryRouter>
+    );
+    const toggleBtn = screen.getByTitle("Mở rộng sidebar");
+    fireEvent.click(toggleBtn);
+
+    expect(screen.queryByTitle(/Ma trận đối sánh/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Dự án nghiên cứu/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Ghi chú nghiên cứu/i)).not.toBeInTheDocument();
   });
 });

@@ -59,7 +59,12 @@ export function PdfCanvasViewer({
   const isLoadingPdf = loadedUrl !== fileUrl && !loadError;
 
   // Track whether currentPage was updated by IntersectionObserver scroll or programmatic click
-  const lastScrolledByObserverRef = useRef<number | null>(null);
+  const lastScrolledByObserverRef = useRef<number | null>(currentPage);
+
+  // Track active user scrolling to prevent any programmatic auto-scroll hijacking
+  const isUserScrollingRef = useRef(false);
+  const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRafRef = useRef<number | null>(null);
 
   // Store & Theme States
   const { theme } = useTheme();
@@ -165,6 +170,77 @@ export function PdfCanvasViewer({
   // Total pages from PDF document or metadata fallback
   const totalPages = pdfDoc?.numPages || documentDetail?.page_count || 1;
 
+  // Active scroll tracking: identify the page occupying the reading viewport
+  const updateCurrentPageFromScroll = useCallback(() => {
+    if (!scrollContainer || readingMode !== "continuous" || totalPages <= 1) {
+      return;
+    }
+
+    const containerRect = scrollContainer.getBoundingClientRect();
+    if (containerRect.height <= 0) return;
+
+    // Reading anchor: 30% from the top of the container
+    const readingAnchorY = containerRect.top + Math.min(200, containerRect.height * 0.3);
+
+    let bestPage = 1;
+    let maxVisibleHeight = -1;
+
+    for (let p = 1; p <= totalPages; p++) {
+      const pageEl = document.getElementById(`pdf-page-${p}`);
+      if (!pageEl) continue;
+      const r = pageEl.getBoundingClientRect();
+
+      // Check if page covers the reading anchor
+      if (r.top <= readingAnchorY && r.bottom >= readingAnchorY) {
+        bestPage = p;
+        break;
+      }
+
+      // Fallback: page with the largest visible overlap
+      const vTop = Math.max(r.top, containerRect.top);
+      const vBottom = Math.min(r.bottom, containerRect.bottom);
+      const vHeight = Math.max(0, vBottom - vTop);
+      if (vHeight > maxVisibleHeight) {
+        maxVisibleHeight = vHeight;
+        bestPage = p;
+      }
+    }
+
+    if (bestPage > 0 && bestPage !== lastScrolledByObserverRef.current) {
+      lastScrolledByObserverRef.current = bestPage;
+      setCurrentPage(bestPage);
+    }
+  }, [scrollContainer, readingMode, totalPages, setCurrentPage]);
+
+  const handleContainerScroll = useCallback(() => {
+    isUserScrollingRef.current = true;
+    if (userScrollTimeoutRef.current) {
+      clearTimeout(userScrollTimeoutRef.current);
+    }
+    userScrollTimeoutRef.current = setTimeout(() => {
+      isUserScrollingRef.current = false;
+      updateCurrentPageFromScroll();
+    }, 400);
+
+    if (scrollRafRef.current === null) {
+      scrollRafRef.current = requestAnimationFrame(() => {
+        scrollRafRef.current = null;
+        updateCurrentPageFromScroll();
+      });
+    }
+  }, [updateCurrentPageFromScroll]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current);
+      }
+      if (userScrollTimeoutRef.current) {
+        clearTimeout(userScrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
   // 2. Handle Text Selection in PDF Text Layer with Normalized BoundingBox Calculation
   const handleMouseUp = () => {
     const selection = window.getSelection();
@@ -241,48 +317,85 @@ export function PdfCanvasViewer({
     window.getSelection()?.removeAllRanges();
   };
 
+  // Track last scrolled bbox key to prevent continuous jumping when user scrolls
+  const lastScrolledBboxKeyRef = useRef<string | null>(null);
+
   // 3. Scroll to Target Page ONLY on programmatic jumps or citation clicks
   // (Never interrupt natural user scrolling velocity)
   useEffect(() => {
-    // A. Citation Highlight Clicked: Always scroll into view and center on bounding box
+    // A. Citation Highlight Clicked: Scroll into view and center on bounding box ONCE
     if (activeBbox && activeBbox[4]) {
+      const bboxKey = `${activeBbox[0]}-${activeBbox[1]}-${activeBbox[2]}-${activeBbox[3]}-${activeBbox[4]}`;
+      if (lastScrolledBboxKeyRef.current === bboxKey) {
+        return;
+      }
+
       const pageNum = activeBbox[4];
       const pageEl = document.getElementById(`pdf-page-${pageNum}`);
       if (pageEl && scrollContainer) {
-        const scrollToBbox = () => {
-          const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
-          const target = bboxOverlay || pageEl;
-          if (typeof target.scrollIntoView === "function") {
+        lastScrolledBboxKeyRef.current = bboxKey;
+        const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
+        const target = bboxOverlay || pageEl;
+        if (typeof target.scrollIntoView === "function") {
+          try {
             target.scrollIntoView({ behavior: "smooth", block: "center" });
+          } catch {
+            // Safe fallback
           }
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const targetRect = target.getBoundingClientRect();
+        }
+
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        if (containerRect.height > 0 && targetRect.height > 0) {
           const relativeTop = targetRect.top - containerRect.top + scrollContainer.scrollTop;
           const centeredTop = Math.max(
             0,
             relativeTop - containerRect.height / 2 + targetRect.height / 2
           );
+
           if (typeof scrollContainer.scrollTo === "function") {
             scrollContainer.scrollTo({ top: centeredTop, behavior: "smooth" });
           } else {
             scrollContainer.scrollTop = centeredTop;
           }
-        };
-        scrollToBbox();
-        const timer = setTimeout(scrollToBbox, 150);
-        return () => clearTimeout(timer);
+        }
       }
+      return;
+    } else {
+      lastScrolledBboxKeyRef.current = null;
+    }
+
+    // B. User is actively scrolling: DO NOT hijack scroll!
+    if (isUserScrollingRef.current) {
+      lastScrolledByObserverRef.current = currentPage;
       return;
     }
 
-    // B. Page updated naturally by scroll observer: DO NOT hijack scroll
+    // C. Page updated naturally by scroll observer: DO NOT hijack scroll
     if (lastScrolledByObserverRef.current === currentPage) {
       return;
     }
 
-    // C. User explicitly jumped via controls or sidebar
+    // D. In continuous reading mode: If page is already substantially visible in viewport, do NOT scroll!
+    if (readingMode === "continuous") {
+      const pageEl = document.getElementById(`pdf-page-${currentPage}`);
+      if (pageEl && scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const pageRect = pageEl.getBoundingClientRect();
+        const visibleTop = Math.max(pageRect.top, containerRect.top);
+        const visibleBottom = Math.min(pageRect.bottom, containerRect.bottom);
+        const visibleHeight = visibleBottom - visibleTop;
+        if (visibleHeight > 100) {
+          lastScrolledByObserverRef.current = currentPage;
+          return;
+        }
+      }
+    }
+
+    // E. Explicit programmatic jump (e.g. clicked thumbnail, pagination controls, or single/two-page switch)
     const pageEl = document.getElementById(`pdf-page-${currentPage}`);
     if (pageEl && scrollContainer) {
+      lastScrolledByObserverRef.current = currentPage;
       const containerRect = scrollContainer.getBoundingClientRect();
       const pageRect = pageEl.getBoundingClientRect();
       const relativeTop = pageRect.top - containerRect.top + scrollContainer.scrollTop;
@@ -483,6 +596,7 @@ export function PdfCanvasViewer({
       {/* 2. Main PDF Scroll Canvas Area */}
       <div
         ref={setContainerRefs}
+        onScroll={handleContainerScroll}
         onMouseUp={handleMouseUp}
         onMouseMove={resetHudTimer}
         className={cn(
@@ -533,6 +647,7 @@ export function PdfCanvasViewer({
                   fallbackDimensions={pageDimensionsMap.get(pageNum)}
                   readingMode="two-page"
                   positionInSpread={idx === 0 ? "left" : "right"}
+                  currentPageNumber={currentPage}
                 />
               ))}
             </div>
@@ -548,6 +663,7 @@ export function PdfCanvasViewer({
                 onClearHighlight={onClearHighlight}
                 colorTheme={colorTheme}
                 isCurrentPage={pageNum === currentPage}
+                currentPageNumber={currentPage}
                 onPageVisible={handlePageVisible}
                 fallbackDimensions={pageDimensionsMap.get(pageNum)}
                 readingMode={readingMode}

@@ -78,6 +78,8 @@ export function SmartReferenceDrawer({
     }
 
     let isMounted = true;
+    setIsFetching(true);
+    setIngestError(null);
     documentsApi
       .resolveReferences(documentId)
       .then((data) => {
@@ -87,7 +89,8 @@ export function SmartReferenceDrawer({
       })
       .catch((err) => {
         if (isMounted) {
-          console.warn("Failed to resolve references via API:", err);
+          setFetchedReferences([]);
+          setIngestError(err instanceof Error ? err.message : "Không thể tải danh mục tham khảo");
         }
       })
       .finally(() => {
@@ -630,6 +633,7 @@ export function SmartReferenceDrawer({
           </div>
         </div>
       </div>
+
     </div>
   );
 }

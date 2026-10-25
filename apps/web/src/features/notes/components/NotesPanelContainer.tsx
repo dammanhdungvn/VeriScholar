@@ -1,19 +1,15 @@
 import { useState, useMemo } from "react";
-import { Sparkles, Search, Plus, BookOpen, AlertCircle, RefreshCw } from "lucide-react";
+import { Search, Plus, BookOpen, AlertCircle, RefreshCw } from "lucide-react";
 import {
   useNotesList,
   useCreateNoteMutation,
   useUpdateNoteMutation,
   useDeleteNoteMutation,
-  useSynthesizeNotesMutation,
 } from "../hooks/useNotesQuery";
 import { NoteCard } from "./NoteCard";
 import { CreateNoteDialog } from "./CreateNoteDialog";
-import { NoteSynthesisModal } from "./NoteSynthesisModal";
-import { SynthesizedLessonCard } from "./SynthesizedLessonCard";
 import { NoteDetailModal } from "./NoteDetailModal";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
-import type { NoteSynthesisResponse, InteractiveBadgeResponse } from "@/types/note";
 import type { BoundingBox } from "@/types/api";
 
 interface NotesPanelContainerProps {
@@ -23,8 +19,6 @@ interface NotesPanelContainerProps {
 export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
   const [searchTag, setSearchTag] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [isSynthesisOpen, setIsSynthesisOpen] = useState(false);
-  const [activeSynthesis, setActiveSynthesis] = useState<NoteSynthesisResponse | null>(null);
   const [inspectNoteId, setInspectNoteId] = useState<string | null>(null);
 
   const {
@@ -40,7 +34,6 @@ export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
   const createMutation = useCreateNoteMutation();
   const updateMutation = useUpdateNoteMutation();
   const deleteMutation = useDeleteNoteMutation();
-  const synthesizeMutation = useSynthesizeNotesMutation();
 
   const setActiveCitation = useReaderStore((s) => s.setActiveCitation);
   const notes = useMemo(() => notesData?.data || [], [notesData]);
@@ -50,11 +43,6 @@ export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
     const bboxes = (note as unknown as { bounding_boxes?: BoundingBox[] })?.bounding_boxes;
     const bbox = bboxes && bboxes.length > 0 ? bboxes[0] : null;
     setActiveCitation(noteId, bbox, page);
-  };
-
-  const handleJumpToBadge = (badge: InteractiveBadgeResponse) => {
-    const bbox = badge.bounding_boxes[0] ?? null;
-    setActiveCitation(badge.badge_id, bbox, badge.page_number);
   };
 
   const handleUpdateNote = async (
@@ -98,17 +86,6 @@ export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
         <div className="flex items-center gap-1.5">
           <button
             type="button"
-            onClick={() => setIsSynthesisOpen(true)}
-            disabled={notes.length === 0}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-surface-cream-strong hover:bg-surface-card dark:bg-[#282622] text-primary font-medium border border-hairline transition-colors disabled:opacity-40"
-            title="AI Tổng hợp ghi chú thành bài học đúc kết"
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Tổng hợp AI</span>
-          </button>
-
-          <button
-            type="button"
             onClick={() => setIsCreateOpen(true)}
             className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-primary hover:bg-primary/90 text-white font-medium shadow-2xs transition-colors"
           >
@@ -120,15 +97,6 @@ export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
 
       {/* Main Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* Active Synthesized Lesson Display if present */}
-        {activeSynthesis && (
-          <SynthesizedLessonCard
-            synthesis={activeSynthesis}
-            onJumpToBadge={handleJumpToBadge}
-            onClose={() => setActiveSynthesis(null)}
-          />
-        )}
-
         {/* 5 UI States for Notes */}
         {isLoading ? (
           <div className="space-y-3 py-6">
@@ -198,22 +166,6 @@ export function NotesPanelContainer({ documentId }: NotesPanelContainerProps) {
             user_note: payload.user_note,
             tags: payload.tags,
           });
-        }}
-      />
-
-      {/* Note Synthesis Modal */}
-      <NoteSynthesisModal
-        isOpen={isSynthesisOpen}
-        onClose={() => setIsSynthesisOpen(false)}
-        selectedNoteIds={notes.map((n) => n.id)}
-        totalNotesCount={notes.length}
-        isLoading={synthesizeMutation.isPending}
-        onSynthesize={async (request) => {
-          const result = await synthesizeMutation.mutateAsync({
-            ...request,
-            note_ids: notes.map((n) => n.id),
-          });
-          setActiveSynthesis(result);
         }}
       />
 

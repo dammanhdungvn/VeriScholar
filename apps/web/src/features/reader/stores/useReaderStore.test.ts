@@ -18,7 +18,7 @@ describe("useReaderStore", () => {
     expect(state.activeBbox).toBeNull();
   });
 
-  it("handles adding and removing open documents (max 5)", () => {
+  it("handles adding and removing open documents (max 5 without silent eviction)", () => {
     useReaderStore.getState().addOpenDocument("doc-1");
     useReaderStore.getState().addOpenDocument("doc-2");
     useReaderStore.getState().addOpenDocument("doc-3");
@@ -28,12 +28,13 @@ describe("useReaderStore", () => {
 
     const state = useReaderStore.getState();
     expect(state.openDocumentIds).toHaveLength(5);
-    expect(state.openDocumentIds).toContain("doc-6");
-    expect(state.activeDocumentId).toBe("doc-6");
+    expect(state.openDocumentIds).toEqual(["doc-1", "doc-2", "doc-3", "doc-4", "doc-5"]);
+    expect(state.openDocumentIds).not.toContain("doc-6");
+    expect(state.activeDocumentId).toBe("doc-5");
 
-    useReaderStore.getState().removeOpenDocument("doc-6");
+    useReaderStore.getState().removeOpenDocument("doc-5");
     expect(useReaderStore.getState().openDocumentIds).toHaveLength(4);
-    expect(useReaderStore.getState().activeDocumentId).toBe("doc-2");
+    expect(useReaderStore.getState().activeDocumentId).toBe("doc-1");
   });
 
   it("manages zoom in/out within bounds 0.5 to 3.0", () => {

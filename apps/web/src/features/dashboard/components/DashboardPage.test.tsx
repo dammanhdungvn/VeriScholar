@@ -148,17 +148,6 @@ describe("DashboardPage component - Lazy Session & Dynamic Workspace Flow", () =
     });
   });
 
-  it("renders Cowork mode when appMode is cowork and allows returning to chat", () => {
-    useDashboardStore.getState().setAppMode("cowork");
-    renderWithProviders(<DashboardPage />);
-
-    expect(screen.getByText("Kế Hoạch Thực Thi")).toBeInTheDocument();
-
-    const backBtn = screen.getByTitle("Quay lại hội thoại");
-    fireEvent.click(backBtn);
-    expect(useDashboardStore.getState().appMode).toBe("chat");
-  });
-
   it("test_route_with_session_id_loads_workspace: navigating directly to /dashboard/:sessionId activates that session", async () => {
     const targetSessionId = "session-vaswani-2017";
     renderWithRoute([`/dashboard/${targetSessionId}`]);

@@ -1,15 +1,11 @@
 import { create } from "zustand";
-import type { SidebarState, AppMode, ModelOption, BoundingBox } from "@/types/dashboard";
-import { AVAILABLE_MODELS } from "../data/mockDashboardData";
+import type { SidebarState, AppMode, BoundingBox } from "@/types/dashboard";
 
 interface DashboardState {
   sidebarState: SidebarState;
   appMode: AppMode;
-  selectedModel: ModelOption;
-  effortLevel: string;
   activeSessionId?: string;
   activeBbox: BoundingBox | null;
-  isModelModalOpen: boolean;
   isUploadModalOpen: boolean;
   isVoiceModalOpen: boolean;
   isReasoningEnabled: boolean;
@@ -20,11 +16,8 @@ interface DashboardState {
   toggleSidebar: () => void;
   setSidebarState: (state: SidebarState) => void;
   setAppMode: (mode: AppMode) => void;
-  setSelectedModel: (model: ModelOption) => void;
-  setEffortLevel: (level: string) => void;
   setActiveSessionId: (id?: string) => void;
   setActiveBbox: (bbox: BoundingBox | null) => void;
-  setModelModalOpen: (open: boolean) => void;
   setUploadModalOpen: (open: boolean) => void;
   setVoiceModalOpen: (open: boolean) => void;
   reset: () => void;
@@ -59,11 +52,8 @@ function persistSidebarState(state: SidebarState) {
 export const useDashboardStore = create<DashboardState>((set) => ({
   sidebarState: getStoredSidebarState(),
   appMode: "chat",
-  selectedModel: AVAILABLE_MODELS[0],
-  effortLevel: "Cao",
   activeSessionId: undefined,
   activeBbox: null,
-  isModelModalOpen: false,
   isUploadModalOpen: false,
   isVoiceModalOpen: false,
   isReasoningEnabled: true,
@@ -85,11 +75,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set({ sidebarState });
   },
   setAppMode: (appMode) => set({ appMode }),
-  setSelectedModel: (selectedModel) => set({ selectedModel }),
-  setEffortLevel: (effortLevel) => set({ effortLevel }),
   setActiveSessionId: (activeSessionId) => set({ activeSessionId }),
   setActiveBbox: (activeBbox) => set({ activeBbox }),
-  setModelModalOpen: (isModelModalOpen) => set({ isModelModalOpen }),
   setUploadModalOpen: (isUploadModalOpen) => set({ isUploadModalOpen }),
   setVoiceModalOpen: (isVoiceModalOpen) => set({ isVoiceModalOpen }),
 
@@ -97,11 +84,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
     set({
       sidebarState: getStoredSidebarState(),
       appMode: "chat",
-      selectedModel: AVAILABLE_MODELS[0],
-      effortLevel: "Cao",
       activeSessionId: undefined,
       activeBbox: null,
-      isModelModalOpen: false,
       isUploadModalOpen: false,
       isVoiceModalOpen: false,
       isReasoningEnabled: true,

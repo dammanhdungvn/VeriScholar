@@ -220,9 +220,3 @@ export function useRestoreArchivedSessionMutation() {
     },
   });
 }
-
-export function useExportSessionBundleMutation() {
-  return useMutation({
-    mutationFn: (sessionId: string) => sessionsApi.exportSessionBundle(sessionId),
-  });
-}

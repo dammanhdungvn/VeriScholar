@@ -61,6 +61,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   setActiveDocumentId: (id) =>
     set((state) => {
       if (!id) return { activeDocumentId: null };
+      if (state.activeDocumentId === id) return {};
       const exists = state.openDocumentIds.includes(id);
       return {
         activeDocumentId: id,
@@ -83,9 +84,8 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         return { activeDocumentId: id };
       }
       if (state.openDocumentIds.length >= 5) {
-        // Keep max 5 documents
-        const updated = [...state.openDocumentIds.slice(1), id];
-        return { openDocumentIds: updated, activeDocumentId: id };
+        // Enforce strict 5-document cap without silent eviction
+        return {};
       }
       return {
         openDocumentIds: [...state.openDocumentIds, id],

@@ -20,6 +20,7 @@ interface PdfPageCanvasProps {
   fallbackDimensions?: [number, number];
   readingMode?: ReadingMode;
   positionInSpread?: "left" | "right" | "single";
+  currentPageNumber?: number;
 }
 
 export const PdfPageCanvas = memo(function PdfPageCanvas({
@@ -35,6 +36,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
   fallbackDimensions,
   readingMode = "continuous",
   positionInSpread = "single",
+  currentPageNumber,
 }: PdfPageCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -45,19 +47,16 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
   const [isVisible, setIsVisible] = useState(false);
   const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null);
 
-  // 1. Observe visibility to render pages smoothly near viewport without overload
+  // 1. Render Lookahead Observer: pre-render canvases within 800px lookahead buffer
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
 
-    const observer = new IntersectionObserver(
+    const renderObserver = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
         if (entry.isIntersecting) {
           setIsVisible(true);
-          if (entry.intersectionRatio > 0.5 && onPageVisible) {
-            onPageVisible(pageNumber);
-          }
         } else {
           // If page scrolled out before finishing render, allow cancellation
           if (!isRendered) {
@@ -66,14 +65,35 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
         }
       },
       {
-        rootMargin: "350px 0px 350px 0px", // Optimal viewport lookahead buffer
-        threshold: [0, 0.5],
+        rootMargin: "800px 0px 800px 0px", // High-velocity lookahead buffer for seamless fast scrolling
+        threshold: 0,
       }
     );
 
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [pageNumber, onPageVisible, isRendered]);
+    renderObserver.observe(el);
+    return () => renderObserver.disconnect();
+  }, [isRendered]);
+
+  // 2. Active Page Visibility Observer: track the truly active reading page
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || !onPageVisible) return;
+
+    const pageObserver = new IntersectionObserver(
+      (entries) => {
+        const [entry] = entries;
+        if (entry.isIntersecting && entry.intersectionRatio >= 0.2) {
+          onPageVisible(pageNumber);
+        }
+      },
+      {
+        threshold: [0.1, 0.2, 0.3, 0.5],
+      }
+    );
+
+    pageObserver.observe(el);
+    return () => pageObserver.disconnect();
+  }, [pageNumber, onPageVisible]);
 
   // Unique task id for queue coordination
   const taskId = `page-${pageNumber}-z${zoomRatio}-r${rotationDeg}`;
@@ -87,7 +107,9 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
 
     let isCancelled = false;
     let cancelIdle: (() => void) | null = null;
-    const priority = isCurrentPage ? 0 : Math.abs(pageNumber - 1);
+    const priority = isCurrentPage
+      ? 0
+      : Math.abs(pageNumber - (currentPageNumber || pageNumber));
 
     const executeRender = async (setCancelHandler: (cancel: () => void) => void) => {
       try {
@@ -183,7 +205,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
       if (cancelIdle) cancelIdle();
       pdfRenderQueue.cancel(taskId);
     };
-  }, [pdfDoc, pageNumber, zoomRatio, rotationDeg, isVisible, isCurrentPage, taskId]);
+  }, [pdfDoc, pageNumber, zoomRatio, rotationDeg, isVisible, isCurrentPage, taskId, currentPageNumber]);
 
   // Estimate aspect ratio from fallback metadata if canvas not yet sized
   const aspectWidth = fallbackDimensions?.[0] || 595;

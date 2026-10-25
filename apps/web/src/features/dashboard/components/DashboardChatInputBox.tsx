@@ -1,5 +1,5 @@
-import { useRef, useState, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
-import { Plus, Mic, ArrowUp, Paperclip, X, Brain, RotateCcw } from "lucide-react";
+import { useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
+import { Plus, Mic, ArrowUp, Paperclip, X, Brain } from "lucide-react";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import type { ActiveContextChip } from "../stores/useWorkspaceStore";
 
@@ -14,50 +14,6 @@ export interface DashboardChatInputBoxProps {
   onContextChipClick?: (chip: ActiveContextChip) => void;
 }
 
-interface ReasoningStep {
-  step: number;
-  title: string;
-  subtitle: string;
-  effort: string;
-  enabled: boolean;
-  desc: string;
-}
-
-const REASONING_STEPS: ReasoningStep[] = [
-  {
-    step: 0,
-    title: "Tắt",
-    subtitle: "Direct Output >",
-    effort: "Off",
-    enabled: false,
-    desc: "Trả lời trực tiếp, không qua phân rã bước suy luận trung gian.",
-  },
-  {
-    step: 1,
-    title: "Light",
-    subtitle: "5.6 Luna • Fast >",
-    effort: "Thấp",
-    enabled: true,
-    desc: "Suy luận nhanh, kiểm tra tiền đề câu hỏi và lọc dẫn chứng (1-2s).",
-  },
-  {
-    step: 2,
-    title: "Medium",
-    subtitle: "Socratic 2.5 • Standard >",
-    effort: "Tiêu chuẩn",
-    enabled: true,
-    desc: "Suy luận Socratic chuẩn mực, đối chiếu dẫn chứng đa chiều.",
-  },
-  {
-    step: 3,
-    title: "Deep",
-    subtitle: "Socratic Deep Reasoning >",
-    effort: "Cao",
-    enabled: true,
-    desc: "Phản biện sâu, chứng minh công thức và kiểm chứng triệt để từng tọa độ PDF.",
-  },
-];
-
 export function DashboardChatInputBox({
   inputText,
   onChangeText,
@@ -70,42 +26,10 @@ export function DashboardChatInputBox({
 }: DashboardChatInputBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const popoverRef = useRef<HTMLDivElement>(null);
-
-  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
   const setVoiceModalOpen = useDashboardStore((s) => s.setVoiceModalOpen);
   const isReasoningEnabled = useDashboardStore((s) => s.isReasoningEnabled);
   const toggleReasoning = useDashboardStore((s) => s.toggleReasoning);
-  const setReasoningEnabled = useDashboardStore((s) => s.setReasoningEnabled);
-  const effortLevel = useDashboardStore((s) => s.effortLevel);
-  const setEffortLevel = useDashboardStore((s) => s.setEffortLevel);
-
-  // Close popover when clicking outside
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (popoverRef.current && !popoverRef.current.contains(event.target as Node)) {
-        setIsPopoverOpen(false);
-      }
-    }
-    if (isPopoverOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [isPopoverOpen]);
-
-  // Current reasoning step calculation
-  const currentStepIndex = !isReasoningEnabled
-    ? 0
-    : effortLevel === "Thấp" || effortLevel === "Light"
-    ? 1
-    : effortLevel === "Tiêu chuẩn" || effortLevel === "Medium"
-    ? 2
-    : 3;
-
-  const currentStepData = REASONING_STEPS[currentStepIndex];
 
   // Auto-resize textarea height up to 240px
   useEffect(() => {
@@ -156,24 +80,6 @@ export function DashboardChatInputBox({
 
   const handleReasoningButtonClick = () => {
     toggleReasoning();
-    setIsPopoverOpen((prev) => !prev);
-  };
-
-  const handleSelectStep = (stepIdx: number) => {
-    const step = REASONING_STEPS[stepIdx];
-    if (!step.enabled) {
-      setReasoningEnabled(false);
-      setEffortLevel("Off");
-    } else {
-      setReasoningEnabled(true);
-      setEffortLevel(step.effort);
-    }
-  };
-
-  const handleResetReasoning = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setReasoningEnabled(true);
-    setEffortLevel("Cao");
   };
 
   const hasText = inputText.trim().length > 0;
@@ -181,78 +87,6 @@ export function DashboardChatInputBox({
 
   return (
     <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 select-text relative">
-      {/* ChatGPT/Codex-style Reasoning Popover Card */}
-      {isPopoverOpen && (
-        <div
-          ref={popoverRef}
-          data-testid="reasoning-popover"
-          className="absolute right-6 bottom-[calc(100%+8px)] z-50 w-72 sm:w-80 p-4 rounded-2xl bg-[#262624] dark:bg-[#1a1918] text-white border border-[#3e3d39] dark:border-[#38342e] shadow-[0_16px_48px_rgba(0,0,0,0.5)] animate-in fade-in zoom-in-95 duration-150 select-none"
-        >
-          {/* Header with Title, Subtitle, and Reset */}
-          <div className="flex items-center justify-between mb-3.5">
-            <div className="flex-1 text-center">
-              <div className="text-base font-bold text-sky-400 dark:text-sky-300 transition-colors">
-                {currentStepData.title}
-              </div>
-              <div className="text-[11px] text-zinc-400 flex items-center justify-center gap-1 mt-0.5">
-                <span>{currentStepData.subtitle}</span>
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={handleResetReasoning}
-              className="p-1 rounded-full text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-              title="Đặt lại mức tiêu chuẩn"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
-          {/* 4-Step Slider Track with Snapping White Thumb */}
-          <div className="h-10 w-full bg-[#353533] dark:bg-[#121110] rounded-full relative flex items-center justify-between px-2 cursor-pointer border border-white/5">
-            {[0, 1, 2, 3].map((step) => (
-              <button
-                key={step}
-                type="button"
-                data-testid={`reasoning-step-btn-${step}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleSelectStep(step);
-                }}
-                className="z-10 w-8 h-8 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer"
-                title={REASONING_STEPS[step].title}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full transition-all ${
-                    currentStepIndex === step ? "opacity-0" : "bg-zinc-500"
-                  }`}
-                />
-              </button>
-            ))}
-
-            {/* Sliding White Circular Thumb */}
-            <div
-              className="w-7 h-7 rounded-full bg-white shadow-lg absolute transition-all duration-200 ease-out pointer-events-none"
-              style={{
-                left:
-                  currentStepIndex === 0
-                    ? "6px"
-                    : currentStepIndex === 1
-                    ? "calc(33.33% - 4px)"
-                    : currentStepIndex === 2
-                    ? "calc(66.66% - 18px)"
-                    : "calc(100% - 34px)",
-              }}
-            />
-          </div>
-
-          {/* Dynamic Description for Current Reasoning Effort */}
-          <p className="text-[11px] text-zinc-400 mt-2.5 text-center leading-relaxed font-sans">
-            {currentStepData.desc}
-          </p>
-        </div>
-      )}
-
       {/* Main Unified ChatGPT-style Chat Pill Box */}
       <div className="bg-[#fbf9f5] dark:bg-[#212120] border border-[#e5dfd4] dark:border-[#38342e] focus-within:border-coral-500/50 dark:focus-within:border-sky-400/50 focus-within:ring-3 focus-within:ring-coral-500/10 dark:focus-within:ring-sky-400/10 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-200 overflow-hidden relative">
         {/* Context Chip (Zero-Click Contextual Evidence) */}
@@ -340,7 +174,7 @@ export function DashboardChatInputBox({
               aria-label="Chế độ Suy luận Socratic (Deep Reasoning)"
               title={
                 isReasoningEnabled
-                  ? `Chế độ Suy luận Socratic (${currentStepData.title}): Đang BẬT. Nhấp để chỉnh mức độ.`
+                  ? "Chế độ Suy luận Socratic: Đang BẬT. Nhấp để tắt."
                   : "Chế độ Suy luận Socratic: Đang TẮT. Nhấp để bật."
               }
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${

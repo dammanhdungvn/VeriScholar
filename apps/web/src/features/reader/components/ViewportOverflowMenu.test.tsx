@@ -82,10 +82,9 @@ describe("ViewportOverflowMenu Component", () => {
     expect(onRotate).toHaveBeenCalledTimes(1);
   });
 
-  it("handles supplementary actions: references, export, zen mode", () => {
+  it("handles supplementary actions: references, zen mode", () => {
     const onClose = vi.fn();
     const onOpenReferences = vi.fn();
-    const onExportPdf = vi.fn();
     const onToggleZenPdf = vi.fn();
 
     render(
@@ -95,7 +94,6 @@ describe("ViewportOverflowMenu Component", () => {
         activeReadingMode="continuous"
         onReadingModeChange={vi.fn()}
         onOpenReferences={onOpenReferences}
-        onExportPdf={onExportPdf}
         onToggleZenPdf={onToggleZenPdf}
         isZenPdf={false}
       />
@@ -104,9 +102,6 @@ describe("ViewportOverflowMenu Component", () => {
     fireEvent.click(screen.getByTestId("overflow-open-references-btn"));
     expect(onClose).toHaveBeenCalled();
     expect(onOpenReferences).toHaveBeenCalledTimes(1);
-
-    fireEvent.click(screen.getByTestId("overflow-export-pdf-btn"));
-    expect(onExportPdf).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId("overflow-zen-pdf-btn"));
     expect(onToggleZenPdf).toHaveBeenCalledTimes(1);
@@ -122,7 +117,6 @@ describe("ViewportOverflowMenu Component", () => {
         showZoomControls={false}
         showReadingModes={false}
         onOpenReferences={vi.fn()}
-        onExportPdf={vi.fn()}
       />
     );
 
@@ -142,6 +136,5 @@ describe("ViewportOverflowMenu Component", () => {
     // Still renders essential tools
     expect(screen.getByText("Công cụ")).toBeInTheDocument();
     expect(screen.getByTestId("overflow-open-references-btn")).toBeInTheDocument();
-    expect(screen.getByTestId("overflow-export-pdf-btn")).toBeInTheDocument();
   });
 });

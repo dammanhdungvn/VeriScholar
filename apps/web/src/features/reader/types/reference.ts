@@ -49,6 +49,7 @@ export interface CitationGraphEdge {
   relationship?: "CITES" | "EXTENDS" | "BENCHMARKS_ON" | string;
   relation?: "CITES" | "EXTENDS" | "BENCHMARKS_ON" | string;
   confidence?: number;
+  scope?: "domain" | "session";
 }
 
 export interface CitationGraphData {

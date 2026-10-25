@@ -30,11 +30,8 @@ function renderTaskbarWithRouter(initialRoute = "/dashboard") {
             <Routes>
               <Route path="/dashboard" element={<div>Trang Nghiên cứu</div>} />
               <Route path="/library" element={<div>Trang Thư viện</div>} />
-              <Route path="/matrix" element={<div>Trang Ma trận 100+</div>} />
-              <Route path="/notes" element={<div>Trang Sổ tay</div>} />
               <Route path="/writing" element={<div>Trang Soạn thảo</div>} />
               <Route path="/discovery" element={<div>Trang Khám phá</div>} />
-              <Route path="/projects" element={<div>Trang Dự án</div>} />
             </Routes>
           </main>
         </div>
@@ -48,16 +45,16 @@ describe("Modular PRD Routes & Taskbar Navigation", () => {
     useDashboardStore.getState().reset();
   });
 
-  it("highlights 'Đọc & Nghiên cứu' when on /dashboard", () => {
+  it("highlights 'Khám phá & Phiên đọc' when on /dashboard", () => {
     renderTaskbarWithRouter("/dashboard");
     expect(screen.getByTestId("location-display")).toHaveTextContent("/dashboard");
 
-    const researchBtn = screen.getByTitle("Đọc & Nghiên cứu (Module 1)");
+    const researchBtn = screen.getByTitle(/Khám phá & Phiên đọc/i);
     expect(researchBtn).toBeInTheDocument();
     expect(researchBtn).toHaveClass("bg-coral-500/15");
   });
 
-  it("navigates to /library when clicking 'Thư viện'", () => {
+  it("navigates to /library when clicking 'Kho Yêu thích'", () => {
     renderTaskbarWithRouter("/dashboard");
 
     const libraryBtn = screen.getByTitle("Thư viện tài liệu nghiên cứu");
@@ -67,54 +64,22 @@ describe("Modular PRD Routes & Taskbar Navigation", () => {
     expect(screen.getByText("Trang Thư viện")).toBeInTheDocument();
   });
 
-  it("navigates to /matrix when clicking 'Ma trận đối chiếu 100+'", () => {
+  it("navigates to /writing when clicking 'Soạn thảo LaTeX'", () => {
     renderTaskbarWithRouter("/dashboard");
 
-    const matrixBtn = screen.getByTitle("Ma trận đối chiếu 100+");
-    fireEvent.click(matrixBtn);
-
-    expect(screen.getByTestId("location-display")).toHaveTextContent("/matrix");
-    expect(screen.getByText("Trang Ma trận 100+")).toBeInTheDocument();
-  });
-
-  it("navigates to /notes when clicking 'Sổ tay tri thức & Tổng hợp'", () => {
-    renderTaskbarWithRouter("/dashboard");
-
-    const notesBtn = screen.getByTitle("Sổ tay tri thức & Tổng hợp");
-    fireEvent.click(notesBtn);
-
-    expect(screen.getByTestId("location-display")).toHaveTextContent("/notes");
-    expect(screen.getByText("Trang Sổ tay")).toBeInTheDocument();
-  });
-
-  it("navigates to /writing when clicking 'Soạn thảo & Kiểm chứng (Module 2)'", () => {
-    renderTaskbarWithRouter("/dashboard");
-
-    const writingBtn = screen.getByTitle("Soạn thảo & Kiểm chứng (Module 2)");
+    const writingBtn = screen.getByTitle(/Soạn thảo LaTeX/i);
     fireEvent.click(writingBtn);
 
     expect(screen.getByTestId("location-display")).toHaveTextContent("/writing");
     expect(screen.getByText("Trang Soạn thảo")).toBeInTheDocument();
   });
 
-  it("navigates to /discovery when clicking 'Khám phá & Đồ thị trích dẫn (Module 3)'", () => {
+  it("excludes out-of-scope Matrix, Projects, and standalone Notes buttons from taskbar", () => {
     renderTaskbarWithRouter("/dashboard");
 
-    const discoveryBtn = screen.getByTitle("Khám phá & Đồ thị trích dẫn (Module 3)");
-    fireEvent.click(discoveryBtn);
-
-    expect(screen.getByTestId("location-display")).toHaveTextContent("/discovery");
-    expect(screen.getByText("Trang Khám phá")).toBeInTheDocument();
-  });
-
-  it("navigates to /projects when clicking 'Dự án nghiên cứu'", () => {
-    renderTaskbarWithRouter("/dashboard");
-
-    const projectsBtn = screen.getByTitle("Dự án nghiên cứu");
-    fireEvent.click(projectsBtn);
-
-    expect(screen.getByTestId("location-display")).toHaveTextContent("/projects");
-    expect(screen.getByText("Trang Dự án")).toBeInTheDocument();
+    expect(screen.queryByTitle(/Ma trận đối chiếu/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Dự án nghiên cứu/i)).not.toBeInTheDocument();
+    expect(screen.queryByTitle(/Sổ tay tri thức/i)).not.toBeInTheDocument();
   });
 
   it("strictly prevents dual active highlights: exactly one item is active even if store appMode was 'library'", () => {
@@ -123,23 +88,21 @@ describe("Modular PRD Routes & Taskbar Navigation", () => {
 
     renderTaskbarWithRouter("/dashboard");
 
-    const researchBtn = screen.getByTitle("Đọc & Nghiên cứu (Module 1)");
+    const researchBtn = screen.getByTitle(/Khám phá & Phiên đọc/i);
     const libraryBtn = screen.getByTitle("Thư viện tài liệu nghiên cứu");
-    const matrixBtn = screen.getByTitle("Ma trận đối chiếu 100+");
-    const projectsBtn = screen.getByTitle("Dự án nghiên cứu");
+    const writingBtn = screen.getByTitle(/Soạn thảo LaTeX/i);
 
     // ONLY research must be active
     expect(researchBtn).toHaveClass("bg-coral-500/15");
     // All other buttons must NOT be active
     expect(libraryBtn).not.toHaveClass("bg-coral-500/15");
-    expect(matrixBtn).not.toHaveClass("bg-coral-500/15");
-    expect(projectsBtn).not.toHaveClass("bg-coral-500/15");
+    expect(writingBtn).not.toHaveClass("bg-coral-500/15");
   });
 
-  it("highlights only 'Thư viện' when route is /library and leaves 'Đọc & Nghiên cứu' inactive", () => {
+  it("highlights only 'Kho Yêu thích' when route is /library and leaves 'Khám phá & Phiên đọc' inactive", () => {
     renderTaskbarWithRouter("/library");
 
-    const researchBtn = screen.getByTitle("Đọc & Nghiên cứu (Module 1)");
+    const researchBtn = screen.getByTitle(/Khám phá & Phiên đọc/i);
     const libraryBtn = screen.getByTitle("Thư viện tài liệu nghiên cứu");
 
     expect(libraryBtn).toHaveClass("bg-coral-500/15");
