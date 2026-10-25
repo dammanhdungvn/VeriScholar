@@ -182,27 +182,25 @@ async def test_library_synthesis_service_caching_with_dead_redis():
             cache=offline_adapter,
         )
 
-        # 1. First call: executes extraction and caches into fallback without crashing
-        res1 = await service.generate_comparison_matrix(
+        # 1. First call: executes hierarchical RAG query with offline Redis adapter without crashing
+        res1 = await service.hierarchical_rag_query(
             user_id=user_id,
-            topic="Attention and Vaccines",
+            query="Attention and Vaccines",
             folder_id=folder_id,
-            limit=10,
-            offset=0,
+            enable_thinking=True,
         )
-        assert res1.total_count == 2
-        assert len(res1.rows) == 2
+        assert res1.answer is not None
+        assert res1.sufficiency.sufficiency_score > 0
 
-        # 2. Second call: hits cache via fallback adapter
-        res2 = await service.generate_comparison_matrix(
+        # 2. Second call: executes cleanly with thinking disabled
+        res2 = await service.hierarchical_rag_query(
             user_id=user_id,
-            topic="Attention and Vaccines",
+            query="Attention and Vaccines",
             folder_id=folder_id,
-            limit=10,
-            offset=0,
+            enable_thinking=False,
         )
-        assert res2.total_count == 2
-        assert [r.title for r in res2.rows] == [r.title for r in res1.rows]
+        assert res2.answer is not None
+        assert res2.thought is None
 
 
 @pytest.mark.asyncio

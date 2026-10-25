@@ -154,6 +154,25 @@ async def test_concurrent_requests_structlog_contextvars_isolation():
 
     structlog contextvars or request.state between concurrent tasks.
     """
+    from fastapi.responses import StreamingResponse
+
+    sse_router = APIRouter()
+
+    @sse_router.get("/challenge/sse-events")
+    async def challenge_sse_events(request: Request):
+        req_id = getattr(request.state, "request_id", None)
+
+        async def _gen():
+            for step in range(1, 4):
+                await asyncio.sleep(0.005)
+                ctx_id = structlog.contextvars.get_contextvars().get("request_id") or req_id
+                payload = json.dumps({"step": step, "request_id": ctx_id})
+                yield f"event: progress\ndata: {payload}\n\n"
+
+        return StreamingResponse(_gen(), media_type="text/event-stream")
+
+    app.include_router(sse_router)
+
     num_requests = 8
     transport = ASGITransport(app=app)
     results: list[dict[str, Any]] = []
@@ -162,7 +181,7 @@ async def test_concurrent_requests_structlog_contextvars_isolation():
 
         async def worker(idx: int) -> dict[str, Any]:
             custom_id = f"stress-concurrency-{idx:03d}-{uuid4()}"
-            res = await client.get("/events", headers={"X-Request-ID": custom_id})
+            res = await client.get("/challenge/sse-events", headers={"X-Request-ID": custom_id})
             assert res.status_code == 200
             res_header = res.headers.get("x-request-id")
 
@@ -624,7 +643,7 @@ async def test_high_concurrency_sse_aborts_memory_and_task_leak():
             "type": "http",
             "asgi": {"version": "3.0", "spec_version": "2.3"},
             "method": "GET",
-            "path": "/events",
+            "path": "/challenge/sse-events",
             "headers": [(b"x-request-id", custom_id.encode())],
             "query_string": b"",
             "server": ("testserver", 80),

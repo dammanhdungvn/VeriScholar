@@ -1,4 +1,4 @@
-"""Database models for Research Notes and AI Note Syntheses."""
+"""Database models for Research Notes."""
 
 from typing import Any
 from uuid import UUID
@@ -12,14 +12,12 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
-    String,
     Text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY as PG_ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 TagsArrayType = JSON().with_variant(PG_ARRAY(Text), "postgresql")
-UUIDsArrayType = JSON().with_variant(PG_ARRAY(String), "postgresql")
 
 
 class ResearchNoteModel(IdentifiableTimestampedModel):
@@ -65,34 +63,4 @@ class ResearchNoteModel(IdentifiableTimestampedModel):
         Index("idx_research_notes_user_doc", "user_id", "document_id"),
         Index("idx_research_notes_created", "created_at"),
         Index("idx_research_notes_user_created", "user_id", "created_at"),
-    )
-
-
-class NoteSynthesisModel(IdentifiableTimestampedModel):
-    """AI-synthesized scholarly lesson or digest derived from selected research notes.
-
-    Aligns with VeriScholar Database Specification (note_syntheses).
-    Supports concept_lesson, literature_review, and research_gap modes with interactive badges.
-    """
-
-    __tablename__ = "note_syntheses"
-
-    user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
-    )
-    title: Mapped[str] = mapped_column(String(255), nullable=False)
-    mode: Mapped[str] = mapped_column(String(50), nullable=False)
-    language: Mapped[str] = mapped_column(String(10), default="vi", nullable=False)
-    markdown_content: Mapped[str] = mapped_column(Text, nullable=False)
-    interactive_badges: Mapped[list[dict[str, Any]]] = mapped_column(
-        JSONType, default=list, nullable=False
-    )
-    source_note_ids: Mapped[list[str]] = mapped_column(UUIDsArrayType, default=list, nullable=False)
-
-    __table_args__ = (
-        CheckConstraint(
-            "mode IN ('concept_lesson', 'literature_review', 'research_gap', 'active_recall_quiz')",
-            name="ck_note_syntheses_valid_mode",
-        ),
-        Index("idx_note_syntheses_user_created", "user_id", "created_at"),
     )

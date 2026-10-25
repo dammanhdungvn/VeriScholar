@@ -1,6 +1,5 @@
 """API Endpoints for Research Sessions (Module 1: Dual-Pane Research Workspace)."""
 
-import io
 from uuid import UUID, uuid4
 
 import structlog
@@ -15,7 +14,6 @@ from api.deps import (
 from api.schemas.envelope import PaginationLinks, PaginationMeta, ResponseMeta
 from api.schemas.error import ErrorResponse
 from api.schemas.session import (
-    CitationGraphEnvelope,
     SessionAddDocumentRequest,
     SessionChatMessageRequest,
     SessionCreateRequest,
@@ -373,29 +371,6 @@ lạnh (Cold Storage) do quá hạn TTL (7 ngày không hoạt động).
 🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
 Khi phát hiện phiên có cờ `is_archived == True`, AI Agent cần hướng dẫn người dùng cung cấp
 lại tệp PDF gốc để gọi API này tái kích hoạt phiên."""
-
-SESSION_EXPORT_BUNDLE_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
-Đóng gói toàn bộ tài nguyên của phiên nghiên cứu vào một tệp nén ZIP duy nhất
-(`application/zip`) để phục vụ nghiên cứu ngoại tuyến (Offline Research) khi không có
-Internet.
-
-📥 **Tham số đầu vào (Path Parameter):**
-- `id` (UUID, Bắt buộc): UUID của phiên nghiên cứu cần đóng gói xuất bản.
-
-📤 **Đầu ra & Thành phần Tệp ZIP (`application/zip`):**
-- `HTTP 200 OK`: Luồng dữ liệu nhị phân tệp ZIP đính kèm.
-  - Header: `Content-Disposition: attachment; filename="verischolar_session_{id}.zip"`.
-- Thành phần gói dữ liệu ZIP:
-  1. `documents/`: Toàn bộ các tệp PDF gốc trong phiên đã được nhúng sẵn Native PDF
-Annotations (chuẩn ISO 32000-1) tại các vị trí highlight.
-  2. `master_lesson.md`: Bài học tổng hợp tri thức chuẩn Markdown tích hợp YAML frontmatter
-và interactive badges.
-  3. `chat_transcript.html`: Bản ghi lịch sử hỏi đáp độc lập tự chứa CSS/JS cho phép tra cứu
-câu hỏi và đối chiếu trích dẫn ngoại tuyến.
-
-🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
-Khi người dùng hoàn thành dự án nghiên cứu hoặc yêu cầu xuất bản gói báo cáo, hãy gọi API
-này để tạo đường dẫn tải trọn gói dữ liệu offline."""
 
 
 # ==============================================================================
@@ -866,40 +841,6 @@ async def restore_archived_session(
 
 
 # ==============================================================================
-# 56. POST /api/v1/sessions/{id}:export-bundle (Full Offline Research Bundle .zip)
-# ==============================================================================
-@router.post(
-    "/{id}:export-bundle",
-    summary="# 56. Xuất Gói Nghiên Cứu Ngoại Tuyến Trọn Gói (Full Offline Research Bundle .zip)",
-    description=SESSION_EXPORT_BUNDLE_DESCRIPTION,
-    responses={
-        200: {
-            "content": {"application/zip": {}},
-            "description": (
-                "Gói nén ZIP chứa tài liệu PDF, master_lesson.md và chat_transcript.html."
-            ),
-        },
-        404: {"model": ErrorResponse, "description": "Phiên nghiên cứu không tồn tại."},
-    },
-)
-async def export_session_bundle(
-    id: UUID,
-    current_user: UserModel = Depends(get_current_user),
-    session_service: SessionService = Depends(get_session_service),
-) -> StreamingResponse:
-    """Generate and download a self-contained offline research bundle ZIP."""
-    zip_bytes = await session_service.export_bundle(session_id=id, user_id=current_user.id)
-    return StreamingResponse(
-        io.BytesIO(zip_bytes),
-        media_type="application/zip",
-        headers={
-            "Content-Disposition": f'attachment; filename="verischolar_session_{id}.zip"',
-            "Content-Length": str(len(zip_bytes)),
-        },
-    )
-
-
-# ==============================================================================
 # 57. POST /api/v1/sessions/{id}/references:ingest (Nạp bài tham khảo mở - PRD §3.3)
 # ==============================================================================
 @router.post(
@@ -934,41 +875,6 @@ async def ingest_session_references(
         resolver=resolver,
     )
     return SessionIngestReferencesEnvelope(
-        success=True,
-        data=data,
-        meta=ResponseMeta(),
-    )
-
-
-# ==============================================================================
-# 58. GET /api/v1/sessions/{id}/citation-graph (Đồ thị trích dẫn đa bài báo - PRD §3.3)
-# ==============================================================================
-@router.get(
-    "/{id}/citation-graph",
-    status_code=status.HTTP_200_OK,
-    response_model=CitationGraphEnvelope,
-    summary="Truy xuất đồ thị trích dẫn đa bài báo với cơ chế ngắt chu trình (PRD §3.3)",
-    description=(
-        "Xây dựng đồ thị trích dẫn đa bài báo (CITES, EXTENDS, BENCHMARKS_ON) "
-        "với độ sâu tối đa k <= 2 hops, tự động bẻ gãy chu trình (Cycle Breaking) "
-        "và trả về thứ tự đọc nền tảng (Foundational Reading Path) qua sắp xếp topo."
-    ),
-    responses={
-        200: {"model": CitationGraphEnvelope, "description": "Đồ thị trích dẫn đa bài báo."},
-        404: {"model": ErrorResponse, "description": "Phiên nghiên cứu không tồn tại."},
-    },
-)
-async def get_session_citation_graph(
-    id: UUID,
-    current_user: UserModel = Depends(get_current_user),
-    session_service: SessionService = Depends(get_session_service),
-) -> CitationGraphEnvelope:
-    """Construct multi-paper citation graph with Cycle Breaking & Max-Hop (k <= 2) constraint."""
-    data = await session_service.get_citation_graph(
-        session_id=id,
-        user_id=current_user.id,
-    )
-    return CitationGraphEnvelope(
         success=True,
         data=data,
         meta=ResponseMeta(),

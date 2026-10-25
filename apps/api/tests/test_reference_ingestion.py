@@ -21,7 +21,7 @@ import pytest
 from api import app
 from api.db.models.base import Base
 from api.db.models.document import DocumentModel
-from api.db.models.reference import CitationEdgeModel, ReferenceItemModel
+from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
@@ -227,15 +227,15 @@ async def test_ingest_references_success() -> None:
             assert ref_db is not None
             assert ref_db.resolved_document_id == UUID(ing_1["document_id"])
 
-            # Check CitationEdgeModel created
-            edge = await session.scalar(
-                select(CitationEdgeModel).where(
-                    CitationEdgeModel.source_document_id == root_doc.id,
-                    CitationEdgeModel.target_document_id == UUID(ing_1["document_id"]),
-                )
-            )
-            assert edge is not None
-            assert edge.relation == "CITES"
+            ingested_doc = await session.get(DocumentModel, UUID(ing_1["document_id"]))
+            assert ingested_doc is not None
+            assert ingested_doc.filename == "reference_1"
+            assert ingested_doc.status == "metadata_only"
+            assert ingested_doc.stage == "metadata_only"
+            assert ingested_doc.file_size_bytes == 0
+            assert ingested_doc.progress == 0
+            assert ingested_doc.content_hash == ""
+            assert "no source PDF" in (ingested_doc.error_message or "")
 
 
 @pytest.mark.asyncio
@@ -298,167 +298,3 @@ async def test_ingest_references_multi_tenant_isolation() -> None:
 
         assert resp.status_code == 404
         assert resp.json()["error"]["code"] == "SESSION_NOT_FOUND"
-
-
-# ==============================================================================
-# 2. Citation Graph & Cycle Breaking Tests
-# ==============================================================================
-
-
-@pytest.mark.asyncio
-async def test_citation_graph_construction_and_topo_path() -> None:
-    """Validate 2-hop citation graph construction with topological reading path."""
-    async with ingestion_test_context() as (client, session_maker, _resolver):
-        user, token = await create_test_user(session_maker)
-        sess, docs = await create_session_with_documents(session_maker, user.id, num_docs=1)
-        doc_a = docs[0]  # Depth 0
-
-        async with session_maker() as session:
-            # Create Doc B (Depth 1)
-            doc_b = DocumentModel(
-                id=uuid4(),
-                user_id=user.id,
-                filename="doc_b.pdf",
-                title="Intermediate Architecture B",
-                publication_year=2021,
-                content_hash="hash_b",
-                file_size_bytes=1024,
-                status="ready",
-                stage="completed",
-                progress=100,
-            )
-            session.add(doc_b)
-            await session.flush()
-
-            # Create Doc C (Depth 2 - Foundational Benchmark)
-            doc_c = DocumentModel(
-                id=uuid4(),
-                user_id=user.id,
-                filename="doc_c.pdf",
-                title="ImageNet Benchmark Dataset",
-                publication_year=2009,
-                content_hash="hash_c",
-                file_size_bytes=1024,
-                status="ready",
-                stage="completed",
-                progress=100,
-            )
-            session.add(doc_c)
-            await session.flush()
-
-            # Doc A cites Doc B (relation: EXTENDS)
-            session.add(
-                CitationEdgeModel(
-                    source_document_id=doc_a.id,
-                    target_document_id=doc_b.id,
-                    relation="EXTENDS",
-                    confidence=0.98,
-                )
-            )
-
-            # Doc B cites Doc C (relation: BENCHMARKS_ON)
-            session.add(
-                CitationEdgeModel(
-                    source_document_id=doc_b.id,
-                    target_document_id=doc_c.id,
-                    relation="BENCHMARKS_ON",
-                    confidence=0.95,
-                )
-            )
-            await session.commit()
-
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.get(
-            f"/api/v1/sessions/{sess.id}/citation-graph",
-            headers=headers,
-        )
-
-        assert resp.status_code == 200, resp.text
-        data = resp.json()["data"]
-
-        node_map = {n["id"]: n for n in data["nodes"]}
-        assert str(doc_a.id) in node_map
-        assert str(doc_b.id) in node_map
-        assert str(doc_c.id) in node_map
-
-        assert node_map[str(doc_a.id)]["depth"] == 0
-        assert node_map[str(doc_a.id)]["is_session_document"] is True
-
-        assert node_map[str(doc_b.id)]["depth"] == 1
-        assert node_map[str(doc_c.id)]["depth"] == 2
-
-        # Check edges
-        edge_relations = {(e["source"], e["target"]): e["relation"] for e in data["edges"]}
-        assert edge_relations.get((str(doc_a.id), str(doc_b.id))) == "EXTENDS"
-        assert edge_relations.get((str(doc_b.id), str(doc_c.id))) == "BENCHMARKS_ON"
-
-        # Check Foundational Reading Path (Topological Ordering: C -> B -> A)
-        reading_path = data["reading_path"]
-        assert len(reading_path) >= 3
-        # Foundational work C must be read before B, and B before A
-        assert reading_path.index(str(doc_c.id)) < reading_path.index(str(doc_b.id))
-        assert reading_path.index(str(doc_b.id)) < reading_path.index(str(doc_a.id))
-
-
-@pytest.mark.asyncio
-async def test_citation_graph_cycle_breaking() -> None:
-    """Graph Cycle Breaking Invariant: Circular citation loops (A -> B -> A) are safely broken."""
-    async with ingestion_test_context() as (client, session_maker, _resolver):
-        user, token = await create_test_user(session_maker)
-        sess, docs = await create_session_with_documents(session_maker, user.id, num_docs=1)
-        doc_a = docs[0]
-
-        async with session_maker() as session:
-            doc_b = DocumentModel(
-                id=uuid4(),
-                user_id=user.id,
-                filename="doc_b.pdf",
-                title="Circular Partner Paper B",
-                publication_year=2023,
-                content_hash="hash_circ_b",
-                file_size_bytes=1024,
-                status="ready",
-                stage="completed",
-                progress=100,
-            )
-            session.add(doc_b)
-            await session.flush()
-
-            # A -> B
-            session.add(
-                CitationEdgeModel(
-                    source_document_id=doc_a.id,
-                    target_document_id=doc_b.id,
-                    relation="CITES",
-                    confidence=1.0,
-                )
-            )
-            # Circular back-edge: B -> A
-            session.add(
-                CitationEdgeModel(
-                    source_document_id=doc_b.id,
-                    target_document_id=doc_a.id,
-                    relation="CITES",
-                    confidence=1.0,
-                )
-            )
-            await session.commit()
-
-        headers = {"Authorization": f"Bearer {token}"}
-        resp = await client.get(
-            f"/api/v1/sessions/{sess.id}/citation-graph",
-            headers=headers,
-        )
-
-        assert resp.status_code == 200, resp.text
-        data = resp.json()["data"]
-
-        # Circular back-edge B -> A must be broken (avoiding infinite loops)
-        edges = [(e["source"], e["target"]) for e in data["edges"]]
-        assert (str(doc_a.id), str(doc_b.id)) in edges
-        # The back-edge B -> A should have been discarded or broken
-        assert (str(doc_b.id), str(doc_a.id)) not in edges
-
-        # Reading path must still contain both documents without crashing
-        assert str(doc_a.id) in data["reading_path"]
-        assert str(doc_b.id) in data["reading_path"]

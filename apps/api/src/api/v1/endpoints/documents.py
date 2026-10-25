@@ -1,7 +1,5 @@
 """Document endpoints implementing Module 1 Deep Reading & Ingestion API."""
 
-import re
-from urllib.parse import quote
 from uuid import UUID, uuid4
 
 from api.db.models.document import DocumentModel
@@ -52,7 +50,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -1048,28 +1046,6 @@ kèm tọa độ dẫn chứng Bounding Boxes.
 """
 
 
-EXPORT_PDF_DESCRIPTION = """
-🎯 **Mục đích:** Xuất tệp PDF kèm theo Native ISO 32000 Highlight Annotations và Popup Notes
-cho các luận điểm học thuật (Vấn đề nghiên cứu, Đóng góp chính, Giới hạn).
-
-📥 **Đầu vào:**
-- `document_id`: UUID của tài liệu cần xuất (Path parameter, bắt buộc).
-- `include_highlights`: Cờ boolean (Query parameter, mặc định `true`).
-  Khi `false`, trả về tệp PDF gốc sạch sẽ.
-
-📤 **Đầu ra (HTTP 200 - application/pdf):**
-- Luồng nhị phân PDF chuẩn ISO 32000-1 / ISO 32000-2 tương thích 100% với Adobe Acrobat Reader,
-  Foxit, GoodNotes, Apple Preview.
-- Header `Content-Disposition`: `attachment; filename="..."; filename*=UTF-8''...`.
-- Header `X-Annotation-Count`: Số lượng visual grounding highlights được nhúng.
-- Header `Cache-Control`: `private, no-transform`.
-
-⚠️ **Lưu ý:**
-- Multi-tenant: Yêu cầu quyền sở hữu tài liệu (`x-user-id` hoặc auth token).
-- Lỗi thường gặp: `404 DOCUMENT_NOT_FOUND` (tài liệu không tồn tại), `422` (UUID sai định dạng).
-"""
-
-
 @router.post(
     "/{document_id}/summary:generate",
     response_model=DocumentSummaryEnvelope,
@@ -1138,70 +1114,6 @@ async def generate_document_summary(
     return JSONResponse(
         content=resp_dict,
         headers={"X-Cache": cache_status},
-    )
-
-
-@router.api_route(
-    "/{document_id}/export-pdf",
-    methods=["GET", "HEAD"],
-    summary="15. Xuất file PDF kèm Native Annotations chuẩn ISO",
-    description=EXPORT_PDF_DESCRIPTION,
-    responses={
-        200: {
-            "content": {"application/pdf": {}},
-            "description": "Luồng nhị phân PDF kèm Native ISO Highlight Annotations.",
-        },
-        404: {
-            "description": "Không tìm thấy tài liệu hoặc người dùng không có quyền truy cập.",
-        },
-        422: {
-            "description": "UUID tài liệu không hợp lệ.",
-        },
-    },
-)
-async def export_annotated_pdf(
-    document_id: UUID = Path(..., description="UUID tài liệu cần xuất PDF"),
-    include_highlights: bool = Query(
-        True,
-        description="Có nhúng các visual grounding highlights của AI vào PDF hay không",
-    ),
-    categories: str | None = Query(
-        None,
-        description=(
-            "Danh sách các danh mục cần highlight: problem_statement,contributions,limitations"
-        ),
-    ),
-    current_user: UserModel = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-    service: DocumentService = Depends(get_document_service),
-) -> Response:
-    """Export document PDF binary optionally embedded with ISO 32000 highlight annotations."""
-    categories_list = (
-        [c.strip() for c in categories.split(",") if c.strip()] if categories else None
-    )
-    pdf_bytes, filename, annotation_count = await service.export_annotated_pdf(
-        document_id=document_id,
-        user_id=current_user.id,
-        db=db,
-        include_highlights=include_highlights,
-        categories=categories_list,
-    )
-
-    ascii_filename = re.sub(r"[^\w\.-]", "_", filename)
-    encoded_filename = quote(filename)
-    content_disposition = (
-        f"attachment; filename=\"{ascii_filename}\"; filename*=UTF-8''{encoded_filename}"
-    )
-
-    return Response(
-        content=pdf_bytes,
-        media_type="application/pdf",
-        headers={
-            "Content-Disposition": content_disposition,
-            "Content-Length": str(len(pdf_bytes)),
-            "X-Annotation-Count": str(annotation_count),
-            "Cache-Control": "private, no-transform",
-        },
     )
 
 

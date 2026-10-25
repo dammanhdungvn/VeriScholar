@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import io
+import os
 import re
 import zipfile
 from collections.abc import AsyncIterator
@@ -14,51 +15,63 @@ from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
-from api.db.models.chunk import DocumentChunkModel
-from api.db.models.document import DocumentModel
-from api.db.models.draft import DraftCommentModel, DraftModel
+from api.db.models.draft import DraftModel
 from api.schemas.draft import (
     CreateDraftAssetRequest,
-    CreateDraftCommentRequest,
     CreateDraftRequest,
     DraftAssetResponse,
-    DraftCollaboratorResponse,
-    DraftCommentListResponse,
-    DraftCommentResponse,
-    DraftShareRequest,
-    DraftShareResponse,
-    UpdateDraftCommentRequest,
     UpdateDraftRequest,
 )
 from api.services.ai_tracing_service import AITracingService
-from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.draft import (
     DraftRole,
     can_call_costly_ai,
-    can_comment_draft,
     can_compile_draft,
     can_edit_draft_source,
     can_manage_draft_assets,
-    can_manage_draft_share,
-    can_resolve_draft_comment,
-    can_view_draft_comments,
 )
 from core.domain.entities.latex import LatexCompilationResult
-from core.domain.entities.safe_claim import FactVerificationReport
 from core.domain.exceptions import (
     ConcurrencyConflictError,
     DraftRoleForbiddenError,
     MaliciousAssetContentError,
 )
-from core.domain.value_objects.bounding_box import BoundingBox
 from core.services.draft_asset_security import DraftAssetSecurityValidator
+from core.services.latex_compiler import E2BLatexCompiler, SandboxedLatexCompiler
 from core.services.latex_healer import AgenticLatexHealer
-from core.services.safe_fact_checker import SafeFactChecker
-from core.services.safe_nli_adapter import SafeNliEngineAdapter
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.draft")
+
+
+def _load_e2b_config() -> tuple[str | None, str | None]:
+    """Read E2B configuration without logging or forwarding any secret to a sandbox."""
+    if os.getenv("PYTEST_CURRENT_TEST"):
+        return None, None
+
+    api_key = os.getenv("E2B_API_KEY", "").strip() or None
+    template = os.getenv("E2B_LATEX_TEMPLATE", "").strip() or None
+    if api_key:
+        return api_key, template
+
+    try:
+        from dotenv import dotenv_values
+    except ImportError:
+        return None, template
+
+    repo_root = Path(__file__).resolve().parents[4]
+    for env_path in (repo_root / ".env", repo_root / "apps" / "api" / ".env"):
+        if not env_path.is_file():
+            continue
+        values = dotenv_values(env_path)
+        file_key = values.get("E2B_API_KEY")
+        file_template = values.get("E2B_LATEX_TEMPLATE")
+        if isinstance(file_key, str) and file_key.strip():
+            api_key = file_key.strip()
+        if isinstance(file_template, str) and file_template.strip():
+            template = file_template.strip()
+    return api_key, template
 
 
 DEFAULT_TEMPLATE_TITLE_PLACEHOLDER = (
@@ -188,9 +201,23 @@ DEFAULT_STARTER_LATEX_TEMPLATE = (
 class DraftService:
     """Service managing academic writing drafts with strict tenant isolation and OCC."""
 
-    def __init__(self, db: AsyncSession, ai_tracing: AITracingService | None = None) -> None:
+    def __init__(
+        self,
+        db: AsyncSession,
+        ai_tracing: AITracingService | None = None,
+        latex_compiler: SandboxedLatexCompiler | None = None,
+    ) -> None:
         self.db = db
         self.ai_tracing = ai_tracing or AITracingService()
+        if latex_compiler is None:
+            e2b_api_key, e2b_template = _load_e2b_config()
+            remote_compiler = (
+                E2BLatexCompiler(api_key=e2b_api_key, template=e2b_template)
+                if e2b_api_key
+                else None
+            )
+            latex_compiler = SandboxedLatexCompiler(remote_compiler=remote_compiler)
+        self.latex_compiler = latex_compiler
 
     @asynccontextmanager
     async def _transaction(self) -> AsyncIterator[None]:
@@ -401,127 +428,6 @@ class DraftService:
         logger.info("draft_deleted", draft_id=str(draft_id))
         return True
 
-    async def verify_draft_facts(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        text: str | None = None,
-        document_ids: list[UUID] | None = None,
-        user_email: str | None = None,
-    ) -> FactVerificationReport:
-        """Run SAFE fact-checking on a draft or passage against literature repository."""
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        if not can_call_costly_ai(role):
-            raise DraftRoleForbiddenError(
-                f"Role '{role.value}' is strictly forbidden from running costly fact verification"
-            )
-
-        target_text = text.strip() if text and text.strip() else draft.content.strip()
-        if not target_text:
-            report = FactVerificationReport(
-                draft_id=draft_id,
-                verified_text="",
-                claims=[],
-                latency_ms=0.0,
-            )
-            report.compute_summary()
-            return report
-
-        # Retrieve candidate literature chunks owned by user
-        stmt = (
-            select(DocumentChunkModel, DocumentModel.title)
-            .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
-            .where(DocumentModel.user_id == user_id)
-        )
-        if document_ids:
-            stmt = stmt.where(DocumentModel.id.in_(document_ids))
-        stmt = stmt.limit(100)
-
-        with self.ai_tracing.trace(
-            name="safe_fact_verification",
-            user_id=user_id,
-            metadata={"draft_id": str(draft_id), "target_length": len(target_text)},
-        ) as trace_span:
-            with self.ai_tracing.span(
-                name="literature_retrieval",
-                input={"candidate_docs": len(document_ids) if document_ids else "all"},
-            ) as ret_span:
-                result = await self.db.execute(stmt)
-                rows = result.all()
-
-                retrieval_chunks: list[DocumentChunk] = []
-                doc_metadata: dict[UUID, str] = {}
-
-                for chunk_model, doc_title in rows:
-                    doc_metadata[chunk_model.document_id] = doc_title or "Tài liệu nghiên cứu"
-                    bboxes = [
-                        BoundingBox(x0=b[0], y0=b[1], x1=b[2], y1=b[3], page=int(b[4]))
-                        for b in (chunk_model.bounding_boxes or [])
-                        if len(b) >= 5 and b[0] < b[2] and b[1] < b[3] and int(b[4]) >= 1
-                    ]
-                    retrieval_chunks.append(
-                        DocumentChunk(
-                            id=chunk_model.id,
-                            document_id=chunk_model.document_id,
-                            chunk_index=chunk_model.chunk_index,
-                            page_number=chunk_model.page_number,
-                            content=chunk_model.content,
-                            bounding_boxes=bboxes,
-                            token_count=chunk_model.token_count,
-                        )
-                    )
-                ret_span.set_output({"chunks_found": len(retrieval_chunks)})
-
-            with self.ai_tracing.span(
-                name="nli_claim_verification",
-                input={"text_length": len(target_text), "context_chunks": len(retrieval_chunks)},
-            ) as nli_span:
-                checker = SafeFactChecker(nli_adapter=SafeNliEngineAdapter())
-                report = await checker.verify_text(
-                    text=target_text,
-                    retrieval_context=retrieval_chunks,
-                    doc_metadata=doc_metadata,
-                    draft_id=draft_id,
-                )
-                nli_span.set_output(
-                    {
-                        "total_claims": report.total_claims,
-                        "supported": report.supported_claims,
-                        "contradicted": report.contradicted_claims,
-                        "unverified": report.unverified_claims,
-                        "latency_ms": report.latency_ms,
-                    }
-                )
-
-            faithfulness = report.supported_claims / max(1, report.total_claims)
-            trace_span.set_output(
-                {
-                    "total_claims": report.total_claims,
-                    "supported": report.supported_claims,
-                    "contradicted": report.contradicted_claims,
-                    "unverified": report.unverified_claims,
-                    "faithfulness_score": round(faithfulness, 3),
-                }
-            )
-            trace_span.score(name="nli_faithfulness", value=round(faithfulness, 3))
-
-        logger.info(
-            "draft_facts_verified",
-            draft_id=str(draft_id),
-            total_claims=report.total_claims,
-            supported=report.supported_claims,
-            contradicted=report.contradicted_claims,
-            latency_ms=report.latency_ms,
-        )
-        return report
-
     async def compile_draft(
         self,
         user_id: UUID,
@@ -547,7 +453,7 @@ class DraftService:
             name="latex_agentic_healing_compile",
             input={"content_length": len(draft.content), "timeout_seconds": timeout_seconds},
         ) as heal_span:
-            healer = AgenticLatexHealer()
+            healer = AgenticLatexHealer(compiler=self.latex_compiler)
             result = await healer.compile_with_healing(
                 draft.content, timeout_seconds=timeout_seconds
             )
@@ -723,58 +629,6 @@ class DraftService:
             zip_size_bytes=len(zip_bytes),
         )
         return zip_bytes
-
-    async def export_overleaf(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        user_email: str | None = None,
-    ) -> dict[str, Any]:
-        """Generate direct Overleaf 1-Click web launch payload."""
-        import urllib.parse
-
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        source_tex = draft.content or ""
-        if draft.format != "latex" or r"\documentclass" not in source_tex:
-            clean_title = (draft.title or "Untitled Draft").replace("{", "").replace("}", "")
-            full_latex = (
-                r"\documentclass{article}" + "\n"
-                r"\usepackage[utf8]{inputenc}" + "\n"
-                rf"\title{{{clean_title}}}" + "\n"
-                r"\author{VeriScholar Researcher}" + "\n"
-                r"\begin{document}" + "\n"
-                r"\maketitle"
-                + "\n\n"
-                + (source_tex or "% Empty draft content\n")
-                + "\n"
-                + r"\end{document}"
-            )
-        else:
-            full_latex = source_tex
-
-        encoded_snip = urllib.parse.quote_plus(full_latex)
-        encoded_title = urllib.parse.quote_plus(draft.title or "Untitled Draft")
-        overleaf_url = (
-            f"https://www.overleaf.com/docs?snip={encoded_snip}&snip_name={encoded_title}"
-        )
-
-        return {
-            "draft_id": draft.id,
-            "title": draft.title,
-            "format": draft.format,
-            "overleaf_url": overleaf_url,
-            "launch_url": overleaf_url,
-            "latex_snip": full_latex,
-            "snip_length": len(full_latex),
-            "created_at": datetime.now(UTC),
-        }
 
     async def assist_draft(
         self,
@@ -988,366 +842,6 @@ class DraftService:
             items.append(DraftAssetResponse(**item_copy))
 
         return items
-
-    async def share_draft(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        request: DraftShareRequest,
-        user_email: str | None = None,
-    ) -> DraftShareResponse:
-        """Configure collaborative sharing permissions for a draft."""
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        if not can_manage_draft_share(role):
-            raise DraftRoleForbiddenError("Only the draft owner can configure sharing permissions")
-
-        now = datetime.now(UTC)
-        norm_perm = request.normalized_permission()
-        existing = _draft_share_cache.get(draft_id, {})
-        token = existing.get("share_token") or uuid4().hex[:16]
-        share_url = f"/shared/drafts/{draft_id}?token={token}"
-
-        collaborators: list[DraftCollaboratorResponse] = list(existing.get("collaborators", []))
-        if request.target_email:
-            target_clean = request.target_email.lower().strip()
-            found = False
-            for i, c in enumerate(collaborators):
-                if c.email.lower() == target_clean:
-                    collaborators[i] = DraftCollaboratorResponse(
-                        user_id=c.user_id,
-                        email=target_clean,
-                        permission=norm_perm,
-                        granted_at=now,
-                    )
-                    found = True
-                    break
-            if not found:
-                collaborators.append(
-                    DraftCollaboratorResponse(
-                        user_id=None,
-                        email=target_clean,
-                        permission=norm_perm,
-                        granted_at=now,
-                    )
-                )
-
-        settings = {
-            "draft_id": draft_id,
-            "share_token": token,
-            "share_url": share_url,
-            "permission": norm_perm,
-            "allow_public_link": request.allow_public_link,
-            "collaborators": collaborators,
-        }
-        _draft_share_cache[draft_id] = settings
-
-        logger.info(
-            "draft_sharing_configured",
-            draft_id=str(draft_id),
-            permission=norm_perm,
-            allow_public_link=request.allow_public_link,
-        )
-        return DraftShareResponse(**settings)
-
-    async def get_share_settings(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        user_email: str | None = None,
-    ) -> DraftShareResponse:
-        """Retrieve active sharing settings for a draft."""
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        if draft_id in _draft_share_cache:
-            return DraftShareResponse(**_draft_share_cache[draft_id])
-
-        # Default private settings
-        token = uuid4().hex[:16]
-        settings = {
-            "draft_id": draft_id,
-            "share_token": token,
-            "share_url": f"/shared/drafts/{draft_id}?token={token}",
-            "permission": "editor",
-            "allow_public_link": False,
-            "collaborators": [],
-        }
-        _draft_share_cache[draft_id] = settings
-        return DraftShareResponse(**settings)
-
-    # ==========================================================================
-    # Peer Review Comments & Annotations (/drafts/{id}/comments) - PRD §3.2
-    # ==========================================================================
-
-    async def create_comment(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        request: CreateDraftCommentRequest,
-        author_name: str = "",
-        user_email: str | None = None,
-    ) -> DraftCommentResponse:
-        """Create a peer review comment or reply on a research draft.
-
-        Raises:
-            KeyError: When draft does not exist or user lacks access.
-            DraftRoleForbiddenError: When user has viewer role (HTTP 403).
-        """
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        if not can_comment_draft(role):
-            raise DraftRoleForbiddenError(
-                f"Role '{role.value}' is strictly forbidden from commenting on this draft"
-            )
-
-        if request.parent_id is not None:
-            parent_stmt = select(DraftCommentModel).where(
-                DraftCommentModel.id == request.parent_id,
-                DraftCommentModel.draft_id == draft_id,
-            )
-            parent_res = await self.db.execute(parent_stmt)
-            if not parent_res.scalar_one_or_none():
-                raise KeyError(f"Parent comment {request.parent_id} not found on draft {draft_id}")
-
-        now = datetime.now(UTC)
-        comment = DraftCommentModel(
-            draft_id=draft_id,
-            author_id=user_id,
-            author_name=author_name or "Anonymous Researcher",
-            start_offset=request.start_offset,
-            end_offset=request.end_offset,
-            selected_text=request.selected_text,
-            comment_text=request.comment_text,
-            parent_id=request.parent_id,
-            is_resolved=False,
-            created_at=now,
-            updated_at=now,
-        )
-
-        async with self._transaction():
-            self.db.add(comment)
-
-        await self.db.refresh(comment)
-        logger.info(
-            "draft_comment_created",
-            draft_id=str(draft_id),
-            comment_id=str(comment.id),
-            author_id=str(user_id),
-            parent_id=str(request.parent_id) if request.parent_id else None,
-        )
-        return DraftCommentResponse(
-            id=comment.id,
-            draft_id=comment.draft_id,
-            author_id=comment.author_id,
-            author_name=comment.author_name,
-            start_offset=comment.start_offset,
-            end_offset=comment.end_offset,
-            selected_text=comment.selected_text,
-            comment_text=comment.comment_text,
-            parent_id=comment.parent_id,
-            is_resolved=comment.is_resolved,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-            replies=[],
-        )
-
-    async def list_comments(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        user_email: str | None = None,
-    ) -> DraftCommentListResponse:
-        """List comments for a research draft organized with threaded replies.
-
-        Raises:
-            KeyError: When draft does not exist or user lacks access.
-            DraftRoleForbiddenError: When user is unauthorized.
-        """
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        if not can_view_draft_comments(role):
-            raise DraftRoleForbiddenError(
-                f"Role '{role.value}' is strictly forbidden from viewing comments"
-            )
-
-        stmt = (
-            select(DraftCommentModel)
-            .where(DraftCommentModel.draft_id == draft_id)
-            .order_by(DraftCommentModel.created_at.asc())
-        )
-        result = await self.db.execute(stmt)
-        all_comments = list(result.scalars().all())
-
-        # Construct tree with nested replies
-        comment_map: dict[UUID, DraftCommentResponse] = {}
-        for c in all_comments:
-            comment_map[c.id] = DraftCommentResponse(
-                id=c.id,
-                draft_id=c.draft_id,
-                author_id=c.author_id,
-                author_name=c.author_name,
-                start_offset=c.start_offset,
-                end_offset=c.end_offset,
-                selected_text=c.selected_text,
-                comment_text=c.comment_text,
-                parent_id=c.parent_id,
-                is_resolved=c.is_resolved,
-                created_at=c.created_at,
-                updated_at=c.updated_at,
-                replies=[],
-            )
-
-        root_comments: list[DraftCommentResponse] = []
-        for c in all_comments:
-            resp_item = comment_map[c.id]
-            if c.parent_id and c.parent_id in comment_map:
-                comment_map[c.parent_id].replies.append(resp_item)
-            else:
-                root_comments.append(resp_item)
-
-        return DraftCommentListResponse(
-            draft_id=draft_id,
-            items=root_comments,
-            total=len(all_comments),
-        )
-
-    async def update_comment(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        comment_id: UUID,
-        request: UpdateDraftCommentRequest,
-        user_email: str | None = None,
-    ) -> DraftCommentResponse:
-        """Update comment text (author only) or resolution status (owner, editor, commenter).
-
-        Raises:
-            KeyError: When draft or comment does not exist.
-            DraftRoleForbiddenError: When non-author tries to edit text, or viewer tries to resolve.
-        """
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        stmt = select(DraftCommentModel).where(
-            DraftCommentModel.id == comment_id,
-            DraftCommentModel.draft_id == draft_id,
-        )
-        comment = (await self.db.execute(stmt)).scalar_one_or_none()
-        if not comment:
-            raise KeyError(f"Comment {comment_id} not found on draft {draft_id}")
-
-        async with self._transaction():
-            if request.comment_text is not None:
-                if comment.author_id != user_id:
-                    raise DraftRoleForbiddenError(
-                        "Only the original comment author is permitted to modify comment text"
-                    )
-                comment.comment_text = request.comment_text
-
-            if request.is_resolved is not None:
-                if not can_resolve_draft_comment(role):
-                    raise DraftRoleForbiddenError(
-                        f"Role '{role.value}' is not permitted to resolve or reopen comments"
-                    )
-                comment.is_resolved = request.is_resolved
-
-            comment.updated_at = datetime.now(UTC)
-
-        await self.db.refresh(comment)
-        logger.info(
-            "draft_comment_updated",
-            draft_id=str(draft_id),
-            comment_id=str(comment.id),
-            is_resolved=comment.is_resolved,
-        )
-        return DraftCommentResponse(
-            id=comment.id,
-            draft_id=comment.draft_id,
-            author_id=comment.author_id,
-            author_name=comment.author_name,
-            start_offset=comment.start_offset,
-            end_offset=comment.end_offset,
-            selected_text=comment.selected_text,
-            comment_text=comment.comment_text,
-            parent_id=comment.parent_id,
-            is_resolved=comment.is_resolved,
-            created_at=comment.created_at,
-            updated_at=comment.updated_at,
-            replies=[],
-        )
-
-    async def delete_comment(
-        self,
-        user_id: UUID,
-        draft_id: UUID,
-        comment_id: UUID,
-        user_email: str | None = None,
-    ) -> None:
-        """Delete comment (permitted for comment author or draft owner).
-
-        Raises:
-            KeyError: When draft or comment does not exist.
-            DraftRoleForbiddenError: When non-author non-owner tries to delete.
-        """
-        draft, role = await self.get_user_draft_role(
-            draft_id=draft_id,
-            user_id=user_id,
-            user_email=user_email,
-        )
-        if not draft or not role:
-            raise KeyError(f"Draft {draft_id} not found")
-
-        stmt = select(DraftCommentModel).where(
-            DraftCommentModel.id == comment_id,
-            DraftCommentModel.draft_id == draft_id,
-        )
-        comment = (await self.db.execute(stmt)).scalar_one_or_none()
-        if not comment:
-            raise KeyError(f"Comment {comment_id} not found on draft {draft_id}")
-
-        if comment.author_id != user_id and role != DraftRole.OWNER:
-            raise DraftRoleForbiddenError(
-                "Only the comment author or draft owner is permitted to delete this comment"
-            )
-
-        async with self._transaction():
-            await self.db.delete(comment)
-
-        logger.info(
-            "draft_comment_deleted",
-            draft_id=str(draft_id),
-            comment_id=str(comment_id),
-            deleted_by=str(user_id),
-        )
 
 
 _draft_pdf_cache: dict[UUID, bytes] = {}

@@ -33,9 +33,22 @@ _EQUATION_PATTERNS = [
     re.compile(r"^.+=\s*(softmax|max|min|sin|cos|Concat)\s*\(", re.IGNORECASE),
 ]
 
-_MATH_SYMBOLS = ("softmax", "∈", "∑", "√", "dmodel", "dv", "dk")
+_MATH_SYMBOLS = ("softmax", "sum", "log", "∈", "∑", "√", "dmodel", "dv", "dk")
 _CAPTION_PATTERN = re.compile(r"^(Figure|Table|Fig\.)\s+\d+[:\.]", re.IGNORECASE)
 _FOOTNOTE_URL_PATTERN = re.compile(r"^\d+\s+https?://", re.IGNORECASE)
+_MATH_BLOCK_PATTERN = re.compile(
+    r"(?:=|\b(?:arg\s*min|arg\s*max|log|ln|sin|cos|softmax|exp)\b|[∑∫√≤≥≈])",
+    re.IGNORECASE,
+)
+
+
+def _formula_to_latex_like(text: str) -> str:
+    """Normalize recoverable PDF formula text without pretending to parse arbitrary math."""
+    normalized = re.sub(r"\s+", " ", text).strip()
+    normalized = re.sub(r"(?i)\b-sum\b", r"\\sum", normalized)
+    normalized = re.sub(r"(?i)\b(sum|prod|sqrt|exp|sin|cos|log|ln)\b", r"\\\1", normalized)
+    normalized = normalized.replace("<=", r"\\leq").replace(">=", r"\\geq")
+    return normalized
 
 
 class PyMuPDFChunkExtractor(IChunkExtractorPort):
@@ -118,7 +131,12 @@ class PyMuPDFChunkExtractor(IChunkExtractorPort):
                     continue
 
                 # Filter isolated single-word diagram scatter (e.g. heatmap diagram labels)
-                if len(words) <= 2 and len(text) < 15 and (bx1 - bx0) < 60:
+                if (
+                    len(words) <= 2
+                    and len(text) < 15
+                    and (bx1 - bx0) < 60
+                    and not _MATH_BLOCK_PATTERN.search(text)
+                ):
                     continue
 
                 filtered_blocks.append((bx0, by0, bx1, by1, text, page_num, width, height))
@@ -315,13 +333,15 @@ class PyMuPDFChunkExtractor(IChunkExtractorPort):
             # 1. Floating Captions and Isolated Equations are self-contained
             if is_caption or is_equation:
                 flush_pending()
+                formula_text = _formula_to_latex_like(cleaned) if is_equation else None
                 chunks.append(
                     DocumentChunk(
                         id=uuid4(),
                         document_id=document_id,
                         chunk_index=counter,
                         page_number=page_num,
-                        content=cleaned,
+                        content=formula_text or cleaned,
+                        formula_text=formula_text,
                         bounding_boxes=[bbox],
                         token_count=max(1, len(cleaned.split())),
                     )

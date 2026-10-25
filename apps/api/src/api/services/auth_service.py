@@ -23,7 +23,7 @@ from api.schemas.auth import (
     UpdateProfileRequest,
 )
 from api.services.email_service import EmailService
-from api.utils.email_validator import validate_academic_or_trusted_email
+from api.core.email_validator import validate_academic_or_trusted_email
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession

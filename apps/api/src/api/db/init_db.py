@@ -80,45 +80,6 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                         END IF;
                     END IF;
 
-                    -- draft_comments schema upgrade (author_id, comment_text, etc.)
-                    IF EXISTS (
-                        SELECT 1 FROM information_schema.tables 
-                        WHERE table_name = 'draft_comments'
-                    ) THEN
-                        IF NOT EXISTS (
-                            SELECT 1 FROM information_schema.columns
-                            WHERE table_name = 'draft_comments' AND column_name = 'author_id'
-                        ) THEN
-                            DROP TABLE IF EXISTS draft_comments CASCADE;
-                            CREATE TABLE draft_comments (
-                                id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                                draft_id UUID NOT NULL REFERENCES drafts(id) ON DELETE CASCADE,
-                                author_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                                author_name VARCHAR(255) NOT NULL DEFAULT '',
-                                start_offset INT NOT NULL DEFAULT 0,
-                                end_offset INT NOT NULL DEFAULT 0,
-                                selected_text TEXT NOT NULL DEFAULT '',
-                                comment_text TEXT NOT NULL DEFAULT '',
-                                parent_id UUID NULL REFERENCES draft_comments(id) ON DELETE CASCADE,
-                                is_resolved BOOLEAN NOT NULL DEFAULT FALSE,
-                                created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                                updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                            );
-                            CREATE INDEX IF NOT EXISTS 
-                                idx_draft_comments_draft_created 
-                                ON draft_comments(draft_id, created_at);
-                            CREATE INDEX IF NOT EXISTS 
-                                idx_draft_comments_parent 
-                                ON draft_comments(parent_id);
-                            CREATE INDEX IF NOT EXISTS 
-                                ix_draft_comments_author_id 
-                                ON draft_comments(author_id);
-                            CREATE INDEX IF NOT EXISTS 
-                                ix_draft_comments_draft_id 
-                                ON draft_comments(draft_id);
-                        END IF;
-                    END IF;
-
                     -- users table upgrades
                     IF EXISTS (
                         SELECT 1 FROM information_schema.tables 
@@ -218,36 +179,6 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                     CREATE INDEX IF NOT EXISTS idx_research_notes_user_created
                         ON research_notes(user_id, created_at DESC);
 
-                    -- note_syntheses table creation & indexes
-                    CREATE TABLE IF NOT EXISTS note_syntheses (
-                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-                        title VARCHAR(255) NOT NULL,
-                        mode VARCHAR(50) NOT NULL CHECK (
-                            mode IN ('concept_lesson', 'literature_review',
-                                      'research_gap', 'active_recall_quiz')
-                        ),
-                        language VARCHAR(10) NOT NULL DEFAULT 'vi',
-                        markdown_content TEXT NOT NULL,
-                        interactive_badges JSONB NOT NULL DEFAULT '[]'::jsonb,
-                        source_note_ids TEXT[] NOT NULL DEFAULT '{}',
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-                    );
-
-                    CREATE INDEX IF NOT EXISTS idx_note_syntheses_user
-                        ON note_syntheses(user_id, created_at DESC);
-
-                    -- Ensure active_recall_quiz constraint upgrade
-                    ALTER TABLE note_syntheses
-                        DROP CONSTRAINT IF EXISTS note_syntheses_mode_check;
-                    ALTER TABLE note_syntheses
-                        DROP CONSTRAINT IF EXISTS ck_note_syntheses_valid_mode;
-                    ALTER TABLE note_syntheses ADD CONSTRAINT ck_note_syntheses_valid_mode CHECK (
-                        mode IN ('concept_lesson', 'literature_review',
-                                      'research_gap', 'active_recall_quiz')
-                    );
-
                     -- Triggers for research_notes
                     IF NOT EXISTS (
                         SELECT 1 FROM pg_trigger WHERE tgname = 'trg_research_notes_occ'
@@ -265,21 +196,65 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                         FOR EACH ROW EXECUTE FUNCTION handle_note_source_detached();
                     END IF;
 
-                    -- Triggers for note_syntheses
-                    IF NOT EXISTS (
-                        SELECT 1 FROM pg_trigger WHERE tgname = 'trg_note_syntheses_updated_at'
-                    ) THEN
-                        CREATE TRIGGER trg_note_syntheses_updated_at
-                        BEFORE UPDATE ON note_syntheses
-                        FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-                    END IF;
-
                 END $$;
             """)
         )
         logger.info("database_schema_upgrades_ensured", dialect=dialect_name)
     elif dialect_name == "sqlite":
         try:
+            # folders table upgrades
+            folders_check = await conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='folders'")
+            )
+            if folders_check.scalar_one_or_none():
+                res = await conn.execute(text("PRAGMA table_info(folders)"))
+                f_cols = [row[1] for row in res.fetchall()]
+                if "color" not in f_cols:
+                    await conn.execute(
+                        text(
+                            "ALTER TABLE folders ADD COLUMN color VARCHAR(30) "
+                            "DEFAULT '#6366f1' NOT NULL"
+                        )
+                    )
+                if "description" not in f_cols:
+                    await conn.execute(text("ALTER TABLE folders ADD COLUMN description TEXT"))
+
+            # users table upgrades
+            users_check = await conn.execute(
+                text("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+            )
+            if users_check.scalar_one_or_none():
+                res = await conn.execute(text("PRAGMA table_info(users)"))
+                u_cols = [row[1] for row in res.fetchall()]
+                user_column_defs = [
+                    (
+                        "role",
+                        "ALTER TABLE users ADD COLUMN role VARCHAR(30) "
+                        "DEFAULT 'researcher' NOT NULL",
+                    ),
+                    ("institution", "ALTER TABLE users ADD COLUMN institution VARCHAR(255)"),
+                    ("academic_rank", "ALTER TABLE users ADD COLUMN academic_rank VARCHAR(100)"),
+                    ("orcid_id", "ALTER TABLE users ADD COLUMN orcid_id VARCHAR(50)"),
+                    ("avatar_url", "ALTER TABLE users ADD COLUMN avatar_url VARCHAR(500)"),
+                    (
+                        "is_verified",
+                        "ALTER TABLE users ADD COLUMN is_verified BOOLEAN DEFAULT 0 NOT NULL",
+                    ),
+                    ("department", "ALTER TABLE users ADD COLUMN department VARCHAR(255)"),
+                    ("bio", "ALTER TABLE users ADD COLUMN bio VARCHAR(1000)"),
+                    (
+                        "research_interests",
+                        "ALTER TABLE users ADD COLUMN research_interests VARCHAR(500)",
+                    ),
+                    (
+                        "google_scholar_url",
+                        "ALTER TABLE users ADD COLUMN google_scholar_url VARCHAR(500)",
+                    ),
+                ]
+                for col_name, sql_stmt in user_column_defs:
+                    if col_name not in u_cols:
+                        await conn.execute(text(sql_stmt))
+
             table_check = await conn.execute(
                 text("SELECT name FROM sqlite_master WHERE type='table' AND name='drafts'")
             )
@@ -304,8 +279,9 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                     await conn.execute(
                         text("ALTER TABLE drafts ADD COLUMN last_compiled_at TIMESTAMP")
                     )
-        except Exception as sq_err:
-            logger.debug("sqlite_schema_upgrade_skipped", error=str(sq_err))
+        except Exception:
+            logger.exception("sqlite_schema_upgrade_failed")
+            raise
         logger.info("database_schema_upgrades_ensured", dialect=dialect_name)
 
 

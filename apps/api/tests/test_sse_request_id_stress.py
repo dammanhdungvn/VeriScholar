@@ -386,25 +386,6 @@ def client(
 # DIMENSION 1: NO X-Request-ID Header -> Valid UUID4 Generated and Propagated
 # ==============================================================================
 @pytest.mark.asyncio
-async def test_dim1_events_no_request_id_generates_valid_uuid4(client: AsyncClient) -> None:
-    """GET /events with NO X-Request-ID: server returns UUID4 header and in SSE payload."""
-    resp = await client.get("/events")
-    assert resp.status_code == 200
-    assert "text/event-stream" in resp.headers["content-type"]
-    assert "x-request-id" in resp.headers
-
-    req_id = resp.headers["x-request-id"]
-    _assert_valid_uuid4(req_id)
-
-    events = _parse_sse_events(resp.text)
-    assert len(events) >= 3
-    for ev in events:
-        assert ev["event"] == "progress"
-        assert isinstance(ev["data"], dict)
-        assert ev["data"]["request_id"] == req_id
-
-
-@pytest.mark.asyncio
 async def test_dim1_document_summary_no_request_id_generates_valid_uuid4(
     client: AsyncClient, sample_document: DocumentModel
 ) -> None:
@@ -458,19 +439,6 @@ async def test_dim1_session_chat_no_request_id_generates_valid_uuid4(
 # DIMENSION 2: Custom X-Request-ID Header -> Exact Echo in Header and Payloads
 # ==============================================================================
 @pytest.mark.asyncio
-async def test_dim2_events_custom_request_id_exact_echo(client: AsyncClient) -> None:
-    """GET /events with custom X-Request-ID: echoes exact trace string."""
-    custom_id = "my-custom-trace-uuid-12345"
-    resp = await client.get("/events", headers={"X-Request-ID": custom_id})
-    assert resp.status_code == 200
-    assert resp.headers.get("x-request-id") == custom_id
-
-    events = _parse_sse_events(resp.text)
-    for ev in events:
-        assert ev["data"]["request_id"] == custom_id
-
-
-@pytest.mark.asyncio
 async def test_dim2_document_summary_custom_request_id_exact_echo(
     client: AsyncClient, sample_document: DocumentModel
 ) -> None:
@@ -521,7 +489,7 @@ async def test_dim2_session_chat_custom_request_id_exact_echo(
 async def test_dim3_uppercase_header_canonical_single_response(client: AsyncClient) -> None:
     """Client sends uppercase X-REQUEST-ID: server returns exactly 1 lowercase x-request-id."""
     custom_id = "trace-uppercase-stress-77777"
-    resp = await client.get("/events", headers={"X-REQUEST-ID": custom_id})
+    resp = await client.get("/health", headers={"X-REQUEST-ID": custom_id})
     assert resp.status_code == 200
 
     # Verify httpx header list has exactly 1 entry
@@ -538,7 +506,7 @@ async def test_dim3_duplicate_headers_deduplicated_to_single_header(client: Asyn
         ("x-request-id", "duplicate-trace-beta"),
         ("X-Request-Id", "duplicate-trace-gamma"),
     ]
-    resp = await client.get("/events", headers=raw_headers)
+    resp = await client.get("/health", headers=raw_headers)
     assert resp.status_code == 200
 
     header_list = resp.headers.get_list("x-request-id")
@@ -568,7 +536,7 @@ async def test_dim3_duplicate_headers_on_document_summary_stream(
 @pytest.mark.asyncio
 async def test_dim3_empty_request_id_fallback_to_uuid4(client: AsyncClient) -> None:
     """Client sends empty string header X-Request-ID: '': server generates new UUID4."""
-    resp = await client.get("/events", headers={"X-Request-ID": ""})
+    resp = await client.get("/health", headers={"X-Request-ID": ""})
     assert resp.status_code == 200
     header_list = resp.headers.get_list("x-request-id")
     assert len(header_list) == 1

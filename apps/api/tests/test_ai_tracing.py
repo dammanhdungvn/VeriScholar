@@ -339,68 +339,6 @@ async def test_session_chat_service_tracing_integration() -> None:
 
 
 @pytest.mark.asyncio
-async def test_note_synthesis_service_tracing_integration() -> None:
-    """Verify NoteSynthesisService instruments note_synthesis, badge_assembly, and llm_synthesis."""
-    from api.db.models.note import ResearchNoteModel
-    from api.schemas.note import SynthesizeNotesRequest
-    from api.services.note_synthesis_service import NoteSynthesisService
-
-    user_id = uuid4()
-    note_id = uuid4()
-
-    mock_db = MagicMock()
-    mock_note = ResearchNoteModel(
-        id=note_id,
-        user_id=user_id,
-        selected_text="Self-attention allows the model to attend to information.",
-        page_number=1,
-        bounding_boxes=[[0.1, 0.2, 0.8, 0.4, 1]],
-        user_note="Key finding",
-        frozen_snapshot={
-            "authors": ["Vaswani"],
-            "year": 2017,
-            "document_title": "Attention Paper",
-        },
-    )
-    mock_res = MagicMock()
-    mock_res.scalars.return_value.all.return_value = [mock_note]
-
-    async def mock_execute(stmt: object, *args: object, **kwargs: object) -> object:
-        return mock_res
-
-    mock_db.execute.side_effect = mock_execute
-    mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
-
-    mock_tracing = MagicMock()
-    mock_trace_span = MagicMock()
-    mock_child_span = MagicMock()
-    mock_tracing.trace.return_value = mock_trace_span
-    mock_tracing.span.return_value = mock_child_span
-    mock_tracing.generation.return_value = mock_child_span
-
-    service = NoteSynthesisService(db=mock_db, ai_tracing=mock_tracing)
-
-    req = SynthesizeNotesRequest(
-        note_ids=[note_id],
-        mode="concept_lesson",
-        language="vi",
-    )
-    resp = await service.synthesize_notes(user_id=user_id, req=req)
-    assert resp is not None
-
-    # Verify tracing
-    assert mock_tracing.trace.called
-    assert mock_tracing.trace.call_args[1]["name"] == "note_synthesis"
-
-    span_names = [call[1]["name"] for call in mock_tracing.span.call_args_list]
-    assert "badge_assembly" in span_names
-
-    gen_names = [call[1]["name"] for call in mock_tracing.generation.call_args_list]
-    assert "llm_synthesis" in gen_names
-
-
-@pytest.mark.asyncio
 async def test_document_service_summary_tracing_integration() -> None:
     """Verify DocumentService.generate_document_summary instruments document_summary & retrieval."""
     from api.db.models.document import DocumentModel

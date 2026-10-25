@@ -2,7 +2,7 @@
 
 import asyncio
 import time
-from collections.abc import AsyncIterable, AsyncIterator
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -17,8 +17,7 @@ from core.domain.exceptions import (
 from fastapi import FastAPI, HTTPException, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.openapi.utils import get_openapi
-from fastapi.responses import JSONResponse
-from fastapi.sse import EventSourceResponse, ServerSentEvent
+from fastapi.responses import JSONResponse, RedirectResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.cors import CORSMiddleware
 
@@ -322,6 +321,12 @@ app.include_router(api_v1_router)
 
 
 # 5. Standard Core Endpoints
+@app.get("/", include_in_schema=False)
+async def root() -> RedirectResponse:
+    """Redirect root path to interactive OpenAPI documentation."""
+    return RedirectResponse(url="/docs")
+
+
 @app.get("/health", tags=["system"])
 async def health_check() -> dict[str, str]:
     """Health check endpoint for container probes and uptime monitoring."""
@@ -385,19 +390,6 @@ async def readiness_check() -> JSONResponse:
             },
         },
     )
-
-
-@app.get("/events", response_class=EventSourceResponse, tags=["streaming"])
-async def demo_sse_events(request: Request) -> AsyncIterable[ServerSentEvent]:
-    """Demo Server-Sent Events (SSE) stream for verifying TTFB and non-buffering delivery."""
-    request_id = getattr(request.state, "request_id", None) or request.headers.get("x-request-id")
-    for i in range(1, 4):
-        await asyncio.sleep(0.05)
-        yield ServerSentEvent(
-            data={"step": i, "content": f"Streaming chunk {i}", "request_id": request_id},
-            event="progress",
-            id=str(i),
-        )
 
 
 def custom_openapi() -> dict[str, Any]:

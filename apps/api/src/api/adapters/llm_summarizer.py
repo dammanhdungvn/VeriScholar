@@ -19,7 +19,6 @@ from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.summary import DocumentSummary, SummaryPoint
 from core.domain.value_objects.bounding_box import BoundingBox
 from core.ports.summary import IDocumentSummarizerPort
-from core.prompts import default_registry
 
 logger = logging.getLogger(__name__)
 
@@ -104,13 +103,28 @@ class LLMGroundedSummarizer(IDocumentSummarizerPort):
             # Build context combining head and tail/structural sections
             repr_chunks = self._select_representative_chunks(chunks, max_chunks=16)
 
-            # Load prompt template from Prompts-as-Code registry
-            prompt_tmpl = default_registry.get("document-grounded-summary")
-            messages = prompt_tmpl.render_messages(
-                title=title or "Unknown",
-                abstract=abstract or "Not available",
-                chunks=repr_chunks,
+            chunks_text = "\n\n".join(
+                f"[Chunk {c.chunk_index} | Page {c.page_number}]\n{c.content}" for c in repr_chunks
             )
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are an expert academic research assistant. Summarize the scholarly "
+                        "document into a strict JSON object with keys: problem_statement, "
+                        "problem_quote, contributions, contribution_quote, limitations, "
+                        "limitation_quote."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Title: {title or 'Unknown'}\n"
+                        f"Abstract: {abstract or 'Not available'}\n\n"
+                        f"Excerpts:\n{chunks_text}"
+                    ),
+                },
+            ]
 
             headers = {
                 "Authorization": f"Bearer {self.api_key}",

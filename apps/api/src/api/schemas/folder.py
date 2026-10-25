@@ -93,40 +93,6 @@ class FolderTreeEnvelope(BaseModel):
     meta: dict[str, Any] = Field(default_factory=dict)
 
 
-# ==============================================================================
-# Literature Comparison Matrix Schemas
-# ==============================================================================
-
-
-class ComparisonMatrixRequest(BaseModel):
-    """Payload for requesting an automated literature comparison matrix."""
-
-    topic: str = Field(
-        ..., min_length=3, max_length=500, description="Chủ đề / Bài toán cần so sánh đối chiếu"
-    )
-    folder_id: UUID | None = Field(None, description="UUID thư mục chứa các bài báo cần phân tích")
-    document_ids: list[UUID] | None = Field(
-        None, description="Danh sách bài báo cụ thể (nếu không chọn cả thư mục)"
-    )
-    search: str | None = Field(None, description="Từ khóa lọc nhanh (phương pháp, dataset, metric)")
-    limit: int = Field(50, ge=1, le=200, description="Số lượng bài báo tối đa trên mỗi trang")
-    offset: int = Field(0, ge=0, description="Số lượng bản ghi bỏ qua (pagination)")
-
-
-class ComparisonMatrixRowSchema(BaseModel):
-    """A row in the comparison matrix for a single research paper."""
-
-    document_id: UUID
-    title: str
-    authors: list[str] = Field(default_factory=list)
-    year: int | None = None
-    core_methodology: str
-    datasets_used: list[str] = Field(default_factory=list)
-    key_metrics: dict[str, str] = Field(default_factory=dict)
-    strengths: list[str] = Field(default_factory=list)
-    limitations: list[str] = Field(default_factory=list)
-
-
 class SufficiencyGateSchema(BaseModel):
     """Evaluation result of evidence sufficiency."""
 
@@ -136,29 +102,6 @@ class SufficiencyGateSchema(BaseModel):
     missing_aspects: list[str] = Field(default_factory=list)
     recommended_search_queries: list[str] = Field(default_factory=list)
     reasoning: str
-
-
-class ComparisonMatrixResponseData(BaseModel):
-    """Response data for literature comparison matrix."""
-
-    matrix_id: UUID
-    topic: str
-    folder_id: UUID | None = None
-    documents_compared: int
-    total_count: int = 0
-    limit: int = 50
-    offset: int = 0
-    rows: list[ComparisonMatrixRowSchema]
-    summary_synthesis: str
-    sufficiency: SufficiencyGateSchema
-    markdown_table: str
-    generated_at: datetime
-
-
-class ComparisonMatrixEnvelope(SingleResponseEnvelope[ComparisonMatrixResponseData]):
-    """Envelope for comparison matrix response."""
-
-    pass
 
 
 # ==============================================================================

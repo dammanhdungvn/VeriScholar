@@ -57,7 +57,7 @@ async def register(
 
     expose_debug_otp = (
         settings.DEBUG
-        or settings.ENVIRONMENT in ("development", "uat", "test")
+        or settings.ENVIRONMENT in ("development", "test")
         or not (os.getenv("SMTP_HOST", "").strip() and os.getenv("SMTP_USER", "").strip())
     )
 

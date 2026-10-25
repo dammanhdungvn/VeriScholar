@@ -7,7 +7,6 @@ from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIde
 from core.adapters.storage.local import LocalStorageAdapter
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
-from core.ports.pdf_annotator import IPdfAnnotatorPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
 from core.services.academic_cache import GlobalAcademicCache
@@ -18,26 +17,22 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
 from api.adapters.llm_summarizer import LLMGroundedSummarizer
-from api.adapters.pdf_annotator import PyMuPdfAnnotator
 from api.core.config import settings
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.services.ai_tracing_service import AITracingService
-from api.services.associative_memory_service import AssociativeMemoryService
 from api.services.auth_service import AuthService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
 from api.services.folder_service import FolderService
 from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
-from api.services.note_synthesis_service import NoteSynthesisService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
 
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
 _idempotency_adapter: IIdempotencyPort | None = None
-_pdf_annotator_adapter: IPdfAnnotatorPort | None = None
 _ai_tracing_service: AITracingService | None = None
 _academic_cache: GlobalAcademicCache | None = None
 _academic_resolver: IAcademicSearchResolverPort | None = None
@@ -84,14 +79,6 @@ def get_idempotency_port() -> IIdempotencyPort:
     return _idempotency_adapter
 
 
-def get_pdf_annotator() -> IPdfAnnotatorPort:
-    """Dependency providing PDF annotation engine adapter."""
-    global _pdf_annotator_adapter
-    if _pdf_annotator_adapter is None:
-        _pdf_annotator_adapter = PyMuPdfAnnotator()
-    return _pdf_annotator_adapter
-
-
 def get_document_summarizer() -> IDocumentSummarizerPort:
     """Dependency providing LLMGroundedSummarizer with heuristic fallback."""
     api_key = settings.OPENAI_API_KEY.get_secret_value() if settings.OPENAI_API_KEY else None
@@ -114,14 +101,12 @@ def get_ai_tracing_service() -> AITracingService:
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
     summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
-    pdf_annotator: IPdfAnnotatorPort = Depends(get_pdf_annotator),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DocumentService:
     """Dependency providing DocumentService instance."""
     return DocumentService(
         storage=storage,
         summarizer=summarizer,
-        pdf_annotator=pdf_annotator,
         ai_tracing=ai_tracing,
     )
 
@@ -147,14 +132,6 @@ def get_note_service(
 ) -> NoteService:
     """Dependency providing NoteService instance bound to request database session."""
     return NoteService(db=db)
-
-
-def get_note_synthesis_service(
-    db: AsyncSession = Depends(get_db),
-    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
-) -> NoteSynthesisService:
-    """Dependency providing NoteSynthesisService instance bound to request database session."""
-    return NoteSynthesisService(db=db, ai_tracing=ai_tracing)
 
 
 def get_auth_service(
@@ -186,14 +163,6 @@ def get_library_synthesis_service(
 ) -> LibrarySynthesisService:
     """Dependency providing LibrarySynthesisService bound to request database session."""
     return LibrarySynthesisService(db=db, ai_tracing=ai_tracing, cache=idempotency_port)
-
-
-def get_associative_memory_service(
-    db: AsyncSession = Depends(get_db),
-    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
-) -> AssociativeMemoryService:
-    """Dependency providing AssociativeMemoryService bound to request database session."""
-    return AssociativeMemoryService(db=db, ai_tracing=ai_tracing)
 
 
 async def get_current_user(

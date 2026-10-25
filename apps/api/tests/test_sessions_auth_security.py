@@ -126,23 +126,13 @@ async def test_case_1_unauthenticated_requests_blocked_with_401() -> None:
         assert res_clear_msg.status_code == 401
         assert res_clear_msg.json()["error"]["code"] == "UNAUTHORIZED"
 
-        # 10. GET /sessions/{id}/citation-graph
-        res_graph = await client.get(f"/api/v1/sessions/{random_id}/citation-graph")
-        assert res_graph.status_code == 401
-        assert res_graph.json()["error"]["code"] == "UNAUTHORIZED"
-
-        # 11. POST /sessions/{id}/references:ingest
+        # 10. POST /sessions/{id}/references:ingest
         res_ingest = await client.post(
             f"/api/v1/sessions/{random_id}/references:ingest",
             json={"document_id": str(uuid4()), "selected_ref_indices": [0]},
         )
         assert res_ingest.status_code == 401
         assert res_ingest.json()["error"]["code"] == "UNAUTHORIZED"
-
-        # 12. POST /sessions/{id}:export-bundle
-        res_bundle = await client.post(f"/api/v1/sessions/{random_id}:export-bundle")
-        assert res_bundle.status_code == 401
-        assert res_bundle.json()["error"]["code"] == "UNAUTHORIZED"
 
 
 @pytest.mark.asyncio
@@ -263,12 +253,6 @@ async def test_case_2_and_3_tenant_isolation_and_legitimate_owner_access() -> No
         )
         assert res_a_messages.status_code == 404
 
-        # Citation graph
-        res_a_graph = await client.get(
-            f"/api/v1/sessions/{session_b_id}/citation-graph", headers=headers_a
-        )
-        assert res_a_graph.status_code == 404
-
         # Delete session
         res_a_delete = await client.delete(f"/api/v1/sessions/{session_b_id}", headers=headers_a)
         assert res_a_delete.status_code == 404
@@ -327,9 +311,3 @@ async def test_case_2_and_3_tenant_isolation_and_legitimate_owner_access() -> No
         )
         assert res_b_messages.status_code == 200
         assert res_b_messages.json()["data"] == []
-
-        # Citation graph
-        res_b_graph = await client.get(
-            f"/api/v1/sessions/{session_b_id}/citation-graph", headers=headers_b
-        )
-        assert res_b_graph.status_code == 200

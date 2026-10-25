@@ -1,7 +1,7 @@
-"""Pydantic v2 schemas for Research Notes and AI Note Syntheses."""
+"""Pydantic v2 schemas for Research Notes."""
 
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -97,63 +97,5 @@ class NoteListItemResponse(BaseModel):
     tags: list[str] = Field(default_factory=list)
     is_source_detached: bool = False
     version: int = 1
-    created_at: datetime
-    updated_at: datetime
-
-
-class SynthesizeNotesRequest(BaseModel):
-    """Request payload for AI note synthesis into structured lesson or review."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    note_ids: list[UUID] = Field(
-        ...,
-        min_length=1,
-        description="List of note UUIDs to synthesize.",
-    )
-    mode: Literal["concept_lesson", "literature_review", "research_gap", "active_recall_quiz"] = (
-        Field(
-            default="concept_lesson",
-            description=(
-                "Synthesis objective: concept_lesson, literature_review, "
-                "research_gap, or active_recall_quiz."
-            ),
-        )
-    )
-    language: str = Field(
-        default="vi",
-        description="Output language code ('vi', 'en').",
-    )
-    target_title: str | None = Field(
-        default=None,
-        description="Custom title for the synthesized lesson.",
-    )
-
-
-class InteractiveBadgeResponse(BaseModel):
-    """Interactive visual citation badge linking back to original PDF passage."""
-
-    badge_id: str
-    note_id: str
-    document_id: str | None = None
-    citation_label: str
-    page_number: int
-    bounding_boxes: list[list[float | int]] = Field(default_factory=list)
-    quote_text: str = ""
-    is_source_detached: bool = False
-
-
-class NoteSynthesisResponse(BaseModel):
-    """Response containing synthesized Markdown content and interactive citation badges."""
-
-    model_config = ConfigDict(from_attributes=True)
-
-    id: UUID
-    title: str
-    mode: str
-    language: str
-    markdown_content: str
-    interactive_badges: list[InteractiveBadgeResponse] = Field(default_factory=list)
-    source_note_ids: list[str] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

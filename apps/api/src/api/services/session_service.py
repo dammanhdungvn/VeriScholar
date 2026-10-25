@@ -2,25 +2,19 @@
 
 from __future__ import annotations
 
-import hashlib
-import io
-import zipfile
 from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 import structlog
 from api.db.models.document import DocumentModel
-from api.db.models.reference import CitationEdgeModel, ReferenceItemModel
+from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import (
     ResearchSessionModel,
     SessionDocumentModel,
     SessionTurnModel,
 )
 from api.schemas.session import (
-    CitationGraphEdge,
-    CitationGraphNode,
-    CitationGraphResponseData,
     IngestedReferenceItem,
     SessionDocumentItem,
     SessionHistoryItem,
@@ -28,7 +22,11 @@ from api.schemas.session import (
     SessionResponseData,
     ViewportStateSchema,
 )
-from core.domain.entities.reference import ExtractedReference, ParsedReferenceInfo
+from core.domain.entities.reference import (
+    ExtractedReference,
+    ParsedReferenceInfo,
+    has_public_academic_identifier,
+)
 from core.domain.entities.session import MAX_SESSION_DOCUMENTS
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.services.exa_resolver import InMemoryAcademicResolverAdapter
@@ -704,117 +702,6 @@ class SessionService:
         logger.info("session_archived_restored", session_id=str(session_id))
         return await self.get_session_detail(session_id, user_id)
 
-    async def export_bundle(
-        self,
-        session_id: UUID,
-        user_id: UUID,
-    ) -> bytes:
-        """Export full offline research bundle zip."""
-        stmt = select(ResearchSessionModel).where(
-            ResearchSessionModel.id == session_id,
-            ResearchSessionModel.user_id == user_id,
-        )
-        res = await self.db.execute(stmt)
-        session = res.scalar_one_or_none()
-        if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "code": "SESSION_NOT_FOUND",
-                    "message": "Phiên nghiên cứu không tồn tại hoặc bạn không có quyền truy cập.",
-                    "action": "Verify session ID.",
-                },
-            )
-
-        docs_stmt = (
-            select(DocumentModel)
-            .join(SessionDocumentModel, DocumentModel.id == SessionDocumentModel.document_id)
-            .where(SessionDocumentModel.session_id == session_id)
-            .order_by(SessionDocumentModel.display_order.asc())
-        )
-        docs_res = await self.db.execute(docs_stmt)
-        documents = list(docs_res.scalars().all())
-
-        turns_stmt = (
-            select(SessionTurnModel)
-            .where(SessionTurnModel.session_id == session_id)
-            .order_by(SessionTurnModel.created_at.asc())
-        )
-        turns_res = await self.db.execute(turns_stmt)
-        turns = list(turns_res.scalars().all())
-
-        buf = io.BytesIO()
-        with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
-            for doc in documents:
-                pdf_filename = doc.filename or f"{doc.id}.pdf"
-                label = doc.title or doc.filename
-                content_bytes: bytes | None = None
-                if self.document_service is not None:
-                    try:
-                        pdf_bytes, fn, _ = await self.document_service.export_annotated_pdf(
-                            doc.id, user_id, self.db, include_highlights=True
-                        )
-                        content_bytes = pdf_bytes
-                        if fn:
-                            pdf_filename = fn
-                    except Exception as ex:
-                        logger.warning(
-                            "export_annotated_pdf_fallback",
-                            doc_id=str(doc.id),
-                            error=str(ex),
-                        )
-                if content_bytes is None:
-                    content_bytes = f"%PDF-1.4\n% VeriScholar PDF: {label}\n%%EOF".encode("utf-8")
-                zf.writestr(f"documents/{pdf_filename}", content_bytes)
-
-            doc_titles = [f"- {d.title or d.filename} (ID: {d.id})" for d in documents]
-            doc_list_str = "\n".join(doc_titles) if doc_titles else "*(Chưa nạp tài liệu)*"
-
-            turns_md: list[str] = []
-            for idx, turn in enumerate(turns, start=1):
-                turns_md.append(f"### Q{idx}: {turn.question}\n\n**A:** {turn.answer}\n")
-            turns_md_str = "\n".join(turns_md) if turns_md else "*(Chưa có lịch sử đối thoại)*"
-
-            master_lesson = (
-                f'---\nsession_id: "{session.id}"\ntitle: "{session.title}"\n'
-                f'exported_at: "{datetime.now(UTC).isoformat()}"\n'
-                f"documents_count: {len(documents)}\nturns_count: {len(turns)}\n---\n\n"
-                f"# {session.title}\n\n## 1. Danh Mục Tài Liệu Trong Phiên\n{doc_list_str}\n\n"
-                f"## 2. Các Luận Điểm Nghiên Cứu & Đối Thoại\n{turns_md_str}\n\n"
-                f"## 3. Bản Quyền & Trích Dẫn\nĐược xuất tự động từ hệ sinh thái VeriScholar.\n"
-            )
-            zf.writestr("master_lesson.md", master_lesson.encode("utf-8"))
-
-            chat_cards: list[str] = []
-            for idx, turn in enumerate(turns, start=1):
-                chat_cards.append(
-                    f'<div class="turn-card"><div class="user-q"><strong>Hỏi {idx}:</strong> '
-                    f'{turn.question}</div><div class="assistant-a"><strong>VeriScholar:</strong> '
-                    f"{turn.answer}</div></div>"
-                )
-            chat_cards_html = (
-                "\n".join(chat_cards)
-                if chat_cards
-                else "<p><em>Chưa có câu hỏi nào trong phiên.</em></p>"
-            )
-
-            html_content = (
-                f'<!DOCTYPE html><html lang="vi"><head><meta charset="UTF-8">'
-                f"<title>{session.title} - VeriScholar Offline Transcript</title>"
-                f"<style>body {{ font-family: sans-serif; max-width: 860px; margin: 40px auto; "
-                f"padding: 0 20px; line-height: 1.6; color: #1e293b; background: #f8fafc; }}"
-                f".turn-card {{ background: #ffffff; border-radius: 8px; padding: 18px; "
-                f"margin-bottom: 16px; border-left: 4px solid #3b82f6; }}"
-                f".user-q {{ font-weight: 600; color: #1e3a8a; margin-bottom: 8px; }}"
-                f"</style></head><body>"
-                f'<h1>{session.title}</h1><div class="meta">'
-                f"Phiên ID: {session.id} • Số bài báo: {len(documents)}</div>"
-                f'<div class="chat-container">{chat_cards_html}</div></body></html>'
-            )
-            zf.writestr("chat_transcript.html", html_content.encode("utf-8"))
-
-        return buf.getvalue()
-
     async def ingest_references(
         self,
         session_id: UUID,
@@ -933,27 +820,66 @@ class SessionService:
 
             target_doc: DocumentModel | None = None
             if ref_item.resolved_document_id:
-                target_doc = await self.db.get(DocumentModel, ref_item.resolved_document_id)
+                target_stmt = select(DocumentModel).where(
+                    DocumentModel.id == ref_item.resolved_document_id,
+                    DocumentModel.user_id == user_id,
+                )
+                target_doc = (await self.db.execute(target_stmt)).scalar_one_or_none()
+                if target_doc is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                        detail={
+                            "code": "REFERENCE_ENTITY_NOT_OWNED",
+                            "message": (
+                                "Tài liệu tham khảo đã liên kết không thuộc tenant hiện tại."
+                            ),
+                            "action": (
+                                "Resolve the reference again before adding it to this session."
+                            ),
+                        },
+                    )
+
+            # A deterministic title-only fallback is displayable but is not a
+            # validated academic entity and must not enter the graph.
+            if not has_public_academic_identifier(resolved) and not (
+                ref_item.doi or ref_item.arxiv_id
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+                    detail={
+                        "code": "ACADEMIC_ENTITY_UNRESOLVED",
+                        "message": (
+                            "Không thể đưa tài liệu tham khảo vào đồ thị vì chưa có DOI "
+                            "hoặc arXiv ID đã xác thực."
+                        ),
+                        "action": (
+                            "Resolve the reference through a supported academic resolver first."
+                        ),
+                    },
+                )
 
             if not target_doc:
                 doc_title = resolved.title or ref_item.parsed_title or f"Reference #{ref_idx}"
                 authors_val = resolved.authors or ref_item.parsed_authors or []
-                content_seed = f"ref_{document_id}_{ref_idx}_{doc_title}".encode("utf-8")
-                content_hash = hashlib.sha256(content_seed).hexdigest()
-
                 target_doc = DocumentModel(
                     user_id=user_id,
-                    filename=f"ingested_{ref_idx}.pdf",
+                    filename=f"reference_{ref_idx}",
                     title=doc_title,
                     authors=authors_val,
                     publication_year=resolved.year or ref_item.parsed_year,
                     doi=resolved.doi or ref_item.doi,
-                    content_hash=content_hash,
-                    file_size_bytes=1024,
-                    status="ready",
-                    stage="completed",
-                    progress=100,
-                    is_persistent=True,
+                    # This record represents validated citation metadata only.  It
+                    # is deliberately not a PDF placeholder or content hash.
+                    content_hash="",
+                    file_size_bytes=0,
+                    status="metadata_only",
+                    stage="metadata_only",
+                    progress=0,
+                    error_message=(
+                        "Metadata-only reference: no source PDF has been ingested; "
+                        "content retrieval is unavailable."
+                    ),
+                    is_persistent=False,
                 )
                 self.db.add(target_doc)
                 await self.db.flush()
@@ -972,22 +898,6 @@ class SessionService:
                         session_id=session_id,
                         document_id=target_doc.id,
                         display_order=display_order,
-                    )
-                )
-
-            # Record citation edge (source document cites target document)
-            edge_stmt = select(CitationEdgeModel).where(
-                CitationEdgeModel.source_document_id == document_id,
-                CitationEdgeModel.target_document_id == target_doc.id,
-            )
-            existing_edge = (await self.db.execute(edge_stmt)).scalar_one_or_none()
-            if not existing_edge:
-                self.db.add(
-                    CitationEdgeModel(
-                        source_document_id=document_id,
-                        target_document_id=target_doc.id,
-                        relation="CITES",
-                        confidence=1.0,
                     )
                 )
 
@@ -1012,307 +922,4 @@ class SessionService:
             total_ingested=len(ingested_items),
             session_document_count=final_count,
             ingested_documents=ingested_items,
-        )
-
-    @staticmethod
-    def _infer_citation_relation(raw_text: str, title: str | None) -> str:
-        """Infer relation type (CITES, EXTENDS, BENCHMARKS_ON) from citation text."""
-        combined = f"{raw_text} {title or ''}".lower()
-        bench_terms = ["benchmark", "dataset", "baseline", "evaluation metric"]
-        if any(term in combined for term in bench_terms):
-            return "BENCHMARKS_ON"
-        extend_terms = ["extend", "improves upon", "built upon", "generalized", "enhancement"]
-        if any(term in combined for term in extend_terms):
-            return "EXTENDS"
-        return "CITES"
-
-    async def get_citation_graph(
-        self,
-        session_id: UUID,
-        user_id: UUID,
-    ) -> CitationGraphResponseData:
-        """Construct multi-paper citation graph with Cycle Breaking & Max-Hop (k <= 2)."""
-        # 1. Enforce session ownership
-        session_stmt = select(ResearchSessionModel).where(
-            ResearchSessionModel.id == session_id,
-            ResearchSessionModel.user_id == user_id,
-        )
-        session_res = await self.db.execute(session_stmt)
-        session = session_res.scalar_one_or_none()
-        if not session:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail={
-                    "code": "SESSION_NOT_FOUND",
-                    "message": "Phiên nghiên cứu không tồn tại hoặc bạn không có quyền truy cập.",
-                    "action": "Verify session ID.",
-                },
-            )
-
-        # 2. Fetch all session documents (Depth 0)
-        docs_stmt = (
-            select(DocumentModel)
-            .join(SessionDocumentModel, SessionDocumentModel.document_id == DocumentModel.id)
-            .where(SessionDocumentModel.session_id == session_id)
-            .order_by(SessionDocumentModel.display_order.asc())
-        )
-        session_docs = list((await self.db.execute(docs_stmt)).scalars().all())
-        session_doc_ids = {str(d.id) for d in session_docs}
-
-        nodes_dict: dict[str, CitationGraphNode] = {}
-        edges: list[CitationGraphEdge] = []
-        edge_set: set[tuple[str, str]] = set()
-
-        for doc in session_docs:
-            nodes_dict[str(doc.id)] = CitationGraphNode(
-                id=str(doc.id),
-                title=doc.title or doc.filename,
-                authors=doc.authors or [],
-                year=doc.publication_year,
-                doi=doc.doi,
-                arxiv_id=None,
-                is_session_document=True,
-                depth=0,
-            )
-
-        # 3. Hop 1 Traversal (Depth 1)
-        depth_1_doc_ids: set[str] = set()
-
-        for doc in session_docs:
-            u_id = str(doc.id)
-
-            # Explicit CitationEdgeModel
-            edge_stmt = select(CitationEdgeModel).where(
-                CitationEdgeModel.source_document_id == doc.id
-            )
-            edge_res = await self.db.execute(edge_stmt)
-            for e in edge_res.scalars().all():
-                v_id = str(e.target_document_id)
-                if v_id == u_id:
-                    continue  # Self-loop cycle breaking
-                if (u_id, v_id) not in edge_set:
-                    edge_set.add((u_id, v_id))
-                    edges.append(
-                        CitationGraphEdge(
-                            source=u_id,
-                            target=v_id,
-                            relation=e.relation,
-                            confidence=e.confidence,
-                        )
-                    )
-                if v_id not in nodes_dict:
-                    t_doc = await self.db.get(DocumentModel, e.target_document_id)
-                    if t_doc:
-                        nodes_dict[v_id] = CitationGraphNode(
-                            id=v_id,
-                            title=t_doc.title or t_doc.filename,
-                            authors=t_doc.authors or [],
-                            year=t_doc.publication_year,
-                            doi=t_doc.doi,
-                            arxiv_id=None,
-                            is_session_document=v_id in session_doc_ids,
-                            depth=1,
-                        )
-                        depth_1_doc_ids.add(v_id)
-
-            # ReferenceItemModel
-            ref_stmt = select(ReferenceItemModel).where(ReferenceItemModel.document_id == doc.id)
-            ref_res = await self.db.execute(ref_stmt)
-            for r in ref_res.scalars().all():
-                if r.resolved_document_id:
-                    v_id = str(r.resolved_document_id)
-                    if v_id == u_id:
-                        continue  # Self-loop cycle breaking
-                    if (u_id, v_id) not in edge_set:
-                        edge_set.add((u_id, v_id))
-                        rel = self._infer_citation_relation(r.raw_text, r.parsed_title)
-                        edges.append(
-                            CitationGraphEdge(
-                                source=u_id,
-                                target=v_id,
-                                relation=rel,
-                                confidence=0.95,
-                            )
-                        )
-                    if v_id not in nodes_dict:
-                        t_doc = await self.db.get(DocumentModel, r.resolved_document_id)
-                        if t_doc:
-                            nodes_dict[v_id] = CitationGraphNode(
-                                id=v_id,
-                                title=t_doc.title or t_doc.filename,
-                                authors=t_doc.authors or [],
-                                year=t_doc.publication_year,
-                                doi=t_doc.doi,
-                                arxiv_id=None,
-                                is_session_document=v_id in session_doc_ids,
-                                depth=1,
-                            )
-                            depth_1_doc_ids.add(v_id)
-                else:
-                    ref_node_id = f"ref_{doc.id}_{r.ref_index}"
-                    if (u_id, ref_node_id) not in edge_set:
-                        edge_set.add((u_id, ref_node_id))
-                        rel = self._infer_citation_relation(r.raw_text, r.parsed_title)
-                        edges.append(
-                            CitationGraphEdge(
-                                source=u_id,
-                                target=ref_node_id,
-                                relation=rel,
-                                confidence=0.90,
-                            )
-                        )
-                    if ref_node_id not in nodes_dict:
-                        nodes_dict[ref_node_id] = CitationGraphNode(
-                            id=ref_node_id,
-                            title=r.parsed_title or r.raw_text[:80],
-                            authors=r.parsed_authors or [],
-                            year=r.parsed_year,
-                            doi=r.doi,
-                            arxiv_id=r.arxiv_id,
-                            is_session_document=False,
-                            depth=1,
-                        )
-
-        # 4. Hop 2 Traversal (Depth 2) with Strict Cycle Breaking (k <= 2)
-        for v_id in list(depth_1_doc_ids):
-            try:
-                v_uuid = UUID(v_id)
-            except ValueError:
-                continue
-
-            # Query edges of depth 1 doc
-            edge_stmt = select(CitationEdgeModel).where(
-                CitationEdgeModel.source_document_id == v_uuid
-            )
-            edge_res = await self.db.execute(edge_stmt)
-            for e in edge_res.scalars().all():
-                w_id = str(e.target_document_id)
-                # Cycle breaking: do not add edges back to depth 0 or reverse edge
-                if w_id in session_doc_ids or w_id == v_id or (w_id, v_id) in edge_set:
-                    continue
-                if (v_id, w_id) not in edge_set:
-                    edge_set.add((v_id, w_id))
-                    edges.append(
-                        CitationGraphEdge(
-                            source=v_id,
-                            target=w_id,
-                            relation=e.relation,
-                            confidence=e.confidence,
-                        )
-                    )
-                if w_id not in nodes_dict:
-                    w_doc = await self.db.get(DocumentModel, e.target_document_id)
-                    if w_doc:
-                        nodes_dict[w_id] = CitationGraphNode(
-                            id=w_id,
-                            title=w_doc.title or w_doc.filename,
-                            authors=w_doc.authors or [],
-                            year=w_doc.publication_year,
-                            doi=w_doc.doi,
-                            arxiv_id=None,
-                            is_session_document=False,
-                            depth=2,
-                        )
-
-            # Query references of depth 1 doc
-            ref_stmt = select(ReferenceItemModel).where(ReferenceItemModel.document_id == v_uuid)
-            ref_res = await self.db.execute(ref_stmt)
-            for r in ref_res.scalars().all():
-                if r.resolved_document_id:
-                    w_id = str(r.resolved_document_id)
-                    # Cycle breaking check
-                    if w_id in session_doc_ids or w_id == v_id or (w_id, v_id) in edge_set:
-                        continue
-                    if (v_id, w_id) not in edge_set:
-                        edge_set.add((v_id, w_id))
-                        rel = self._infer_citation_relation(r.raw_text, r.parsed_title)
-                        edges.append(
-                            CitationGraphEdge(
-                                source=v_id,
-                                target=w_id,
-                                relation=rel,
-                                confidence=0.95,
-                            )
-                        )
-                    if w_id not in nodes_dict:
-                        w_doc = await self.db.get(DocumentModel, r.resolved_document_id)
-                        if w_doc:
-                            nodes_dict[w_id] = CitationGraphNode(
-                                id=w_id,
-                                title=w_doc.title or w_doc.filename,
-                                authors=w_doc.authors or [],
-                                year=w_doc.publication_year,
-                                doi=w_doc.doi,
-                                arxiv_id=None,
-                                is_session_document=False,
-                                depth=2,
-                            )
-                else:
-                    ref_node_id = f"ref_{v_id}_{r.ref_index}"
-                    if (v_id, ref_node_id) not in edge_set:
-                        edge_set.add((v_id, ref_node_id))
-                        rel = self._infer_citation_relation(r.raw_text, r.parsed_title)
-                        edges.append(
-                            CitationGraphEdge(
-                                source=v_id,
-                                target=ref_node_id,
-                                relation=rel,
-                                confidence=0.90,
-                            )
-                        )
-                    if ref_node_id not in nodes_dict:
-                        nodes_dict[ref_node_id] = CitationGraphNode(
-                            id=ref_node_id,
-                            title=r.parsed_title or r.raw_text[:80],
-                            authors=r.parsed_authors or [],
-                            year=r.parsed_year,
-                            doi=r.doi,
-                            arxiv_id=r.arxiv_id,
-                            is_session_document=False,
-                            depth=2,
-                        )
-
-        # 5. Compute Foundational Reading Path (Topological Ordering)
-        # Prerequisite edge: target -> source (cited prior work should be read before citing work)
-        all_node_ids = list(nodes_dict.keys())
-        prereq_graph: dict[str, list[str]] = {nid: [] for nid in all_node_ids}
-        in_degree: dict[str, int] = {nid: 0 for nid in all_node_ids}
-
-        for edge in edges:
-            u, v = edge.target, edge.source
-            if u in prereq_graph and v in prereq_graph:
-                prereq_graph[u].append(v)
-                in_degree[v] += 1
-
-        def _node_sort_key(nid: str) -> tuple[int, int]:
-            return (nodes_dict[nid].depth, -(nodes_dict[nid].year or 0))
-
-        queue = [nid for nid, deg in in_degree.items() if deg == 0]
-        queue.sort(key=_node_sort_key, reverse=True)
-
-        reading_path: list[str] = []
-        visited_topo: set[str] = set()
-
-        while queue:
-            curr = queue.pop(0)
-            if curr in visited_topo:
-                continue
-            visited_topo.add(curr)
-            reading_path.append(curr)
-
-            for neighbor in prereq_graph.get(curr, []):
-                in_degree[neighbor] -= 1
-                if in_degree[neighbor] <= 0 and neighbor not in visited_topo:
-                    queue.append(neighbor)
-            queue.sort(key=_node_sort_key, reverse=True)
-
-        remaining = [nid for nid in all_node_ids if nid not in visited_topo]
-        remaining.sort(key=_node_sort_key, reverse=True)
-        reading_path.extend(remaining)
-
-        return CitationGraphResponseData(
-            session_id=session_id,
-            nodes=list(nodes_dict.values()),
-            edges=edges,
-            reading_path=reading_path,
         )

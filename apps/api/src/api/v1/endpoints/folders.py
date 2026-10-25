@@ -16,8 +16,6 @@ from api.deps import (
 from api.schemas.envelope import SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.schemas.folder import (
-    ComparisonMatrixEnvelope,
-    ComparisonMatrixRequest,
     FolderCreateRequest,
     FolderDocumentAssignRequest,
     FolderResponseData,
@@ -108,40 +106,6 @@ async def get_folder_tree(
     """Retrieve full hierarchical nested tree of user folders."""
     tree = await folder_service.get_folder_tree(user_id=current_user.id)
     return FolderTreeEnvelope(success=True, data=tree)
-
-
-# ==============================================================================
-# 4. POST /api/v1/folders/comparison-matrix (Generate Literature Matrix - Global)
-# ==============================================================================
-@router.post(
-    "/comparison-matrix",
-    response_model=ComparisonMatrixEnvelope,
-    summary="Tạo Ma trận So sánh Đối chiếu Học thuật (Toàn thư viện / Tuỳ chọn)",
-    description=(
-        "Trích xuất tự động và đối chiếu các phương pháp, bộ dữ liệu, "
-        "chỉ số, điểm mạnh và giới hạn từ 5-20+ bài báo."
-    ),
-    responses={
-        200: {"description": "Ma trận đối chiếu sinh thành công."},
-        404: {"model": ErrorResponse, "description": "Không tìm thấy tài liệu phân tích."},
-    },
-)
-async def generate_global_comparison_matrix(
-    payload: ComparisonMatrixRequest,
-    current_user: UserModel = Depends(get_current_user),
-    synthesis_service: LibrarySynthesisService = Depends(get_library_synthesis_service),
-) -> ComparisonMatrixEnvelope:
-    """Generate automated literature comparison matrix."""
-    matrix = await synthesis_service.generate_comparison_matrix(
-        user_id=current_user.id,
-        topic=payload.topic,
-        folder_id=payload.folder_id,
-        document_ids=payload.document_ids,
-        search=payload.search,
-        limit=payload.limit,
-        offset=payload.offset,
-    )
-    return ComparisonMatrixEnvelope(data=matrix)
 
 
 # ==============================================================================
@@ -305,40 +269,6 @@ async def remove_documents_from_folder(
         user_id=current_user.id, folder_id=id, document_ids=payload.document_ids
     )
     return SingleResponseEnvelope(data=result)
-
-
-# ==============================================================================
-# 11. POST /api/v1/folders/{id}/comparison-matrix (Literature Matrix for Folder)
-# ==============================================================================
-@router.post(
-    "/{id}/comparison-matrix",
-    response_model=ComparisonMatrixEnvelope,
-    summary="Tạo Ma trận So sánh Đối chiếu Học thuật cho Thư mục",
-    description=(
-        "Tạo ma trận đối chiếu tự động cho tất cả các bài báo trong thư mục đề tài được chỉ định."
-    ),
-    responses={
-        200: {"description": "Ma trận đối chiếu sinh thành công."},
-        404: {"model": ErrorResponse, "description": "Thư mục không có tài liệu nào."},
-    },
-)
-async def generate_folder_comparison_matrix(
-    id: UUID,
-    payload: ComparisonMatrixRequest,
-    current_user: UserModel = Depends(get_current_user),
-    synthesis_service: LibrarySynthesisService = Depends(get_library_synthesis_service),
-) -> ComparisonMatrixEnvelope:
-    """Generate comparison matrix scoped to specific folder."""
-    matrix = await synthesis_service.generate_comparison_matrix(
-        user_id=current_user.id,
-        topic=payload.topic,
-        folder_id=id,
-        document_ids=payload.document_ids,
-        search=payload.search,
-        limit=payload.limit,
-        offset=payload.offset,
-    )
-    return ComparisonMatrixEnvelope(data=matrix)
 
 
 # ==============================================================================

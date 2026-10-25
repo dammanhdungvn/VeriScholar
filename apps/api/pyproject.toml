@@ -20,6 +20,7 @@ dependencies = [
     "asyncpg>=0.30.0",
     "pgvector>=0.3.6",
     "langfuse>=5.0.1",
+    "e2b>=2.5.0",
 ]
 
 [tool.uv.sources]

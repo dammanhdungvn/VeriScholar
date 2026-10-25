@@ -233,6 +233,10 @@ class SessionChatService:
             "bảng": ["table"],
             "độ phức tạp": ["complexity", "o("],
             "chuỗi": ["sequence", "path length"],
+            "equation": ["formula", "=", "loss", "objective"],
+            "formula": ["equation", "=", "loss", "objective"],
+            "loss": ["loss", "objective", "formula", "equation", "="],
+            "công thức": ["formula", "equation", "loss", "objective", "="],
         }
 
         expanded_terms = set(q_terms)
@@ -1008,12 +1012,14 @@ class SessionChatService:
                     "QUY TẮC PHẢN HỒI:\n"
                     "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
                     "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
-                    "2. Gắn trích dẫn inline: Khi đưa ra số liệu hay luận điểm then chốt "
-                    "lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn inline (ví dụ: [^cit_1], [^cit_2]) "
+                    "2. Gắn trích dẫn inline dạng số: Khi đưa ra số liệu, công thức hay luận điểm "
+                    "then chốt lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn inline bằng số trong ngoặc vuông (ví dụ: [1], [2]) "
                     "NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa luận điểm đó. "
-                    "CHỈ trích dẫn [^cit_X] khi trong ngữ cảnh cung cấp thực sự có nội dung "
-                    "bằng chứng rõ ràng cho chi tiết. Nếu chỉ có bảng phân rã hoặc chưa có "
-                    "trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa [^cit_X].\n"
+                    "Số trích dẫn [1], [2] tương ứng với thứ tự các đoạn tài liệu được cung cấp trong ngữ cảnh "
+                    "(1 cho tài liệu/chunk đầu tiên, 2 cho tài liệu/chunk tiếp theo, v.v.). "
+                    "Tuyệt đối KHÔNG viết [^cit], [^cit_X], hay [^\\text{cit}]. "
+                    "CHỈ trích dẫn [1], [2] khi trong ngữ cảnh thực sự có nội dung bằng chứng rõ ràng cho chi tiết. "
+                    "Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa trích dẫn.\n"
                     "3. Hiển thị công thức toán học: Định dạng chuẩn LaTeX KaTeX. "
                     "Sử dụng \\[ ... \\] hoặc $$ ... $$ cho công thức hiển thị riêng dòng, "
                     "và \\( ... \\) hoặc $ ... $ cho công thức inline trong dòng.\n"

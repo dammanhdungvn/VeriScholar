@@ -7,9 +7,7 @@ import structlog
 from api.db.models.user import UserModel
 from api.deps import (
     get_current_user,
-    get_idempotency_port,
     get_note_service,
-    get_note_synthesis_service,
 )
 from api.schemas.envelope import (
     PaginatedResponseEnvelope,
@@ -23,21 +21,16 @@ from api.schemas.note import (
     CreateNoteRequest,
     NoteListItemResponse,
     NoteResponse,
-    NoteSynthesisResponse,
-    SynthesizeNotesRequest,
     UpdateNoteRequest,
 )
 from api.services.note_service import NoteService
-from api.services.note_synthesis_service import NoteSynthesisService
 from core.domain.exceptions import (
     ConcurrencyConflictError,
     EntityNotFoundError,
     InvalidNoteDataError,
     NoteNotFoundError,
-    NoteSynthesisError,
     PreconditionRequiredError,
 )
-from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
     Depends,
@@ -48,7 +41,6 @@ from fastapi import (
     Response,
     status,
 )
-from fastapi.responses import JSONResponse
 from fastapi.responses import Response as RawResponse
 
 logger = structlog.get_logger("api.endpoints.notes")
@@ -237,47 +229,6 @@ văn bản hay các ghi chú khác.
 🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
 Thao tác xóa là vĩnh viễn (hard delete). AI Agent chỉ nên gọi endpoint này khi người dùng
 yêu cầu rõ ràng."""
-
-SYNTHESIZE_NOTES_DESCRIPTION = """🎯 **Mục đích & Ngữ cảnh sử dụng:**
-Kích hoạt mô hình AI tổng hợp tri thức từ một tập hợp các ghi chú đã chọn thành một bài học
-sư phạm, bài tổng quan tài liệu, hoặc phân tích khoảng trống nghiên cứu.
-Dùng khi người dùng hoàn thành việc đọc và muốn đúc kết kiến thức có cấu trúc kèm trích dẫn
-đối chiếu.
-
-📥 **Tham số đầu vào:**
-- `Idempotency-Key` (string, Header, Tùy chọn): Khóa chống gửi trùng lặp request (cửa sổ lưu
-  cache kết quả 24 giờ).
-- Request Body (`application/json`):
-  - `note_ids` (list[UUID], Bắt buộc): Danh sách từ 1 đến 50 UUID ghi chú cần đưa vào tổng
-    hợp.
-  - `mode` (string, Tùy chọn, Mặc định: `concept_lesson`): Chế độ tổng hợp tri thức:
-    - `concept_lesson`: Bài học khái niệm sư phạm (định nghĩa, cơ chế, ví dụ minh họa, lưu
-      ý).
-    - `literature_review`: Bài tổng quan tài liệu đối chiếu các luận điểm khoa học.
-    - `research_gap`: Phân tích khoảng trống nghiên cứu và các bài toán chưa giải quyết.
-  - `language` (string, Mặc định: `vi`): Ngôn ngữ bài học đầu ra (`vi`, `en`).
-  - `target_title` (string, Tùy chọn): Tiêu đề tùy chỉnh cho bài học tổng hợp.
-
-📤 **Đầu ra & Dữ liệu phản hồi:**
-- `HTTP 200 OK`: `SingleResponseEnvelope[NoteSynthesisResponse]` gồm:
-  - `markdown_content`: Nội dung bài học Markdown tích hợp các huy hiệu trích dẫn tương tác
-    `[^note_{id}]`.
-  - `quiz_items`: Danh sách câu hỏi kiểm tra độ hiểu bài (Active Recall Quiz) kèm đáp án
-    giải thích.
-  - `evidence_sources`: Mảng liên kết huy hiệu trích dẫn ngược về bài báo, số trang và toạ
-    độ Bounding Box gốc.
-- Headers phản hồi:
-  - `X-Cache: Idempotent-Hit` (nếu trùng khóa Idempotency-Key trong vòng 24 giờ).
-
-⚠️ **Mã lỗi thường gặp & Hướng xử lý cho AI/Client:**
-- `400 INVALID_REQUEST`: Danh sách `note_ids` rỗng hoặc vượt quá 50 ghi chú, hoặc `mode`
-  không hợp lệ. -> **Hành động:** Kiểm tra `note_ids` (1-50 mục) và chọn đúng `mode`.
-- `404 NOTE_NOT_FOUND`: Một hoặc nhiều ghi chú trong danh sách không tồn tại. -> **Hành
-  động:** Gọi `GET /api/v1/notes` để xác thực lại danh sách ID hợp lệ.
-
-🤖 **Chỉ dẫn tự động hóa cho AI Agent:**
-Nên truyền kèm header `Idempotency-Key` (ví dụ UUIDv4 ngẫu nhiên cho mỗi tác vụ tổng hợp) để
-tránh sinh lại tốn token LLM khi mạng bị chập chờn."""
 
 
 # ==============================================================================
@@ -542,72 +493,3 @@ async def delete_note(
     """Delete note idempotently without altering the source academic document."""
     await note_service.delete_note(note_id=id, user_id=current_user.id)
     return RawResponse(status_code=status.HTTP_204_NO_CONTENT)
-
-
-# ==============================================================================
-# 21. POST /api/v1/notes:synthesize (AI Tổng hợp ghi chú thành bài học)
-# ==============================================================================
-@router.post(
-    ":synthesize",
-    response_model=SingleResponseEnvelope[NoteSynthesisResponse],
-    summary="# 21. AI Tổng hợp ghi chú thành bài học (3 modes + Badges)",
-    description=SYNTHESIZE_NOTES_DESCRIPTION,
-    responses={
-        200: {
-            "description": "Tổng hợp tri thức thành công với interactive citation badges.",
-        },
-        400: {"model": ErrorResponse, "description": "Dữ liệu yêu cầu không hợp lệ."},
-    },
-)
-async def synthesize_notes(
-    payload: SynthesizeNotesRequest,
-    response: Response,
-    idempotency_key: str | None = Header(
-        None,
-        alias="Idempotency-Key",
-        description="Khóa lũy đẳng tùy chọn",
-    ),
-    current_user: UserModel = Depends(get_current_user),
-    synthesis_service: NoteSynthesisService = Depends(get_note_synthesis_service),
-    idempotency_port: IIdempotencyPort = Depends(get_idempotency_port),
-) -> SingleResponseEnvelope[NoteSynthesisResponse] | JSONResponse:
-    """Synthesize research notes into structured concept lesson, review, or gap analysis."""
-    # Check idempotency cache if key provided
-    if idempotency_key:
-        cache_key = f"idempotency:note_synthesize:{current_user.id}:{idempotency_key}"
-        cached_resp = await idempotency_port.get_response(cache_key)
-        if cached_resp:
-            response.headers["X-Cache"] = "Idempotent-Hit"
-            return JSONResponse(
-                status_code=status.HTTP_200_OK,
-                content=cached_resp,
-                headers=dict(response.headers),
-            )
-
-    try:
-        data = await synthesis_service.synthesize_notes(
-            user_id=current_user.id,
-            req=payload,
-        )
-    except NoteSynthesisError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "code": "SYNTHESIS_FAILED",
-                "message": str(e),
-                "action": "Ensure note_ids belong to current user and contain valid content.",
-            },
-        )
-
-    envelope = SingleResponseEnvelope(data=data, meta=ResponseMeta())
-
-    if idempotency_key:
-        cache_key = f"idempotency:note_synthesize:{current_user.id}:{idempotency_key}"
-        await idempotency_port.store_response(
-            key=cache_key,
-            response_data=envelope.model_dump(mode="json"),
-            status_code=200,
-            ttl_seconds=86400,
-        )
-
-    return envelope

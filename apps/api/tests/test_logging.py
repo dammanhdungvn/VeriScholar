@@ -86,32 +86,6 @@ def test_mask_pii_processor_nested_dict():
 
 
 @pytest.mark.asyncio
-async def test_sse_streaming_endpoint():
-    """Verify /events streams SSE events with valid headers and chunks."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://testserver") as client:
-        # 1. Standard request without custom header
-        res = await client.get("/events")
-        assert res.status_code == 200
-        assert "text/event-stream" in res.headers.get("content-type", "")
-        assert "x-request-id" in res.headers
-        generated_id = res.headers["x-request-id"]
-        assert len(generated_id) > 0
-        content = res.text
-        assert "event: progress" in content
-        assert "Streaming chunk 1" in content
-        assert "Streaming chunk 3" in content
-        assert generated_id in content
-
-        # 2. Custom X-Request-ID propagation
-        custom_id = "test-sse-custom-trace-001"
-        res_custom = await client.get("/events", headers={"X-Request-ID": custom_id})
-        assert res_custom.status_code == 200
-        assert res_custom.headers.get("x-request-id") == custom_id
-        assert custom_id in res_custom.text
-
-
-@pytest.mark.asyncio
 async def test_error_handlers_return_structured_json():
     """Verify HTTP 404 error responses adhere to standard ErrorResponse schema
     and propagate request_id.
