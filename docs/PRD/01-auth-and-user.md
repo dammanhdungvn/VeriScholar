@@ -201,11 +201,9 @@ Feature: Cô lập dữ liệu đa người dùng tuyệt đối
 
 ---
 
-## 7. Tài Liệu Tham Chiếu Báo Cáo & Bảo Vệ Đồ Án Tốt Nghiệp
+## 6. Tham Chiếu Báo Cáo & Bảo Vệ Đồ Án Tốt Nghiệp
 
-Dành cho tác giả khi biên soạn Thuyết minh Đồ án Tốt nghiệp và chuẩn bị slide bảo vệ trước Hội đồng:
-* **Giải thích bình dân, ẩn dụ thực tế & Use case BYOK:** Xem mục 1 trong [Sổ Tay Bảo Vệ Đồ Án Tốt Nghiệp — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
-* **Phân tích Tại sao bắt buộc & Cơ chế Hybrid thông minh:** Xem mục 2 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
-* **Bộ câu hỏi & câu trả lời phản biện Hội đồng (Q&A):** Xem mục 3 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
-* **Bằng chứng thực nghiệm Langfuse Cloud & OpenAI:** Xem mục 4 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+Dành cho tác giả biên soạn Thuyết minh Đồ án và chuẩn bị slide bảo vệ Hội đồng:
+* **Giải thích bình dân, ẩn dụ thực tế & use case BYOK:** Xem [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+* **Phân tích bắt buộc vs mở rộng, Q&A Hội đồng & thực chứng Langfuse:** Xem chi tiết tại [THESIS_DEFENSE_GUIDE.md](../THESIS_DEFENSE_GUIDE.md).
 
