@@ -170,26 +170,21 @@ export function ScholarSettingsView({
 
     setIsSavingProfile(true);
     try {
-      let nextOrcid = cleanOrcid || undefined;
-      let nextTheme: ThemePreference = themePreference;
-      try {
-        const res = await authApi.updateProfile({
-          full_name: fullName.trim(),
-          institution: institution.trim() || undefined,
-          department: department.trim() || undefined,
-          academic_rank: academicRank.trim() || undefined,
-          orcid_id: cleanOrcid ? cleanOrcid : undefined,
-          avatar_url: avatarUrl.trim() || undefined,
-          google_scholar_url: googleScholarUrl.trim() || undefined,
-          research_interests: researchInterests.trim() || undefined,
-          bio: bio.trim() || undefined,
-          theme_preference: themePreference,
-        });
-        if (res.orcid_id !== undefined) nextOrcid = res.orcid_id;
-        if (res.theme_preference) nextTheme = res.theme_preference;
-      } catch {
-        // Fallback for offline or mock
-      }
+      const res = await authApi.updateProfile({
+        full_name: fullName.trim(),
+        institution: institution.trim() || undefined,
+        department: department.trim() || undefined,
+        academic_rank: academicRank.trim() || undefined,
+        orcid_id: cleanOrcid ? cleanOrcid : undefined,
+        avatar_url: avatarUrl.trim() || undefined,
+        google_scholar_url: googleScholarUrl.trim() || undefined,
+        research_interests: researchInterests.trim() || undefined,
+        bio: bio.trim() || undefined,
+        theme_preference: themePreference,
+      });
+
+      const nextOrcid = res.orcid_id !== undefined ? res.orcid_id : cleanOrcid || undefined;
+      const nextTheme: ThemePreference = res.theme_preference || themePreference;
 
       const updatedPayload: Partial<UserProfile> = {
         full_name: fullName.trim(),
@@ -233,25 +228,16 @@ export function ScholarSettingsView({
 
     setIsSavingByok(true);
     try {
-      const fallbackMasked = maskClientApiKey(rawKey);
-      let nextMasked = fallbackMasked;
-      let nextHasByok = true;
-      let nextOrcid = orcidId.trim() || effectiveUser?.orcid_id || undefined;
-      let nextTheme: ThemePreference = themePreference;
+      const res = await authApi.updateProfile({
+        byok_api_key: rawKey,
+        orcid_id: orcidId.trim() ? orcidId.trim() : undefined,
+        theme_preference: themePreference,
+      });
 
-      try {
-        const res = await authApi.updateProfile({
-          byok_api_key: rawKey,
-          orcid_id: orcidId.trim() ? orcidId.trim() : undefined,
-          theme_preference: themePreference,
-        });
-        if (typeof res.has_byok === "boolean") nextHasByok = res.has_byok;
-        if (res.byok_masked) nextMasked = res.byok_masked;
-        if (res.orcid_id !== undefined) nextOrcid = res.orcid_id;
-        if (res.theme_preference) nextTheme = res.theme_preference;
-      } catch {
-        // Offline / unit test fallback
-      }
+      const nextMasked = res.byok_masked || maskClientApiKey(rawKey);
+      const nextHasByok = typeof res.has_byok === "boolean" ? res.has_byok : true;
+      const nextOrcid = res.orcid_id !== undefined ? res.orcid_id : orcidId.trim() || undefined;
+      const nextTheme: ThemePreference = res.theme_preference || themePreference;
 
       setHasByok(nextHasByok);
       setByokMasked(nextMasked);
@@ -286,11 +272,8 @@ export function ScholarSettingsView({
     setByokError(null);
     setIsDeletingByok(true);
     try {
-      try {
-        await authApi.updateProfile({ byok_api_key: "" });
-      } catch {
-        // Offline fallback
-      }
+      await authApi.updateProfile({ byok_api_key: "" });
+
       setHasByok(false);
       setByokMasked(null);
       setByokApiKey("");
@@ -359,11 +342,7 @@ export function ScholarSettingsView({
     }
 
     try {
-      try {
-        await authApi.updateProfile({ theme_preference: newTheme });
-      } catch {
-        // Offline / unit test fallback
-      }
+      await authApi.updateProfile({ theme_preference: newTheme });
       setStoreTheme(newTheme);
       updateStoreUser({ theme_preference: newTheme });
       onUpdated?.({
@@ -372,7 +351,7 @@ export function ScholarSettingsView({
       });
       setThemeSuccessMsg("Tùy chọn giao diện đã được lưu vào hồ sơ cá nhân.");
     } catch {
-      // Ignored
+      // Ignored for offline mock
     }
   };
 
@@ -381,22 +360,22 @@ export function ScholarSettingsView({
   return (
     <div
       className={cn(
-        "w-full bg-[#181715] text-[#f4f1ea] border border-[#2e2b26] rounded-2xl shadow-2xl flex flex-col overflow-hidden",
+        "w-full bg-[#faf8f5] dark:bg-[#181715] text-[#1a1918] dark:text-[#f4f1ea] border border-[#e7e2da] dark:border-[#2e2b26] rounded-2xl shadow-2xl flex flex-col overflow-hidden transition-colors duration-200",
         variant === "page" ? "max-w-4xl mx-auto shadow-xl" : "max-w-2xl max-h-[90vh]"
       )}
       onClick={(e) => e.stopPropagation()}
     >
       {/* 1. Header Bar: Editorial Aesthetic */}
-      <div className="h-16 px-6 border-b border-[#2e2b26] flex items-center justify-between shrink-0 bg-[#201e1b]/80 backdrop-blur-md">
+      <div className="h-16 px-6 border-b border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between shrink-0 bg-[#f4efe6]/80 dark:bg-[#201e1b]/80 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-[#cc785c]/15 text-[#cc785c] border border-[#cc785c]/30 flex items-center justify-center shadow-inner">
             <User className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="font-serif font-bold text-base sm:text-lg text-[#f4f1ea] tracking-tight">
+            <h1 className="font-serif font-bold text-base sm:text-lg text-[#1a1918] dark:text-[#f4f1ea] tracking-tight">
               Cài đặt tài khoản
             </h1>
-            <p className="text-3xs text-[#a09a8e] font-sans">
+            <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] font-sans">
               Thông tin cá nhân &amp; Khóa AI
             </p>
           </div>
@@ -406,7 +385,7 @@ export function ScholarSettingsView({
             type="button"
             aria-label="Đóng"
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#a09a8e] hover:text-[#f4f1ea] hover:bg-[#282521] transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea] hover:bg-[#e7e2da]/60 dark:hover:bg-[#282521] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -414,11 +393,11 @@ export function ScholarSettingsView({
       </div>
 
       {/* 2. Scholar Identity Card Showcase */}
-      <div className="px-6 py-5 bg-gradient-to-b from-[#201e1b] to-[#181715] border-b border-[#2e2b26]">
+      <div className="px-6 py-5 bg-gradient-to-b from-[#f4efe6] to-[#faf8f5] dark:from-[#201e1b] dark:to-[#181715] border-b border-[#e7e2da] dark:border-[#2e2b26]">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <div className="relative group shrink-0">
-              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-[#cc785c]/40 shadow-lg flex items-center justify-center bg-[#282521]">
+              <div className="w-16 h-16 rounded-full overflow-hidden ring-2 ring-[#cc785c]/40 shadow-lg flex items-center justify-center bg-[#e7e2da] dark:bg-[#282521]">
                 {avatarUrl ? (
                   <img
                     src={avatarUrl}
@@ -436,7 +415,7 @@ export function ScholarSettingsView({
                 type="button"
                 onClick={() => setShowAvatarEdit(!showAvatarEdit)}
                 title="Đổi URL ảnh đại diện"
-                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[#201e1b] border border-[#2e2b26] text-[#a09a8e] hover:text-[#cc785c] flex items-center justify-center shadow-md cursor-pointer transition-colors"
+                className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] text-[#706a60] dark:text-[#a09a8e] hover:text-[#cc785c] flex items-center justify-center shadow-md cursor-pointer transition-colors"
               >
                 <Camera className="w-3 h-3" />
               </button>
@@ -444,7 +423,7 @@ export function ScholarSettingsView({
 
             <div className="space-y-1">
               <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="font-serif font-bold text-lg text-[#f4f1ea] leading-tight">
+                <span className="font-serif font-bold text-lg text-[#1a1918] dark:text-[#f4f1ea] leading-tight">
                   {fullName || effectiveUser?.full_name || "Nhà Nghiên Cứu"}
                 </span>
                 {academicRank && (
@@ -453,10 +432,10 @@ export function ScholarSettingsView({
                   </span>
                 )}
               </div>
-              <p className="text-xs text-[#a09a8e] font-mono">{effectiveUser?.email}</p>
+              <p className="text-xs text-[#706a60] dark:text-[#a09a8e] font-mono">{effectiveUser?.email}</p>
               <div className="flex items-center gap-2 pt-0.5">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-sans">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
                   Đã xác thực
                 </span>
               </div>
@@ -466,20 +445,20 @@ export function ScholarSettingsView({
 
         {/* Optional Avatar URL Input Accordion */}
         {showAvatarEdit && (
-          <div className="mt-4 pt-3 border-t border-[#2e2b26] flex items-center gap-2 text-xs">
+          <div className="mt-4 pt-3 border-t border-[#e7e2da] dark:border-[#2e2b26] flex items-center gap-2 text-xs">
             <Input
               type="url"
               placeholder="Nhập đường dẫn trực tiếp ảnh đại diện (https://...)"
               value={avatarUrl}
               onChange={(e) => setAvatarUrl(e.target.value)}
-              className="h-8 text-xs bg-[#181715] border-[#2e2b26] text-[#f4f1ea] rounded-lg"
+              className="h-8 text-xs bg-white dark:bg-[#181715] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-lg"
             />
             <Button
               type="button"
               size="sm"
               variant="secondary"
               onClick={() => setShowAvatarEdit(false)}
-              className="h-8 px-3 text-xs border border-[#2e2b26] text-[#a09a8e] hover:text-[#f4f1ea] rounded-lg"
+              className="h-8 px-3 text-xs border border-[#e7e2da] dark:border-[#2e2b26] text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea] rounded-lg"
             >
               Đóng
             </Button>
@@ -488,7 +467,7 @@ export function ScholarSettingsView({
       </div>
 
       {/* 3. Navigation 3 Tabs */}
-      <div className="px-6 border-b border-[#2e2b26] bg-[#201e1b]/40 flex items-center gap-6 overflow-x-auto select-none">
+      <div className="px-6 border-b border-[#e7e2da] dark:border-[#2e2b26] bg-[#f4efe6]/40 dark:bg-[#201e1b]/40 flex items-center gap-6 overflow-x-auto select-none">
         <button
           type="button"
           onClick={() => setActiveTab("profile")}
@@ -496,7 +475,7 @@ export function ScholarSettingsView({
             "py-3.5 text-xs font-medium flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap",
             activeTab === "profile"
               ? "border-[#cc785c] text-[#cc785c] font-semibold"
-              : "border-transparent text-[#a09a8e] hover:text-[#f4f1ea]"
+              : "border-transparent text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
           )}
         >
           <User className="w-4 h-4" />
@@ -510,7 +489,7 @@ export function ScholarSettingsView({
             "py-3.5 text-xs font-medium flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap",
             activeTab === "security"
               ? "border-[#cc785c] text-[#cc785c] font-semibold"
-              : "border-transparent text-[#a09a8e] hover:text-[#f4f1ea]"
+              : "border-transparent text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
           )}
         >
           <Shield className="w-4 h-4" />
@@ -524,7 +503,7 @@ export function ScholarSettingsView({
             "py-3.5 text-xs font-medium flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap",
             activeTab === "appearance"
               ? "border-[#cc785c] text-[#cc785c] font-semibold"
-              : "border-transparent text-[#a09a8e] hover:text-[#f4f1ea]"
+              : "border-transparent text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
           )}
         >
           <Palette className="w-4 h-4" />
@@ -538,13 +517,13 @@ export function ScholarSettingsView({
         {activeTab === "profile" && (
           <form onSubmit={handleSaveProfile} className="space-y-5">
             {profileSuccessMsg && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{profileSuccessMsg}</span>
               </div>
             )}
             {profileErrorMsg && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{profileErrorMsg}</span>
               </div>
@@ -552,7 +531,7 @@ export function ScholarSettingsView({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="full_name" className="text-xs text-[#a09a8e]">
+                <Label htmlFor="full_name" className="text-xs text-[#706a60] dark:text-[#a09a8e]">
                   Họ và tên học giả <span className="text-[#cc785c]">*</span>
                 </Label>
                 <Input
@@ -562,12 +541,12 @@ export function ScholarSettingsView({
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Ví dụ: GS. TS. Nguyễn Văn A"
-                  className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                  className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="institution" className="text-xs text-[#a09a8e] flex items-center gap-1.5">
+                <Label htmlFor="institution" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center gap-1.5">
                   <Building2 className="w-3.5 h-3.5" />
                   Đơn vị công tác (Viện / Đại học)
                 </Label>
@@ -577,12 +556,12 @@ export function ScholarSettingsView({
                   value={institution}
                   onChange={(e) => setInstitution(e.target.value)}
                   placeholder="Đại học Quốc gia / Viện Hàn lâm"
-                  className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                  className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="department" className="text-xs text-[#a09a8e] flex items-center gap-1.5">
+                <Label htmlFor="department" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center gap-1.5">
                   <GraduationCap className="w-3.5 h-3.5" />
                   Khoa / Phòng thí nghiệm
                 </Label>
@@ -592,17 +571,17 @@ export function ScholarSettingsView({
                   value={department}
                   onChange={(e) => setDepartment(e.target.value)}
                   placeholder="Khoa Khoa học Máy tính &amp; AI"
-                  className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                  className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="orcid_id" className="text-xs text-[#a09a8e] flex items-center justify-between">
+                <Label htmlFor="orcid_id" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center justify-between">
                   <span className="flex items-center gap-1.5">
-                    <Fingerprint className="w-3.5 h-3.5 text-emerald-400" />
+                    <Fingerprint className="w-3.5 h-3.5 text-emerald-500" />
                     Mã định danh ORCID iD
                   </span>
-                  <span className="text-3xs text-[#a09a8e] font-mono">Định dạng 16 số: 0000-0002-1825-0097</span>
+                  <span className="text-3xs text-[#706a60] dark:text-[#a09a8e] font-mono">Định dạng 16 số: 0000-0002-1825-0097</span>
                 </Label>
                 <div className="relative">
                   <Input
@@ -611,7 +590,7 @@ export function ScholarSettingsView({
                     value={orcidId}
                     onChange={(e) => setOrcidId(e.target.value)}
                     placeholder="0000-0002-1825-0097"
-                    className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] font-mono rounded-xl pl-9 focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                    className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] font-mono rounded-xl pl-9 focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                   />
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full bg-[#a6ce39] flex items-center justify-center font-bold text-[8px] text-white">
                     iD
@@ -620,7 +599,7 @@ export function ScholarSettingsView({
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="google_scholar_url" className="text-xs text-[#a09a8e] flex items-center gap-1.5">
+                <Label htmlFor="google_scholar_url" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center gap-1.5">
                   <Globe className="w-3.5 h-3.5" />
                   Hồ sơ Google Scholar
                 </Label>
@@ -630,12 +609,12 @@ export function ScholarSettingsView({
                   value={googleScholarUrl}
                   onChange={(e) => setGoogleScholarUrl(e.target.value)}
                   placeholder="https://scholar.google.com/citations?user=..."
-                  className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                  className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="research_interests" className="text-xs text-[#a09a8e] flex items-center gap-1.5">
+                <Label htmlFor="research_interests" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5" />
                   Lĩnh vực &amp; Hướng nghiên cứu chính (phân tách bởi dấu phẩy)
                 </Label>
@@ -645,12 +624,12 @@ export function ScholarSettingsView({
                   value={researchInterests}
                   onChange={(e) => setResearchInterests(e.target.value)}
                   placeholder="Large Language Models, AI for Science, Document Analysis"
-                  className="bg-[#201e1b] border-[#2e2b26] text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                  className="bg-white dark:bg-[#201e1b] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                 />
               </div>
 
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="bio" className="text-xs text-[#a09a8e]">
+                <Label htmlFor="bio" className="text-xs text-[#706a60] dark:text-[#a09a8e]">
                   Giới thiệu học thuật ngắn (Bio)
                 </Label>
                 <textarea
@@ -659,7 +638,7 @@ export function ScholarSettingsView({
                   value={bio}
                   onChange={(e) => setBio(e.target.value)}
                   placeholder="Tóm tắt quá trình học thuật, các công trình hoặc dự án nghiên cứu tiêu biểu..."
-                  className="w-full bg-[#201e1b] border border-[#2e2b26] text-[#f4f1ea] rounded-xl p-3 text-xs focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c] outline-none resize-none font-sans"
+                  className="w-full bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl p-3 text-xs focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c] outline-none resize-none font-sans"
                 />
               </div>
             </div>
@@ -686,35 +665,35 @@ export function ScholarSettingsView({
         {/* ================= TAB 2: BẢO MẬT & KHÓA BYOK ================= */}
         {activeTab === "security" && (
           <div className="space-y-6">
-            {/* Part 1: Két sắt BYOK */}
-            <div className="p-5 rounded-2xl bg-[#201e1b] border border-[#2e2b26] space-y-4">
+            {/* Part 1: Khóa API cá nhân */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
                     <KeyRound className="w-4 h-4" />
                   </div>
                   <div>
-                    <h3 className="font-serif font-bold text-sm text-[#f4f1ea]">
+                    <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
                       Khóa API cá nhân
                     </h3>
-                    <p className="text-3xs text-[#a09a8e]">
+                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
                       Sử dụng khóa riêng để kết nối trực tiếp với các mô hình AI
                     </p>
                   </div>
                 </div>
-                <span className="text-3xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                <span className="text-3xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
                   Được bảo vệ
                 </span>
               </div>
 
               {byokSuccess && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{byokSuccess}</span>
                 </div>
               )}
               {byokError && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{byokError}</span>
                 </div>
@@ -722,16 +701,16 @@ export function ScholarSettingsView({
 
               {/* Status: Has Key */}
               {hasByok && !showByokInput && (
-                <div className="p-4 rounded-xl bg-[#181715] border border-[#2e2b26] flex items-center justify-between gap-4">
+                <div className="p-4 rounded-xl bg-[#fbf9f6] dark:bg-[#181715] border border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-2xs text-[#a09a8e]">Khóa đang hoạt động:</p>
+                      <p className="text-2xs text-[#706a60] dark:text-[#a09a8e]">Khóa đang hoạt động:</p>
                       <p
                         data-testid="byok-masked-badge"
-                        className="font-mono text-xs font-semibold text-[#f4f1ea]"
+                        className="font-mono text-xs font-semibold text-[#1a1918] dark:text-[#f4f1ea]"
                       >
                         {byokMasked || "sk-...active"}
                       </p>
@@ -743,7 +722,7 @@ export function ScholarSettingsView({
                       size="sm"
                       variant="secondary"
                       onClick={() => setShowByokInput(true)}
-                      className="rounded-lg text-2xs border border-[#2e2b26] text-[#a09a8e] hover:text-[#f4f1ea] hover:bg-[#282521]"
+                      className="rounded-lg text-2xs border border-[#e7e2da] dark:border-[#2e2b26] text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea] hover:bg-[#e7e2da]/40 dark:hover:bg-[#282521]"
                     >
                       Đổi khóa mới
                     </Button>
@@ -751,9 +730,11 @@ export function ScholarSettingsView({
                       type="button"
                       size="sm"
                       variant="secondary"
+                      aria-label="Xóa khóa"
+                      title="Xóa khóa"
                       disabled={isDeletingByok}
                       onClick={handleDeleteByok}
-                      className="rounded-lg text-2xs border border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                      className="rounded-lg text-2xs border border-rose-500/30 text-rose-500 hover:bg-rose-500/10"
                     >
                       {isDeletingByok ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                     </Button>
@@ -764,13 +745,13 @@ export function ScholarSettingsView({
               {/* Input Form for BYOK */}
               {(!hasByok || showByokInput) && (
                 <form onSubmit={handleSaveByok} className="space-y-3 pt-1">
-                  <Label htmlFor="byok_input" className="text-xs text-[#a09a8e] flex items-center justify-between">
+                  <Label htmlFor="byok_input" className="text-xs text-[#706a60] dark:text-[#a09a8e] flex items-center justify-between">
                     <span>Nhập OpenAI / DeepSeek API Key</span>
                     {showByokInput && (
                       <button
                         type="button"
                         onClick={() => setShowByokInput(false)}
-                        className="text-3xs text-[#a09a8e] hover:text-[#f4f1ea]"
+                        className="text-3xs text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
                       >
                         Hủy thay đổi
                       </button>
@@ -783,18 +764,18 @@ export function ScholarSettingsView({
                       value={byokApiKey}
                       onChange={(e) => setByokApiKey(e.target.value)}
                       placeholder="sk-proj-..."
-                      className="bg-[#181715] border-[#2e2b26] text-[#f4f1ea] font-mono rounded-xl pr-10 focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
+                      className="bg-white dark:bg-[#181715] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] font-mono rounded-xl pr-10 focus:border-[#cc785c] focus:ring-1 focus:ring-[#cc785c]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKeyText(!showApiKeyText)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a09a8e] hover:text-[#f4f1ea]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
                     >
                       {showApiKeyText ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
                   </div>
                   <div className="flex items-center justify-between pt-1">
-                    <p className="text-3xs text-[#a09a8e]">
+                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
                       Khóa của bạn được mã hóa an toàn và chỉ dùng khi gửi yêu cầu AI.
                     </p>
                     <Button
@@ -805,7 +786,7 @@ export function ScholarSettingsView({
                       {isSavingByok ? (
                         <>
                           <Loader2 className="w-3.5 h-3.5 animate-spin mr-1.5" />
-                          <span>Đang mã hóa...</span>
+                          <span>Đang lưu...</span>
                         </>
                       ) : (
                         <span>Lưu &amp; Xác thực khóa</span>
@@ -817,25 +798,25 @@ export function ScholarSettingsView({
             </div>
 
             {/* Part 2: Mật khẩu dự phòng */}
-            <form onSubmit={handleChangePassword} className="p-5 rounded-2xl bg-[#201e1b] border border-[#2e2b26] space-y-4">
+            <form onSubmit={handleChangePassword} className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-4">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center">
                   <Shield className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="font-serif font-bold text-sm text-[#f4f1ea]">Thiết lập Mật khẩu dự phòng</h3>
-                  <p className="text-3xs text-[#a09a8e]">Dùng để đăng nhập trực tiếp khi không sử dụng Google OAuth</p>
+                  <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">Thiết lập Mật khẩu dự phòng</h3>
+                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Dùng để đăng nhập trực tiếp khi không sử dụng Google OAuth</p>
                 </div>
               </div>
 
               {passwordSuccessMsg && (
-                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4 shrink-0" />
                   <span>{passwordSuccessMsg}</span>
                 </div>
               )}
               {passwordErrorMsg && (
-                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-400 flex items-center gap-2">
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span>{passwordErrorMsg}</span>
                 </div>
@@ -843,19 +824,19 @@ export function ScholarSettingsView({
 
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label className="text-3xs text-[#a09a8e]">Mật khẩu hiện tại</Label>
+                  <Label className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Mật khẩu hiện tại</Label>
                   <div className="relative">
                     <Input
                       type={showCurrentPassword ? "text" : "password"}
                       value={currentPassword}
                       onChange={(e) => setCurrentPassword(e.target.value)}
                       placeholder="Nhập mật khẩu hiện tại"
-                      className="bg-[#181715] border-[#2e2b26] text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
+                      className="bg-white dark:bg-[#181715] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
                     />
                     <button
                       type="button"
                       onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a09a8e] hover:text-[#f4f1ea]"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
                     >
                       {showCurrentPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -864,19 +845,19 @@ export function ScholarSettingsView({
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <Label className="text-3xs text-[#a09a8e]">Mật khẩu mới (tối thiểu 8 ký tự)</Label>
+                    <Label className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Mật khẩu mới (tối thiểu 8 ký tự)</Label>
                     <div className="relative">
                       <Input
                         type={showNewPassword ? "text" : "password"}
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
                         placeholder="Mật khẩu mới"
-                        className="bg-[#181715] border-[#2e2b26] text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
+                        className="bg-white dark:bg-[#181715] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowNewPassword(!showNewPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a09a8e] hover:text-[#f4f1ea]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
                       >
                         {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -884,19 +865,19 @@ export function ScholarSettingsView({
                   </div>
 
                   <div className="space-y-1">
-                    <Label className="text-3xs text-[#a09a8e]">Xác nhận mật khẩu mới</Label>
+                    <Label className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Xác nhận mật khẩu mới</Label>
                     <div className="relative">
                       <Input
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
                         placeholder="Nhập lại mật khẩu mới"
-                        className="bg-[#181715] border-[#2e2b26] text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
+                        className="bg-white dark:bg-[#181715] border-[#e7e2da] dark:border-[#2e2b26] text-[#1a1918] dark:text-[#f4f1ea] rounded-xl pr-10 focus:border-[#cc785c]"
                       />
                       <button
                         type="button"
                         onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#a09a8e] hover:text-[#f4f1ea]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#706a60] dark:text-[#a09a8e] hover:text-[#1a1918] dark:hover:text-[#f4f1ea]"
                       >
                         {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
@@ -924,16 +905,16 @@ export function ScholarSettingsView({
             </form>
 
             {/* Part 3: Phiên làm việc (Active Sessions) */}
-            <div className="p-5 rounded-2xl bg-[#201e1b] border border-[#2e2b26] space-y-3">
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <Laptop className="w-4 h-4 text-[#a09a8e]" />
+                  <Laptop className="w-4 h-4 text-[#706a60] dark:text-[#a09a8e]" />
                   <div>
-                    <h3 className="font-serif font-bold text-xs text-[#f4f1ea]">Thiết bị này</h3>
-                    <p className="text-3xs text-[#a09a8e]">Trình duyệt web hiện tại</p>
+                    <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Thiết bị này</h3>
+                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Trình duyệt web hiện tại</p>
                   </div>
                 </div>
-                <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
                   • Đang hoạt động
                 </span>
               </div>
@@ -945,11 +926,43 @@ export function ScholarSettingsView({
                     logout();
                     window.location.href = "/login";
                   }}
-                  className="rounded-lg text-2xs border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 flex items-center gap-1.5 cursor-pointer"
+                  className="rounded-lg text-2xs border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 cursor-pointer"
                 >
                   <LogOut className="w-3 h-3" />
                   <span>Đăng xuất thiết bị</span>
                 </Button>
+              </div>
+            </div>
+
+            {/* Part 4: Tài khoản liên kết (Connected Accounts) */}
+            <div className="p-5 rounded-2xl bg-white dark:bg-[#201e1b] border border-[#e7e2da] dark:border-[#2e2b26] space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Globe className="w-4 h-4 text-[#706a60] dark:text-[#a09a8e]" />
+                  <div>
+                    <h3 className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">Tài khoản liên kết</h3>
+                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">Đăng nhập nhanh qua dịch vụ liên kết</p>
+                  </div>
+                </div>
+              </div>
+              <div className="p-3.5 rounded-xl bg-[#fbf9f6] dark:bg-[#181715] border border-[#e7e2da] dark:border-[#2e2b26] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-6 h-6 rounded-full bg-white flex items-center justify-center shadow-xs border border-zinc-200">
+                    <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
+                      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                      <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                      <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="text-2xs font-semibold text-[#1a1918] dark:text-[#f4f1ea]">Google</p>
+                    <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] font-mono">{effectiveUser?.email || "Google Account"}</p>
+                  </div>
+                </div>
+                <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-medium">
+                  Đã kết nối
+                </span>
               </div>
             </div>
           </div>
@@ -959,16 +972,16 @@ export function ScholarSettingsView({
         {activeTab === "appearance" && (
           <div className="space-y-6">
             <div className="space-y-1">
-              <h3 className="font-serif font-bold text-sm text-[#f4f1ea]">
+              <h3 className="font-serif font-bold text-sm text-[#1a1918] dark:text-[#f4f1ea]">
                 Chế độ Hiển thị &amp; Bảng màu Học thuật
               </h3>
-              <p className="text-3xs text-[#a09a8e]">
+              <p className="text-3xs text-[#706a60] dark:text-[#a09a8e]">
                 Chọn bảng màu phù hợp với môi trường nghiên cứu và giảm mệt mỏi thị giác
               </p>
             </div>
 
             {themeSuccessMsg && (
-              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 flex items-center gap-2">
+              <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0" />
                 <span>{themeSuccessMsg}</span>
               </div>
@@ -983,7 +996,7 @@ export function ScholarSettingsView({
                   "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
                   themePreference === "light"
                     ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
-                    : "border-[#2e2b26] bg-[#201e1b] hover:border-[#38332c]"
+                    : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -995,8 +1008,8 @@ export function ScholarSettingsView({
                   )}
                 </div>
                 <div>
-                  <p className="font-serif font-bold text-xs text-[#f4f1ea]">☀️ Sáng</p>
-                  <p className="text-3xs text-[#a09a8e] mt-0.5">Giấy ngà ấm (Scholarly Parchment)</p>
+                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">☀️ Sáng</p>
+                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Giấy ngà ấm (Scholarly Parchment)</p>
                 </div>
               </button>
 
@@ -1008,7 +1021,7 @@ export function ScholarSettingsView({
                   "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
                   themePreference === "dark"
                     ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
-                    : "border-[#2e2b26] bg-[#201e1b] hover:border-[#38332c]"
+                    : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
                 <div className="flex items-center justify-between">
@@ -1020,8 +1033,8 @@ export function ScholarSettingsView({
                   )}
                 </div>
                 <div>
-                  <p className="font-serif font-bold text-xs text-[#f4f1ea]">🌙 Tối</p>
-                  <p className="text-3xs text-[#a09a8e] mt-0.5">Obsidian đen ấm (#181715)</p>
+                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">🌙 Tối</p>
+                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Obsidian đen ấm (#181715)</p>
                 </div>
               </button>
 
@@ -1033,11 +1046,11 @@ export function ScholarSettingsView({
                   "p-4 rounded-2xl border text-left flex flex-col justify-between h-32 transition-all cursor-pointer relative",
                   themePreference === "system"
                     ? "border-[#cc785c] bg-[#cc785c]/10 shadow-lg"
-                    : "border-[#2e2b26] bg-[#201e1b] hover:border-[#38332c]"
+                    : "border-[#e7e2da] dark:border-[#2e2b26] bg-white dark:bg-[#201e1b] hover:border-[#cc785c]/50"
                 )}
               >
                 <div className="flex items-center justify-between">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
                     <Monitor className="w-4 h-4" />
                   </div>
                   {themePreference === "system" && (
@@ -1045,8 +1058,8 @@ export function ScholarSettingsView({
                   )}
                 </div>
                 <div>
-                  <p className="font-serif font-bold text-xs text-[#f4f1ea]">💻 Tự động</p>
-                  <p className="text-3xs text-[#a09a8e] mt-0.5">Theo thiết lập hệ điều hành</p>
+                  <p className="font-serif font-bold text-xs text-[#1a1918] dark:text-[#f4f1ea]">💻 Tự động</p>
+                  <p className="text-3xs text-[#706a60] dark:text-[#a09a8e] mt-0.5">Theo thiết lập hệ điều hành</p>
                 </div>
               </button>
             </div>
