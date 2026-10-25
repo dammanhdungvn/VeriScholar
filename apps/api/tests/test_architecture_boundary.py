@@ -17,31 +17,62 @@ from pathlib import Path
 ROOT_DIR = Path(__file__).resolve().parent.parent.parent.parent
 
 
+BANNED_MODULES = {
+    "apps",
+    "apps.api",
+    "api",
+    "fastapi",
+    "starlette",
+    "sqlalchemy",
+    "sqlmodel",
+    "alembic",
+    "redis",
+    "aioredis",
+    "fitz",
+    "pymupdf",
+    "httpx",
+    "aiohttp",
+    "requests",
+    "aiofiles",
+    "e2b",
+    "langfuse",
+    "openai",
+}
+
+
+def is_banned_import(mod_name: str) -> bool:
+    top_pkg = mod_name.split(".")[0]
+    return (
+        top_pkg in BANNED_MODULES
+        or mod_name in BANNED_MODULES
+        or any(mod_name == m or mod_name.startswith(f"{m}.") for m in BANNED_MODULES)
+    )
+
+
+def check_ast_violations(source: str, filename: str = "core/domain/entity.py") -> list[str]:
+    tree = ast.parse(source, filename=filename)
+    violations: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if is_banned_import(alias.name):
+                    violations.append(f"{filename}:{node.lineno}: import {alias.name}")
+        elif isinstance(node, ast.ImportFrom):
+            if node.module and is_banned_import(node.module):
+                violations.append(f"{filename}:{node.lineno}: from {node.module} import ...")
+    return violations
+
+
+def test_hexagonal_checker_catches_apps_api_submodules():
+    source = "from apps.api.models import DocumentModel\nimport apps.api.db"
+    violations = check_ast_violations(source)
+    assert len(violations) == 2
+
+
 def test_hexagonal_boundary_pure_domain():
     """Validates that packages/core domain and ports do not import framework/infra packages."""
     core_src = ROOT_DIR / "packages" / "core" / "src" / "core"
     scan_dirs = [core_src / "domain", core_src / "ports"]
-
-    banned_modules = {
-        "fastapi",
-        "starlette",
-        "sqlalchemy",
-        "sqlmodel",
-        "alembic",
-        "redis",
-        "aioredis",
-        "fitz",
-        "pymupdf",
-        "httpx",
-        "aiohttp",
-        "requests",
-        "aiofiles",
-        "e2b",
-        "langfuse",
-        "openai",
-        "apps.api",
-        "api",
-    }
 
     violations: list[str] = []
 
@@ -50,23 +81,9 @@ def test_hexagonal_boundary_pure_domain():
             continue
         for py_file in scan_dir.rglob("*.py"):
             source = py_file.read_text(encoding="utf-8")
-            tree = ast.parse(source, filename=str(py_file))
-
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    for alias in node.names:
-                        top_pkg = alias.name.split(".")[0]
-                        if top_pkg in banned_modules or alias.name in banned_modules:
-                            violations.append(
-                                f"{py_file.relative_to(ROOT_DIR)}:{node.lineno}: import {alias.name}"
-                            )
-                elif isinstance(node, ast.ImportFrom):
-                    if node.module:
-                        top_pkg = node.module.split(".")[0]
-                        if top_pkg in banned_modules or node.module in banned_modules:
-                            violations.append(
-                                f"{py_file.relative_to(ROOT_DIR)}:{node.lineno}: from {node.module} import ..."
-                            )
+            violations.extend(
+                check_ast_violations(source, filename=str(py_file.relative_to(ROOT_DIR)))
+            )
 
     assert not violations, "Hexagonal architecture violation(s) detected in core:\n" + "\n".join(violations)
 

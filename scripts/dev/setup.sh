@@ -67,7 +67,7 @@ fi
 
 # 5. Check Database (PostgreSQL with pgvector)
 echo -n "Checking PostgreSQL pgvector connectivity... "
-python3 -c "
+uv run python3 -c "
 import asyncio, os
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy import text
@@ -90,7 +90,7 @@ print('OK' if ok else 'UNAVAILABLE')
 
 # 6. Check Redis
 echo -n "Checking Redis 7 connectivity... "
-python3 -c "
+uv run python3 -c "
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.settimeout(1.0)
