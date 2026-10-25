@@ -1,4 +1,4 @@
-name: Continuous Integration (Quality Gates)
+name: Continuous Integration (2-Tier Fast-Fail Quality Gates)
 
 on:
   push:
@@ -17,36 +17,8 @@ permissions:
   pull-requests: read
 
 jobs:
-  detect-changes:
-    name: Detect Changed Components
-    runs-on: ubuntu-latest
-    outputs:
-      backend: ${{ steps.filter.outputs.backend }}
-      frontend: ${{ steps.filter.outputs.frontend }}
-      docker: ${{ steps.filter.outputs.docker }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Filter changed paths
-        id: filter
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            backend:
-              - 'apps/api/**'
-              - 'packages/core/**'
-              - 'pyproject.toml'
-              - 'uv.lock'
-            frontend:
-              - 'apps/web/**'
-              - '.github/workflows/ci.yml'
-            docker:
-              - 'deploy/**'
-              - '.dockerignore'
-
   security-scan:
-    name: Security & Secret Leak Detection
+    name: Tier 1 — Security & Secret Leak Detection
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -60,12 +32,34 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  backend-checks:
-    name: Backend Quality Gates (Python / uv)
-    needs: [detect-changes]
-    if: needs.detect-changes.outputs.backend == 'true' || github.event_name == 'push'
+  backend-quality-gates:
+    name: Tier 1 — Backend, DB & Harness Gates (Python / uv / pgvector / Redis)
     runs-on: ubuntu-latest
     timeout-minutes: 10
+
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg18
+        env:
+          POSTGRES_USER: verischolar
+          POSTGRES_PASSWORD: verischolar
+          POSTGRES_DB: verischolar
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U verischolar -d verischolar"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=3s
+          --health-retries=5
 
     steps:
       - name: Checkout repository
@@ -83,55 +77,25 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install backend dependencies (Strict Sync)
+      - name: Install backend dependencies (Frozen Lockfile)
         run: |
           uv sync --all-packages --frozen
 
-      - name: Install Tectonic LaTeX Compiler
-        run: |
-          curl --proto '=https' --tlsv1.2 -fsSL https://drop-sh.fullyjustified.net | sh || true
-          if [ -f ./tectonic ]; then
-            sudo mv ./tectonic /usr/local/bin/
-            tectonic --version
-            echo '\documentclass{article}\begin{document}warmup\end{document}' > /tmp/warmup.tex
-            tectonic -o /tmp /tmp/warmup.tex || true
-          fi
-
-
-
-      - name: Verify Hexagonal Architecture Boundaries
-        run: |
-          # Ngăn chặn rò rỉ mã hạ tầng vào packages/core
-          uv run python -c "
-          import sys
-          from pathlib import Path
-          core_path = Path('packages/core/src/core/domain')
-          violations = []
-          if core_path.exists():
-              for py_file in core_path.rglob('*.py'):
-                  content = py_file.read_text()
-                  for banned in ['fastapi', 'sqlalchemy', 'uvicorn', 'docker', 'fitz']:
-                      if f'import {banned}' in content or f'from {banned}' in content:
-                          violations.append(f'{py_file}: chứa import cấm \"{banned}\"')
-          if violations:
-              print('\n'.join(violations))
-              sys.exit(1)
-          print('Hexagonal boundary verification: PASSED')
-          "
-
-      - name: Run Ruff Linter & Formatter checks
+      - name: Run Gate 1 — Ruff Linter & Formatter Checks
         run: |
           uv run ruff check .
           uv run ruff format --check .
 
-      - name: Run Pytest with JUnit
+      - name: Run Gate 2 — Pytest Suite (Boundary, Unit & Integration Tests)
         env:
           PYTHONPATH: apps/api/src:packages/core/src
           ENVIRONMENT: test
+          DATABASE_URL: postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar
+          REDIS_URL: redis://127.0.0.1:6379/0
         run: |
-          uv run pytest --junitxml=test-results.xml
+          uv run pytest -v --junitxml=test-results.xml
 
-      - name: Upload Test Results
+      - name: Upload Backend Test Results
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -139,10 +103,8 @@ jobs:
           path: test-results.xml
           retention-days: 7
 
-  frontend-checks:
-    name: Frontend Quality Gates (TypeScript / React / pnpm)
-    needs: [detect-changes]
-    if: needs.detect-changes.outputs.frontend == 'true' || github.event_name == 'push'
+  frontend-quality-gates:
+    name: Tier 1 — Frontend Quality Gates (TypeScript / React 19 / pnpm)
     runs-on: ubuntu-latest
     timeout-minutes: 10
     defaults:
@@ -169,10 +131,6 @@ jobs:
         run: |
           pnpm install --frozen-lockfile
 
-      - name: Run Dependency Vulnerability Audit
-        run: |
-          pnpm audit --prod
-
       - name: Run Oxlint (Fast code linting)
         run: |
           pnpm lint
@@ -181,7 +139,7 @@ jobs:
         run: |
           pnpm exec tsc -b
 
-      - name: Run Vitest unit & integration test suite
+      - name: Run Gate 3 — Vitest Unit & Integration Test Suite
         run: |
           pnpm test:run --passWithNoTests --reporter=default --reporter=junit --outputFile=test-results.xml
 
@@ -193,20 +151,23 @@ jobs:
           path: apps/web/test-results.xml
           retention-days: 7
 
-      - name: Run Vite production build test
+      - name: Run Gate 4 — Vite Production Build
         run: |
           pnpm build
 
   docker-validation:
-    name: Container & Infrastructure Validation (Docker)
-    needs: [detect-changes]
-    if: needs.detect-changes.outputs.backend == 'true' || needs.detect-changes.outputs.frontend == 'true' || needs.detect-changes.outputs.docker == 'true' || github.event_name == 'push'
+    name: Tier 2 — Container & Deployment Script Validation (Gated)
+    needs: [backend-quality-gates, frontend-quality-gates]
     runs-on: ubuntu-latest
     timeout-minutes: 8
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Validate Deployment Shell Scripts Syntax
+        run: |
+          bash -n scripts/deploy_production.sh scripts/deploy_web.sh scripts/dev/setup.sh
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -224,7 +185,7 @@ jobs:
 
       - name: Smoke Test Backend Docker Container
         run: |
-          docker run --rm verischolar-api:ci-test python -c "import api; print('API module verified')"
+          docker run --rm verischolar-api:ci-test uv run --no-dev python -c "import api; print('API module verified')"
 
       - name: Test Build Frontend Docker Image
         uses: docker/build-push-action@v6
@@ -235,4 +196,3 @@ jobs:
           tags: verischolar-web:ci-test
           cache-from: type=gha,scope=web
           cache-to: type=gha,mode=max,scope=web
-

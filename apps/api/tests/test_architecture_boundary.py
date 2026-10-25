@@ -87,7 +87,9 @@ def test_hexagonal_boundary_pure_domain():
                 check_ast_violations(source, filename=str(py_file.relative_to(ROOT_DIR)))
             )
 
-    assert not violations, "Hexagonal architecture violation(s) detected in core:\n" + "\n".join(violations)
+    assert not violations, "Hexagonal architecture violation(s) detected in core:\n" + "\n".join(
+        violations
+    )
 
 
 def test_banned_legacy_artifacts():
@@ -121,7 +123,9 @@ def test_banned_legacy_artifacts():
                             f"{py_file.relative_to(ROOT_DIR)}:{line_no}: contains banned keyword '{kw}' -> {stripped}"
                         )
 
-    assert not violations, "Banned legacy artifact(s) found in production Python code:\n" + "\n".join(violations)
+    assert not violations, (
+        "Banned legacy artifact(s) found in production Python code:\n" + "\n".join(violations)
+    )
 
 
 def test_agent_harness_integrity():
@@ -207,7 +211,9 @@ def test_no_absolute_file_urls_in_markdown():
                         f"{rel_path}:{line_no}: contains banned link pattern '{pattern}' -> {line.strip()}"
                     )
 
-    assert not violations, "Forbidden absolute file:/// URLs found in markdown documents:\n" + "\n".join(violations)
+    assert not violations, (
+        "Forbidden absolute file:/// URLs found in markdown documents:\n" + "\n".join(violations)
+    )
 
 
 def test_no_broken_relative_links_in_markdown():
@@ -259,12 +265,20 @@ def test_prd_conciseness_and_structure_invariants():
             if sec not in text:
                 violations.append(f"{prd_file.name}: missing required section prefix '{sec}'")
 
-    assert not violations, "PRD structure or conciseness invariant violated:\n" + "\n".join(violations)
+    assert not violations, "PRD structure or conciseness invariant violated:\n" + "\n".join(
+        violations
+    )
 
     spec_09 = ROOT_DIR / "docs" / "specs" / "09-deployment-cicd-and-evaluation-spec.md"
     assert spec_09.exists(), "docs/specs/09-deployment-cicd-and-evaluation-spec.md is missing"
     spec_09_text = spec_09.read_text(encoding="utf-8")
-    for marker in ("Azure Ubuntu", "proxy_buffering off", "Thực Nghiệm 1", "Thực Nghiệm 2", "Thực Nghiệm 3"):
+    for marker in (
+        "Azure Ubuntu",
+        "proxy_buffering off",
+        "Thực Nghiệm 1",
+        "Thực Nghiệm 2",
+        "Thực Nghiệm 3",
+    ):
         assert marker in spec_09_text, f"Spec-09 missing required section marker: {marker}"
 
 
@@ -298,4 +312,44 @@ def test_thesis_outline_mapping_integrity():
     assert "09-deployment-cicd-and-evaluation-spec.md" in content
 
 
+def test_deployment_configs_and_nginx_sse_routes():
+    """Validates Nginx SSE unbuffered routing, Dockerfile.api uv sync/CAS volume, 2-tier CI, and CD deploy scripts."""
+    nginx_files = [
+        ROOT_DIR / "deploy" / "nginx" / "production-host.conf",
+        ROOT_DIR / "deploy" / "nginx" / "verischolar.conf",
+    ]
+    required_sse_fragments = [
+        "context-table:stream",
+        "library/graph:query",
+        "drafts/.*/chat:stream",
+        "summary:stream",
+        "proxy_buffering off;",
+    ]
+    for nf in nginx_files:
+        assert nf.exists(), f"Missing Nginx config: {nf}"
+        content = nf.read_text(encoding="utf-8")
+        for frag in required_sse_fragments:
+            assert frag in content, (
+                f"{nf.relative_to(ROOT_DIR)} missing required SSE fragment '{frag}'"
+            )
 
+    dockerfile_api = ROOT_DIR / "deploy" / "Dockerfile.api"
+    assert dockerfile_api.exists(), "deploy/Dockerfile.api is missing"
+    df_text = dockerfile_api.read_text(encoding="utf-8")
+    assert "uv sync" in df_text, "deploy/Dockerfile.api must use 'uv sync' for deterministic builds"
+    assert "/app/data/cas" in df_text, "deploy/Dockerfile.api must declare /app/data/cas volume"
+
+    ci_yml = ROOT_DIR / ".github" / "workflows" / "ci.yml"
+    ci_text = ci_yml.read_text(encoding="utf-8")
+    assert "pgvector/pgvector:0.8.6-pg18" in ci_text, (
+        "ci.yml must include pgvector service container"
+    )
+    assert "redis:7-alpine" in ci_text, "ci.yml must include redis:7-alpine service container"
+    assert "tectonic" not in ci_text.lower(), "ci.yml must not install legacy Tectonic compiler"
+
+    for script_name in ("deploy_production.sh", "deploy_web.sh"):
+        script_path = ROOT_DIR / "scripts" / script_name
+        assert script_path.exists(), f"Missing deployment script: scripts/{script_name}"
+        assert os.access(script_path, os.X_OK), (
+            f"scripts/{script_name} must be executable (chmod +x)"
+        )

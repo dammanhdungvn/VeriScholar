@@ -109,15 +109,41 @@ async def seed_database() -> None:
 
             # 3. Seed Blobs in DB
             papers_data = [
-                (h_attn, p_attn, s_attn, "Attention Is All You Need.pdf", "Attention Is All You Need", ["Vaswani et al."], 2017),
-                (h_resnet, p_resnet, s_resnet, "Deep Residual Learning for Image Recognition.pdf", "Deep Residual Learning for Image Recognition", ["He et al."], 2016),
-                (h_bert, p_bert, s_bert, "BERT: Pre-training of Deep Bidirectional Transformers.pdf", "BERT: Pre-training of Deep Bidirectional Transformers", ["Devlin et al."], 2018),
+                (
+                    h_attn,
+                    p_attn,
+                    s_attn,
+                    "Attention Is All You Need.pdf",
+                    "Attention Is All You Need",
+                    ["Vaswani et al."],
+                    2017,
+                ),
+                (
+                    h_resnet,
+                    p_resnet,
+                    s_resnet,
+                    "Deep Residual Learning for Image Recognition.pdf",
+                    "Deep Residual Learning for Image Recognition",
+                    ["He et al."],
+                    2016,
+                ),
+                (
+                    h_bert,
+                    p_bert,
+                    s_bert,
+                    "BERT: Pre-training of Deep Bidirectional Transformers.pdf",
+                    "BERT: Pre-training of Deep Bidirectional Transformers",
+                    ["Devlin et al."],
+                    2018,
+                ),
             ]
 
             seeded_doc_ids: list[UUID] = []
 
             for chash, spath, fsize, fname, title, authors, year in papers_data:
-                blob_stmt = select(DocumentStorageBlobModel).where(DocumentStorageBlobModel.content_hash == chash)
+                blob_stmt = select(DocumentStorageBlobModel).where(
+                    DocumentStorageBlobModel.content_hash == chash
+                )
                 blob_res = await session.execute(blob_stmt)
                 blob = blob_res.scalar_one_or_none()
                 if not blob:
@@ -163,15 +189,37 @@ async def seed_database() -> None:
 
                 # Seed sample chunks with bounding boxes for Attention
                 if "Attention" in fname:
-                    chunk_stmt = select(DocumentChunkModel).where(DocumentChunkModel.document_id == doc.id)
+                    chunk_stmt = select(DocumentChunkModel).where(
+                        DocumentChunkModel.document_id == doc.id
+                    )
                     chunk_res = await session.execute(chunk_stmt)
                     if not chunk_res.first():
                         sample_chunks = [
-                            ("The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.", 1, [0.1, 0.2, 0.9, 0.25]),
-                            ("The Transformer is the first transduction model relying entirely on self-attention to compute representations.", 1, [0.1, 0.26, 0.9, 0.32]),
-                            ("Recurrent models typically factor computation along the symbol positions of the input and output sequences.", 2, [0.12, 0.15, 0.88, 0.22]),
-                            ("Attention mechanisms have become an integral part of compelling sequence modeling and transduction models.", 2, [0.12, 0.23, 0.88, 0.30]),
-                            ("An attention function can be described as mapping a query and a set of key-value pairs to an output.", 3, [0.15, 0.1, 0.85, 0.18]),
+                            (
+                                "The dominant sequence transduction models are based on complex recurrent or convolutional neural networks.",
+                                1,
+                                [0.1, 0.2, 0.9, 0.25],
+                            ),
+                            (
+                                "The Transformer is the first transduction model relying entirely on self-attention to compute representations.",
+                                1,
+                                [0.1, 0.26, 0.9, 0.32],
+                            ),
+                            (
+                                "Recurrent models typically factor computation along the symbol positions of the input and output sequences.",
+                                2,
+                                [0.12, 0.15, 0.88, 0.22],
+                            ),
+                            (
+                                "Attention mechanisms have become an integral part of compelling sequence modeling and transduction models.",
+                                2,
+                                [0.12, 0.23, 0.88, 0.30],
+                            ),
+                            (
+                                "An attention function can be described as mapping a query and a set of key-value pairs to an output.",
+                                3,
+                                [0.15, 0.1, 0.85, 0.18],
+                            ),
                         ]
                         for idx, (text_content, page_num, bbox) in enumerate(sample_chunks):
                             chunk = DocumentChunkModel(
@@ -188,7 +236,9 @@ async def seed_database() -> None:
                         await session.flush()
 
             # 4. Seed Reading Session
-            session_stmt = select(ResearchSessionModel).where(ResearchSessionModel.user_id == dev_user.id)
+            session_stmt = select(ResearchSessionModel).where(
+                ResearchSessionModel.user_id == dev_user.id
+            )
             session_res = await session.execute(session_stmt)
             r_session = session_res.scalar_one_or_none()
             if not r_session and seeded_doc_ids:
@@ -242,7 +292,9 @@ async def seed_database() -> None:
             await session.commit()
             print("Deterministic seeding completed successfully in database.")
     except Exception as exc:
-        print(f"Database unavailable or offline ({exc}). Physical CAS blobs are prepared for offline testing.")
+        print(
+            f"Database unavailable or offline ({exc}). Physical CAS blobs are prepared for offline testing."
+        )
 
 
 def main():

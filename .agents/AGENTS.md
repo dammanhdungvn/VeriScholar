@@ -39,8 +39,8 @@ Nguyên tắc kiến trúc tối thượng: Đọc [`.agents/ARCHITECTURE_PRINCI
 ## 4. Bốn Cổng Xác Minh Bắt Buộc (The 4 Verification Gates)
 Trước khi hoàn thành bất kỳ task nào hoặc tạo commit, bắt buộc xác nhận 100% exit code 0:
 ```bash
-uv run ruff check .               # Cổng 1: Linter Python
-uv run pytest                     # Cổng 2: Toàn bộ Backend & Boundary Tests
-npm --prefix apps/web run test    # Cổng 3: Frontend Unit Tests
-npm --prefix apps/web run build   # Cổng 4: Production Build Giao Diện
+uv run ruff check . && uv run ruff format --check .  # Cổng 1: Linter & Formatter Python
+uv run pytest                                        # Cổng 2: Toàn bộ Backend & Boundary Tests
+npm --prefix apps/web run test                       # Cổng 3: Frontend Unit Tests
+npm --prefix apps/web run build                      # Cổng 4: Production Build Giao Diện
 ```

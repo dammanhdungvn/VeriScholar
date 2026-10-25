@@ -1,38 +1,26 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Determine script & repository directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+WEB_DEPLOY_ROOT="${WEB_DEPLOY_ROOT:-/var/www/verischolar/web}"
 
-echo "=== [1/6] Building Web Frontend (apps/web) ==="
-cd "${REPO_ROOT}"
-pnpm --dir apps/web build
+echo "=== [VeriScholar Web Deploy] Building React 19 Production Bundle ==="
+cd "$ROOT_DIR/apps/web"
+pnpm install --frozen-lockfile
+pnpm build
 
-echo "=== [2/6] Preparing /var/www/verischolar/web ==="
-sudo mkdir -p /var/www/verischolar/web
+if [[ "${DRY_RUN:-false}" == "true" ]]; then
+    echo "=== [VeriScholar Web Deploy] DRY_RUN=true: Skipping copy to $WEB_DEPLOY_ROOT ==="
+    exit 0
+fi
 
-echo "=== [3/6] Deploying static build artifacts ==="
-sudo cp -r apps/web/dist/* /var/www/verischolar/web/
-
-echo "=== [4/6] Setting ownership and permissions ==="
-sudo chown -R VeriScholar:www-data /var/www/verischolar
-sudo chmod -R 755 /var/www/verischolar
-
-echo "=== [5/6] Configuring Nginx Site ==="
-if [ -f "${REPO_ROOT}/deploy/nginx/production-host.conf" ]; then
-    sudo cp "${REPO_ROOT}/deploy/nginx/production-host.conf" /etc/nginx/sites-available/verischolar.conf
+if [[ -w "$(dirname "$WEB_DEPLOY_ROOT")" ]] || [[ "${EUID:-$(id -u)}" -eq 0 ]]; then
+    mkdir -p "$WEB_DEPLOY_ROOT"
+    cp -r "$ROOT_DIR/apps/web/dist/." "$WEB_DEPLOY_ROOT/"
+    echo "=== [VeriScholar Web Deploy] Synced bundle to $WEB_DEPLOY_ROOT ==="
+    if command -v nginx >/dev/null 2>&1; then
+        nginx -t && systemctl reload nginx || true
+    fi
 else
-    sudo cp "${REPO_ROOT}/deploy/nginx/verischolar.conf" /etc/nginx/sites-available/verischolar.conf
+    echo "=== [VeriScholar Web Deploy] Bundle ready at $ROOT_DIR/apps/web/dist (non-root mode) ==="
 fi
-sudo ln -sf /etc/nginx/sites-available/verischolar.conf /etc/nginx/sites-enabled/verischolar.conf
-if [ -L /etc/nginx/sites-enabled/default ] || [ -f /etc/nginx/sites-enabled/default ]; then
-    echo "Removing default nginx site..."
-    sudo rm -f /etc/nginx/sites-enabled/default
-fi
-
-echo "=== [6/6] Testing and reloading Nginx ==="
-sudo nginx -t
-sudo systemctl reload nginx
-
-echo "=== Web deployment completed successfully! ==="

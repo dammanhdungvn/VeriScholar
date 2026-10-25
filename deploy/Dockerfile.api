@@ -1,28 +1,29 @@
-# Multi-stage Python build for VeriScholar Enterprise API & ARQ Worker
-FROM python:3.12-slim AS base
+# Deterministic uv build for VeriScholar MVP API (Azure Ubuntu & Container Runtime)
+FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS base
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
+    UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy \
+    CAS_STORAGE_ROOT=/app/data/cas \
     PYTHONPATH=/app/apps/api/src:/app/packages/core/src
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
     curl \
-    git \
     libpq-dev \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && mkdir -p /app/data/cas
 
-COPY pyproject.toml README.md ./
-
-RUN pip install --upgrade pip && \
-    pip install .
-
+COPY pyproject.toml uv.lock README.md ./
 COPY packages/core ./packages/core
 COPY apps/api ./apps/api
 
+RUN uv sync --all-packages --frozen --no-dev
+
+VOLUME ["/app/data/cas"]
+
 EXPOSE 8000
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4"]
+CMD ["uv", "run", "--no-dev", "uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
