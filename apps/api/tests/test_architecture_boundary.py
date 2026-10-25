@@ -287,3 +287,15 @@ def test_no_code_placeholders_in_superpowers_plans():
     assert not violations, "Placeholder lines found in superpowers plans:\n" + "\n".join(violations)
 
 
+def test_thesis_outline_mapping_integrity():
+    """Validates that docs/THESIS_OUTLINE_MAPPING.md exists and maps all 5 graduation thesis chapters."""
+    thesis_doc = ROOT_DIR / "docs" / "THESIS_OUTLINE_MAPPING.md"
+    assert thesis_doc.exists(), "docs/THESIS_OUTLINE_MAPPING.md is missing"
+    content = thesis_doc.read_text(encoding="utf-8")
+    for chapter in ("Chương 1", "Chương 2", "Chương 3", "Chương 4", "Chương 5"):
+        assert chapter in content, f"THESIS_OUTLINE_MAPPING.md is missing '{chapter}'"
+    assert "08-deployment-and-system-evaluation.md" in content
+    assert "09-deployment-cicd-and-evaluation-spec.md" in content
+
+
+

@@ -75,4 +75,10 @@ Hợp đồng kỹ thuật chi tiết làm căn cứ trực tiếp để lập t
 | **[`09-deployment-cicd-and-evaluation-spec.md`](specs/09-deployment-cicd-and-evaluation-spec.md)** | Phân Hệ Triển Khai Azure Ubuntu, CI/CD 2 Tầng & Khung Thực Nghiệm Đồ Án: Cấu hình Nginx 5 tuyến SSE, Docker/Systemd, GitHub Actions CI/CD và 3 Thực nghiệm Định lượng (E1, E2, E3). |
 
 ---
+
+### 3. Cẩm Nang Ánh Xạ Báo Cáo Đồ Án Tốt Nghiệp: [`THESIS_OUTLINE_MAPPING.md`](THESIS_OUTLINE_MAPPING.md)
+
+- **[`THESIS_OUTLINE_MAPPING.md`](THESIS_OUTLINE_MAPPING.md):** Bản đồ nối trực tiếp 5 Chương Báo cáo Đồ án Tốt nghiệp Đại học (Chương 1 $\rightarrow$ Chương 5) sang đúng từng file PRD (`00..08`), Spec (`00..09`), sơ đồ Mermaid và kế hoạch TDD (`docs/superpowers/plans/`) để lập trình song song với viết báo cáo.
+
+---
 *Bản quyền © 2026 VeriScholar Platform. Mọi quyền được bảo lưu.*
