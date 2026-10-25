@@ -198,3 +198,14 @@ Feature: Cô lập dữ liệu đa người dùng tuyệt đối
 2. **Không Tiết Lộ Danh Tính Qua Thông Báo Lỗi (Anti-Enumeration Rule):** Mọi thông báo lỗi đăng nhập hoặc quên mật khẩu đều dùng câu chữ trung tính, không tiết lộ một địa chỉ email đã đăng ký hay chưa.
 3. **Bảo Mật Tuyệt Đối Khóa BYOK:** Khóa riêng tư của học giả phải được mã hóa bảo mật trước khi lưu trữ, chỉ giải mã trên bộ nhớ tạm khi gọi mô hình AI cho chính học giả đó và chỉ hiển thị 4 ký tự cuối trên giao diện.
 4. **Bảo Toàn Mạch Nghiên Cứu Không Gián Đoạn (Seamless Research Continuity):** Quá trình gia hạn phiên làm việc ngắn hạn phải diễn ra ngầm định, không làm gián đoạn trang PDF đang đọc hay cuộc hội thoại đang diễn ra.
+
+---
+
+## 7. Tài Liệu Tham Chiếu Báo Cáo & Bảo Vệ Đồ Án Tốt Nghiệp
+
+Dành cho tác giả khi biên soạn Thuyết minh Đồ án Tốt nghiệp và chuẩn bị slide bảo vệ trước Hội đồng:
+* **Giải thích bình dân, ẩn dụ thực tế & Use case BYOK:** Xem mục 1 trong [Sổ Tay Bảo Vệ Đồ Án Tốt Nghiệp — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+* **Phân tích Tại sao bắt buộc & Cơ chế Hybrid thông minh:** Xem mục 2 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+* **Bộ câu hỏi & câu trả lời phản biện Hội đồng (Q&A):** Xem mục 3 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+* **Bằng chứng thực nghiệm Langfuse Cloud & OpenAI:** Xem mục 4 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+
