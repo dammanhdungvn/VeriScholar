@@ -1,7 +1,7 @@
 """User database model."""
 
 from api.db.models.base import IdentifiableTimestampedModel
-from sqlalchemy import Boolean, String
+from sqlalchemy import Boolean, CheckConstraint, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 
@@ -24,3 +24,9 @@ class UserModel(IdentifiableTimestampedModel):
     bio: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     research_interests: Mapped[str | None] = mapped_column(String(500), nullable=True)
     google_scholar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    theme_preference: Mapped[str] = mapped_column(String(20), default="system", nullable=False)
+    byok_api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    __table_args__ = (
+        CheckConstraint("theme_preference IN ('light', 'dark', 'system')", name="ck_users_theme"),
+    )

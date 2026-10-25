@@ -40,3 +40,7 @@ class DocumentModel(IdentifiableTimestampedModel):
     progress: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     is_persistent: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    is_starred: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    access_status: Mapped[str] = mapped_column(
+        String(30), default="open_access_pdf", nullable=False
+    )

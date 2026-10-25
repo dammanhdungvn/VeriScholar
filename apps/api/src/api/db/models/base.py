@@ -1,6 +1,7 @@
 """SQLAlchemy Declarative Base for VeriScholar API."""
 
 from datetime import UTC, datetime
+from typing import Any
 from uuid import UUID, uuid4
 
 from sqlalchemy import DateTime
@@ -11,7 +12,25 @@ from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 class Base(AsyncAttrs, DeclarativeBase):
     """Abstract declarative base for all database models."""
 
-    pass
+    def __init__(self, **kwargs: Any) -> None:
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+        mapper = getattr(self, "__mapper__", None)
+        if mapper is not None:
+            for col in mapper.columns:
+                if (
+                    col.key not in kwargs
+                    and getattr(self, col.key, None) is None
+                    and col.default is not None
+                ):
+                    arg = col.default.arg
+                    if callable(arg):
+                        try:
+                            setattr(self, col.key, arg())
+                        except TypeError:
+                            pass
+                    else:
+                        setattr(self, col.key, arg)
 
 
 class IdentifiableTimestampedModel(Base):
