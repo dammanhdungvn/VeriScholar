@@ -130,9 +130,48 @@ from uuid import uuid4
 
 @pytest.mark.asyncio
 async def test_session_tab_limit_and_active_reassignment(async_client, auth_headers, db_session, test_user):
-    # Create session and 5 documents, verify adding 6th returns 409 MAX_SESSION_DOCUMENTS_REACHED
-    # Verify closing active_document_id reassigns active_document_id to remaining tab
-    ...
+    res_sess = await async_client.post("/api/v1/sessions", headers=auth_headers, json={"title": "Multi-Tab Test"})
+    assert res_sess.status_code == 201
+    session_id = res_sess.json()["data"]["id"]
+    doc_ids = []
+    for idx in range(5):
+        pdf_bytes = f"%PDF-1.4 sample paper {idx} ".encode() + (b"word " * 100)
+        res_doc = await async_client.post(
+            "/api/v1/documents/upload",
+            headers=auth_headers,
+            files={"file": (f"paper_{idx}.pdf", pdf_bytes, "application/pdf")},
+        )
+        doc_id = res_doc.json()["data"]["id"]
+        doc_ids.append(doc_id)
+        res_add = await async_client.post(
+            f"/api/v1/sessions/{session_id}/documents",
+            headers=auth_headers,
+            json={"document_id": doc_id},
+        )
+        assert res_add.status_code in (200, 201)
+
+    # Adding 6th document must return 409 MAX_SESSION_DOCUMENTS_REACHED
+    extra_pdf = b"%PDF-1.4 extra paper 6 " + (b"word " * 100)
+    res_extra = await async_client.post(
+        "/api/v1/documents/upload",
+        headers=auth_headers,
+        files={"file": ("paper_6.pdf", extra_pdf, "application/pdf")},
+    )
+    extra_id = res_extra.json()["data"]["id"]
+    res_conflict = await async_client.post(
+        f"/api/v1/sessions/{session_id}/documents",
+        headers=auth_headers,
+        json={"document_id": extra_id},
+    )
+    assert res_conflict.status_code == 409
+    assert res_conflict.json()["error"]["code"] == "MAX_SESSION_DOCUMENTS_REACHED"
+
+    # Closing active tab reassigns active_document_id to remaining tab
+    res_close = await async_client.delete(
+        f"/api/v1/sessions/{session_id}/documents/{doc_ids[0]}",
+        headers=auth_headers,
+    )
+    assert res_close.status_code == 204
 ```
 
 - [ ] **Step 2: Run test to verify it fails**

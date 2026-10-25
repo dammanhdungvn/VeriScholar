@@ -5,6 +5,7 @@
 **Phiên bản:** `2.0-OFFICIAL`  
 **Vai trò phụ trách:** Chuyên viên Phân tích Nghiệp vụ (Lead Business Analyst — BA)  
 **Tài liệu Kỹ thuật liên đới:** [`03-sessions-and-deep-reading-spec.md`](../specs/03-sessions-and-deep-reading-spec.md)  
+**File nền tảng liên đới:** [`00-overview-and-cleanup.md`](./00-overview-and-cleanup.md)  
 **Trạng thái:** CHÍNH THỨC BAN HÀNH (RELEASE CANDIDATE)
 
 ---

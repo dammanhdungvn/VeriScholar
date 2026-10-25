@@ -90,7 +90,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
 
 ### Tầng 2: Thực Thể Định Danh & Tài Liệu Gốc (Identity & Document Entities)
 - **Tập tin:** `apps/api/src/api/db/models/`
-  1. [`user.py`](../../apps/api/src/api/db/models/user.py): `UserModel` (bảng `users`):
+  1. [`user.py`](../../../apps/api/src/api/db/models/user.py): `UserModel` (bảng `users`):
      - `id`: UUID khóa chính.
      - `email`: String(255) (`UNIQUE`, `INDEX`).
      - `hashed_password`: String(255).
@@ -116,19 +116,19 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
      - `key_hint`: String(10).
      - `is_active`: Boolean default True.
      - `CONSTRAINT uq_user_api_keys_user_provider UNIQUE (user_id, provider)`.
-  4. [`blob.py`](../../apps/api/src/api/db/models/blob.py): `DocumentStorageBlobModel` (bảng `document_storage_blobs`):
+  4. [`blob.py`](../../../apps/api/src/api/db/models/blob.py): `DocumentStorageBlobModel` (bảng `document_storage_blobs`):
      - `content_hash`: String(64) (`UNIQUE`, `INDEX`).
      - `storage_path`: String(500).
      - `byte_size`: Integer.
      - `mime_type`: String(100).
      - `ref_count`: Integer default 1.
-  5. [`document.py`](../../apps/api/src/api/db/models/document.py): `DocumentModel` (bảng `documents`):
+  5. [`document.py`](../../../apps/api/src/api/db/models/document.py): `DocumentModel` (bảng `documents`):
      - `user_id`: UUID Khóa ngoại trỏ `users.id` (`ON DELETE CASCADE`, `INDEX`).
      - `blob_id`: UUID Khóa ngoại trỏ `document_storage_blobs.id` (`ON DELETE RESTRICT`). Nullable khi ở trạng thái `abstract_only`.
      - `title`, `authors`, `year`, `doi`, `arxiv_id`, `venue`.
      - `status`: String(30) (`CHECK (status IN ('uploaded', 'parsing', 'indexing', 'ready', 'failed', 'abstract_only'))`).
      - `access_status`: String(30) (`CHECK (access_status IN ('open_access_pdf', 'abstract_only', 'user_uploaded'))`).
-  6. [`chunk.py`](../../apps/api/src/api/db/models/chunk.py): `DocumentChunkModel` (bảng `document_chunks`):
+  6. [`chunk.py`](../../../apps/api/src/api/db/models/chunk.py): `DocumentChunkModel` (bảng `document_chunks`):
      - `user_id`: UUID Khóa ngoại trỏ `users.id` (`ON DELETE CASCADE`, `INDEX` - đảm bảo multi-tenant filter).
      - `document_id`: UUID Khóa ngoại trỏ `documents.id` (`ON DELETE CASCADE`).
      - `chunk_index`: Integer.
@@ -137,7 +137,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
      - `bbox_json`: JSONB (tọa độ `[x0, y0, x1, y1]`).
      - `embedding`: `Vector(1536)` (pgvector).
      - `content_tsv`: `TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', text_content)) STORED`.
-  7. [`summary.py`](../../apps/api/src/api/db/models/summary.py): `DocumentSummaryModel` (bảng `document_summaries` - Cấu trúc 3 Luận điểm theo SPEC-00):
+  7. [`summary.py`](../../../apps/api/src/api/db/models/summary.py): `DocumentSummaryModel` (bảng `document_summaries` - Cấu trúc 3 Luận điểm theo SPEC-00):
      - `user_id`: UUID Khóa ngoại trỏ `users.id` (`ON DELETE CASCADE`, `INDEX`).
      - `document_id`: UUID Khóa ngoại trỏ `documents.id` (`ON DELETE CASCADE`, `UNIQUE`).
      - `problem_statement`: TEXT.
@@ -148,7 +148,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
      - `limitation_citations`: JSONB.
      - `total_tokens`: Integer default 0.
      - `latency_ms`: Integer default 0.
-  8. [`reference.py`](../../apps/api/src/api/db/models/reference.py): `ReferenceItemModel` (bảng `reference_items`):
+  8. [`reference.py`](../../../apps/api/src/api/db/models/reference.py): `ReferenceItemModel` (bảng `reference_items`):
      - `user_id`: UUID Khóa ngoại trỏ `users.id` (`ON DELETE CASCADE`, `INDEX`).
      - `document_id`: UUID Khóa ngoại trỏ `documents.id` (`ON DELETE CASCADE`).
      - `ref_index`: Integer.
@@ -160,7 +160,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
 
 ### Tầng 3: Thực Thể Tương Tác & Mạng Tri Thức GraphRAG (Interaction & Graph Entities)
 - **Tập tin:** `apps/api/src/api/db/models/`
-  1. [`session.py`](../../apps/api/src/api/db/models/session.py):
+  1. [`session.py`](../../../apps/api/src/api/db/models/session.py):
      - `ResearchSessionModel` (bảng `research_sessions`):
        - `user_id`: UUID (`ON DELETE CASCADE`, `INDEX`).
        - `title`: String(255).
@@ -183,7 +183,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
        - `latency_ms`: Integer default 0.
        - `finish_reason`: String(30) default 'stop'.
        - `trace_id`: String(64) Nullable.
-  2. [`note.py`](../../apps/api/src/api/db/models/note.py): `ResearchNoteModel` (bảng `research_notes` - bảo toàn bằng chứng học thuật):
+  2. [`note.py`](../../../apps/api/src/api/db/models/note.py): `ResearchNoteModel` (bảng `research_notes` - bảo toàn bằng chứng học thuật):
      - `user_id`: UUID (`ON DELETE CASCADE`, `INDEX`).
      - `document_id`: UUID Nullable (`ON DELETE SET NULL`).
      - `chunk_id`: UUID Nullable (`ON DELETE SET NULL`).
@@ -195,7 +195,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
      - `frozen_snapshot`: JSONB NOT NULL DEFAULT '{}'.
      - `is_source_detached`: Boolean NOT NULL DEFAULT FALSE.
      - `version`: Integer NOT NULL DEFAULT 1 (OCC Version).
-  3. [`folder.py`](../../apps/api/src/api/db/models/folder.py): `FolderModel` (bảng `folders`):
+  3. [`folder.py`](../../../apps/api/src/api/db/models/folder.py): `FolderModel` (bảng `folders`):
      - `user_id`: UUID (`ON DELETE CASCADE`, `INDEX`).
      - `parent_id`: UUID Nullable (`ON DELETE CASCADE`).
      - `name`: String(100) NOT NULL.
@@ -225,7 +225,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
 
 ### Tầng 4: Thực Thể Soạn Thảo & Khởi Tạo Idempotent Schema (Writing Entities & Bootstrap)
 - **Tập tin:**
-  1. [`draft.py`](../../apps/api/src/api/db/models/draft.py): `DraftModel` (bảng `drafts`):
+  1. [`draft.py`](../../../apps/api/src/api/db/models/draft.py): `DraftModel` (bảng `drafts`):
      - `user_id`: UUID (`ON DELETE CASCADE`, `INDEX`).
      - `source_session_id`: UUID Nullable (`ON DELETE SET NULL`).
      - `title`: String(255) NOT NULL.
@@ -250,7 +250,7 @@ VeriScholar là nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình 
      - `tool_calls`: JSONB Nullable.
      - `compile_attempts`: SmallInteger NOT NULL DEFAULT 0.
      - `trace_id`: String(64) Nullable.
-  4. [`init_db.py`](../../apps/api/src/api/db/init_db.py): Hàm `ensure_database_schema(conn: AsyncConnection)`:
+  4. [`init_db.py`](../../../apps/api/src/api/db/init_db.py): Hàm `ensure_database_schema(conn: AsyncConnection)`:
      - Tạo extension `vector`.
      - Tạo hàm trigger `handle_occ_and_timestamp()` và gắn trigger `trg_drafts_occ` vào `drafts`, `trg_research_notes_occ` vào `research_notes`.
      - Tạo trigger vô điều kiện `BEFORE UPDATE ON research_notes` gọi `handle_note_source_detached()` để đảm bảo tự động bật `is_source_detached = TRUE` khi `documents` bị xóa kéo theo `ON DELETE SET NULL`.

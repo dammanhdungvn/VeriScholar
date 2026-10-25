@@ -1,11 +1,12 @@
-# TÀI LIỆU YÊU CẦU NGHIỆP VỤ (PRD): BẢNG QUẢN LÝ NGỮ CẢNH 3 CỘT & LỘ TRÌNH HỌC TUẦN TỰ
-# (3-COLUMN CONTEXT TABLE & SEQUENTIAL LEARNING ROADMAP)
+# VERISCHOLAR MVP — TÀI LIỆU YÊU CẦU SẢN PHẨM: BẢNG QUẢN LÝ NGỮ CẢNH 3 CỘT & LỘ TRÌNH HỌC TUẦN TỰ
+# (PRODUCT REQUIREMENTS DOCUMENT: 3-COLUMN CONTEXT TABLE & SEQUENTIAL LEARNING ROADMAP)
 
-**Mã tài liệu:** `PRD-04`  
-**Thuộc giải pháp:** VeriScholar AI Research Assistant  
-**Vai trò tác giả:** Chuyên viên Phân tích Nghiệp vụ (Business Analyst)  
-**Tài liệu kỹ thuật đối ứng:** [`04-context-table-and-roadmap-spec.md`](../specs/04-context-table-and-roadmap-spec.md)  
+**Mã phân hệ:** `PRD-04`  
+**Phiên bản:** `2.0-OFFICIAL`  
+**Vai trò phụ trách:** Chuyên viên Phân tích Nghiệp vụ (Lead Business Analyst — BA)  
+**Tài liệu Kỹ thuật liên đới:** [`04-context-table-and-roadmap-spec.md`](../specs/04-context-table-and-roadmap-spec.md)  
 **File nền tảng liên đới:** [`00-overview-and-cleanup.md`](./00-overview-and-cleanup.md)  
+**Trạng thái:** CHÍNH THỨC BAN HÀNH (RELEASE CANDIDATE)
 
 ---
 

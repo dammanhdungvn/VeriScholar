@@ -304,17 +304,22 @@ Bảng ma trận dưới đây quy định toàn bộ các mã lỗi tất đị
 | `409 Conflict` | `DUPLICATE_ASSET_FILENAME` | Tải lên file ảnh có tên trùng với một file ảnh đã tồn tại trong thư mục `figures/` của bản thảo | `"Tên tệp hình ảnh đã tồn tại trong dự án. Vui lòng đổi tên hoặc xóa tệp cũ trước."` | `field: "filename"` — Đổi tên file hoặc ghi đè có chủ đích. |
 | `409 Conflict` | `NO_UNDO_SNAPSHOT_AVAILABLE` | Người dùng gọi `POST :undo` khi chưa từng có thao tác sửa đổi nào của AI hoặc `previous_snapshot` là null | `"Không có bản sao lưu trước đó để thực hiện thao tác hoàn tác."` | `field: null` — Nút hoàn tác chỉ khả dụng sau khi AI đã can thiệp. |
 | `412 Precondition Failed` | `DRAFT_CONCURRENCY_CONFLICT` | Phiên bản `version` (hoặc `If-Match` ETag) từ client gửi lên không khớp với phiên bản hiện tại trong CSDL do có cập nhật đồng thời (OCC) | `"Bản thảo đã bị sửa đổi bởi một phiên làm việc khác. Vui lòng tải lại trang để cập nhật phiên bản mới nhất."` | `field: "version"` — Nạp lại bản thảo mới nhất và áp dụng lại thay đổi. |
-| `422 Unprocessable Entity` | `LATEX_COMPILATION_TIMEOUT` | Quá trình biên dịch trong E2B Sandbox MicroVM vượt quá giới hạn thời gian an toàn `15 giây` (do hình ảnh quá nặng hoặc macro lồng nhau) | `"Thời gian biên dịch bản thảo vượt quá giới hạn an toàn 15 giây. Vui lòng tối ưu hóa hình ảnh hoặc kiểm tra vòng lặp macro."` | `field: null` — Chuyển sang chế độ phác thảo nháp hoặc giảm độ phân giải ảnh. |
+| `422 Unprocessable Entity` | `LATEX_COMPILATION_TIMEOUT` | Quá trình biên dịch trong E2B Sandbox MicroVM vượt quá giới hạn thời gian an toàn `15 giây` (do hình ảnh quá nặng hoặc macro lồng nhau) | `"Thời gian biên dịch bản thảo vượt quá giới hạn an toàn 15 giây. Vui lòng tối ưu hóa hình ảnh hoặc kiểm tra vòng lặp macro."` | `field: null` — Giảm độ phân giải hình ảnh hoặc kiểm tra lại lệnh macro. |
 | `422 Unprocessable Entity` | `LATEX_SELF_HEAL_EXHAUSTED` | Vòng lặp ReAct tự sửa lỗi biên dịch đã dùng hết ngân sách 3 lần thử mà mã nguồn vẫn còn lỗi cú pháp không thể xuất PDF | `"AI đã thử tự vá lỗi 3 lần nhưng chưa thể giải quyết triệt để lỗi cú pháp. Vui lòng kiểm tra nhật ký lỗi để xử lý thủ công."` | `field: null` — Mở nhật ký lỗi chi tiết để chỉnh sửa thủ công dòng bị lỗi. |
 | `503 Service Unavailable` | `SANDBOX_SERVICE_UNAVAILABLE` | Dịch vụ E2B Sandbox MicroVM không thể khởi tạo, quá tải hoặc mất kết nối mạng | `"Hạ tầng biên dịch đám mây tạm thời không khả dụng. Vui lòng thử lại sau giây lát."` | `field: null` — Thử lại sau ít phút khi sandbox phục hồi. |
 
-**Cấu Trúc Phong Bì Phản Hồi Lỗi Chuẩn (Standard Error Envelope):**
+**Cấu Trúc Phong Bì Phản Hồi Lỗi Chuẩn (`ErrorResponse`):**
 ```json
 {
+  "success": false,
   "error": {
     "code": "DRAFT_CONCURRENCY_CONFLICT",
     "message": "Bản thảo đã bị sửa đổi bởi một phiên làm việc khác. Vui lòng tải lại trang để cập nhật phiên bản mới nhất.",
     "field": "version",
+    "action": "Nạp lại bản thảo mới nhất và áp dụng lại thay đổi."
+  },
+  "meta": {
+    "request_id": "req_89c2de0192ab",
     "trace_id": "trace-draft-89c2"
   }
 }

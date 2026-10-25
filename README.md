@@ -108,10 +108,8 @@ Each package in the monorepo has dedicated documentation detailing its internal 
 | :--- | :--- | :--- | :--- |
 | **`core`** | [`packages/core/`](packages/core/) | Pure Domain Core | Pure entities (`DocumentChunk`, `BoundingBox`), Ports, and Hybrid Search algorithms. |
 | **`api`** | [`apps/api/`](apps/api/) | Delivery & Observability | FastAPI server, pure ASGI TTFB tracing, secret masking, and adapters. 👉 **[Read API Guide](apps/api/README.md)** |
-| **`worker`** | [`apps/worker/`](docs/vi/backend-directory-structure.md) | Background Workers | Dedicated ingestion worker pool, Redis Streams consumer, explicit ACK, and DLQ. |
-| **`sandbox-broker`** | [`apps/sandbox-broker/`](docs/vi/backend-directory-structure.md) | Isolated Execution | Kernel-isolated compile sandbox (gVisor `runsc`) over internal gRPC/mTLS. |
 | **`web`** | [`apps/web/`](apps/web/) | User Interface | React 19, TypeScript, PDF.js visual grounding canvas overlay. |
-| **`infra`** | [`infra/`](infra/) | Infrastructure | Docker Compose definition, PostgreSQL 18 + `pgvector` and Redis 7 setup. 👉 **[Read Docker Guide](docs/vi/guide-docker.md)** |
+| **`infra`** | [`docker-compose.yml`](docker-compose.yml) | Infrastructure | Docker Compose definition, PostgreSQL 16+ `pgvector` and Redis 7 setup. |
 
 ---
 
@@ -213,17 +211,17 @@ pnpm --prefix apps/web build
 
 ## 📚 Documentation
 
-The authoritative **Single Source of Truth** for VeriScholar MVP specifications and engineering guides is maintained in [`docs/PRD/`](docs/PRD/) and [`docs/`](docs/README.md):
+The authoritative **Single Source of Truth** for VeriScholar MVP specifications and engineering guides is maintained in [`docs/PRD/`](docs/PRD/), [`docs/specs/`](docs/specs/), and [`docs/README.md`](docs/README.md):
 - **[MVP Master Overview & Scope (`docs/PRD/00-overview-and-cleanup.md`)](docs/PRD/00-overview-and-cleanup.md):** 4 MVP routes, core product vision, and out-of-scope pruning rules.
-- **[Authentication & Account Settings (`docs/PRD/01-authentication-and-profile.md`)](docs/PRD/01-authentication-and-profile.md):** JWT + Google GIS OAuth 2.0, ORCID iD, and 3-tab Account Settings modal.
-- **[Dashboard & Discovery (`docs/PRD/02-dashboard-and-discovery.md`)](docs/PRD/02-dashboard-and-discovery.md):** 4-item left navigation taskbar (`Đoạn chat mới`, `Tìm kiếm bài báo`, `Thư viện`, `Soạn thảo LaTeX`), Session history, and External Academic Search (`/discovery`).
-- **[Deep Reading, Hybrid RAG & GraphRAG (`docs/PRD/03-deep-reading-rag-and-graphrag.md`)](docs/PRD/03-deep-reading-rag-and-graphrag.md):** Multi-tab PDF.js canvas with normalized `[x0, y0, x1, y1, page]` bounding boxes, Hybrid RAG + GraphRAG strictly on **PostgreSQL + `pgvector`** (`graph_nodes` and `graph_edges`), Smart Notes, and Reference Drawer.
-- **[Personal Library & Folders (`docs/PRD/04-personal-library.md`)](docs/PRD/04-personal-library.md):** Hierarchical folders and starred documents management (`/library`).
-- **[LaTeX Studio & AI Writing Assistant (`docs/PRD/05-latex-writing-studio.md`)](docs/PRD/05-latex-writing-studio.md):** Tri-pane LaTeX code editor, Tectonic sandbox compiler with self-healing, and AI Writing Assistant (`/writing`).
-- **[Database Schema & Storage (`docs/PRD/06-database-and-storage.md`)](docs/PRD/06-database-and-storage.md):** PostgreSQL + `pgvector` schema (`users`, `folders`, `document_storage_blobs`, `documents`, `document_chunks`, `document_summaries`, `graph_nodes`, `graph_edges`, `reference_items`, `global_academic_cache`, `research_sessions`, `session_documents`, `session_turns`, `research_notes`, `drafts`).
-- **[Monitoring, Observability & Langfuse (`docs/PRD/07-monitoring-and-langfuse.md`)](docs/PRD/07-monitoring-and-langfuse.md):** Structlog JSON, `trace_id`, Langfuse Cloud (`verischolar-dev` / `verischolar-prod`), Sentry, and Alert Webhooks.
-- **[Architecture & Operations Portal (`docs/README.md`)](docs/README.md):** Detailed architecture, frontend engineering, CI/CD, and QA guides.
-- **[Engineering & Agent Protocol (`AGENTS.md`)](AGENTS.md):** Mandatory behavioral laws, SOLID design rules, and monorepo invariants.
+- **[Authentication, Scholar Profile & BYOK (`docs/PRD/01-auth-and-user.md`)](docs/PRD/01-auth-and-user.md):** JWT + OAuth 2.0, ORCID iD, and AES-256-GCM BYOK encryption.
+- **[Scholarly Discovery & Documents CRUD (`docs/PRD/02-discovery-and-documents-crud.md`)](docs/PRD/02-discovery-and-documents-crud.md):** External Academic Search (`/discovery`), 2-Tier ingestion, and CAS Zero-Retention purge.
+- **[Deep Reading Sessions & Grounded RAG (`docs/PRD/03-sessions-and-deep-reading-crud.md`)](docs/PRD/03-sessions-and-deep-reading-crud.md):** Multi-tab PDF.js canvas (1–5 docs), normalized `[0..1000]` bounding boxes, Hybrid RAG RRF, and in-session Notes.
+- **[3-Column Context Table & Roadmap (`docs/PRD/04-context-table-and-roadmap.md`)](docs/PRD/04-context-table-and-roadmap.md):** Reference extraction drawer, `< 500ms` 2-Tier ingestion, and Socratic learning roadmap ($A \rightarrow B \rightarrow C \rightarrow D$).
+- **[Favorite Library & 4-Entity GraphRAG (`docs/PRD/05-favorite-library-and-graphrag.md`)](docs/PRD/05-favorite-library-and-graphrag.md):** Hierarchical folders, Canonical Hub Merging (`Paper`, `Method`, `Dataset`, `MetricResult`), and cross-paper synthesis.
+- **[Agentic Overleaf Writing Workspace (`docs/PRD/06-agentic-overleaf-writing.md`)](docs/PRD/06-agentic-overleaf-writing.md):** 3-column LaTeX workspace, E2B Cloud Sandbox compilation, 3-attempt ReAct self-healing, and 1-Click Undo.
+- **[Monitoring, Observability & Langfuse (`docs/PRD/07-monitoring-and-langfuse.md`)](docs/PRD/07-monitoring-and-langfuse.md):** Structlog JSON, `trace_id`, Langfuse Cloud telemetry, and Alert Webhooks.
+- **[Architecture & Technical Specs Portal (`docs/README.md`)](docs/README.md):** Complete index of BA PRDs (`00..07`) and Senior Technical Specs (`00..08`).
+- **[Engineering & Agent Protocol (`AGENTS.md`)](AGENTS.md):** Mandatory behavioral laws, Hexagonal isolation, and 4 Verification Gates.
 
 ---
 

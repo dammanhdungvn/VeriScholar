@@ -239,8 +239,15 @@ async def test_cas_deduplication_and_ref_count(async_client: AsyncClient, auth_h
 
 @pytest.mark.asyncio
 async def test_zero_retention_purges_physical_blob_when_last_reference_deleted(async_client: AsyncClient, auth_headers: dict):
-    # Create and delete unique document, verify cascade cleanup
-    ...
+    pdf_content = b"%PDF-1.4 unique confidential draft content " + (b"text " * 100)
+    files = {"file": ("confidential.pdf", pdf_content, "application/pdf")}
+    res_up = await async_client.post("/api/v1/documents/upload", headers=auth_headers, files=files)
+    assert res_up.status_code == 202
+    doc_id = res_up.json()["data"]["id"]
+
+    res_del = await async_client.delete(f"/api/v1/documents/{doc_id}", headers=auth_headers)
+    assert res_del.status_code == 200
+    assert res_del.json()["data"]["purged_physical_file"] is True
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
