@@ -7,11 +7,23 @@
       "skillPath": "skills/build-with-exa/SKILL.md",
       "computedHash": "6eaf62e8f26d39614ef8d1b810d4f83f4f8e3b657fa772d28d35a4cee0047806"
     },
+    "frontend-design": {
+      "source": "anthropics/skills",
+      "sourceType": "github",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "89496d5dd00f4810205f351759594fc2742bf8eea85a2f2b2d1de59f4bd91576"
+    },
     "langfuse": {
       "source": "langfuse/skills",
       "sourceType": "github",
       "skillPath": "skills/langfuse/SKILL.md",
       "computedHash": "14afde211553546dc280bbdd25feff7d20b64b17f7c5d0976db192f5998b3709"
+    },
+    "web-design-guidelines": {
+      "source": "vercel-labs/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/web-design-guidelines/SKILL.md",
+      "computedHash": "a6a44d5498f7e8f68289902f3dedfc6f38ae0cee1e96527c80724cf27f727c2a"
     }
   }
 }

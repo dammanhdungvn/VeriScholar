@@ -5,8 +5,6 @@ from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.document import Document
 from core.domain.entities.draft import Draft
 from core.domain.entities.folder import (
-    ComparisonMatrixResult,
-    ComparisonMatrixRow,
     FolderEntity,
     SufficiencyEvaluation,
 )
@@ -26,8 +24,6 @@ from core.domain.entities.summary import DocumentSummary, SummaryPoint
 
 __all__ = [
     "CitationItem",
-    "ComparisonMatrixResult",
-    "ComparisonMatrixRow",
     "Document",
     "DocumentChunk",
     "DocumentSection",

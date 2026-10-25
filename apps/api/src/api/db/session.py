@@ -2,7 +2,7 @@
 
 from collections.abc import AsyncGenerator
 
-from api.core.config import ROOT_DIR, settings
+from api.core.config import settings
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 engine = create_async_engine(
@@ -18,27 +18,6 @@ AsyncSessionLocal = async_sessionmaker(
     autocommit=False,
     autoflush=False,
 )
-
-
-async def init_sqlite_fallback() -> None:
-    """Initializes local SQLite database fallback when PostgreSQL is unreachable."""
-    global engine, AsyncSessionLocal
-    sqlite_dir = ROOT_DIR / "storage"
-    sqlite_dir.mkdir(parents=True, exist_ok=True)
-    sqlite_url = f"sqlite+aiosqlite:///{sqlite_dir / 'verischolar.db'}"
-
-    await engine.dispose()
-    engine = create_async_engine(
-        sqlite_url,
-        echo=settings.SQL_ECHO,
-    )
-    AsyncSessionLocal = async_sessionmaker(
-        bind=engine,
-        class_=AsyncSession,
-        expire_on_commit=False,
-        autocommit=False,
-        autoflush=False,
-    )
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:

@@ -45,35 +45,6 @@ class FolderEntity:
 
 
 @dataclass
-class ComparisonMatrixRow:
-    """A row in the literature comparison matrix corresponding to one paper."""
-
-    document_id: UUID
-    title: str
-    authors: list[str]
-    year: int | None
-    core_methodology: str
-    datasets_used: list[str]
-    key_metrics: dict[str, str]
-    strengths: list[str]
-    limitations: list[str]
-    citations_count: int = 0
-
-
-@dataclass
-class ComparisonMatrixResult:
-    """Structured literature comparison matrix generated across multiple papers."""
-
-    matrix_id: UUID
-    topic: str
-    folder_id: UUID | None
-    documents_compared: int
-    rows: list[ComparisonMatrixRow]
-    summary_synthesis: str
-    generated_at: datetime = field(default_factory=datetime.utcnow)
-
-
-@dataclass
 class SufficiencyEvaluation:
     """Evaluation result from the Sufficiency Gate measuring evidence completeness."""
 

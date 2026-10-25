@@ -95,14 +95,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
                     )
                 )
                 if is_connection_error:
-                    logger.warning(
-                        "postgres_connection_failed_falling_back_to_sqlite",
+                    logger.error(
+                        "postgres_connection_failed",
                         error=str(exc),
                     )
-                    await db_session.init_sqlite_fallback()
-                    async with db_session.engine.begin() as conn:
-                        await conn.run_sync(Base.metadata.create_all)
-                        await ensure_database_schema(conn)
                     break
                 else:
                     logger.error("database_schema_initialization_error", error=str(exc))
