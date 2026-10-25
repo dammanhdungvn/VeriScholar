@@ -29,6 +29,11 @@ Mọi tệp nguồn phải đặt đúng vị trí trách nhiệm:
 * **Bản in đóng gáy (Hard Copy):** Tác giả đã làm riêng 2 trang bìa cứng mạ nhũ vàng bên ngoài. Bản in PDF xuất ra từ LaTeX là phần ruột nội dung để tiệm in kẹp vào giữa. Do đó, cờ `\showcoverfalse` được kích hoạt mặc định để trang đầu tiên của PDF bắt đầu từ phần ruột (không in lại bìa tránh lệch gáy).
 * **Bản mềm nộp lưu trữ (Soft Copy):** Khi cần nộp file PDF lưu trữ cho Bộ môn CNTT theo Quy chế, chỉ cần đổi thành `\showcovertrue` trong `main.tex` để tự động kích hoạt trang bìa phụ (`frontmatter/bia_phu.tex` theo Phụ lục 02).
 
+### 1.4. Kiến Trúc Phân Rã Sâu Từng Mục (Micro-Modular Structure)
+* **Tách tệp vi mô (Section-level files):** Để tối ưu hóa triệt để cửa sổ ngữ cảnh (Context Window) và tiết kiệm quota token cho AI, mỗi chương được phân rã thành các thư mục con chuyên biệt (`chapters/ch1/`, `chapters/ch2/`, `chapters/ch3/`, `chapters/ch4/`). Mỗi phần lớn là một tệp `.tex` độc lập (ví dụ `chapters/ch3/3_1_khao_sat.tex`, `chapters/ch3/3_2_use_cases.tex`...).
+* **Tệp điều phối chương:** Mỗi tệp `chapters/chX_ten_chuong.tex` đóng vai trò điều phối, chỉ chứa tiêu đề chương và các lệnh `\input{chapters/chX/...}` nạp tuần tự các tệp con.
+* **Nguyên tắc nạp ngữ cảnh tối thiểu:** Khi AI viết, sửa chữa hoặc bổ sung một mục cụ thể, AI chỉ nạp duy nhất tệp con tương ứng và tệp bản đồ mục lục `ROADMAP.md`, tuyệt đối không đọc toàn bộ báo cáo để tránh lãng phí token và ngăn ngừa lỗi vô tình sửa lan sang các phần khác.
+
 ---
 
 ## PHẦN 2: QUY CHUẨN ĐỊNH DẠNG TRANG & HÌNH THỨC
@@ -81,6 +86,20 @@ Giống như cách lập luận của 2 đồ án mẫu xuất sắc, khi giới
 * Ảnh chụp giao diện thực tế của hệ thống.
 * Kết quả chạy 4 Cổng kiểm thử tự động (số lượng test pass, thời gian chạy).
 * Bảng số liệu thực nghiệm: Độ trễ phản hồi (TTFT < 1.5s), độ chính xác tọa độ Bounding Box (IoU $\ge$ 0.85), tỷ lệ tự sửa lỗi biên dịch LaTeX ($\ge$ 90%), chi phí token từ Langfuse Cloud.
+
+### 3.5. Quy Chuẩn Danh Ngữ Hóa Tiêu Đề & Chống Trần Thuật Kể Lể (Academic Nominalization)
+Để khắc phục triệt để lỗi văn phong trần thuật kể lể (Narrative Rambling) và đảm bảo tính trong sáng, đanh thép của một đồ án tốt nghiệp xuất sắc:
+* **Tuyệt đối cấm tiêu đề dạng mệnh đề kể lể, dài dòng:** Cấm mở đầu tiêu đề bằng các động từ hành động hoặc cụm từ trần thuật như *"Nghiên cứu giải pháp..."*, *"Tìm hiểu về..."*, *"Khảo sát về..."*, *"Hiện thực hóa..."*, *"Thiết kế luồng..."*, cùng các liên từ độn từ dài lê thê (*"kết hợp... dựa trên... trên nền..."*).
+* **Độ dài tiêu đề mục chuẩn mực:** Mỗi tiêu đề mục chỉ dài từ **3 đến 7 từ**, định danh trực diện khái niệm, đối tượng kỹ thuật, thuật toán hoặc quy trình cốt lõi.
+  * *Ví dụ vi phạm (Kể lể):* *"Nghiên cứu giải pháp truy xuất lai Agentic Hybrid RAG kết hợp thuật toán xếp hạng đảo ngược RRF"* (18 từ).
+  * *Ví dụ chuẩn (Chuyên gia):* **"Kỹ thuật truy xuất lai (Hybrid RAG) và thuật toán RRF"** (8 từ).
+  * *Ví dụ vi phạm (Kể lể):* *"Khảo sát quy trình nghiên cứu khoa học và bài toán hỗ trợ xuất bản quốc tế tại VinUniversity"* (16 từ).
+  * *Ví dụ chuẩn (Chuyên gia):* **"Khảo sát bài toán nghiên cứu tại VinUniversity"** (7 từ).
+* **Cấu trúc đoạn văn kim tự tháp (Minto Pyramid Principle):**
+  * Câu đầu đoạn (Topic sentence) nêu trực diện luận điểm hoặc kết luận chính.
+  * Các câu tiếp theo trình bày ngay số liệu thực nghiệm, công thức toán học và bảng đối chiếu logic.
+  * Câu cuối chốt ý nghĩa hoặc dẫn chiếu tới Bảng/Hình (`Bảng~\ref{...}`, `Hình~\ref{...}`).
+  * Tuyệt đối không dùng văn trần thuật ngôi kể nhật ký (*"Sau khi làm xong A thì ta tiếp tục chuyển sang làm B..."*).
 
 ---
 
