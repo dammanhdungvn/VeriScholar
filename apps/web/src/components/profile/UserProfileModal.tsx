@@ -159,10 +159,30 @@ export function UserProfileModal({
       try {
         const apiRes = await authApi.updateProfile(payload);
         updated = { ...updated, ...apiRes };
+        if (typeof apiRes.has_byok === "boolean") {
+          setHasByok(apiRes.has_byok);
+        }
+        if (apiRes.byok_masked !== undefined) {
+          setByokMasked(apiRes.byok_masked ?? null);
+        }
+        if (apiRes.orcid_id !== undefined) {
+          setOrcidId(apiRes.orcid_id ?? "");
+        }
+        if (apiRes.theme_preference) {
+          setThemePreference(apiRes.theme_preference);
+        }
       } catch {
         // Offline / test fallback
       }
-      updateStoreUser(payload);
+      updateStoreUser({
+        full_name: updated.full_name,
+        institution: updated.institution ?? undefined,
+        department: updated.department ?? undefined,
+        orcid_id: updated.orcid_id ?? undefined,
+        has_byok: updated.has_byok,
+        byok_masked: updated.byok_masked,
+        theme_preference: updated.theme_preference,
+      });
       onUpdated?.(updated);
       setProfileSuccess("Đã lưu thông tin hồ sơ học thuật thành công.");
     } catch (err: unknown) {
@@ -189,22 +209,45 @@ export function UserProfileModal({
     try {
       const fallbackMasked = maskClientApiKey(rawKey);
       let nextMasked = fallbackMasked;
+      let nextHasByok = true;
+      let nextOrcid = orcidId.trim() || effectiveUser?.orcid_id || null;
+      let nextTheme: ThemePreference = themePreference;
       try {
-        const res = await authApi.updateProfile({ byok_api_key: rawKey });
+        const res = await authApi.updateProfile({
+          byok_api_key: rawKey,
+          orcid_id: orcidId.trim() ? orcidId.trim() : undefined,
+          theme_preference: themePreference,
+        });
+        if (typeof res.has_byok === "boolean") {
+          nextHasByok = res.has_byok;
+        }
         if (res.byok_masked) {
           nextMasked = res.byok_masked;
+        }
+        if (res.orcid_id !== undefined) {
+          nextOrcid = res.orcid_id ?? null;
+        }
+        if (res.theme_preference) {
+          nextTheme = res.theme_preference;
         }
       } catch {
         // Offline / unit test fallback
       }
-      setHasByok(true);
+      setHasByok(nextHasByok);
       setByokMasked(nextMasked);
       setByokApiKey("");
-      updateStoreUser({ has_byok: true, byok_masked: nextMasked });
+      updateStoreUser({
+        has_byok: nextHasByok,
+        byok_masked: nextMasked,
+        orcid_id: nextOrcid ?? undefined,
+        theme_preference: nextTheme,
+      });
       onUpdated?.({
         ...(effectiveUser ?? { id: "usr-local", email: "", full_name: fullName }),
-        has_byok: true,
+        has_byok: nextHasByok,
         byok_masked: nextMasked,
+        orcid_id: nextOrcid,
+        theme_preference: nextTheme,
       });
       setByokSuccess("Khóa cá nhân đã được mã hóa AES-256-GCM và lưu trữ an toàn.");
     } catch (err: unknown) {

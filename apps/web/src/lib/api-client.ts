@@ -187,8 +187,10 @@ export interface ApiPaginatedResult<T> {
 }
 
 export function resolveApiUrl(endpoint: string): string {
+  const runtimeBase = (globalThis as { __VITE_API_BASE_URL__?: string }).__VITE_API_BASE_URL__;
+  const baseUrl = runtimeBase ?? import.meta.env.VITE_API_BASE_URL ?? API_BASE_URL;
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  return `${API_BASE_URL}${API_PREFIX}${cleanEndpoint}`;
+  return `${baseUrl}${API_PREFIX}${cleanEndpoint}`;
 }
 
 export function generateRequestId(customId?: string): string {

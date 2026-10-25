@@ -16,7 +16,11 @@ import httpx
 import structlog
 from api.core.config import settings
 from api.core.crypto import CryptoError, encrypt_byok_key
-from api.core.email_validator import validate_academic_or_trusted_email, validate_orcid_id
+from api.core.email_validator import (
+    mask_api_key,
+    validate_academic_or_trusted_email,
+    validate_orcid_id,
+)
 from api.db.models.user import UserModel
 from api.schemas.auth import (
     AuthTokensResponse,
@@ -24,6 +28,7 @@ from api.schemas.auth import (
     RegisterRequest,
     UpdateProfileRequest,
 )
+from api.services.ai_tracing_service import AITracingService
 from api.services.email_service import EmailService
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -1080,77 +1085,118 @@ class AuthService:
 
     async def update_profile(self, user: UserModel, payload: UpdateProfileRequest) -> UserModel:
         """Update authenticated user's profile details."""
-        if payload.orcid_id is not None:
-            clean_orcid = payload.orcid_id.strip()
-            if not validate_orcid_id(clean_orcid):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "code": "INVALID_ORCID_FORMAT",
-                        "message": "Định dạng mã ORCID không hợp lệ (chuẩn: 0000-0002-1825-0097).",
-                        "field": "orcid_id",
-                        "action": "Nhập mã ORCID chuẩn gồm 16 chữ số chia 4 nhóm.",
-                    },
-                )
-            user.orcid_id = clean_orcid or None
-
-        if payload.theme_preference is not None:
-            clean_theme = payload.theme_preference.strip().lower()
-            if clean_theme not in ("light", "dark", "system"):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail={
-                        "code": "INVALID_THEME_PREFERENCE",
-                        "message": (
-                            "Tùy chọn giao diện không hợp lệ. "
-                            "Chỉ chấp nhận các giá trị: light, dark hoặc system."
-                        ),
-                        "field": "theme_preference",
-                        "action": "Chọn một trong 3 giá trị cho phép.",
-                    },
-                )
-            user.theme_preference = clean_theme
-
-        if payload.byok_api_key is not None:
-            clean_key = payload.byok_api_key.strip()
-            if clean_key == "":
-                user.byok_api_key_encrypted = None
-            else:
-                try:
-                    user.byok_api_key_encrypted = encrypt_byok_key(
-                        clean_key, settings.BYOK_ENCRYPTION_KEY
-                    )
-                except CryptoError as exc:
-                    logger.error("byok_encryption_failed", error=str(exc))
+        tracer = AITracingService()
+        with tracer.trace(
+            name="scholar_profile_byok_update",
+            user_id=user.id,
+            tags=["plan-01", "byok-vault", "auto-trace"],
+            input={
+                "has_byok_payload": bool(payload.byok_api_key),
+                "orcid_id": payload.orcid_id,
+                "theme_preference": payload.theme_preference,
+            },
+        ) as trace_span:
+            if payload.orcid_id is not None:
+                clean_orcid = payload.orcid_id.strip()
+                if not validate_orcid_id(clean_orcid):
                     raise HTTPException(
-                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        status_code=status.HTTP_400_BAD_REQUEST,
                         detail={
-                            "code": "BYOK_ENCRYPTION_FAILED",
+                            "code": "INVALID_ORCID_FORMAT",
                             "message": (
-                                "Lỗi hệ thống trong quá trình mã hóa bảo mật khóa cá nhân. "
-                                "Vui lòng liên hệ ban quản trị."
+                                "Định dạng mã ORCID không hợp lệ (chuẩn: 0000-0002-1825-0097)."
                             ),
-                            "action": "Kiểm tra lại biến môi trường server.",
+                            "field": "orcid_id",
+                            "action": "Nhập mã ORCID chuẩn gồm 16 chữ số chia 4 nhóm.",
                         },
-                    ) from exc
+                    )
+                user.orcid_id = clean_orcid or None
 
-        if payload.full_name is not None:
-            user.full_name = payload.full_name.strip()
-        if payload.institution is not None:
-            user.institution = payload.institution.strip()
-        if payload.academic_rank is not None:
-            user.academic_rank = payload.academic_rank.strip()
-        if payload.avatar_url is not None:
-            user.avatar_url = payload.avatar_url.strip()
-        if payload.department is not None:
-            user.department = payload.department.strip()
-        if payload.bio is not None:
-            user.bio = payload.bio.strip()
-        if payload.research_interests is not None:
-            user.research_interests = payload.research_interests.strip()
-        if payload.google_scholar_url is not None:
-            user.google_scholar_url = payload.google_scholar_url.strip()
+            if payload.theme_preference is not None:
+                clean_theme = payload.theme_preference.strip().lower()
+                if clean_theme not in ("light", "dark", "system"):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "code": "INVALID_THEME_PREFERENCE",
+                            "message": (
+                                "Tùy chọn giao diện không hợp lệ. "
+                                "Chỉ chấp nhận các giá trị: light, dark hoặc system."
+                            ),
+                            "field": "theme_preference",
+                            "action": "Chọn một trong 3 giá trị cho phép.",
+                        },
+                    )
+                user.theme_preference = clean_theme
 
-        await self.db.commit()
-        await self.db.refresh(user)
+            if payload.byok_api_key is not None:
+                clean_key = payload.byok_api_key.strip()
+                if clean_key == "":
+                    user.byok_api_key_encrypted = None
+                else:
+                    try:
+                        encrypted_val = encrypt_byok_key(clean_key, settings.BYOK_ENCRYPTION_KEY)
+                        user.byok_api_key_encrypted = encrypted_val
+                        with tracer.span(
+                            name="byok_aes256_gcm_encrypt",
+                            input={"masked_key": mask_api_key(clean_key)},
+                            output={
+                                "cipher_bytes": len(user.byok_api_key_encrypted),
+                                "status": "encrypted_aes256_gcm",
+                            },
+                        ) as enc_span:
+                            enc_span.set_output(
+                                {
+                                    "cipher_bytes": len(user.byok_api_key_encrypted),
+                                    "status": "encrypted_aes256_gcm",
+                                }
+                            )
+                    except CryptoError as exc:
+                        logger.error("byok_encryption_failed", error=str(exc))
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail={
+                                "code": "BYOK_ENCRYPTION_FAILED",
+                                "message": (
+                                    "Lỗi hệ thống trong quá trình mã hóa bảo mật khóa cá nhân. "
+                                    "Vui lòng liên hệ ban quản trị."
+                                ),
+                                "action": "Kiểm tra lại biến môi trường server.",
+                            },
+                        ) from exc
+
+            if payload.full_name is not None:
+                user.full_name = payload.full_name.strip()
+            if payload.institution is not None:
+                user.institution = payload.institution.strip()
+            if payload.academic_rank is not None:
+                user.academic_rank = payload.academic_rank.strip()
+            if payload.avatar_url is not None:
+                user.avatar_url = payload.avatar_url.strip()
+            if payload.department is not None:
+                user.department = payload.department.strip()
+            if payload.bio is not None:
+                user.bio = payload.bio.strip()
+            if payload.research_interests is not None:
+                user.research_interests = payload.research_interests.strip()
+            if payload.google_scholar_url is not None:
+                user.google_scholar_url = payload.google_scholar_url.strip()
+
+            await self.db.commit()
+            await self.db.refresh(user)
+
+            trace_span.set_output(
+                {
+                    "user_id": str(user.id),
+                    "has_byok": bool(user.byok_api_key_encrypted),
+                    "byok_masked": (
+                        mask_api_key(payload.byok_api_key.strip())
+                        if payload.byok_api_key and payload.byok_api_key.strip()
+                        else None
+                    ),
+                    "orcid_id": user.orcid_id,
+                    "theme_preference": user.theme_preference,
+                }
+            )
+        tracer.flush()
         return user
