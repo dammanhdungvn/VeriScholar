@@ -1,0 +1,82 @@
+% !TEX program = xelatex
+% ==============================================================================
+% VERISCHOLAR GRADUATION THESIS (ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC)
+% Đại học Mỏ - Địa chất (HUMG) - Khoa Công nghệ Thông tin
+% Tác giả: Đàm Mạnh Dũng
+% ==============================================================================
+
+\documentclass[12pt,a4paper,oneside]{report}
+
+% Nạp cấu hình tiền xử lý và lệnh tiện ích
+\input{config/preamble}
+\input{config/commands}
+
+% Cờ điều khiển hiển thị trang bìa phụ (Phục vụ nộp bản mềm PDF)
+% Đặt \showcoverfalse để xuất bản in ấn ruột (bắt đầu từ Lời cảm ơn/Mục lục)
+% Đặt \showcovertrue khi cần nộp file PDF đầy đủ có trang bìa phụ cho bộ môn
+\newif\ifshowcover
+\showcoverfalse
+
+\begin{document}
+
+% ------------------------------------------------------------------------------
+% 0. TRANG BÌA PHỤ (Tùy chọn cho bản mềm lưu trữ)
+% ------------------------------------------------------------------------------
+\ifshowcover
+    \input{frontmatter/bia_phu}
+    \cleardoublepage
+\fi
+
+% ------------------------------------------------------------------------------
+% I. PHẦN SƠ BỘ (FRONTMATTER - Đánh số trang La Mã thường i, ii, iii...)
+% ------------------------------------------------------------------------------
+\pagenumbering{roman}
+\setcounter{page}{1}
+
+% Lời cảm ơn
+\input{frontmatter/loi_cam_on}
+
+% Mục lục tự động
+\cleardoublepage
+\phantomsection
+\addcontentsline{toc}{chapter}{MỤC LỤC}
+\tableofcontents
+
+% Danh mục ký hiệu và chữ viết tắt
+\input{frontmatter/danh_muc_viet_tat}
+
+% Danh mục bảng biểu và hình vẽ
+\input{frontmatter/danh_muc_bang}
+\input{frontmatter/danh_muc_hinh}
+
+% Lời mở đầu dẫn nhập
+\input{frontmatter/loi_mo_dau}
+
+% ------------------------------------------------------------------------------
+% II. PHẦN THÂN BÀI (MAIN BODY - Đánh số trang Ả Rập 1, 2, 3...)
+% ------------------------------------------------------------------------------
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+% Chương 1: Tổng quan về đề tài
+\input{chapters/ch1_tong_quan}
+
+% Chương 2: Cơ sở lý thuyết và công nghệ sử dụng
+\input{chapters/ch2_co_so_ly_thuyet}
+
+% Chương 3: Phân tích và thiết kế hệ thống
+\input{chapters/ch3_thiet_ke_he_thong}
+
+% Chương 4: Cài đặt và Kết quả thực nghiệm
+\input{chapters/ch4_thuc_nghiem}
+
+% Kết luận và Hướng phát triển
+\input{chapters/ket_luan}
+
+% ------------------------------------------------------------------------------
+% III. TÀI LIỆU THAM KHẢO & PHỤ LỤC
+% ------------------------------------------------------------------------------
+\input{chapters/tai_lieu_tham_khao}
+
+\end{document}

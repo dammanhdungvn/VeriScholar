@@ -1,0 +1,77 @@
+% !TEX root = ../main.tex
+\chapter{PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG}
+\label{ch:thiet_ke_he_thong}
+
+\section{Khảo sát nghiệp vụ và bài toán thực tế}
+\label{sec:khao_sat}
+Học giả khi tiếp cận một đề tài nghiên cứu mới thường trải qua 4 giai đoạn làm việc liên hoàn:
+\begin{enumerate}
+    \item Tìm kiếm các ấn phẩm liên quan từ các kho lưu trữ toàn cầu.
+    \item Đọc sâu từng công trình, đối chiếu số liệu và ghi chú các đoạn trích dẫn quan trọng.
+    \item Xây dựng bức tranh tổng thể về các phương pháp và so sánh thực nghiệm.
+    \item Soạn thảo bản thảo bài báo khoa học bằng \LaTeX\ theo quy chuẩn của các hội nghị quốc tế.
+\end{enumerate}
+
+\section{Xác định tác nhân và biểu đồ ca sử dụng (Use Case)}
+\label{sec:use_case}
+\subsection{Xác định các tác nhân trong hệ thống}
+\label{subsec:tac_nhan}
+Hệ thống \VS\ phục vụ hai nhóm tác nhân chính:
+\begin{itemize}
+    \item \textbf{Học giả (Scholar / Researcher):} Người dùng chính của hệ thống, thực hiện tìm kiếm, đọc hiểu, quản lý thư viện và soạn thảo bản thảo.
+    \item \textbf{Quản trị viên (System Administrator):} Giám sát tình trạng vận hành, theo dõi hạn ngạch tài nguyên và nhật ký truy vết.
+\end{itemize}
+
+\subsection{Danh mục các ca sử dụng chính}
+\label{subsec:danh_muc_uc}
+Hệ thống bao gồm 30 ca sử dụng chuẩn hóa phân chia theo 4 phân hệ chính:
+\begin{itemize}
+    \item \textbf{Phân hệ Định danh và Bảo mật (UC-01):} Đăng nhập OTP/OAuth, quản lý hồ sơ học giả và két sắt mã hóa khóa cá nhân AES-256-GCM.
+    \item \textbf{Phân hệ Khám phá và Nạp bài báo 2 tầng (UC-02):} Tìm kiếm liên hợp đa nguồn (Exa + arXiv + Semantic Scholar), nạp bài tức thì và bóc tách ngầm CAS.
+    \item \textbf{Phân hệ Đọc sâu và Bảng ngữ cảnh (UC-03 \& UC-04):} Hỏi đáp Hybrid RAG có minh chứng tọa độ trang và tổng hợp bảng đối chiếu 3 cột.
+    \item \textbf{Phân hệ Thư viện GraphRAG và Soạn thảo \LaTeX\ (UC-05 \& UC-06):} Trích xuất mạng tri thức 4 thực thể và tác nhân LangGraph tự sửa lỗi biên dịch trên E2B Sandbox.
+\end{itemize}
+
+\section{Thiết kế kiến trúc tổng thể của hệ thống}
+\label{sec:kien_truc_tong_the}
+\subsection{Kiến trúc 4 phân tầng monorepo}
+\label{subsec:kien_truc_4_tang}
+Kiến trúc phần mềm của \VS\ được tổ chức thành 4 phân tầng:
+\begin{enumerate}
+    \item \textbf{Tầng Giao diện người dùng (\texttt{apps/web}):} Xây dựng trên React 19, Tailwind CSS và PDF Canvas Viewer.
+    \item \textbf{Tầng Giao vận API (\texttt{apps/api}):} Cung cấp các RESTful API và các luồng sự kiện Server-Sent Events (SSE) trên FastAPI.
+    \item \textbf{Tầng Lõi miền nghiệp vụ (\texttt{packages/core}):} Lõi logic thuần khiết, không phụ thuộc I/O.
+    \item \textbf{Tầng Dữ liệu và Hạ tầng ngoài:} CSDL PostgreSQL 16 + \texttt{pgvector}, Kho CAS tệp nhị phân và E2B Sandbox.
+\end{enumerate}
+
+\subsection{Biểu đồ tuần tự cho luồng hỏi đáp Hybrid RAG có minh chứng tọa độ}
+\label{subsec:sequence_rag}
+Luồng xử lý câu hỏi của học giả được thực hiện tuần tự: Người dùng gửi câu hỏi $\rightarrow$ API kích hoạt tìm kiếm lai (Vector + BM25) $\rightarrow$ Thuật toán RRF xếp hạng đoạn trích $\rightarrow$ LLM tổng hợp câu trả lời kèm mảng tọa độ Bounding Box $[0..1000]$ $\rightarrow$ Truyền tải về giao diện qua kênh SSE để tự động cuộn trang và vẽ khung viền vàng tô sáng.
+
+\section{Thiết kế cơ sở dữ liệu vật lý}
+\label{sec:thiet_ke_db}
+\subsection{Lược đồ quan hệ thực thể (ERD)}
+\label{subsec:erd}
+Hệ thống sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 gồm 16 bảng cốt lõi, được phân hoạch an toàn theo \texttt{user\_id}.
+
+\subsection{Đặc tả một số bảng cơ sở dữ liệu chính}
+\label{subsec:dac_ta_bang}
+Dưới đây là đặc tả bảng lưu trữ đoạn trích và vector nhúng:
+
+\begin{table}[htbp]
+\centering
+\caption{Đặc tả bảng dữ liệu \texttt{document\_chunks}}
+\label{tab:document_chunks}
+\begin{tabular}{p{3.5cm}p{3cm}p{2.5cm}p{5.5cm}}
+\toprule
+\textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Index} & \textbf{Mô tả nghiệp vụ} \\
+\midrule
+\texttt{id} & UUID & Khóa chính & Định danh duy nhất của đoạn trích \\
+\texttt{document\_id} & UUID & Khóa ngoại & Khóa ngoại trỏ tới bảng \texttt{documents} \\
+\texttt{page\_number} & INTEGER & Index B-Tree & Số thứ tự trang giấy trong tài liệu PDF \\
+\texttt{chunk\_text} & TEXT & Không & Nội dung văn bản của đoạn trích \\
+\texttt{bbox} & JSONB & Không & Tọa độ hộp định vị $[x_0, y_0, x_1, y_1]$ chuẩn hóa \\
+\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao \\
+\bottomrule
+\end{tabular}
+\end{table}

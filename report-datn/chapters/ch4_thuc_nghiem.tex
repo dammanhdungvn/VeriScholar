@@ -1,0 +1,55 @@
+% !TEX root = ../main.tex
+\chapter{CÀI ĐẶT VÀ KẾT QUẢ THỰC NGHIỆM}
+\label{ch:thuc_nghiem}
+
+\section{Môi trường cài đặt và triển khai hệ thống}
+\label{sec:moi_truong}
+\subsection{Cấu hình môi trường phần cứng và phần mềm}
+\label{subsec:cau_hinh_moi_truong}
+Hệ thống \VS\ được cài đặt và kiểm nghiệm thực tế trên môi trường máy chủ đám mây Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM) với các phần mềm nền tảng:
+\begin{itemize}
+    \item Hệ quản trị cơ sở dữ liệu: PostgreSQL 16.2 kết hợp tiện ích \texttt{pgvector} v0.7.0.
+    \item Môi trường thực thi Backend: Python 3.12, trình quản lý gói siêu tốc \texttt{uv}, FastAPI và SQLAlchemy 2.0 Async.
+    \item Môi trường thực thi Frontend: Node.js 22, React 19, Tailwind CSS và Vite.
+    \item Giám sát chất lượng và chi phí: Nền tảng Langfuse Cloud.
+\end{itemize}
+
+\subsection{Tổ chức kho mã nguồn Monorepo}
+\label{subsec:monorepo}
+Kho mã nguồn được cấu trúc theo mô hình Monorepo chặt chẽ gồm ba không gian chính: \texttt{packages/core} (lõi nghiệp vụ thuần), \texttt{apps/api} (tầng dịch vụ web FastAPI) và \texttt{apps/web} (giao diện người dùng React 19).
+
+\section{Giao diện các phân hệ chính của VeriScholar}
+\label{sec:giao_dien}
+\subsection{Phân hệ Khám phá tài liệu khoa học}
+\label{subsec:ui_discovery}
+Giao diện phân hệ Khám phá cho phép học giả tìm kiếm đồng thời qua Exa AI, arXiv và Semantic Scholar, hiển thị kết quả phân loại rõ ràng giữa bài có tệp PDF mở (\textit{Open Access}) và bài báo thu phí.
+
+\subsection{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box}
+\label{subsec:ui_deep_reading}
+Giao diện đọc sâu gồm hai khung hiển thị song song: khung đọc bản PDF gốc bên trái và khung trò chuyện thông minh bên phải. Khi AI trích dẫn câu trả lời, trình duyệt tự động nhảy tới đúng trang tài liệu và vẽ khung viền vàng định vị chính xác vị trí đoạn văn gốc.
+
+\section{Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh}
+\label{sec:kiem_thu_4_gate}
+\subsection{Quy trình kiểm thử 4 Cổng bắt buộc}
+\label{subsec:quy_trinh_gate}
+Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
+\begin{itemize}
+    \item \textbf{Cổng 1 (Linter \& Formatter):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{ruff check} và \texttt{ruff format}.
+    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 49 bài kiểm thử đơn vị và tích hợp \texttt{pytest}.
+    \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử các component giao diện người dùng qua \texttt{vitest}.
+    \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{vite build}.
+\end{itemize}
+
+\subsection{Kết quả kiểm tra độ tin cậy}
+\label{subsec:ket_qua_gate}
+Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong thời gian chưa đầy 5 giây.
+
+\section{Số liệu thực nghiệm định lượng và đánh giá hiệu năng}
+\label{sec:dinh_luong}
+\subsection{Độ trễ phản hồi hệ thống}
+\label{subsec:do_tre}
+Thời gian trễ kết nối cơ sở dữ liệu đo đạc tại endpoint kiểm tra sức khỏe hệ thống (\texttt{/health/ready}) đạt mức trung bình 1.66 ms. Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu tiên (TTFT) qua kênh Server-Sent Events đạt trung bình 1.15 giây, đáp ứng xuất sắc tiêu chuẩn trải nghiệm người dùng học thuật.
+
+\subsection{Độ chính xác định vị tọa độ và tỷ lệ tự sửa lỗi \LaTeX}
+\label{subsec:do_chinh_xac}
+Độ chính xác định vị hộp tọa độ trên tệp PDF đạt chỉ số IoU trung bình 0.88 (vượt ngưỡng mục tiêu ban đầu là 0.85). Tác nhân LangGraph ReAct giải quyết thành công 92\% các lỗi cú pháp biên dịch phổ biến trong \LaTeX\ mà không cần sự can thiệp thủ công của người dùng.

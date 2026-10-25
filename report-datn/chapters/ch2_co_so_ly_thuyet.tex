@@ -1,0 +1,52 @@
+% !TEX root = ../main.tex
+\chapter{CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ}
+\label{ch:co_so_ly_thuyet}
+
+\section{Kiến trúc phần mềm lục giác (Hexagonal Architecture)}
+\label{sec:hexagonal}
+\subsection{Nguyên lý Ports and Adapters}
+\label{subsec:ports_and_adapters}
+Kiến trúc Lục giác, do Alistair Cockburn khởi xướng, phân tách hệ thống phần mềm thành ba vùng độc lập: Lõi miền nghiệp vụ thuần khiết (Pure Core Domain), các Cổng giao tiếp trừu tượng (Ports), và các Bộ điều hợp kỹ thuật (Adapters). Quy tắc phụ thuộc bất biến quy định rằng lõi nghiệp vụ tuyệt đối không được phụ thuộc vào bất kỳ framework giao diện, cơ sở dữ liệu hay thư viện I/O nào.
+
+\subsection{Luận giải lựa chọn kiến trúc lục giác cho VeriScholar}
+\label{subsec:luan_giai_hexagonal}
+Hệ thống \VS\ lựa chọn Kiến trúc Lục giác vì đề tài tích hợp nhiều công nghệ AI có tốc độ thay đổi nhanh (mô hình LLM, dịch vụ trích xuất PDF, sandbox đám mây). Bằng việc cô lập nghiệp vụ qua các Cổng giao tiếp, hệ thống cho phép thay thế nhà cung cấp AI hoặc chuyển đổi cơ sở dữ liệu mà không cần chỉnh sửa bất kỳ logic tính toán nghiệp vụ nào.
+
+\section{Tìm kiếm lai (Hybrid Search) và Thuật toán RRF}
+\label{sec:hybrid_search}
+\subsection{Nguyên lý tìm kiếm ngữ nghĩa và tìm kiếm từ khóa}
+\label{subsec:nguyen_ly_search}
+Tìm kiếm dày (Dense Retrieval) sử dụng vector nhúng ngữ nghĩa chiều cao (1024 hoặc 1536 chiều) trên chỉ mục đồ thị HNSW để tìm các đoạn văn đồng nghĩa. Ngược lại, tìm kiếm thưa (Sparse Retrieval) dựa trên thuật toán BM25 và chỉ mục GIN để khớp các từ khóa kỹ thuật hiếm gặp như công thức toán hoặc mã định danh.
+
+\subsection{Thuật toán Hợp nhất Xếp hạng Đảo ngược (RRF)}
+\label{subsec:thuat_toan_rrf}
+Thuật toán RRF hợp nhất hai danh sách xếp hạng độc lập mà không cần chuẩn hóa điểm số tương đồng theo công thức:
+\begin{equation}
+\label{eq:rrf}
+\RRF(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
+\end{equation}
+trong đó $M$ là tập các phương pháp truy xuất, $r_m(d)$ là thứ hạng của tài liệu $d$ trong phương pháp $m$, và $hằng\ số\ k = 60$ là tham số làm mịn chuẩn hóa học thuật nhằm tránh việc các tài liệu đứng đầu áp đảo hoàn toàn bảng xếp hạng chung.
+
+\subsection{Luận giải lựa chọn thuật toán RRF}
+\label{subsec:luan_giai_rrf}
+Đề tài lựa chọn thuật toán RRF vì trong nghiên cứu học thuật, các câu hỏi thường kết hợp giữa khái niệm lý thuyết trừu tượng và các thuật ngữ chuyên ngành chính xác. Việc kết hợp cả hai luồng tìm kiếm giúp cải thiện rõ rệt chỉ số độ bao phủ tài liệu so với phương pháp tìm kiếm đơn lẻ.
+
+\section{Mạng tri thức học thuật 4-thực thể (GraphRAG)}
+\label{sec:graphrag}
+\subsection{Mô hình hóa thực thể học thuật}
+\label{subsec:mo_hinh_graph}
+Khác với các hệ thống đồ thị tổng quát, \VS\ tinh gọn tri thức khoa học thành 4 lớp thực thể cốt lõi: Bài báo (\textit{Paper}), Phương pháp (\textit{Method}), Bộ dữ liệu (\textit{Dataset}) và Kết quả đo lường (\textit{MetricResult}). Mối quan hệ giữa các thực thể cho phép suy luận đa bước như: \textit{''Phương pháp A đã được kiểm nghiệm trên những bộ dữ liệu nào và đạt độ chính xác bao nhiêu?''}.
+
+\subsection{Luận giải triển khai GraphRAG trên PostgreSQL pgvector}
+\label{subsec:luan_giai_pgvector}
+Thay vì vận hành thêm một cơ sở dữ liệu đồ thị độc lập (như Neo4j) gây tốn kém tài nguyên và khó đồng bộ giao dịch, đề tài lựa chọn mô hình hóa các nút và cạnh liên kết trực tiếp trên PostgreSQL với các truy vấn đệ quy Common Table Expression (CTE). Giải pháp này đảm bảo tính toàn vẹn giao dịch ACID tuyệt đối: khi học giả xóa một bài báo, toàn bộ các nút đồ thị và vector liên quan đều được dọn dẹp trong cùng một phiên xử lý.
+
+\section{Máy trạng thái tác nhân AI và Sandbox đám mây}
+\label{sec:react_agent}
+\subsection{Chu trình Suy luận -- Hành động -- Quan sát (ReAct)}
+\label{subsec:chu_trinh_react}
+Tác nhân AI trong phân hệ soạn thảo \LaTeX\ vận hành dựa trên máy trạng thái hữu hạn LangGraph StateGraph theo chu trình ReAct. Tác nhân gửi mã nguồn tới môi trường thực thi cách ly E2B Sandbox, phân tích tệp nhật ký lỗi biên dịch (\texttt{.log}), suy luận nguyên nhân và tự động chỉnh sửa mã nguồn với giới hạn tối đa 3 vòng lặp.
+
+\subsection{Luận giải lựa chọn E2B Sandbox}
+\label{subsec:luan_giai_e2b}
+Việc biên dịch \LaTeX\ từ mã nguồn người dùng tiềm ẩn các rủi ro bảo mật hệ thống nghiêm trọng nếu chạy trực tiếp trên máy chủ ứng dụng. E2B Sandbox cung cấp môi trường máy ảo Linux siêu nhẹ (MicroVM) cô lập hoàn toàn, tự động giải phóng tài nguyên sau khi phiên kết thúc, đảm bảo an toàn tuyệt đối cho hạ tầng đám mây của đề tài.
