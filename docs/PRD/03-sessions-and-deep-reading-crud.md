@@ -31,7 +31,7 @@ Trên thanh điều hướng bên trái (Sidebar), người dùng quản lý to�
 
 Một phiên đọc cho phép mở và đối chiếu đồng thời **tối đa 5 bài báo** trên Thanh Tab PDF (`DocumentTabBar.tsx`):
 1. **Thêm bài báo vào phiên (`POST /api/v1/sessions/{id}/documents`):**
-   * Thêm bài báo từ danh sách tài liệu đã tải hoặc từ Bảng Context 3 Cột (Module 04) vào phiên hiện tại.
+   * Thêm bài báo từ danh sách tài liệu đã tải hoặc từ Bảng Tham Khảo & Lộ Trình Socratic vào phiên hiện tại.
    * Nếu phiên đã đủ `5/5 bài báo`, hệ thống chặn thêm mới và thông báo rõ: *"Phiên đọc chỉ hỗ trợ tối đa 5 bài báo cùng lúc để đảm bảo độ chính xác của AI. Vui lòng đóng bớt 1 bài báo trước khi thêm mới."*
 2. **Chuyển đổi Tab bài báo:**
    * Bấm vào Tab bài báo nào trên `DocumentTabBar`, khung PDF bên trái hiển thị ngay bài báo đó.
@@ -55,7 +55,7 @@ Khi người dùng dùng chuột bôi đen bất kỳ đoạn văn hoặc công 
 
 ---
 
-## 5. Hỏi Đáp Học Sâu Qua RAG Chuyên Biệt & Quản Lý Lịch Sử Chat (`session_messages`)
+## 5. Hỏi Đáp Học Sâu Qua RAG Chuyên Biệt & Quản Lý Lịch Sử Chat (Bảng `session_turns` / API `/messages`)
 
 ### A. CRUD Lịch sử Hội thoại trong Phiên
 1. **Xem lịch sử tin nhắn (`GET /api/v1/sessions/{id}/messages`):** Tải toàn bộ các lượt hỏi đáp trước đó của phiên đọc.

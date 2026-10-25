@@ -114,7 +114,7 @@ Tuân thủ nghiêm ngặt PRD 05 §3, đồ thị tri thức chỉ sử dụng 
 
 ## 4. Hợp Đồng API REST (API Contracts)
 
-### A. Tra Cứu Tri Thức Đồ Thị Tổng Hợp (`POST /api/v1/library/graph-query`)
+### A. Tra Cứu Tri Thức Đồ Thị Tổng Hợp (`POST /api/v1/folders/synthesis` hoặc `/api/v1/library/graph-query`)
 - **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
 - **Request Body:**
   ```json

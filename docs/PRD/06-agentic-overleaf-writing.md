@@ -4,13 +4,13 @@
 ---
 
 ## 1. Mục Tiêu Phân Hệ
-Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTeX trở nên tự động và liền mạch: người dùng chuyển thẳng từ phiên đọc sang không gian soạn thảo 3 cột kiểu Overleaf; tại đây **LangGraph Agent** có thể tự động viết và chỉnh sửa trực tiếp file `main.tex` / `references.bib`, tự động kéo kiến thức từ Kho GraphRAG (Module 05), và tự động đóng gói kèm thư mục hình ảnh `figures/` đẩy lên **E2B Sandbox** để biên dịch ra PDF hoàn chỉnh (tự đọc log vá lỗi tối đa 3 lần nếu sai cú pháp).
+Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTeX trở nên tự động và liền mạch: người dùng chuyển thẳng từ phiên đọc sang không gian soạn thảo 3 cột kiểu Overleaf; tại đây **LangGraph Agent** có thể tự động viết và chỉnh sửa trực tiếp file `main.tex` / `references.bib`, tự động kéo kiến thức từ Kho Tri Thức GraphRAG, và tự động đóng gói kèm thư mục hình ảnh `figures/` đẩy lên **E2B Sandbox** để biên dịch ra PDF hoàn chỉnh (tự đọc log vá lỗi tối đa 3 lần nếu sai cú pháp).
 
 ---
 
 ## 2. Cầu Nối "Đọc Sang Viết" (Reading-to-Writing Bridge)
 
-* Trên thanh công cụ của màn hình Phiên đọc (Module 03) có nút **`[✍️ Bắt đầu viết bài từ phiên đọc này]`**.
+* Trên thanh công cụ của màn hình Phiên Đọc Sâu có nút **`[✍️ Bắt đầu viết bài từ phiên đọc này]`**.
 * Khi người dùng bấm vào nút này:
   1. Hệ thống tự động tạo một Bản thảo mới (`Draft`) gắn với phiên đọc đó.
   2. Tự động khởi tạo sẵn nội dung file **`references.bib`** từ danh sách các bài báo đang có trong phiên đọc (kèm khóa trích dẫn chuẩn như `@article{vaswani2017attention, ...}`).
@@ -30,7 +30,9 @@ Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTe
    * Cho phép đổi tên bản thảo (`title`), cập nhật nội dung `main.tex` và `references.bib` khi người dùng sửa tay hoặc khi Agent cập nhật.
 4. **Xóa bản thảo (`DELETE /api/v1/drafts/{id}`):**
    * Xóa bản thảo và các file ảnh đính kèm của bản thảo đó (có xác nhận trước khi xóa).
-5. **Tải file kết quả (`GET /api/v1/drafts/{id}/preview.pdf`, `POST /api/v1/drafts/{id}:export-bundle`):**
+5. **Biên dịch, Hoàn tác & Tải file kết quả (`POST /api/v1/drafts/{id}/compile`, `POST /api/v1/drafts/{id}:undo`, `GET /api/v1/drafts/{id}/preview.pdf`, `POST /api/v1/drafts/{id}:export-bundle`):**
+   * Biên dịch tức thì bản thảo LaTeX trên E2B Sandbox, tự sửa lỗi tối đa 3 lần.
+   * Hoàn tác 1-Click trạng thái mã nguồn về trước khi AI chỉnh sửa.
    * Xem trực tiếp hoặc tải file PDF đã biên dịch về máy.
    * Tải gói nén `.zip` chứa đầy đủ `main.tex`, `references.bib` và thư mục `figures/` để nộp bài.
 
@@ -69,7 +71,7 @@ Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTe
 Agent viết bài được xây dựng bằng `StateGraph` của **LangGraph** với 4 công cụ chuyên biệt:
 1. **`create_file` / `edit_file`**: Tạo mới hoặc chỉnh sửa trực tiếp nội dung file `main.tex` và bổ sung mã trích dẫn BibTeX vào `references.bib`.
 2. **`list_project_files`**: Đọc danh sách các file và tên chính xác của các hình ảnh đang có trong thư mục `figures/` để viết lệnh `\includegraphics{figures/...}` không bị sai tên file.
-3. **`query_library_graph_rag`**: Truy vấn vào Kho Paper Yêu thích (Module 05) khi người dùng yêu cầu viết tổng quan tài liệu hoặc lập bảng so sánh kết quả thực nghiệm với các bài báo đã lưu trong kho.
+3. **`query_library_graph_rag`**: Truy vấn vào Kho Paper Yêu Thích & GraphRAG khi người dùng yêu cầu viết tổng quan tài liệu hoặc lập bảng so sánh kết quả thực nghiệm với các bài báo đã lưu trong kho.
 4. **`compile_latex_e2b`**:
    * Đóng gói trọn bộ **`main.tex` + `references.bib` + toàn bộ file ảnh trong `figures/`** đẩy lên thư mục làm việc `/tmp/verischolar-latex/` của **E2B Sandbox (Cloud MicroVM)**.
    * Chạy quy trình biên dịch đầy đủ (`pdflatex -> bibtex -> pdflatex -> pdflatex` hoặc `tectonic` với cờ bảo mật `--no-shell-escape` và giới hạn cứng `timeout = 15 giây`) để đảm bảo mọi trích dẫn `\cite{...}` hiển thị chuẩn xác (không bị lỗi dấu hỏi `[?]`) và lên đầy đủ hình ảnh.

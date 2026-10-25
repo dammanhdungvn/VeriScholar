@@ -4,7 +4,7 @@
 ---
 
 ## 1. Mục Tiêu Phân Hệ
-Giúp người dùng lưu trữ các bài báo tâm đắc vào **Kho Paper Yêu Thích** được phân loại theo cây thư mục đề tài cá nhân, đồng thời tự động bóc tách mỗi bài báo được đánh dấu yêu thích (`Star`) thành **Đồ thị Tri thức 4 Thực thể cố định trên PostgreSQL + `pgvector`**. Nhờ đó, khi kho tài liệu lên tới hàng chục, hàng trăm bài, người dùng (hoặc Agent viết bài ở Module 06) có thể tìm lại chính xác bài báo nào dùng phương pháp gì, chạy trên tập dữ liệu nào và đạt kết quả bao nhiêu chỉ trong tích tắc.
+Giúp người dùng lưu trữ các bài báo tâm đắc vào **Kho Paper Yêu Thích** được phân loại theo cây thư mục đề tài cá nhân, đồng thời tự động bóc tách mỗi bài báo được đánh dấu yêu thích (`Star`) thành **Đồ thị Tri thức 4 Thực thể cố định trên PostgreSQL + `pgvector`**. Nhờ đó, khi kho tài liệu lên tới hàng chục, hàng trăm bài, người dùng (hoặc Agent ở Phân hệ Soạn Thảo Học Thuật) có thể tìm lại chính xác bài báo nào dùng phương pháp gì, chạy trên tập dữ liệu nào và đạt kết quả bao nhiêu chỉ trong tích tắc.
 
 ---
 
@@ -57,9 +57,9 @@ Giúp người dùng lưu trữ các bài báo tâm đắc vào **Kho Paper Yêu
 
 ---
 
-## 4. Truy Vấn Tìm Lại Tri Thức Trong Kho (`POST /api/v1/folders/synthesis`)
+## 4. Truy Vấn Tìm Lại Tri Thức Trong Kho (`POST /api/v1/folders/synthesis` hoặc `/api/v1/library/graph-query`)
 
-Khi người dùng vào màn hình **Kho Tài Liệu (`LibraryWorkspaceView.tsx`)** và đặt câu hỏi tra cứu (hoặc khi LangGraph Agent ở Module 06 gọi công cụ `query_library_graph_rag`):
+Khi người dùng vào màn hình **Kho Tài Liệu (`LibraryWorkspaceView.tsx`)** và đặt câu hỏi tra cứu (hoặc khi LangGraph Agent ở Phân hệ Soạn Thảo Học Thuật gọi công cụ `query_library_graph_rag`):
 * Ví dụ câu hỏi: *"Trong kho yêu thích của tôi, những bài báo nào xử lý bài toán dịch máy trên tập dữ liệu WMT-14 và đạt điểm BLEU cao nhất?"*
 * **Luồng truy vấn kết hợp (Hybrid Graph + Vector Search):**
   1. Tìm kiếm ngữ nghĩa trên vector (`embedding`) kết hợp khớp tên thực thể trong bảng `graph_nodes` (`Dataset = WMT-14`, `Method`, `MetricResult = BLEU`).

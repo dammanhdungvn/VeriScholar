@@ -23,7 +23,7 @@ Tính năng tìm kiếm bài báo theo chủ đề hoạt động đồng nhất
    * **Tóm tắt ngắn (Abstract / Highlights)**.
    * Nhãn trạng thái: **`[🟢 Có sẵn PDF Open Access]`** (hoặc `[🟡 Chỉ có Tóm tắt]` nếu bài bị khóa thu phí).
 4. Khi người dùng bấm nút **`[📖 Mở đọc ngay]`** trên một bài báo có sẵn PDF:
-   * Hệ thống tự động tải file PDF về máy chủ, tạo mới một Phiên đọc (`ResearchSession`) và chuyển thẳng người dùng vào màn hình Đọc sâu (Module 03) mà không cần tải thủ công về máy tính.
+   * Hệ thống tự động tải file PDF về máy chủ, tạo mới một Phiên đọc (`ResearchSession`) và chuyển thẳng người dùng vào không gian Đọc Sâu (Deep Reading) mà không cần tải thủ công về máy tính.
 
 ---
 

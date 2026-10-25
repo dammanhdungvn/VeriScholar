@@ -296,7 +296,7 @@ Giao diện người dùng áp dụng triệt để nguyên tắc **Trải nghi�
   - **Mã tham chiếu hỗ trợ:** Đặt ở góc dưới dạng chữ nhỏ xám mờ: `Mã tham chiếu: #9c1f` kèm icon sao chép nhỏ. Tuyệt đối không hiển thị màn hình đỏ hoặc stack trace kỹ thuật cho người dùng cuối.
 
 ### B. Nút Đánh Giá Phản Hồi AI (AI Feedback Thumbs)
-- Dưới mỗi khối câu trả lời của AI trong Phiên đọc (Module 03) và Soạn thảo (Module 06) có 2 icon nhỏ: **👍 Hài lòng** và **👎 Chưa chính xác**.
+- Dưới mỗi khối câu trả lời của AI trong Phiên Đọc Sâu và Không Gian Soạn Thảo Học Thuật có 2 icon nhỏ: **👍 Hài lòng** và **👎 Chưa chính xác**.
 - Khi người dùng bấm nút:
   - Giao diện sáng nhẹ icon đã chọn (Zero-Friction UX).
   - Trình duyệt ngầm gọi API feedback; hệ thống cập nhật chỉ số `user_feedback` trên Langfuse Cloud ngay lập tức.

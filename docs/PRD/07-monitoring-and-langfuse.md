@@ -37,9 +37,10 @@ Mỗi khi người dùng gửi một câu hỏi (Query) hoặc thực hiện m�
      * **Langfuse Trace**: Gắn làm ID truy vết của câu query đó, đồng thời gắn kèm **`session_id`** (nếu ở phiên đọc) hoặc **`draft_id`** (nếu ở phiên viết bài).
      * **HTTP Response & Bao thư lỗi (`ErrorResponse`)**: Trả về cho Frontend trong `meta.trace_id` và header `X-Request-ID`.
 2. **Hiển thị trực tiếp trên Giao diện Web khi có lỗi:**
-   * Khi bất kỳ yêu cầu nào gặp lỗi (hoặc khi giao diện bị crash vào React Error Boundary), thông báo lỗi trên màn hình luôn hiển thị kèm:
-     > *"⚠️ Đã xảy ra lỗi khi xử lý yêu cầu — Mã tra cứu: `tr_9c1fa8fe` [📋 Sao chép]"*
-   * Người phát triển chỉ cần copy mã này dán vào ô tìm kiếm của **Langfuse**, **Sentry** hoặc tìm trong `api-error.log` là thấy ngay lập tức câu query gây lỗi và dòng code bị gãy.
+   * Khi bất kỳ yêu cầu nào gặp lỗi (hoặc khi giao diện bị crash vào React Error Boundary), thông báo lỗi trên màn hình hiển thị lịch sự bằng tiếng Việt kèm mã hỗ trợ mờ tinh tế:
+     > *"Hệ thống tạm thời chưa thể xử lý yêu cầu này. Vui lòng bấm [Thử lại] sau giây lát."*  
+     > *(Mã tham chiếu hỗ trợ: `#9c1f`)*
+   * Người dùng không phải bối rối với chuỗi mã kỹ thuật; người phát triển chỉ cần tra cứu theo email người dùng hoặc mã `#9c1f` trong ô tìm kiếm của **Langfuse**, **Sentry** hoặc `api-error.log` là thấy ngay lập tức câu query gây lỗi và dòng code bị gãy.
 
 ---
 

@@ -181,7 +181,7 @@ stateDiagram-v2
 
 ### B. API Quản Lý Tài Liệu PDF (`apps/api/src/api/v1/endpoints/documents.py`)
 
-#### 1. Tải lên tài liệu PDF cá nhân (`POST /api/v1/documents/upload`)
+#### 1. Tải lên tài liệu PDF cá nhân (`POST /api/v1/documents` hoặc alias `/upload`)
 - **Headers:** `Content-Type: multipart/form-data`
 - **Form Data:**
   - `file`: File nhị phân (`.pdf`)
@@ -217,7 +217,7 @@ stateDiagram-v2
 ## 5. Thiết Kế Đường Ống Bóc Tách Kỹ Thuật (Ingestion & PyMuPDF Chunking)
 
 ### A. Thuật Toán Trích Xuất Khối Văn Bản & Bounding Box
-Trong [`packages/core/src/core/services/pdf_extractor.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/pdf_extractor.py), sử dụng PyMuPDF (`fitz` / `pymupdf`):
+Trong [`apps/api/src/api/adapters/chunk_extractor.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/adapters/chunk_extractor.py), sử dụng PyMuPDF (`pymupdf`):
 1. **Lấy khối chữ theo trang (Page Blocks):**
    ```python
    page = doc.load_page(page_num)
