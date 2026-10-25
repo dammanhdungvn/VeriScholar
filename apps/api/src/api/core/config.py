@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from typing import Literal
 
+from dotenv import load_dotenv
 from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -35,12 +36,15 @@ def get_env_files() -> tuple[str, ...]:
     """Dynamically resolves environment configuration files with environment override precedence."""
     app_env = os.getenv("APP_ENV") or os.getenv("ENVIRONMENT") or "development"
     files = [
-        ".env",
         str(ROOT_DIR / ".env"),
         str(ROOT_DIR / "apps" / "api" / ".env"),
         str(ROOT_DIR / f".env.{app_env}"),
         str(ROOT_DIR / "apps" / "api" / f".env.{app_env}"),
+        ".env",
     ]
+    for f in files:
+        if Path(f).exists():
+            load_dotenv(f, override=False)
     return tuple(files)
 
 
@@ -54,7 +58,7 @@ class Settings(BaseSettings):
 
     PROJECT_NAME: str = "VeriScholar API"
     VERSION: str = "0.1.0"
-    ENVIRONMENT: Literal["development", "uat", "staging", "production", "test"] = "development"
+    ENVIRONMENT: Literal["development", "production", "test"] = "development"
 
     # Server settings
     HOST: str = "0.0.0.0"
@@ -81,6 +85,17 @@ class Settings(BaseSettings):
     GITHUB_CLIENT_ID: str = ""
     GITHUB_CLIENT_SECRET: str = ""
 
+    # SMTP & Email Delivery settings
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USER: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = "onboarding@resend.dev"
+    SMTP_FROM_NAME: str = "VeriScholar Academic Platform"
+    RESEND_API_KEY: str = ""
+    RESEND_FROM_EMAIL: str = "onboarding@resend.dev"
+    APP_PUBLIC_URL: str = "https://verischolar.duckdns.org"
+
     # Langfuse AI Observability & Tracing settings
     LANGFUSE_ENABLED: bool = False
     LANGFUSE_PUBLIC_KEY: str | None = None
@@ -88,8 +103,13 @@ class Settings(BaseSettings):
     LANGFUSE_HOST: str = "https://cloud.langfuse.com"
     LANGFUSE_BASE_URL: str | None = None
     LANGFUSE_SAMPLE_RATE: float = 1.0
-    LANGFUSE_MASK_INPUT_OUTPUT: bool = True
+    LANGFUSE_MASK_INPUT_OUTPUT: bool = False
     LANGFUSE_ENVIRONMENT: str | None = None
+
+    # System Monitoring & Alerting settings
+    SENTRY_DSN: str | None = None
+    ALERT_WEBHOOK_URL: str | None = None
+    E2B_LATEX_TEMPLATE: str = "base"
 
     # Reasoning Mode settings (5.6-luna)
     REASONING_EFFORT: Literal["low", "medium", "high"] = "medium"
@@ -115,13 +135,26 @@ class Settings(BaseSettings):
             # Auto-enable if keys exist and not explicitly set, except in test mode
             if "LANGFUSE_ENABLED" not in self.model_fields_set and self.ENVIRONMENT != "test":
                 self.LANGFUSE_ENABLED = True
-        if self.LANGFUSE_ENVIRONMENT is None:
-            self.LANGFUSE_ENVIRONMENT = self.ENVIRONMENT
-        # Default masking rule: unmasked in development, uat, staging, and test;
-        # masked in production (ZDR)
+        if not self.LANGFUSE_ENVIRONMENT:
+            if self.ENVIRONMENT == "development":
+                self.LANGFUSE_ENVIRONMENT = "verischolar-dev"
+            elif self.ENVIRONMENT == "production":
+                self.LANGFUSE_ENVIRONMENT = "verischolar-prod"
+            else:
+                self.LANGFUSE_ENVIRONMENT = "test"
         if "LANGFUSE_MASK_INPUT_OUTPUT" not in self.model_fields_set:
-            self.LANGFUSE_MASK_INPUT_OUTPUT = self.ENVIRONMENT == "production"
+            self.LANGFUSE_MASK_INPUT_OUTPUT = False
         return self
+
+    @property
+    def resolved_langfuse_environment(
+        self,
+    ) -> Literal["verischolar-dev", "verischolar-prod", "test"]:
+        if self.ENVIRONMENT == "production":
+            return "verischolar-prod"
+        if self.ENVIRONMENT == "test":
+            return "test"
+        return "verischolar-dev"
 
     @model_validator(mode="after")
     def validate_azure_credentials(self) -> "Settings":
@@ -171,7 +204,7 @@ class Settings(BaseSettings):
     # Cloud LLM Settings (SecretStr ensures no accidental leaks in logs/prints)
     OPENAI_API_KEY: SecretStr | None = None
     OPENAI_BASE_URL: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "gpt-5.6-luna"
+    OPENAI_MODEL: str = "gpt-5.4-mini"
 
     GEMINI_API_KEY: SecretStr | None = None
     GEMINI_MODEL: str = "gemini-1.5-flash"
