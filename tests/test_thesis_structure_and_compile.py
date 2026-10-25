@@ -1,5 +1,5 @@
-from pathlib import Path
 import subprocess
+from pathlib import Path
 
 
 def test_thesis_files_exist():
@@ -31,7 +31,5 @@ def test_thesis_compilation():
         capture_output=True,
         text=True,
     )
-    assert (
-        res.returncode == 0
-    ), f"XeLaTeX compilation failed with log:\n{res.stdout[-1500:]}"
+    assert res.returncode == 0, f"XeLaTeX compilation failed with log:\n{res.stdout[-1500:]}"
     assert Path("report-datn/main.pdf").exists()
