@@ -38,6 +38,21 @@ Trao quyền cho người làm nghiên cứu bắt đầu hành trình học thu
 * **Học giả có sẵn tài liệu (Document Uploader):** Đã có sẵn tệp PDF trong máy tính và muốn tải lên hệ thống để phân tích sâu, trích xuất mục lục và đối chiếu trích dẫn.
 * **Động cơ bóc tách tài liệu tự động (Automated Document Parsing Engine):** Tác nhân hệ thống thực hiện phân tích trang, phát hiện mục lục, trích xuất đoạn văn theo thứ tự đọc học thuật 2 cột và lưu tọa độ không gian trên trang PDF.
 
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Nghiên Cứu"])
+    subgraph DiscoveryBoundary ["Phân Hệ Khám Phá Học Thuật & Quản Lý Tài Liệu PDF"]
+        UC1(["UC-DISC-01: Tìm Kiếm Ngữ Nghĩa Đa Nguồn"])
+        UC2(["UC-DISC-02: Mở Đọc Sâu Tức Thì 2 Tầng (< 500ms)"])
+        UC3(["UC-DISC-03: Tải Lên PDF & Khử Trùng Lặp CAS"])
+        UC4(["UC-DISC-04: Nâng Cấp Bản Tóm Tắt & Xóa Vật Lý"])
+        UC1 --> UC2
+    end
+    Scholar --> UC1
+    Scholar --> UC3
+    Scholar --> UC4
+```
+
 ---
 
 ## 3. Đặc Tả Chi Tiết Các Use Cases Nghiệp Vụ (Detailed Use Cases)

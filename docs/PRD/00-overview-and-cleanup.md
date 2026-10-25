@@ -50,29 +50,21 @@ Hệ thống phục vụ 3 nhóm tác nhân chính:
 
 Nhằm tối ưu hóa công thái học (Ergonomics) và loại bỏ hoàn toàn tình trạng giao diện cồng kềnh, phân tán, VeriScholar thống nhất giao diện ứng dụng xoay quanh đúng **4 mục điều hướng cốt lõi trên thanh Sidebar toàn cục**:
 
-```text
-+-----------------------------------------------------------------------------------+
-| VERISCHOLAR GLOBAL NAVIGATION                                                     |
-+-----------------------------------------------------------------------------------+
-| [1] 🔍 Khám phá & Phiên đọc (/discovery & /dashboard)                             |
-|     - Khám phá bài báo theo chủ đề (Học thuật mở Exa AI & arXiv).                 |
-|     - Tải tài liệu PDF cá nhân lên hệ thống (Kèm cam kết tiêu hủy vật lý).        |
-|     - Quản lý danh sách các Phiên đọc sâu đa bài báo (Sessions).                  |
-|                                                                                   |
-| [2] ⭐ Kho Yêu thích (/library)                                                   |
-|     - Quản lý cây thư mục đề tài nghiên cứu phân cấp.                             |
-|     - Tra cứu và tổng hợp liên kết trên Đồ thị Tri thức học thuật 4 thực thể.     |
-|                                                                                   |
-| [3] ✍️ Soạn thảo LaTeX (/writing)                                                 |
-|     - Quản lý danh sách Bản thảo học thuật cá nhân.                               |
-|     - Không gian làm việc 3 cột: Cây tệp -> Trình soạn thảo -> Khung xem trước.   |
-|     - Trợ lý AI đồng tác giả hỗ trợ viết, sửa lỗi biên dịch và xuất bản thảo.     |
-|                                                                                   |
-| [4] 👤 Tài khoản & Cấu hình (/profile & /settings)                                |
-|     - Quản lý hồ sơ nghiên cứu cá nhân (ORCID, học hàm, đơn vị công tác).         |
-|     - Quản lý khóa riêng tư bảo mật BYOK (Bring Your Own Key).                   |
-|     - Chuyển đổi giao diện Sáng / Tối (Light / Dark Mode).                         |
-+-----------------------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Nghiên Cứu"])
+    subgraph Lifecycle ["Chu Trình Nghiên Cứu Khoa Học Toàn Trình (VeriScholar MVP)"]
+        Step1["1. Khám Phá & Nạp Bài Báo 2 Tầng"]
+        Step2["2. Đọc Sâu Đa Bài & Bảo Chứng BBox"]
+        Step3["3. Mở Rộng Tham Khảo & Lộ Trình Socratic"]
+        Step4["4. Tổng Hợp Đồ Thị Tri Thức 4 Thực Thể"]
+        Step5["5. Đồng Tác Giả LaTeX Tự Vá Lỗi Biên Dịch"]
+        Step1 --> Step2 --> Step3 --> Step4 --> Step5
+    end
+    Scholar --> Step1
+    Scholar --> Step2
+    Scholar --> Step4
+    Scholar --> Step5
 ```
 
 ---

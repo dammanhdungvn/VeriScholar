@@ -47,45 +47,38 @@ Phân hệ này chịu trách nhiệm trọn vẹn toàn bộ chu trình soạn 
 
 ```mermaid
 flowchart TD
-    subgraph Client ["<b>Frontend (React 19 - WritingWorkspace.tsx)</b>"]
-        Col1["Cột 1: File Tree & Monaco Editor<br/>(main.tex, references.bib, figures/)"]
-        Col2["Cột 2: PDF Preview Pane<br/>(Live PDF & Zoom & Export ZIP)"]
-        Col3["Cột 3: LangGraph Assistant Chat<br/>(SSE Streaming & Execution Badges)"]
+    subgraph StudioUI ["Không Gian Soạn Thảo Học Thuật 3 Cột (Agentic LaTeX IDE)"]
+        EditorPane["Cột 1: Cây Dự Án & Trình Soạn Thảo Mã Nguồn LaTeX/BibTeX"]
+        PreviewPane["Cột 2: Khung Xem Trước Bản Dựng PDF & Xuất Gói Camera-Ready"]
+        AssistantPane["Cột 3: Trợ Lý Soạn Thảo Tự Hành (Luồng SSE Trực Tiếp)"]
     end
 
-    subgraph API ["<b>Backend Endpoints (apps/api/v1/endpoints/drafts.py)</b>"]
-        DraftCRUD["Drafts CRUD & OCC Versioning<br/>(ETag / If-Match)"]
-        AssetsCRUD["Figures CRUD (draft_assets)<br/>(Upload PNG/JPG/PDF <= 10MB)"]
-        MessagesCRUD["Chat History CRUD (draft_messages)<br/>(Persistent Turns)"]
-        AssistStream["SSE Streaming /assist<br/>(LangGraph ReAct Loop)"]
-        UndoAPI["Rollback Endpoint :undo<br/>(Restore previous_snapshot)"]
+    subgraph OrchestrationLayer ["Tầng Điều Phối Bản Thảo & Kiểm Soát Phiên Bản"]
+        OCCGuard["Kiểm Soát Đồng Thời Lạc Quan (OCC Version & ETag)"]
+        SnapshotVault["Kho Lưu Ảnh Chụp Bản Thảo (1-Click Undo Snapshot)"]
+        ReActStream["Kênh Điều Phối Tác Nhân LangGraph Qua SSE"]
     end
 
-    subgraph LangGraphEngine ["<b>LangGraph Agent & Tools (packages/core)</b>"]
-        StateGraph["LangGraph StateGraph Runner<br/>(Anti-Oscillation Memory)"]
-        ToolEdit["Tool 1: edit_latex_files"]
-        ToolList["Tool 2: list_project_files"]
-        ToolGraphRAG["Tool 3: query_library_graph_rag"]
-        ToolCompile["Tool 4: compile_latex_e2b"]
+    subgraph AgentCore ["Động Cơ Tác Nhân Tự Sửa Lỗi (LangGraph ReAct Engine)"]
+        Planner["Bộ Lập Kế Hoạch & Chống Dao Động (Anti-Oscillation)"]
+        GraphTool["Công Cụ Truy Xuất Tri Thức Đồ Thị (GraphRAG Tool)"]
+        PatchTool["Công Cụ Vá Mã Nguồn LaTeX & Đồng Bộ BibTeX"]
+        CompileTool["Công Cụ Biên Dịch Cô Lập ( tối đa 3 vòng Tự Sửa Lỗi)"]
     end
 
-    subgraph Sandbox ["<b>Cloud Micro-VM (E2B Sandbox)</b>"]
-        E2BVM["Firecracker MicroVM (/tmp/verischolar-latex)<br/>(tectonic / pdflatex + bibtex, --no-shell-escape, 15s)"]
+    subgraph CloudSandbox ["Môi Trường Hộp Cát Vi Máy Ảo (E2B Firecracker Micro-VM)"]
+        LatexCompiler["Trình Biên Dịch Cô Lập (Chặn Shell-Escape, Giới Hạn 15 Giây)"]
     end
 
-    Col1 --> DraftCRUD
-    Col1 --> AssetsCRUD
-    Col1 --> UndoAPI
-    Col2 --> DraftCRUD
-    Col3 --> MessagesCRUD
-    Col3 --> AssistStream
-    
-    AssistStream --> StateGraph
-    StateGraph --> ToolEdit
-    StateGraph --> ToolList
-    StateGraph --> ToolGraphRAG
-    StateGraph --> ToolCompile
-    ToolCompile --> E2BVM
+    EditorPane --> OCCGuard
+    EditorPane --> SnapshotVault
+    PreviewPane --> OCCGuard
+    AssistantPane --> ReActStream
+    ReActStream --> Planner
+    Planner --> GraphTool
+    Planner --> PatchTool
+    Planner --> CompileTool
+    CompileTool --> LatexCompiler
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -333,25 +326,25 @@ Agent soạn thảo được xây dựng dựa trên `StateGraph` của **LangGr
 
 ```mermaid
 flowchart TD
-    Start([Bắt đầu yêu cầu từ Cột 3]) --> SaveSnapshot[Lưu previous_snapshot nếu chưa lưu]
-    SaveSnapshot --> AgentReasoning[Agent Reasoning Node: Suy luận kế hoạch & Chọn Tool]
-    
-    AgentReasoning -->|Cần dữ liệu bài báo| CallGraphRAG[Tool: query_library_graph_rag]
-    AgentReasoning -->|Cần kiểm tra file ảnh| CallListFiles[Tool: list_project_files]
-    AgentReasoning -->|Cần cập nhật văn bản| CallEdit[Tool: edit_latex_files]
-    AgentReasoning -->|Cần kiểm tra bản dựng| CallCompile[Tool: compile_latex_e2b]
-    
+    Start(["Nhận Yêu Cầu Soạn Thảo Từ Học Giả"]) --> SaveSnapshot["Lưu Ảnh Chụp Bản Thảo (1-Click Undo Snapshot)"]
+    SaveSnapshot --> AgentReasoning["Nút Suy Luận Trung Tâm (LangGraph ReAct Planner)"]
+
+    AgentReasoning -->|"Tra cứu tri thức"| CallGraphRAG["Truy Xuất Đồ Thị Tri Thức (GraphRAG)"]
+    AgentReasoning -->|"Kiểm tra tài nguyên"| CallListFiles["Liệt Kê Cây Tệp & Hình Ảnh Dự Án"]
+    AgentReasoning -->|"Soạn thảo & vá mã"| CallEdit["Cập Nhật Mã Nguồn LaTeX & BibTeX"]
+    AgentReasoning -->|"Kiểm định bản dựng"| CallCompile["Biên Dịch Hộp Cát Cô Lập (E2B Firecracker)"]
+
     CallGraphRAG --> AgentReasoning
     CallListFiles --> AgentReasoning
     CallEdit --> AgentReasoning
-    
-    CallCompile --> CheckCompile{Biên dịch thành công?}
-    CheckCompile -->|Thành công (exit_code=0)| EmitSuccess[Emit PDF mới & Trả kết quả hoàn tất]
-    CheckCompile -->|Thất bại & attempts < 3| SelfHeal[Node Self-Healing: Đọc stderr & Lập kế hoạch vá lỗi]
-    CheckCompile -->|Thất bại & attempts >= 3| GracefulFail[Dừng vòng lặp: Báo cáo số dòng lỗi & Cách sửa cho người dùng]
-    
+
+    CallCompile --> CheckCompile{"Biên Dịch Thành Công?"}
+    CheckCompile -->|"Thành công (Mã thoát 0)"| EmitSuccess["Xuất Bản Dựng PDF Mới & Kết Thúc"]
+    CheckCompile -->|"Lỗi cú pháp (Số lần thử < 3)"| SelfHeal["Nút Tự Sửa Lỗi: Phân Tích Nhật Ký & Vá Cú Pháp"]
+    CheckCompile -->|"Quá 3 lần thử"| GracefulFail["Dừng An Toàn: Báo Dòng Lỗi & Gợi Ý Khắc Phục"]
+
     SelfHeal --> CallEdit
-    EmitSuccess --> Done([Kết thúc])
+    EmitSuccess --> Done(["Hoàn Tất Vòng Lặp"])
     GracefulFail --> Done
 ```
 
@@ -407,23 +400,30 @@ Mọi thay đổi kỹ thuật của phân hệ Soạn Thảo & Agentic LaTeX ph
 Mọi thay đổi kỹ thuật thuộc Phân hệ Soạn thảo & Agentic LaTeX phải vượt qua đầy đủ các kịch bản kiểm thử tự động sau:
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng 1: Core LangGraph & Sandbox Tests (< 2s)</b>"]
-        TC1["Test Academic Skeleton Generator<br/>(Sinh main.tex hợp lệ cú pháp kèm references.bib)"]
-        TC2["Test LangGraph 4-Tools Definition<br/>(Kiểm tra schema của 4 tools không lỗi cú pháp)"]
-        TC3["Test Anti-Oscillation Memory<br/>(Chặn vòng lặp sửa lỗi lặp lại trạng thái AST cũ)"]
-        TC4["Test Zip Slip Asset Security<br/>(Từ chối file ảnh có tên traversal ../)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant IDE as Giao Diện Soạn Thảo 3 Cột
+    participant Agent as Tác Nhân LangGraph ReAct
+    participant DB as PostgreSQL (drafts)
+    participant E2B as Hộp Cát E2B Firecracker
 
-    subgraph APITests ["<b>Tầng 2: API & Integration Tests (< 5s)</b>"]
-        TC5["Test Draft OCC Concurrency Conflict<br/>(Gửi sai version trả về 412 PRECONDITION_FAILED)"]
-        TC6["Test Reading-to-Writing Bridge Creation<br/>(POST /drafts từ source_session_id)"]
-        TC7["Test 1-Click Undo Snapshot<br/>(Khôi phục chính xác content và bib_content)"]
-        TC8["Test Camera-Ready Bundle Export<br/>(Xuất file .zip đầy đủ cấu trúc main.tex, bib, figures)"]
-        TC9["Test SSE Streaming Assist<br/>(Nhận đủ chuỗi sự kiện thinking -> content_update -> done)"]
+    Scholar->>IDE: Yêu cầu viết mục Related Work từ Thư viện Yêu thích
+    IDE->>Agent: POST /api/v1/drafts/{id}/chat:stream (SSE)
+    Agent->>DB: Lưu ảnh chụp previous_snapshot (Bảo toàn 1-Click Undo)
+    Agent->>DB: Truy vấn GraphRAG lấy các bài báo & khóa trích dẫn BibTeX
+    Agent->>Agent: Cập nhật nội dung LaTeX & chèn khóa \cite{...}
+    loop Vòng lặp Tự Sửa Lỗi Biên Dịch (Tối đa 3 lần thử)
+        Agent->>E2B: Gửi mã nguồn LaTeX + BibTeX biên dịch cô lập (--no-shell-escape)
+        alt Biên dịch thành công (exit_code = 0)
+            E2B-->>Agent: Trả về luồng PDF đã biên dịch
+        else Lỗi cú pháp LaTeX (attempt < 3)
+            E2B-->>Agent: Trả về nhật ký lỗi (stderr & số dòng lỗi)
+            Agent->>Agent: Phân tích log lỗi & tự động vá cú pháp LaTeX
+        end
     end
-
-    CoreTests --> APITests
+    Agent->>DB: Lưu bản thảo mới & tăng số phiên bản OCC
+    Agent-->>IDE: Phát sự kiện content_update & hiển thị PDF trực tiếp
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

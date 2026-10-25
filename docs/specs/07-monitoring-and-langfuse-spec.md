@@ -52,36 +52,39 @@ Phân hệ Giám sát, Vận hành & Đo lường chịu trách nhiệm giám s�
 
 ```mermaid
 flowchart TD
-    subgraph RequestPipeline ["<b>Đường Ống Xử Lý HTTP Request</b>"]
-        Request["HTTP Request từ Client"] --> Middleware["PureASGITracingMiddleware<br/>(Sinh trace_id & Đếm Metrics RAM)"]
-        Middleware --> Router["FastAPI Endpoints"]
-        Router --> Response["HTTP Response + Header X-Request-ID"]
+    subgraph RequestPipeline ["Đường Ống Đánh Dấu Truy Vết ASGI (Request Pipeline)"]
+        ClientReq["Yêu Cầu HTTP / SSE Từ Học Giả"]
+        ASGITracer["Bộ Chặn Truy Vết ASGI (Gán X-Request-ID & Đo TTFT)"]
+        Scrubber["Bộ Lọc Khử Thông Tin Nhạy Cảm (PII & Khóa BYOK)"]
+        Endpoints["Các Dịch Vụ Nghiệp Vụ Trung Tâm"]
+
+        ClientReq --> ASGITracer --> Scrubber --> Endpoints
     end
 
-    subgraph Tier1AI ["<b>Tầng 1: Giám Sát Luồng AI (Langfuse Cloud)</b>"]
-        RAGFlow["Hybrid RAG & Discovery"] -.->|Trace & Spans| LangfuseDev["verischolar-dev"]
-        AgentFlow["LangGraph Overleaf Agent"] -.->|Trace & Spans| LangfuseProd["verischolar-prod"]
-        Scores["Điểm số: bbox_grounded, e2b_attempts, user_feedback"] --> LangfuseProd
+    subgraph Tier1AI ["Tầng 1: Quan Sát Chuyên Sâu Đường Ống AI (Langfuse)"]
+        RAGTrace["Truy Vết Truy Xuất Hybrid RAG & Điểm RRF"]
+        AgentTrace["Truy Vết Vòng Lặp Tác Nhân LangGraph & E2B"]
+        QualityScore["Đo Lường Chất Lượng: BBox Grounded & Phản Hồi Học Giả"]
     end
 
-    subgraph Tier2Alerts ["<b>Tầng 2: Quản Lý Lỗi & Cảnh Báo Tức Thì</b>"]
-        ErrorCapture{"Bắt lỗi 500 hoặc sập dịch vụ"}
-        LogFile["storage/logs/api-error.log<br/>(File log xoay vòng trên đĩa)"]
-        SentrySDK["Sentry Cloud SDK<br/>(Frontend & Backend Unhandled Errors)"]
-        WebhookTask["Tác vụ ngầm Fire-and-Forget<br/>(Telegram / Discord Webhook)"]
-        
-        ErrorCapture --> LogFile
-        ErrorCapture --> SentrySDK
-        ErrorCapture -->|Nếu ENVIRONMENT=production| WebhookTask
+    subgraph Tier2Alerts ["Tầng 2: Nhật Ký Cấu Trúc & Cảnh Báo Sự Cố"]
+        JsonLogs["Nhật Ký Cấu Trúc JSON Xoay Vòng"]
+        AlertWebhook["Cảnh Báo Bất Đồng Bộ Tức Thì (Sentry & Webhook)"]
     end
 
-    subgraph Tier3Health ["<b>Tầng 3: Sức Khỏe & Hiệu Năng Tích Hợp</b>"]
-        ReadyAPI["GET /health/ready<br/>(Deep ping PG, Redis, CAS, OpenAI, E2B)"]
-        StatusAPI["GET /api/v1/system/status<br/>(Uptime, 2xx/4xx/5xx, Ring Buffer 20 Lỗi)"]
+    subgraph Tier3Health ["Tầng 3: Kiểm Định Sức Khỏe Hạ Tầng Sâu"]
+        DeepProbe["Kiểm Định Sẵn Sàng Đa Thành Phần (PG, Redis, CAS, E2B)"]
+        RingBuffer["Bộ Đệm Vòng RAM Lưu 20 Sự Cố Gần Nhất"]
     end
 
-    Middleware --> ErrorCapture
-    Router --> Tier1AI
+    Endpoints --> RAGTrace
+    Endpoints --> AgentTrace
+    RAGTrace --> QualityScore
+    AgentTrace --> QualityScore
+    Scrubber --> JsonLogs
+    Scrubber --> AlertWebhook
+    ASGITracer --> RingBuffer
+    ASGITracer --> DeepProbe
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -332,23 +335,22 @@ Mọi thay đổi kỹ thuật của phân hệ Giám Sát, Vận Hành & Đo L�
 Mọi thay đổi kỹ thuật thuộc Phân hệ Giám sát & Vận hành phải vượt qua đầy đủ các kịch bản kiểm thử tự động sau:
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng 1: Unit & Sanitization Tests (< 1s)</b>"]
-        TM1["Test Secret Scrubber Regex<br/>(Che sạch Bearer, OpenAI sk-, JWT, Passwords)"]
-        TM2["Test User Pseudonymization<br/>(HMAC-SHA256 băm user_id đồng nhất)"]
-        TM3["Test Langfuse No-Op Fallback<br/>(Không cấu hình key hệ thống vẫn chạy bình thường)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant ASGI as Bộ Chặn Truy Vết ASGI
+    participant Scrubber as Bộ Lọc Khử Mật Mã & PII
+    participant Service as Dịch Vụ AI (RAG / LangGraph)
+    participant Langfuse as Hệ Thống Giám Sát Langfuse
 
-    subgraph APITests ["<b>Tầng 2: Middleware & Endpoint Tests (< 5s)</b>"]
-        TM4["Test PureASGITracingMiddleware Headers<br/>(Kiểm tra X-Request-ID và ttfb_ms)"]
-        TM5["Test In-Memory Ring Buffer Deque<br/>(Chỉ giữ đúng 20 lỗi gần nhất, không rò bộ nhớ)"]
-        TM6["Test Readiness Deep Probe<br/>(Trả về 200 khi PG/Storage sẵn sàng, 503 khi PG ngắt)"]
-        TM7["Test System Status Endpoint<br/>(Báo cáo đúng uptime, metrics counters)"]
-        TM8["Test Feedback Endpoint<br/>(Ghi nhận điểm số thành công)"]
-        TM9["Test Webhook Fire-and-Forget<br/>(Bắn cảnh báo lỗi 500 không chặn response HTTP)"]
-    end
-
-    CoreTests --> APITests
+    Scholar->>ASGI: Gửi yêu cầu kèm khóa BYOK hoặc JWT
+    ASGI->>ASGI: Khởi tạo trace_id duy nhất & bấm giờ TTFT
+    ASGI->>Service: Chuyển tiếp ngữ cảnh đã gắn trace_id
+    Service->>Scrubber: Đẩy dữ liệu Span (Prompt, Token, Latency)
+    Scrubber->>Scrubber: Băm ẩn danh user_id (HMAC-SHA256) & che khóa sk-...
+    Scrubber--)Langfuse: Gửi bất đồng bộ Trace & Span sạch
+    Service-->>ASGI: Phản hồi luồng SSE / JSON
+    ASGI-->>Scholar: Trả kết quả kèm Header X-Request-ID
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

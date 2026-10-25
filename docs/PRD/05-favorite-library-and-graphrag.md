@@ -40,6 +40,22 @@ Biến kho bài báo yêu thích của học giả từ một danh sách tệp t
 | **Động Cơ Tri Thức Đồ Thị** | Hệ thống tự động bóc tách và hợp nhất thực thể | Tự động trích xuất 4 loại thực thể học thuật khi bài báo được gắn sao, gộp các điểm nút chuẩn hóa trùng tên và liên kết cạnh quan hệ. |
 | **Trợ Lý Soạn Thảo Tích Hợp** | Tác nhân liên thông sang không gian viết bài | Truy xuất mạng tri thức trong kho yêu thích để lấy số liệu thực nghiệm và dẫn chứng khi hỗ trợ viết bản thảo (`PRD-06`). |
 
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Nghiên Cứu"])
+    GraphEngine(["Động Cơ Đồ Thị Tri Thức"])
+    subgraph LibraryBoundary ["Phân Hệ Kho Yêu Thích & Mạng Tri Thức Học Thuật 4 Thực Thể"]
+        UC1(["UC-LIB-01: Tổ Chức Cây Thư Mục Đề Tài Đa Cấp"])
+        UC2(["UC-LIB-02: Gắn Sao & Bóc Tách Đồ Thị 4 Thực Thể"])
+        UC3(["UC-LIB-03: Hỏi Đáp Đối Chiếu Đa Bài Báo (GraphRAG)"])
+        UC2 --> UC3
+    end
+    Scholar --> UC1
+    Scholar --> UC2
+    Scholar --> UC3
+    GraphEngine --> UC2
+```
+
 ---
 
 ## 3. Danh Sách Use Cases Chi Tiết (Structured Use Cases)

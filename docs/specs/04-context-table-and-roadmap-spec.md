@@ -34,31 +34,31 @@ Phân hệ này giải quyết 2 bài toán trải nghiệm cốt lõi của h�
 2. **Mở rộng Ngữ cảnh Bảng 3 Cột không đứt mạch đọc:** Bóc tách mục References cuối bài kết hợp Exa AI, hiển thị Bảng 3 Cột trực quan cho phép người dùng nạp thêm bài báo vào phiên chat trong `< 500ms`.
 
 ```mermaid
-flowchart LR
-    subgraph ChatStream ["<b>Khung Chat Socratic (Cột Phải)</b>"]
-        UserQuestion["Người dùng hỏi khái niệm nâng cao (D)"]
-        AIAnswer["AI giải thích tổng quan khái niệm (D)"]
-        BridgeDetection{"Phát hiện dẫn chiếu nền tảng (B)?"}
-        BridgeCard["Thẻ Gợi Ý Lộ Trình Học (BridgeHintCard.tsx)<br/>[➕ Nạp bài [3] Vaswani 2017 vào phiên chat]"]
-        
-        UserQuestion --> AIAnswer --> BridgeDetection
-        BridgeDetection -->|Có dẫn chiếu [k]| BridgeCard
+flowchart TD
+    subgraph SocraticEngine ["Tầng Phát Hiện Hổng Kiến Thức & Cầu Nối Socratic"]
+        AdvancedQuery["Câu Hỏi Về Khái Niệm Nâng Cao"]
+        ConceptExplain["Giải Thích Tổng Quan & Kiểm Tra Dẫn Chiếu Nền Tảng"]
+        BridgeDetector{"Phát Hiện Bài Báo Nền Tảng [k]?"}
+        RoadmapCard["Thẻ Gợi Ý Lộ Trình Học Thuật (A -> B -> C -> D)"]
+
+        AdvancedQuery --> ConceptExplain --> BridgeDetector
+        BridgeDetector -->|"Có bài nền tảng"| RoadmapCard
     end
 
-    subgraph ContextDrawer ["<b>Ngăn Trượt Bảng 3 Cột (SmartReferenceDrawer.tsx)</b>"]
-        RefTable["Bảng 3 Cột References<br/>Cột 1: Tên + DOI | Cột 2: URL | Cột 3: Action"]
-        OneClickAction["Nút [➕ Thêm vào chat] / [🗑️ Xóa khỏi chat]"]
-        RefTable --> OneClickAction
+    subgraph ReferenceMatrix ["Bảng Đối Chiếu Tài Liệu Tham Khảo 3 Cột"]
+        RefCatalog["Danh Mục Tham Khảo Đã Bóc Tách (DOI / arXiv)"]
+        OneClickTrigger["Thao Tác Nạp 1-Click Vào Phiên Đọc Hiện Tại"]
+        RefCatalog --> OneClickTrigger
     end
 
-    subgraph IngestionService ["<b>Tầng Backend Ingestion 2 Tầng</b>"]
-        IngestAPI["POST /api/v1/sessions/{id}/references:ingest"]
-        Tier1["Tầng 1 (< 500ms): Thêm vào session_documents<br/>Cập nhật ngay thanh DocumentTabBar"]
-        Tier2["Tầng 2 (BackgroundTasks): Tải PDF Open Access<br/>PyMuPDF Chunking & Bbox Highlight"]
-        
-        BridgeCard -.1-Click.-> IngestAPI
-        OneClickAction -.1-Click.-> IngestAPI
-        IngestAPI --> Tier1 --> Tier2
+    subgraph LazyIngestion ["Đường Ống Nạp Lười 2 Tầng (Lazy Reference Ingestion)"]
+        TabGuard["Bộ Kiểm Soát Giới Hạn 5 Tab Phiên Đọc"]
+        Tier1Attach["Tầng 1 (< 500ms): Gắn Tab Tài Liệu Vào Phiên"]
+        Tier2Parse["Tầng 2 (Bất Đồng Bộ): Tải PDF Mở & Bóc Tách BBox"]
+
+        RoadmapCard -->|"1-Click"| TabGuard
+        OneClickTrigger -->|"1-Click"| TabGuard
+        TabGuard --> Tier1Attach --> Tier2Parse
     end
 ```
 
@@ -264,23 +264,21 @@ Mọi thay đổi kỹ thuật của phân hệ Bảng Ngữ Cảnh 3 Cột và 
 ## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Context Table & Roadmap TDD Matrix)
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng Core / Domain Tests</b>"]
-        J1["Test Bridge Hint Tag Parser<br/>(Extract XML tag attributes from LLM text)"]
-        J2["Test Reference DOI/arXiv Regex<br/>(Extract identifiers from messy citation strings)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant UI as Giao Diện Phiên Đọc
+    participant API as Động Cơ Socratic & Tham Khảo
+    participant DB as PostgreSQL (reference_items)
 
-    subgraph ServiceTests ["<b>Tầng Service & Ingestion Tests</b>"]
-        K1["Test 2-Tier Ingestion Timing<br/>(Tier 1 commits DB < 500ms, Tier 2 dispatches background task)"]
-        K2["Test Session Tab Limit Guard<br/>(Reject 6th reference ingestion with 409 Conflict)"]
-    end
-
-    subgraph IntegrationTests ["<b>Tầng Integration Tests (Database Real)</b>"]
-        L1["Test Get References List<br/>(Verify reference_items returned with correct in_session flags)"]
-        L2["Test Ingest Reference Creates Document<br/>(Verify DocumentModel & SessionDocumentModel linked)"]
-    end
-
-    CoreTests --> ServiceTests --> IntegrationTests
+    Scholar->>UI: Hỏi về thuật toán nâng cao trong bài báo hiện tại
+    UI->>API: Gửi truy vấn SSE kèm danh mục reference_items
+    API-->>UI: Phản hồi giải thích + Sự kiện event: bridge_hint (Bài gốc [k])
+    UI-->>Scholar: Hiển thị Thẻ Lộ Trình Học (A -> B -> C -> D)
+    Scholar->>UI: Bấm "Nạp bài nền tảng [k] vào phiên đọc" (1-Click)
+    UI->>API: POST /api/v1/sessions/{id}/references:ingest
+    API->>DB: Kiểm tra giới hạn <= 5 tab & gắn bài báo vào session_documents
+    API-->>UI: 201 Created (< 500ms, mở tab mới ngay lập tức)
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

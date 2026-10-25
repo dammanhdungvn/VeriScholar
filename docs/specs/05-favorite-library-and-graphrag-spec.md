@@ -35,27 +35,28 @@ Phân hệ này quản lý Kho Bài báo Yêu thích cá nhân (`/library`), c�
 
 ```mermaid
 flowchart TD
-    subgraph LibraryUI ["<b>Giao Diện Kho Yêu Thích (/library)</b>"]
-        FolderTree["Cây Thư Mục Đề Tài<br/>(FoldersTree.tsx)"]
-        StarredList["Danh Sách Bài Báo Đã Star<br/>(LibraryWorkspaceView.tsx)"]
-        GraphQueryBox["Ô Tra Cứu Tri Thức Đồ Thị<br/>('Phương pháp nào đạt SOTA trên ImageNet?')"]
+    subgraph CurationLayer ["Tầng Tuyển Chọn Thư Viện Học Thuật Cá Nhân"]
+        FolderHierarchy["Cây Thư Mục Đề Tài Đa Cấp"]
+        StarTrigger["Sự Kiện Đánh Dấu Bài Báo Tâm Đắc (Star)"]
+        GraphQuery["Truy Vấn Tổng Hợp Liên Bài Báo (Cross-Paper Query)"]
     end
 
-    subgraph GraphEngine ["<b>Tầng Xử Lý GraphRAG (PostgreSQL 16+)</b>"]
-        StarTrigger["Sự kiện Star bài báo<br/>(POST /documents/{id}:toggle-star)"]
-        Extractor["Tác vụ ngầm trích xuất 4 Thực thể<br/>(BackgroundTasks + JSON Schema)"]
-        CanonicalMerge["Gộp Đỉnh Trùng Tên (Hub Tri Thức)<br/>(Canonical Entity Merging)"]
-        
-        StarTrigger --> Extractor --> CanonicalMerge
+    subgraph ExtractionPipeline ["Đường Ống Trích Xuất & Hợp Nhất Đồ Thị (GraphRAG Engine)"]
+        OntologyExtractor["Bộ Trích Xuất 4 Thực Thể & 4 Quan Hệ Có Cấu Trúc"]
+        CanonicalMerger["Bộ Hợp Nhất Đỉnh Chuẩn Hóa (Canonical Hub Merging)"]
+        StarTrigger --> OntologyExtractor --> CanonicalMerger
     end
 
-    subgraph PGGraphTables ["<b>Bảng CSDL Đồ Thị (pgvector)</b>"]
-        NodesTable["graph_nodes Table<br/>(Paper, Method, Dataset, MetricResult)"]
-        EdgesTable["graph_edges Table<br/>(PROPOSES, EVALUATED_ON, ACHIEVES, CITES)"]
-        
-        CanonicalMerge --> NodesTable
-        CanonicalMerge --> EdgesTable
-        GraphQueryBox -.->|HNSW Vector + 1-Hop Traversal| NodesTable
+    subgraph KnowledgeStore ["Kho Đồ Thị Tri Thức Quan Hệ + Vector (PostgreSQL 18)"]
+        GraphNodes[("Đỉnh Đồ Thị: Paper | Method | Dataset | MetricResult")]
+        GraphEdges[("Cạnh Quan Hệ: PROPOSES | EVALUATED_ON | ACHIEVES | CITES")]
+        SubgraphTraversal["Truy Vấn Lan Truyền Đồ Thị Đa Chặng (HNSW + SQL Traversal)"]
+
+        CanonicalMerger --> GraphNodes
+        CanonicalMerger --> GraphEdges
+        GraphQuery --> SubgraphTraversal
+        SubgraphTraversal --> GraphNodes
+        SubgraphTraversal --> GraphEdges
     end
 ```
 
@@ -293,24 +294,25 @@ Mọi thay đổi kỹ thuật của phân hệ Thư Viện Yêu Thích và Grap
 ## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Library & GraphRAG TDD Matrix)
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng Core / Domain Tests</b>"]
-        M1["Test Graph Entity Schema Validator<br/>(Enforce 4 entity types and 4 relation types)"]
-        M2["Test Canonical Name Normalization<br/>(Verify lowercase and whitespace stripping)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant Client as Giao Diện Thư Viện
+    participant GraphSvc as Dịch Vụ Học Thuật GraphRAG
+    participant PG as PostgreSQL (graph_nodes & graph_edges)
+    participant LLM as Cổng Suy Luận LLM
 
-    subgraph ServiceTests ["<b>Tầng Service & GraphRAG Tests</b>"]
-        N1["Test Canonical Entity Deduplication<br/>(Multiple papers linking to same Method entity)"]
-        N2["Test 1-Hop Graph Traversal Query<br/>(Verify connected triples retrieved accurately)"]
-        N3["Test Unstar Prunes Edges and Orphan Nodes<br/>(Keep shared nodes, delete disconnected ones)"]
-    end
-
-    subgraph IntegrationTests ["<b>Tầng Integration Tests (PostgreSQL Real)</b>"]
-        O1["Test Folders Tree Hierarchy & Count<br/>(Verify parent-child tree with document counts)"]
-        O2["Test Toggle Star Dispatches Background Task<br/>(Toggle star updates is_starred flag)"]
-    end
-
-    CoreTests --> ServiceTests --> IntegrationTests
+    Scholar->>Client: Đánh dấu yêu thích (Star) bài báo nghiên cứu
+    Client->>GraphSvc: POST /api/v1/documents/{id}:toggle-star
+    GraphSvc->>LLM: Trích xuất thực thể theo Ontology 4 Nhãn (JSON Schema)
+    LLM-->>GraphSvc: Danh sách Đỉnh (Method, Dataset, Metric) & Cạnh
+    GraphSvc->>PG: Gộp đỉnh trùng tên (Canonical Merge) & lưu cạnh đồ thị
+    Scholar->>Client: Đặt câu hỏi so sánh liên bài báo trên đồ thị
+    Client->>GraphSvc: POST /api/v1/library/graph:query
+    GraphSvc->>PG: Tìm đỉnh mỏ neo bằng HNSW Vector + Duyệt lân cận 1-2 Hop
+    PG-->>GraphSvc: Đồ thị con (Subgraph Triples) liên kết các bài báo
+    GraphSvc->>LLM: Tổng hợp câu trả lời đối chiếu từ Subgraph
+    LLM-->>Client: Phản hồi tổng hợp kèm cấu trúc Đỉnh & Cạnh trực quan
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

@@ -54,44 +54,30 @@ Hệ thống Harness Engineering của VeriScholar được thiết kế thành 
 
 ```mermaid
 flowchart TD
-    subgraph L1 ["<b>TẦNG 1: HIẾN PHÁP & QUẢN TRỊ NGỮ CẢNH (CONTEXT & ERGONOMICS)</b>"]
-        direction TB
-        RootLink["Symlink Root: VeriScholar/AGENTS.md"] --> AgentMD[".agents/AGENTS.md<br/>(&lt; 150 dòng - Router & Verification Gates)"]
-        AgentMD --> ArchMD[".agents/ARCHITECTURE_PRINCIPLES.md<br/>(5 Bất biến kiến trúc tối thượng)"]
-        AgentMD --> SkillsDir[".agents/skills/<br/>(Progressive Disclosure Library)"]
-        SkillsDir --> CoreSkills["4 Core Skills: verischolar-backend | verischolar-frontend | verischolar-tdd | agent-maintenance"]
-        SkillsDir --> UISkills["8 UI/UX Design Skills (Retained)"]
+    subgraph L1 ["Tầng 1: Hiến Pháp Tác Nhân & Nạp Kỹ Năng Lũy Tiến"]
+        Constitution["Hiến Pháp Trung Tâm Tối Giản (< 150 Dòng)"]
+        ArchInvariants["5 Bất Biến Kiến Trúc Cốt Lõi"]
+        SkillRouter["Bộ Định Tuyến Kỹ Năng Chuyên Biệt Theo Ngữ Cảnh"]
+        Constitution --> ArchInvariants
+        Constitution --> SkillRouter
     end
 
-    subgraph L2 ["<b>TẦNG 2: MÔI TRƯỜNG XÁC ĐỊNH & HỘP CÁT OFFLINE (SANDBOXING)</b>"]
-        direction TB
-        SetupScript["scripts/dev/setup.sh<br/>(Healthcheck Docker PGVector + Redis 7 + Node 22 + Python 3.12)"]
-        SeedScript["scripts/dev/seed.py<br/>(3 Classic Papers + Physical CAS Blobs + Mock Data)"]
-        DockerCompose["docker-compose.yml<br/>(pgvector/pgvector:0.8.6-pg18 + redis:7-alpine)"]
+    subgraph L2 ["Tầng 2: Môi Trường Khởi Tạo Tất Định & Dữ Liệu Hạt Giống"]
+        InfraProvision["Khởi Tạo Hạ Tầng Tự Động (PostgreSQL 18 + Redis 7)"]
+        CorpusSeeder["Nạp Tập Dữ Liệu Học Thuật Chuẩn & Kho CAS Hạt Giống"]
     end
 
-    subgraph L3 ["<b>TẦNG 3: RÀO CHẮN KIỂM THỬ CƠ HỌC (MECHANICAL ENFORCEMENT)</b>"]
-        direction TB
-        BoundaryTest["apps/api/tests/test_architecture_boundary.py<br/>(AST Hexagonal Linter + Banned String Scanner)"]
-        VerificationGates["4 Cổng Xác Minh Bắt Buộc:<br/>1. ruff check . | 2. uv run pytest | 3. vitest run | 4. vite build"]
+    subgraph L3 ["Tầng 3: Rào Chắn Kiểm Thử Kiến Trúc Cơ Học"]
+        ASTBoundary["Bộ Phân Tích Cây Cú Pháp AST Cô Lập Lõi Lục Giác"]
+        FourGates["4 Cổng Xác Minh Bắt Buộc (Linter, Pytest, Vitest, Build)"]
     end
 
-    subgraph L4 ["<b>TẦNG 4: ĐỘNG CƠ CHỐNG SUY THOÁI QUY TẮC (ANTI-ROT ENGINE)</b>"]
-        direction TB
-        CoLocation["Co-Location Commit Rule<br/>(Sửa Code = Sửa Skill trong cùng Commit)"]
-        AuthorityHierarchy["Tháp Thẩm Quyền:<br/>Passing Tests & Code > docs/specs/ > .agents/skills/"]
-        MaintenanceSkill["agent-maintenance Skill<br/>(Audit và đào thải rules lỗi thời)"]
+    subgraph L4 ["Tầng 4: Động Cơ Chống Suy Thoái Quy Tắc & Tự Học (/learn)"]
+        AuthorityTower["Tháp Thẩm Quyền: Mã Nguồn & Test Xanh > Đặc Tả > Kỹ Năng"]
+        AntiRecurrence["Giao Thức Tự Học 3 Lớp Chống Tái Phạm Lỗi"]
     end
 
-    subgraph L5 ["<b>TẦNG 5: TÍNH TƯƠNG THÍCH ĐA NỀN TẢNG (UNIVERSAL INTEROPERABILITY)</b>"]
-        direction TB
-        NeutralFormat["Định dạng Trung lập Chuẩn Mở<br/>(Tương thích: Antigravity CLI, Cursor, Claude Code, Codex)"]
-    end
-
-    L1 ==> L2
-    L2 ==> L3
-    L3 ==> L4
-    L4 ==> L5
+    L1 ==> L2 ==> L3 ==> L4
 ```
 
 ### A. 5 Bất Biến Kiến Trúc Tối Thượng Của VeriScholar MVP
@@ -373,22 +359,20 @@ Mọi thay đổi kỹ thuật của phân hệ Khung Điều Hướng Tác Nhâ
 Mọi thay đổi cấu trúc của Agent Harness bắt buộc phải vượt qua đầy đủ ma trận kiểm thử cơ học tự động:
 
 ```mermaid
-flowchart TD
-    subgraph ASTIsolation ["<b>Tầng 1: Kiểm Tra Ranh Giới Kiến Trúc AST</b>"]
-        TH1["test_hexagonal_boundary_pure_domain<br/>(Core domain & ports không import I/O, DB, FastAPI)"]
-        TH2["test_hexagonal_checker_catches_apps_api_submodules<br/>(Kiểm tra đơn vị logic bắt vi phạm import)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Dev as Kỹ Sư / Học Giả
+    participant Agent as Tác Nhân Lập Trình AI
+    participant Harness as Hiến Pháp & Sổ Đăng Ký (/learn)
+    participant ASTGate as Rào Chắn Kiểm Thử Cơ Học
 
-    subgraph LegacyGuard ["<b>Tầng 2: Quét Di Sản Cũ & Toàn Vẹn Tài Liệu</b>"]
-        TH3["test_banned_legacy_artifacts<br/>(Quét mã Python cấm aiosqlite, sqlite3, neo4j, ComparisonMatrix)"]
-        TH4["test_no_absolute_file_urls_in_markdown<br/>(Quét toàn bộ .md docs cấm URL tuyệt đối file:///)"]
-    end
-
-    subgraph HarnessCheck ["<b>Tầng 3: Toàn Vẹn Cấu Trúc Khung Tác Nhân</b>"]
-        TH5["test_agent_harness_integrity<br/>(Symlink AGENTS.md, &lt;= 200 dòng, Core skills & scripts tồn tại)"]
-    end
-
-    ASTIsolation --> LegacyGuard --> HarnessCheck
+    Dev->>Agent: Phản hồi lỗi kiến trúc hoặc sai lệch tài liệu
+    Agent->>Agent: Phân tích nguyên nhân gốc rễ (Root-Cause Analysis)
+    Agent->>Harness: Ghi nhận quy tắc bất biến vào Locked Anti-Recurrence Registry
+    Agent->>ASTGate: Bổ sung bài kiểm thử ranh giới tự động (Mechanical Guardrail)
+    Agent->>ASTGate: Thực thi 4 Cổng Xác Minh Bắt Buộc (Linter, Pytest, Vitest, Build)
+    ASTGate-->>Agent: Xác nhận 100% Exit Code 0 (Chặn đứng lỗi tái diễn vĩnh viễn)
+    Agent-->>Dev: Báo cáo hoàn tất đồng bộ Code, Tài liệu & Rào chắn
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

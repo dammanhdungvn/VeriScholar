@@ -38,6 +38,22 @@ Cung cấp cổng truy cập an toàn, tin cậy và liền mạch cho học gi�
 * **Học giả mới đăng ký (Unverified Scholar):** Tài khoản vừa khởi tạo, được phép truy cập không gian làm việc cơ bản nhưng cần hoàn tất xác nhận mã OTP qua thư điện tử để kích hoạt đầy đủ quyền hạn.
 * **Khách vãng lai (Guest User):** Người dùng chưa đăng nhập, chỉ xem được trang giới thiệu và được điều hướng đến màn hình Đăng nhập/Đăng ký khi bắt đầu sử dụng.
 
+```mermaid
+flowchart LR
+    Guest(["Khách Vãng Lai"])
+    Scholar(["Học Giả Đã Xác Thực"])
+    subgraph AuthBoundary ["Phân Hệ Định Danh Học Giả & Bảo Mật Khóa BYOK"]
+        UC1(["UC-AUTH-01/02: Đăng Ký, Đăng Nhập & OAuth 2.0"])
+        UC2(["UC-AUTH-03: Xác Thực OTP & Khôi Phục Mật Khẩu"])
+        UC3(["UC-AUTH-04: Quản Lý Hồ Sơ Học Thuật & ORCID"])
+        UC4(["UC-AUTH-05: Cấu Hình Khóa Cá Nhân BYOK Mã Hóa"])
+    end
+    Guest --> UC1
+    Guest --> UC2
+    Scholar --> UC3
+    Scholar --> UC4
+```
+
 ---
 
 ## 3. Đặc Tả Chi Tiết Các Use Cases Nghiệp Vụ (Detailed Use Cases)

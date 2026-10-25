@@ -39,6 +39,24 @@ Cung cấp một không gian soạn thảo bản thảo khoa học 3 cột khép
 | **Đồng Tác Giả AI (AI Co-Author)** | Trợ lý soạn thảo tự trị chuyên sâu | Viết nội dung học thuật chuẩn mực, tự bổ sung mục trích dẫn từ kho tài liệu của học giả và tự vá lỗi cú pháp biên dịch. |
 | **Động Cơ Biên Dịch Cô Lập** | Hạ tầng biên dịch đám mây an toàn | Biên dịch toàn bộ gói mã nguồn, danh mục trích dẫn và hình ảnh thành bản in PDF chuẩn quốc tế trong thời gian giới hạn an toàn (`15 giây`). |
 
+```mermaid
+flowchart LR
+    Scholar(["Tác Giả Bản Thảo"])
+    CoAuthor(["Đồng Tác Giả AI (LangGraph)"])
+    subgraph WritingBoundary ["Phân Hệ Soạn Thảo Học Thuật 3 Cột & Đồng Tác Giả Tự Trị"]
+        UC1(["UC-WRITE-01: Chuyển Giao Khung Sườn Từ Phiên Đọc"])
+        UC2(["UC-WRITE-02: Soạn Thảo Tự Trị & Chèn Trích Dẫn GraphRAG"])
+        UC3(["UC-WRITE-03: Tự Vá Lỗi Biên Dịch LaTeX (Tối Đa 3 Vòng)"])
+        UC4(["UC-WRITE-04: Hoàn Tác 1-Click & Xuất Gói Camera-Ready"])
+        UC2 --> UC3
+    end
+    Scholar --> UC1
+    Scholar --> UC2
+    Scholar --> UC4
+    CoAuthor --> UC2
+    CoAuthor --> UC3
+```
+
 ---
 
 ## 3. Danh Sách Use Cases Chi Tiết (Structured Use Cases)

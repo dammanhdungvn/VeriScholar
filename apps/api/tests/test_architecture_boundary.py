@@ -353,3 +353,56 @@ def test_deployment_configs_and_nginx_sse_routes():
         assert os.access(script_path, os.X_OK), (
             f"scripts/{script_name} must be executable (chmod +x)"
         )
+
+
+def test_mermaid_diagrams_are_human_centric_paper_grade():
+    """Enforces that Mermaid diagrams in docs/specs/ and docs/PRD/ are human-centric, paper-grade conceptual/UML diagrams without code filenames, HTML tags, or fake test-list boxes."""
+    spec_files = sorted((ROOT_DIR / "docs" / "specs").glob("0*.md"))
+    prd_files = sorted((ROOT_DIR / "docs" / "PRD").glob("0*.md"))
+    assert len(spec_files) == 10, f"Expected 10 spec files, found {len(spec_files)}"
+    assert len(prd_files) == 9, f"Expected 9 PRD files, found {len(prd_files)}"
+
+    mermaid_re = re.compile(r"```mermaid\n(.*?)```", re.DOTALL)
+    banned_tokens_in_mermaid = (
+        ".tsx",
+        ".ts",
+        ".py",
+        ".sh",
+        "<b>",
+        "</b>",
+        "<br/>",
+        "<br>",
+        "subgraph CoreTests",
+        "Tầng Core / Domain Tests",
+        "Test User Entity Creation",
+        "test_hexagonal_boundary_pure_domain",
+    )
+
+    violations: list[str] = []
+    sequence_diagram_count = 0
+
+    for doc_file in [*spec_files, *prd_files]:
+        text = doc_file.read_text(encoding="utf-8")
+        blocks = mermaid_re.findall(text)
+        rel_path = doc_file.relative_to(ROOT_DIR)
+        if not blocks:
+            violations.append(f"{rel_path}: must contain at least 1 ```mermaid diagram block")
+            continue
+
+        for idx, block in enumerate(blocks, 1):
+            if "sequenceDiagram" in block:
+                sequence_diagram_count += 1
+            for token in banned_tokens_in_mermaid:
+                if token in block:
+                    violations.append(
+                        f"{rel_path} (Mermaid block #{idx}): contains banned coder/clutter token '{token}'"
+                    )
+
+    if sequence_diagram_count < 6:
+        violations.append(
+            f"Expected at least 6 UML sequenceDiagram blocks across docs/specs/, found {sequence_diagram_count}"
+        )
+
+    assert not violations, (
+        "Mermaid diagrams violated human-centric paper-grade standards:\n" + "\n".join(violations)
+    )

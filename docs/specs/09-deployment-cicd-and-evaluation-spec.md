@@ -13,42 +13,42 @@ Hệ thống VeriScholar MVP được thiết kế để vận hành tối ưu t
 
 ```mermaid
 flowchart TD
-    subgraph INTERNET ["🌐 Internet & Học Giả (Client Browser)"]
-        Browser["Trình duyệt Học giả<br/>(React 19 SPA + PDF.js + EventSource SSE)"]
+    subgraph INTERNET ["Không Gian Người Dùng (Client Browser)"]
+        Browser["Trình Duyệt Học Giả (React 19 SPA, PDF Canvas & SSE)"]
     end
 
-    subgraph AZURE_VM ["☁️ Máy Chủ Azure Ubuntu VM (NSG: Chỉ mở TCP 80, 443, 22)"]
-        subgraph EDGE ["Tầng Reverse Proxy & TLS (Host Nginx)"]
-            Nginx["Nginx 1.24+ (TLS 1.3 Let's Encrypt)<br/>- Phục vụ tĩnh: /var/www/verischolar/web<br/>- Unbuffered SSE Proxy (5 tuyến)"]
+    subgraph AZURE_VM ["Máy Chủ Đám Mây Azure Ubuntu VM (NSG: TCP 80, 443, 22)"]
+        subgraph EDGE ["Tầng Cổng Ngược & Bảo Mật TLS (Host Nginx)"]
+            Nginx["Nginx Reverse Proxy (TLS 1.3 & 5 Tuyến SSE Không Đệm)"]
         end
 
-        subgraph APP_RUNTIME ["Tầng Ứng Dụng (Systemd / Docker Container)"]
-            FastAPI["FastAPI + Uvicorn (2-4 Workers)<br/>Bind: 127.0.0.1:8000"]
-            CAS[("Ổ đĩa bền vững CAS Storage<br/>/var/lib/verischolar/cas<br/>(SHA-256 PDF Blobs)")]
+        subgraph APP_RUNTIME ["Tầng Thực Thi Ứng Dụng (Uvicorn Workers)"]
+            FastAPI["Dịch Vụ API Trung Tâm (FastAPI Async - 127.0.0.1:8000)"]
+            CAS[("Ổ Đĩa Bền Vững CAS Storage (SHA-256 PDF Blobs)")]
         end
 
-        subgraph DATA_CONTAINERS ["Tầng Dữ Liệu (Docker Compose - Loopback 127.0.0.1)"]
-            PG[("PostgreSQL 18 + pgvector 0.8.6<br/>127.0.0.1:5432<br/>(16 Bảng + HNSW + FTS)")]
-            Redis[("Redis 7 Alpine<br/>127.0.0.1:6379<br/>(OTP, Rate Limit, Stream State)")]
+        subgraph DATA_CONTAINERS ["Tầng Cơ Sở Dữ Liệu Cô Lập Nội Bộ (127.0.0.1)"]
+            PG[("PostgreSQL 18 + pgvector (16 Bảng, HNSW & BM25 FTS)")]
+            Redis[("Bộ Đệm Redis 7 Alpine (OTP, Rate-Limit & Khóa Phiên)")]
         end
     end
 
-    subgraph EXTERNAL_CLOUD ["🌩️ Dịch Vụ Đám Mây Đối Tác (Outbound HTTPS 443)"]
-        E2B["E2B Cloud Sandbox<br/>(Biên dịch LaTeX texlive)"]
-        LLMs["Cloud LLM / BYOK Gateways<br/>(OpenAI / Gemini / Anthropic)"]
-        ScholarAPIs["Academic Discovery APIs<br/>(Exa / Semantic Scholar / arXiv)"]
-        Langfuse["Langfuse Cloud & Sentry<br/>(Observability & Telemetry)"]
+    subgraph EXTERNAL_CLOUD ["Dịch Vụ Đám Mây Đối Tác (Outbound HTTPS 443)"]
+        E2B["Hộp Cát E2B Firecracker (Biên Dịch LaTeX Cô Lập)"]
+        LLMs["Cổng Suy Luận LLM & Khóa Cá Nhân BYOK"]
+        ScholarAPIs["Cổng Dữ Liệu Học Thuật (Exa, Semantic Scholar, arXiv)"]
+        Langfuse["Hệ Thống Quan Sát Langfuse & Cảnh Báo Sentry"]
     end
 
-    Browser ==>|"HTTPS (443) / HTTP/2 & SSE"| Nginx
-    Nginx ==>|"Proxy /api/v1/* & /health"| FastAPI
-    FastAPI <-->|"Đọc/Ghi PDF SHA-256"| CAS
-    FastAPI <-->|"SQLAlchemy Asyncpg"| PG
-    FastAPI <-->|"Redis Async"| Redis
-    FastAPI -.->|"gRPC / HTTPS"| E2B
-    FastAPI -.->|"HTTPS"| LLMs
-    FastAPI -.->|"HTTPS"| ScholarAPIs
-    FastAPI -.->|"Async OpenTelemetry"| Langfuse
+    Browser ==>|"HTTPS 443 / HTTP2 & SSE"| Nginx
+    Nginx ==>|"Chuyển tiếp /api/v1/* & /health"| FastAPI
+    FastAPI <-->|"Đọc & Ghi PDF Phi Bản Sao"| CAS
+    FastAPI <-->|"Truy Vấn Bất Đồng Bộ Asyncpg"| PG
+    FastAPI <-->|"Kiểm Soát Tốc Độ & OTP"| Redis
+    FastAPI -.->|"Biên Dịch LaTeX"| E2B
+    FastAPI -.->|"Suy Luận Ngôn Ngữ"| LLMs
+    FastAPI -.->|"Tìm Kiếm Bài Báo"| ScholarAPIs
+    FastAPI -.->|"Truy Vết Bất Đồng Bộ"| Langfuse
 ```
 
 ### 1.1. Hai Chế Độ Vận Hành Trên Azure Ubuntu VM

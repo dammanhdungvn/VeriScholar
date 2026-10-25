@@ -35,27 +35,31 @@ Phân hệ này chịu trách nhiệm toàn bộ vòng đời xác thực học 
 
 ```mermaid
 flowchart TD
-    subgraph Client ["<b>Frontend (React 19)</b>"]
-        LoginUI["LoginForm.tsx<br/>(Email/Password & OAuth)"]
-        RegisterUI["RegisterForm.tsx<br/>(Full name, Email, Password)"]
-        ProfileModal["UserProfileModal.tsx<br/>(Hồ sơ, Đổi MK, BYOK, Theme)"]
-        AuthStore["useAuthStore.ts (Zustand v5)<br/>(token, user, theme)"]
+    subgraph ClientLayer ["Không Gian Giao Diện Học Giả"]
+        AuthUI["Luồng Đăng Nhập, Đăng Ký & OAuth 2.0"]
+        VaultUI["Trình Quản Lý Hồ Sơ & Khóa BYOK"]
+        SessionStore["Bộ Lưu Trạng Thái Phiên & Giao Diện"]
     end
 
-    subgraph API ["<b>Backend Endpoints (apps/api)</b>"]
-        AuthRouter["auth.py Router<br/>(13 Endpoints REST)"]
-        AuthService["AuthService (PBKDF2/JWT)<br/>(Token, OTP, Crypto)"]
+    subgraph SecurityLayer ["Tầng Bảo Mật & Định Danh Trung Tâm"]
+        AuthGateway["Cổng Xác Thực & Chống Brute-Force"]
+        CryptoEngine["Động Cơ Băm PBKDF2 & Ký JWT"]
+        ByokVault["Két Mã Hóa Khóa BYOK (AES-256-GCM)"]
     end
 
-    subgraph Storage ["<b>Data & Cache Layer</b>"]
-        UsersTable["PostgreSQL users Table<br/>(Profile, BYOK AES-256)"]
-        RedisCache["Redis 7 (OTP & Blacklist)<br/>(Key: verischolar:otp:*)"]
+    subgraph StorageLayer ["Tầng Lưu Trữ Định Danh & Bộ Nhớ Đệm"]
+        UsersDB[("Bảng Định Danh Học Giả (PostgreSQL)")]
+        RedisOTP[("Bộ Đệm OTP & Danh Sách Thu Hồi (Redis 7)")]
     end
 
-    Client --> AuthRouter
-    AuthRouter --> AuthService
-    AuthService --> UsersTable
-    AuthService --> RedisCache
+    AuthUI --> AuthGateway
+    VaultUI --> AuthGateway
+    AuthGateway --> SessionStore
+    AuthGateway --> CryptoEngine
+    AuthGateway --> ByokVault
+    CryptoEngine --> UsersDB
+    CryptoEngine --> RedisOTP
+    ByokVault --> UsersDB
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -375,26 +379,25 @@ Mọi thay đổi kỹ thuật của phân hệ Xác thực và Hồ sơ phải 
 ## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Auth TDD Test Matrix)
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng Core / Domain Tests</b>"]
-        A1["Test User Entity Creation<br/>(Valid email format & password length)"]
-        A2["Test Value Object Email & ORCID<br/>(Normalize and regex validation)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant Client as Giao Diện Web
+    participant API as Cổng Xác Thực API
+    participant Redis as Bộ Đệm Redis 7
+    participant DB as PostgreSQL (users)
 
-    subgraph ServiceTests ["<b>Tầng API & Service Tests (Mock / Fake)</b>"]
-        B1["Test Password PBKDF2 Hashing<br/>(Verify hash is salt-protected and timing-safe)"]
-        B2["Test JWT Token Issuance & Expiry<br/>(Verify payload claims, exp, sub)"]
-        B3["Test BYOK AES-256-GCM Roundtrip<br/>(Encrypt -> Decrypt matches original key)"]
-    end
-
-    subgraph IntegrationTests ["<b>Tầng Integration Tests (PostgreSQL + Redis Real)</b>"]
-        C1["Test User Registration & Duplicate Email<br/>(Expect 201 on new, 409 on duplicate)"]
-        C2["Test Login Credentials & Invalid Password<br/>(Expect 200 on correct, 401 on wrong)"]
-        C3["Test Redis OTP Generation & Rate Limit<br/>(TTL expiration, 5-attempt brute-force cutoff)"]
-        C4["Test Multi-Tenant Profile Isolation<br/>(User 1 cannot update User 2 profile)"]
-    end
-
-    CoreTests --> ServiceTests --> IntegrationTests
+    Scholar->>Client: Đăng nhập / Xác thực OAuth 2.0
+    Client->>API: POST /api/v1/auth/login (Credentials)
+    API->>Redis: Kiểm tra ngưỡng Rate-Limit & OTP
+    API->>DB: Truy vấn hồ sơ & kiểm chứng băm PBKDF2-SHA256
+    DB-->>API: Bản ghi User hợp lệ
+    API-->>Client: Cặp JWT (Access 30m + Refresh 7d)
+    Scholar->>Client: Lưu khóa cá nhân BYOK (OpenAI / Gemini)
+    Client->>API: PUT /api/v1/auth/byok-key (Plaintext Key)
+    API->>API: Mã hóa đối xứng AES-256-GCM (Nonce 96-bit)
+    API->>DB: Lưu Ciphertext & Mask tiền tố khóa
+    API-->>Client: 200 OK (Trạng thái khóa đã kích hoạt)
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

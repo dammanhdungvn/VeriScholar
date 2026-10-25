@@ -76,3 +76,26 @@ flowchart LR
 | **5.1. Kết quả đạt được** | Hoàn thiện nền tảng VeriScholar MVP chạy thực tế trên Azure Ubuntu VM, giải quyết trọn vẹn bài toán đọc sâu minh chứng tọa độ, tổng hợp đồ thị tri thức 4 thực thể và soạn thảo LaTeX tự sửa lỗi. | Tổng hợp từ bảng nghiệm thu tại [`PRD/08-deployment-and-system-evaluation.md`](PRD/08-deployment-and-system-evaluation.md) (Mục 4.2) |
 | **5.2. Hạn chế của đề tài** | Phụ thuộc kết nối mạng tới E2B Cloud khi biên dịch các gói LaTeX ngoại cỡ; giới hạn tối đa 5 bài báo mở đồng thời trong một phiên đọc sâu để tối ưu bộ nhớ trình duyệt. | [`PRD/00-overview-and-cleanup.md`](PRD/00-overview-and-cleanup.md), [`PRD/06-agentic-overleaf-writing.md`](PRD/06-agentic-overleaf-writing.md) |
 | **5.3. Hướng phát triển tiếp theo** | (1) Hỗ trợ cộng tác thời gian thực nhiều tác giả qua CRDT/Yjs trên trình soạn thảo LaTeX; (2) Bổ sung phân tích biểu đồ hình ảnh đa phương thức chuyên sâu; (3) Triển khai cụm worker phân tán cho thư viện hàng chục nghìn bài báo. | Lộ trình mở rộng hậu MVP |
+
+---
+
+## 6. Danh Mục 30 Sơ Đồ Kiến Trúc, Use Case & UML Tuần Tự Chuẩn Bài Báo Khoa Học (Paper-Grade Figure Catalog)
+
+Toàn bộ các sơ đồ Mermaid trong `docs/PRD/` và `docs/specs/` đã được chuẩn hóa theo phong cách **Kiến trúc Khái niệm Bài báo Khoa học (Paper-Grade Conceptual Pipeline & UML)** — không chứa tên file mã nguồn (`.tsx`, `.py`), không chứa thẻ HTML gây lỗi hiển thị, chữ to rõ trên khổ giấy dọc A4 khi xuất ra ảnh PNG/SVG để chèn vào Đồ án Tốt nghiệp:
+
+| Hình vẽ gợi ý trong Đồ án | Loại sơ đồ | Nội dung biểu diễn học thuật | Nguồn trích xuất trực tiếp |
+| :--- | :--- | :--- | :--- |
+| **Hình 1.1** | Conceptual Flow | Chu trình nghiên cứu khoa học toàn trình 5 bước trên VeriScholar | [`docs/PRD/00-overview-and-cleanup.md`](./PRD/00-overview-and-cleanup.md) |
+| **Hình 2.1 – 2.8** | Use Case Diagrams | Sơ đồ Tác nhân & Ca sử dụng (Use Case) cho toàn bộ 8 phân hệ (`PRD-01` $\rightarrow$ `PRD-08`) | [`docs/PRD/01-auth-and-user.md`](./PRD/01-auth-and-user.md) $\rightarrow$ [`docs/PRD/08-deployment-and-system-evaluation.md`](./PRD/08-deployment-and-system-evaluation.md) |
+| **Hình 3.1** | Hexagonal Architecture | Kiến trúc Lục giác 3 tầng (Driving Adapters $\rightarrow$ Pure Core $\rightarrow$ Driven Adapters) | [`docs/specs/00-foundation-architecture-and-db.md`](./specs/00-foundation-architecture-and-db.md) (Block #1) |
+| **Hình 3.2** | Entity-Relationship (`erDiagram`) | Lược đồ Quan hệ Thực thể (ERD) 16 bảng PostgreSQL 18 + `pgvector` | [`docs/specs/00-foundation-architecture-and-db.md`](./specs/00-foundation-architecture-and-db.md) (Block #2) |
+| **Hình 3.3 & 3.4** | Pipeline + `sequenceDiagram` | Kiến trúc Bảo mật Định danh & Két khóa BYOK AES-256-GCM + Biểu đồ Tuần tự UML | [`docs/specs/01-auth-and-user-spec.md`](./specs/01-auth-and-user-spec.md) |
+| **Hình 3.5 – 3.7** | Pipeline + `stateDiagram-v2` + `sequenceDiagram` | Đường ống Khám phá Đa nguồn & Nạp 2 Tầng + Máy trạng thái Tài liệu + Biểu đồ Tuần tự | [`docs/specs/02-discovery-and-documents-spec.md`](./specs/02-discovery-and-documents-spec.md) |
+| **Hình 3.8 & 3.9** | Paper-Style RAG + `sequenceDiagram` | Kiến trúc Hybrid RAG (HNSW Cosine + BM25 FTS + RRF $k=60$) & Đồng bộ Khung viền vàng BBox | [`docs/specs/03-sessions-and-deep-reading-spec.md`](./specs/03-sessions-and-deep-reading-spec.md) |
+| **Hình 3.10 & 3.11** | Pipeline + `sequenceDiagram` | Bảng Ngữ cảnh 3 Cột & Lộ trình Socratic ($A \rightarrow B \rightarrow C \rightarrow D$) + Biểu đồ Tuần tự Nạp lười | [`docs/specs/04-context-table-and-roadmap-spec.md`](./specs/04-context-table-and-roadmap-spec.md) |
+| **Hình 3.12 & 3.13** | GraphRAG Pipeline + `sequenceDiagram` | Đường ống Trích xuất & Hợp nhất Đỉnh Đồ thị 4 Thực thể (Canonical Hub Merging) + Biểu đồ Tuần tự | [`docs/specs/05-favorite-library-and-graphrag-spec.md`](./specs/05-favorite-library-and-graphrag-spec.md) |
+| **Hình 3.14 – 3.16** | System + ReAct Flowchart + `sequenceDiagram` | Kiến trúc IDE LaTeX 3 Cột + Lưu đồ Thuật toán ReAct Tự sửa lỗi 3 vòng + Biểu đồ Tuần tự E2B | [`docs/specs/06-agentic-overleaf-writing-spec.md`](./specs/06-agentic-overleaf-writing-spec.md) |
+| **Hình 3.17 & 3.18** | Telemetry Pipeline + `sequenceDiagram` | Kiến trúc Quan sát 3 Tầng (Langfuse + Khử PII) + Biểu đồ Tuần tự Truy vết ASGI | [`docs/specs/07-monitoring-and-langfuse-spec.md`](./specs/07-monitoring-and-langfuse-spec.md) |
+| **Hình 3.19 & 3.20** | Harness Architecture + `sequenceDiagram` | Kiến trúc Khung Tác nhân 4 Tầng & Giao thức Tự học Chống tái phạm (`/learn`) | [`docs/specs/08-universal-agent-harness-spec.md`](./specs/08-universal-agent-harness-spec.md) |
+| **Hình 4.1** | Cloud Deployment Topology | Kiến trúc Triển khaiThực tế trên Máy chủ Đám mây Azure Ubuntu VM & Nginx SSE Không đệm | [`docs/specs/09-deployment-cicd-and-evaluation-spec.md`](./specs/09-deployment-cicd-and-evaluation-spec.md) |
+

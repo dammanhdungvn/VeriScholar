@@ -39,33 +39,34 @@ Phân hệ này là không gian làm việc trung tâm nhất của VeriScholar 
 - **Ngăn trượt:** Sổ tay ghi chú (`NotesPanelContainer.tsx`) bám sát tài liệu gốc.
 
 ```mermaid
-flowchart LR
-    subgraph LeftWorkspace ["<b>Cột Trái: Trình Đọc Tài Liệu</b>"]
-        TabBar["DocumentTabBar.tsx<br/>(1–5 Tabs, nút đóng [✕])"]
-        ViewerSwitch{"Trạng thái bài báo active"}
-        PDFCanvas["PdfCanvasViewer.tsx<br/>(Zoom, TOC, BboxLayer)"]
-        AbstractCard["AbstractCardViewer.tsx<br/>(Thẻ tóm tắt + Nút upload PDF)"]
-        SelectionMenu["ScholarSelectionMenu.tsx<br/>([💬 Đưa vào Chat], [📝 Vào sổ tay])"]
-        
-        TabBar --> ViewerSwitch
-        ViewerSwitch -->|ready| PDFCanvas
-        ViewerSwitch -->|abstract_only| AbstractCard
-        PDFCanvas --> SelectionMenu
+flowchart TD
+    subgraph InputContext ["Ngữ Cảnh Đầu Vào Phiên Đọc Đa Tài Liệu"]
+        ScholarQuery["Câu Hỏi Học Thuật & Vùng Bôi Đen PDF"]
+        ActiveTabs["Ngữ Cảnh Tối Đa 5 Bài Báo Trong Phiên"]
     end
 
-    subgraph RightWorkspace ["<b>Cột Phải: Trợ Lý Socratic & Ghi Chú</b>"]
-        ChatHeader["Thanh tiêu đề Chat<br/>([🔄 Reset Chat], [⏹️ Dừng])"]
-        MessageStream["Luồng tin nhắn SSE<br/>(Markdown + KaTeX Math)"]
-        CitationBadge["Huy hiệu [📄 Tên bài • Trang X]<br/>(Bấm để cuộn PDF & tô Bbox)"]
-        NotesDrawer["NotesPanelContainer.tsx<br/>(CRUD Ghi chú học thuật)"]
-        
-        ChatHeader --> MessageStream
-        MessageStream --> CitationBadge
+    subgraph HybridRetrieval ["Động Cơ Truy Xuất Lai (Hybrid RAG Engine)"]
+        DenseSearch["Truy Xuất Ngữ Nghĩa Đặc (HNSW Cosine Vector)"]
+        SparseSearch["Truy Xuất Từ Khóa Thưa (PostgreSQL BM25 FTS)"]
+        RRF["Hợp Nhất Xếp Hạng Nghịch Đảo (RRF k=60)"]
+
+        DenseSearch --> RRF
+        SparseSearch --> RRF
     end
 
-    CitationBadge -.->|Sự kiện cuộn & Highlight| PDFCanvas
-    SelectionMenu -.->|Nạp trích dẫn| MessageStream
-    SelectionMenu -.->|Lưu trích dẫn| NotesDrawer
+    subgraph GroundedGeneration ["Tầng Sinh Phản Hồi Neo Bằng Chứng & Đồng Bộ Thị Giác"]
+        PromptGuard["Bộ Chắn Chống Bịa Đặt & Neo Trích Dẫn"]
+        SSEStream["Luồng Phản Hồi SSE (Token + Citation + Bridge Hint)"]
+        BBoxCanvas["Đồng Bộ Cuộn Trang & Tô Sáng BBox [0..1000]"]
+
+        PromptGuard --> SSEStream --> BBoxCanvas
+    end
+
+    ScholarQuery --> DenseSearch
+    ScholarQuery --> SparseSearch
+    ActiveTabs --> DenseSearch
+    ActiveTabs --> SparseSearch
+    RRF -->|"Top-K Đoạn Văn Kèm Tọa Độ"| PromptGuard
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -268,24 +269,25 @@ Mọi thay đổi kỹ thuật của phân hệ Phiên đọc sâu và Hỏi đ�
 ## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Deep Reading TDD Matrix)
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng Core / Domain Tests</b>"]
-        G1["Test Session Entity Tab Limit<br/>(Enforce max 5 documents constraint)"]
-        G2["Test Citation Tag Parser<br/>(Extract [[cite:id]] from markdown stream)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant Reader as Không Gian Đọc Sâu
+    participant RAG as Động Cơ Hybrid RAG
+    participant PG as PostgreSQL (HNSW + FTS)
+    participant LLM as Cổng Suy Luận LLM
 
-    subgraph ServiceTests ["<b>Tầng API & RAG Hybrid Search Tests</b>"]
-        H1["Test PostgreSQL Hybrid RAG RRF<br/>(Verify vector + FTS score combining)"]
-        H2["Test Abstract-Only Chat Guardrail<br/>(Verify AI does not hallucinate formulas)"]
-        H3["Test SSE Stream Event Sequencing<br/>(Verify citation -> token -> bridge_hint -> done)"]
+    Scholar->>Reader: Bôi đen đoạn văn & đặt câu hỏi chuyên sâu
+    Reader->>RAG: POST /api/v1/sessions/{id}/messages:stream (SSE)
+    RAG->>PG: Truy vấn song song HNSW Cosine + GIN Full-Text Search
+    PG-->>RAG: Top-K đoạn văn hợp nhất điểm RRF (k=60) kèm BBox [0..1000]
+    RAG->>LLM: Truyền Prompt neo bằng chứng (Grounded Context)
+    loop Luồng SSE Không Đệm (Unbuffered Stream)
+        LLM-->>Reader: event: token (Văn bản & công thức KaTeX)
+        RAG-->>Reader: event: citation (chunk_id, page_number, bbox)
     end
-
-    subgraph IntegrationTests ["<b>Tầng Integration Tests (Database Real)</b>"]
-        I1["Test Close Document Tab Reassignment<br/>(Close active tab updates active_document_id)"]
-        I2["Test Reset Chat Purges Turns Only<br/>(DELETE messages removes turns, keeps session)"]
-    end
-
-    CoreTests --> ServiceTests --> IntegrationTests
+    Scholar->>Reader: Nhấp vào Huy hiệu Trích dẫn [Trang X]
+    Reader->>Reader: Tự động chuyển tab, cuộn PDF & tô sáng khung BBox
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

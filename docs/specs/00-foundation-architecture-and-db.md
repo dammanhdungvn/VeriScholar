@@ -24,40 +24,38 @@
 Hệ thống được tổ chức theo cấu trúc `uv workspace` monorepo:
 
 ```mermaid
-flowchart LR
-    subgraph DrivingAdapters ["<b>Driving Adapters (apps/api)</b>"]
-        FastAPI["FastAPI HTTP Endpoints<br/>(AIP-136 REST / JSON)"]
-        SSEStream["Unbuffered SSE Stream<br/>(Chat RAG & Agent Writing)"]
-        AuthMiddleware["JWT & Rate-Limit Middleware<br/>(Redis 7 OTP)"]
+flowchart TD
+    subgraph DrivingLayer ["Tầng Giao Tiếp Đầu Vào (Driving Adapters)"]
+        REST["Cổng RESTful JSON (AIP-136)"]
+        SSE["Kênh Stream SSE Không Đệm"]
+        Guard["Bộ Chắn Xác Thực JWT & Rate-Limit"]
     end
 
-    subgraph CoreDomain ["<b>Core Business Domain (packages/core)</b>"]
-        Entities["Domain Entities & VOs<br/>(User, Document, Chunk, Draft...)"]
-        Ports["Abstract Ports (Interfaces)<br/>(IBlobStoragePort, ICompilerPort...)"]
-        BusinessServices["Domain Logic & AST Linters<br/>(ChunkTokenizer, LatexAstLinter)"]
+    subgraph CoreDomain ["Lõi Miền Nghiệp Vụ Thuần Khiết (Hexagonal Core)"]
+        Ports["Giao Diện Cổng Trừu Tượng (Ports)"]
+        DomainLogic["Thực Thể Nghiệp Vụ & Bộ Phân Tích AST"]
     end
 
-    subgraph DrivenAdapters ["<b>Driven Adapters (apps/api & packages/core)</b>"]
-        PG["PostgreSQL 16+ pgvector<br/>(16 Tables, HNSW & GIN Indexes)"]
-        CASDisk["CAS File Storage<br/>(storage/blobs/ SHA-256)"]
-        RedisClient["Redis 7 Client<br/>(OTP, Idempotency, Session Locks)"]
-        E2BClient["E2B Sandbox Runner<br/>(Isolated Firecracker Micro-VM)"]
-        ExaClient["Exa AI & arXiv SDK<br/>(Scholarly Search Adapters)"]
-        LangfuseClient["Langfuse Tracing SDK<br/>(PureASGITracingMiddleware)"]
+    subgraph DrivenLayer ["Tầng Hạ Tầng & Dịch Vụ Ngoài (Driven Adapters)"]
+        PG[("PostgreSQL 18 + pgvector (HNSW & FTS)")]
+        CAS[("Kho Lưu Trữ Phi Bản Sao SHA-256 CAS")]
+        Redis[("Bộ Nhớ Đệm Redis 7 (OTP & Khóa Phiên)")]
+        E2B["Máy Ảo Vi Mô E2B Firecracker (Biên Dịch LaTeX)"]
+        ScholarSearch["Cổng Tìm Kiếm Học Thuật (Exa / S2 / arXiv)"]
+        Telemetry["Giám Sát AI Langfuse & Sentry"]
     end
 
-    FastAPI --> Ports
-    SSEStream --> Ports
-    AuthMiddleware --> Ports
-    Ports --> Entities
-    BusinessServices --> Entities
+    REST --> Ports
+    SSE --> Ports
+    Guard --> Ports
+    Ports --> DomainLogic
 
-    PG -.implements.-> Ports
-    CASDisk -.implements.-> Ports
-    RedisClient -.implements.-> Ports
-    E2BClient -.implements.-> Ports
-    ExaClient -.implements.-> Ports
-    LangfuseClient -.implements.-> Ports
+    PG -.->|"Thực thi IRepositoryPort"| Ports
+    CAS -.->|"Thực thi IBlobStoragePort"| Ports
+    Redis -.->|"Thực thi ICachePort"| Ports
+    E2B -.->|"Thực thi ICompilerPort"| Ports
+    ScholarSearch -.->|"Thực thi ISearchPort"| Ports
+    Telemetry -.->|"Thực thi ITelemetryPort"| Ports
 ```
 
 ### Ràng buộc bất biến kiến trúc (Invariants):

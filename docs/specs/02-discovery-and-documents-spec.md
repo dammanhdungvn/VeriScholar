@@ -37,29 +37,28 @@ Phân hệ này giải quyết bài toán khởi đầu nghiên cứu khoa học
 
 ```mermaid
 flowchart TD
-    subgraph DiscoveryFlow ["<b>Luồng Khám Phá Bài Báo Mới (Zero-to-Reading)</b>"]
-        QueryInput["Người dùng nhập chủ đề nghiên cứu<br/>(DiscoveryPage.tsx)"]
-        SearchAPI["POST /api/v1/discovery/search<br/>(Exa AI + Semantic Scholar + arXiv)"]
-        CardDisplay{"Phân loại quyền truy cập bài báo"}
-        
-        OpenAccessCard["Thẻ có PDF mở (Open Access)<br/>Nút: [📖 Mở Đọc Sâu (Full PDF)]"]
-        PaywallCard["Thẻ chỉ có tóm tắt (Paywall)<br/>Nút: [📄 Xem Tóm Tắt (Abstract)]"]
-        
-        QueryInput --> SearchAPI --> CardDisplay
-        CardDisplay -->|Có Open Access URL| OpenAccessCard
-        CardDisplay -->|Không có PDF mở| PaywallCard
+    subgraph DiscoveryStage ["Giai Đoạn 1: Tìm Kiếm Học Thuật Đa Nguồn (Federated Discovery)"]
+        ScholarQuery["Truy Vấn Học Thuật Tự Nhiên"]
+        MultiSource["Truy Vấn Song Song (Exa AI + Semantic Scholar + arXiv)"]
+        Deduplicator["Bộ Hợp Nhất DOI & Phân Loại Quyền Truy Cập"]
+        AccessGate{"Có PDF Truy Cập Mở?"}
+        FullPdfCard["Thẻ Bài Báo Đầy Đủ (Open Access PDF)"]
+        AbstractCard["Thẻ Tóm Tắt Học Thuật (Abstract-Only)"]
+
+        ScholarQuery --> MultiSource --> Deduplicator --> AccessGate
+        AccessGate -->|"Có URL PDF"| FullPdfCard
+        AccessGate -->|"Bị khóa Paywall"| AbstractCard
     end
 
-    subgraph IngestionFlow ["<b>Đường Ống Nạp 2 Tầng (2-Tier Ingestion)</b>"]
-        OpenReadingAPI["POST /api/v1/discovery/open-reading"]
-        Tier1Meta["Tầng 1 (< 500ms): Lưu Metadata & Abstract<br/>Tạo Document & ResearchSession"]
-        Tier2Background["Tầng 2 (BackgroundTasks): Tải PDF về CAS<br/>PyMuPDF Chunking & Bounding Box & Vector(1536)"]
-        
-        OpenAccessCard --> OpenReadingAPI
-        PaywallCard --> OpenReadingAPI
-        OpenReadingAPI --> Tier1Meta
-        Tier1Meta -->|Nếu có PDF URL| Tier2Background
-        Tier1Meta --> Navigate["Frontend chuyển thẳng sang /dashboard/{sessionId}"]
+    subgraph IngestionStage ["Giai Đoạn 2: Đường Ống Nạp Tài Liệu 2 Tầng (2-Tier Ingestion)"]
+        Tier1Fast["Tầng 1 (< 500ms): Khởi Tạo Metadata & Phiên Đọc Tức Thì"]
+        Tier2Async["Tầng 2 (Bất Đồng Bộ): Tải PDF, Băm CAS SHA-256 & Chuẩn Hóa BBox"]
+        VectorIndex[("Kho CAS Phi Bản Sao & Chỉ Mục HNSW Vector(1536)")]
+
+        FullPdfCard --> Tier1Fast
+        AbstractCard --> Tier1Fast
+        Tier1Fast -->|"Mở phiên đọc ngay"| ReaderWorkspace["Không Gian Đọc Sâu Song Song"]
+        Tier1Fast -->|"Tác vụ nền"| Tier2Async --> VectorIndex
     end
 ```
 
@@ -363,24 +362,26 @@ Mọi thay đổi kỹ thuật của phân hệ Khám phá và Quản lý tài l
 ## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Discovery & Documents TDD Matrix)
 
 ```mermaid
-flowchart TD
-    subgraph CoreTests ["<b>Tầng Core / Domain Tests</b>"]
-        D1["Test PDF Validator Gate<br/>(Reject file > 50MB, > 100 pages, scanned PDF)"]
-        D2["Test Bounding Box Normalizer<br/>(Transform raw points to 0..1000 range)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Scholar as Học Giả
+    participant Client as Giao Diện Khám Phá
+    participant API as Dịch Vụ Discovery & Ingestion
+    participant CAS as Kho Lưu Trữ CAS (SHA-256)
+    participant DB as PostgreSQL + pgvector
 
-    subgraph ServiceTests ["<b>Tầng API Discovery & Ingestion Tests</b>"]
-        E1["Test Search Deduplication<br/>(Merge Exa + Semantic Scholar + arXiv by DOI)"]
-        E2["Test Ingestion 2-Tier Timing<br/>(Tier 1 responds < 500ms, Tier 2 background)"]
-        E3["Test Abstract-Only to Ready Transition<br/>(Attach PDF switches status and parses chunks)"]
+    Scholar->>Client: Nhập truy vấn chủ đề nghiên cứu
+    Client->>API: POST /api/v1/discovery/search
+    API-->>Client: Danh sách bài báo đã khử trùng lặp DOI
+    Scholar->>Client: Bấm "Mở Đọc Sâu" trên bài báo được chọn
+    Client->>API: POST /api/v1/discovery/open-reading
+    API->>DB: [Tầng 1] Lưu Metadata & khởi tạo ResearchSession (< 500ms)
+    API-->>Client: 201 Created (Trả về session_id mở ngay giao diện)
+    par Tác vụ nền Tầng 2 (Background Ingestion)
+        API->>CAS: Tải PDF, tính SHA-256 & khử trùng lặp ref_count
+        API->>API: Bóc tách đoạn văn PyMuPDF & chuẩn hóa BBox [0..1000]
+        API->>DB: Lưu document_chunks + Vector(1536) & chuyển trạng thái ready
     end
-
-    subgraph IntegrationTests ["<b>Tầng Integration Tests (PostgreSQL + CAS Real)</b>"]
-        F1["Test CAS Upload Deduplication<br/>(Two uploads with same hash share blob_id)"]
-        F2["Test Document Cascading Deletion<br/>(Delete document purges chunks and triggers CAS unlink)"]
-    end
-
-    CoreTests --> ServiceTests --> IntegrationTests
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |

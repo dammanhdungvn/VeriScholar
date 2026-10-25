@@ -44,6 +44,23 @@ Một nền tảng AI Nghiên cứu Khoa học hoàn chỉnh không chỉ dừng
 | **UC-08.3** | Thực thi Bộ Thực nghiệm Định lượng (E1, E2, E3) | Thesis Author | Đo đạc và xuất bảng kết quả độ trễ TTFT, độ chính xác trích dẫn RAG/GraphRAG và tỷ lệ pass kiểm thử. |
 | **UC-08.4** | Sao lưu & Phục hồi Dữ liệu Bền vững (CAS & PostgreSQL) | DevOps Engineer | Đảm bảo an toàn 100% cho cơ sở dữ liệu 16 bảng và kho bài báo PDF trước sự cố khởi động lại máy chủ. |
 
+```mermaid
+flowchart LR
+    DevOps(["Kỹ Sư Vận Hành / Tác Giả Đồ Án"])
+    Committee(["Hội Đồng Bảo Vệ & Học Giả"])
+    subgraph DeployBoundary ["Phân Hệ Triển Khai Azure Ubuntu, CI/CD & Thực Nghiệm Định Lượng"]
+        UC1(["UC-08.1: Kiểm Định CI 2 Tầng (4 Cổng Xác Minh)"])
+        UC2(["UC-08.2: Triển Khai Azure VM & Nginx SSE Không Đệm"])
+        UC3(["UC-08.3: Thực Thi 3 Bộ Thực Nghiệm Định Lượng (E1, E2, E3)"])
+        UC4(["UC-08.4: Lưu Trữ Bền Vững CAS & Cô Lập CSDL"])
+        UC1 --> UC2 --> UC3
+    end
+    DevOps --> UC1
+    DevOps --> UC2
+    DevOps --> UC4
+    Committee --> UC3
+```
+
 ---
 
 ## 3. Đặc Tả Chi Tiết Các Ca Sử Dụng (Detailed Use Case Specifications)

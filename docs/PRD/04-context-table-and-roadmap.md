@@ -40,6 +40,22 @@ VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế n
 | **Trợ Lý AI Socratic** | Trợ lý phân tích văn bản và định hướng sư phạm | Phân tích nội dung đang thảo luận, phát hiện các định lý/mô hình kế thừa từ tài liệu tham khảo, phát thẻ gợi ý bắc cầu lộ trình học. |
 | **Hệ Thống Phân Giải Học Thuật** | Dịch vụ trung gian xác thực dữ liệu | Tự động đối chiếu mã định danh chuẩn (DOI / arXiv ID), xác định trạng thái truy cập mở (Open Access) hoặc tài liệu thu phí (Paywall). |
 
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Nghiên Cứu"])
+    SocraticAI(["Trợ Lý Sư Phạm Socratic"])
+    subgraph RoadmapBoundary ["Phân Hệ Bảng Ngữ Cảnh 3 Cột & Lộ Trình Học Tuần Tự"]
+        UC1(["UC-ROAD-01: Tra Cứu Bảng Tham Khảo 3 Cột"])
+        UC2(["UC-ROAD-02: Nạp Bài Tham Khảo 1-Click Vào Phiên (< 500ms)"])
+        UC3(["UC-ROAD-03: Gợi Ý Lộ Trình Học Bắc Cầu (A -> B -> C -> D)"])
+        UC1 --> UC2
+        UC3 --> UC2
+    end
+    Scholar --> UC1
+    Scholar --> UC2
+    SocraticAI --> UC3
+```
+
 ---
 
 ## 3. Danh Sách Use Cases Chi Tiết (Structured Use Cases)

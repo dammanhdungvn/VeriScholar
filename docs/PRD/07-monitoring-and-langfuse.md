@@ -42,6 +42,22 @@ VeriScholar giải quyết trọn vẹn những thách thức trên thông qua 4
 | **Kỹ Sư Vận Hành / Quản Trị Viên** | Người chịu trách nhiệm duy trì hệ thống | Giám sát sức khỏe dịch vụ, nhận cảnh báo sự cố khẩn cấp, tra cứu nguyên nhân gốc rễ qua mã truy vết để hỗ trợ học giả. |
 | **Động Cơ Đo Lường Học Thuật** | Hệ thống tự động theo dõi và ghi nhận chỉ số | Tự động ghi nhận chi phí tài nguyên, thời gian phản hồi, kiểm tra tính xác thực của trích dẫn và chấm điểm vận hành. |
 
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Nghiên Cứu"])
+    Operator(["Kỹ Sư Vận Hành"])
+    subgraph MonitoringBoundary ["Phân Hệ Giám Sát Vận Hành & Đo Lường Chất Lượng Học Thuật"]
+        UC1(["UC-MON-01: Thông Báo Lỗi Thân Thiện & Mã Truy Vết"])
+        UC2(["UC-MON-02: Đánh Giá Chất Lượng Trích Dẫn & Truy Vết AI"])
+        UC3(["UC-MON-03/04: Cảnh Báo Khẩn Cấp & Kiểm Định Sức Khỏe Sâu"])
+    end
+    Scholar --> UC1
+    Scholar --> UC2
+    Operator --> UC1
+    Operator --> UC2
+    Operator --> UC3
+```
+
 ---
 
 ## 3. Danh Sách Use Cases Chi Tiết (Structured Use Cases)

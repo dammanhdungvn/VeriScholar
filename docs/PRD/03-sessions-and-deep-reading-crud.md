@@ -36,6 +36,19 @@ Cung cấp một không gian làm việc trung tâm chuyên sâu, mô phỏng b�
 * **Học giả đọc sâu (Deep Reader):** Cần đọc kỹ từng trang tài liệu, phóng to công thức toán học, tra cứu mục lục và hỏi đáp chi tiết về các đoạn khó hiểu.
 * **Học giả đối chiếu (Comparative Scholar):** Mở đồng thời 2 đến 5 bài báo trong cùng một phiên để so sánh kiến trúc mô hình, kết quả đo lường và hạn chế của từng phương pháp.
 
+```mermaid
+flowchart LR
+    Scholar(["Học Giả Đọc Sâu"])
+    subgraph ReadingBoundary ["Phân Hệ Phiên Đọc Sâu Đa Bài Báo & Bảo Chứng Trực Quan"]
+        UC1(["UC-SESS-01/02: Quản Lý Phiên & Thanh Tab (1-5 Bài Báo)"])
+        UC2(["UC-SESS-03: Hỏi Đáp Hybrid RAG Kèm Khung Viền Vàng BBox"])
+        UC3(["UC-SESS-04: Bôi Đen Trích Dẫn & Sổ Tay Bằng Chứng Đóng Băng"])
+    end
+    Scholar --> UC1
+    Scholar --> UC2
+    Scholar --> UC3
+```
+
 ---
 
 ## 3. Đặc Tả Chi Tiết Các Use Cases Nghiệp Vụ (Detailed Use Cases)
