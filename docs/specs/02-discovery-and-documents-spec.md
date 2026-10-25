@@ -2,9 +2,9 @@
 # (SCHOLARLY DISCOVERY, 2-TIER INGESTION & DOCUMENTS CRUD SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/02-discovery-and-documents-crud.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/02-discovery-and-documents-crud.md)  
+**Nguồn tham chiếu PRD:** [`02-discovery-and-documents-crud.md`](../PRD/02-discovery-and-documents-crud.md)  
 **Phân hệ kỹ thuật:** Phân Hệ Khám Phá & Nạp Tài Liệu (Discovery & Ingestion)  
-**File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
+**File nền tảng liên đới:** [`00-foundation-architecture-and-db.md`](./00-foundation-architecture-and-db.md)
 
 ---
 
@@ -67,10 +67,10 @@ flowchart TD
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
 | **Discovery API** | `apps/api/src/api/v1/endpoints/discovery.py` | **CREATE** | Tạo mới 2 endpoint: `POST /api/v1/discovery/search` (tìm bài báo ngoài) và `POST /api/v1/discovery/open-reading` (khởi tạo phiên đọc từ kết quả tìm kiếm). Mount vào `api_v1_router`. |
-| **Documents API** | [`apps/api/src/api/v1/endpoints/documents.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py) | **KEEP** | Giữ nguyên CRUD tài liệu: `POST /upload`, `GET /`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`, `POST /{id}:parse`. |
-| **Ingestion Pipeline** | [`apps/api/src/api/services/document_service.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/services/document_service.py) | **MODIFY** | Bổ sung logic phân biệt 2 trạng thái `ready` (cho abstract-only) và `parsing` $\rightarrow$ `ready` (cho full PDF), bóc tách Bounding Box PyMuPDF và sinh embedding `Vector(1536)`. |
+| **Documents API** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | **KEEP** | Giữ nguyên CRUD tài liệu: `POST /upload`, `GET /`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`, `POST /{id}:parse`. |
+| **Ingestion Pipeline** | [`apps/api/src/api/services/document_service.py`](../../apps/api/src/api/services/document_service.py) | **MODIFY** | Bổ sung logic phân biệt 2 trạng thái `ready` (cho abstract-only) và `parsing` $\rightarrow$ `ready` (cho full PDF), bóc tách Bounding Box PyMuPDF và sinh embedding `Vector(1536)`. |
 | **Exa & arXiv Adapter** | `packages/core/src/core/services/` & `apps/api/src/api/adapters/` | **MODIFY** | Tách cổng trừu tượng `IScholarlySearchPort` trong Core và cài đặt Adapter gọi Exa AI SDK (`category="research paper"`) + Semantic Scholar + arXiv. |
-| **Discovery UI** | [`apps/web/src/features/discovery/components/DiscoveryPage.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/discovery/components/DiscoveryPage.tsx) | **MODIFY** | Thay thế code tìm kiếm nhầm trong danh sách tài liệu local cũ bằng gọi API `POST /api/v1/discovery/search`, hiển thị thẻ kết quả với 2 nút tương ứng. |
+| **Discovery UI** | [`apps/web/src/features/discovery/components/DiscoveryPage.tsx`](../../apps/web/src/features/discovery/components/DiscoveryPage.tsx) | **MODIFY** | Thay thế code tìm kiếm nhầm trong danh sách tài liệu local cũ bằng gọi API `POST /api/v1/discovery/search`, hiển thị thẻ kết quả với 2 nút tương ứng. |
 | **Documents UI** | `apps/web/src/features/documents/` | **KEEP** | Danh sách tài liệu, Modal upload PDF kéo thả, thanh tiến trình parse tài liệu. |
 
 ---
@@ -217,7 +217,7 @@ stateDiagram-v2
 ## 5. Thiết Kế Đường Ống Bóc Tách Kỹ Thuật (Ingestion & PyMuPDF Chunking)
 
 ### A. Thuật Toán Trích Xuất Khối Văn Bản & Bounding Box
-Trong [`apps/api/src/api/adapters/chunk_extractor.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/adapters/chunk_extractor.py), sử dụng PyMuPDF (`pymupdf`):
+Trong [`apps/api/src/api/adapters/chunk_extractor.py`](../../apps/api/src/api/adapters/chunk_extractor.py), sử dụng PyMuPDF (`pymupdf`):
 1. **Lấy khối chữ theo trang (Page Blocks):**
    ```python
    page = doc.load_page(page_num)
@@ -262,7 +262,20 @@ Khi bài báo ở trạng thái `status="abstract_only"`:
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Discovery & Documents TDD Matrix)
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Khám phá và Quản lý tài liệu phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **API Endpoints Pattern** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | Tham chiếu cách định nghĩa Router, xử lý upload `UploadFile`, streaming PDF file và quản lý OCC version. |
+| **Document Service & Ingestion** | [`apps/api/src/api/services/document_service.py`](../../apps/api/src/api/services/document_service.py) | Tham chiếu cách gọi `BackgroundTasks`, tính SHA-256 hash và liên kết với `IBlobStoragePort`. |
+| **Structure & Chunk Extractor** | [`apps/api/src/api/adapters/chunk_extractor.py`](../../apps/api/src/api/adapters/chunk_extractor.py) | Tham chiếu cách dùng PyMuPDF bóc tách blocks và tính chuẩn hóa tọa độ `[0..1000]`. |
+| **Storage Adapter** | [`packages/core/src/core/adapters/storage/local.py`](../../packages/core/src/core/adapters/storage/local.py) | Tham chiếu cấu trúc lưu trữ `storage/blobs/{hash[:2]}/{hash[2:4]}/{hash}`. |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Discovery & Documents TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -296,10 +309,10 @@ flowchart TD
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] 2 API `POST /api/v1/discovery/search` và `POST /api/v1/discovery/open-reading` được cài đặt hoàn chỉnh và mount vào API router.
 - [ ] Giao diện `DiscoveryPage.tsx` tìm kiếm được bài báo thực tế từ internet và hiển thị đúng 2 loại nút bấm (`Full PDF` vs `Abstract`).
 - [ ] Quy trình nạp bài 2 tầng đảm bảo phản hồi tức thì (`< 500ms`) cho người dùng trước khi tải ngầm PDF.
 - [ ] Hỗ trợ đầy đủ luồng nâng cấp bài báo `abstract_only` sang `ready` qua `attach-pdf`.
-- [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 6 đạt `100% PASS`.
+- [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 8 đạt `100% PASS`.

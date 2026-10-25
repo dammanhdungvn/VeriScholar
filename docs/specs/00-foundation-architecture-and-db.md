@@ -1,37 +1,27 @@
 # ĐẶC TẢ KỸ THUẬT: PHÂN HỆ NỀN TẢNG KIẾN TRÚC HỆ THỐNG, CSDL 16 BẢNG & LƯU TRỮ CAS
-# (FOUNDATION ARCHITECTURE, POSTGRESQL SCHEMA & CAS STORAGE SPECIFICATION)
+# (FOUNDATION ARCHITECTURE, POSTGRESQL 16-TABLE SCHEMA & CAS STORAGE SPECIFICATION)
 
-**Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/00-overview-and-cleanup.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/00-overview-and-cleanup.md)  
-**Phân hệ kỹ thuật:** Phân Hệ Nền Tảng Kiến Trúc & Dữ Liệu (Foundation Architecture & Storage)  
-**Mục tiêu:** Cung cấp khung kiến trúc lục giác, lược đồ 16 bảng CSDL quan hệ kết hợp vector, và cơ chế lưu trữ nội dung định danh CAS cho toàn bộ hệ thống VeriScholar.
-
----
-
-## 1. Usecase & Bối Cảnh Vận Hành Hệ Thống (Real-World System Use Cases & Value)
-
-### A. Usecase 1: Cô Lập Dữ Liệu Học Thuật Đa Người Dùng Tuyệt Đối (Multi-Tenant Academic Isolation)
-- **Bối cảnh & Vấn đề thực tế:** Trong môi trường nghiên cứu khoa học, các bài báo chưa công bố, ý tưởng luận văn hoặc dữ liệu thí nghiệm là tài sản sở hữu trí tuệ cực kỳ nhạy cảm. Nếu hệ thống để rò rỉ dữ liệu giữa hai người dùng (ví dụ: User A đọc trộm được tài liệu hoặc câu hỏi chat của User B thông qua lỗi ID enumeration), uy tín của nền tảng sẽ bị hủy hoại hoàn toàn.
-- **Giải pháp của phân hệ:**
-  - Mọi bản ghi CSDL từ bảng người dùng, tài liệu, phiên đọc, đến bản thảo đều bắt buộc gán khóa ngoại `user_id FK users.id ON DELETE CASCADE`.
-  - Mọi câu truy vấn bắt buộc có điều kiện lọc `WHERE user_id = :current_user_id`. Khi một người dùng cố tình truy cập ID tài nguyên của người khác, hệ thống luôn trả về `404 NOT_FOUND` đồng nhất, triệt tiêu mọi khả năng dò quét dữ liệu.
-
-### B. Usecase 2: Quyền Riêng Tư & Tiêu Hủy Dữ Liệu Vật Lý Tức Thì (Zero-Retention Guarantee)
-- **Bối cảnh & Vấn đề thực tế:** Khi học giả quyết định xóa một bài báo PDF bí mật hoặc hủy tài khoản, họ yêu cầu file nhị phân vật lý trên đĩa cứng máy chủ phải bị tiêu hủy ngay lập tức, không được phép lưu trữ mồ côi hay trôi nổi trên bộ nhớ đệm máy chủ.
-- **Giải pháp của phân hệ:**
-  - Hệ thống sử dụng cơ chế Content-Addressable Storage (CAS) kết hợp bộ đếm tham chiếu đồng bộ (`ref_count`).
-  - Khi người dùng xóa tài liệu (`DELETE /api/v1/documents/{id}`): hệ thống giảm `ref_count -= 1`. Ngay khi `ref_count <= 0`, lệnh `os.unlink()` xóa vĩnh viễn file nhị phân vật lý trên đĩa cứng ngay trong cùng chu kỳ request, cam kết không tồn đọng file mồ côi.
-
-### C. Usecase 3: Tìm Kiếm Hỗn Hợp Ngữ Nghĩa & Từ Khóa Cực Nhanh (Hybrid Vector & FTS Scaling)
-- **Bối cảnh & Vấn đề thực tế:** Một nhà nghiên cứu lưu trữ hàng trăm bài báo (tương đương hàng vạn đoạn văn chunk). Khi tìm kiếm câu trả lời, họ vừa muốn tìm theo thuật ngữ toán học chính xác (Full-Text Search từ khóa), vừa muốn tìm theo ngữ nghĩa tương đồng (Semantic Vector Search) mà thời gian phản hồi không được vượt quá 300ms.
-- **Giải pháp của phân hệ:**
-  - Tích hợp trực tiếp PostgreSQL 16+ với extension `pgvector` (`vector(1536)`) kèm chỉ mục HNSW (`vector_cosine_ops`) và chỉ mục GIN trên cột `content_tsv`. Không cần duy trì cụm Elasticsearch hay Milvus cồng kềnh, tối ưu hóa tối đa chi phí vận hành VPS.
+**Mã phân hệ:** `SPEC-00`  
+**Phiên bản:** `2.0-OFFICIAL`  
+**Vai trò phụ trách:** Kỹ sư Trưởng Kiến trúc Hệ thống (Senior Technical Lead / System Architect)  
+**Tài liệu Nghiệp vụ liên đới (BA PRD):** [`00-overview-and-cleanup.md`](../PRD/00-overview-and-cleanup.md)  
+**Trạng thái:** CHÍNH THỨC BAN HÀNH (RELEASE CANDIDATE)
 
 ---
 
-## 2. Ranh Giới Kiến Trúc Lục Giác & Ràng Buộc Toàn Cục (Hexagonal Boundaries & Invariants)
+## 1. Mục Tiêu Kỹ Thuật & Phạm Vi Triển Khai (Technical Goals & Scope)
 
-Hệ thống VeriScholar tuân thủ nghiêm ngặt mô hình **Kiến trúc Lục giác (Hexagonal Architecture / Ports & Adapters)** trong monorepo `uv workspace`:
+### 1.1. Mục tiêu kỹ thuật cốt lõi
+1. **Kiến trúc Lục giác Cô lập Tuyệt đối (Strict Hexagonal Architecture):** Đảm bảo miền nghiệp vụ lõi (`packages/core`) hoàn toàn độc lập với mọi framework I/O, database ORM, thư viện mạng. Mọi phụ thuộc chỉ được phép đi một chiều từ ngoài (`apps/api`) vào trong lõi.
+2. **Lược đồ CSDL PostgreSQL 16+ pgvector Chuẩn hóa 16 Bảng:** Định nghĩa tường minh toàn bộ 16 bảng CSDL phục vụ đầy đủ 6 luồng giá trị học thuật của VeriScholar MVP, tích hợp chỉ mục vector HNSW (`vector_cosine_ops`) và chỉ mục tìm kiếm toàn văn GIN (`to_tsvector`).
+3. **Lưu trữ Nội dung Định danh CAS Khử trùng lặp & Tiêu hủy Tức thì:** Cài đặt cơ chế Content-Addressable Storage (CAS) theo băm SHA-256 phân tán 2 tầng tại `storage/blobs/`, cam kết tiêu hủy vật lý tức thì (`zero-retention`) ngay khi `ref_count <= 0`.
+4. **Cô lập Đa người dùng Tuyệt đối (Multi-Tenant Scoping Invariant):** 100% bảng nghiệp vụ gắn khóa ngoại `user_id FK users.id ON DELETE CASCADE`. Mọi truy vấn bắt buộc có điều kiện `WHERE user_id = :current_user_id`.
+
+---
+
+## 2. Ranh Giới Kiến Trúc Lục Giác & Tổ Chức Workspace
+
+Hệ thống được tổ chức theo cấu trúc `uv workspace` monorepo:
 
 ```mermaid
 flowchart LR
@@ -43,11 +33,11 @@ flowchart LR
 
     subgraph CoreDomain ["<b>Core Business Domain (packages/core)</b>"]
         Entities["Domain Entities & VOs<br/>(User, Document, Chunk, Draft...)"]
-        Ports["Abstract Ports (Interfaces)<br/>(ILatexCompilerPort, IDocumentStoragePort...)"]
-        BusinessServices["Domain Logic & AST Linters<br/>(FastLatexAstLinter, ChunkTokenizer)"]
+        Ports["Abstract Ports (Interfaces)<br/>(IBlobStoragePort, ICompilerPort...)"]
+        BusinessServices["Domain Logic & AST Linters<br/>(ChunkTokenizer, LatexAstLinter)"]
     end
 
-    subgraph DrivenAdapters ["<b>Driven Adapters (apps/api)</b>"]
+    subgraph DrivenAdapters ["<b>Driven Adapters (apps/api & packages/core)</b>"]
         PG["PostgreSQL 16+ pgvector<br/>(16 Tables, HNSW & GIN Indexes)"]
         CASDisk["CAS File Storage<br/>(storage/blobs/ SHA-256)"]
         RedisClient["Redis 7 Client<br/>(OTP, Idempotency, Session Locks)"]
@@ -70,26 +60,15 @@ flowchart LR
     LangfuseClient -.implements.-> Ports
 ```
 
-### A. Ràng Buộc Bất Biến Của Core (`packages/core`)
-1. **Thuần Python (Pure Python 3.12):** `packages/core/src/core/domain/` và `packages/core/src/core/ports/` tuyệt đối **không được import** bất kỳ thư viện framework nào: cấm `fastapi`, `sqlalchemy`, `httpx`, `fitz` (`pymupdf`), `redis`, `langfuse`, `e2b`.
-2. **Quy tắc phụ thuộc một chiều (Dependency Inversion):** Mọi chiều phụ thuộc chỉ đi từ ngoài (`apps/api`) vào trong (`packages/core`). Core định nghĩa các giao diện trừu tượng (`Ports`), Adapters trong API cài đặt các giao diện đó.
-3. **Tốc độ thực thi Unit Test:** Mọi bài test trong `packages/core/tests/` phải chạy độc lập trên RAM với Fake/Mock ports, không mở socket mạng và không phụ thuộc CSDL (tổng thời gian chạy `< 1 giây`).
-
-### B. Ràng Buộc Bất Biến Của Adapters & API (`apps/api`)
-1. **Cô lập Đa người dùng Tuyệt đối (Multi-Tenant Isolation):**
-   Mọi bảng dữ liệu nghiệp vụ đều có khóa ngoại `user_id FK users.id ON DELETE CASCADE`. Mọi câu lệnh SQL truy vấn hoặc thao tác dữ liệu đều bắt buộc có điều kiện lọc:
-   $$\text{WHERE } user_id = :current\_user\_id$$
-   Cố gắng truy cập tài nguyên của người dùng khác hoặc tài nguyên không tồn tại phải trả về mã lỗi `404 NOT_FOUND` đồng nhất (tránh lộ thông tin tồn tại qua `403`).
-2. **Tô pô Tiến trình Đơn máy chủ (Single Async Uvicorn Worker Topology):**
-   Trên môi trường máy chủ đơn (VPS), API chạy duy nhất **1 async Uvicorn worker** để đảm bảo bộ đếm metrics trong RAM (`PureASGITracingMiddleware`), cache xem trước và các tác vụ ngầm không bị phân mảnh thành nhiều không gian nhớ độc lập.
-3. **Phân Vùng Tác Vụ Ngầm (BackgroundTasks Session Safety):**
-   Mọi tác vụ chạy ngầm qua `BackgroundTasks` (tải PDF Tầng 2, trích xuất GraphRAG) **tuyệt đối không dùng chung `AsyncSession` của HTTP request** (vì session này sẽ bị đóng khi request kết thúc). Tác vụ ngầm phải tự mở `AsyncSessionLocal()` độc lập trong context manager `async with`.
+### Ràng buộc bất biến kiến trúc (Invariants):
+* `packages/core/src/core/domain/` và `ports/`: **CẤM IMPORT** `fastapi`, `starlette`, `sqlalchemy`, `sqlmodel`, `alembic`, `redis`, `pymupdf`, `fitz`, `httpx`, `aiohttp`, `requests`, `aiofiles`, `e2b`, `langfuse`, `openai`, hoặc import từ `apps`.
+* Mọi giao diện tương tác ngoài đều thông qua `Ports` (Protocol trong `packages/core/src/core/ports/`).
 
 ---
 
-## 3. Kiểm Kê Toàn Diện & Lược Đồ 16 Bảng CSDL PostgreSQL 16+
+## 3. Lược Đồ Chi Tiết 16 Bảng CSDL PostgreSQL 16+
 
-Toàn bộ hệ thống VeriScholar MVP gồm đúng **16 bảng PostgreSQL** (12 bảng hiện có + 4 bảng tạo mới trong `Delta`).
+Toàn bộ hệ thống VeriScholar gồm chính xác **16 bảng PostgreSQL**:
 
 ```mermaid
 erDiagram
@@ -108,7 +87,6 @@ erDiagram
     documents ||--o| document_summaries : summarizes
     documents ||--o{ reference_items : references
     documents ||--o{ session_documents : joins
-    documents ||--o{ graph_nodes : anchors
 
     research_sessions ||--o{ session_documents : includes
     research_sessions ||--o{ session_turns : records
@@ -122,35 +100,33 @@ erDiagram
     graph_nodes ||--o{ graph_edges : target
 ```
 
-### A. Danh Mục 12 Bảng Hiện Có (`As-Is` $\rightarrow$ `Refactor`)
+### 3.1. Danh Mục 12 Bảng Hiện Có (As-Is & Cải Tiến)
 
-| # | Bảng PostgreSQL | File Model hiện tại | Trạng thái | Nâng cấp cần thực hiện trong `Delta` |
-|---|---|---|---|---|
-| **1** | `users` | [`user.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/user.py) | **MODIFY** | Bổ sung cột `theme_preference VARCHAR(20) DEFAULT 'system'`, `byok_api_key_encrypted TEXT NULL`. |
-| **2** | `documents` | [`document.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/document.py) | **MODIFY** | Bổ sung cột `is_starred BOOLEAN DEFAULT FALSE INDEX`, `folder_id UUID FK folders.id SET NULL`. |
-| **3** | `document_chunks` | [`chunk.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/chunk.py) | **MODIFY** | Bổ sung cột `user_id UUID FK users.id CASCADE INDEX`, chuyển `embedding` từ `JSONType` sang `Vector(1536)` kèm chỉ mục `HNSW`, thêm cột `content_tsv TSVECTOR` kèm chỉ mục `GIN`. |
-| **4** | `document_storage_blobs` | [`blob.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/blob.py) | **KEEP** | Lưu trữ mã băm SHA-256 (`content_hash`), kích thước byte, đường dẫn lưu file, và bộ đếm `ref_count`. |
-| **5** | `document_summaries` | [`summary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/summary.py) | **KEEP** | Tóm tắt 3 phần (Problem, Contribution, Limitations) gắn trích dẫn Bounding Box. |
-| **6** | `reference_items` | [`reference.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/reference.py) | **KEEP** | Danh mục tài liệu tham khảo bóc tách từ cuối bài báo (DOI, arXiv, title, authors, year). |
-| **7** | `research_sessions` | [`session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) | **KEEP** | Phiên đọc sâu đa bài báo (1–5 PDF đồng thời), lưu trạng thái viewport và active tab. |
-| **8** | `session_documents` | [`session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) | **KEEP** | Bảng liên kết Many-to-Many giữa `research_sessions` và `documents`, kiểm soát giới hạn 5 bài. |
-| **9** | `session_turns` | [`session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/session.py) | **MODIFY** | Bổ sung cột `trace_id VARCHAR(64) NULL` để gắn kết trực tiếp với vết giám sát Langfuse. |
-| **10** | `research_notes` | [`note.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/note.py) | **KEEP** | Ghi chú học thuật có đối chiếu Bounding Box và bản chụp chứng cứ đóng băng (`frozen_snapshot`). |
-| **11** | `folders` | [`folder.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/folder.py) | **KEEP** | Cây thư mục đề tài phân cấp trong Kho Yêu thích (`parent_id FK folders.id CASCADE`). |
-| **12** | `drafts` | [`draft.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/draft.py) | **MODIFY** | Bổ sung cột `bib_content TEXT DEFAULT ''`, `source_session_id UUID FK research_sessions.id SET NULL`, `pdf_preview_storage_path TEXT NULL`, `previous_snapshot JSONB NULL`. |
+| # | Bảng PostgreSQL | File Model | Nâng cấp kỹ thuật cần thực hiện |
+|---|---|---|---|
+| **1** | `users` | [`user.py`](../../apps/api/src/api/db/models/user.py) | Thêm `theme_preference VARCHAR(20) DEFAULT 'system'`, `byok_api_key_encrypted TEXT NULL`. |
+| **2** | `documents` | [`document.py`](../../apps/api/src/api/db/models/document.py) | Thêm `is_starred BOOLEAN DEFAULT FALSE INDEX`, `folder_id UUID FK folders.id SET NULL`. |
+| **3** | `document_chunks` | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`, chuyển `embedding` sang `Vector(1536)` (HNSW `vector_cosine_ops`), thêm `content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED` (GIN index). |
+| **4** | `document_storage_blobs` | [`blob.py`](../../apps/api/src/api/db/models/blob.py) | Quản lý mã băm SHA-256 (`content_hash`), kích thước byte, đường dẫn lưu file, và bộ đếm `ref_count`. |
+| **5** | `document_summaries` | [`summary.py`](../../apps/api/src/api/db/models/summary.py) | Tóm tắt 3 phần (Problem, Contribution, Limitations) gắn trích dẫn Bounding Box. |
+| **6** | `reference_items` | [`reference.py`](../../apps/api/src/api/db/models/reference.py) | Danh mục trích dẫn cuối bài (DOI, arXiv, title, authors, year, resolution_status). |
+| **7** | `research_sessions` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Phiên đọc sâu đa bài báo (1–5 PDF đồng thời), lưu trạng thái viewport và active tab. |
+| **8** | `session_documents` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Bảng junction Many-to-Many giữa `research_sessions` và `documents`, kiểm soát giới hạn tối đa 5 bài. |
+| **9** | `session_turns` | [`session.py`](../../apps/api/src/api/db/models/session.py) | Thêm `trace_id VARCHAR(64) NULL` để đồng bộ giám sát trực tiếp với Langfuse trace. Export tường minh trong `models/__init__.py`. |
+| **10** | `research_notes` | [`note.py`](../../apps/api/src/api/db/models/note.py) | Ghi chú học thuật nhúng trong phiên đọc, gắn trích dẫn Bounding Box và bản chụp chứng cứ `frozen_snapshot`. |
+| **11** | `folders` | [`folder.py`](../../apps/api/src/api/db/models/folder.py) | Cây thư mục đề tài phân cấp trong Kho Yêu thích (`parent_id FK folders.id CASCADE`). |
+| **12** | `drafts` | [`draft.py`](../../apps/api/src/api/db/models/draft.py) | Thêm `bib_content TEXT DEFAULT ''`, `source_session_id UUID FK research_sessions.id SET NULL`, `pdf_preview_storage_path TEXT NULL`, `previous_snapshot JSONB NULL`. |
 
----
+### 3.2. Danh Mục 4 Bảng Mới (Delta DDL Specifications)
 
-### B. Danh Mục 4 Bảng Tạo Mới (`Delta`)
-
-#### 13. Bảng `graph_nodes` (Đỉnh Tri Thức GraphRAG 4 Thực Thể)
-- **Vị trí file:** `apps/api/src/api/db/models/graph.py`
-- **Mục đích:** Lưu trữ các thực thể học thuật được trích xuất từ bài báo khoa học phục vụ tìm kiếm ngữ nghĩa và tổng hợp tri thức chéo.
+#### 13. Bảng `graph_nodes` (Đỉnh Tri Thức Đồ Thị 4 Thực Thể)
+* **File model:** `apps/api/src/api/db/models/graph.py`
+* **Mục đích:** Lưu trữ các thực thể học thuật (`Paper`, `Method`, `Dataset`, `MetricResult`), hỗ trợ gộp đỉnh dùng chung giữa nhiều bài báo của cùng 1 user (Canonical Entity Merging).
 ```sql
 CREATE TABLE graph_nodes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    document_id UUID NULL REFERENCES documents(id) ON DELETE SET NULL,
     node_type VARCHAR(30) NOT NULL CHECK (node_type IN ('Paper', 'Method', 'Dataset', 'MetricResult')),
     canonical_name VARCHAR(255) NOT NULL,
     description TEXT NULL,
@@ -159,7 +135,8 @@ CREATE TABLE graph_nodes (
     page_number INT NULL,
     embedding vector(1536) NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_graph_nodes_user_type_canonical UNIQUE (user_id, node_type, canonical_name)
 );
 
 CREATE INDEX idx_graph_nodes_user_doc ON graph_nodes(user_id, document_id);
@@ -167,9 +144,9 @@ CREATE INDEX idx_graph_nodes_user_type ON graph_nodes(user_id, node_type);
 CREATE INDEX idx_graph_nodes_embedding ON graph_nodes USING hnsw (embedding vector_cosine_ops);
 ```
 
-#### 14. Bảng `graph_edges` (Cạnh Quan Hệ GraphRAG 4 Loại Cố Định)
-- **Vị trí file:** `apps/api/src/api/db/models/graph.py`
-- **Mục đích:** Kết nối các đỉnh tri thức theo 4 quan hệ học thuật chuẩn mực.
+#### 14. Bảng `graph_edges` (Cạnh Quan Hệ Đồ Thị 4 Loại Cố Định)
+* **File model:** `apps/api/src/api/db/models/graph.py`
+* **Mục đích:** Kết nối các đỉnh tri thức theo 4 quan hệ học thuật chuẩn mực (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`).
 ```sql
 CREATE TABLE graph_edges (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -188,11 +165,12 @@ CREATE TABLE graph_edges (
 CREATE INDEX idx_graph_edges_user_source ON graph_edges(user_id, source_node_id);
 CREATE INDEX idx_graph_edges_user_target ON graph_edges(user_id, target_node_id);
 CREATE INDEX idx_graph_edges_user_type ON graph_edges(user_id, edge_type);
+CREATE INDEX idx_graph_edges_user_doc ON graph_edges(user_id, document_id);
 ```
 
 #### 15. Bảng `draft_assets` (Tài Sản & Hình Ảnh Bản Thảo LaTeX)
-- **Vị trí file:** `apps/api/src/api/db/models/draft_asset.py`
-- **Mục đích:** Quản lý các file đính kèm trong thư mục `figures/` của bản thảo, tích hợp Content-Addressable Storage.
+* **File model:** `apps/api/src/api/db/models/draft_asset.py`
+* **Mục đích:** Quản lý các file đính kèm trong thư mục `figures/` của bản thảo, tích hợp Content-Addressable Storage.
 ```sql
 CREATE TABLE draft_assets (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -211,9 +189,9 @@ CREATE TABLE draft_assets (
 CREATE INDEX idx_draft_assets_user_draft ON draft_assets(user_id, draft_id);
 ```
 
-#### 16. Bảng `draft_messages` (Lịch Sử Hội Thoại Với LangGraph Writing Agent)
-- **Vị trí file:** `apps/api/src/api/db/models/draft_message.py`
-- **Mục đích:** Lưu trữ lịch sử hội thoại trợ lý AI bên Cột 3 của không gian viết bài, kèm dấu vết công cụ và lượt biên dịch.
+#### 16. Bảng `draft_messages` (Lịch Sử Hội Thoại Với Trợ Lý Soạn Thảo)
+* **File model:** `apps/api/src/api/db/models/draft_message.py`
+* **Mục đích:** Lưu trữ lịch sử hội thoại trợ lý AI bên Cột 3 của không gian viết bài, kèm dấu vết công cụ và lượt biên dịch.
 ```sql
 CREATE TABLE draft_messages (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -246,146 +224,68 @@ storage/blobs/
         └── 4fa1...892.png
 ```
 
-### A. Thuật Toán Sinh Khóa & Đường Dẫn
-1. Mọi file nhị phân (PDF tải lên hoặc ảnh figures) đều được tính băm SHA-256 trên nội dung thô:
+### 4.1. Thuật toán sinh khóa & đường dẫn 2 tầng
+1. File nhị phân (PDF hoặc ảnh) được tính băm SHA-256 trên nội dung thô:
    $$\text{hash} = \text{SHA-256}(\text{raw\_bytes})$$
-2. Đường dẫn lưu trữ được phân tán theo 2 ký tự đầu và 2 ký tự kế tiếp để tránh nghẽn inode filesystem:
+2. Đường dẫn lưu trữ phân tán 2 tầng:
    $$\text{path} = \text{storage/blobs/} + \text{hash}[0:2] + \text{/} + \text{hash}[2:4] + \text{/} + \text{hash} + \text{ext}$$
 
-### B. Vòng Đời & Tiêu Hủy Đồng Bộ (Zero-Retention Guarantee)
-1. **Khử trùng lặp khi ghi (Upload Deduplication):**
-   - Khi người dùng nạp file, kiểm tra trong `document_storage_blobs` theo `content_hash`.
-   - Nếu đã tồn tại file: Tăng `ref_count += 1` và trỏ bản ghi mới vào `blob_id` sẵn có mà không ghi thêm file vật lý xuống đĩa.
-2. **Tiêu hủy tức thì khi xóa (Synchronous Purge):**
-   - Khi người dùng xóa tài liệu (`DELETE /api/v1/documents/{id}`):
-   - Xóa thực thể `documents` (PostgreSQL cascade xóa chunks, summaries, references).
-   - Kiểm tra `document_storage_blobs`: giảm `ref_count -= 1`.
-   - Khi `ref_count <= 0`: Xóa bản ghi trong `document_storage_blobs` và gọi `unlink` xóa ngay file vật lý trên đĩa. Không để lại file mồ côi.
+### 4.2. Vòng đời tiêu hủy tức thì (Zero-Retention Guarantee)
+* **Khử trùng lặp khi ghi (Upload Deduplication):** Kiểm tra `content_hash` trong `document_storage_blobs`. Nếu đã có: tăng `ref_count += 1`, trỏ bản ghi mới vào `blob_id` sẵn có mà không ghi thêm file xuống đĩa.
+* **Tiêu hủy tức thì khi xóa (Synchronous Purge):** Khi người dùng xóa tài liệu (`DELETE /api/v1/documents/{id}`):
+  - Xóa bản ghi `documents` (PostgreSQL cascade xóa chunks, summaries, references).
+  - Giảm `document_storage_blobs.ref_count -= 1`.
+  - Ngay khi `ref_count <= 0`: Xóa bản ghi blob và gọi `target_path.unlink()` xóa vĩnh viễn file nhị phân vật lý trên đĩa cứng ngay trong cùng chu kỳ request. Dọn sạch thư mục cha rỗng nếu có.
 
 ---
 
-## 5. Cơ Chế Khởi Tạo CSDL Idempotent (`ensure_database_schema`)
+## 5. Quy Trình Khởi Tạo CSDL Idempotent (`init_db.py`)
 
-Dự án không duy trì hệ thống migration Alembic đa phiên bản phức tạp cho cấu trúc đơn giản của MVP. Thay vào đó, toàn bộ quy trình khởi tạo và vá cột được tự động thực thi khi API khởi động thông qua hàm `ensure_database_schema()` trong [`init_db.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/init_db.py):
-
-```python
-async def ensure_database_schema(engine: AsyncEngine) -> None:
-    """Idempotently bootstrap and patch PostgreSQL database schema."""
-    async with engine.begin() as conn:
-        # 1. Bật extension pgvector bắt buộc
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
-
-        # 2. Tạo toàn bộ 16 bảng nếu chưa tồn tại
-        await conn.run_sync(Base.metadata.create_all)
-
-        # 3. Vá cột mới an toàn trên các volume CSDL cũ (Idempotent ALTER TABLE)
-        ddl_patches = [
-            # Nâng cấp users
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS theme_preference VARCHAR(20) DEFAULT 'system';",
-            "ALTER TABLE users ADD COLUMN IF NOT EXISTS byok_api_key_encrypted TEXT NULL;",
-
-            # Nâng cấp documents
-            "ALTER TABLE documents ADD COLUMN IF NOT EXISTS is_starred BOOLEAN DEFAULT FALSE;",
-            "ALTER TABLE documents ADD COLUMN IF NOT EXISTS folder_id UUID NULL REFERENCES folders(id) ON DELETE SET NULL;",
-
-            # Nâng cấp document_chunks (Hybrid RAG)
-            "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS user_id UUID NULL REFERENCES users(id) ON DELETE CASCADE;",
-            "ALTER TABLE document_chunks ADD COLUMN IF NOT EXISTS content_tsv tsvector GENERATED ALWAYS AS (to_tsvector('simple', content)) STORED;",
-
-            # Nâng cấp drafts
-            "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS bib_content TEXT DEFAULT '';",
-            "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS source_session_id UUID NULL REFERENCES research_sessions(id) ON DELETE SET NULL;",
-            "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS pdf_preview_storage_path TEXT NULL;",
-            "ALTER TABLE drafts ADD COLUMN IF NOT EXISTS previous_snapshot JSONB NULL;",
-
-            # Nâng cấp session_turns
-            "ALTER TABLE session_turns ADD COLUMN IF NOT EXISTS trace_id VARCHAR(64) NULL;",
-        ]
-
-        for ddl in ddl_patches:
-            try:
-                await conn.execute(text(ddl))
-            except Exception as e:
-                logger.warning("schema_patch_warning", ddl=ddl, error=str(e))
-
-        # 4. Tạo chỉ mục HNSW và GIN nếu chưa có
-        index_patches = [
-            "CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw ON document_chunks USING hnsw (embedding vector_cosine_ops);",
-            "CREATE INDEX IF NOT EXISTS idx_chunks_content_tsv_gin ON document_chunks USING gin (content_tsv);",
-            "CREATE INDEX IF NOT EXISTS idx_documents_starred ON documents(user_id, is_starred);",
-        ]
-        for idx in index_patches:
-            await conn.execute(text(idx))
-```
-
-> [!CAUTION]
-> **Loại bỏ vĩnh viễn SQLite Fallback:**  
-> Tuyệt đối không gọi hàm `init_sqlite_fallback()` hay import `aiosqlite`. Nếu kết nối PostgreSQL thất bại lúc khởi động, API bắt buộc phải fail-fast với thông điệp lỗi rõ ràng yêu cầu người vận hành kiểm tra container PostgreSQL.
+Hệ thống sử dụng hàm `ensure_database_schema(conn: AsyncConnection)` chạy tự động khi API khởi động:
+1. Tạo extension `vector` (`CREATE EXTENSION IF NOT EXISTS vector;`).
+2. Chạy `Base.metadata.create_all` tạo đủ 16 bảng.
+3. Áp dụng các lệnh `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` cho các volume CSDL cũ (Idempotent DDL Patches).
+4. Tạo chỉ mục HNSW và GIN nếu chưa có.
+5. **Fail-Fast Policy:** Nếu không kết nối được PostgreSQL lúc khởi động, API bắt buộc phải fail-fast và báo lỗi rõ ràng. Tuyệt đối cấm fallback sang SQLite.
 
 ---
 
-## 6. Cấu Hình Môi Trường & Tô Pô Vận Hành (Configuration & Topology)
+## 6. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
 
-### A. Bảng Biến Môi Trường Cốt Lõi (`.env`)
+Khi lập trình viên hoặc AI Agent triển khai các tính năng, bắt buộc phải đối chiếu và tuân thủ các pattern từ các tệp neo sau:
 
-| Tên biến môi trường | Giá trị chuẩn mực | Mục đích sử dụng |
-|---|---|---|
-| `ENVIRONMENT` | `development` hoặc `production` | Duy nhất 2 môi trường; kiểm thử tự gán `ENVIRONMENT=test`. |
-| `DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5432/verischolar` | Chuỗi kết nối PostgreSQL 16+ kèm `pgvector`. |
-| `TEST_DATABASE_URL` | `postgresql+asyncpg://postgres:postgres@localhost:5432/verischolar_test` | Database riêng biệt cho pytest integration tests. |
-| `REDIS_URL` | `redis://localhost:6379/0` | Cache OTP, khóa Idempotency và rate-limiting. |
-| `JWT_SECRET_KEY` | Hex string 64 ký tự ngẫu nhiên | Ký và xác thực token JWT người dùng. |
-| `BYOK_ENCRYPTION_KEY` | Hex string 32 bytes (256 bits) | Khóa chủ server dùng mã hóa AES-256-GCM các khóa cá nhân của user. |
-| `EMBEDDING_PROVIDER` | `openai` | Cố định nhà cung cấp embedding để bảo toàn số chiều 1536. |
-| `EMBEDDING_MODEL` | `text-embedding-3-small` | Cố định mô hình embedding chuẩn chi phí thấp. |
-| `EMBEDDING_DIM` | `1536` | Số chiều vector khớp cứng với `vector(1536)`. |
-| `E2B_API_KEY` | `e2b_...` | Khóa API chạy sandbox Firecracker biên dịch LaTeX. |
-| `E2B_LATEX_TEMPLATE` | `verischolar-latex` | Tên E2B custom template chứa sẵn TeX Live / tectonic. |
-| `LANGFUSE_PUBLIC_KEY` | `pk-lf-...` | Khóa công khai Langfuse. |
-| `LANGFUSE_SECRET_KEY` | `sk-lf-...` | Khóa bí mật Langfuse. |
-| `LANGFUSE_HOST` | `https://cloud.langfuse.com` | Máy chủ Langfuse Cloud. |
-| `ALERT_WEBHOOK_URL` | `https://api.telegram.org/...` | Webhook bắn cảnh báo lỗi 500 trên `production`. |
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **Base Model & UUID** | [`base.py`](../../apps/api/src/api/db/models/base.py) | Kế thừa `IdentifiableTimestampedModel` cho bảng có `id, created_at, updated_at`. |
+| **Existing Models** | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py), [`session.py`](../../apps/api/src/api/db/models/session.py) | Tham chiếu cách cấu hình `Mapped`, `mapped_column`, Foreign Keys và Table Args. |
+| **Storage Port & Adapter** | [`storage.py`](../../packages/core/src/core/ports/storage.py), [`local.py`](../../packages/core/src/core/adapters/storage/local.py) | Tuân thủ protocol `IBlobStoragePort` và triển khai async file I/O với `asyncio.to_thread`. |
+| **Session & DI Engine** | [`session.py`](../../apps/api/src/api/db/session.py), [`deps.py`](../../apps/api/src/api/deps.py) | Sử dụng `get_db` async generator session và injection dependencies chuẩn FastAPI. |
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Nền Tảng (Foundation TDD Matrix)
+## 7. Ma Trận Kiểm Thử TDD Nền Tảng (TDD Verification Matrix)
 
-Mọi thay đổi kỹ thuật thuộc Phân hệ Nền tảng Kiến trúc & Dữ liệu phải vượt qua đầy đủ các kịch bản kiểm thử sau:
+Mọi thay đổi trên tầng nền tảng phải vượt qua đầy đủ ma trận kiểm thử sau:
 
-```mermaid
-flowchart TD
-    subgraph RAMTests ["<b>Tầng 1: Pure In-Memory Core Tests (< 1s)</b>"]
-        T1["Test Entity Immutability & Validation<br/>(User, Document, Chunk entities)"]
-        T2["Test Hexagonal Import Guard<br/>(Cấm import fastapi/sqlalchemy trong packages/core)"]
-        T3["Test CAS Hash Calculation<br/>(SHA-256 deterministic path generator)"]
-    end
-
-    subgraph PGTests ["<b>Tầng 2: PostgreSQL Real Integration Tests (< 5s)</b>"]
-        T4["Test Idempotent DDL Execution<br/>(ensure_database_schema chạy 2 lần không lỗi)"]
-        T5["Test 16-Table Schema & Foreign Keys<br/>(ON DELETE CASCADE & SET NULL)"]
-        T6["Test Multi-Tenant user_id Scoping<br/>(User A không thể select document của User B)"]
-        T7["Test pgvector HNSW & Full-Text Search<br/>(Vector cosine query & tsvector match)"]
-        T8["Test CAS Zero-Retention Purge<br/>(ref_count -= 1, file xóa khi ref_count=0)"]
-    end
-
-    RAMTests --> PGTests
-```
-
-| Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |
-|---|---|---|---|
-| `test_core_has_zero_framework_imports` | `packages/core/tests/test_hexagonal_guard.py` | Quét AST toàn bộ thư mục `packages/core/src/core/domain/` | 0 dòng import `fastapi`, `sqlalchemy`, `redis`, `fitz`. |
-| `test_cas_path_distribution` | `packages/core/tests/test_cas_storage.py` | Kiểm tra thuật toán băm SHA-256 và chia nhánh thư mục | Đúng định dạng `storage/blobs/ab/cd/abcd...`. |
-| `test_ensure_database_schema_idempotency` | `apps/api/tests/test_db_bootstrap.py` | Chạy `ensure_database_schema()` 2 lần liên tiếp trên test DB | Không nổ ngoại lệ, toàn bộ 16 bảng và extension sẵn sàng. |
-| `test_multi_tenant_user_isolation` | `apps/api/tests/test_multi_tenant_isolation.py` | Tạo User 1 và User 2, User 1 tạo Document, User 2 cố gắng query | Trả về `404 NOT_FOUND` hoặc rỗng, không rò rỉ dữ liệu. |
+| Test Case | Tệp kiểm thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |
+| :--- | :--- | :--- | :--- |
+| `test_core_has_zero_framework_imports` | `apps/api/tests/test_architecture_boundary.py` | Quét AST toàn bộ `packages/core/src/core/domain/` và `ports/` | 0 dòng import `fastapi`, `sqlalchemy`, `redis`, `pymupdf`. |
+| `test_no_absolute_file_urls_in_markdown` | `apps/api/tests/test_architecture_boundary.py` | Quét toàn bộ `.md` docs trong repo tìm `file:///` | 0 liên kết tuyệt đối máy chủ. |
+| `test_cas_path_distribution` | `packages/core/tests/test_cas_storage.py` | Kiểm tra thuật toán băm SHA-256 và chia nhánh thư mục 2 tầng | Đúng định dạng `storage/blobs/ab/cd/abcd...`. |
+| `test_ensure_database_schema_idempotency` | `apps/api/tests/test_db_bootstrap.py` | Chạy `ensure_database_schema()` 2 lần liên tiếp | Không nổ ngoại lệ, 16 bảng và extension sẵn sàng. |
+| `test_multi_tenant_user_isolation` | `apps/api/tests/test_multi_tenant_isolation.py` | User 1 tạo Document, User 2 cố gắng query | Trả về `404 NOT_FOUND` hoặc rỗng, không rò rỉ dữ liệu. |
 | `test_cas_blob_reference_counting_purge` | `apps/api/tests/test_cas_lifecycle.py` | Nạp 2 tài liệu cùng file băm (`ref_count=2`), xóa lần 1 còn file, xóa lần 2 file bị unlink | File nhị phân vật lý bị xóa sạch khi `ref_count=0`. |
-| `test_hybrid_search_vector_and_fts` | `apps/api/tests/test_pgvector_fts.py` | Chèn chunk có embedding và text, truy vấn vector cosine và `to_tsquery` | Trả về đúng thứ tự độ tương đồng ngữ nghĩa. |
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 8. Tiêu Chí Hoàn Thành Kỹ Thuật (Definition of Done)
 
-- [ ] Toàn bộ 16 bảng PostgreSQL và các chỉ mục HNSW/GIN được định nghĩa tường minh bằng SQLAlchemy và DDL SQL.
-- [ ] Không còn bất kỳ tham chiếu hay hàm gọi nào tới `aiosqlite` hoặc SQLite fallback trong toàn bộ codebase.
+- [ ] Toàn bộ 16 bảng PostgreSQL và chỉ mục HNSW/GIN được khai báo đầy đủ bằng SQLAlchemy trong `apps/api/src/api/db/models/`.
+- [ ] Không còn code SQLite fallback trong `init_db.py` hay bất kỳ đâu trong repo.
 - [ ] Hàm `ensure_database_schema()` chạy thành công và an toàn trên cả database trống lẫn database đã có dữ liệu.
-- [ ] Cơ chế CAS đảm bảo tiêu hủy file vật lý ngay lập tức khi không còn tài liệu nào trỏ tới.
-- [ ] Toàn bộ ma trận kiểm thử tại Mục 6 vượt qua `100% PASS` trên môi trường kiểm thử với PostgreSQL thật.
+- [ ] Cơ chế CAS hỗ trợ đa dạng định dạng (`pdf`, `png`, `webp`) và tiêu hủy vật lý tức thì khi `ref_count <= 0`.
+- [ ] Vượt qua 100% exit code 0 trên cả **4 Cổng Xác Minh**:
+  1. `uv run ruff check .`
+  2. `uv run pytest`
+  3. `npm --prefix apps/web run test`
+  4. `npm --prefix apps/web run build`

@@ -2,9 +2,9 @@
 # (AGENTIC OVERLEAF WRITING WORKSPACE, LANGGRAPH AGENT & E2B SANDBOX SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/06-agentic-overleaf-writing.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/06-agentic-overleaf-writing.md)  
+**Nguồn tham chiếu PRD:** [`06-agentic-overleaf-writing.md`](../PRD/06-agentic-overleaf-writing.md)  
 **Phân hệ kỹ thuật:** Phân Hệ Soạn Thảo & Agentic LaTeX (Writing Workspace & Agentic LaTeX)  
-**File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
+**File nền tảng liên đới:** [`00-foundation-architecture-and-db.md`](./00-foundation-architecture-and-db.md)
 
 ---
 
@@ -91,12 +91,12 @@ flowchart TD
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
-| **API Endpoints** | [`apps/api/src/api/v1/endpoints/drafts.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/drafts.py) | **MODIFY** | Đã có CRUD cơ bản và OCC. Cần chuẩn hóa: luồng SSE unbuffered cho `/assist`, endpoint `POST :undo`, tải danh mục ảnh `figures/`, và xuất gói nộp bài chuẩn `:export-bundle`. |
-| **Logic Service** | [`apps/api/src/api/services/draft_service.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/services/draft_service.py) | **MODIFY** | Tích hợp StateGraph LangGraph, cơ chế tự động lưu `previous_snapshot` trước Attempt 1, đóng gói bundle gửi sang E2B Sandbox. |
-| **Model CSDL Draft** | [`apps/api/src/api/db/models/draft.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/draft.py) | **MODIFY** | Bổ sung các cột đã thiết kế ở Spec 00: `bib_content`, `source_session_id`, `pdf_preview_storage_path`, `previous_snapshot`. |
+| **API Endpoints** | [`apps/api/src/api/v1/endpoints/drafts.py`](../../apps/api/src/api/v1/endpoints/drafts.py) | **MODIFY** | Đã có CRUD cơ bản và OCC. Cần chuẩn hóa: luồng SSE unbuffered cho `/assist`, endpoint `POST :undo`, tải danh mục ảnh `figures/`, và xuất gói nộp bài chuẩn `:export-bundle`. |
+| **Logic Service** | [`apps/api/src/api/services/draft_service.py`](../../apps/api/src/api/services/draft_service.py) | **MODIFY** | Tích hợp StateGraph LangGraph, cơ chế tự động lưu `previous_snapshot` trước Attempt 1, đóng gói bundle gửi sang E2B Sandbox. |
+| **Model CSDL Draft** | [`apps/api/src/api/db/models/draft.py`](../../apps/api/src/api/db/models/draft.py) | **MODIFY** | Bổ sung các cột đã thiết kế ở Spec 00: `bib_content`, `source_session_id`, `pdf_preview_storage_path`, `previous_snapshot`. |
 | **Model CSDL Assets** | `apps/api/src/api/db/models/draft_asset.py` | **NEW** | Bảng `draft_assets` quản lý file trong thư mục `figures/` tích hợp lưu trữ CAS. |
 | **Model CSDL Messages** | `apps/api/src/api/db/models/draft_message.py` | **NEW** | Bảng `draft_messages` lưu vết lịch sử chat, các tool calls và lượt biên dịch. |
-| **Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/services/latex_compiler.py) | **MODIFY** | **Xóa bỏ vĩnh viễn** hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`. Toàn bộ quá trình biên dịch chạy qua E2B Cloud Sandbox / binary `tectonic` thật. |
+| **Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](../../packages/core/src/core/services/latex_compiler.py) | **MODIFY** | **Xóa bỏ vĩnh viễn** hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`. Toàn bộ quá trình biên dịch chạy qua E2B Cloud Sandbox / binary `tectonic` thật. |
 | **LangGraph Agent** | `packages/core/src/core/services/latex_agent.py` | **NEW** | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần). |
 | **E2B Dockerfile** | `deploy/e2b.Dockerfile` | **NEW** | Dockerfile xây dựng Custom E2B Template chứa đầy đủ môi trường TeX Live và `tectonic`. |
 | **Frontend Workspace** | `apps/web/src/features/writing/` | **MODIFY** | Tích hợp SSE unbuffered cho Cột 3, nút `[↩️ Hoàn tác]` trên HeaderBar, hiển thị cây thư mục file kèm `figures/`. |
@@ -335,7 +335,7 @@ flowchart TD
 
 ## 6. Thiết Kế Giao Diện & Tương Tác Frontend (`apps/web`)
 
-Giao diện Không gian Soạn thảo được tổ chức tại [`WritingWorkspace.tsx`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/web/src/features/writing/components/WritingWorkspace.tsx) với 3 cột thích ứng:
+Giao diện Không gian Soạn thảo được tổ chức tại [`WritingWorkspace.tsx`](../../apps/web/src/features/writing/components/WritingWorkspace.tsx) với 3 cột thích ứng:
 
 | Khu Vực | Component Phụ Trách | Hành Vi & Tương Tác Người Dùng |
 |---|---|---|
@@ -345,7 +345,21 @@ Giao diện Không gian Soạn thảo được tổ chức tại [`WritingWorksp
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Writing & LangGraph TDD Matrix)
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Soạn Thảo & Agentic LaTeX phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **Drafts Endpoints** | [`apps/api/src/api/v1/endpoints/drafts.py`](../../apps/api/src/api/v1/endpoints/drafts.py) | Tham chiếu CRUD bản thảo, OCC ETag/If-Match, endpoint `:undo` và `:export-bundle`. |
+| **Draft Logic Service** | [`apps/api/src/api/services/draft_service.py`](../../apps/api/src/api/services/draft_service.py) | Tham chiếu cách điều phối StateGraph LangGraph, quản trị snapshot và đóng gói bundle gửi sang E2B Sandbox. |
+| **LaTeX Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](../../packages/core/src/core/services/latex_compiler.py) | Biên dịch thực tế qua binary `tectonic` hoặc E2B Cloud Sandbox (loại bỏ hoàn toàn giả lập PyMuPDF). |
+| **LangGraph Agent & Tools** | `packages/core/src/core/services/latex_agent.py` | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần). |
+| **Writing Workspace UI** | `apps/web/src/features/writing/components/WritingWorkspace.tsx` | Không gian làm việc 3 cột (Quản lý file & Editor, Preview PDF, Assistant Chat). |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Writing & LangGraph TDD Matrix)
 
 Mọi thay đổi kỹ thuật thuộc Phân hệ Soạn thảo & Agentic LaTeX phải vượt qua đầy đủ các kịch bản kiểm thử tự động sau:
 
@@ -381,11 +395,11 @@ flowchart TD
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Phân hệ có tên định danh rõ ràng là **Phân Hệ Soạn Thảo & Agentic LaTeX (Writing Workspace & Agentic LaTeX)**, không dùng số thứ tự định danh trong nội dung tài liệu.
 - [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 3 kịch bản: Cầu nối Khung sườn học thuật, Quản lý ảnh `figures/`, và Vòng lặp ReAct tự sửa lỗi biên dịch tự trị.
 - [ ] Cầu nối từ Đọc sang Viết tự động khởi tạo sẵn `main.tex` và `references.bib` hợp lệ 100% cú pháp, hiển thị bản dựng PDF xem trước tức thì trên Cột 2 mà không gặp lỗi.
 - [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`.
 - [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click.
-- [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 7 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, AST (`ast` module), Pytest, FastAPI, PostgreSQL 16+ (`pgvector`), Redis 7, CAS storage (`storage/blobs/`), Docker Compose, React 19, Vite, Tailwind CSS.
 
-**Spec:** [`docs/specs/08-universal-agent-harness-spec.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/08-universal-agent-harness-spec.md) (kèm thiết kế tại [`docs/superpowers/specs/2026-10-25-universal-agent-harness-design.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/superpowers/specs/2026-10-25-universal-agent-harness-design.md)).
+**Spec:** [`08-universal-agent-harness-spec.md`](../../specs/08-universal-agent-harness-spec.md) (kèm thiết kế tại [`2026-10-25-universal-agent-harness-design.md`](../specs/2026-10-25-universal-agent-harness-design.md)).
 
 ## Global Constraints
 

@@ -1,95 +1,180 @@
-# PHÂN HỆ KHÔNG GIAN SOẠN THẢO AGENTIC OVERLEAF, LANGGRAPH AGENT & E2B SANDBOX
-# (AGENTIC OVERLEAF WRITING WORKSPACE, DRAFTS CRUD, LANGGRAPH & E2B)
+# TÀI LIỆU YÊU CẦU NGHIỆP VỤ (PRD): KHÔNG GIAN SOẠN THẢO HỌC THUẬT & ĐỒNG TÁC GIẢ AI TỰ TRỊ
+# (AGENTIC SCHOLARLY WRITING WORKSPACE & AUTONOMOUS AI CO-AUTHOR)
+
+**Mã tài liệu:** `PRD-06`  
+**Thuộc giải pháp:** VeriScholar AI Research Assistant  
+**Vai trò tác giả:** Chuyên viên Phân tích Nghiệp vụ (Business Analyst)  
+**Tài liệu kỹ thuật đối ứng:** [`06-agentic-overleaf-writing-spec.md`](../specs/06-agentic-overleaf-writing-spec.md)  
+**File nền tảng liên đới:** [`00-overview-and-cleanup.md`](./00-overview-and-cleanup.md)  
 
 ---
 
-## 1. Mục Tiêu Phân Hệ
-Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTeX trở nên tự động và liền mạch: người dùng chuyển thẳng từ phiên đọc sang không gian soạn thảo 3 cột kiểu Overleaf; tại đây **LangGraph Agent** có thể tự động viết và chỉnh sửa trực tiếp file `main.tex` / `references.bib`, tự động kéo kiến thức từ Kho Tri Thức GraphRAG, và tự động đóng gói kèm thư mục hình ảnh `figures/` đẩy lên **E2B Sandbox** để biên dịch ra PDF hoàn chỉnh (tự đọc log vá lỗi tối đa 3 lần nếu sai cú pháp).
+## 1. Tầm Nhìn Nghiệp Vụ & Nỗi Đau Người Dùng (Business Context & Pain Points)
+
+Soạn thảo một bài báo khoa học chuẩn quốc tế hay một báo cáo đồ án tốt nghiệp là giai đoạn gian nan nhất trong toàn bộ quy trình nghiên cứu:
+- **Nỗi đau 1 — Đứt gãy giữa khâu đọc tài liệu và khâu viết bài:** Sau khi hoàn thành phiên đọc sâu 3–5 bài báo, học giả phải mở một phần mềm soạn thảo bên ngoài từ con số không. Họ phải tự đi tìm lại từng mã trích dẫn, gõ lại cấu trúc khung bài báo, sao chép từng ghi chú rời rạc. Sự rời rạc này tạo nên "hội chứng sợ trang giấy trắng", làm tiêu tốn hàng giờ đồng hồ quý báu chỉ để thiết lập môi trường viết ban đầu.
+- **Nỗi đau 2 — Ác mộng lỗi cú pháp biên dịch tài liệu học thuật:** Để có bản in khoa học đẹp chuẩn mực, các học giả bắt buộc phải sử dụng các định dạng học thuật chuyên dụng. Tuy nhiên, chỉ cần thiếu một dấu ngoặc, sai một ký tự đặc biệt hoặc một trích dẫn không khớp, tài liệu sẽ lập tức bị lỗi biên dịch với những thông báo dòng lệnh khó hiểu. Người viết thường mất nhiều thời gian sửa lỗi cú pháp hơn là tập trung sáng tạo nội dung khoa học.
+- **Nỗi đau 3 — Thiếu một đồng tác giả AI thấu hiểu toàn diện bối cảnh nghiên cứu:** Các công cụ sinh văn bản thông thường chỉ tạo ra những đoạn văn chung chung, không có khả năng tự động liên kết với kho bài báo yêu thích của học giả, không biết cách trích xuất số liệu thực nghiệm chính xác và không thể tự giác sửa chữa lỗi định dạng khi xảy ra sự cố.
+
+VeriScholar giải quyết triệt để các rào cản trên bằng một giải pháp đột phá:
+1. **Cầu Nối "Đọc Sang Viết" Tự Động:** Khởi tạo tức thì một bản thảo học thuật hoàn chỉnh từ phiên đọc, nạp sẵn toàn bộ danh mục tài liệu trích dẫn chuẩn chỉ sau một cú nhấp chuột.
+2. **Không Gian Soạn Thảo 3 Cột Tương Tác Trực Quan:** Tích hợp quản lý tệp, soạn thảo mã nguồn, xem trước bản in PDF thời gian thực và khung đối thoại với trợ lý AI.
+3. **Đồng Tác Giả AI Tự Trị & Vòng Lặp Tự Vá Lỗi Biên Dịch:** AI có khả năng tự soạn thảo, tự tra cứu số liệu từ kho tri thức, tự gửi biên dịch và tự giác sửa chữa lỗi cú pháp đến khi tài liệu hoàn toàn xuất bản thành công mà không đòi hỏi người dùng phải can thiệp thủ công.
 
 ---
 
-## 2. Cầu Nối "Đọc Sang Viết" (Reading-to-Writing Bridge)
+## 2. Các Tác Nhân Tham Gia (Actors)
 
-* Trên thanh công cụ của màn hình Phiên Đọc Sâu có nút **`[✍️ Bắt đầu viết bài từ phiên đọc này]`**.
-* Khi người dùng bấm vào nút này:
-  1. Hệ thống tự động tạo một Bản thảo mới (`Draft`) gắn với phiên đọc đó.
-  2. Tự động khởi tạo sẵn nội dung file **`references.bib`** từ danh sách các bài báo đang có trong phiên đọc (kèm khóa trích dẫn chuẩn như `@article{vaswani2017attention, ...}`).
-  3. Truyền danh sách `document_ids` của phiên đọc và các ghi chú (`notes`) người dùng đã lưu sang làm ngữ cảnh nền cho Agent Soạn thảo.
-
----
-
-## 3. Quản Lý Bản Thảo & File Dự Án — Đầy Đủ Thao Tác CRUD (`drafts` & `draft_assets`)
-
-### A. CRUD Bản thảo LaTeX (`drafts`)
-1. **Tạo bản thảo mới (`POST /api/v1/drafts`):**
-   * Tạo từ mẫu chuẩn (Template IEEE, ACM, Báo cáo Đồ án hoặc Bản trống) hoặc tạo từ nút Cầu nối Phiên đọc.
-   * Mỗi bản thảo lưu trữ cả 2 nội dung văn bản cốt lõi: mã nguồn **`main.tex`** (`content`) và danh mục tài liệu tham khảo **`references.bib`** (`bib_content`).
-2. **Xem danh sách & Chi tiết bản thảo (`GET /api/v1/drafts`, `GET /api/v1/drafts/{id}`):**
-   * Liệt kê các bản thảo của người dùng kèm thời gian chỉnh sửa gần nhất.
-3. **Lưu & Cập nhật bản thảo (`PUT /api/v1/drafts/{id}`, `PATCH /api/v1/drafts/{id}`):**
-   * Cho phép đổi tên bản thảo (`title`), cập nhật nội dung `main.tex` và `references.bib` khi người dùng sửa tay hoặc khi Agent cập nhật.
-4. **Xóa bản thảo (`DELETE /api/v1/drafts/{id}`):**
-   * Xóa bản thảo và các file ảnh đính kèm của bản thảo đó (có xác nhận trước khi xóa).
-5. **Biên dịch, Hoàn tác & Tải file kết quả (`POST /api/v1/drafts/{id}/compile`, `POST /api/v1/drafts/{id}:undo`, `GET /api/v1/drafts/{id}/preview.pdf`, `POST /api/v1/drafts/{id}:export-bundle`):**
-   * Biên dịch tức thì bản thảo LaTeX trên E2B Sandbox, tự sửa lỗi tối đa 3 lần.
-   * Hoàn tác 1-Click trạng thái mã nguồn về trước khi AI chỉnh sửa.
-   * Xem trực tiếp hoặc tải file PDF đã biên dịch về máy.
-   * Tải gói nén `.zip` chứa đầy đủ `main.tex`, `references.bib` và thư mục `figures/` để nộp bài.
-
-### B. CRUD Thư mục Hình ảnh (`figures/` — `draft_assets`)
-Để chèn sơ đồ kiến trúc, biểu đồ thực nghiệm vào bài báo thông qua lệnh `\includegraphics{figures/ten_anh.png}`:
-1. **Tải ảnh lên thư mục `figures/` (`POST /api/v1/drafts/{id}/assets`):**
-   * Hỗ trợ tải file ảnh `.png`, `.jpg`, `.jpeg`, `.pdf` (kiểm tra an toàn tên file và dung lượng).
-2. **Xem danh sách file trong `figures/` (`GET /api/v1/drafts/{id}/assets`):**
-   * Hiển thị danh sách các file ảnh đang có trong dự án ở thanh Quản lý File Cột 1; bấm vào tên ảnh có thể chèn nhanh đoạn mã `\begin{figure} ... \includegraphics{figures/...} \end{figure}` vào `main.tex`.
-3. **Xóa ảnh khỏi `figures/` (`DELETE /api/v1/drafts/{id}/assets/{asset_id}`):**
-   * Xóa ảnh tải nhầm hoặc không còn sử dụng khỏi bản thảo.
-
-### C. CRUD Lịch sử Hội thoại với Agent Soạn thảo (`draft_messages`)
-Để khi người dùng tải lại trang (`F5`) hoặc mở lại bản thảo vào ngày hôm sau không bị mất mạch làm việc với Agent ở Cột 3:
-1. **Xem lịch sử chat của Bản thảo (`GET /api/v1/drafts/{id}/messages`):** Tải toàn bộ các lượt yêu cầu của người dùng và các bước phản hồi/gọi công cụ của LangGraph Agent gắn với `draft_id` đó.
-2. **Gửi yêu cầu mới cho Agent (`POST /api/v1/drafts/{id}/messages` / `/assist`):** Lưu tin nhắn của người dùng và phản hồi của Agent vào cơ sở dữ liệu.
-3. **Làm mới lịch sử chat của Bản thảo (`DELETE /api/v1/drafts/{id}/messages`):** Nút `[🔄 Làm mới đoạn chat]` trên Cột 3 giúp xóa lịch sử hội thoại cũ của bản thảo mà không làm ảnh hưởng đến code `main.tex` hay `references.bib`.
-
----
-
-## 4. Bố Cục Không Gian Soạn Thảo 3 Cột (`WritingWorkspace.tsx`)
-
-| Cột 1 (Trái): Quản lý File & Trình soạn thảo Code | Cột 2 (Giữa): Xem trước PDF trực tiếp | Cột 3 (Phải): Khung Chat Agentic AI |
+| Tác nhân | Vai trò trong phân hệ | Trách nhiệm & Kỳ vọng |
 | :--- | :--- | :--- |
-| • Thanh cây thư mục dự án: chuyển đổi giữa **`main.tex`**, **`references.bib`** và thư mục **`figures/`** (có nút `[➕ Tải ảnh lên]`).<br>• Khung soạn thảo mã nguồn có đánh số dòng, tô màu cú pháp, hỗ trợ sửa tay bất kỳ lúc nào.<br>• Nút **`[⚙️ Biên dịch PDF]`** thủ công và nút **`[↩️ Hoàn tác (Undo) thay đổi của AI]`**. | • Hiển thị bản dựng PDF (`WritingPreviewPane.tsx`) trả về từ E2B Sandbox ngay sau mỗi lần biên dịch thành công.<br>• Hỗ trợ phóng to/thu nhỏ và tải file PDF về máy. | • Khung hội thoại trực tiếp với **LangGraph Agent**.<br>• Hiển thị trực quan từng bước Agent đang thực thi theo thời gian thực (*`🔍 Đang tra cứu Kho GraphRAG...` $\rightarrow$ `✍️ Đang cập nhật main.tex...` $\rightarrow$ `⚙️ Đang biên dịch trên E2B (Lần 1/3)...`*). |
-
-### Cơ chế Chống Ghi Đè Khi Vừa Sửa Tay Vừa Dùng Agent (Anti-Overwrite & 1-Click Undo)
-1. **Đồng bộ trước khi gọi Agent:** Mỗi khi người dùng bấm gửi yêu cầu trong khung Chat Cột 3, trình duyệt tự động gửi kèm nội dung mới nhất đang có trên ô soạn thảo (`main.tex` và `references.bib`) lên Backend để Agent luôn thao tác trên bản mới nhất của người dùng.
-2. **Khóa tạm thời & Lưu Snapshot Undo:** Trong vài giây Agent đang gọi công cụ `edit_file`, khung code Cột 1 tạm thời chuyển sang chế độ chỉ đọc (`Đang chờ AI cập nhật code...`) và lưu lại bản chụp (`previous_snapshot`) trước khi sửa. Ngay khi AI sửa xong, nút **`[↩️ Hoàn tác (Undo) thay đổi của AI]`** sáng lên để người dùng có thể quay về bản trước đó chỉ với 1 cú nhấp chuột nếu chưa ưng ý.
+| **Nhà Nghiên Cứu / Tác Giả** | Chủ sở hữu bản thảo | Định hướng đề tài, ra lệnh cho AI soạn thảo từng mục, tự do chỉnh sửa thủ công và quyết định chấp nhận hay hoàn tác các thay đổi của AI. |
+| **Đồng Tác Giả AI (AI Co-Author)** | Trợ lý soạn thảo tự trị chuyên sâu | Viết nội dung học thuật chuẩn mực, tự bổ sung khóa trích dẫn, tra cứu số liệu đối chiếu từ kho tài liệu và tự sửa chữa lỗi cú pháp tài liệu. |
+| **Động Cơ Biên Dịch Học Thuật** | Hạ tầng biên dịch đám mây cô lập an toàn | Tiếp nhận toàn bộ gói mã nguồn bài báo, biên dịch thành bản in PDF chuẩn quốc tế, và cung cấp phản hồi chi tiết nếu phát sinh lỗi định dạng. |
 
 ---
 
-## 5. Kiến Trúc LangGraph Agent & Vòng Lặp Tự Sửa Lỗi Biên Dịch Trên E2B Sandbox
+## 3. Danh Sách Use Cases Chi Tiết (Structured Use Cases)
 
-### A. Bộ 4 Công Cụ (Tools) của LangGraph Agent
-Agent viết bài được xây dựng bằng `StateGraph` của **LangGraph** với 4 công cụ chuyên biệt:
-1. **`create_file` / `edit_file`**: Tạo mới hoặc chỉnh sửa trực tiếp nội dung file `main.tex` và bổ sung mã trích dẫn BibTeX vào `references.bib`.
-2. **`list_project_files`**: Đọc danh sách các file và tên chính xác của các hình ảnh đang có trong thư mục `figures/` để viết lệnh `\includegraphics{figures/...}` không bị sai tên file.
-3. **`query_library_graph_rag`**: Truy vấn vào Kho Paper Yêu Thích & GraphRAG khi người dùng yêu cầu viết tổng quan tài liệu hoặc lập bảng so sánh kết quả thực nghiệm với các bài báo đã lưu trong kho.
-4. **`compile_latex_e2b`**:
-   * Đóng gói trọn bộ **`main.tex` + `references.bib` + toàn bộ file ảnh trong `figures/`** đẩy lên thư mục làm việc `/tmp/verischolar-latex/` của **E2B Sandbox (Cloud MicroVM)**.
-   * Chạy quy trình biên dịch đầy đủ (`pdflatex -> bibtex -> pdflatex -> pdflatex` hoặc `tectonic` với cờ bảo mật `--no-shell-escape` và giới hạn cứng `timeout = 15 giây`) để đảm bảo mọi trích dẫn `\cite{...}` hiển thị chuẩn xác (không bị lỗi dấu hỏi `[?]`) và lên đầy đủ hình ảnh.
+### UC-WRITE-01: Chuyển Giao Khung Sườn Liền Mạch Từ Phiên Đọc (Reading-to-Writing Handover)
+- **Tác nhân:** Nhà Nghiên Cứu.
+- **Tiền điều kiện:** Người dùng đang ở trong một phiên nghiên cứu có tài liệu và các ghi chú trích dẫn.
+- **Sự kiện kích hoạt:** Người dùng nhấp vào nút `[✍️ Bắt đầu viết bài từ phiên này]` trên thanh công cụ đọc.
+- **Luồng sự kiện chính (Happy Path):**
+  1. Hệ thống tự động tạo một bản thảo nghiên cứu mới gắn liền với phiên đọc hiện tại.
+  2. Hệ thống tự động sinh **Khung Sườn Học Thuật Chuẩn**:
+     - Danh mục trích dẫn đã được nạp đầy đủ 100% tất cả các bài báo đang mở trong phiên đọc kèm mã định danh trích dẫn chuẩn mực.
+     - Mã nguồn bài báo đã được thiết lập sẵn cấu trúc hoàn chỉnh: Tiêu đề gợi ý theo đề tài, phần Giới thiệu, phần Tổng quan Nghiên cứu (đã chèn sẵn các câu dẫn chiếu tới các bài báo vừa đọc), phần Phương pháp luận và phần Thực nghiệm.
+     - Toàn bộ ghi chú cá nhân người dùng đã lưu trong phiên đọc được nạp vào bộ nhớ ngữ cảnh của trợ lý viết bài.
+  3. Hệ thống tự động chuyển người dùng sang Không Gian Soạn Thảo 3 Cột, bản xem trước PDF lập tức hiển thị sắc nét trong vòng chưa đầy 2 giây.
+- **Luồng sự kiện ngoại lệ (Exception Flows):**
+  - *Người dùng muốn tạo bản thảo độc lập không từ phiên đọc:* Hệ thống cung cấp tùy chọn tạo bản thảo mới từ trang danh sách, cho phép chọn mẫu định dạng chuẩn (IEEE, ACM, Báo cáo Đồ án hoặc Bản trống).
 
-### B. Vòng lặp Tự sửa lỗi biên dịch (Self-Healing Loop — Tối đa 3 lần)
+---
+
+### UC-WRITE-02: Không Gian Soạn Thảo Học Thuật 3 Cột (3-Column Scholarly Workspace)
+- **Tác nhân:** Nhà Nghiên Cứu.
+- **Tiền điều kiện:** Người dùng đã mở một bản thảo nghiên cứu.
+- **Sự kiện kích hoạt:** Giao diện không gian soạn thảo được hiển thị.
+- **Bố cục 3 Cột Tinh Gọn:**
+  1. **Cột 1 (Trái) — Quản lý Tài liệu & Ô Soạn Thảo Mã Nguồn:**
+     - Cây danh mục dự án: Chuyển đổi linh hoạt giữa tệp mã nguồn chính, tệp danh mục trích dẫn và thư mục hình ảnh của bài báo.
+     - Trình soạn thảo mã nguồn có số dòng, tô màu cú pháp rõ ràng, hỗ trợ chỉnh sửa thủ công bất kỳ lúc nào.
+     - Nút `[⚙️ Biên dịch PDF]` thủ công và nút `[↩️ Hoàn tác thay đổi của AI]`.
+  2. **Cột 2 (Giữa) — Bản Xem Trước Bản In PDF:**
+     - Hiển thị trực tiếp bản PDF được biên dịch từ mã nguồn.
+     - Hỗ trợ công cụ phóng to, thu nhỏ, cuộn trang mượt mà và nút xuất tải gói tài liệu hoàn chỉnh.
+  3. **Cột 3 (Phải) — Trợ Lý Đồng Tác Giả AI:**
+     - Khung đối thoại với trợ lý AI, lưu trữ bền vững toàn bộ lịch sử trao đổi.
+     - Hiển thị huy hiệu trạng thái hành động trực quan theo thời gian thực để người dùng nắm rõ AI đang làm gì.
+- **Cơ chế Chống Ghi Đè & Hoàn Tác 1-Click (1-Click Undo):**
+  - Trước khi cho phép AI chỉnh sửa mã nguồn, hệ thống tự động chụp lại một bản sao lưu trạng thái hiện tại.
+  - Ngay sau khi AI hoàn tất chỉnh sửa, nút `[↩️ Hoàn tác thay đổi của AI]` sáng lên. Người dùng có thể quay về trạng thái ban đầu chỉ với 1 cú nhấp chuột nếu không hài lòng với nội dung AI tạo ra.
+
+---
+
+### UC-WRITE-03: Đồng Tác Giả AI Soạn Thảo & Tích Hợp Tri Thức Kho Yêu Thích
+- **Tác nhân:** Nhà Nghiên Cứu & Đồng Tác Giả AI.
+- **Tiền điều kiện:** Bản thảo đang mở và người dùng nhập yêu cầu vào khung chat Cột 3.
+- **Sự kiện kích hoạt:** Người dùng gửi yêu cầu soạn thảo (ví dụ: *"Hãy viết mục Tổng quan nghiên cứu so sánh cơ chế Attention của bài Vaswani với CNN truyền thống, có trích dẫn chuẩn"*).
+- **Luồng sự kiện chính (Happy Path):**
+  1. Trợ lý AI tiếp nhận yêu cầu, phân tích nội dung cần viết.
+  2. AI tự động truy vấn vào Kho Bài Báo Yêu Thích và Mạng Tri Thức Đồ Thị để trích xuất các luận điểm và con số thực nghiệm chính xác.
+  3. AI kiểm tra danh mục trích dẫn; nếu bài báo chưa có trong danh mục, AI tự động bổ sung thông tin trích dẫn mới.
+  4. AI viết đoạn văn học thuật mới trực tiếp vào tệp mã nguồn chính với câu từ trang trọng, đúng văn phong nghiên cứu quốc tế và chèn mã trích dẫn chuẩn xác.
+  5. AI tự động kích hoạt tiến trình biên dịch tài liệu để cập nhật bản xem trước PDF ở Cột 2.
+- **Luồng sự kiện ngoại lệ (Exception Flows):**
+  - *Yêu cầu vượt quá dữ liệu có trong kho:* AI phản hồi rõ ràng những điểm thiếu tài liệu minh chứng và khuyến nghị người dùng nạp thêm bài báo liên quan thay vì tự ý bịa đặt trích dẫn.
+
+---
+
+### UC-WRITE-04: Biên Dịch Tự Động & Vòng Lặp Tự Sửa Lỗi Cú Pháp (Zero-Click Self-Healing Compilation)
+- **Tác nhân:** Đồng Tác Giả AI & Động Cơ Biên Dịch Học Thuật.
+- **Tiền điều kiện:** Bản thảo được yêu cầu biên dịch (do người dùng bấm nút hoặc do AI kích hoạt sau khi viết).
+- **Sự kiện kích hoạt:** Mã nguồn được gửi tới Động cơ Biên dịch.
+- **Luồng sự kiện chính (Happy Path):**
+  1. Động cơ Biên dịch tiếp nhận toàn bộ gói mã nguồn, thực thi quy trình dựng bản in trong môi trường cô lập an toàn.
+  2. Biên dịch thành công: Bản in PDF mới nhất lập tức hiển thị trên Cột 2.
+- **Luồng Tự Sửa Lỗi Tự Trị (Self-Healing Loop — Tối đa 3 vòng lặp):**
+  1. Nếu biên dịch thất bại do lỗi cú pháp (ví dụ: thiếu dấu ngoặc công thức toán, sai nhãn trích dẫn):
+  2. Đồng tác giả AI lập tức tự động can thiệp mà không làm phiền người dùng.
+  3. AI đọc thông báo lỗi từ động cơ biên dịch, xác định chính xác dòng bị lỗi và nguyên nhân cú pháp.
+  4. AI tự động chỉnh sửa trực tiếp mã nguồn để vá lỗi cú pháp.
+  5. AI tự động gửi lại lệnh biên dịch để kiểm tra lại. Quy trình này tự động lặp lại cho đến khi biên dịch thành công (ngân sách tối đa 3 lần thử).
+  6. Suốt quá trình, khung chat Cột 3 hiển thị huy hiệu tiến trình minh bạch: *`⚠️ Phát hiện lỗi dòng 42` $\rightarrow$ `✍️ AI đang tự vá cú pháp` $\rightarrow$ `⚙️ Biên dịch lại (Lần 2/3)` $\rightarrow$ `🎉 Hoàn tất!`*.
+- **Luồng sự kiện ngoại lệ (Exception Flows):**
+  - *Vượt quá 3 lần tự sửa lỗi mà vẫn thất bại:* AI dừng vòng lặp an toàn, bảo toàn nguyên vẹn mã nguồn, thông báo rõ ràng dòng bị lỗi kèm hướng dẫn cụ thể để người dùng cùng xử lý.
+
+---
+
+### UC-WRITE-05: Quản Lý Tài Nguyên Đồ Họa & Đóng Gói Xuất Bản Thảo (Assets & Export)
+- **Tác nhân:** Nhà Nghiên Cứu.
+- **Tiền điều kiện:** Bản thảo đang mở.
+- **Sự kiện kích hoạt:** Người dùng muốn chèn hình ảnh hoặc tải toàn bộ công trình để nộp bài.
+- **Luồng sự kiện chính (Happy Path):**
+  - **Quản lý tài nguyên đồ họa:**
+    1. Người dùng nhấp `[➕ Tải ảnh lên]` trong mục hình ảnh ở Cột 1 để tải sơ đồ kiến trúc hoặc biểu đồ thực nghiệm (hỗ trợ định dạng ảnh chuẩn và PDF vector).
+    2. Tệp ảnh hiển thị trong danh mục tài nguyên. Người dùng chỉ cần nhấp vào tên ảnh là hệ thống tự động chèn đoạn mã mẫu chèn hình học thuật vào vị trí con trỏ trong mã nguồn.
+    3. AI khi được yêu cầu mô tả sơ đồ cũng có thể nhận biết danh sách tệp ảnh này để chèn đúng vị trí.
+  - **Đóng gói xuất bản thảo nộp bài:**
+    1. Người dùng nhấp nút `[📦 Xuất gói nộp bài]`.
+    2. Hệ thống tự động đóng gói toàn bộ dự án thành một tệp nén `.zip` hoàn chỉnh gồm: Tệp mã nguồn chính, tệp danh mục trích dẫn, toàn bộ thư mục hình ảnh và bản PDF đã biên dịch thành công.
+    3. Gói nén này tương thích 100% với các nền tảng nộp bài quốc tế và hệ thống Overleaf.
+
+---
+
+## 4. Tiêu Chí Nghiệm Thu Nghiệp Vụ (Acceptance Criteria - Gherkin)
+
+### Kịch bản 1: Tạo bản thảo tức thì từ phiên đọc với khung sườn học thuật hợp lệ
+```gherkin
+Given người dùng đang có một phiên đọc sâu chứa 3 bài báo khoa học và các ghi chú trích dẫn
+When người dùng nhấp nút "[✍️ Bắt đầu viết bài từ phiên này]"
+Then hệ thống phải tạo ngay một bản thảo mới gắn với đề tài phiên đọc
+  And danh mục trích dẫn phải nạp đầy đủ mã chuẩn của cả 3 bài báo
+  And mã nguồn bài báo phải có sẵn các mục Giới thiệu, Tổng quan có trích dẫn và Phương pháp luận
+  And bản xem trước PDF phải hiển thị thành công trong vòng chưa đầy 2 giây mà không có lỗi cú pháp
 ```
-[Agent sửa main.tex / references.bib]
-                  │
-                  ▼
-     [Gọi tool compile_latex_e2b]
-                  │
-      ┌───────────┴───────────┐
-      ▼ (Thành công)          ▼ (Lỗi biên dịch & Số lần thử < 3)
-[Trả về PDF mới       [Node phân tích stderr từ E2B]
- lên Cột 2 Preview]           │
-                              ▼
-                      [Gọi edit_file tự vá lỗi cú pháp]
-                              │
-                              └──► [Quay lại compile_latex_e2b]
+
+### Kịch bản 2: AI tự động vá lỗi biên dịch cú pháp tối đa 3 lần
+```gherkin
+Given mã nguồn bài báo bị lỗi cú pháp thiếu dấu đóng ngoặc công thức toán ở dòng 42
+When tiến trình biên dịch tài liệu được kích hoạt
+Then hệ thống không được báo lỗi chặn người dùng ngay lập tức
+  And đồng tác giả AI phải tự động đọc thông báo lỗi và tự sửa lại mã nguồn
+  And AI tự động gửi biên dịch lại cho đến khi thành công
+  And toàn bộ tiến trình tự vá lỗi phải hiển thị huy hiệu trạng thái rõ ràng ở Cột 3
+  And số lần tự sửa lỗi tối đa không được vượt quá 3 lần
 ```
-* Nếu sau **3 vòng lặp** mà vẫn còn lỗi biên dịch (ví dụ do người dùng chèn gói thư viện lạ không tồn tại), Agent tự động dừng vòng lặp, giữ nguyên mã nguồn và báo rõ **Số dòng bị lỗi + Nguyên nhân cụ thể + Cách khắc phục** trên khung Chat Cột 3.
+
+### Kịch bản 3: Hoàn tác 1-Click bảo toàn quyền kiểm soát của tác giả
+```gherkin
+Given đồng tác giả AI vừa thực hiện chỉnh sửa nội dung trong mã nguồn bài báo
+When người dùng cảm thấy nội dung AI viết chưa đúng ý và nhấp nút "[↩️ Hoàn tác]"
+Then mã nguồn bài báo và danh mục trích dẫn phải lập tức khôi phục chính xác về trạng thái trước khi AI chỉnh sửa
+  And bản xem trước PDF phải được tự động biên dịch lại về đúng trạng thái ban đầu
+```
+
+### Kịch bản 4: Xuất gói nộp bài hoàn chỉnh tương thích tuyệt đối
+```gherkin
+Given bản thảo nghiên cứu có mã nguồn, danh mục trích dẫn và 2 tệp ảnh sơ đồ
+When người dùng nhấp nút "[📦 Xuất gói nộp bài]"
+Then hệ thống phải tải xuống một tệp nén .zip chuẩn
+  And bên trong tệp nén phải có đủ tệp mã nguồn chính, tệp trích dẫn, thư mục hình ảnh và bản in PDF
+  And tệp nén có thể mở và biên dịch thành công ngay lập tức trên các nền tảng học thuật chuẩn
+```
+
+---
+
+## 5. Quy Tắc Nghiệp Vụ Bất Biến (Business Invariants)
+
+1. **Nguyên Tắc Tác Giả Nắm Quyền Tối Thượng (Author Sovereignty Invariant):**
+   - Mọi chỉnh sửa của AI đều bắt buộc phải lưu lại bản sao chụp dự phòng.
+   - Người dùng luôn có quyền hoàn tác 1-Click (`Undo`) để khôi phục trạng thái nguyên bản của mình bất kỳ lúc nào.
+2. **Nguyên Tắc Ngân Sách Tự Khắc Phục Lỗi An Toàn (Self-Healing Retry Budget):**
+   - Vòng lặp tự động sửa lỗi cú pháp của AI được giới hạn nghiêm ngặt ở mức tối đa **3 lần thử**.
+   - Tuyệt đối cấm vòng lặp vô hạn gây tiêu tốn tài nguyên và treo trải nghiệm của người dùng.
+3. **Nguyên Tắc Toàn Vẹn Gói Nộp Bài (Submission Bundle Integrity):**
+   - Bản xuất gói nộp bài bắt buộc phải tự chứa đầy đủ mọi thành phần phụ thuộc (mã nguồn, danh mục trích dẫn, hình ảnh).
+   - Khi giải nén trên bất kỳ hệ thống chuẩn nào đều phải biên dịch được ngay mà không bị thiếu tệp.
+4. **Nguyên Tắc Bảo Mật Thực Thi Cô Lập (Sandboxed Execution Isolation):**
+   - Mọi hoạt động biên dịch mã nguồn bắt buộc phải diễn ra trong môi trường ảo hóa cô lập hoàn toàn.
+   - Tuyệt đối ngăn chặn các đoạn mã độc hại có khả năng truy cập tài nguyên máy chủ hay rò rỉ dữ liệu của người dùng khác.

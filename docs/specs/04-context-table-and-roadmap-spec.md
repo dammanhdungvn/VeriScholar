@@ -2,9 +2,9 @@
 # (3-COLUMN CONTEXT TABLE, 2-TIER INGESTION & SOCRATIC ROADMAP SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/04-context-table-and-roadmap.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/04-context-table-and-roadmap.md)  
+**Nguồn tham chiếu PRD:** [`04-context-table-and-roadmap.md`](../PRD/04-context-table-and-roadmap.md)  
 **Phân hệ kỹ thuật:** Phân Hệ Bảng Ngữ Cảnh & Lộ Trình Học (Context Table & Roadmap)  
-**File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
+**File nền tảng liên đới:** [`00-foundation-architecture-and-db.md`](./00-foundation-architecture-and-db.md)
 
 ---
 
@@ -65,8 +65,8 @@ flowchart LR
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
-| **References Endpoint** | [`apps/api/src/api/v1/endpoints/documents.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/documents.py) | **MODIFY** | Bổ sung `GET /api/v1/documents/{document_id}/references` trả về danh sách `reference_items` đã bóc tách/xác thực của bài báo (tránh gọi lại `:extract-references` tốn phí). |
-| **Session Ingest Endpoint** | [`apps/api/src/api/v1/endpoints/sessions.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/sessions.py) | **CREATE** | Tạo mới `POST /api/v1/sessions/{session_id}/references:ingest` nhận `{ ref_index: int }` thực thi nạp 2 tầng trực tiếp vào phiên. |
+| **References Endpoint** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | **MODIFY** | Bổ sung `GET /api/v1/documents/{document_id}/references` trả về danh sách `reference_items` đã bóc tách/xác thực của bài báo (tránh gọi lại `:extract-references` tốn phí). |
+| **Session Ingest Endpoint** | [`apps/api/src/api/v1/endpoints/sessions.py`](../../apps/api/src/api/v1/endpoints/sessions.py) | **CREATE** | Tạo mới `POST /api/v1/sessions/{session_id}/references:ingest` nhận `{ ref_index: int }` thực thi nạp 2 tầng trực tiếp vào phiên. |
 | **Socratic Roadmap Service** | `packages/core/src/core/services/socratic_roadmap.py` | **CREATE** | Service thuần Python phân tích cú pháp trích dẫn trong văn bản và phát sinh payload `bridge_hint` trong SSE stream. |
 | **Bảng 3 Cột UI** | `apps/web/src/features/reader/components/SmartReferenceDrawer.tsx` | **MODIFY** | Nâng cấp component bảng 3 cột chuẩn: Cột 1 (Name + DOI), Cột 2 (URL gốc), Cột 3 (Action nạp/gỡ khỏi chat). |
 | **Bridge Hint Card UI** | `apps/web/src/features/reader/components/BridgeHintCard.tsx` | **CREATE** | Tạo mới component hiển thị thẻ lộ trình học tuần tự $A \rightarrow B \rightarrow C \rightarrow D$ gắn ở cuối tin nhắn bot. |
@@ -238,7 +238,21 @@ Bấm nút `[➕ Nạp bài [3]]` sẽ hiển thị spinner tải và chuyển h
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Context Table & Roadmap TDD Matrix)
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Bảng Ngữ Cảnh 3 Cột và Lộ Trình Học Socratic phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **References API Endpoint** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | Tham chiếu cách bóc tách, lưu trữ và truy vấn danh mục tài liệu tham khảo `reference_items`. |
+| **Session Ingestion Endpoint** | [`apps/api/src/api/v1/endpoints/sessions.py`](../../apps/api/src/api/v1/endpoints/sessions.py) | Tham chiếu cách nạp 2 tầng, kiểm soát hạn mức 5 tab và phát sinh tác vụ nền `BackgroundTasks`. |
+| **Socratic Roadmap Core** | `packages/core/src/core/services/socratic_roadmap.py` | Thuần Python standard library, bóc tách cú pháp `<bridge_hint>` và tính toán đồ thị học tập tuần tự. |
+| **Smart Reference Drawer** | `apps/web/src/features/reader/components/SmartReferenceDrawer.tsx` | Tham chiếu giao diện ngăn trượt 3 cột (Name, URL, Action) và đồng bộ trạng thái `in_session`. |
+| **Bridge Hint Card Component** | `apps/web/src/features/reader/components/BridgeHintCard.tsx` | Tham chiếu thẻ giao diện Amber hiển thị lộ trình học $A \rightarrow B \rightarrow C \rightarrow D$ gắn ở cuối tin nhắn bot. |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Context Table & Roadmap TDD Matrix)
 
 ```mermaid
 flowchart TD
@@ -270,10 +284,10 @@ flowchart TD
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] API `GET /api/v1/documents/{id}/references` và `POST /api/v1/sessions/{id}/references:ingest` hoạt động ổn định.
 - [ ] Bảng 3 Cột hiển thị đầy đủ thông tin, hỗ trợ nạp bài 1-Click và gỡ bài khỏi chat an toàn.
 - [ ] Luồng SSE phát đúng sự kiện `bridge_hint` và giao diện hiển thị thẻ `BridgeHintCard.tsx` đẹp mắt.
 - [ ] Giới hạn 5 bài báo / phiên được bảo vệ nghiêm ngặt khi nạp bài từ Bảng References hoặc thẻ Bridge Hint.
-- [ ] Toàn bộ ma trận kiểm thử tại Mục 6 vượt qua `100% PASS`.
+- [ ] Toàn bộ ma trận kiểm thử tại Mục 8 vượt qua `100% PASS`.

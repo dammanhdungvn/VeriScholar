@@ -162,3 +162,41 @@ def test_agent_harness_integrity():
     assert os.access(setup_sh, os.X_OK), "scripts/dev/setup.sh is not executable"
     assert seed_py.exists(), "scripts/dev/seed.py is missing"
     assert os.access(seed_py, os.X_OK), "scripts/dev/seed.py is not executable"
+
+
+def test_no_absolute_file_urls_in_markdown():
+    """Validates that markdown documents do not contain absolute machine URLs like file:///home/ or ](file:///."""
+    scan_dirs = [
+        ROOT_DIR / "docs",
+        ROOT_DIR / ".agents",
+    ]
+    markdown_files: list[Path] = []
+    for sdir in scan_dirs:
+        if sdir.exists():
+            markdown_files.extend(sdir.rglob("*.md"))
+    for root_md in ROOT_DIR.glob("*.md"):
+        markdown_files.append(root_md)
+
+    banned_link_patterns = [
+        "file:///home/",
+        "file:///Users/",
+        "file:///root/",
+        "](file:///",
+    ]
+
+    violations: list[str] = []
+    for md_file in markdown_files:
+        try:
+            lines = md_file.read_text(encoding="utf-8").splitlines()
+        except UnicodeDecodeError:
+            continue
+        for line_no, line in enumerate(lines, 1):
+            for pattern in banned_link_patterns:
+                if pattern in line:
+                    rel_path = md_file.relative_to(ROOT_DIR)
+                    violations.append(
+                        f"{rel_path}:{line_no}: contains banned link pattern '{pattern}' -> {line.strip()}"
+                    )
+
+    assert not violations, "Forbidden absolute file:/// URLs found in markdown documents:\n" + "\n".join(violations)
+

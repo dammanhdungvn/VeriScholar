@@ -2,9 +2,9 @@
 # (SYSTEM MONITORING, TELEMETRY, SENTRY ALERTING & LANGFUSE OBSERVABILITY SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/07-monitoring-and-langfuse.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/07-monitoring-and-langfuse.md)  
+**Nguồn tham chiếu PRD:** [`07-monitoring-and-langfuse.md`](../PRD/07-monitoring-and-langfuse.md)  
 **Phân hệ kỹ thuật:** Phân Hệ Giám Sát & Vận Hành (Monitoring & Telemetry)  
-**File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
+**File nền tảng liên đới:** [`00-foundation-architecture-and-db.md`](./00-foundation-architecture-and-db.md)
 
 ---
 
@@ -87,10 +87,10 @@ flowchart TD
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
-| **Cấu hình Môi trường** | [`apps/api/src/api/core/config.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/core/config.py) | **MODIFY** | Chuẩn hóa duy nhất 2 môi trường: `development` và `production` (+ chế độ `test`). Xóa bỏ hoàn toàn cấu hình `uat`, `staging`, `enterprise`. |
-| **Tracing Middleware** | [`apps/api/src/api/middleware/tracing.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/middleware/tracing.py) | **MODIFY** | `PureASGITracingMiddleware`: duy trì bộ đếm request in-memory (`total`, `2xx`, `4xx`, `5xx`), tính `avg_duration_ms` và duy trì Ring Buffer `deque(maxlen=20)` cho 20 lỗi gần nhất. |
-| **Ghi Log Hệ Thống** | [`apps/api/src/api/core/logging.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/core/logging.py) | **MODIFY** | Cấu hình `structlog`: ghi ra console có màu ở `development`, ghi JSON 1 dòng kèm xoay vòng file `storage/logs/api-error.log` ở `production`. |
-| **Langfuse Service** | [`apps/api/src/api/services/ai_tracing_service.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/services/ai_tracing_service.py) | **KEEP** | Đã có sẵn No-Op facade, làm sạch khóa nhạy cảm (`scrub_sensitive_text`) và ẩn danh user (`pseudonymize_user_id`). Bổ sung ghi nhận 3 chỉ số Scores. |
+| **Cấu hình Môi trường** | [`apps/api/src/api/core/config.py`](../../apps/api/src/api/core/config.py) | **MODIFY** | Chuẩn hóa duy nhất 2 môi trường: `development` và `production` (+ chế độ `test`). Xóa bỏ hoàn toàn cấu hình `uat`, `staging`, `enterprise`. |
+| **Tracing Middleware** | [`apps/api/src/api/middleware/tracing.py`](../../apps/api/src/api/middleware/tracing.py) | **MODIFY** | `PureASGITracingMiddleware`: duy trì bộ đếm request in-memory (`total`, `2xx`, `4xx`, `5xx`), tính `avg_duration_ms` và duy trì Ring Buffer `deque(maxlen=20)` cho 20 lỗi gần nhất. |
+| **Ghi Log Hệ Thống** | [`apps/api/src/api/core/logging.py`](../../apps/api/src/api/core/logging.py) | **MODIFY** | Cấu hình `structlog`: ghi ra console có màu ở `development`, ghi JSON 1 dòng kèm xoay vòng file `storage/logs/api-error.log` ở `production`. |
+| **Langfuse Service** | [`apps/api/src/api/services/ai_tracing_service.py`](../../apps/api/src/api/services/ai_tracing_service.py) | **KEEP** | Đã có sẵn No-Op facade, làm sạch khóa nhạy cảm (`scrub_sensitive_text`) và ẩn danh user (`pseudonymize_user_id`). Bổ sung ghi nhận 3 chỉ số Scores. |
 | **Dịch Vụ Cảnh Báo** | `apps/api/src/api/services/alert_service.py` | **NEW** | Gửi cảnh báo lỗi 500 về Webhook Telegram/Discord dạng bất đồng bộ ngầm (`asyncio.create_task`). |
 | **Health & Status Endpoints** | `apps/api/src/api/v1/endpoints/health.py` | **NEW** | Tách riêng các endpoint giám sát: `/health/ready` (deep ping đa hạ tầng) và `/api/v1/system/status` (báo cáo hiệu năng và danh sách 20 lỗi gần nhất). |
 | **Feedback Endpoint** | `apps/api/src/api/v1/endpoints/feedback.py` | **NEW** | Endpoint `POST /api/v1/sessions/{id}/messages/{msg_id}/feedback` ghi nhận điểm 👍 / 👎 gửi lên Langfuse. |
@@ -303,7 +303,21 @@ Giao diện người dùng áp dụng triệt để nguyên tắc **Trải nghi�
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Monitoring & Telemetry TDD Matrix)
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Giám Sát, Vận Hành & Đo Lường phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **Tracing Middleware** | [`apps/api/src/api/middleware/tracing.py`](../../apps/api/src/api/middleware/tracing.py) | Cài đặt `PureASGITracingMiddleware`, quản lý `X-Request-ID`, metrics RAM và deque 20 lỗi gần nhất. |
+| **Environment Configuration** | [`apps/api/src/api/core/config.py`](../../apps/api/src/api/core/config.py) | Chỉ giữ 2 môi trường chuẩn (`development` và `production`), các cờ debug và secret keys. |
+| **Structured Logging** | [`apps/api/src/api/core/logging.py`](../../apps/api/src/api/core/logging.py) | Cấu hình `structlog` với bộ lọc nhạy cảm `scrub_sensitive_text` và ghi file xoay vòng. |
+| **Langfuse & Telemetry Service** | [`apps/api/src/api/services/ai_tracing_service.py`](../../apps/api/src/api/services/ai_tracing_service.py) | Quản lý telemetry, ghi nhận span LLM, bộ lọc No-Op fallback và băm ẩn danh `user_id`. |
+| **Health Endpoints** | `apps/api/src/api/v1/endpoints/health.py` | Kiểm tra sẵn sàng `/health/ready` (deep ping đa dịch vụ) và báo cáo `/api/v1/system/status`. |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Monitoring & Telemetry TDD Matrix)
 
 Mọi thay đổi kỹ thuật thuộc Phân hệ Giám sát & Vận hành phải vượt qua đầy đủ các kịch bản kiểm thử tự động sau:
 
@@ -339,7 +353,7 @@ flowchart TD
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Phân hệ có tên định danh rõ ràng là **Phân Hệ Giám Sát, Vận Hành & Đo Lường (System Monitoring, Telemetry & Langfuse Observability)**, không dùng số thứ tự định danh trong nội dung tài liệu.
 - [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 4 kịch bản thực tế: Trải nghiệm bắt lỗi thân thiện, Cảnh báo tức thì Telegram/Discord, Đo lường chi phí/chất lượng Langfuse, và Giám sát sức khỏe hệ thống.
@@ -347,4 +361,4 @@ flowchart TD
 - [ ] Cơ chế `trace_id` gắn kết xuyên suốt từ Middleware, log `structlog`, Langfuse trace, đến header HTTP `X-Request-ID`.
 - [ ] Điểm kiểm tra `/health/ready` deep-ping toàn bộ hạ tầng (PostgreSQL 16+ `pgvector`, Redis 7, CAS storage, E2B, OpenAI).
 - [ ] Điểm kiểm tra `/api/v1/system/status` báo cáo uptime, metrics và bộ đệm vòng 20 lỗi gần nhất trong RAM.
-- [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 7 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

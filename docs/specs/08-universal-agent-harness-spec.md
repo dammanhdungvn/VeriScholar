@@ -2,8 +2,8 @@
 # (UNIVERSAL AGENT HARNESS & ERGONOMICS TECHNICAL SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu Thiết kế:** [`docs/superpowers/specs/2026-10-25-universal-agent-harness-design.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/superpowers/specs/2026-10-25-universal-agent-harness-design.md) (Commit [`5b76b36`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar))  
-**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/temp/.agents))  
+**Nguồn tham chiếu Thiết kế:** [`2026-10-25-universal-agent-harness-design.md`](../superpowers/specs/2026-10-25-universal-agent-harness-design.md) (Commit ``5b76b36``)  
+**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](../../temp/.agents))  
 **Phân hệ kỹ thuật:** Kỹ Nghệ Khung Tác Nhân & Công Thái Học Lập Trình AI (Agent Harness & Ergonomics Engineering)  
 **Mục tiêu:** Thiết lập khung điều phối tác nhân đa nền tảng (Antigravity CLI, Cursor, Claude Code, Codex), tối ưu hóa cửa sổ ngữ cảnh qua Progressive Disclosure, cung cấp môi trường chạy thử xác định 100% offline và thiết lập rào chắn kiểm thử kiến trúc cơ học bằng mã tự động.
 
@@ -15,7 +15,7 @@
 - **Bối cảnh & Vấn đề thực tế:** Khi lập trình dự án quy mô lớn cùng các Agent AI (như Antigravity CLI, Claude Code hay Cursor), nếu nhồi nhét toàn bộ hàng nghìn dòng tài liệu kiến trúc, database, frontend, backend và quy chuẩn test vào một file prompt duy nhất (`AGENTS.md` hoặc `.cursorrules`), mỗi lượt prompt sẽ lãng phí từ 10.000 đến 30.000 tokens. Điều này làm loãng sự chú ý của mô hình (*Attention Dilution*), tăng độ trễ và khiến AI thường xuyên quên hoặc bỏ qua các quy tắc nằm ở giữa văn bản (*Lost in the Middle*).
 - **Giải pháp của phân hệ:**
   - Thiết lập cơ chế **Tiết lộ Ngữ cảnh Tuần tự (Progressive Disclosure)**:
-    - File gốc [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) được nén gọn dưới **150 dòng**, chỉ đóng vai trò như một "Bộ định tuyến" (Router) hướng dẫn tác nhân cách tra cứu và cổng kiểm tra.
+    - File gốc [`AGENTS.md`](../../AGENTS.md) được nén gọn dưới **150 dòng**, chỉ đóng vai trò như một "Bộ định tuyến" (Router) hướng dẫn tác nhân cách tra cứu và cổng kiểm tra.
     - Toàn bộ tri thức kỹ thuật chi tiết được đóng gói thành các **Kỹ Năng (Skills)** chuyên biệt trong `.agents/skills/`. Agent chỉ tải đúng tài liệu cần thiết cho tác vụ hiện tại (ví dụ: chỉ nạp `verischolar-backend` khi viết API, chỉ nạp `verischolar-frontend` khi viết UI).
 
 ### B. Usecase 2: Kiểm Thử Hộp Cát Ngoại Tuyến 100% Xác Định (Deterministic Offline Sandboxing)
@@ -25,15 +25,15 @@
   - Dữ liệu ngẫu nhiên khiến kết quả test không thể tái lập (flaky tests).
 - **Giải pháp của phân hệ:**
   - Cung cấp bộ công cụ developer xác định:
-    - [`scripts/dev/setup.sh`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/dev): Kiểm tra môi trường Docker PostgreSQL `pgvector`, Redis 7, Python 3.12, Node 22 trong vài giây.
-    - [`scripts/dev/seed.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/dev): Nạp sẵn tài khoản kiểm thử mặc định và **3 bài báo học thuật kinh điển** (*Attention Is All You Need*, *ResNet*, *BERT*). Script tự động sinh các file PDF vật lý hợp lệ khớp mã băm SHA-256 vào `storage/blobs/`, kèm đầy đủ đoạn trích (chunks) và tọa độ Bounding Box mẫu `[x0, y0, x1, y1]`.
+    - [`scripts/dev/setup.sh`](../../scripts/dev): Kiểm tra môi trường Docker PostgreSQL `pgvector`, Redis 7, Python 3.12, Node 22 trong vài giây.
+    - [`scripts/dev/seed.py`](../../scripts/dev): Nạp sẵn tài khoản kiểm thử mặc định và **3 bài báo học thuật kinh điển** (*Attention Is All You Need*, *ResNet*, *BERT*). Script tự động sinh các file PDF vật lý hợp lệ khớp mã băm SHA-256 vào `storage/blobs/`, kèm đầy đủ đoạn trích (chunks) và tọa độ Bounding Box mẫu `[x0, y0, x1, y1]`.
   - Mọi Agent có thể chạy kiểm thử toàn trình Reader và RAG hoàn toàn offline với độ trễ `< 200ms`.
 
 ### C. Usecase 3: Rào Chắn Kiểm Thử Cơ Học Tự Động Bằng AST (Automated Mechanical Enforcement)
 - **Bối cảnh & Vấn đề thực tế:** Con người hay AI đều có xu hướng đi đường tắt khi gặp bài toán khó: import lén lút một module ngoài vào tầng Core Domain, hoặc vô tình tái sử dụng các mẫu thiết kế di sản (như cơ chế SQLite fallback hoặc Neo4j cũ) nếu chỉ được nhắc nhở bằng văn bản thông thường.
 - **Giải pháp của phân hệ:**
   - "Không bao giờ dùng văn xuôi cho những gì có thể gác cổng bằng mã tự động".
-  - Xây dựng bài kiểm thử ranh giới kiến trúc tự động [`apps/api/tests/test_architecture_boundary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/tests):
+  - Xây dựng bài kiểm thử ranh giới kiến trúc tự động [`apps/api/tests/test_architecture_boundary.py`](../../apps/api/tests):
     - Dùng AST (Abstract Syntax Tree) phân tích mã nguồn `packages/core/src/core/domain/` và `ports/`: Cấm tuyệt đối import bất kỳ thư viện I/O, Database, Web framework (`fastapi`, `sqlalchemy`, `redis`, `fitz`, `httpx`, `aiofiles`) hoặc import từ `apps.api`.
     - Quét toàn bộ mã nguồn Python production trong `apps/api/src/` và `packages/core/src/`: Đánh trượt ngay lập tức nếu xuất hiện các chuỗi ký tự di sản cấm (`aiosqlite`, `sqlite3`, `neo4j`, `ComparisonMatrix`, `DeBERTa`).
     - Kiểm tra tính toàn vẹn của thư mục `.agents/`: Báo lỗi nếu thiếu file cốt lõi hoặc nếu `AGENTS.md` vượt quá 200 dòng.
@@ -95,7 +95,7 @@ flowchart TD
 ```
 
 ### A. 5 Bất Biến Kiến Trúc Tối Thượng Của VeriScholar MVP
-Mọi tác nhân AI khi tham gia phát triển dự án bắt buộc phải tuân thủ 5 bất biến (được định nghĩa bất di bất dịch trong [`.agents/ARCHITECTURE_PRINCIPLES.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/ARCHITECTURE_PRINCIPLES.md)):
+Mọi tác nhân AI khi tham gia phát triển dự án bắt buộc phải tuân thủ 5 bất biến (được định nghĩa bất di bất dịch trong [`.agents/ARCHITECTURE_PRINCIPLES.md`](../../.agents/ARCHITECTURE_PRINCIPLES.md)):
 
 1. **Thuần PostgreSQL 16+ với `pgvector` & Redis 7:**
    - Tuyệt đối cấm sử dụng cơ sở dữ liệu đồ thị độc lập bên ngoài (như Neo4j). Toàn bộ thực thể và quan hệ đồ thị học thuật 4 tầng được lưu trữ trực tiếp trên PostgreSQL qua 2 bảng `graph_nodes` và `graph_edges`.
@@ -152,7 +152,7 @@ VeriScholar/
             └── test_architecture_boundary.py       # Bài test gác cổng kiến trúc tự động (AST + Lexical)
 ```
 
-### A. Đặc Tả [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Hiến Pháp Tối Cao)
+### A. Đặc Tả [`AGENTS.md`](../../AGENTS.md) (Hiến Pháp Tối Cao)
 * **Kích thước:** Nghiêm ngặt dưới **150 dòng**.
 * **Nội dung bao gồm:**
   1. *Định danh Dự án & Scope:* Giới thiệu ngắn gọn VeriScholar MVP (Nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình) bám sát tài liệu trong `docs/PRD/` và `docs/specs/`.
@@ -217,7 +217,7 @@ VeriScholar/
     * Trạng thái: Đã xác thực (`is_active = True`, `is_verified = True`).
   * Nạp 3 bài báo kinh điển:
     1. *Attention Is All You Need (Vaswani et al., 2017)*:
-       - Hash CAS SHA-256 thực tế từ file [`data/papers/Attention Is All You Need.pdf`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/data/papers/Attention%20Is%20All%20You%20Need.pdf).
+       - Hash CAS SHA-256 thực tế từ file [`data/papers/Attention Is All You Need.pdf`](../../data/papers/Attention%20Is%20All%20You%20Need.pdf).
        - Nạp 10 chunks mẫu kèm vector embedding và dữ liệu đồ thị tri thức 4 thực thể tương thích.
     2. *Deep Residual Learning for Image Recognition (He et al., 2016)*:
        - Tự động sinh file PDF hợp lệ tối thiểu vào `storage/blobs/` để CAS hashing trỏ tới file thật.
@@ -316,13 +316,13 @@ Quá trình hiện thực hóa bộ Harness Engineering được chia thành **4
 
 ### Giai Đoạn 1: Dọn Dẹp Môi Trường & Mã Nguồn Di Sản
 1. Dọn dẹp toàn bộ các tệp unstaged/deleted di sản của hệ thống cũ đang tồn tại trong working tree.
-2. Dọn sạch hàm rác `init_sqlite_fallback()` trong [`apps/api/src/api/db/session.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/session.py) và [`apps/api/src/api/__init__.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/__init__.py).
-3. Dọn sạch class `ComparisonMatrixRow` và `ComparisonMatrixResult` trong [`packages/core/src/core/domain/entities/folder.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/packages/core/src/core/domain/entities/folder.py).
+2. Dọn sạch hàm rác `init_sqlite_fallback()` trong [`apps/api/src/api/db/session.py`](../../apps/api/src/api/db/session.py) và [`apps/api/src/api/__init__.py`](../../apps/api/src/api/__init__.py).
+3. Dọn sạch class `ComparisonMatrixRow` và `ComparisonMatrixResult` trong [`packages/core/src/core/domain/entities/folder.py`](../../packages/core/src/core/domain/entities/folder.py).
 
 ### Giai Đoạn 2: Thiết Lập Cấu Trúc `.agents/` & Kỹ Năng Cốt Lõi
 1. Khởi tạo thư mục `.agents/` và tạo symlink `AGENTS.md` ở thư mục gốc.
-2. Soạn thảo file [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) tinh gọn (< 150 dòng).
-3. Soạn thảo file [`.agents/ARCHITECTURE_PRINCIPLES.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/ARCHITECTURE_PRINCIPLES.md) ghi nhận 5 bất biến.
+2. Soạn thảo file [`AGENTS.md`](../../AGENTS.md) tinh gọn (< 150 dòng).
+3. Soạn thảo file [`.agents/ARCHITECTURE_PRINCIPLES.md`](../../.agents/ARCHITECTURE_PRINCIPLES.md) ghi nhận 5 bất biến.
 4. Xây dựng 4 thư mục skill:
    * `.agents/skills/verischolar-backend/SKILL.md`
    * `.agents/skills/verischolar-frontend/SKILL.md`
@@ -331,11 +331,69 @@ Quá trình hiện thực hóa bộ Harness Engineering được chia thành **4
 5. Giữ nguyên vẹn 8 thư mục kỹ năng thiết kế UI/UX hiện có trong `.agents/skills/`.
 
 ### Giai Đoạn 3: Xây Dựng Bộ Công Cụ Developer Xác Định
-1. Cập nhật [`docker-compose.yml`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docker-compose.yml): Bổ sung service `redis:7-alpine`.
-2. Tạo script [`scripts/dev/setup.sh`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/dev/setup.sh) với quyền thực thi `chmod +x`.
-3. Tạo script [`scripts/dev/seed.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/scripts/dev/seed.py) nạp 3 bài báo mẫu và đảm bảo physical PDF blobs trong `storage/blobs/`.
+1. Cập nhật [`docker-compose.yml`](../../docker-compose.yml): Bổ sung service `redis:7-alpine`.
+2. Tạo script [`scripts/dev/setup.sh`](../../scripts/dev/setup.sh) với quyền thực thi `chmod +x`.
+3. Tạo script [`scripts/dev/seed.py`](../../scripts/dev/seed.py) nạp 3 bài báo mẫu và đảm bảo physical PDF blobs trong `storage/blobs/`.
 
 ### Giai Đoạn 4: Hiện Thực Hóa Rào Chắn Kiểm Thử & Chạy Nghiệm Thu
-1. Tạo bài test [`apps/api/tests/test_architecture_boundary.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/tests/test_architecture_boundary.py) cài đặt đầy đủ 3 kiểm tra: AST Hexagonal checker, Banned keywords scanner, và Harness integrity checker.
+1. Tạo bài test [`apps/api/tests/test_architecture_boundary.py`](../../apps/api/tests/test_architecture_boundary.py) cài đặt đầy đủ 3 kiểm tra: AST Hexagonal checker, Banned keywords scanner, và Harness integrity checker.
 2. Chạy toàn bộ **4 Cổng Xác Minh** (`ruff`, `pytest`, `npm test`, `npm build`).
 3. Cam kết mã nguồn bằng commit chuẩn Convention.
+
+---
+
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Khung Điều Hướng Tác Nhân & Công Thái Học phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **Root Agent Symlink** | [`AGENTS.md`](../../AGENTS.md) | Symlink trỏ về `.agents/AGENTS.md`, tối giản dưới 150 dòng, đóng vai trò Skill Router & Verification Gates. |
+| **Architecture Principles** | [`.agents/ARCHITECTURE_PRINCIPLES.md`](../../.agents/ARCHITECTURE_PRINCIPLES.md) | Định nghĩa 5 bất biến kiến trúc tối thượng của VeriScholar MVP. |
+| **Progressive Disclosure Skills** | [`.agents/skills/`](../../.agents/skills) | 4 core skills (`verischolar-backend`, `verischolar-frontend`, `verischolar-tdd`, `agent-maintenance`) và các kỹ năng thiết kế UI/UX. |
+| **Deterministic Developer Tools** | [`scripts/dev/setup.sh`](../../scripts/dev/setup.sh)<br>[`scripts/dev/seed.py`](../../scripts/dev/seed.py) | Thiết lập môi trường và seed dữ liệu mẫu 3 bài báo kinh điển kèm file CAS vật lý xác định 100% offline. |
+| **Automated Boundary Gatekeeper** | [`apps/api/tests/test_architecture_boundary.py`](../../apps/api/tests/test_architecture_boundary.py) | Rào chắn cơ học tự động dùng AST kiểm tra Kiến trúc Lục giác, chuỗi di sản cấm và liên kết Markdown tương đối. |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Harness Engineering TDD Matrix)
+
+Mọi thay đổi cấu trúc của Agent Harness bắt buộc phải vượt qua đầy đủ ma trận kiểm thử cơ học tự động:
+
+```mermaid
+flowchart TD
+    subgraph ASTIsolation ["<b>Tầng 1: Kiểm Tra Ranh Giới Kiến Trúc AST</b>"]
+        TH1["test_hexagonal_boundary_pure_domain<br/>(Core domain & ports không import I/O, DB, FastAPI)"]
+        TH2["test_hexagonal_checker_catches_apps_api_submodules<br/>(Kiểm tra đơn vị logic bắt vi phạm import)"]
+    end
+
+    subgraph LegacyGuard ["<b>Tầng 2: Quét Di Sản Cũ & Toàn Vẹn Tài Liệu</b>"]
+        TH3["test_banned_legacy_artifacts<br/>(Quét mã Python cấm aiosqlite, sqlite3, neo4j, ComparisonMatrix)"]
+        TH4["test_no_absolute_file_urls_in_markdown<br/>(Quét toàn bộ .md docs cấm URL tuyệt đối file:///)"]
+    end
+
+    subgraph HarnessCheck ["<b>Tầng 3: Toàn Vẹn Cấu Trúc Khung Tác Nhân</b>"]
+        TH5["test_agent_harness_integrity<br/>(Symlink AGENTS.md, &lt;= 200 dòng, Core skills & scripts tồn tại)"]
+    end
+
+    ASTIsolation --> LegacyGuard --> HarnessCheck
+```
+
+| Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |
+|---|---|---|---|
+| `test_hexagonal_boundary_pure_domain` | `apps/api/tests/test_architecture_boundary.py` | Quét AST `packages/core/src/core/domain` và `ports` | 0 vi phạm import thư viện I/O, Database, Web framework hoặc `apps.api`. |
+| `test_hexagonal_checker_catches_apps_api_submodules` | `apps/api/tests/test_architecture_boundary.py` | Kiểm thử hàm `check_ast_violations()` với chuỗi import vi phạm mẫu | Phát hiện chính xác 2 vi phạm import từ `apps.api`. |
+| `test_banned_legacy_artifacts` | `apps/api/tests/test_architecture_boundary.py` | Quét toàn bộ mã nguồn Python trong `apps/api/src` và `packages/core/src` | 0 dòng code chứa các từ khóa cấm (`aiosqlite`, `sqlite3`, `neo4j`, `ComparisonMatrix`, `DeBERTa`). |
+| `test_no_absolute_file_urls_in_markdown` | `apps/api/tests/test_architecture_boundary.py` | Quét toàn bộ file `.md` trong `docs/`, `.agents/`, root | 0 liên kết chứa URL tuyệt đối máy chủ (file:// scheme). |
+| `test_agent_harness_integrity` | `apps/api/tests/test_architecture_boundary.py` | Kiểm tra symlink, độ dài dòng, file bất biến và script thực thi | `AGENTS.md` là symlink hợp lệ, `<= 200` dòng, scripts có cờ thực thi `+x`. |
+
+---
+
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+
+- [ ] Root `AGENTS.md` là symlink hợp lệ tới `.agents/AGENTS.md`, độ dài tối giản dưới 150 dòng.
+- [ ] 5 Bất biến kiến trúc tối thượng được ghi nhận đầy đủ trong `.agents/ARCHITECTURE_PRINCIPLES.md`.
+- [ ] Rào chắn kiểm thử ranh giới `apps/api/tests/test_architecture_boundary.py` kiểm tra AST Lục giác, Banned keywords, Harness integrity và Zero absolute file URLs đạt `100% PASS`.
+- [ ] Bộ công cụ developer `scripts/dev/setup.sh` và `scripts/dev/seed.py` cấp quyền thực thi và hoạt động offline xác định.
+- [ ] Toàn bộ 5 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Bốn Cổng Xác Minh Bắt Buộc (`ruff`, `pytest`, `npm test`, `npm build`) đồng loạt đạt exit code 0.

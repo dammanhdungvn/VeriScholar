@@ -2,9 +2,9 @@
 # (AUTHENTICATION, USER PROFILE & BYOK SECURITY SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
-**Nguồn tham chiếu PRD:** [`docs/PRD/01-auth-and-user.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD/01-auth-and-user.md)  
+**Nguồn tham chiếu PRD:** [`01-auth-and-user.md`](../PRD/01-auth-and-user.md)  
 **Phân hệ kỹ thuật:** Phân Hệ Xác Thực & Quản Lý Học Giả (Authentication & Scholar Profile)  
-**File nền tảng liên đới:** [`docs/specs/00-foundation-architecture-and-db.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs/00-foundation-architecture-and-db.md)
+**File nền tảng liên đới:** [`00-foundation-architecture-and-db.md`](./00-foundation-architecture-and-db.md)
 
 ---
 
@@ -61,10 +61,10 @@ flowchart TD
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
-| **API Endpoints** | [`apps/api/src/api/v1/endpoints/auth.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/v1/endpoints/auth.py) | **KEEP** | 13 endpoints đầy đủ: Register, Login, Google, GitHub, Logout, Refresh, Forgot-Password, Reset-Password, Verify-Email, Resend-Verification, Me (GET/PATCH), Change-Password. |
-| **Logic Service** | [`apps/api/src/api/services/auth_service.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/services/auth_service.py) | **MODIFY** | Đã có sẵn mã hóa mật khẩu, sinh JWT HMAC-SHA256, OTP Redis. Cần bổ sung hàm mã hóa/giải mã khóa cá nhân **BYOK AES-256-GCM**. |
-| **Model CSDL** | [`apps/api/src/api/db/models/user.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/db/models/user.py) | **MODIFY** | Bổ sung 2 cột: `theme_preference` (mặc định `'system'`) và `byok_api_key_encrypted` (TEXT nullable). |
-| **Pydantic Schemas** | [`apps/api/src/api/schemas/auth.py`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/apps/api/src/api/schemas/auth.py) | **MODIFY** | Bổ sung trường `theme_preference` và `byok_api_key` vào `UserProfileResponse` và `UpdateProfileRequest`. |
+| **API Endpoints** | [`apps/api/src/api/v1/endpoints/auth.py`](../../apps/api/src/api/v1/endpoints/auth.py) | **KEEP** | 13 endpoints đầy đủ: Register, Login, Google, GitHub, Logout, Refresh, Forgot-Password, Reset-Password, Verify-Email, Resend-Verification, Me (GET/PATCH), Change-Password. |
+| **Logic Service** | [`apps/api/src/api/services/auth_service.py`](../../apps/api/src/api/services/auth_service.py) | **MODIFY** | Đã có sẵn mã hóa mật khẩu, sinh JWT HMAC-SHA256, OTP Redis. Cần bổ sung hàm mã hóa/giải mã khóa cá nhân **BYOK AES-256-GCM**. |
+| **Model CSDL** | [`apps/api/src/api/db/models/user.py`](../../apps/api/src/api/db/models/user.py) | **MODIFY** | Bổ sung 2 cột: `theme_preference` (mặc định `'system'`) và `byok_api_key_encrypted` (TEXT nullable). |
+| **Pydantic Schemas** | [`apps/api/src/api/schemas/auth.py`](../../apps/api/src/api/schemas/auth.py) | **MODIFY** | Bổ sung trường `theme_preference` và `byok_api_key` vào `UserProfileResponse` và `UpdateProfileRequest`. |
 | **Domain Entity** | `packages/core/src/core/domain/entities/user.py` | **KEEP** | Thực thể User thuần Python không phụ thuộc ORM. |
 | **Frontend UI** | `apps/web/src/features/auth/` | **KEEP** | Form Đăng nhập, Đăng ký, Quên/Đặt lại mật khẩu đã kết nối API. |
 | **Frontend Modal** | `apps/web/src/components/profile/UserProfileModal.tsx` | **MODIFY** | Chuẩn hóa Modal 3 Tabs: Tab 1 (Hồ sơ học thuật), Tab 2 (Bảo mật & BYOK API Key), Tab 3 (Giao diện Sáng/Tối). |
@@ -175,7 +175,7 @@ Tất cả API Auth đều tuân thủ chuẩn phong bì phản hồi chuẩn (R
     "expires_in_seconds": 300
   }
   ```
-- **Fallback Môi trường Dev:** Nếu `SMTP_HOST` chưa cấu hình, mã OTP được ghi ra file log [`storage/logs/auth-emails.log`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/storage/logs/auth-emails.log) để lập trình viên copy kiểm thử.
+- **Fallback Môi trường Dev:** Nếu `SMTP_HOST` chưa cấu hình, mã OTP được ghi ra file log [`storage/logs/auth-emails.log`](../../storage/logs/auth-emails.log) để lập trình viên copy kiểm thử.
 
 #### 5. Đặt lại mật khẩu (`POST /api/v1/auth/reset-password`)
 - **Request Body:**
@@ -259,7 +259,20 @@ interface AuthState {
 
 ---
 
-## 7. Ma Trận Kiểm Thử TDD Bắt Buộc (Auth TDD Test Matrix)
+## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
+
+Mọi thay đổi kỹ thuật của phân hệ Xác thực và Hồ sơ phải tuân thủ và tham chiếu từ các tệp sau:
+
+| Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
+| :--- | :--- | :--- |
+| **API Endpoints Pattern** | [`apps/api/src/api/v1/endpoints/auth.py`](../../apps/api/src/api/v1/endpoints/auth.py) | Tham chiếu cách định nghĩa Router, xử lý lỗi `ErrorResponse`, và phân quyền JWT. |
+| **Business Logic Service** | [`apps/api/src/api/services/auth_service.py`](../../apps/api/src/api/services/auth_service.py) | Bổ sung hàm mã hóa/giải mã AES-256-GCM dùng `cryptography.hazmat.primitives.ciphers.aead.AESGCM`. |
+| **Database Model** | [`apps/api/src/api/db/models/user.py`](../../apps/api/src/api/db/models/user.py) | Bổ sung cột `theme_preference` và `byok_api_key_encrypted`. |
+| **Pydantic Schemas** | [`apps/api/src/api/schemas/auth.py`](../../apps/api/src/api/schemas/auth.py) | Cập nhật request/response schema với validation chặt chẽ. |
+
+---
+
+## 8. Ma Trận Kiểm Thử TDD Bắt Buộc (Auth TDD Test Matrix)
 
 ```mermaid
 flowchart TD
@@ -296,10 +309,10 @@ flowchart TD
 
 ---
 
-## 8. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
+## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Lược đồ bảng `users` được cập nhật đầy đủ các trường `theme_preference` và `byok_api_key_encrypted`.
 - [ ] 13 endpoint trong `auth.py` hoạt động ổn định, có rate-limiting qua Redis và xử lý lỗi đồng nhất.
 - [ ] Cơ chế mã hóa khóa cá nhân BYOK sử dụng thuật toán AES-256-GCM an toàn, không bao giờ để lộ khóa thô ra log hoặc response.
 - [ ] Mọi thao tác truy vấn dữ liệu học giả đều được cô lập triệt để theo `user_id`.
-- [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 6 đạt `100% PASS`.
+- [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 8 đạt `100% PASS`.

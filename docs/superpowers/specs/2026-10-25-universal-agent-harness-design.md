@@ -4,8 +4,8 @@
 **Ngày ban hành:** 2026-10-25  
 **Trạng thái:** DỰ THẢO THIẾT KẾ (DESIGN DOCUMENT V1)  
 **Nhánh triển khai:** `refactor/mvp-cleanup-and-directory`  
-**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/temp/.agents))  
-**Cơ sở nghiệp vụ:** Bộ tài liệu [`docs/PRD/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD) và [`docs/specs/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs) (Commit [`5706f11`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar))
+**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](../../../temp/.agents))  
+**Cơ sở nghiệp vụ:** Bộ tài liệu [`docs/PRD/`](../../PRD) và [`docs/specs/`](../../specs) (Commit ``5706f11``)
 
 ---
 
@@ -17,7 +17,7 @@ Khi lập trình dự án phức tạp cùng các Agent AI (như Antigravity CLI
 3. **Thiếu tính xác định khi chạy thử (Non-Deterministic Sandboxing):** Mỗi lần kiểm thử tính năng RAG hoặc GraphRAG, nếu AI phải gọi API OpenAI/Exa thật thì vừa tốn chi phí, vừa chậm, vừa dễ gãy do mạng; nếu để AI tự viết dữ liệu test ngẫu nhiên thì dữ liệu thiếu chuẩn mực học thuật (thiếu Bounding Box, sai schema 4 thực thể).
 
 **Giải pháp:**  
-Học hỏi từ kiến trúc xuất sắc của Langfuse ([`temp/.agents/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/temp/.agents)), VeriScholar xây dựng một **Khung Điều Hướng Tác Nhân Đa Nền Tảng Thuần Dự Án (Repo-Owned Universal Agent Harness)** tinh gọn, hoạt động như một "hệ điều hành quy chuẩn" cho mọi Agent AI tham gia phát triển dự án.
+Học hỏi từ kiến trúc xuất sắc của Langfuse ([`temp/.agents/`](../../../temp/.agents)), VeriScholar xây dựng một **Khung Điều Hướng Tác Nhân Đa Nền Tảng Thuần Dự Án (Repo-Owned Universal Agent Harness)** tinh gọn, hoạt động như một "hệ điều hành quy chuẩn" cho mọi Agent AI tham gia phát triển dự án.
 
 ---
 
@@ -25,8 +25,8 @@ Học hỏi từ kiến trúc xuất sắc của Langfuse ([`temp/.agents/`](fil
 
 ### A. Mục tiêu cốt lõi (Goals)
 1. Dọn sạch 100% các file di sản unstaged/deleted của hệ thống 5-pillar cũ trong working tree để có môi trường sạch sẽ tuyệt đối.
-2. Thiết lập file gốc [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) siêu tinh gọn (< 150 dòng) làm "Hiến pháp tối cao", liên kết symlink với `.agents/AGENTS.md`.
-3. Thiết lập [`ARCHITECTURE_PRINCIPLES.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/ARCHITECTURE_PRINCIPLES.md) ghi nhận 5 bất biến kiến trúc tối thượng của VeriScholar MVP.
+2. Thiết lập file gốc [`AGENTS.md`](../../../AGENTS.md) siêu tinh gọn (< 150 dòng) làm "Hiến pháp tối cao", liên kết symlink với `.agents/AGENTS.md`.
+3. Thiết lập [`ARCHITECTURE_PRINCIPLES.md`](../../../.agents/ARCHITECTURE_PRINCIPLES.md) ghi nhận 5 bất biến kiến trúc tối thượng của VeriScholar MVP.
 4. Xây dựng đúng **4 Skills nghiệp vụ trọng tâm** theo nguyên tắc Tiết lộ Ngữ cảnh Tuần tự (Progressive Disclosure):
    * `verischolar-backend`: FastAPI async, SQLAlchemy 2.0, pgvector SQL RRF, Hexagonal Architecture.
    * `verischolar-frontend`: React 19, Canvas PDF viewer, Bbox highlight layer, KaTeX, unbuffered SSE.
@@ -94,8 +94,8 @@ VeriScholar/
         └── seed.py                        # Seeder nạp 3 bài báo mẫu học thuật offline
 ```
 
-### A. Nội Dung [`AGENTS.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/AGENTS.md) (Hiến Pháp Tối Cao)
-* **Scope:** Nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình (VeriScholar MVP) bám sát 100% [`docs/PRD/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/PRD) và [`docs/specs/`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/specs).
+### A. Nội Dung [`AGENTS.md`](../../../AGENTS.md) (Hiến Pháp Tối Cao)
+* **Scope:** Nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình (VeriScholar MVP) bám sát 100% [`docs/PRD/`](../../PRD) và [`docs/specs/`](../../specs).
 * **Quy tắc làm việc (How To Work):**
   1. Luôn đọc tối thiểu ngữ cảnh cần thiết; tra cứu kỹ thuật qua các skills chuyên biệt trong `.agents/skills/`.
   2. Bắt buộc theo phương pháp TDD: Viết test đỏ trước $\rightarrow$ Code xanh sau $\rightarrow$ Refactor.
@@ -111,7 +111,7 @@ VeriScholar/
   * Viết Unit / Integration Test $\rightarrow$ nạp `verischolar-tdd`.
   * Cập nhật quy tắc / Đổi kiến trúc $\rightarrow$ nạp `agent-maintenance`.
 
-### B. Nội Dung [`ARCHITECTURE_PRINCIPLES.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/.agents/ARCHITECTURE_PRINCIPLES.md) (5 Bất Biến Kiến Trúc)
+### B. Nội Dung [`ARCHITECTURE_PRINCIPLES.md`](../../../.agents/ARCHITECTURE_PRINCIPLES.md) (5 Bất Biến Kiến Trúc)
 1. **Thuần PostgreSQL 16+ với `pgvector` & Redis 7:** Không có cơ sở dữ liệu đồ thị rời (Neo4j) và tuyệt đối không có SQLite fallback.
 2. **Kiến Trúc Lục Giác Độc Lập:** `packages/core` không phụ thuộc bất kỳ framework hay adapter nào.
 3. **Lưu Trữ CAS SHA-256 Với Cam Kết Zero-Retention:** File PDF và figures được lưu theo băm; khi `ref_count <= 0` file vật lý bị xóa ngay lập tức.
