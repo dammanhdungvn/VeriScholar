@@ -37,25 +37,21 @@ class EmailService:
 
     def __init__(self) -> None:
         self.resend_api_key = settings.RESEND_API_KEY or os.getenv("RESEND_API_KEY", "")
-        self.resend_from_email = (
-            settings.RESEND_FROM_EMAIL
-            or os.getenv("RESEND_FROM_EMAIL", "onboarding@resend.dev")
+        self.resend_from_email = settings.RESEND_FROM_EMAIL or os.getenv(
+            "RESEND_FROM_EMAIL", "onboarding@resend.dev"
         )
         self.smtp_host = settings.SMTP_HOST or os.getenv("SMTP_HOST", "")
         self.smtp_port = int(settings.SMTP_PORT or os.getenv("SMTP_PORT", "587"))
         self.smtp_user = settings.SMTP_USER or os.getenv("SMTP_USER", "")
         self.smtp_password = settings.SMTP_PASSWORD or os.getenv("SMTP_PASSWORD", "")
-        self.from_email = (
-            settings.SMTP_FROM_EMAIL
-            or os.getenv("SMTP_FROM_EMAIL", "onboarding@resend.dev")
+        self.from_email = settings.SMTP_FROM_EMAIL or os.getenv(
+            "SMTP_FROM_EMAIL", "onboarding@resend.dev"
         )
-        self.from_name = (
-            settings.SMTP_FROM_NAME
-            or os.getenv("SMTP_FROM_NAME", "VeriScholar Academic Platform")
+        self.from_name = settings.SMTP_FROM_NAME or os.getenv(
+            "SMTP_FROM_NAME", "VeriScholar Academic Platform"
         )
-        self.app_url = (
-            settings.APP_PUBLIC_URL
-            or os.getenv("APP_PUBLIC_URL", "https://verischolar.duckdns.org")
+        self.app_url = settings.APP_PUBLIC_URL or os.getenv(
+            "APP_PUBLIC_URL", "https://verischolar.duckdns.org"
         )
 
         EMAIL_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)

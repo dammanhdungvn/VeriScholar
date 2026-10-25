@@ -287,6 +287,7 @@ class SandboxedLatexCompiler:
 
         # Tier 2: Check for system compiler (pdflatex / tectonic)
         from pathlib import Path
+
         user_local_tectonic = str(Path.home() / ".local/bin/tectonic")
         ci_tectonic = "/home/VeriScholar/.local/bin/tectonic"
         compiler_bin = (

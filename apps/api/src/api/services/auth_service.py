@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 import httpx
 import structlog
 from api.core.config import settings
+from api.core.email_validator import validate_academic_or_trusted_email
 from api.db.models.user import UserModel
 from api.schemas.auth import (
     AuthTokensResponse,
@@ -23,7 +24,6 @@ from api.schemas.auth import (
     UpdateProfileRequest,
 )
 from api.services.email_service import EmailService
-from api.core.email_validator import validate_academic_or_trusted_email
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
