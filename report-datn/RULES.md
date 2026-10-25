@@ -1,7 +1,7 @@
 # BỘ QUY TẮC BẤT BIẾN BIÊN SOẠN BÁO CÁO ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR (RULES.md)
 
 > **Cơ sở pháp lý & Học thuật:** Tuân thủ 100% tài liệu hướng dẫn [`Huong-dan-viet-DATN.md`](./guide/Huong-dan-viet-DATN.md) của Trường Đại học Mỏ - Địa chất (HUMG) và kế thừa chuẩn mực văn phong từ 2 đồ án mẫu xuất sắc ([`Nguyễn Trung Hiếu`](./guide/2121050196_NguyenTrungHieu_BaoCaoDATN.md) và [`Nguyễn Quang Bắc`](./guide/NguyenQuangBac_Báo%20cáo%20DATN_final.md)).
-> **Đề tài:** *Nghiên cứu và Xây dựng Nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình Kết hợp Hybrid RAG Minh chứng Tọa độ, Mạng Tri thức 4-Thực thể (GraphRAG) và Tác nhân Tự sửa lỗi LaTeX (VeriScholar)*
+> **Đề tài chính thức:** *Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn*
 > **Tác giả:** Đàm Mạnh Dũng — Ngành Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất
 > **Quy chuẩn kỹ thuật:** Mọi AI Agent hoặc tác giả trước khi chỉnh sửa/viết nội dung vào thư mục `report-datn/` bắt buộc phải đọc và tuân thủ tuyệt đối các điều luật trong văn bản này.
 

@@ -1,7 +1,7 @@
 # Thiết Kế Kiến Trúc Báo Cáo Đồ Án Tốt Nghiệp LaTeX & Quy Tắc Viết Báo Cáo VeriScholar
 
 > **Tài liệu:** Bản thiết kế kiến trúc hệ thống tài liệu LaTeX và bộ quy tắc biên soạn đồ án tốt nghiệp  
-> **Đề tài:** *Nghiên cứu và Xây dựng Nền tảng Trợ lý AI Nghiên cứu Khoa học Toàn trình Kết hợp Hybrid RAG Minh chứng Tọa độ, Mạng Tri thức 4-Thực thể (GraphRAG) và Tác nhân Tự sửa lỗi LaTeX (VeriScholar)*  
+> **Đề tài chính thức:** *Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn*  
 > **Tác giả:** Đàm Mạnh Dũng — Ngành Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất (HUMG)  
 > **Trạng thái:** Chờ phê duyệt (Pending Approval)  
 > **Đường dẫn lưu trữ:** `docs/superpowers/specs/2026-10-26-thesis-latex-architecture-design.md`  

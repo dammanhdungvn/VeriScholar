@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Khởi tạo toàn bộ bộ quy tắc bất biến `report-datn/RULES.md`, khung mã nguồn LaTeX mô-đun hóa hỗ trợ 100% XeLaTeX tiếng Việt, cấu hình phím tắt VSCode (`Ctrl+Alt+B`), và bài kiểm thử tự động toàn vẹn tài liệu cho đồ án tốt nghiệp VeriScholar.
+**Goal:** Khởi tạo toàn bộ bộ quy tắc bất biến `report-datn/RULES.md`, khung mã nguồn LaTeX mô-đun hóa hỗ trợ 100% XeLaTeX tiếng Việt, cấu hình phím tắt VSCode (`Ctrl+Alt+B`), và bài kiểm thử tự động toàn vẹn tài liệu cho đồ án tốt nghiệp: "Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn".
 
 **Architecture:** Sử dụng kiến trúc đa tệp mô-đun hóa tách biệt rõ ràng giữa tệp điều phối `main.tex`, cấu hình trình bày `config/preamble.tex`, các trang sơ bộ `frontmatter/`, khung sườn 4 chương học thuật `chapters/`, sơ đồ `figures/` và tài liệu tham khảo theo Phụ lục 03 HUMG. Toàn bộ quy chuẩn và chiến lược chắt lọc tài liệu được hợp nhất vào một tệp kim chỉ nam duy nhất `report-datn/RULES.md`.
 
