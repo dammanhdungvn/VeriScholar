@@ -270,7 +270,7 @@ export function ScholarSettingsView({
         ...(effectiveUser ?? { id: "usr-local", email: "", full_name: fullName }),
         ...updatedPayload,
       });
-      setByokSuccess("Khóa cá nhân đã được mã hóa AES-256-GCM và kích hoạt an toàn.");
+      setByokSuccess("Khóa cá nhân đã được lưu trữ an toàn.");
     } catch (err: unknown) {
       setByokError(
         err instanceof Error ? err.message : "Không thể xác thực khóa BYOK. Vui lòng kiểm tra lại."
@@ -306,7 +306,7 @@ export function ScholarSettingsView({
         ...(effectiveUser ?? { id: "usr-local", email: "", full_name: fullName }),
         ...updatedPayload,
       });
-      setByokSuccess("Đã gỡ bỏ khóa BYOK cá nhân khỏi Két sắt mã hóa.");
+      setByokSuccess("Đã gỡ bỏ khóa API cá nhân.");
     } catch (err: unknown) {
       setByokError(err instanceof Error ? err.message : "Không thể xóa khóa BYOK.");
     } finally {
@@ -394,10 +394,10 @@ export function ScholarSettingsView({
           </div>
           <div>
             <h1 className="font-serif font-bold text-base sm:text-lg text-[#f4f1ea] tracking-tight">
-              Cài đặt Tài khoản &amp; Két sắt Học giả
+              Cài đặt tài khoản
             </h1>
             <p className="text-3xs text-[#a09a8e] font-sans">
-              Định danh học thuật DOI/ORCID &amp; Quản lý Khóa AI cá nhân (BYOK AES-256-GCM)
+              Thông tin cá nhân &amp; Khóa AI
             </p>
           </div>
         </div>
@@ -457,7 +457,7 @@ export function ScholarSettingsView({
               <div className="flex items-center gap-2 pt-0.5">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-3xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-sans">
                   <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                  Học giả đã xác thực (ISO 32000-1 / DOI Ready)
+                  Đã xác thực
                 </span>
               </div>
             </div>
@@ -695,15 +695,15 @@ export function ScholarSettingsView({
                   </div>
                   <div>
                     <h3 className="font-serif font-bold text-sm text-[#f4f1ea]">
-                      Két sắt Khóa AI Cá nhân (BYOK AES-256-GCM Vault)
+                      Khóa API cá nhân
                     </h3>
                     <p className="text-3xs text-[#a09a8e]">
-                      Mã hóa bảo vệ cấp ngân hàng với khóa đối xứng riêng biệt
+                      Sử dụng khóa riêng để kết nối trực tiếp với các mô hình AI
                     </p>
                   </div>
                 </div>
                 <span className="text-3xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                  AES-256-GCM
+                  Được bảo vệ
                 </span>
               </div>
 
@@ -728,7 +728,7 @@ export function ScholarSettingsView({
                       <CheckCircle2 className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-2xs text-[#a09a8e]">Khóa API hiện tại trong Két sắt:</p>
+                      <p className="text-2xs text-[#a09a8e]">Khóa đang hoạt động:</p>
                       <p
                         data-testid="byok-masked-badge"
                         className="font-mono text-xs font-semibold text-[#f4f1ea]"
@@ -795,7 +795,7 @@ export function ScholarSettingsView({
                   </div>
                   <div className="flex items-center justify-between pt-1">
                     <p className="text-3xs text-[#a09a8e]">
-                      Nguyên tắc Zero-Retention: Khóa chỉ lưu trữ dạng mã hóa và giải mã tạm thời trên RAM.
+                      Khóa của bạn được mã hóa an toàn và chỉ dùng khi gửi yêu cầu AI.
                     </p>
                     <Button
                       type="submit"
@@ -929,8 +929,8 @@ export function ScholarSettingsView({
                 <div className="flex items-center gap-2.5">
                   <Laptop className="w-4 h-4 text-[#a09a8e]" />
                   <div>
-                    <h3 className="font-serif font-bold text-xs text-[#f4f1ea]">Phiên làm việc hiện tại (Active Session)</h3>
-                    <p className="text-3xs text-[#a09a8e]">Trình duyệt web • Thời hạn 30 ngày (Remember Me token)</p>
+                    <h3 className="font-serif font-bold text-xs text-[#f4f1ea]">Thiết bị này</h3>
+                    <p className="text-3xs text-[#a09a8e]">Trình duyệt web hiện tại</p>
                   </div>
                 </div>
                 <span className="text-3xs px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">

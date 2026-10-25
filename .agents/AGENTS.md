@@ -18,6 +18,7 @@ Toàn bộ mã nguồn phải bám sát 100% tài liệu nghiệp vụ tại [`d
    $$\mathbf{Code\ \&\ Passing\ Tests} > \mathbf{Technical\ Specs\ (docs/specs/)} > \mathbf{Agent\ Skills\ (.agents/skills/)}$$
 4. **Co-Location Commit Rule:** Sửa endpoint, schema hoặc loại bỏ tính năng $\rightarrow$ cập nhật hoặc xóa skill tương ứng trong cùng commit.
 5. **Quy Chuẩn Liên Kết Markdown (Relative Markdown Links Only):** Tuyệt đối cấm sử dụng URL tuyệt đối máy chủ (`file://...`) trong toàn bộ tài liệu Markdown (`docs/`, `.agents/`, `README.md`). Mọi liên kết tham chiếu tài liệu nội bộ phải dùng đường dẫn tương đối (ví dụ: `../PRD/...`, `./...`, `../../apps/...`).
+6. **Quy Chuẩn Ngôn Từ Giao Diện (Product-Grade Minimalist Copy):** Tuyệt đối cấm đưa tên thuật toán (AES-256, HMAC, SHA-256), chuẩn kỹ thuật (ISO 32000-1, RFC), hay cơ chế nội bộ (RAM Zero-Retention, Token TTL, UUID) lên giao diện người dùng (UI/UX). Ngôn từ hiển thị phải tối giản, tinh tế, hướng đến người dùng theo chuẩn các sản phẩm quốc tế hàng đầu (Apple, Stripe, Linear, Claude).
 
 ---
 

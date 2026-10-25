@@ -69,3 +69,17 @@ Tài liệu này là cẩm nang bắt buộc khi phát triển giao diện ngư�
 ## 4. Hiển Thị Công Thức Toán Học (KaTeX)
 * Mọi công thức inline đặt trong `$ ... $`, công thức khối (display math) đặt trong `$$ ... $$`.
 * Sử dụng `AcademicMarkdownRenderer` tích hợp `rehype-katex` và `remark-math`.
+
+---
+
+## 5. Quy Chuẩn Ngôn Từ Giao Diện (Product-Grade Minimalist Copy)
+* **Tuyệt đối cấm "khoe công nghệ kỹ thuật" (Engineering-centered UI):** Người dùng không quan tâm đến tên chuẩn kỹ thuật (ISO 32000-1, RFC), thuật toán mã hóa (AES-256-GCM, HMAC), hoặc cơ chế nội bộ (RAM Zero-Retention, Token TTL, UUID, Trace ID). Bảo mật là điều đương nhiên sản phẩm phải đảm bảo.
+* **Nguyên tắc copywriting chuẩn các sản phẩm lớn (Apple, Stripe, Linear, Claude):**
+  * Gãy gọn, tối giản, tôn trọng sự tập trung của học giả.
+  * Mỗi câu chú thích không quá 10–12 từ, tập trung vào lợi ích (benefit-driven) thay vì kể công năng kỹ thuật (feature-bragging).
+  * **Bảng chuyển đổi chuẩn mực:**
+    * ❌ `Học giả đã xác thực (ISO 32000-1 / DOI Ready)` $\rightarrow$ ✅ `Đã xác thực` (icon tích xanh nhỏ).
+    * ❌ `Két sắt Khóa AI Cá nhân (BYOK AES-256-GCM Vault)` $\rightarrow$ ✅ `Khóa API cá nhân`.
+    * ❌ `Nguyên tắc Zero-Retention: Khóa chỉ lưu trữ dạng mã hóa và giải mã tạm thời trên RAM.` $\rightarrow$ ✅ `Khóa của bạn được mã hóa và chỉ dùng khi gửi yêu cầu.`
+    * ❌ `Phiên làm việc hiện tại (Active Session) • Thời hạn 30 ngày (Remember Me token)` $\rightarrow$ ✅ `Thiết bị này • Đang hoạt động`.
+    * ❌ Banner `Quản lý Khóa AI cá nhân (BYOK AES-256-GCM)...` $\rightarrow$ ✅ Loại bỏ hoàn toàn.
