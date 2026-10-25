@@ -1,9 +1,9 @@
-# MODULE 07: QUẢN LÝ MÔI TRƯỜNG (.ENV), LANGFUSE TRACING & HỆ THỐNG MONITORING 3 TẦNG
-# (FILE 07: ENVIRONMENTS, LANGFUSE OBSERVABILITY, ERROR ALERTING & SYSTEM MONITORING)
+# PHÂN HỆ GIÁM SÁT, VẬN HÀNH & ĐO LƯỜNG (MONITORING & OBSERVABILITY)
+# (SYSTEM MONITORING, TELEMETRY, SENTRY ALERTING & LANGFUSE OBSERVABILITY)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Thiết lập hệ thống quản lý môi trường và giám sát vận hành (Monitoring & Error Tracking) gọn nhẹ, thực chiến cho dự án cá nhân trên cả 2 môi trường **`development`** và **`production`**:
 * Bất kỳ câu query hay thao tác nào bị lỗi đều có **1 mã `trace_id` duy nhất** hiển thị ngay trên màn hình để tra cứu trong 3 giây.
 * Theo dõi chi tiết từng bước thực thi AI trên **Langfuse** (`verischolar-dev` & `verischolar-prod`).

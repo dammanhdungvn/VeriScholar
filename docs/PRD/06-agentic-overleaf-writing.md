@@ -1,9 +1,9 @@
-# MODULE 06: KHÔNG GIAN SOẠN THẢO AGENTIC OVERLEAF (LANGGRAPH + E2B SANDBOX)
-# (FILE 06: AGENTIC OVERLEAF WRITING WORKSPACE, DRAFTS CRUD, LANGGRAPH & E2B)
+# PHÂN HỆ KHÔNG GIAN SOẠN THẢO AGENTIC OVERLEAF, LANGGRAPH AGENT & E2B SANDBOX
+# (AGENTIC OVERLEAF WRITING WORKSPACE, DRAFTS CRUD, LANGGRAPH & E2B)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Biến quá trình viết báo cáo đồ án / bài báo khoa học bằng LaTeX trở nên tự động và liền mạch: người dùng chuyển thẳng từ phiên đọc sang không gian soạn thảo 3 cột kiểu Overleaf; tại đây **LangGraph Agent** có thể tự động viết và chỉnh sửa trực tiếp file `main.tex` / `references.bib`, tự động kéo kiến thức từ Kho GraphRAG (Module 05), và tự động đóng gói kèm thư mục hình ảnh `figures/` đẩy lên **E2B Sandbox** để biên dịch ra PDF hoàn chỉnh (tự đọc log vá lỗi tối đa 3 lần nếu sai cú pháp).
 
 ---

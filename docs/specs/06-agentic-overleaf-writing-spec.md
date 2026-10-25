@@ -276,8 +276,11 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
   - `main.tex`: Mã nguồn LaTeX chính.
   - `references.bib`: Danh mục trích dẫn BibTeX hoàn chỉnh.
   - `figures/`: Thư mục chứa toàn bộ hình ảnh đính kèm của bản thảo.
-  - `preview.pdf`: File PDF chất lượng cao đã biên dịch thành công.
-  - `README.txt`: Hướng dẫn tái lập kết quả biên dịch.
+  - `preview.pdf`: File PDF chất lượng cao đã biên dịch thành công (nếu có).
+  - `README.txt`: Hướng dẫn tái lập kết quả biên dịch và danh sách các gói phụ thuộc.
+- **Cơ chế Fallback Linh Hoạt (Không Chặn Người Dùng):**
+  - Hệ thống tự động kích hoạt 1 lượt biên dịch E2B trước khi nén zip.
+  - Nếu mã nguồn có lỗi cú pháp và chưa thể tạo ra file PDF, hệ thống **tuyệt đối không chặn hoặc báo lỗi HTTP**, mà vẫn xuất trọn vẹn gói `.zip` chứa toàn bộ `main.tex`, `references.bib`, và thư mục `figures/`. File `README.txt` sẽ ghi rõ: *"Bản thảo chưa được biên dịch thành công lần cuối, vui lòng chạy tectonic hoặc pdflatex theo hướng dẫn bên dưới để kiểm tra lỗi cú pháp."* Giúp học giả luôn nắm toàn quyền sở hữu và tải về mã nguồn của mình bất cứ lúc nào.
 
 ---
 

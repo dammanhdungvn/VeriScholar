@@ -1,9 +1,9 @@
-# MODULE 04: BẢNG QUẢN LÝ NGỮ CẢNH 3 CỘT (EXA 2 TẦNG) & LỘ TRÌNH HỌC TUẦN TỰ (A → B → C → D)
-# (FILE 04: 3-COLUMN CONTEXT TABLE, 2-TIER EXA INGESTION & SOCRATIC ROADMAP)
+# PHÂN HỆ BẢNG NGỮ CẢNH 3 CỘT & LỘ TRÌNH HỌC TUẦN TỰ (A → B → C → D)
+# (3-COLUMN CONTEXT TABLE, 2-TIER INGESTION & SOCRATIC ROADMAP)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Giải quyết hai nỗi đau lớn nhất khi đọc hiểu chuyên sâu một bài báo khoa học:
 1. **Chống học nhảy cóc (A $\rightarrow$ D):** Khi người đọc hỏi một kiến thức nâng cao (D) mà bài báo hiện tại chỉ nhắc lướt qua vì kế thừa từ kiến thức nền tảng (B, C) trong các bài báo tham khảo khác, AI tự động phát hiện và gợi ý lộ trình học tuần tự từ gốc đến ngọn.
 2. **Mở rộng ngữ cảnh 1-Click không đứt mạch đọc:** Bóc tách mục References cuối bài theo mã định danh chuẩn (DOI / arXiv ID) kết hợp **Exa AI**, hiển thị thành **Bảng 3 Cột** để người dùng bấm nạp thêm bài báo vào phiên chat trong `< 500ms`.

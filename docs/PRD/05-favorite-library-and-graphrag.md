@@ -1,9 +1,9 @@
-# MODULE 05: KHO PAPER YÊU THÍCH (FOLDERS & STAR CRUD) & HỆ THỐNG GRAPHRAG 4 THỰC THỂ
-# (FILE 05: FAVORITE PAPERS LIBRARY CRUD & POSTGRESQL GRAPHRAG)
+# PHÂN HỆ KHO PAPER YÊU THÍCH & HỆ THỐNG GRAPHRAG 4 THỰC THỂ
+# (FAVORITE PAPERS LIBRARY CRUD & POSTGRESQL GRAPHRAG)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Giúp người dùng lưu trữ các bài báo tâm đắc vào **Kho Paper Yêu Thích** được phân loại theo cây thư mục đề tài cá nhân, đồng thời tự động bóc tách mỗi bài báo được đánh dấu yêu thích (`Star`) thành **Đồ thị Tri thức 4 Thực thể cố định trên PostgreSQL + `pgvector`**. Nhờ đó, khi kho tài liệu lên tới hàng chục, hàng trăm bài, người dùng (hoặc Agent viết bài ở Module 06) có thể tìm lại chính xác bài báo nào dùng phương pháp gì, chạy trên tập dữ liệu nào và đạt kết quả bao nhiêu chỉ trong tích tắc.
 
 ---

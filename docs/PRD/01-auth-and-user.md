@@ -1,9 +1,9 @@
-# MODULE 01: XÁC THỰC, QUẢN LÝ TÀI KHOẢN & CÔ LẬP DỮ LIỆU ĐA NGƯỜI DÙNG
-# (FILE 01: AUTHENTICATION & USER MANAGEMENT)
+# PHÂN HỆ XÁC THỰC, QUẢN LÝ TÀI KHOẢN & BẢO MẬT KHÓA RIÊNG HỌC GIẢ
+# (AUTHENTICATION, USER PROFILE & BYOK SECURITY)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Giữ nguyên và vận hành ổn định hệ thống xác thực người dùng (Authentication) và cô lập dữ liệu đa người dùng (Multi-User Isolation) hiện có của dự án, đảm bảo mỗi sinh viên/nhà nghiên cứu có không gian tài liệu, phiên đọc, thư mục yêu thích và bản thảo hoàn toàn riêng tư.
 
 ---

@@ -1,9 +1,9 @@
-# MODULE 02: KHÁM PHÁ ĐỀ TÀI (DISCOVERY) & QUẢN LÝ TÀI LIỆU PDF (DOCUMENTS CRUD)
-# (FILE 02: TOPIC DISCOVERY & DOCUMENTS CRUD)
+# PHÂN HỆ KHÁM PHÁ ĐỀ TÀI & NẠP TÀI LIỆU 2 TẦNG
+# (SCHOLARLY DISCOVERY, 2-TIER INGESTION & DOCUMENTS CRUD)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Giúp người dùng bắt đầu nghiên cứu ngay cả khi chưa có sẵn file PDF trong máy (thông qua tìm kiếm chủ đề bằng Exa AI / Semantic Scholar / arXiv), đồng thời cung cấp đầy đủ các thao tác quản lý vòng đời file PDF (`Upload`, `Xem danh sách`, `Xem chi tiết/mục lục`, `Xóa`).
 
 ---

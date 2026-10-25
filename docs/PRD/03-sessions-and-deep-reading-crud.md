@@ -1,9 +1,9 @@
-# MODULE 03: QUẢN LÝ PHIÊN ĐỌC (SESSION CRUD), ĐỌC SÂU PDF & HỎI ĐÁP RAG BOUNDING BOX
-# (FILE 03: SESSIONS CRUD, PDF READER, RAG CHAT & NOTES CRUD)
+# PHÂN HỆ PHIÊN ĐỌC SÂU, QUẢN LÝ ĐA TAB & HYBRID RAG CHAT CÓ BOUNDING BOX
+# (DEEP READING SESSIONS, MULTI-TAB PDF, RAG GROUNDING & SCHOLAR NOTES)
 
 ---
 
-## 1. Mục Tiêu Module
+## 1. Mục Tiêu Phân Hệ
 Cung cấp không gian làm việc trung tâm gồm **Khung đọc PDF gốc bên trái** và **Khung Chat AI Sư phạm bên phải**, đi kèm đầy đủ các thao tác quản lý Phiên đọc (`Session CRUD`), quản lý các Tab bài báo trong phiên (`tối đa 5 bài`), quản lý Lịch sử tin nhắn (`Chat CRUD`) và Sổ tay ghi chú (`Notes CRUD`).
 
 > **Lưu ý phạm vi MVP:** Khung đọc bên trái chỉ hiển thị **Bản gốc PDF (`PdfCanvasViewer.tsx`)** (không làm chế độ hiển thị toàn văn PDF/HTML Tiếng Việt trong MVP). Mọi nhu cầu dịch đoạn khó hoặc giải thích khái niệm bằng Tiếng Việt được thực hiện trực tiếp qua khung Chat AI bên phải.
