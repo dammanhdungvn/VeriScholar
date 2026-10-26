@@ -156,6 +156,7 @@ Khi xây dựng các sơ đồ phân tích và thiết kế hệ thống (đặc
 * Mọi từ viết tắt xuất hiện trong bài phải được tổng hợp tại trang *Danh mục ký hiệu và chữ viết tắt* theo thứ tự bảng chữ cái ABC.
 
 ### 4.5. Quy Chuẩn Tài Liệu Tham Khảo (Bibliography)
+* **Giới hạn số lượng tài liệu tham khảo ($\le 20$):** Toàn bộ danh mục tài liệu tham khảo của báo cáo đồ án tốt nghiệp bắt buộc phải có số lượng **nhỏ hơn hoặc bằng 20 tài liệu** ($N_{\text{refs}} \le 20$). Ưu tiên các ấn phẩm nền tảng, hội nghị/tạp chí uy tín hàng đầu và quy chế học thuật chính thống; tuyệt đối không đưa vào các trích dẫn mang tính lấp chỗ trống.
 * Phân tách rõ ràng thành 2 nhóm: **Tài liệu tiếng Việt** trước, **Tài liệu tiếng Anh** sau.
 * Xếp thứ tự ABC:
   * Tác giả nước ngoài: Xếp ABC theo Họ.

@@ -68,3 +68,28 @@ def test_thesis_rules_academic_architecture_paradigm():
     assert (
         "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế" in rules_content
     ), "RULES.md must contain Section 3.7 on Academic Paper Architecture Paradigm"
+
+
+def test_thesis_reference_count_within_cap():
+    """Kiểm tra Giới hạn số lượng tài liệu tham khảo (Reference Cap Invariant):
+    Danh mục tài liệu tham khảo của báo cáo đồ án bắt buộc phải <= 20 tài liệu.
+    """
+    import re
+
+    ref_file = Path("report-datn/chapters/tai_lieu_tham_khao.tex")
+    assert ref_file.exists(), "tai_lieu_tham_khao.tex must exist"
+
+    content = ref_file.read_text(encoding="utf-8")
+    bibitems = re.findall(r"\\bibitem\{([^}]+)\}", content)
+
+    assert 0 < len(bibitems) <= 20, (
+        f"Số lượng tài liệu tham khảo vi phạm quy chuẩn ({len(bibitems)} tài liệu). "
+        f"Bắt buộc: 0 < N_refs <= 20."
+    )
+
+    # Kiểm tra quy tắc đã được thể chế hóa trong RULES.md và AGENTS.md
+    rules_content = Path("report-datn/RULES.md").read_text(encoding="utf-8")
+    agents_content = Path(".agents/AGENTS.md").read_text(encoding="utf-8")
+
+    assert "20" in rules_content and "tài liệu tham khảo" in rules_content
+    assert "20" in agents_content and "tài liệu tham khảo" in agents_content
