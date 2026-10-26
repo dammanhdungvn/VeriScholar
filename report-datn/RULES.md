@@ -46,10 +46,25 @@ Mọi tệp nguồn phải đặt đúng vị trí trách nhiệm:
   * Lề trái (Left - gáy sách): **3.5 cm** (chừa khoảng đóng gáy lò xo/bìa cứng)
   * Lề phải (Right): **2.5 cm**
 
-### 2.2. Phông Chữ & Dãn Dòng
-* **Phông chữ:** `Liberation Serif` (tương đương chuẩn Microsoft Times New Roman).
-* **Cỡ chữ (Font size):** Đúng cỡ **13pt** (`\usepackage[fontsize=13pt]{scrextend}`). Mật độ chữ bình thường, không nén hay kéo dãn.
+### 2.2. Phông Chữ, Dãn Dòng & Ma Trận Phân Cấp Cỡ Chữ (Font Size Matrix)
+* **Phông chữ:** `Liberation Serif` (tương đương chuẩn Microsoft Times New Roman bản địa Unicode).
 * **Dãn dòng (Line spacing):** Đặt ở chế độ **1.5 lines** (`\onehalfspacing` qua gói `setspace`).
+* **Thụt lề đoạn văn (First-line Indent):** Đúng chuẩn **1.0 cm** (`\setlength{\parindent}{1.0cm}`).
+
+#### Bảng Quy Chuẩn Phân Cấp Cỡ Chữ Báo Cáo Đồ Án Tốt Nghiệp:
+
+| Cấp bậc | Thành phần trong đồ án | Cỡ chữ (Size) | Định dạng (Style) | Căn lề | Khoảng cách (Spacing) | Cấu hình kỹ thuật |
+| :--- | :--- | :---: | :--- | :---: | :--- | :--- |
+| **Bìa chính / Bìa phụ** | Tên trường, Tác giả, Tên đề tài | **16pt** | In hoa, Đậm | Giữa | Theo mẫu phụ lục | `\fontsize{16}{20}\selectfont` |
+| | Nhãn "ĐỒ ÁN TỐT NGHIỆP" | **32pt – 40pt** | In hoa, Đậm | Giữa | Theo mẫu phụ lục | `\fontsize{28}{34}\selectfont` đến `40pt` |
+| **Tiêu đề Chương** | `CHƯƠNG 1: TÊN CHƯƠNG`, `MỤC LỤC`... | **16pt** | In hoa, Đậm | Giữa | Before 0pt, After 18pt | `\titleformat{\chapter}[block]` |
+| **Mục cấp 1** | `1.1`, `2.1`, `3.1`... | **14pt** | Đậm | Trái | Before 12pt, After 6pt | `\titleformat{\section}` |
+| **Tiểu mục cấp 2** | `1.1.1`, `2.1.1`... | **13pt** | Đậm | Trái | Before 9pt, After 4pt | `\titleformat{\subsection}` |
+| **Tiểu mục cấp 3** | `1.1.1.1`, `2.1.1.1`... | **13pt** | Đậm nghiêng | Trái | Before 6pt, After 3pt | `\titleformat{\subsubsection}` |
+| **Thân bài (Body text)** | Đoạn văn nội dung toàn bài | **13pt** | Thường, dãn dòng 1.5 | Đều 2 bên | Thụt lề đầu dòng 1.0cm | `\usepackage[fontsize=13pt]{scrextend}` |
+| **Tiêu đề Bảng / Hình** | `Bảng 3-1:`, `Hình 3-1:` | **12pt** | Nhãn Đậm, Tên Nghiêng | Giữa | Bảng: trên 6pt; Hình: dưới 6pt | `\captionsetup{font=size12}` |
+| **Header & Footer** | Tên đồ án / Họ tên SV, Số trang | **10pt** | Header Đậm, Footer Nghiêng | Trái / Phải | Cách mép giấy 1.5cm – 2.0cm | `\fontsize{10}{12}\selectfont` |
+| **Chú thích (Footnote)** | Giải thích từ ngữ chân trang | **10pt** | Thường | Đều 2 bên | Dãn dòng đơn | `\fontsize{10}{13}\selectfont` |
 
 ### 2.3. Quy Chuẩn Đánh Số Trang & Tiêu Đề Đầu/Chân Trang (Header & Footer)
 * **Phần mở đầu (Frontmatter - Đánh số La Mã thường `i, ii...`):** Dành riêng cho `MỤC LỤC` (bắt đầu từ trang `i`), `DANH MỤC HÌNH ẢNH`, `DANH MỤC BẢNG BIỂU`, `DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT`.

@@ -18,6 +18,13 @@
 \usepackage{setspace}
 \onehalfspacing
 
+% Thụt lề đầu dòng đoạn văn 1.0cm và khoảng cách đoạn văn chuẩn học thuật
+\setlength{\parindent}{1.0cm}
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
+
+% Chú thích chân trang (Footnote) đúng cỡ 10pt
+\renewcommand{\footnotesize}{\fontsize{10}{13}\selectfont}
+
 % 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa
 \usepackage{fontspec}
 \setmainfont{Liberation Serif}[
@@ -47,10 +54,12 @@
 \usepackage{array}
 \usepackage{enumitem}
 
-% 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI)
+% 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI, Cỡ chữ 12pt)
 \usepackage{caption}
+\DeclareCaptionFont{size12}{\fontsize{12}{15}\selectfont}
 \captionsetup[table]{
     position=top,
+    font=size12,
     labelfont=bf,
     textfont=it,
     skip=6pt,
@@ -58,6 +67,7 @@
 }
 \captionsetup[figure]{
     position=bottom,
+    font=size12,
     labelfont=bf,
     textfont=it,
     skip=6pt,
@@ -173,11 +183,38 @@
 \setcounter{secnumdepth}{4}
 \setcounter{tocdepth}{3}
 
-% Định dạng tiêu đề chương không bị cách khoảng quá xa
-\titleformat{\chapter}[display]
-  {\normalfont\bfseries\centering}
-  {\MakeUppercase{\chaptertitlename}\ \thechapter}{10pt}{\Large\MakeUppercase}
-\titlespacing*{\chapter}{0pt}{-10pt}{20pt}
+% Định dạng tiêu đề chương chuẩn 16pt in hoa đậm căn giữa
+% Dạng block: CHƯƠNG X: TÊN CHƯƠNG (chương có số) hoặc TÊN CHƯƠNG (chương không số)
+\titleformat{\chapter}[block]
+  {\fontsize{16}{20}\selectfont\bfseries\centering}
+  {\MakeUppercase{\chaptertitlename}\ \thechapter:\ }
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{18pt}
+
+% Mục cấp 1 (1.1, 2.1...): 14pt Đậm, căn trái
+\titleformat{\section}
+  {\fontsize{14}{18}\selectfont\bfseries}
+  {\thesection}{0.75em}{}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+
+% Tiểu mục cấp 2 (1.1.1, 2.1.1...): 13pt Đậm, căn trái
+\titleformat{\subsection}
+  {\fontsize{13}{17}\selectfont\bfseries}
+  {\thesubsection}{0.75em}{}
+\titlespacing*{\subsection}{0pt}{9pt}{4pt}
+
+% Tiểu mục cấp 3 (1.1.1.1, 2.1.1.1...): 13pt Đậm nghiêng, căn trái
+\titleformat{\subsubsection}
+  {\fontsize{13}{17}\selectfont\bfseries\itshape}
+  {\thesubsubsection}{0.75em}{}
+\titlespacing*{\subsubsection}{0pt}{6pt}{3pt}
+
+% Đoạn văn có tiêu đề (\paragraph): 13pt Đậm inline
+\titleformat{\paragraph}[runin]
+  {\fontsize{13}{17}\selectfont\bfseries}
+  {\theparagraph}{0.5em}{}[:]
+\titlespacing*{\paragraph}{0pt}{4pt}{0.75em}
 
 % 8. Liên kết siêu văn bản PDF học thuật
 \usepackage{hyperref}
