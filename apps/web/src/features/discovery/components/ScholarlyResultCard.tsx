@@ -1,6 +1,70 @@
 import { useState } from "react";
-import { BookOpen, FileText, ExternalLink, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
+import {
+  BookOpen,
+  FileText,
+  ExternalLink,
+  ChevronDown,
+  ChevronUp,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import type { ScholarlyPaper } from "../api/discoveryApi";
+
+export function formatScholarlyAuthors(authors?: string[]): string {
+  if (!authors || authors.length === 0) {
+    return "Chưa rõ tác giả";
+  }
+  if (authors.length <= 2) {
+    return authors.join(", ");
+  }
+  return `${authors[0]}, ${authors[1]} và cộng sự`;
+}
+
+export function sanitizeAcademicTitle(title: string): string {
+  if (!title) return "";
+  let clean = title;
+
+  // Replace common LaTeX math symbols and arrows
+  clean = clean.replace(/\\to\b|\\rightarrow\b/g, " -> ");
+  clean = clean.replace(/\\leftarrow\b/g, " <- ");
+  clean = clean.replace(/\\leftrightarrow\b/g, " <-> ");
+  clean = clean.replace(/\\pm\b/g, " ± ");
+  clean = clean.replace(/\\times\b/g, " × ");
+  clean = clean.replace(/\\cdot\b/g, " · ");
+  clean = clean.replace(/\\leq\b/g, " <= ");
+  clean = clean.replace(/\\geq\b/g, " >= ");
+  clean = clean.replace(/\\neq\b/g, " != ");
+  clean = clean.replace(/\\approx\b/g, " ≈ ");
+  clean = clean.replace(/\\infty\b/g, " ∞ ");
+
+  // Greek letters
+  clean = clean.replace(/\\mu\b/g, "mu");
+  clean = clean.replace(/\\alpha\b/g, "alpha");
+  clean = clean.replace(/\\beta\b/g, "beta");
+  clean = clean.replace(/\\gamma\b/g, "gamma");
+  clean = clean.replace(/\\theta\b/g, "theta");
+  clean = clean.replace(/\\lambda\b/g, "lambda");
+  clean = clean.replace(/\\pi\b/g, "pi");
+  clean = clean.replace(/\\sigma\b/g, "sigma");
+
+  // LaTeX text formatting commands: \text{abc}, \mathbf{abc}, etc.
+  clean = clean.replace(/\\(?:text|mathbf|mathit|mathrm|mathcal|mathbb)\{([^}]*)\}/g, "$1");
+
+  // Remove remaining curly braces
+  clean = clean.replace(/[{}]/g, "");
+
+  // Remove stray backslashes before words
+  clean = clean.replace(/\\([a-zA-Z]+)/g, "$1");
+  clean = clean.replace(/\\/g, "");
+
+  // Remove all $ delimiters
+  clean = clean.replace(/\$/g, "");
+
+  // Collapse whitespace
+  clean = clean.replace(/\s+/g, " ").trim();
+
+  return clean;
+}
 
 interface ScholarlyResultCardProps {
   paper: ScholarlyPaper;
@@ -19,19 +83,28 @@ export function ScholarlyResultCard({
   return (
     <div className="p-5 rounded-xl border border-hairline bg-white dark:bg-[#1c1b18] hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 shadow-xs flex flex-col justify-between gap-4">
       <div className="space-y-2">
-        {/* Header row: Access badge & Year */}
-        <div className="flex items-center justify-between gap-2">
-          {isOpenAccess ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              <span>Có sẵn PDF Open Access</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/20">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              <span>Chỉ có Tóm tắt (Paywall)</span>
-            </span>
-          )}
+        {/* Header row: Access badge, Peer-Reviewed tag & Year */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {isOpenAccess ? (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                <span>Open Access PDF</span>
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-zinc-500/10 text-zinc-700 dark:text-zinc-400 border border-zinc-500/20">
+                <span className="w-1.5 h-1.5 rounded-full bg-zinc-400" />
+                <span>Tóm tắt</span>
+              </span>
+            )}
+
+            {paper.is_peer_reviewed && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+                <CheckCircle2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
+                <span>Đã bình duyệt</span>
+              </span>
+            )}
+          </div>
 
           {paper.publication_year && (
             <span className="text-[11px] font-mono text-muted dark:text-zinc-400">
@@ -40,14 +113,14 @@ export function ScholarlyResultCard({
           )}
         </div>
 
-        {/* Paper Title */}
+        {/* Paper Title (Sanitized of raw LaTeX) */}
         <h3 className="text-base font-semibold font-anthropic-serif text-ink dark:text-zinc-100 leading-snug">
-          {paper.title}
+          {sanitizeAcademicTitle(paper.title)}
         </h3>
 
-        {/* Authors and Venue */}
+        {/* Authors (Clamped to 2 authors + 'và cộng sự') and Venue */}
         <div className="text-xs text-muted dark:text-zinc-400">
-          <span>{paper.authors.length > 0 ? paper.authors.join(", ") : "Chưa rõ tác giả"}</span>
+          <span>{formatScholarlyAuthors(paper.authors)}</span>
           {paper.venue && (
             <>
               <span className="mx-1.5 text-zinc-300 dark:text-zinc-700">•</span>
@@ -56,21 +129,21 @@ export function ScholarlyResultCard({
           )}
         </div>
 
-        {/* Abstract */}
+        {/* Abstract (Clamped to line-clamp-2) */}
         {paper.abstract && (
           <div className="pt-1">
             <p
               className={`text-xs text-zinc-600 dark:text-zinc-300 leading-relaxed font-sans ${
-                !isExpanded ? "line-clamp-3" : ""
+                !isExpanded ? "line-clamp-2" : ""
               }`}
             >
               {paper.abstract}
             </p>
-            {paper.abstract.length > 180 && (
+            {paper.abstract.length > 120 && (
               <button
                 type="button"
                 onClick={() => setIsExpanded(!isExpanded)}
-                className="mt-1 text-[11px] font-medium text-coral-600 dark:text-coral-400 hover:underline flex items-center gap-1 cursor-pointer"
+                className="mt-1 text-[11px] font-medium text-[#cc785c] dark:text-[#e08b6f] hover:underline flex items-center gap-1 cursor-pointer"
               >
                 {isExpanded ? (
                   <>
@@ -88,7 +161,7 @@ export function ScholarlyResultCard({
           </div>
         )}
 
-        {/* Identifiers */}
+        {/* Direct Identifiers */}
         <div className="flex flex-wrap items-center gap-3 pt-1 text-[10px] font-mono text-muted dark:text-zinc-400">
           {paper.doi && (
             <a

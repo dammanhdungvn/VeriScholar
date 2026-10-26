@@ -33,23 +33,23 @@
 - Modify: `apps/api/src/api/v1/endpoints/discovery.py`
 - Test: `apps/api/tests/test_discovery_search_endpoints.py`
 
-- [ ] **Step 1.1: Viết test kiểm tra tìm kiếm chính xác và lọc rác**
+- [x] **Step 1.1: Viết test kiểm tra tìm kiếm chính xác và lọc rác**
   Viết test trong `apps/api/tests/test_discovery_search_endpoints.py`:
   - `test_scholarly_search_precision_no_particle_physics()`: Tìm *"Retrieval-Augmented Generation"* không chứa bài vật lý hạt nhân 2014.
   - `test_scholarly_search_peer_reviewed_filter()`: Tìm kiếm với `is_peer_reviewed_only=True` lọc bỏ các bài thuần arXiv pre-print không có venue xuất bản.
-- [ ] **Step 1.2: Chạy test để xác nhận test đỏ**
+- [x] **Step 1.2: Chạy test để xác nhận test đỏ**
   Chạy `uv run pytest apps/api/tests/test_discovery_search_endpoints.py`.
-- [ ] **Step 1.3: Mở rộng `ScholarlyPaperSearchResult` và `DiscoverySearchRequest`**
+- [x] **Step 1.3: Mở rộng `ScholarlyPaperSearchResult` và `DiscoverySearchRequest`**
   - Thêm `is_peer_reviewed: bool = False` vào `ScholarlyPaperSearchResult`.
   - Thêm `is_peer_reviewed_only: bool = False` vào `DiscoverySearchRequest`.
-- [ ] **Step 1.4: Nâng cấp `ScholarlySearchAdapter`**
+- [x] **Step 1.4: Nâng cấp `ScholarlySearchAdapter`**
   - Xây dựng truy vấn arXiv chính xác: `ti:"{clean_query}" OR (ti:{tokens} AND abs:{tokens})`.
   - Thêm hàm tính điểm tương đồng tiêu đề (Jaccard token overlap): loại bỏ các bài có điểm tương đồng < 0.2 nếu query có từ 3 từ trở lên.
   - Phân loại `is_peer_reviewed`: kiểm tra nếu venue thuộc các tổ chức/hội nghị uy tín (NeurIPS, ICML, CVPR, ACL, IEEE, ACM, Nature, Science, Springer) hoặc DOI không phải thuần arXiv.
   - Áp dụng bộ lọc `is_peer_reviewed_only` khi có yêu cầu.
-- [ ] **Step 1.5: Chạy lại pytest để xác nhận test xanh**
+- [x] **Step 1.5: Chạy lại pytest để xác nhận test xanh**
   Chạy `uv run pytest apps/api/tests/test_discovery_search_endpoints.py`.
-- [ ] **Step 1.6: Commit Task 1**
+- [x] **Step 1.6: Commit Task 1**
   `git commit -m "feat(api): implement precision scholarly search with relevance filtering and peer-reviewed classification"`
 
 ---
@@ -62,22 +62,22 @@
 - Modify: `apps/web/src/features/dashboard/components/UnifiedHeroWorkspace.tsx`
 - Test: `apps/web/src/features/dashboard/__tests__/UnifiedHeroWorkspace.test.tsx`
 
-- [ ] **Step 2.1: Viết test cho Skeleton Loading khi đang tìm kiếm**
+- [x] **Step 2.1: Viết test cho Skeleton Loading khi đang tìm kiếm**
   Viết test trong `apps/web/src/features/dashboard/__tests__/UnifiedHeroWorkspace.test.tsx` kiểm tra khi `isSearching === true`, hiển thị container Skeleton có `data-testid="scholarly-skeleton-list"`.
-- [ ] **Step 2.2: Tạo component `ScholarlySkeletonList.tsx`**
+- [x] **Step 2.2: Tạo component `ScholarlySkeletonList.tsx`**
   Thiết kế 3 thẻ giả lập nhấp nháy (`animate-pulse`) với cấu trúc:
   - Header tag nhấp nháy
   - Tiêu đề 2 dòng
   - Tác giả 1 dòng
   - Tóm tắt 2 dòng
-- [ ] **Step 2.3: Tích hợp Skeleton vào `UnifiedHeroWorkspace.tsx`**
+- [x] **Step 2.3: Tích hợp Skeleton vào `UnifiedHeroWorkspace.tsx`**
   - Thay thế loader chữ đơn điệu bằng `<ScholarlySkeletonList />` khi `isSearching === true`.
   - Đảm bảo vùng dropzone và gợi ý ẩn mượt mà trong khi tìm kiếm.
-- [ ] **Step 2.4: Bổ sung spinner trực tiếp trên nút Gửi của `DashboardChatInputBox.tsx`**
+- [x] **Step 2.4: Bổ sung spinner trực tiếp trên nút Gửi của `DashboardChatInputBox.tsx`**
   Khi `isGenerating` hoặc `isSearching` bật, nút mũi tên chuyển thành biểu tượng `Loader2` quay tròn.
-- [ ] **Step 2.5: Chạy vitest để xác nhận test xanh**
+- [x] **Step 2.5: Chạy vitest để xác nhận test xanh**
   Chạy `npm --prefix apps/web run test`.
-- [ ] **Step 2.6: Commit Task 2**
+- [x] **Step 2.6: Commit Task 2**
   `git commit -m "feat(web): add scholarly skeleton loading cards and animated search button indicator"`
 
 ---
@@ -88,24 +88,24 @@
 - Modify: `apps/web/src/features/discovery/components/ScholarlyResultCard.tsx`
 - Test: `apps/web/src/features/discovery/__tests__/ScholarlyResultCard.test.tsx`
 
-- [ ] **Step 3.1: Viết test kiểm thử các trường hợp giới hạn của Thẻ bài báo**
+- [x] **Step 3.1: Viết test kiểm thử các trường hợp giới hạn của Thẻ bài báo**
   - Test rút gọn tác giả: 50 tác giả hiển thị `${authors[0]}, ${authors[1]} và cộng sự`.
   - Test làm sạch mã LaTeX thô trong tiêu đề: `$B^0_s\to\mu^+\mu^-$` chuyển thành văn bản sạch không còn ký tự thô.
   - Test tóm tắt bị giới hạn 2 dòng với class `line-clamp-2`.
-- [ ] **Step 3.2: Triển khai hàm `formatScholarlyAuthors(authors: string[])`**
+- [x] **Step 3.2: Triển khai hàm `formatScholarlyAuthors(authors: string[])`**
   - Nếu `authors.length === 0`: `"Chưa rõ tác giả"`.
   - Nếu `authors.length <= 2`: `authors.join(", ")`.
   - Nếu `authors.length > 2`: `${authors[0]}, ${authors[1]} và cộng sự`.
-- [ ] **Step 3.3: Triển khai hàm `sanitizeAcademicTitle(title: string)`**
+- [x] **Step 3.3: Triển khai hàm `sanitizeAcademicTitle(title: string)`**
   - Khử các ký tự bọc LaTeX `$`, các lệnh `\to`, `\mu`,... chuyển về dạng ký tự chuẩn hoặc loại bỏ ký tự rác.
-- [ ] **Step 3.4: Tinh gọn Badge Tags và Abstract**
+- [x] **Step 3.4: Tinh gọn Badge Tags và Abstract**
   - Tag dạng pill thanh mảnh: `Open Access PDF` (xanh ngọc) hoặc `Tóm tắt` (xám).
   - Thêm tag `Đã bình duyệt` (tím nhạt) nếu `paper.is_peer_reviewed`.
   - Thẻ tóm tắt cố định `line-clamp-2`, hỗ trợ mở rộng/thu gọn nếu cần.
   - Link DOI / arXiv trực tiếp, mở tab mới an toàn với `rel="noreferrer"`.
-- [ ] **Step 3.5: Chạy vitest để kiểm tra component**
+- [x] **Step 3.5: Chạy vitest để kiểm tra component**
   Chạy `npm --prefix apps/web run test`.
-- [ ] **Step 3.6: Commit Task 3**
+- [x] **Step 3.6: Commit Task 3**
   `git commit -m "refactor(web): transform ScholarlyResultCard into radical minimalist format with author clamping and LaTeX sanitization"`
 
 ---
@@ -117,17 +117,17 @@
 - Modify: `apps/web/src/features/dashboard/components/UnifiedHeroWorkspace.tsx`
 - Test: `apps/web/src/features/dashboard/__tests__/UnifiedHeroWorkspace.test.tsx`
 
-- [ ] **Step 4.1: Cập nhật `discoveryApi.ts`**
+- [x] **Step 4.1: Cập nhật `discoveryApi.ts`**
   Thêm `is_peer_reviewed?: boolean` vào interface `ScholarlyPaper` và thêm cờ `is_peer_reviewed_only` vào `discoveryApi.search()`.
-- [ ] **Step 4.2: Tích hợp Pill Filter Toggle vào Header kết quả**
+- [x] **Step 4.2: Tích hợp Pill Filter Toggle vào Header kết quả**
   - Hiển thị thanh đếm kết quả kèm nút gạt:
     `[ Tất cả (N) ]` | `[ Đã bình duyệt (M) ]`.
   - Khi nhấp vào "Đã bình duyệt", danh sách kết quả lọc tức thì các bài có `is_peer_reviewed === true`.
-- [ ] **Step 4.3: Viết test cho hành vi chuyển đổi bộ lọc**
+- [x] **Step 4.3: Viết test cho hành vi chuyển đổi bộ lọc**
   Test chuyển đổi giữa "Tất cả" và "Đã bình duyệt" thay đổi số lượng bài báo hiển thị.
-- [ ] **Step 4.4: Chạy vitest**
+- [x] **Step 4.4: Chạy vitest**
   Chạy `npm --prefix apps/web run test`.
-- [ ] **Step 4.5: Commit Task 4**
+- [x] **Step 4.5: Commit Task 4**
   `git commit -m "feat(web): add hybrid peer-reviewed filter toggle to search results hub"`
 
 ---

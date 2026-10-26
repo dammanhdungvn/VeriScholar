@@ -41,4 +41,19 @@ describe("DashboardChatInputBox Component", () => {
     fireEvent.click(resetBtn);
     expect(screen.getByTestId("reasoning-effort-label")).toHaveTextContent("High");
   });
+
+  it("displays spinning loader when isGenerating is true", () => {
+    render(
+      <DashboardChatInputBox
+        inputText="Explain attention mechanism"
+        onChangeText={vi.fn()}
+        onSend={vi.fn()}
+        isGenerating={true}
+      />
+    );
+
+    const spinner = screen.getByTestId("send-spinner");
+    expect(spinner).toBeInTheDocument();
+    expect(spinner).toHaveClass("animate-spin");
+  });
 });

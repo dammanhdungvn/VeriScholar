@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
-import { Plus, Mic, ArrowUp, Paperclip, X, Brain } from "lucide-react";
+import { Plus, Mic, ArrowUp, Paperclip, X, Brain, Loader2 } from "lucide-react";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import type { ActiveContextChip } from "../stores/useWorkspaceStore";
 import { ReasoningPopover } from "./ReasoningPopover";
@@ -222,15 +222,27 @@ export function DashboardChatInputBox({
               type="button"
               onClick={handleSendMessage}
               disabled={!canSend}
-              aria-label="Gửi câu hỏi"
-              title={canSend ? "Gửi câu hỏi (Enter)" : "Nhập câu hỏi để gửi"}
+              aria-label={isGenerating ? "Đang xử lý..." : "Gửi câu hỏi"}
+              title={
+                isGenerating
+                  ? "Đang xử lý..."
+                  : canSend
+                    ? "Gửi câu hỏi (Enter)"
+                    : "Nhập câu hỏi để gửi"
+              }
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 ${
-                canSend
-                  ? "bg-ink dark:bg-white text-white dark:text-black shadow-sm hover:scale-105 active:scale-95 cursor-pointer font-bold"
-                  : "bg-black/10 dark:bg-white/10 text-muted/40 dark:text-zinc-600 cursor-not-allowed"
+                isGenerating
+                  ? "bg-ink dark:bg-white text-white dark:text-black cursor-wait opacity-80"
+                  : canSend
+                    ? "bg-ink dark:bg-white text-white dark:text-black shadow-sm hover:scale-105 active:scale-95 cursor-pointer font-bold"
+                    : "bg-black/10 dark:bg-white/10 text-muted/40 dark:text-zinc-600 cursor-not-allowed"
               }`}
             >
-              <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+              {isGenerating ? (
+                <Loader2 className="w-4 h-4 animate-spin stroke-[2.5]" data-testid="send-spinner" />
+              ) : (
+                <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+              )}
             </button>
           </div>
         </div>

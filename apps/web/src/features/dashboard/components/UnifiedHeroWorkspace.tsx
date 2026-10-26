@@ -1,10 +1,11 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
-import { Search, MessageSquare, FileUp, X, Loader2 } from "lucide-react";
+import { Search, MessageSquare, FileUp, X } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { useTheme } from "@/hooks/useTheme";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { ScholarlyResultCard } from "@/features/discovery/components/ScholarlyResultCard";
+import { ScholarlySkeletonList } from "@/features/discovery/components/ScholarlySkeletonList";
 import { discoveryApi, type ScholarlyPaper } from "@/features/discovery/api/discoveryApi";
 import type { ReasoningEffortLevel } from "@/features/dashboard/stores/useDashboardStore";
 
@@ -39,6 +40,7 @@ export function UnifiedHeroWorkspace({
   const [mode, setMode] = useState<"search" | "chat">("search");
   const [isSearching, setIsSearching] = useState(false);
   const [searchResults, setSearchResults] = useState<ScholarlyPaper[]>([]);
+  const [filterMode, setFilterMode] = useState<"all" | "peer_reviewed">("all");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [isDragActive, setIsDragActive] = useState(false);
   const [openingPaperTitle, setOpeningPaperTitle] = useState<string | null>(null);
@@ -48,10 +50,18 @@ export function UnifiedHeroWorkspace({
     ? user.full_name.split(" ").slice(-2).join(" ")
     : user?.email?.split("@")[0] || "Học giả";
 
+  const totalCount = searchResults.length;
+  const peerReviewedCount = searchResults.filter((p) => Boolean(p.is_peer_reviewed)).length;
+  const displayedResults =
+    filterMode === "peer_reviewed"
+      ? searchResults.filter((p) => Boolean(p.is_peer_reviewed))
+      : searchResults;
+
   const executeSearch = async (query: string) => {
     if (!query.trim()) return;
     setIsSearching(true);
     setSearchError(null);
+    setFilterMode("all");
     try {
       const results = await discoveryApi.search(query.trim(), 8);
       setSearchResults(results);
@@ -177,13 +187,8 @@ export function UnifiedHeroWorkspace({
         />
       </div>
 
-      {/* 4. Dynamic Content: Search Results */}
-      {isSearching && (
-        <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted dark:text-zinc-400">
-          <Loader2 className="w-4 h-4 animate-spin text-[#cc785c]" />
-          <span>Đang tìm kiếm bài báo...</span>
-        </div>
-      )}
+      {/* 4. Dynamic Content: Search Results & Skeleton Loading */}
+      {isSearching && <ScholarlySkeletonList />}
 
       {searchError && (
         <div className="text-xs text-rose-500 py-3 text-center">{searchError}</div>
@@ -191,11 +196,41 @@ export function UnifiedHeroWorkspace({
 
       {searchResults.length > 0 && !isSearching && (
         <div className="w-full mt-6 space-y-4">
-          <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1">
-            <span>Tìm thấy {searchResults.length} bài báo:</span>
+          <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1 flex-wrap gap-2">
+            {/* Pill filter toggle */}
+            <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#ede8df] dark:bg-[#252320] border border-[#ded8cd] dark:border-[#35322d]">
+              <button
+                type="button"
+                onClick={() => setFilterMode("all")}
+                data-testid="filter-all-btn"
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  filterMode === "all"
+                    ? "bg-white dark:bg-[#1a1916] text-ink dark:text-[#f3f2ef] shadow-xs"
+                    : "text-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200"
+                }`}
+              >
+                Tất cả ({totalCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterMode("peer_reviewed")}
+                data-testid="filter-peer-reviewed-btn"
+                className={`px-3 py-1 rounded-full text-xs font-medium transition-all cursor-pointer ${
+                  filterMode === "peer_reviewed"
+                    ? "bg-white dark:bg-[#1a1916] text-ink dark:text-[#f3f2ef] shadow-xs"
+                    : "text-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200"
+                }`}
+              >
+                Đã bình duyệt ({peerReviewedCount})
+              </button>
+            </div>
+
             <button
               type="button"
-              onClick={() => setSearchResults([])}
+              onClick={() => {
+                setSearchResults([]);
+                setFilterMode("all");
+              }}
               className="flex items-center gap-1 hover:text-ink dark:hover:text-zinc-200 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
@@ -203,16 +238,22 @@ export function UnifiedHeroWorkspace({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
-            {searchResults.map((paper, idx) => (
-              <ScholarlyResultCard
-                key={`${paper.title}-${idx}`}
-                paper={paper}
-                onOpenReading={handlePaperClick}
-                isLoading={openingPaperTitle === paper.title}
-              />
-            ))}
-          </div>
+          {displayedResults.length === 0 ? (
+            <div className="py-8 text-center text-xs text-muted dark:text-zinc-400">
+              Không có bài báo đã bình duyệt trong kết quả tìm kiếm này.
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+              {displayedResults.map((paper, idx) => (
+                <ScholarlyResultCard
+                  key={`${paper.title}-${idx}`}
+                  paper={paper}
+                  onOpenReading={handlePaperClick}
+                  isLoading={openingPaperTitle === paper.title}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 

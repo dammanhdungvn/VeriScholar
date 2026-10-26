@@ -71,7 +71,7 @@ describe("UnifiedHeroWorkspace Component", () => {
 
     await waitFor(() => {
       expect(screen.getByText(/Attention Is All You Need/i)).toBeInTheDocument();
-      expect(screen.getByText(/Có sẵn PDF Open Access/i)).toBeInTheDocument();
+      expect(screen.getByText(/Open Access PDF/i)).toBeInTheDocument();
     });
 
     const openReadingBtn = screen.getByText(/Mở Đọc Sâu/i);
@@ -80,5 +80,101 @@ describe("UnifiedHeroWorkspace Component", () => {
     expect(onOpenPaper).toHaveBeenCalledWith(
       expect.objectContaining({ title: "Attention Is All You Need" })
     );
+  });
+
+  it("renders scholarly skeleton list while search is pending and hides dropzone", async () => {
+    let resolveSearch: (val: any) => void;
+    const searchPromise = new Promise((resolve) => {
+      resolveSearch = resolve;
+    });
+    vi.spyOn(discoveryApi, "search").mockReturnValue(searchPromise as any);
+
+    render(
+      <UnifiedHeroWorkspace
+        inputText="Attention"
+        onChangeText={vi.fn()}
+        onSendChat={vi.fn()}
+        onIngestFile={vi.fn()}
+        onOpenPaper={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+    // Skeleton list is rendered with data-testid="scholarly-skeleton-list"
+    expect(screen.getByTestId("scholarly-skeleton-list")).toBeInTheDocument();
+    // Dropzone is hidden while searching
+    expect(screen.queryByText(/Kéo thả tệp PDF/i)).not.toBeInTheDocument();
+
+    // Resolve search
+    resolveSearch!([
+      {
+        title: "Attention Is All You Need",
+        authors: ["Ashish Vaswani"],
+        publication_year: 2017,
+        access_status: "open_access_pdf",
+      },
+    ]);
+
+    await waitFor(() => {
+      expect(screen.queryByTestId("scholarly-skeleton-list")).not.toBeInTheDocument();
+      expect(screen.getByText(/Attention Is All You Need/i)).toBeInTheDocument();
+    });
+  });
+
+  it("toggles between all papers and peer-reviewed papers using the pill filter", async () => {
+    vi.spyOn(discoveryApi, "search").mockResolvedValue([
+      {
+        title: "Paper One (Peer Reviewed)",
+        authors: ["Author A"],
+        publication_year: 2023,
+        access_status: "open_access_pdf",
+        is_peer_reviewed: true,
+      },
+      {
+        title: "Paper Two (Preprint)",
+        authors: ["Author B"],
+        publication_year: 2024,
+        access_status: "open_access_pdf",
+        is_peer_reviewed: false,
+      },
+    ]);
+
+    render(
+      <UnifiedHeroWorkspace
+        inputText="Transformers"
+        onChangeText={vi.fn()}
+        onSendChat={vi.fn()}
+        onIngestFile={vi.fn()}
+        onOpenPaper={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Paper One (Peer Reviewed)")).toBeInTheDocument();
+      expect(screen.getByText("Paper Two (Preprint)")).toBeInTheDocument();
+    });
+
+    // Pill filter buttons
+    const peerReviewedBtn = screen.getByTestId("filter-peer-reviewed-btn");
+    expect(peerReviewedBtn).toHaveTextContent("Đã bình duyệt (1)");
+    const allBtn = screen.getByTestId("filter-all-btn");
+    expect(allBtn).toHaveTextContent("Tất cả (2)");
+
+    // Switch to peer-reviewed
+    fireEvent.click(peerReviewedBtn);
+
+    expect(screen.getByText("Paper One (Peer Reviewed)")).toBeInTheDocument();
+    expect(screen.queryByText("Paper Two (Preprint)")).not.toBeInTheDocument();
+
+    // Switch back to all
+    fireEvent.click(allBtn);
+
+    expect(screen.getByText("Paper One (Peer Reviewed)")).toBeInTheDocument();
+    expect(screen.getByText("Paper Two (Preprint)")).toBeInTheDocument();
   });
 });

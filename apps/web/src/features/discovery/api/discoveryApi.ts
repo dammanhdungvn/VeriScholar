@@ -10,6 +10,7 @@ export interface ScholarlyPaper {
   abstract?: string | null;
   access_status: "open_access_pdf" | "abstract_only";
   pdf_url?: string | null;
+  is_peer_reviewed?: boolean;
 }
 
 export interface OpenReadingPayload {
@@ -33,13 +34,17 @@ export const discoveryApi = {
   /**
    * Search academic papers across multi-source scholarly databases (arXiv, S2, Exa).
    */
-  async search(query: string, limit = 10): Promise<ScholarlyPaper[]> {
+  async search(query: string, limit = 10, isPeerReviewedOnly = false): Promise<ScholarlyPaper[]> {
     return apiClient<ScholarlyPaper[]>("/discovery/search", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query, limit }),
+      body: JSON.stringify({
+        query,
+        limit,
+        is_peer_reviewed_only: isPeerReviewedOnly,
+      }),
     });
   },
 
