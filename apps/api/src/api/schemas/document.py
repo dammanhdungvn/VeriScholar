@@ -31,6 +31,10 @@ class DocumentUploadResponseData(BaseModel):
         default=None,
         description="Linked research session ID if provided",
     )
+    access_status: str | None = Field(
+        default="open_access_pdf",
+        description="Access status ('open_access_pdf' or 'abstract_only')",
+    )
     created_at: datetime = Field(description="Document creation timestamp")
     links: DocumentLinks = Field(description="Resource navigation links")
 

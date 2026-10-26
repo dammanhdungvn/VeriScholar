@@ -311,6 +311,128 @@ class DocumentService:
             links=links,
         )
 
+    async def attach_pdf(
+        self,
+        document_id: UUID,
+        file: UploadFile,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentUploadResponseData:
+        """Attach a full PDF file to an existing abstract_only document, performing CAS dedup."""
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "document_id",
+                },
+            )
+
+        initial_chunk = await file.read(1024)
+        if not initial_chunk.startswith(PDF_MAGIC_BYTES):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_FILE_TYPE",
+                    "message": "File is not a valid PDF (missing %PDF- header magic bytes).",
+                    "field": "file",
+                },
+            )
+
+        hasher = hashlib.sha256()
+        hasher.update(initial_chunk)
+        total_size = len(initial_chunk)
+        chunks: list[bytes] = [initial_chunk]
+
+        while True:
+            chunk = await file.read(64 * 1024)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail={
+                        "code": "FILE_TOO_LARGE",
+                        "message": (
+                            f"File exceeds maximum size limit of {MAX_FILE_SIZE_BYTES} bytes."
+                        ),
+                        "field": "file",
+                    },
+                )
+            hasher.update(chunk)
+            chunks.append(chunk)
+
+        content_hash = hasher.hexdigest()
+
+        # CAS Blob Check
+        stmt_blob = select(DocumentStorageBlobModel).where(
+            DocumentStorageBlobModel.content_hash == content_hash
+        )
+        res_blob = await db.execute(stmt_blob)
+        blob = res_blob.scalar_one_or_none()
+
+        if blob is not None:
+            blob.ref_count += 1
+        else:
+
+            async def _stream_chunks():
+                for c in chunks:
+                    yield c
+
+            storage_path, _ = await self.storage.save_blob(_stream_chunks(), content_hash)
+            blob = DocumentStorageBlobModel(
+                id=uuid4(),
+                content_hash=content_hash,
+                storage_path=storage_path,
+                file_size_bytes=total_size,
+                mime_type="application/pdf",
+                ref_count=1,
+            )
+            db.add(blob)
+            await db.flush()
+
+        doc.blob_id = blob.id
+        doc.content_hash = content_hash
+        doc.file_size_bytes = total_size
+        doc.status = "parsing"
+        doc.stage = "queued"
+        doc.progress = 0
+        doc.access_status = "open_access_pdf"
+        if file.filename:
+            doc.filename = file.filename
+
+        await db.commit()
+
+        doc_id_str = str(doc.id)
+        links = DocumentLinks(
+            self_url=f"/api/v1/documents/{doc_id_str}",
+            status_url=f"/api/v1/documents/{doc_id_str}/status",
+            file_url=f"/api/v1/documents/{doc_id_str}/file",
+            parse_url=f"/api/v1/documents/{doc_id_str}:parse",
+        )
+
+        return DocumentUploadResponseData(
+            id=doc.id,
+            filename=doc.filename,
+            file_size_bytes=doc.file_size_bytes,
+            content_hash=doc.content_hash,
+            status=doc.status,
+            stage=doc.stage,
+            progress=doc.progress,
+            is_persistent=doc.is_persistent,
+            created_at=doc.created_at,
+            links=links,
+            access_status=doc.access_status,
+        )
+
     async def list_documents(
         self,
         user_id: UUID,
@@ -935,7 +1057,7 @@ class DocumentService:
         document_id: UUID,
         user_id: UUID,
         db: AsyncSession,
-    ) -> None:
+    ) -> bool:
         """Purge a document according to Zero-Retention Guarantee & CAS Multi-Tenant Invariant.
 
         1. Enforce multi-tenant scoping: Document must exist and belong to `user_id`.
@@ -995,13 +1117,16 @@ class DocumentService:
             blob_res = await db.execute(blob_stmt)
             blob = blob_res.scalar_one_or_none()
 
+        purged_physical = False
         if blob is not None:
             blob.ref_count -= 1
             if blob.ref_count <= 0:
                 await db.delete(blob)
                 await self.storage.delete_blob(content_hash)
+                purged_physical = True
 
-        await db.flush()
+        await db.commit()
+        return purged_physical
 
     async def trigger_parse_document(
         self,

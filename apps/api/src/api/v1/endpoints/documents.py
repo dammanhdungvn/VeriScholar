@@ -1,5 +1,6 @@
 """Document endpoints implementing Module 1 Deep Reading & Ingestion API."""
 
+from typing import Any
 from uuid import UUID, uuid4
 
 from api.db.models.document import DocumentModel
@@ -30,7 +31,7 @@ from api.schemas.document import (
     DocumentSummaryGenerateRequest,
     DocumentUploadEnvelope,
 )
-from api.schemas.envelope import ResponseMeta
+from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.services.document_service import DocumentService
 from core.domain.entities.document import DocumentStage, DocumentStatus
@@ -174,12 +175,26 @@ STAR_DESCRIPTION = (
 
 @router.post(
     "",
-    status_code=status.HTTP_201_CREATED,
+    status_code=status.HTTP_202_ACCEPTED,
     response_model=DocumentUploadEnvelope,
     summary="Tải lên PDF bài báo (nhận session_id tùy chọn)",
     description=UPLOAD_DESCRIPTION,
     responses={
-        201: {"description": "Tải lên thành công, tài liệu đã được ghi nhận vào hàng đợi."},
+        202: {"description": "Tải lên thành công, tài liệu đã được ghi nhận vào hàng đợi."},
+        400: {"description": "Tệp không hợp lệ (không phải định dạng PDF hoặc thiếu %PDF-)."},
+        404: {"description": "Không tìm thấy session_id được chỉ định."},
+        409: {"description": "Phiên nghiên cứu đã đạt trần tối đa 5 bài báo."},
+        413: {"description": "Dung lượng tệp vượt quá giới hạn cho phép (50MB)."},
+    },
+)
+@router.post(
+    "/upload",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DocumentUploadEnvelope,
+    summary="Tải lên PDF bài báo (Alias)",
+    description=UPLOAD_DESCRIPTION,
+    responses={
+        202: {"description": "Tải lên thành công, tài liệu đã được ghi nhận vào hàng đợi."},
         400: {"description": "Tệp không hợp lệ (không phải định dạng PDF hoặc thiếu %PDF-)."},
         404: {"description": "Không tìm thấy session_id được chỉ định."},
         409: {"description": "Phiên nghiên cứu đã đạt trần tối đa 5 bài báo."},
@@ -502,15 +517,12 @@ DELETE_DESCRIPTION = (
 
 @router.delete(
     "/{document_id}",
-    status_code=status.HTTP_204_NO_CONTENT,
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[dict[str, Any]],
     summary="Xóa bài báo theo đồ thị phụ thuộc (Zero-Retention)",
     description=DELETE_DESCRIPTION,
     responses={
-        204: {
-            "description": (
-                "Xóa bài báo và các dữ liệu liên quan thành công (Không có nội dung trả về)."
-            )
-        },
+        200: {"description": ("Xóa bài báo và các dữ liệu liên quan thành công (Zero-Retention).")},
         404: {
             "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
         },
@@ -527,14 +539,45 @@ async def delete_document(
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: DocumentService = Depends(get_document_service),
-) -> None:
+) -> SingleResponseEnvelope[dict[str, Any]]:
     """Permanently delete a document, cascading its dependency graph (Zero-Retention)."""
-    await service.delete_document(
+    purged_physical = await service.delete_document(
         document_id=document_id,
         user_id=current_user.id,
         db=db,
     )
-    return None
+    return SingleResponseEnvelope(
+        data={"deleted_id": str(document_id), "purged_physical_file": bool(purged_physical)},
+        meta=ResponseMeta(),
+    )
+
+
+@router.post(
+    "/{document_id}/attach-pdf",
+    status_code=status.HTTP_202_ACCEPTED,
+    response_model=DocumentUploadEnvelope,
+    summary="Đính kèm tệp PDF cho bài báo Abstract-Only",
+    description="Nâng cấp bài báo từ abstract_only lên parsing và lưu tệp PDF vào kho CAS.",
+)
+async def attach_pdf_to_document(
+    document_id: UUID = Path(..., description="UUID của bài báo"),
+    file: UploadFile = File(..., description="Tệp bài báo học thuật định dạng PDF"),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
+) -> DocumentUploadEnvelope:
+    """Attach a full PDF file to an existing abstract_only document."""
+    data = await service.attach_pdf(
+        document_id=document_id,
+        file=file,
+        user_id=current_user.id,
+        db=db,
+    )
+    return DocumentUploadEnvelope(
+        success=True,
+        data=data,
+        meta=ResponseMeta(),
+    )
 
 
 PARSE_DESCRIPTION = (
