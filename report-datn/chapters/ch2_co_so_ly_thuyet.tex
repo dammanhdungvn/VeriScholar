@@ -1,89 +1,12 @@
 % !TEX root = ../main.tex
+% ==============================================================================
+% CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
+% ==============================================================================
 \chapter{CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ}
 \label{ch:co_so_ly_thuyet}
 
-\section{Kiến trúc phần mềm lục giác (Hexagonal Architecture)}
-\label{sec:hexagonal}
-\subsection{Nguyên lý Ports and Adapters}
-\label{subsec:ports_and_adapters}
-Kiến trúc Lục giác (\textit{Hexagonal Architecture}), do Alistair Cockburn khởi xướng \cite{cockburn2005}, phân tách hệ thống phần mềm thành ba vùng độc lập: Lõi miền nghiệp vụ thuần khiết (\textit{Pure Core Domain}), các Cổng giao tiếp trừu tượng (\textit{Ports}), và các Bộ điều hợp kỹ thuật (\textit{Adapters}). Quy tắc phụ thuộc bất biến quy định rằng lõi nghiệp vụ chỉ chứa các mô hình logic và cấu trúc dữ liệu thuần túy (chỉ dùng Python Standard Library và Pydantic), tuyệt đối cấm import từ các thư viện cơ sở dữ liệu ORM, web framework hoặc các thư viện I/O mạng. Mọi tương tác với thế giới bên ngoài (cơ sở dữ liệu, dịch vụ AI, hệ thống tệp) đều phải thông qua các Port giao tiếp trừu tượng được định nghĩa bằng Interface hoặc Abstract Base Class.
-
-\subsection{Luận giải lựa chọn kiến trúc lục giác cho VeriScholar}
-\label{subsec:luan_giai_hexagonal}
-Hệ thống \VS\ lựa chọn Kiến trúc Lục giác vì đề tài tích hợp nhiều công nghệ AI có tốc độ biến đổi rất nhanh: các thế hệ mô hình ngôn ngữ lớn (OpenAI GPT-4o, Anthropic Claude, Google Gemini), các dịch vụ trích xuất PDF và hạ tầng sandbox đám mây. Bằng việc cô lập nghiệp vụ qua các Cổng giao tiếp trừu tượng, đề tài đạt được ba lợi ích kỹ thuật cốt lõi:
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Khả năng thay thế nhà cung cấp linh hoạt:} Cho phép chuyển đổi mô hình AI hoặc chuyển đổi nhà cung cấp đám mây mà không cần sửa đổi bất kỳ dòng mã lệnh tính toán nghiệp vụ nào trong \texttt{packages/core}.
-    \item \textbf{Kiểm thử đơn vị độc lập và siêu tốc:} Toàn bộ các bài kiểm thử miền nghiệp vụ có thể chạy trực tiếp với các Mock Ports trong bộ nhớ mà không cần khởi động máy chủ cơ sở dữ liệu hay gọi API mạng thực tế.
-    \item \textbf{Bảo toàn tính toàn vẹn nghiệp vụ:} Ngăn ngừa hiện tượng rò rỉ các ràng buộc kỹ thuật của cơ sở dữ liệu vào quy trình phân tích và xử lý học thuật.
-\end{enumerate}
-
-\section{Tìm kiếm lai (Hybrid Search) và Thuật toán RRF}
-\label{sec:hybrid_search}
-\subsection{Nguyên lý tìm kiếm ngữ nghĩa và tìm kiếm từ khóa}
-\label{subsec:nguyen_ly_search}
-Trong các hệ thống RAG hiện đại dựa trên mô hình biến đổi Transformer \cite{vaswani2017}, tìm kiếm dày (\textit{Dense Retrieval}) sử dụng vector nhúng ngữ nghĩa chiều cao (1536 chiều từ mô hình \texttt{text-embedding-3-small}) trên chỉ mục đồ thị phân cấp HNSW (\textit{Hierarchical Navigable Small World}) với hàm khoảng cách Cosine để tìm kiếm các đoạn văn bản đồng nghĩa hoặc diễn giải tương đương. Tuy nhiên, tìm kiếm vector thường gặp khó khăn đối với các từ khóa kỹ thuật hiếm gặp, tên riêng của nhà khoa học, số hiệu phương trình hay các mã định danh cụ thể. Ngược lại, tìm kiếm thưa (\textit{Sparse Retrieval}) dựa trên thuật toán BM25 và chỉ mục tra cứu ngược GIN (\textit{Generalized Inverted Index}) trong PostgreSQL có khả năng khớp từ khóa chính xác tuyệt đối nhưng lại hoàn toàn không nắm bắt được ngữ nghĩa khái quát \cite{nguyendinhthuc2001}.
-
-\subsection{Thuật toán Hợp nhất Xếp hạng Đảo ngược (RRF)}
-\label{subsec:thuat_toan_rrf}
-Để dung hòa ưu điểm của cả hai phương pháp, đề tài ứng dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (\textit{Reciprocal Rank Fusion -- RRF}) do Cormack và các cộng sự đề xuất \cite{cormack2009}. Thuật toán RRF hợp nhất hai danh sách xếp hạng độc lập mà không đòi hỏi phải chuẩn hóa điểm số tương đồng (vốn có thang đo khác nhau giữa Cosine Similarity và BM25 Score) theo công thức toán học:
-\begin{equation}
-\label{eq:rrf}
-\RRF(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
-\end{equation}
-trong đó $M$ là tập các phương pháp truy xuất ($M = \{\text{Vector Dense}, \text{BM25 Sparse}\}$), $r_m(d)$ là thứ hạng nguyên của tài liệu $d$ trong danh sách kết quả của phương pháp $m$ (bắt đầu từ 1), và hằng số $k = 60$ là tham số làm mịn chuẩn hóa học thuật nhằm tránh việc các tài liệu đứng đầu áp đảo hoàn toàn bảng xếp hạng chung.
-
-\subsection{Luận giải lựa chọn thuật toán RRF}
-\label{subsec:luan_giai_rrf}
-Đề tài lựa chọn thuật toán RRF vì trong nghiên cứu khoa học tại VinUni, các câu hỏi nghiên cứu của học giả thường mang tính phức hợp: kết hợp giữa khái niệm lý thuyết trừu tượng (như \textit{''cơ chế tự chú ý đa đầu trong mạng nơ-ron''}) và các thuật ngữ chuyên ngành chính xác (như \textit{''BLEU score'', ''CIFAR-100'', ''Equation (4)''}). Thực nghiệm đối chiếu cho thấy việc kết hợp RRF $k=60$ giúp chỉ số độ bao phủ tài liệu liên quan đạt độ nhạy vượt trội so với việc chỉ sử dụng một trong hai phương pháp tìm kiếm đơn lẻ.
-
-\section{Mạng tri thức học thuật 4-thực thể (GraphRAG)}
-\label{sec:graphrag}
-\subsection{Mô hình hóa thực thể học thuật}
-\label{subsec:mo_hinh_graph}
-Phương pháp GraphRAG \cite{edge2024} mở rộng khả năng suy luận của hệ thống RAG truyền thống từ việc chỉ trích xuất các đoạn văn độc lập sang việc nắm bắt mạng lưới quan hệ đa chiều giữa các khái niệm học thuật. Thay vì sử dụng đồ thị tri thức tổng quát không có cấu trúc cố định, \VS\ tinh gọn và mô hình hóa tri thức khoa học thành 4 lớp thực thể cốt lõi:
-\begin{itemize}
-    \item \textbf{Bài báo (\textit{Paper}):} Thực thể trung tâm đại diện cho công trình khoa học, chứa metadata, tác giả, năm công bố và nguồn gốc trích dẫn.
-    \item \textbf{Phương pháp (\textit{Method}):} Các kỹ thuật, thuật toán hoặc mô hình kiến trúc mới được đề xuất trong công trình (ví dụ: \textit{FlashAttention-2}, \textit{LoRA}).
-    \item \textbf{Bộ dữ liệu (\textit{Dataset}):} Các tập dữ liệu chuẩn được dùng làm chuẩn so sánh thực nghiệm (ví dụ: \textit{ImageNet-1K}, \textit{MMLU}).
-    \item \textbf{Kết quả đo lường (\textit{MetricResult}):} Các con số định lượng cụ thể đo lường hiệu năng của phương pháp trên bộ dữ liệu tương ứng (ví dụ: \textit{Accuracy = 92.4\%}, \textit{Latency = 12ms}).
-\end{itemize}
-
-\subsection{Luận giải triển khai GraphRAG trên PostgreSQL pgvector}
-\label{subsec:luan_giai_pgvector}
-Hội đồng phản biện thường đặt câu hỏi: \textit{''Tại sao không sử dụng một cơ sở dữ liệu đồ thị chuyên dụng như Neo4j kết hợp Vector DB độc lập như Milvus hay Pinecone?''}. Đề tài khẳng định việc hợp nhất GraphRAG trực tiếp trên PostgreSQL 16 kết hợp \texttt{pgvector} là một quyết định kiến trúc tối ưu vì:
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Bảo toàn tính nhất quán giao dịch (ACID Invariant):} Khi một học giả xóa một bài báo khỏi thư viện, một giao dịch \texttt{DELETE} duy nhất trong PostgreSQL sẽ đồng thời dọn sạch metadata, các đoạn trích (chunks), vector nhúng và các liên kết thực thể đồ thị. Nếu dùng nhiều cơ sở dữ liệu phân tán độc lập, hệ thống sẽ phải đối mặt với bài toán Distributed Transaction phức tạp, rất dễ gây ra hiện tượng dữ liệu mồ côi.
-    \item \textbf{Truy vấn đệ quy hiệu năng cao:} PostgreSQL hỗ trợ xuất sắc các câu truy vấn đệ quy CTE (\textit{Common Table Expressions}) trên các bảng liên kết thực thể, cho phép duyệt đồ thị đa tầng với độ trễ thấp mà không cần bổ sung một hệ quản trị CSDL thứ hai.
-    \item \textbf{Tối ưu chi phí và tính đơn giản hóa hạ tầng:} Giúp hệ sinh thái vận hành gọn nhẹ, tiết kiệm tài nguyên bộ nhớ RAM và loại bỏ chi phí duy trì dịch vụ đám mây của bên thứ ba.
-\end{enumerate}
-
-\section{Máy trạng thái tác nhân AI và Sandbox đám mây}
-\label{sec:react_agent}
-\subsection{Chu trình Suy luận -- Hành động -- Quan sát (ReAct)}
-\label{subsec:chu_trinh_react}
-Tác nhân AI trong phân hệ soạn thảo và biên dịch \LaTeX\ vận hành dựa trên máy trạng thái hữu hạn LangGraph StateGraph theo chu trình ReAct (\textit{Reasoning and Acting}) \cite{yao2022}. Quy trình xử lý gồm 3 pha khép kín:
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Pha Suy luận (Reason):} Tác nhân tiếp nhận yêu cầu chỉnh sửa hoặc tệp nhật ký lỗi biên dịch (\texttt{.log}) từ môi trường thực thi, phân tích nguyên nhân gốc rễ của lỗi cú pháp \LaTeX\ (ví dụ: thiếu gói lệnh, ký tự đặc biệt chưa escape, xung đột môi trường bảng).
-    \item \textbf{Pha Hành động (Act):} Tác nhân gọi các công cụ sửa mã nguồn, bổ sung cấu hình trong tệp tiền xử lý hoặc thay thế các cấu trúc lệnh bị sai.
-    \item \textbf{Pha Quan sát (Observe):} Gửi mã nguồn đã sửa sang môi trường hộp cát đám mây để biên dịch lại và thu thập mã phản hồi. Quá trình tự sửa lỗi được giới hạn lặp tối đa 3 chu kỳ nhằm kiểm soát chi phí token và ngăn ngừa vòng lặp vô hạn.
-\end{enumerate}
-
-\subsection{Luận giải lựa chọn môi trường E2B Sandbox}
-\label{subsec:luan_giai_e2b}
-Việc biên dịch các tệp \LaTeX\ do người dùng tải lên tiềm ẩn nguy cơ bảo mật hệ thống nghiêm trọng (như thực thi lệnh hệ điều hành thông qua lệnh \verb|\write18| hoặc dò quét hệ thống tệp cục bộ) nếu thực thi trực tiếp trên máy chủ backend. Đề tài lựa chọn giải pháp E2B Cloud Sandbox vì nền tảng này khởi tạo các máy ảo Linux siêu nhẹ (MicroVM) cô lập hoàn toàn cho từng phiên làm việc, tự động dọn dẹp và tiêu hủy tài nguyên ngay sau khi biên dịch xong, đảm bảo an toàn tuyệt đối cho hạ tầng máy chủ của hệ thống.
-
-\section{Lưu trữ định danh nội dung (CAS) và Két sắt khóa cá nhân (BYOK)}
-\label{sec:cas_byok}
-\subsection{Nguyên lý lưu trữ CAS và mã hóa xác thực AEAD}
-\label{subsec:nguyen_ly_cas_byok}
-Kho lưu trữ định danh nội dung CAS (\textit{Content-Addressable Storage}) tổ chức các tệp nhị phân dựa trên mã băm SHA-256 của chính nội dung tệp theo cấu trúc thư mục 2 tầng phân tán (\texttt{storage/blobs/ab/cd/hash.pdf}). Mỗi bản ghi tệp nhị phân được quản lý vòng đời thông qua biến đếm tham chiếu (\textit{Reference Counting}).
-
-Đối với thông tin nhạy cảm của người dùng (khóa API cá nhân OpenAI BYOK), hệ thống áp dụng thuật toán mã hóa đối xứng AES-256-GCM (\textit{Galois/Counter Mode}) \cite{nguyendinhthuc2001}. Đây là chuẩn mã hóa xác thực dữ liệu kết hợp AEAD (\textit{Authenticated Encryption with Associated Data}) với khóa 32 bytes ngẫu nhiên độc lập và thẻ xác thực Authentication Tag 16 bytes.
-
-\subsection{Luận giải lựa chọn CAS và AES-256-GCM cho VeriScholar}
-\label{subsec:luan_giai_cas_byok}
-Đề tài khẳng định đây là hai lựa chọn kỹ thuật mang tính sống còn đối với kiến trúc \VS:
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Tiết kiệm 98\% dung lượng lưu trữ qua CAS:} Trong môi trường nghiên cứu học thuật như VinUni, nhiều sinh viên và học giả trong cùng một đề tài thường nạp cùng các bài báo nền tảng kinh điển (ví dụ bài báo \cite{vaswani2017} nặng 20MB). CAS đảm bảo máy chủ chỉ lưu đúng một bản tệp vật lý duy nhất trên đĩa cứng dù có hàng trăm người cùng tải lên, đồng thời hỗ trợ giao thức HTTP Range Requests giúp trình duyệt tải luồng và hiển thị từng trang PDF tức thì.
-    \item \textbf{Bảo mật cấp quân đội và chống tấn công thay đổi bản mã:} Chế độ AES-256-GCM không chỉ bảo mật dữ liệu mà còn xác thực tính toàn vẹn. Nếu kẻ tấn công thay đổi dù chỉ 1 bit mã hóa trong CSDL, hàm giải mã trên RAM sẽ lập tức từ chối, ngăn chặn triệt để các cuộc tấn công Padding Oracle. Đồng thời, thuật toán tận dụng tập lệnh phần cứng Intel AES-NI giúp quá trình giải mã trên RAM diễn ra trong chưa đầy 1 mili-giây, hoàn toàn không gây trễ cho tác vụ hỏi đáp của người dùng.
-\end{enumerate}
+\input{chapters/ch2/2_1_hexagonal}
+\input{chapters/ch2/2_2_hybrid_rag}
+\input{chapters/ch2/2_3_graph_rag}
+\input{chapters/ch2/2_4_react_agent}
+\input{chapters/ch2/2_5_cas_byok}

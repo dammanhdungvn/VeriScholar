@@ -1,0 +1,75 @@
+% !TEX root = ../../main.tex
+\section{Máy trạng thái tác nhân AI và Môi trường thực thi đám mây}
+\label{sec:react_agent}
+
+\subsection{Chu trình Suy luận -- Hành động -- Quan sát (ReAct)}
+\label{subsec:chu_trinh_react}
+Phân hệ biên soạn và sửa lỗi bản thảo khoa học trong VeriScholar được điều khiển bởi một tác nhân trí tuệ nhân tạo xây dựng trên nền tảng máy trạng thái hữu hạn (\textit{StateGraph}), tuân thủ mô hình tương tác ReAct (\textit{Reasoning and Acting}) do Yao và các cộng sự đề xuất \cite{yao2022}.
+
+Mô hình ReAct khắc phục nhược điểm của các mô hình ngôn ngữ đơn lẻ (vốn chỉ có khả năng sinh văn bản tĩnh và dễ mắc lỗi ảo giác) bằng cách thiết lập vòng lặp phản hồi đóng gồm 3 pha:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Pha Suy luận (\textit{Reasoning -- Thought}):} Tác nhân đọc yêu cầu của học giả cùng với tệp nhật ký lỗi biên dịch (\texttt{.log}), tiến hành phân tích nguyên nhân gốc rễ gây ra lỗi cú pháp (chẳng hạn: thiếu gói lệnh tiền đề, thiếu dấu đóng ngoặc nhọn, hoặc xung đột môi trường bảng).
+    \item \textbf{Pha Hành động (\textit{Acting -- Action}):} Tác nhân quyết định lựa chọn công cụ phù hợp từ tập công cụ, chẳng hạn như sửa đổi nội dung tệp nguồn, bổ sung cấu hình trong phần tiền đề, hoặc cập nhật trích dẫn thư mục.
+    \item \textbf{Pha Quan sát (\textit{Observation}):} Hệ thống thực thi hành động, gọi trình biên dịch trong môi trường cách ly và trả kết quả biên dịch mới về cho tác nhân. Tác nhân quan sát thông báo trả về: nếu biên dịch thành công (mã thoát 0), chu trình kết thúc; nếu phát sinh lỗi mới, tác nhân tiếp tục chu kỳ suy luận tiếp theo.
+\end{enumerate}
+
+Chu trình vận hành khép kín của tác nhân ReAct và cơ chế tự sửa lỗi bản thảo được minh họa trong Hình~\ref{fig:react_agent_loop}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88, transform shape,
+    box/.style={draw=blue!80!black, fill=blue!8, rounded corners=5pt, line width=1pt, align=center, inner sep=6pt, font=\small},
+    decision/.style={draw=orange!80!black, fill=orange!10, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black}
+]
+    % Vòng lặp ReAct
+    \node[box, minimum width=4.5cm] (input) at (0, 3) {
+        \textbf{Nhận tệp lỗi \& Bản thảo}\\
+        \footnotesize Tệp nhật ký \texttt{.log} biên dịch thất bại
+    };
+    \node[box, fill=teal!10, draw=teal!80!black, minimum width=4.5cm] (reason) at (0, 1.4) {
+        \textbf{1. Pha Suy luận (\textit{Thought})}\\
+        \footnotesize Phân tích nguyên nhân lỗi cú pháp
+    };
+    \node[box, fill=purple!10, draw=purple!80!black, minimum width=4.5cm] (act) at (0, -0.2) {
+        \textbf{2. Pha Hành động (\textit{Action})}\\
+        \footnotesize Áp dụng công cụ vá lỗi mã nguồn \LaTeX
+    };
+    \node[box, fill=blue!12, draw=blue!80!black, minimum width=4.5cm] (compile) at (0, -1.8) {
+        \textbf{3. Biên dịch trong E2B MicroVM}\\
+        \footnotesize Thực thi cách ly an toàn tuyệt đối
+    };
+    \node[decision, minimum width=4cm] (check) at (0, -3.4) {
+        \textbf{Kiểm tra mã thoát (Exit Code)}\\
+        \footnotesize Thành công hay tiếp tục lỗi?
+    };
+    \node[box, fill=green!15, draw=green!60!black, right=1.6cm of check, minimum width=2.6cm] (success) {
+        \textbf{Xuất PDF}\\
+        \footnotesize Kết thúc chu trình
+    };
+
+    % Đường nối
+    \draw[arrow] (input) -- (reason);
+    \draw[arrow] (reason) -- (act);
+    \draw[arrow] (act) -- (compile);
+    \draw[arrow] (compile) -- (check);
+    \draw[arrow] (check) -- node[above, font=\footnotesize\bfseries] {Pass (0)} (success);
+    \draw[arrow] (check.west) -- ++(-1.2,0) |- node[near end, left, font=\footnotesize\bfseries] {Lỗi ($N < 3$)} (reason.west);
+\end{tikzpicture}
+\caption{Chu trình Suy luận -- Hành động -- Quan sát (ReAct) tự động sửa lỗi bản thảo}
+\label{fig:react_agent_loop}
+\end{figure}
+
+Nhằm kiểm soát chi phí tính toán và ngăn ngừa hiện tượng lặp vô hạn, chu trình ReAct được ràng buộc với số chu kỳ lặp tối đa là 3 lần ($N_{\max} = 3$). Thực nghiệm cho thấy trên 90\% các lỗi cú pháp phổ biến đều được tác nhân giải quyết thành công ngay trong 2 vòng lặp đầu tiên.
+
+\subsection{Luận giải lựa chọn môi trường E2B Sandbox MicroVM}
+\label{subsec:luan_giai_e2b}
+Việc cho phép người dùng tải lên và biên dịch mã nguồn \LaTeX\ tùy biến đặt ra thách thức an ninh hệ thống tối nghiêm trọng. Trình biên dịch TeX cung cấp các lệnh tương tác hệ điều hành (chẳng hạn như cơ chế mở cổng thực thi lệnh \verb|\write18|), nếu thực thi trực tiếp trên máy chủ backend sẽ tạo cơ hội cho kẻ tấn công thực thi mã độc tùy ý (\textit{Remote Code Execution -- RCE}), đọc trộm mã khóa bí mật môi trường (\texttt{.env}), tệp mật khẩu hệ thống (\texttt{/etc/passwd}) hoặc làm gián đoạn dịch vụ máy chủ.
+
+Đề tài lựa chọn giải pháp \textbf{E2B Cloud Sandbox} thay vì môi trường container thông thường vì các lý do an ninh vượt trội:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Cô lập cấp độ ảo hóa phần cứng MicroVM:} Nền tảng sử dụng công nghệ ảo hóa siêu nhẹ dựa trên Firecracker MicroVM, tạo ra một máy ảo Linux hoàn toàn độc lập cho mỗi phiên biên dịch. Máy ảo này cách ly 100\% với hệ điều hành máy chủ và các tiến trình của người dùng khác.
+    \item \textbf{Tốc độ khởi tạo tức thì:} Thời gian khởi tạo một máy ảo MicroVM mới chỉ mất khoảng 150 mili-giây, hoàn toàn đáp ứng yêu cầu phản hồi thời gian thực của giao diện người dùng.
+    \item \textbf{Cơ chế tự hủy (\textit{Zero-Persistence}):} Toàn bộ hệ thống tệp và tiến trình trong máy ảo sẽ bị tiêu hủy vĩnh viễn ngay sau khi tệp tài liệu xuất bản được tạo ra và trả về cho học giả, ngăn chặn hoàn toàn nguy cơ lưu vết hay lây nhiễm mã độc.
+\end{enumerate}

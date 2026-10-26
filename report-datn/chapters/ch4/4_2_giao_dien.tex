@@ -1,0 +1,14 @@
+% !TEX root = ../../main.tex
+\section{Giao diện các phân hệ chính của VeriScholar}
+\label{sec:giao_dien}
+\subsection{Phân hệ Khám phá tài liệu khoa học}
+\label{subsec:ui_discovery}
+Giao diện phân hệ Khám phá cho phép học giả tìm kiếm đồng thời qua Exa AI, arXiv và Semantic Scholar, hiển thị kết quả phân loại rõ ràng giữa bài có tệp PDF mở (\textit{Open Access}) và bài báo thu phí, hỗ trợ nạp bài tức thì vào thư viện nghiên cứu cá nhân.
+
+\subsection{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box}
+\label{subsec:ui_deep_reading}
+Giao diện đọc sâu gồm hai khung hiển thị song song: khung đọc bản PDF gốc bên trái và khung trò chuyện thông minh bên phải. Khi AI trích dẫn câu trả lời, trình duyệt tự động nhảy tới đúng trang tài liệu và vẽ khung viền vàng định vị chính xác vị trí đoạn văn gốc trong vòng 1 giây.
+
+\subsection{Phân hệ Hồ sơ học giả và Két sắt khóa cá nhân}
+\label{subsec:ui_profile}
+Giao diện quản lý hồ sơ học giả (\texttt{UserProfileModal} và \texttt{ScholarSettingsView}) cho phép liên kết mã định danh học giả ORCID iD 16 chữ số, cấu hình tùy chọn mô hình ngôn ngữ và mã hóa lưu trữ khóa API OpenAI cá nhân (BYOK) bằng thuật toán AES-256-GCM.

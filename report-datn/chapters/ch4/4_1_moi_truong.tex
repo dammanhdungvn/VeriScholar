@@ -1,0 +1,17 @@
+% !TEX root = ../../main.tex
+\section{Môi trường cài đặt và triển khai hệ thống}
+\label{sec:moi_truong}
+\subsection{Cấu hình môi trường phần cứng và phần mềm}
+\label{subsec:cau_hinh_moi_truong}
+Hệ thống \VS\ được cài đặt và kiểm nghiệm thực tế trên môi trường máy chủ đám mây Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM) với các phần mềm nền tảng:
+\begin{itemize}
+    \item \textbf{Hệ quản trị cơ sở dữ liệu:} PostgreSQL 16.2 kết hợp tiện ích mở rộng \texttt{pgvector} v0.7.0.
+    \item \textbf{Môi trường thực thi Backend:} Python 3.12, trình quản lý gói siêu tốc \texttt{uv}, FastAPI và SQLAlchemy 2.0 Async.
+    \item \textbf{Môi trường thực thi Frontend:} Node.js 22, React 19, Tailwind CSS, Zustand và Vite.
+    \item \textbf{Môi trường thực thi hộp cát đám mây:} E2B Sandbox MicroVM phục vụ chu trình tự sửa lỗi biên dịch \LaTeX.
+    \item \textbf{Nền tảng quan sát và giám sát LLM:} Langfuse Cloud (Project ID: \texttt{cmv8ub9jl00nvad0je39ueywo}).
+\end{itemize}
+
+\subsection{Tổ chức kho mã nguồn Monorepo}
+\label{subsec:monorepo}
+Kho mã nguồn được cấu trúc theo mô hình Monorepo chặt chẽ gồm ba không gian chính: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết, không phụ thuộc I/O), \texttt{apps/api} (tầng dịch vụ web FastAPI cung cấp RESTful API và SSE) và \texttt{apps/web} (giao diện người dùng React 19).

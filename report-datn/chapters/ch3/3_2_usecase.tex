@@ -1,0 +1,50 @@
+% !TEX root = ../../main.tex
+\section{Xác định tác nhân và biểu đồ ca sử dụng (Use Case)}
+\label{sec:use_case}
+\subsection{Xác định các tác nhân trong hệ thống}
+\label{subsec:tac_nhan}
+Hệ thống \VS\ phục vụ hai nhóm tác nhân chính:
+\begin{itemize}
+    \item \textbf{Học giả (Scholar / Researcher):} Người dùng chính của hệ thống (giảng viên, nghiên cứu sinh, sinh viên tại VinUni), thực hiện tìm kiếm bài báo, đọc hiểu chuyên sâu với hỗ trợ của AI, đối chiếu số liệu qua khung viền tọa độ, quản lý thư viện tri thức và soạn thảo bản thảo khoa học.
+    \item \textbf{Quản trị viên (System Administrator):} Giám sát tình trạng vận hành, theo dõi hạn ngạch tài nguyên, số lượng kết nối đồng thời và nhật ký truy vết hệ thống qua nền tảng Langfuse Cloud.
+\end{itemize}
+
+\subsection{Danh mục các ca sử dụng chính}
+\label{subsec:danh_muc_uc}
+Hệ thống bao gồm 30 ca sử dụng chuẩn hóa phân chia theo 4 phân hệ cốt lõi:
+\begin{itemize}
+    \item \textbf{Phân hệ Định danh và Bảo mật (UC-01):} Đăng nhập qua mã OTP gửi về email, liên kết mã định danh học giả quốc tế ORCID iD, quản lý hồ sơ cá nhân và két sắt mã hóa khóa cá nhân AES-256-GCM.
+    \item \textbf{Phân hệ Khám phá và Nạp bài báo 2 tầng (UC-02):} Tìm kiếm liên hợp đa nguồn (Exa AI, arXiv, Semantic Scholar), nạp bài tức thì kèm chỉ thị phân biệt Open Access và bóc tách cấu trúc ngầm CAS SHA-256.
+    \item \textbf{Phân hệ Đọc sâu và Bảng ngữ cảnh (UC-03 \& UC-04):} Hỏi đáp Hybrid RAG có minh chứng tọa độ trang và tổng hợp bảng đối chiếu ma trận nghiên cứu đa bài báo.
+    \item \textbf{Phân hệ Thư viện GraphRAG và Soạn thảo \LaTeX\ (UC-05 \& UC-06):} Trích xuất mạng tri thức 4 thực thể (\textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) và tác nhân LangGraph tự sửa lỗi biên dịch trên đám mây E2B Sandbox.
+\end{itemize}
+
+\subsection{Đặc tả ca sử dụng tiêu biểu UC-03}
+\label{subsec:dac_ta_uc_tieu_bieu}
+Ca sử dụng cốt lõi thể hiện điểm sáng tạo của đề tài là UC-03: \textit{Hỏi đáp Hybrid RAG có minh chứng tọa độ trang}. Cấu trúc nghiệp vụ chi tiết của ca sử dụng này được đặc tả theo chuẩn BA trong Bảng~\ref{tab:uc_03_spec}.
+
+\begin{table}[htbp]
+\centering
+\caption{Bảng đặc tả chi tiết ca sử dụng UC-03 (Hỏi đáp Hybrid RAG có tọa độ)}
+\label{tab:uc_03_spec}
+\begin{tabular}{p{3.5cm}p{11.5cm}}
+\toprule
+\textbf{Thuộc tính} & \textbf{Nội dung đặc tả nghiệp vụ} \\
+\midrule
+\textbf{Mã ca sử dụng} & UC-03-DEEP-READ-CHAT \\
+\textbf{Tên ca sử dụng} & Hỏi đáp tài liệu có minh chứng tọa độ trực quan trên bản PDF gốc \\
+\textbf{Tác nhân} & Học giả (Scholar) \\
+\textbf{Mục đích} & Cho phép học giả đặt câu hỏi bằng ngôn ngữ tự nhiên và nhận câu trả lời đối chiếu trực tiếp trên trang giấy tài liệu. \\
+\textbf{Tiền điều kiện} & Học giả đã đăng nhập thành công và đã mở một phiên đọc sâu (\textit{Deep Reading Session}) có chứa ít nhất 1 bài báo đã hoàn tất bóc tách CAS. \\
+\textbf{Hậu điều kiện} & Hệ thống lưu trữ câu hỏi và câu trả lời vào CSDL, đồng thời hiển thị hộp viền vàng tô sáng đoạn văn bản đối chiếu trên giao diện PDF. \\
+\textbf{Luồng sự kiện chính} & 
+1. Học giả nhập câu hỏi nghiên cứu tại khung trò chuyện và nhấn nút gửi.\\
+& 2. Giao diện \texttt{apps/web} mở kết nối HTTP POST truyền luồng Server-Sent Events tới máy chủ \texttt{apps/api}.\\
+& 3. Backend kích hoạt song song 2 luồng truy xuất: tìm kiếm vector HNSW trên \texttt{pgvector} và tìm kiếm toàn văn BM25 trên chỉ mục GIN.\\
+& 4. Lõi nghiệp vụ \texttt{packages/core} áp dụng thuật toán RRF ($k=60$) để xếp hạng và chọn top các đoạn trích có độ phù hợp cao nhất.\\
+& 5. Mô hình ngôn ngữ lớn tổng hợp câu trả lời dựa trên ngữ cảnh đã chọn, đính kèm mảng tọa độ Bounding Box $[x_0, y_0, x_1, y_1]$ và số trang tương ứng.\\
+& 6. Trình duyệt nhận dòng dữ liệu SSE, tự động cuộn trang PDF đến đúng vị trí và vẽ khung viền vàng tô sáng trong vòng 1 giây.\\
+\textbf{Luồng ngoại lệ} & Nếu không tìm thấy thông tin phù hợp, hệ thống thông báo trung thực rằng bài báo không đề cập tới nội dung này, tuyệt đối không bịa đặt số liệu. \\
+\bottomrule
+\end{tabular}
+\end{table}

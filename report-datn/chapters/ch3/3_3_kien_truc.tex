@@ -1,0 +1,24 @@
+% !TEX root = ../../main.tex
+\section{Thiết kế kiến trúc tổng thể của hệ thống}
+\label{sec:kien_truc_tong_the}
+\subsection{Kiến trúc 4 phân tầng monorepo}
+\label{subsec:kien_truc_4_tang}
+Kiến trúc phần mềm của \VS\ được tổ chức thành 4 phân tầng tách bạch trách nhiệm:
+\begin{enumerate}
+    \item \textbf{Tầng Giao diện người dùng (\texttt{apps/web}):} Xây dựng trên React 19, Tailwind CSS, Zustand state management và PDF Canvas Viewer, hỗ trợ hiển thị luồng SSE và vẽ lớp phủ Canvas tọa độ.
+    \item \textbf{Tầng Giao vận API (\texttt{apps/api}):} Cung cấp các RESTful API và các luồng sự kiện Server-Sent Events (SSE) trên FastAPI, quản lý phiên làm việc JWT và kết nối CSDL bất đồng bộ qua SQLAlchemy 2.0 Async.
+    \item \textbf{Tầng Lõi miền nghiệp vụ (\texttt{packages/core}):} Lõi logic thuần khiết, độc lập hoàn toàn với I/O và framework, chứa các thuật toán tính toán RRF, chuẩn hóa tọa độ và mô hình miền.
+    \item \textbf{Tầng Dữ liệu và Hạ tầng ngoài:} CSDL quan hệ PostgreSQL 16 kết hợp \texttt{pgvector}, Kho CAS tệp nhị phân trên hệ thống tệp cục bộ và môi trường đám mây E2B Sandbox.
+\end{enumerate}
+
+\subsection{Biểu đồ tuần tự cho luồng hỏi đáp Hybrid RAG có minh chứng tọa độ}
+\label{subsec:sequence_rag}
+Luồng tương tác giữa các thành phần phần mềm trong chu trình hỏi đáp học thuật được tổ chức theo 6 bước tuần tự:
+\begin{enumerate}[label=(\arabic*)]
+    \item \textbf{Khởi tạo câu hỏi:} Học giả nhập câu hỏi nghiên cứu tại thành phần \texttt{DeepReadingChatPanel} trên trình duyệt.
+    \item \textbf{Truyền phát yêu cầu:} Trình duyệt gửi yêu cầu HTTP POST tới endpoint \texttt{/api/v1/sessions/\{id\}/chat} của \texttt{apps/api}.
+    \item \textbf{Truy xuất lai song song:} Backend giải mã khóa cá nhân BYOK trên RAM và đồng thời kích hoạt 2 truy vấn độc lập: truy vấn vector ngữ nghĩa trên bảng \texttt{document\_chunks} (\texttt{pgvector}) và truy vấn từ khóa BM25 trên chỉ mục toàn văn.
+    \item \textbf{Hợp nhất RRF:} Tầng lõi nghiệp vụ nhận hai danh sách kết quả, áp dụng thuật toán RRF với tham số $k=60$ để tái sắp xếp và chọn lọc top $K$ đoạn văn bản có độ tin cậy cao nhất.
+    \item \textbf{Tổng hợp ngữ cảnh và truyền phát SSE:} Mô hình LLM tạo sinh câu trả lời kèm siêu dữ liệu tọa độ định vị $[x_0, y_0, x_1, y_1]$ và số thứ tự trang. Kết quả được truyền phát tức thì về trình duyệt qua kênh Server-Sent Events (SSE).
+    \item \textbf{Định vị trực quan trên Canvas:} Thành phần \texttt{PDFCanvasViewer} bắt sự kiện tọa độ từ luồng SSE, thực hiện phép co dãn tỷ lệ từ dải chuẩn hóa $[0..1000]$ sang độ phân giải thực tế của màn hình và vẽ khung viền vàng tô sáng ngay tức thì.
+\end{enumerate}

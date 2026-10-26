@@ -1,0 +1,48 @@
+% !TEX root = ../../main.tex
+\section{Thiết kế cơ sở dữ liệu vật lý}
+\label{sec:thiet_ke_db}
+\subsection{Lược đồ quan hệ thực thể (ERD)}
+\label{subsec:erd}
+Hệ thống sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 gồm 16 bảng cốt lõi, được phân hoạch an toàn theo \texttt{user\_id} nhằm đảm bảo quyền riêng tư tuyệt đối cho các nghiên cứu của từng học giả.
+
+\subsection{Đặc tả các bảng cơ sở dữ liệu chính}
+\label{subsec:dac_ta_bang}
+Cấu trúc và ý nghĩa các trường của bảng lưu trữ đoạn trích được tổng hợp chi tiết trong Bảng~\ref{tab:document_chunks}:
+
+\begin{table}[htbp]
+\centering
+\caption{Đặc tả bảng dữ liệu \texttt{document\_chunks}}
+\label{tab:document_chunks}
+\begin{tabular}{p{3.5cm}p{3cm}p{2.5cm}p{5.5cm}}
+\toprule
+\textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Index} & \textbf{Mô tả nghiệp vụ} \\
+\midrule
+\texttt{id} & UUID & Khóa chính & Định danh duy nhất của đoạn trích \\
+\texttt{document\_id} & UUID & Khóa ngoại & Khóa ngoại trỏ tới bảng \texttt{documents} \\
+\texttt{page\_number} & INTEGER & Index B-Tree & Số thứ tự trang giấy trong tài liệu PDF \\
+\texttt{chunk\_text} & TEXT & Không & Nội dung văn bản của đoạn trích \\
+\texttt{bbox} & JSONB & Không & Tọa độ hộp định vị $[x_0, y_0, x_1, y_1]$ chuẩn hóa \\
+\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Bên cạnh đó, cấu trúc bảng quản lý kho tệp nhị phân định danh nội dung (CAS) phục vụ cơ chế chống trùng lặp tệp và đếm tham chiếu được thể hiện trong Bảng~\ref{tab:document_storage_blobs}:
+
+\begin{table}[htbp]
+\centering
+\caption{Đặc tả bảng dữ liệu \texttt{document\_storage\_blobs}}
+\label{tab:document_storage_blobs}
+\begin{tabular}{p{4cm}p{3cm}p{2.5cm}p{5cm}}
+\toprule
+\textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Index} & \textbf{Mô tả nghiệp vụ} \\
+\midrule
+\texttt{id} & UUID & Khóa chính & Định danh duy nhất của khối tệp nhị phân \\
+\texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân của tệp PDF \\
+\texttt{file\_size\_bytes} & BIGINT & Không & Dung lượng tệp tính theo bytes \\
+\texttt{mime\_type} & VARCHAR(64) & Không & Định dạng chuẩn tệp (\texttt{application/pdf}) \\
+\texttt{storage\_path} & TEXT & Không & Đường dẫn tệp 2 tầng trên hệ thống tệp máy chủ \\
+\texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu tham chiếu tới khối tệp \\
+\bottomrule
+\end{tabular}
+\end{table}

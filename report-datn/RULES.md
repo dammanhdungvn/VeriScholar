@@ -105,6 +105,29 @@ Giống như cách lập luận của 2 đồ án mẫu xuất sắc, khi giới
   * Câu cuối chốt ý nghĩa hoặc dẫn chiếu tới Bảng/Hình (`Bảng~\ref{...}`, `Hình~\ref{...}`).
   * Tuyệt đối không dùng văn trần thuật ngôi kể nhật ký (*"Sau khi làm xong A thì ta tiếp tục chuyển sang làm B..."*).
 
+### 3.6. Quy Chuẩn Liêm Chính Học Thuật Giữa Các Chương (Academic Chapter Isolation)
+Để bảo đảm tính chuyên nghiệp đỉnh cao và phương pháp luận khoa học:
+* **Chương 2 (Cơ sở lý thuyết & Công nghệ):** Chỉ trình bày nguyên lý khoa học, mô hình lý thuyết, công thức toán học và kiến trúc tổng quát. Tuyệt đối cấm xuất hiện đường dẫn thư mục mã nguồn (`packages/`, `apps/`, `src/`), tên tệp (`.tsx`, `.py`), tên interface/class cụ thể trong code.
+  * *Sai:* "Trong thư mục `packages/core/ports/`, hệ thống định nghĩa interface `IAcademicSearchResolverPort`."
+  * *Đúng:* "Tầng lõi nghiệp vụ định nghĩa các cổng giao tiếp trừu tượng (*Ports*) như cổng phân giải ấn phẩm học thuật để phục vụ việc truy xuất tài liệu."
+* **Chương 3 (Thiết kế hệ thống):** Nơi chính thức công bố sơ đồ kiến trúc Monorepo, thiết kế CSDL, các ca sử dụng và các thành phần phần mềm.
+* **Chương 4 (Cài đặt và thực nghiệm):** Nơi trình bày chi tiết môi trường mã nguồn, kết quả kiểm thử tự động và số liệu đo đạc thực tế.
+* **Quy chuẩn trích dẫn trong bản thảo xem trước:** Trong mọi bản nháp gửi người dùng duyệt, trích dẫn phải viết ở định dạng học thuật tự nhiên `[1]`, `[2]` hoặc `(Tác giả, Năm)`, không được để lộ cú pháp mã nguồn thô của LaTeX như `\cite{...}. T`.
+
+### 3.7. Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế (Academic Paper Architecture Paradigm)
+
+Khi xây dựng các sơ đồ phân tích và thiết kế hệ thống (đặc biệt tại Chương 3):
+
+1. **Triết lý Thiết kế Hướng Người Đọc (Human-Centric):**
+   * *Mục tiêu:* Phục vụ Hội đồng chấm luận án, giảng viên hướng dẫn và học giả nghiên cứu đọc hiểu trọn vẹn bản chất phương pháp luận và đóng góp khoa học.
+   * *Đặc trưng:* Tương tự sơ đồ Transformer trong bài báo *"Attention Is All You Need"* [Vaswani et al., 2017] hay sơ đồ RAG [Lewis et al., 2020], kiến trúc chỉ bao gồm các khối chức năng toán học và dòng chảy biến đổi thông tin logic.
+
+2. **Bốn Tiêu Chuẩn Vàng Của Sơ Đồ Kiến Trúc Đồ Án:**
+   * **Tiêu chuẩn 1 — Danh xưng khoa học:** Mọi thành phần trong sơ đồ phải được định danh bằng thuật ngữ khoa học chuyên ngành (ví dụ: *Tầng Phân giải Ấn phẩm, Động cơ Hợp nhất Thứ hạng RRF, Bộ Kiểm chứng Tọa độ Trực quan, Không gian Sandbox MicroVM*). Tuyệt đối không dùng tên file code (`.ts`, `.py`), endpoint URL (`/api/v1/...`) hay tên biến.
+   * **Tiêu chuẩn 2 — Trực quan hóa Dòng chảy Tri thức (Dataflow Transformation):** Sơ đồ phải làm rõ: Dữ liệu bài báo thô đi qua quá trình phân tách cấu trúc 2 cột như thế nào $\rightarrow$ lập chỉ mục kép (Dense + Sparse) ra sao $\rightarrow$ tác nhân Agentic điều phối chu trình suy luận thế nào $\rightarrow$ trả về trích dẫn có minh chứng tọa độ Bounding Box ra sao.
+   * **Tiêu chuẩn 3 — Tôn vinh Tính Đổi mới (Highlighting Novelty):** Làm nổi bật các điểm sáng tạo của đề tài (Agentic Hybrid RAG, GraphRAG 4 thực thể trên PostgreSQL ACID, E2B MicroVM triệt tiêu lỗ hổng `\write18`).
+   * **Tiêu chuẩn 4 — Nghiêm cấm Sơ đồ "Máy đọc":** Cấm tuyệt đối các biểu đồ lớp (Class Diagram) vụn vặt kiểu CRUD với danh sách thuộc tính và hàm getter/setter của lập trình viên phần mềm.
+
 ---
 
 ## PHẦN 4: QUY TẮC BẢNG BIỂU, HÌNH VẼ & DẪN CHIẾU CHÉO
