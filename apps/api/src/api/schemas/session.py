@@ -5,6 +5,7 @@ from typing import Any, Literal
 from uuid import UUID
 
 from api.schemas.envelope import PaginatedResponseEnvelope, SingleResponseEnvelope
+from core.domain.value_objects.reasoning_effort import ReasoningEffortLevel
 from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
@@ -205,7 +206,7 @@ class SessionChatMessageRequest(BaseModel):
 
     question: str = Field(
         ...,
-        validation_alias=AliasChoices("question", "message"),
+        validation_alias=AliasChoices("question", "message", "content"),
         min_length=1,
         max_length=4000,
         description="Nội dung câu hỏi",
@@ -220,6 +221,10 @@ class SessionChatMessageRequest(BaseModel):
     )
     enable_thinking: bool = Field(
         False, description="Kích hoạt cơ chế suy luận phản biện chuyên sâu (Thinking Mode)"
+    )
+    reasoning_effort: ReasoningEffortLevel | None = Field(
+        default="high",
+        description="Mức độ suy luận độc lập với nhà cung cấp (off, low, medium, high)",
     )
     interactive_response: dict[str, Any] | None = Field(
         default=None,
