@@ -10,6 +10,7 @@ import {
   Search,
   Archive,
   BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -370,32 +371,30 @@ export function DashboardTaskbar({
             )}
           </div>
 
-          {/* User Details (when expanded): Dam Manh Dung • Tài khoản cá nhân */}
+          {/* User Details (when expanded): Verified checkmark without redundant email (Rule Item 2) */}
           <div
             className={cn(
-              "flex flex-col min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden",
+              "flex items-center min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden",
               isExpanded
                 ? "flex-1 opacity-100 max-w-[170px] ml-2.5"
                 : "max-w-0 opacity-0 ml-0 pointer-events-none"
             )}
           >
-            <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-serif leading-tight">
-              {user?.full_name ?? "Dam Manh Dung"}
-            </span>
-            <span className="text-3xs text-muted dark:text-zinc-400 truncate font-sans leading-tight mt-0.5">
-              Tài khoản cá nhân
-            </span>
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-serif leading-tight">
+                {user?.full_name ?? "Dam Manh Dung"}
+              </span>
+              <CheckCircle2 className="w-3.5 h-3.5 text-[#cc785c] shrink-0" />
+            </div>
           </div>
         </button>
 
-        {/* Avatar Dropdown Popover */}
+        {/* Avatar Dropdown Popover - Floating Overlay Layer */}
         <AvatarDropdownPopover
           isOpen={isAvatarDropdownOpen}
           onClose={() => setIsAvatarDropdownOpen(false)}
           onOpenSettings={() => setIsSettingsOpen(true)}
-          side="top"
-          align="left"
-          className="bottom-full mb-2 left-2"
+          className="bottom-16 left-3 shadow-[0_16px_48px_rgba(0,0,0,0.25)]"
         />
       </div>
     </aside>

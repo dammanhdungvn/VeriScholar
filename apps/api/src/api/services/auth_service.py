@@ -15,7 +15,12 @@ from uuid import UUID, uuid4
 import httpx
 import structlog
 from api.core.config import settings
-from api.core.email_validator import validate_academic_or_trusted_email
+from api.core.crypto import CryptoError, encrypt_byok_key
+from api.core.email_validator import (
+    mask_api_key,
+    validate_academic_or_trusted_email,
+    validate_orcid_id,
+)
 from api.db.models.user import UserModel
 from api.schemas.auth import (
     AuthTokensResponse,
@@ -23,6 +28,7 @@ from api.schemas.auth import (
     RegisterRequest,
     UpdateProfileRequest,
 )
+from api.services.ai_tracing_service import AITracingService
 from api.services.email_service import EmailService
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -68,6 +74,21 @@ async def _get_otp_cache(key: str) -> dict[str, Any] | None:
     if cached and time.time() < cached.get("exp", 0):
         return cached
     return None
+
+
+async def _delete_otp_cache(key: str) -> None:
+    """Evict OTP from in-memory cache and Redis."""
+    _otp_cache.pop(key, None)
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5
+        )
+        await client.delete(f"verischolar:otp:{key}")
+        await client.aclose()
+    except Exception:
+        pass
 
 
 class AuthService:
@@ -254,9 +275,10 @@ class AuthService:
                 detail={
                     "code": "EMAIL_ALREADY_EXISTS",
                     "message": (
-                        "Email học thuật này đã được đăng ký. "
-                        "Vui lòng đăng nhập hoặc sử dụng email khác."
+                        "Địa chỉ email này đã được sử dụng. "
+                        "Vui lòng đăng nhập hoặc sử dụng tính năng quên mật khẩu."
                     ),
+                    "field": "email",
                     "action": "Use an alternate email address or log in.",
                 },
             )
@@ -269,7 +291,7 @@ class AuthService:
             is_active=True,
             role="researcher",
             institution=payload.institution.strip() if payload.institution else None,
-            academic_rank="Nhà nghiên cứu Khoa học",
+            academic_rank=None,
             orcid_id=payload.orcid_id.strip() if payload.orcid_id else None,
             avatar_url=None,
             is_verified=False,
@@ -321,7 +343,7 @@ class AuthService:
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail={
                     "code": "INVALID_CREDENTIALS",
-                    "message": "Email hoặc mật khẩu không chính xác. Vui lòng thử lại.",
+                    "message": "Email hoặc mật khẩu không chính xác.",
                     "action": "Verify your email and password or use password reset.",
                 },
                 headers={"WWW-Authenticate": "Bearer"},
@@ -435,7 +457,7 @@ class AuthService:
         google_name = (
             token_data.get("name") or token_data.get("given_name") or normalized_email.split("@")[0]
         )
-        full_name = " ".join(str(google_name).strip().split()) or "Nhà nghiên cứu Google"
+        full_name = " ".join(str(google_name).strip().split()) or "Học giả"
         google_picture = token_data.get("picture")
 
         if user is None:
@@ -448,7 +470,7 @@ class AuthService:
                 role="researcher",
                 is_active=True,
                 is_verified=True,
-                academic_rank="Nhà nghiên cứu Khoa học",
+                academic_rank=None,
                 avatar_url=str(google_picture).strip() if google_picture else None,
             )
             self.db.add(user)
@@ -730,7 +752,7 @@ class AuthService:
         github_name = (
             user_data.get("name") or user_data.get("login") or normalized_email.split("@")[0]
         )
-        full_name = " ".join(str(github_name).strip().split()) or "Nhà nghiên cứu GitHub"
+        full_name = " ".join(str(github_name).strip().split()) or "Học giả"
         github_avatar = user_data.get("avatar_url")
 
         if user is None:
@@ -743,7 +765,7 @@ class AuthService:
                 role="researcher",
                 is_active=True,
                 is_verified=True,
-                academic_rank="Nhà nghiên cứu Khoa học",
+                academic_rank=None,
                 avatar_url=str(github_avatar).strip() if github_avatar else None,
             )
             self.db.add(user)
@@ -905,7 +927,18 @@ class AuthService:
         clean_token = token.strip()
 
         # Check if 6-digit OTP code was provided
-        if len(clean_token) == 6 and clean_token.isdigit() and email:
+        if len(clean_token) == 6 and clean_token.isdigit():
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "EMAIL_REQUIRED_FOR_OTP",
+                        "message": (
+                            "Vui lòng cung cấp địa chỉ email khi sử dụng mã xác thực OTP 6 số."
+                        ),
+                        "action": "Include email in the request.",
+                    },
+                )
             normalized_email = email.strip().lower()
             cached = await _get_otp_cache(f"reset:{normalized_email}")
             if cached and cached.get("code") == clean_token:
@@ -971,6 +1004,8 @@ class AuthService:
 
         user.hashed_password = self.hash_password(new_password)
         await self.db.commit()
+        if email and len(clean_token) == 6 and clean_token.isdigit():
+            await _delete_otp_cache(f"reset:{email.strip().lower()}")
 
     async def verify_email(self, email: str, token_or_code: str) -> UserModel:
         """Verify scholarly email address using 6-digit OTP code or JWT token."""
@@ -1020,6 +1055,7 @@ class AuthService:
         user.is_verified = True
         await self.db.commit()
         await self.db.refresh(user)
+        await _delete_otp_cache(f"verify:{normalized_email}")
         return user
 
     async def resend_verification(self, email: str) -> str:
@@ -1078,25 +1114,118 @@ class AuthService:
 
     async def update_profile(self, user: UserModel, payload: UpdateProfileRequest) -> UserModel:
         """Update authenticated user's profile details."""
-        if payload.full_name is not None:
-            user.full_name = payload.full_name.strip()
-        if payload.institution is not None:
-            user.institution = payload.institution.strip()
-        if payload.academic_rank is not None:
-            user.academic_rank = payload.academic_rank.strip()
-        if payload.orcid_id is not None:
-            user.orcid_id = payload.orcid_id.strip()
-        if payload.avatar_url is not None:
-            user.avatar_url = payload.avatar_url.strip()
-        if payload.department is not None:
-            user.department = payload.department.strip()
-        if payload.bio is not None:
-            user.bio = payload.bio.strip()
-        if payload.research_interests is not None:
-            user.research_interests = payload.research_interests.strip()
-        if payload.google_scholar_url is not None:
-            user.google_scholar_url = payload.google_scholar_url.strip()
+        tracer = AITracingService()
+        with tracer.trace(
+            name="scholar_profile_byok_update",
+            user_id=user.id,
+            tags=["plan-01", "byok-vault", "auto-trace"],
+            input={
+                "has_byok_payload": bool(payload.byok_api_key),
+                "orcid_id": payload.orcid_id,
+                "theme_preference": payload.theme_preference,
+            },
+        ) as trace_span:
+            if payload.orcid_id is not None:
+                clean_orcid = payload.orcid_id.strip()
+                if not validate_orcid_id(clean_orcid):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "code": "INVALID_ORCID_FORMAT",
+                            "message": (
+                                "Định dạng mã ORCID không hợp lệ (chuẩn: 0000-0002-1825-0097)."
+                            ),
+                            "field": "orcid_id",
+                            "action": "Nhập mã ORCID chuẩn gồm 16 chữ số chia 4 nhóm.",
+                        },
+                    )
+                user.orcid_id = clean_orcid or None
 
-        await self.db.commit()
-        await self.db.refresh(user)
+            if payload.theme_preference is not None:
+                clean_theme = payload.theme_preference.strip().lower()
+                if clean_theme not in ("light", "dark", "system"):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail={
+                            "code": "INVALID_THEME_PREFERENCE",
+                            "message": (
+                                "Tùy chọn giao diện không hợp lệ. "
+                                "Chỉ chấp nhận các giá trị: light, dark hoặc system."
+                            ),
+                            "field": "theme_preference",
+                            "action": "Chọn một trong 3 giá trị cho phép.",
+                        },
+                    )
+                user.theme_preference = clean_theme
+
+            if payload.byok_api_key is not None:
+                clean_key = payload.byok_api_key.strip()
+                if clean_key == "":
+                    user.byok_api_key_encrypted = None
+                else:
+                    try:
+                        encrypted_val = encrypt_byok_key(clean_key, settings.BYOK_ENCRYPTION_KEY)
+                        user.byok_api_key_encrypted = encrypted_val
+                        with tracer.span(
+                            name="byok_aes256_gcm_encrypt",
+                            input={"masked_key": mask_api_key(clean_key)},
+                            output={
+                                "cipher_bytes": len(user.byok_api_key_encrypted),
+                                "status": "encrypted_aes256_gcm",
+                            },
+                        ) as enc_span:
+                            enc_span.set_output(
+                                {
+                                    "cipher_bytes": len(user.byok_api_key_encrypted),
+                                    "status": "encrypted_aes256_gcm",
+                                }
+                            )
+                    except CryptoError as exc:
+                        logger.error("byok_encryption_failed", error=str(exc))
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail={
+                                "code": "BYOK_ENCRYPTION_FAILED",
+                                "message": (
+                                    "Lỗi hệ thống trong quá trình mã hóa bảo mật khóa cá nhân. "
+                                    "Vui lòng liên hệ ban quản trị."
+                                ),
+                                "action": "Kiểm tra lại biến môi trường server.",
+                            },
+                        ) from exc
+
+            if payload.full_name is not None:
+                user.full_name = payload.full_name.strip()
+            if payload.institution is not None:
+                user.institution = payload.institution.strip()
+            if payload.academic_rank is not None:
+                user.academic_rank = payload.academic_rank.strip()
+            if payload.avatar_url is not None:
+                user.avatar_url = payload.avatar_url.strip()
+            if payload.department is not None:
+                user.department = payload.department.strip()
+            if payload.bio is not None:
+                user.bio = payload.bio.strip()
+            if payload.research_interests is not None:
+                user.research_interests = payload.research_interests.strip()
+            if payload.google_scholar_url is not None:
+                user.google_scholar_url = payload.google_scholar_url.strip()
+
+            await self.db.commit()
+            await self.db.refresh(user)
+
+            trace_span.set_output(
+                {
+                    "user_id": str(user.id),
+                    "has_byok": bool(user.byok_api_key_encrypted),
+                    "byok_masked": (
+                        mask_api_key(payload.byok_api_key.strip())
+                        if payload.byok_api_key and payload.byok_api_key.strip()
+                        else None
+                    ),
+                    "orcid_id": user.orcid_id,
+                    "theme_preference": user.theme_preference,
+                }
+            )
+        tracer.flush()
         return user

@@ -71,6 +71,7 @@ select = ["E", "F", "I"]
 testpaths = [
     "apps/api/tests",
     "packages/core/tests",
+    "tests",
 ]
 norecursedirs = [
     ".agents",

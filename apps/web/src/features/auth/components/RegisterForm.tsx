@@ -143,14 +143,11 @@ export function RegisterForm() {
 
   return (
     <div className="w-full space-y-5 font-sans text-left">
-      {/* 1. Academic Luxury Header */}
+      {/* 1. Header */}
       <div>
         <h1 className="text-2xl sm:text-[28px] font-serif font-bold tracking-tight text-ink dark:text-[#f7f5f0]">
           Đăng ký
         </h1>
-        <p className="text-xs sm:text-sm text-muted dark:text-[#9c988f] pt-0.5">
-          Tạo tài khoản nhà nghiên cứu trên nền tảng VeriScholar
-        </p>
       </div>
 
       {/* 2. Icon-Only Social SSO at Top */}
@@ -289,8 +286,8 @@ export function RegisterForm() {
             className="text-xs text-muted dark:text-[#a8a49a] leading-snug cursor-pointer select-none"
           >
             Đồng ý với{" "}
-            <span className="text-amber-700 dark:text-amber-400 hover:underline font-medium">Điều khoản</span> &{" "}
-            <span className="text-amber-700 dark:text-amber-400 hover:underline font-medium">Bảo mật</span> của VeriScholar.
+            <span className="text-amber-700 dark:text-amber-400 hover:underline font-medium">Điều khoản</span> &amp;{" "}
+            <span className="text-amber-700 dark:text-amber-400 hover:underline font-medium">Quyền riêng tư</span>.
           </label>
         </div>
 

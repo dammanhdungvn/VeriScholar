@@ -22,8 +22,10 @@ from core.services.email_validator import (
     is_institutional_domain,
     is_reputable_domain,
     is_valid_email_syntax,
+    mask_api_key,
     normalize_email,
     validate_academic_or_trusted_email,
+    validate_orcid_id,
     validate_user_full_name,
 )
 
@@ -45,7 +47,9 @@ __all__ = [
     "is_institutional_domain",
     "is_reputable_domain",
     "is_valid_email_syntax",
+    "mask_api_key",
     "normalize_email",
     "validate_academic_or_trusted_email",
+    "validate_orcid_id",
     "validate_user_full_name",
 ]

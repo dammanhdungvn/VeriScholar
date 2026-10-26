@@ -90,6 +90,19 @@ export const documentsApi = {
   },
 
   /**
+   * 1b. POST /api/v1/documents/{id}/attach-pdf
+   * Đính kèm tệp PDF đầy đủ cho bài báo chỉ có tóm tắt
+   */
+  async attachPdf(documentId: string, file: File): Promise<DocumentUploadResponseData> {
+    const formData = new FormData();
+    formData.append("file", file);
+    return apiClient<DocumentUploadResponseData>(`/documents/${documentId}/attach-pdf`, {
+      method: "POST",
+      body: formData,
+    });
+  },
+
+  /**
    * 2. GET /api/v1/documents
    * Danh sách bài báo cá nhân (phân trang RFC 8288)
    */
@@ -149,7 +162,7 @@ export const documentsApi = {
 
   /**
    * 7. DELETE /api/v1/documents/{id}
-   * Xóa bài báo theo đồ thị phụ thuộc (Zero-Retention Cascade Purge)
+   * Xóa bài báo theo đồ thị phụ thuộc (Cascade Purge)
    */
   async deleteDocument(documentId: string): Promise<void> {
     return apiClient<void>(`/documents/${documentId}`, {

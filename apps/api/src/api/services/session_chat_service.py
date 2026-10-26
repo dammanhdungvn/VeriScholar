@@ -26,6 +26,7 @@ from api.schemas.session import (
     SessionTurnItem,
 )
 from api.services.ai_tracing_service import AITracingService
+from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_provider
 from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select
@@ -1119,9 +1120,10 @@ class SessionChatService:
                     "messages": llm_messages,
                     "stream": True,
                 }
-                if any(m in settings.OPENAI_MODEL.lower() for m in ("gpt-5", "o1", "o3", "luna")):
-                    payload["reasoning_effort"] = settings.REASONING_EFFORT
-                else:
+                effort = getattr(request, "reasoning_effort", None) or settings.REASONING_EFFORT
+                effort_params = map_reasoning_effort_to_provider("openai", effort)
+                payload.update(effort_params)
+                if not effort_params:
                     payload["temperature"] = 0.3
 
                 async with httpx.AsyncClient(timeout=60.0) as client:

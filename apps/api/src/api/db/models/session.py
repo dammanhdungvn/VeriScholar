@@ -71,6 +71,11 @@ class SessionTurnModel(Base):
         primary_key=True,
         default=uuid4,
     )
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     session_id: Mapped[UUID] = mapped_column(
         ForeignKey("research_sessions.id", ondelete="CASCADE"),
         nullable=False,
@@ -91,10 +96,14 @@ class SessionTurnModel(Base):
         default="stop",
         nullable=False,
     )
+    trace_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default=lambda: datetime.now(UTC),
         nullable=False,
     )
 
-    __table_args__ = (Index("idx_session_turns_session_created", "session_id", "created_at"),)
+    __table_args__ = (
+        Index("idx_session_turns_user_session", "user_id", "session_id"),
+        Index("idx_session_turns_session_created", "session_id", "created_at"),
+    )

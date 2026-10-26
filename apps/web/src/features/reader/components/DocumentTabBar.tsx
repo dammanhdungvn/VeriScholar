@@ -112,7 +112,7 @@ export function DocumentTabBar({
                 </button>
               )}
 
-              {/* Delete document button (Zero-Retention Cascade Purge) */}
+              {/* Delete document button (Cascade Purge) */}
               {onDeleteDocument && (
                 <button
                   type="button"
@@ -177,7 +177,7 @@ export function DocumentTabBar({
               </strong>{" "}
               khỏi hệ thống?
               <br /><br />
-              Thao tác này sẽ thực thi quy trình <strong>Zero-Retention Cascade Purge</strong>: xóa triệt để file vật lý, toàn bộ phân đoạn Chunks và vector embeddings liên quan. Hành động này không thể hoàn tác!
+              Thao tác này sẽ xóa vĩnh viễn tệp cùng toàn bộ phân đoạn và dữ liệu liên quan. Hành động này không thể hoàn tác!
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2">

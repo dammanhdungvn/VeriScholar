@@ -1,7 +1,7 @@
 """Local filesystem Content-Addressable Storage (CAS) adapter.
 
 Organizes blobs in a 2-tier fan-out directory structure:
-storage/blobs/ab/cd/abcdef123456...pdf
+storage/blobs/ab/cd/abcdef123456...
 Guarantees atomic file writes via temporary files and rename operations.
 """
 
@@ -37,11 +37,16 @@ class LocalStorageAdapter(IBlobStoragePort):
         clean_hash = content_hash.lower().strip()
         prefix1 = clean_hash[:2]
         prefix2 = clean_hash[2:4]
-        return self.base_dir / prefix1 / prefix2 / f"{clean_hash}.pdf"
+        # Check if legacy .pdf file exists on disk, otherwise use raw hash
+        pdf_path = self.base_dir / prefix1 / prefix2 / f"{clean_hash}.pdf"
+        if pdf_path.is_file():
+            return pdf_path
+        return self.base_dir / prefix1 / prefix2 / clean_hash
 
     def get_blob_path(self, content_hash: str) -> str:
-        """Return canonical absolute or relative path to the blob file."""
-        return str(self._resolve_path(content_hash))
+        """Return canonical 2-tier partitioned storage relative path for given content hash."""
+        clean_hash = content_hash.lower().strip()
+        return f"{clean_hash[:2]}/{clean_hash[2:4]}/{clean_hash}"
 
     async def blob_exists(self, content_hash: str) -> bool:
         """Check whether physical blob file exists on disk."""
@@ -68,8 +73,7 @@ class LocalStorageAdapter(IBlobStoragePort):
         # Check if already present on disk (CAS deduplication)
         if await self.blob_exists(clean_hash):
             file_size = await asyncio.to_thread(final_path.stat)
-            relative_path = str(final_path.relative_to(self.base_dir.parent))
-            return relative_path, file_size.st_size
+            return self.get_blob_path(clean_hash), file_size.st_size
 
         # Prepare parent directories
         await asyncio.to_thread(final_path.parent.mkdir, parents=True, exist_ok=True)
@@ -101,11 +105,10 @@ class LocalStorageAdapter(IBlobStoragePort):
                 await asyncio.to_thread(temp_path.unlink, missing_ok=True)
             raise
 
-        relative_path = str(final_path.relative_to(self.base_dir.parent))
-        return relative_path, total_bytes
+        return self.get_blob_path(clean_hash), total_bytes
 
     async def delete_blob(self, content_hash: str) -> bool:
-        """Safely delete blob file when ref_count reaches 0."""
+        """Safely delete blob file when ref_count reaches 0 and clean empty parent folders."""
         target_path = self._resolve_path(content_hash)
         if not await asyncio.to_thread(target_path.is_file):
             return False
@@ -113,13 +116,14 @@ class LocalStorageAdapter(IBlobStoragePort):
         await asyncio.to_thread(target_path.unlink, missing_ok=True)
 
         def _cleanup_empty_parents(path: Path) -> None:
+            clean_hash = content_hash.lower().strip()
             try:
                 p2 = path.parent
-                if p2.exists() and not any(p2.iterdir()):
+                if p2.exists() and p2 != self.base_dir and not any(p2.iterdir()):
                     p2.rmdir()
-                    p1 = p2.parent
-                    if p1.exists() and not any(p1.iterdir()):
-                        p1.rmdir()
+                p1 = self.base_dir / clean_hash[:2]
+                if p1.exists() and p1 != self.base_dir and not any(p1.iterdir()):
+                    p1.rmdir()
             except OSError as err:
                 logger.debug("Storage cleanup: directory not empty or permission denied: %s", err)
 

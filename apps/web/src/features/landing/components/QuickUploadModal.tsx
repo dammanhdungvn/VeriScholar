@@ -141,7 +141,7 @@ export function QuickUploadModal() {
                     Kéo thả tệp PDF vào đây, hoặc <span className="text-primary underline">chọn từ máy tính</span>
                   </p>
                   <p className="text-xs text-muted font-sans">
-                    Hỗ trợ tối đa 50MB • Bóc tách 2 cột • Nhúng ISO 32000-1
+                    Hỗ trợ tệp PDF tối đa 50MB
                   </p>
                 </div>
               )}

@@ -1,0 +1,109 @@
+% !TEX root = ../../main.tex
+\section{Khảo sát quy trình nghiệp vụ và mô hình hóa bài toán thực tế}
+\label{sec:khao_sat}
+
+\subsection{Bối cảnh nghiên cứu khoa học tại VinUniversity}
+\label{subsec:boi_canh_vinuni}
+Tại VinUniversity, định hướng phát triển trường đại học nghiên cứu tinh hoa theo chuẩn mực quốc tế đặt ra yêu cầu rất cao đối với các công trình công bố khoa học của đội ngũ giảng viên, nghiên cứu sinh và sinh viên. Các ấn phẩm bắt buộc phải hướng tới các hội nghị chuyên ngành hàng đầu (như NeurIPS, ICML, CVPR, SIGIR, KDD) và các tạp chí khoa học uy tín thuộc danh mục Q1/Q2 (IEEE Transactions, ACM Computing Surveys, Springer Nature).
+
+Trong môi trường học thuật chuyên sâu này, tính liêm chính học thuật (\textit{Academic Integrity}) là yêu cầu bất biến tối thượng. Mọi khẳng định khoa học, số liệu thực nghiệm và chỉ số đo lường trích dẫn đều bắt buộc phải có minh chứng nguồn gốc xác thực, tuyệt đối không chấp nhận các sai sót do trích dẫn sai lệch hay số liệu suy đoán không có căn cứ.
+
+\subsection{Phân tích quy trình nghiên cứu truyền thống (Luồng AS-IS)}
+\label{subsec:luong_as_is}
+Khảo sát thực tế quy trình làm việc của các nhóm nghiên cứu khoa học tại trường cho thấy quy trình hiện tại đang bị phân mảnh nghiêm trọng qua 4 giai đoạn độc lập:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Giai đoạn khám phá ấn phẩm:} Học giả phải tra cứu thủ công trên nhiều cổng thông tin riêng rẽ như Google Scholar, arXiv, DBLP hay Semantic Scholar. Việc nạp tài liệu về máy tính thường xuyên dẫn đến tình trạng tải trùng lặp các tệp PDF dung lượng lớn, gây lãng phí tài nguyên lưu trữ và khó khăn trong việc đồng bộ thư viện tài liệu.
+    \item \textbf{Giai đoạn đọc sâu và trích xuất thông tin:} Học giả mở tài liệu trên các ứng dụng đọc PDF thông thường hoặc sử dụng các công cụ hỏi đáp tài liệu phổ quát. Các công cụ này chỉ bóc tách văn bản thô, làm mất hoàn toàn cấu trúc hai cột của bài báo và chỉ trích dẫn số trang chung chung. Học giả phải mất nhiều thời gian rà soát thủ công từng dòng chữ trên trang PDF để đối chiếu tính xác thực của thông tin.
+    \item \textbf{Giai đoạn tổng hợp mạng lưới tri thức:} Để xây dựng bức tranh toàn cảnh về một hướng nghiên cứu, học giả phải tự lập các bảng tính Excel hoặc ghi chú rời rạc nhằm đối chiếu xem phương pháp nào đã được thử nghiệm trên bộ dữ liệu nào và đạt kết quả thực nghiệm ra sao. Quy trình thủ công này rất dễ bỏ sót các mối liên hệ bắc cầu giữa các công trình nghiên cứu đa ngành.
+    \item \textbf{Giai đoạn soạn thảo bản thảo bằng \LaTeX:} Học giả chuyển sang các công cụ soạn thảo như Overleaf hoặc TeXstudio. Khi xảy ra lỗi cú pháp, học giả mất hàng giờ đọc tệp nhật ký lỗi (\texttt{.log}) dài hàng nghìn dòng để khắc phục thủ công.
+\end{enumerate}
+
+Sự chia cắt giữa các công cụ khiến học giả mất trung bình từ $30\%$ đến $40\%$ quỹ thời gian nghiên cứu cho các thao tác chuyển đổi ngữ cảnh và xử lý kỹ thuật vụn vặt, đồng thời tiềm ẩn nguy cơ sai lệch trích dẫn trong bản thảo công bố.
+
+\subsection{Mô hình quy trình nghiên cứu đề xuất (Luồng TO-BE)}
+\label{subsec:luong_to_be}
+Nhằm giải quyết triệt để các rào cản trên, đề tài đề xuất mô hình quy trình nghiên cứu mới tích hợp khép kín trong nền tảng \VS\ với 4 không gian học thuật liền mạch:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Không gian Khám phá thông minh:} Tích hợp tìm kiếm liên hợp đa nguồn qua giao diện thống nhất, tự động nhận diện tài liệu truy cập mở (\textit{Open Access}) và lưu trữ khử trùng lặp nội dung CAS SHA-256 tức thì.
+    \item \textbf{Không gian Đọc sâu có kiểm chứng trực quan:} Cung cấp công cụ hỏi đáp học thuật Hybrid RAG kết hợp thuật toán RRF. Khi AI đưa ra câu trả lời, hệ thống tự động truyền luồng tọa độ chuẩn hóa $[0..1000]$ và vẽ khung viền vàng (\textit{Bounding Box}) định vị chính xác vị trí câu văn gốc trên tài liệu PDF trong vòng 1 giây, bảo đảm tính liêm chính dữ liệu tuyệt đối.
+    \item \textbf{Không gian Mạng tri thức học thuật (GraphRAG):} Tự động trích xuất và kết nối mạng lưới 4 thực thể (\textit{Bài báo $\rightarrow$ Phương pháp $\rightarrow$ Bộ dữ liệu $\rightarrow$ Kết quả đo}), hỗ trợ truy vấn so sánh đa phương pháp tức thì thông qua cấu trúc CTE trên PostgreSQL \texttt{pgvector}.
+    \item \textbf{Không gian Soạn thảo và Tự phục hồi bản thảo:} Tác nhân AI hoạt động theo chu trình ReAct trong máy ảo E2B Sandbox MicroVM, tự động phân tích lỗi \texttt{.log} và vá lỗi cú pháp \LaTeX\ đạt tỷ lệ thành công trên $90\%$.
+\end{enumerate}
+
+Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (AS-IS) và quy trình đề xuất (TO-BE) được minh họa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.78, transform shape,
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small, text width=6.6cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small, text width=6.6cm},
+    arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
+    trans_arrow/.style={-{Stealth[length=3mm]}, line width=1.5pt, draw=teal!80!black, dashed}
+]
+    % Cột AS-IS (Truyền thống)
+    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7cm, inner sep=5pt] (h_asis) at (-4.2, 4.2) {QUY TRÌNH HIỆN TẠI (AS-IS)};
+    
+    \node[box_asis] (a1) at (-4.2, 2.8) {
+        \textbf{1. Tìm kiếm phân mảnh thủ công}\\
+        \footnotesize Google Scholar / arXiv riêng rẽ\\
+        \footnotesize $\times$ Tải trùng lặp tệp PDF lớn lãng phí đĩa
+    };
+    \node[box_asis] (a2) at (-4.2, 0.8) {
+        \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
+        \footnotesize Bóc tách thô làm mất bố cục 2 cột\\
+        \footnotesize $\times$ Mất dấu ngữ cảnh, rà soát trang thủ công
+    };
+    \node[box_asis] (a3) at (-4.2, -1.2) {
+        \textbf{3. Lập bảng so sánh thủ công}\\
+        \footnotesize Ghi chú Excel / Notion rời rạc\\
+        \footnotesize $\times$ Bỏ sót liên kết bắc cầu giữa các bài báo
+    };
+    \node[box_asis] (a4) at (-4.2, -3.2) {
+        \textbf{4. Soạn thảo \& Tự dò lỗi \LaTeX}\\
+        \footnotesize Chuyển ngữ cảnh sang Overleaf\\
+        \footnotesize $\times$ Đọc tệp log hàng giờ để sửa lỗi cú pháp
+    };
+
+    % Cột TO-BE (Đề xuất)
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7cm, inner sep=5pt] (h_tobe) at (4.2, 4.2) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+
+    \node[box_tobe] (b1) at (4.2, 2.8) {
+        \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
+        \footnotesize Tìm kiếm đa nguồn thống nhất\\
+        \footnotesize $\checkmark$ Tiết kiệm 98\% dung lượng lưu trữ tệp
+    };
+    \node[box_tobe] (b2) at (4.2, 0.8) {
+        \textbf{2. Đọc sâu có minh chứng tọa độ}\\
+        \footnotesize Agentic Hybrid RAG (Dense + BM25)\\
+        \footnotesize $\checkmark$ Tô sáng khung viền vàng trong 1 giây (IoU $\ge$ 0.85)
+    };
+    \node[box_tobe] (b3) at (4.2, -1.2) {
+        \textbf{3. Mạng tri thức tự động (GraphRAG)}\\
+        \footnotesize Đồ thị 4 thực thể trên PostgreSQL ACID\\
+        \footnotesize $\checkmark$ Truy vấn so sánh đa bài báo tức thì với CTE
+    };
+    \node[box_tobe] (b4) at (4.2, -3.2) {
+        \textbf{4. Tác nhân tự sửa lỗi \LaTeX}\\
+        \footnotesize Chu trình ReAct trong E2B MicroVM\\
+        \footnotesize $\checkmark$ Tự động phân tích log và vá lỗi $>90\%$
+    };
+
+    % Mũi tên tuần tự
+    \draw[arrow_down] (a1) -- (a2);
+    \draw[arrow_down] (a2) -- (a3);
+    \draw[arrow_down] (a3) -- (a4);
+
+    \draw[arrow_down] (b1) -- (b2);
+    \draw[arrow_down] (b2) -- (b3);
+    \draw[arrow_down] (b3) -- (b4);
+
+    % Mũi tên chuyển đổi giữa 2 luồng
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tối ưu};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tự sửa};
+\end{tikzpicture}
+\caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
+\label{fig:workflow_as_is_to_be}
+\end{figure}

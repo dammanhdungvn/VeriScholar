@@ -1,0 +1,68 @@
+% !TEX root = ../../main.tex
+\section{Mạng tri thức học thuật 4 thực thể (GraphRAG)}
+\label{sec:graphrag}
+
+\subsection{Mô hình hóa mạng lưới tri thức 4 thực thể cốt lõi}
+\label{subsec:mo_hinh_graph}
+Hạn chế lớn nhất của mô hình RAG truyền thống là việc xử lý các đoạn trích văn bản rời rạc, không nắm bắt được mối quan hệ bắc cầu giữa các công trình khoa học \cite{edge2024}. Khi học giả hỏi các câu hỏi mang tính tổng hợp (ví dụ: \textit{''Những phương pháp nào đã được thử nghiệm trên bộ dữ liệu ImageNet và đạt độ chính xác trên 90\%?''}), RAG truyền thống thường bỏ sót hoặc tổng hợp sai lệch do các mảnh thông tin nằm rải rác ở nhiều bài báo khác nhau.
+
+VeriScholar khắc phục hạn chế này bằng cách mô hình hóa tri thức học thuật thành đồ thị mạng lưới 4 lớp thực thể cốt lõi:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bài báo khoa học (\textit{Paper Node}):} Thực thể gốc đại diện cho công trình công bố, chứa tiêu đề, tác giả, năm công bố, số định danh DOI và liên kết tệp dữ liệu.
+    \item \textbf{Phương pháp khoa học (\textit{Method Node}):} Các kỹ thuật, thuật toán hoặc kiến trúc mô hình mới được đề xuất trong công trình (ví dụ: \textit{LoRA}, \textit{FlashAttention}, \textit{Agentic RAG}).
+    \item \textbf{Bộ dữ liệu chuẩn (\textit{Dataset Node}):} Các tập dữ liệu được dùng làm chuẩn đánh giá thực nghiệm (ví dụ: \textit{SQuAD 2.0}, \textit{MMLU}, \textit{ImageNet}).
+    \item \textbf{Kết quả đo lường (\textit{MetricResult Node}):} Các chỉ số định lượng cụ thể đo lường hiệu năng của phương pháp trên bộ dữ liệu tương ứng (chứa trường tên chỉ số, giá trị định lượng, và đơn vị đo lường).
+\end{enumerate}
+
+Cấu trúc đồ thị mạng lưới 4 thực thể cùng các mối liên kết ngữ nghĩa được mô hình hóa trong Hình~\ref{fig:graphrag_model}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.88, transform shape,
+    papernode/.style={draw=blue!80!black, fill=blue!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
+    methodnode/.style={draw=teal!80!black, fill=teal!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
+    datanode/.style={draw=purple!80!black, fill=purple!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
+    metricnode/.style={draw=orange!80!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
+    edgearrow/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!70}
+]
+    % 4 Nodes chính
+    \node[papernode, minimum width=3.8cm] (paper) at (0, 2.5) {
+        \textbf{Bài báo (Paper)}\\[2pt]
+        \footnotesize \textit{Title, DOI, Year, Authors}
+    };
+    \node[methodnode, minimum width=3.8cm] (method) at (0, 0) {
+        \textbf{Phương pháp (Method)}\\[2pt]
+        \footnotesize \textit{Name, Category, Description}
+    };
+    \node[datanode, minimum width=3.8cm] (dataset) at (-3.2, -2.5) {
+        \textbf{Bộ dữ liệu (Dataset)}\\[2pt]
+        \footnotesize \textit{Name, Domain, Benchmark}
+    };
+    \node[metricnode, minimum width=3.8cm] (metric) at (3.2, -2.5) {
+        \textbf{Kết quả đo (MetricResult)}\\[2pt]
+        \footnotesize \textit{Metric, Value, Unit}
+    };
+
+    % Các Cạnh liên kết ngữ nghĩa có nhãn
+    \draw[edgearrow] (paper) -- (method) node[midway, right, font=\footnotesize\bfseries] {ĐỀ XUẤT (\textit{PROPOSES})};
+    \draw[edgearrow] (method) -- (dataset) node[midway, above left, font=\footnotesize\bfseries] {ĐÁNH GIÁ (\textit{EVALUATES})};
+    \draw[edgearrow] (method) -- (metric) node[midway, above right, font=\footnotesize\bfseries] {ĐẠT CHỈ SỐ (\textit{YIELDS})};
+    \draw[edgearrow, dashed] (metric) -- (dataset) node[midway, below, font=\footnotesize\bfseries] {TRÊN TẬP DỮ LIỆU};
+\end{tikzpicture}
+\caption{Mô hình đồ thị tri thức học thuật 4 thực thể cốt lõi (GraphRAG)}
+\label{fig:graphrag_model}
+\end{figure}
+
+Các cạnh nối liên kết có hướng giữa các thực thể biểu diễn quan hệ ngữ nghĩa chặt chẽ: $\text{Bài báo} \xrightarrow{\text{Đề xuất}} \text{Phương pháp}$, $\text{Phương pháp} \xrightarrow{\text{Đánh giá trên}} \text{Bộ dữ liệu}$, và $\text{Phương pháp} \xrightarrow{\text{Đạt kết quả}} \text{Chỉ số đo lường}$.
+
+\subsection{Luận giải tích hợp GraphRAG trên PostgreSQL pgvector}
+\label{subsec:luan_giai_pgvector}
+Một câu hỏi lý thuyết quan trọng là: \textit{''Tại sao đề tài không triển khai GraphRAG trên cơ sở dữ liệu đồ thị chuyên dụng kết hợp với một cơ sở dữ liệu vector độc lập?''}.
+
+Đề tài khẳng định việc tích hợp đồ thị tri thức và vector nhúng trực tiếp trên cơ sở dữ liệu quan hệ \textbf{PostgreSQL kết hợp tiện ích mở rộng pgvector} là giải pháp vượt trội vì ba lý do:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bảo toàn tuyệt đối tính nhất quán giao dịch ACID (\textit{Transactional ACID Invariant}):} Khi người dùng kích hoạt tính năng xóa an toàn tài liệu (\textit{Zero-Retention}), một lệnh giao dịch duy nhất trong PostgreSQL sẽ đồng bộ xóa sạch bản ghi bài báo, các đoạn trích, vector nhúng 1536 chiều và toàn bộ các nút, cạnh liên đới trong đồ thị tri thức. Nếu sử dụng hệ thống cơ sở dữ liệu phân tán nhiều thành phần, hệ thống bắt buộc phải giải bài toán giao dịch phân tán (\textit{Distributed Transactions}) phức tạp, rất dễ dẫn đến hiện tượng dữ liệu mồ côi (\textit{orphaned data}) và rò rỉ thông tin học giả.
+    \item \textbf{Truy vấn đệ quy hiệu năng cao với cấu trúc CTE:} PostgreSQL hỗ trợ cấu trúc truy vấn đệ quy \texttt{WITH RECURSIVE} (\textit{Common Table Expressions} -- CTE) cho phép duyệt đồ thị quan hệ đa cấp độ cực kỳ mạnh mẽ, đáp ứng xuất sắc các tác vụ truy tìm chuỗi trích dẫn hay so sánh đa phương pháp với độ trễ thấp mà không cần bổ sung một hệ thống cơ sở dữ liệu thứ hai.
+    \item \textbf{Tối ưu hóa chi phí và tính tinh gọn hạ tầng:} Việc hợp nhất toàn bộ dữ liệu quan hệ, dữ liệu vector và dữ liệu đồ thị vào một hệ quản trị duy nhất giúp tiết kiệm tài nguyên bộ nhớ RAM máy chủ, đơn giản hóa quy trình sao lưu và giảm thiểu chi phí vận hành cho nhà trường.
+\end{enumerate}

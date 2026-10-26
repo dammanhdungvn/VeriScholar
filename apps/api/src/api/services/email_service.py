@@ -159,6 +159,9 @@ class EmailService:
         self, recipient: str, subject: str, html_content: str, text_content: str
     ) -> bool:
         """Dispatch email according to priority: Resend API -> SMTP -> Audit Log Fallback."""
+        if settings.ENVIRONMENT == "test" or os.getenv("ENVIRONMENT") == "test":
+            return True
+
         # 1. Ưu tiên 1: SMTP nếu được cấu hình đầy đủ (như Google App Password)
         if self.smtp_host and self.smtp_user:
             ok = await asyncio.to_thread(

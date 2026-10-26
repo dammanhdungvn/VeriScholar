@@ -52,3 +52,22 @@ class SessionActiveTab(StrEnum):
     SUMMARY = "summary"
     GRAPH = "graph"
     DRAFT = "draft"
+
+
+class ThemePreference(StrEnum):
+    """User interface color theme preference."""
+
+    LIGHT = "light"
+    DARK = "dark"
+    SYSTEM = "system"
+
+
+class AcademicRank(StrEnum):
+    """Academic rank or title of a scholar."""
+
+    STUDENT = "student"
+    MASTER = "master"
+    PHD = "phd"
+    ASSOC_PROF = "assoc_prof"
+    PROFESSOR = "professor"
+    RESEARCHER = "researcher"

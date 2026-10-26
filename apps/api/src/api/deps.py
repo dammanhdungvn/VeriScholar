@@ -7,6 +7,7 @@ from core.adapters.cache.idempotency import InMemoryIdempotencyAdapter, RedisIde
 from core.adapters.storage.local import LocalStorageAdapter
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
+from core.ports.scholarly_search import IScholarlySearchPort
 from core.ports.storage import IBlobStoragePort
 from core.ports.summary import IDocumentSummarizerPort
 from core.services.academic_cache import GlobalAcademicCache
@@ -36,6 +37,7 @@ _idempotency_adapter: IIdempotencyPort | None = None
 _ai_tracing_service: AITracingService | None = None
 _academic_cache: GlobalAcademicCache | None = None
 _academic_resolver: IAcademicSearchResolverPort | None = None
+_scholarly_search_port: IScholarlySearchPort | None = None
 
 
 def get_academic_cache() -> GlobalAcademicCache:
@@ -58,6 +60,16 @@ def get_academic_resolver(
             cache=cache,
         )
     return _academic_resolver
+
+
+def get_scholarly_search_port() -> IScholarlySearchPort:
+    """Dependency providing IScholarlySearchPort instance."""
+    global _scholarly_search_port
+    if _scholarly_search_port is None:
+        from api.adapters.scholarly_search_adapter import ScholarlySearchAdapter
+
+        _scholarly_search_port = ScholarlySearchAdapter()
+    return _scholarly_search_port
 
 
 def get_storage() -> IBlobStoragePort:

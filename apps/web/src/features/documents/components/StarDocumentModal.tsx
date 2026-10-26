@@ -100,7 +100,7 @@ export function StarDocumentModal({
           )}
 
           <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-800 dark:text-amber-300 leading-relaxed text-[11px]">
-            <strong>Chính sách Zero-Retention Transition:</strong> Khi gắn sao (Star), bài báo được chuyển trạng thái từ tệp tạm thời sang <em>tài liệu vĩnh viễn</em> (CAS Persistent Storage), bảo toàn toàn bộ vector nhúng và liên kết trích dẫn.
+            Khi gắn sao, bài báo sẽ được lưu trữ vĩnh viễn trong thư viện nghiên cứu cá nhân của bạn.
           </div>
 
           <div className="space-y-1.5">

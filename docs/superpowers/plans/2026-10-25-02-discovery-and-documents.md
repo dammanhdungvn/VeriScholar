@@ -54,7 +54,7 @@
   - `validate_pdf_metadata_invariants(file_size: int, page_count: int, first_page_chars: int, is_encrypted: bool) -> None` (ném `DomainValidationError` với các mã: `PDF_FILE_TOO_LARGE`, `PDF_PAGE_LIMIT_EXCEEDED`, `PDF_NO_TEXT_LAYER`, `PDF_PASSWORD_PROTECTED`).
   - `normalize_bbox_coordinates(raw_x0: float, raw_y0: float, raw_x1: float, raw_y1: float, page_width: float, page_height: float) -> tuple[int, int, int, int]` (chuẩn hóa tỷ lệ sang thang đo nguyên $0..1000$).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_pdf_validator_core.py`:
 ```python
@@ -99,21 +99,21 @@ def test_normalize_bbox_coordinates_scales_to_thousand():
     assert norm == (250, 250, 750, 750)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_pdf_validator_core.py -v`  
 Expected: FAIL with `ModuleNotFoundError: No module named 'core.services.pdf_validator'`.
 
-- [ ] **Step 3: Implement `packages/core/src/core/services/pdf_validator.py` and update bounding box VO**
+- [x] **Step 3: Implement `packages/core/src/core/services/pdf_validator.py` and update bounding box VO**
 
 Cài đặt các hằng số kiểm tra giới hạn, hàm xác thực bất biến `validate_pdf_metadata_invariants()` và hàm chuẩn hóa tọa độ `normalize_bbox_coordinates()` thuần túy không dùng thư viện ngoài.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_pdf_validator_core.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/core/services/pdf_validator.py packages/core/src/core/domain/value_objects/bounding_box.py packages/core/tests/test_pdf_validator_core.py
@@ -137,7 +137,7 @@ git commit -m "feat(core): add PDF limit invariants validator and normalized 0..
   - Endpoint `POST /api/v1/discovery/search` (khử trùng lặp kết quả theo DOI, phân loại `open_access_pdf` vs `abstract_only`).
   - Xử lý mã lỗi chuẩn hóa: `SEARCH_QUERY_EMPTY`, `SEARCH_LIMIT_OUT_OF_RANGE`, `SEARCH_UPSTREAM_ERROR`, `SEARCH_UPSTREAM_TIMEOUT`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_discovery_search_endpoints.py`:
 ```python
@@ -170,21 +170,21 @@ async def test_discovery_search_returns_scholarly_results(async_client: AsyncCli
         assert paper["access_status"] in ["open_access_pdf", "abstract_only"]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_discovery_search_endpoints.py -v`  
 Expected: FAIL with `404 Not Found` (endpoint `/api/v1/discovery/search` chưa tồn tại).
 
-- [ ] **Step 3: Implement `IScholarlySearchPort`, `ScholarlySearchAdapter`, and `discovery.py` endpoint**
+- [x] **Step 3: Implement `IScholarlySearchPort`, `ScholarlySearchAdapter`, and `discovery.py` endpoint**
 
 Tạo port trong `packages/core/src/core/ports/scholarly_search.py`, cài đặt adapter trong `apps/api/src/api/adapters/scholarly_search_adapter.py` có cơ chế timeout 15s và gộp kết quả theo DOI, sau đó mount router `/discovery` vào `api_v1_router`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_discovery_search_endpoints.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/core/ports/scholarly_search.py apps/api/src/api/adapters/scholarly_search_adapter.py apps/api/src/api/v1/endpoints/discovery.py apps/api/tests/test_discovery_search_endpoints.py
@@ -211,7 +211,7 @@ git commit -m "feat(api): add IScholarlySearchPort, multi-source search adapter,
   - `POST /api/v1/documents/{id}/attach-pdf`: Nâng cấp bài báo `abstract_only` lên `ready`.
   - `DELETE /api/v1/documents/{id}`: Giảm `ref_count`; nếu về 0, tiêu hủy tệp vật lý ngay lập tức trên đĩa (`storage/blobs/ab/cd/hash.pdf`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_document_ingestion_and_cas.py`:
 ```python
@@ -250,21 +250,21 @@ async def test_zero_retention_purges_physical_blob_when_last_reference_deleted(a
     assert res_del.json()["data"]["purged_physical_file"] is True
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_document_ingestion_and_cas.py -v`  
 Expected: FAIL (thiếu endpoint `open-reading` hoặc logic xóa vật lý CAS chưa hoàn tất).
 
-- [ ] **Step 3: Implement 2-Tier ingestion, CAS deduplication, and Zero-Retention cascade purge**
+- [x] **Step 3: Implement 2-Tier ingestion, CAS deduplication, and Zero-Retention cascade purge**
 
 Cập nhật `DocumentService` trong `apps/api/src/api/services/document_service.py`, bổ sung endpoint `open-reading` trong `discovery.py`, và hoàn thiện các phương thức CRUD tài liệu trong `documents.py`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_document_ingestion_and_cas.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/services/document_service.py apps/api/src/api/v1/endpoints/documents.py apps/api/src/api/v1/endpoints/discovery.py apps/api/tests/test_document_ingestion_and_cas.py
@@ -291,7 +291,7 @@ git commit -m "feat(api): implement 2-tier ingestion, PyMuPDF 2-column chunking,
     - Bấm nút gọi `open-reading` và chuyển hướng tức thì sang `/dashboard/{sessionId}` (< 500ms).
   - `DocumentUploadModal`: Vùng kéo thả PDF với kiểm tra giới hạn 50MB / 100 trang tại client và thanh tiến độ tải lên trực quan.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/discovery/__tests__/DiscoveryPage.test.tsx`:
 ```tsx
@@ -317,21 +317,21 @@ describe('DiscoveryPage Component', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- DiscoveryPage`  
 Expected: FAIL with component missing or elements not found.
 
-- [ ] **Step 3: Implement `DiscoveryPage.tsx`, `ScholarlyResultCard.tsx`, and `DocumentUploadModal.tsx`**
+- [x] **Step 3: Implement `DiscoveryPage.tsx`, `ScholarlyResultCard.tsx`, and `DocumentUploadModal.tsx`**
 
 Cập nhật giao diện Discovery gọi đúng API `discoveryApi.search()`, render danh sách thẻ kết quả bài báo với 2 loại nút bấm và kết nối luồng nạp 2 tầng Zero-to-Reading.
 
-- [ ] **Step 4: Run test and build to verify all 4 verification gates pass**
+- [x] **Step 4: Run test and build to verify all 4 verification gates pass**
 
 Run: `uv run ruff check . && uv run pytest && npm --prefix apps/web run test && npm --prefix apps/web run build`  
 Expected: 100% PASS (exit code 0)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/features/discovery/ apps/web/src/features/documents/

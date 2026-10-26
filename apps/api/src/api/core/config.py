@@ -78,6 +78,7 @@ class Settings(BaseSettings):
     # Authentication & JWT settings
     JWT_SECRET_KEY: str = "verischolar-super-secure-jwt-secret-key-2026-production-grade"
     JWT_ALGORITHM: str = "HS256"
+    BYOK_ENCRYPTION_KEY: str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
     ACCESS_TOKEN_EXPIRE_SECONDS: int = 7200  # 2 hours standard
     REMEMBER_ME_ACCESS_TOKEN_EXPIRE_SECONDS: int = 2592000  # 30 days for persistent session
     REFRESH_TOKEN_EXPIRE_SECONDS: int = 7776000  # 90 days durable refresh

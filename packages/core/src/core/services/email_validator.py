@@ -536,3 +536,24 @@ def ensure_valid_registration_email(email: str) -> str:
             "không được chấp nhận. Vui lòng sử dụng email học thuật (.edu, .ac) hoặc email uy tín."
         )
     return clean_email
+
+
+ORCID_COMPILED_REGEX: Final[re.Pattern[str]] = re.compile(r"^\d{4}-\d{4}-\d{4}-\d{3}[\dX]$")
+
+
+def validate_orcid_id(orcid: str | None) -> bool:
+    """Validate ORCID identifier format (e.g. 0000-0002-1825-0097)."""
+    if orcid is None or orcid == "":
+        return True
+    return bool(ORCID_COMPILED_REGEX.match(orcid.strip()))
+
+
+def mask_api_key(raw_key: str) -> str:
+    """Mask an API key so only prefix and last 4 characters are visible."""
+    if not raw_key:
+        return ""
+    if raw_key.startswith("sk-proj-"):
+        return f"sk-proj-...{raw_key[-4:]}"
+    if raw_key.startswith("sk-"):
+        return f"sk-...{raw_key[-4:]}"
+    return f"{raw_key[:4]}...{raw_key[-4:]}"

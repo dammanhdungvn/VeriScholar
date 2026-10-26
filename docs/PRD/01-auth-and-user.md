@@ -198,3 +198,12 @@ Feature: Cô lập dữ liệu đa người dùng tuyệt đối
 2. **Không Tiết Lộ Danh Tính Qua Thông Báo Lỗi (Anti-Enumeration Rule):** Mọi thông báo lỗi đăng nhập hoặc quên mật khẩu đều dùng câu chữ trung tính, không tiết lộ một địa chỉ email đã đăng ký hay chưa.
 3. **Bảo Mật Tuyệt Đối Khóa BYOK:** Khóa riêng tư của học giả phải được mã hóa bảo mật trước khi lưu trữ, chỉ giải mã trên bộ nhớ tạm khi gọi mô hình AI cho chính học giả đó và chỉ hiển thị 4 ký tự cuối trên giao diện.
 4. **Bảo Toàn Mạch Nghiên Cứu Không Gián Đoạn (Seamless Research Continuity):** Quá trình gia hạn phiên làm việc ngắn hạn phải diễn ra ngầm định, không làm gián đoạn trang PDF đang đọc hay cuộc hội thoại đang diễn ra.
+
+---
+
+## 6. Tham Chiếu Báo Cáo & Bảo Vệ Đồ Án Tốt Nghiệp
+
+Dành cho tác giả biên soạn Thuyết minh Đồ án và chuẩn bị slide bảo vệ Hội đồng:
+* **Giải thích bình dân, ẩn dụ thực tế & use case BYOK:** Xem [Sổ Tay Bảo Vệ Đồ Án — Chương 1](../THESIS_DEFENSE_GUIDE.md#chương-1-định-danh-học-giả-mã-orcid--két-sắt-khóa-byok).
+* **Phân tích bắt buộc vs mở rộng, Q&A Hội đồng & thực chứng Langfuse:** Xem chi tiết tại [THESIS_DEFENSE_GUIDE.md](../THESIS_DEFENSE_GUIDE.md).
+

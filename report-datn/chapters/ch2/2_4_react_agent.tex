@@ -1,0 +1,87 @@
+% !TEX root = ../../main.tex
+\section{Máy trạng thái tác nhân AI và Môi trường thực thi đám mây}
+\label{sec:react_agent}
+
+\subsection[Mô hình Tác nhân AI Độc lập (Autonomous Agent)]{Mô hình Tác nhân AI Độc lập\\(LLM-Powered Autonomous Agent)}
+\label{subsec:chu_trinh_react}
+Trong nghiên cứu về các hệ thống trí tuệ nhân tạo hiện đại, mô hình Tác nhân Độc lập (\textit{Autonomous Agent}) do Lilian Weng tổng hợp \cite{weng2023agent} đã trở thành khuôn mẫu lý thuyết chuẩn mực của cộng đồng khoa học quốc tế. Mô hình định nghĩa một tác nhân thông minh hoàn chỉnh được vận hành bởi mô hình ngôn ngữ lớn (LLM) tại trung tâm, kết nối hài hòa với 4 trụ cột chức năng cốt lõi:
+
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ làm việc ngắn hạn (\textit{Short-term Working Memory} lưu trữ ngữ cảnh hội thoại đa lượt và luồng sự kiện SSE) và bộ nhớ dài hạn (\textit{Long-term Memory} lưu trữ đồ thị tri thức 4 thực thể và kho vector nhúng HNSW).
+    \item \textbf{Lập kế hoạch (\textit{Planning}):} Chịu trách nhiệm phân rã bài toán phức tạp thành các mục tiêu con (\textit{Subgoal Decomposition}), thiết lập chuỗi suy luận (\textit{Chain of Thoughts}) và thực hiện phản tư tự sửa lỗi (\textit{Self-Reflection / Self-Critics}) nhằm loại bỏ triệt để hiện tượng ảo giác trích dẫn.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Cung cấp cho tác nhân khả năng tương tác thông qua các giao diện lập trình: bộ truy xuất lai \texttt{HybridRetriever()}, công cụ định vị \texttt{PDFCanvas()} và trình biên dịch cô lập \texttt{MicroVMCompiler()}.
+    \item \textbf{Hành động (\textit{Action}):} Thực thi các quyết định cụ thể dựa trên kế hoạch và kết quả từ công cụ, bao gồm truyền phát câu trả lời, vẽ khung viền vàng trên bản PDF gốc và vá lỗi cú pháp bản thảo \LaTeX.
+\end{enumerate}
+
+Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được minh họa chi tiết trong Hình~\ref{fig:react_agent_loop}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.74, transform shape,
+    centerbox/.style={draw=red!70!black, fill=red!10, rounded corners=6pt, line width=1.2pt, align=center, inner sep=8pt, font=\bfseries\small},
+    pillarbox/.style={draw=black!70, fill=gray!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\bfseries\footnotesize},
+    leafbox/.style={draw=black!60, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=4pt, font=\scriptsize},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!70},
+    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.9pt, draw=black!50}
+]
+    % Khối Agent ở trung tâm
+    \node[centerbox, minimum width=3.4cm, minimum height=1.4cm] (agent) at (0, 0) {
+        TÁC NHÂN AI\\
+        \footnotesize (\textit{LLM Agent Brain})
+    };
+
+    % 1. Memory (Phía trên)
+    \node[pillarbox, minimum width=3.2cm] (memory) at (0, 2.5) {BỘ NHỚ (\textit{Memory})};
+    \node[leafbox, minimum width=3.2cm] (m_short) at (-2.3, 4.0) {Bộ nhớ ngắn hạn\\Ngữ cảnh hội thoại SSE};
+    \node[leafbox, minimum width=3.2cm] (m_long) at (2.3, 4.0) {Bộ nhớ dài hạn\\Vector HNSW \& GraphRAG};
+    \draw[arrowstyle] (agent) -- (memory);
+    \draw[arrowstyle] (memory) -- (m_short);
+    \draw[arrowstyle] (memory) -- (m_long);
+
+    % 2. Planning (Bên phải)
+    \node[pillarbox, minimum width=3.0cm] (plan) at (3.8, 0) {KẾ HOẠCH (\textit{Planning})};
+    \node[leafbox, minimum width=3.4cm] (p_refl) at (7.4, 1.8) {Tự phản tư (\textit{Reflection})};
+    \node[leafbox, minimum width=3.4cm] (p_crit) at (7.4, 0.6) {Kiểm định trích dẫn (\textit{Critics})};
+    \node[leafbox, minimum width=3.4cm] (p_cot) at (7.4, -0.6) {Chuỗi suy luận (\textit{Chain-of-Thought})};
+    \node[leafbox, minimum width=3.4cm] (p_sub) at (7.4, -1.8) {Phân rã mục tiêu (\textit{Subgoal})};
+    \draw[arrowstyle] (agent) -- (plan);
+    \draw[arrowstyle] (plan) -- (p_refl);
+    \draw[arrowstyle] (plan) -- (p_crit);
+    \draw[arrowstyle] (plan) -- (p_cot);
+    \draw[arrowstyle] (plan) -- (p_sub);
+    \draw[dasharrow] (memory.east) -| (p_refl.north);
+
+    % 3. Tools (Bên trái)
+    \node[pillarbox, minimum width=3.0cm] (tools) at (-3.8, 0) {CÔNG CỤ (\textit{Tools})};
+    \node[leafbox, minimum width=3.2cm] (t_ret) at (-7.4, 1.8) {\texttt{HybridRetriever()}};
+    \node[leafbox, minimum width=3.2cm] (t_pdf) at (-7.4, 0.6) {\texttt{PDFCanvasViewer()}};
+    \node[leafbox, minimum width=3.2cm] (t_e2b) at (-7.4, -0.6) {\texttt{MicroVMCompiler()}};
+    \node[leafbox, minimum width=3.2cm] (t_srch) at (-7.4, -1.8) {\texttt{AcademicSearch()}};
+    \draw[arrowstyle] (agent) -- (tools);
+    \draw[arrowstyle] (tools) -- (t_ret);
+    \draw[arrowstyle] (tools) -- (t_pdf);
+    \draw[arrowstyle] (tools) -- (t_e2b);
+    \draw[arrowstyle] (tools) -- (t_srch);
+
+    % 4. Action (Phía dưới)
+    \node[pillarbox, minimum width=3.2cm] (action) at (0, -2.5) {HÀNH ĐỘNG (\textit{Action})};
+    \draw[arrowstyle] (agent) -- (action);
+    \draw[dasharrow] (tools.south) |- (action.west);
+\end{tikzpicture}
+\caption{Mô hình Kiến trúc Tư duy Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
+\label{fig:react_agent_loop}
+\end{figure}
+
+Nhằm kiểm soát chi phí tính toán và ngăn ngừa hiện tượng lặp vô hạn, chu trình ReAct được ràng buộc với số chu kỳ lặp tối đa là 3 lần ($N_{\max} = 3$). Thực nghiệm cho thấy trên 90\% các lỗi cú pháp phổ biến đều được tác nhân giải quyết thành công ngay trong 2 vòng lặp đầu tiên.
+
+\subsection{Luận giải lựa chọn môi trường E2B Sandbox MicroVM}
+\label{subsec:luan_giai_e2b}
+Việc cho phép người dùng tải lên và biên dịch mã nguồn \LaTeX\ tùy biến đặt ra thách thức an ninh hệ thống tối nghiêm trọng. Trình biên dịch TeX cung cấp các lệnh tương tác hệ điều hành (chẳng hạn như cơ chế mở cổng thực thi lệnh \verb|\write18|), nếu thực thi trực tiếp trên máy chủ backend sẽ tạo cơ hội cho kẻ tấn công thực thi mã độc tùy ý (\textit{Remote Code Execution -- RCE}), đọc trộm mã khóa bí mật môi trường (\texttt{.env}), tệp mật khẩu hệ thống (\texttt{/etc/passwd}) hoặc làm gián đoạn dịch vụ máy chủ.
+
+Đề tài lựa chọn giải pháp \textbf{E2B Cloud Sandbox} thay vì môi trường container thông thường vì các lý do an ninh vượt trội:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Cô lập cấp độ ảo hóa phần cứng MicroVM:} Nền tảng sử dụng công nghệ ảo hóa siêu nhẹ dựa trên Firecracker MicroVM, tạo ra một máy ảo Linux hoàn toàn độc lập cho mỗi phiên biên dịch. Máy ảo này cách ly 100\% với hệ điều hành máy chủ và các tiến trình của người dùng khác.
+    \item \textbf{Tốc độ khởi tạo tức thì:} Thời gian khởi tạo một máy ảo MicroVM mới chỉ mất khoảng 150 mili-giây, hoàn toàn đáp ứng yêu cầu phản hồi thời gian thực của giao diện người dùng.
+    \item \textbf{Cơ chế tự hủy (\textit{Zero-Persistence}):} Toàn bộ hệ thống tệp và tiến trình trong máy ảo sẽ bị tiêu hủy vĩnh viễn ngay sau khi tệp tài liệu xuất bản được tạo ra và trả về cho học giả, ngăn chặn hoàn toàn nguy cơ lưu vết hay lây nhiễm mã độc.
+\end{enumerate}

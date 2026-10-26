@@ -275,7 +275,7 @@ export function DocumentLibraryModal({
                               {doc.title || doc.filename}
                             </h5>
                             {doc.is_persistent && (
-                              <span title="Tài liệu đã lưu vĩnh viễn (Persistent CAS)">
+                              <span title="Tài liệu đã lưu">
                                 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                               </span>
                             )}
@@ -416,7 +416,7 @@ export function DocumentLibraryModal({
               <span>Xác nhận xóa tài liệu</span>
             </div>
             <p className="text-muted leading-relaxed">
-              Bạn có chắc chắn muốn xóa bài báo &ldquo;{deleteConfirmDoc.title || deleteConfirmDoc.filename}&rdquo;? Toàn bộ chỉ mục vector và trích dẫn liên quan sẽ được dọn sạch vĩnh viễn (Zero-Retention Cascade Purge).
+              Bạn có chắc chắn muốn xóa bài báo &ldquo;{deleteConfirmDoc.title || deleteConfirmDoc.filename}&rdquo;? Thao tác này sẽ xóa vĩnh viễn tệp cùng các trích dẫn liên quan và không thể hoàn tác.
             </p>
             <div className="flex items-center justify-end gap-2 pt-2">
               <button

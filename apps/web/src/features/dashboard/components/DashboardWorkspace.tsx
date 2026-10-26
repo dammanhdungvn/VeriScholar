@@ -42,6 +42,7 @@ import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { DocumentTabBar } from "@/features/reader/components/DocumentTabBar";
 import { ViewportControls } from "@/features/reader/components/ViewportControls";
 import { PdfCanvasViewer } from "@/features/reader/components/PdfCanvasViewer";
+import { AbstractOnlyViewer } from "@/features/reader/components/AbstractOnlyViewer";
 import { DocumentStructureSheet } from "@/features/reader/components/DocumentStructureSheet";
 import { DocumentChunksSheet } from "@/features/reader/components/DocumentChunksSheet";
 import { ReferenceListModal } from "@/features/reader/components/ReferenceListModal";
@@ -820,7 +821,15 @@ export function DashboardWorkspace({
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
-        {isRealDocument && activeDocumentId ? (
+        {isRealDocument && activeDocumentId && (documentDetail?.access_status === "abstract_only" || documentDetail?.status === "abstract_only") ? (
+          <AbstractOnlyViewer
+            document={documentDetail}
+            onPdfAttached={() => {
+              queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.detail(activeDocumentId) });
+              queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.list() });
+            }}
+          />
+        ) : isRealDocument && activeDocumentId ? (
           <PdfCanvasViewer
             documentId={activeDocumentId}
             documentDetail={documentDetail}

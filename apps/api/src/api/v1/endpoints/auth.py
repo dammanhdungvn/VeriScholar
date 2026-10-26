@@ -365,6 +365,18 @@ async def get_my_profile(
         "Chỉnh sửa họ tên, cơ quan, chức danh, ORCID hoặc ảnh đại diện của người dùng hiện tại."
     ),
 )
+@router.put(
+    "/me",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[UserProfileResponse],
+    include_in_schema=False,
+)
+@router.patch(
+    "/profile",
+    status_code=status.HTTP_200_OK,
+    response_model=SingleResponseEnvelope[UserProfileResponse],
+    include_in_schema=False,
+)
 async def update_my_profile(
     payload: UpdateProfileRequest,
     current_user: UserModel = Depends(get_current_user),

@@ -69,3 +69,20 @@ Tài liệu này là cẩm nang bắt buộc khi phát triển giao diện ngư�
 ## 4. Hiển Thị Công Thức Toán Học (KaTeX)
 * Mọi công thức inline đặt trong `$ ... $`, công thức khối (display math) đặt trong `$$ ... $$`.
 * Sử dụng `AcademicMarkdownRenderer` tích hợp `rehype-katex` và `remark-math`.
+
+---
+
+## 5. Quy Chuẩn Ngôn Từ & Bố Cục Tối Giản 80/20 (Product-Grade Radical Minimalism)
+* **Tuyệt đối cấm "khoe công nghệ kỹ thuật" & văn mẫu:** Người dùng không quan tâm đến tên chuẩn kỹ thuật (ISO 32000-1, RFC), thuật toán mã hóa (AES-256-GCM, HMAC), mã màu kỹ thuật (`#hex`), hay cơ chế nội bộ (RAM Zero-Retention, Token TTL, UUID, Trace ID). Bảo mật và trích dẫn chuẩn xác là điều đương nhiên sản phẩm phải đảm bảo.
+* **Nguyên tắc 80/20 - Ít chữ nhất có thể:**
+  * Tiêu đề trang gãy gọn (Ví dụ: `Cài đặt`, không slogan hay subtitle).
+  * Loại bỏ hoàn toàn danh xưng thừa ("Nhà nghiên cứu Khoa học", "Nhà Nghiên Cứu", v.v.) và các huy hiệu chức danh cạnh tên.
+  * Huy hiệu cồng kềnh $\rightarrow$ Icon tích xanh nhỏ gọn (`CheckCircle2`) nằm ngay bên cạnh họ và tên người dùng.
+  * Tùy chọn giao diện $\rightarrow$ 3 nút sạch (`Sáng`, `Tối`, `Tự động`) với duy nhất 1 icon Lucide (không lặp emoji như `☀️` kèm `<Sun />`), tuyệt đối không show mã màu (`#181715`) hay câu thuyết minh dài dòng.
+  * Icon thay thế chữ một cách tinh tế: Khi icon đủ nghĩa (có tooltip/accessible label), ưu tiên icon để giữ không gian tĩnh lặng, không lạm dụng làm thô giao diện.
+* **Bảng chuyển đổi chuẩn mực:**
+  * ❌ `Học giả đã xác thực (ISO 32000-1 / DOI Ready)` / `<span ...>Đã xác thực</span>` / `Nhà nghiên cứu Khoa học` $\rightarrow$ ✅ `<CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />` cạnh tên.
+  * ❌ `Két sắt Khóa AI Cá nhân (BYOK AES-256-GCM Vault)` $\rightarrow$ ✅ `Khóa API cá nhân`.
+  * ❌ `Chế độ Hiển thị & Bảng màu Học thuật` / `Obsidian đen ấm (#181715)` / 2 icon trùng (`<Sun />` + `☀️`) $\rightarrow$ ✅ `Tùy chọn giao diện` / 3 nút `<Sun /> Sáng`, `<Moon /> Tối`, `<Monitor /> Tự động`.
+  * ❌ `Quy trình Zero-Retention Cascade Purge` $\rightarrow$ ✅ `Xóa tài liệu và dữ liệu liên quan`.
+  * ❌ `Phiên làm việc hiện tại (Active Session) • Thời hạn 30 ngày` / `• Đang hoạt động` $\rightarrow$ ✅ `Thiết bị này`.

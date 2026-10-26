@@ -97,3 +97,21 @@ test-results.xml
 .agents/runtime/
 
 .claude/
+
+# LaTeX build artifacts
+report-datn/*.aux
+report-datn/*.fls
+report-datn/*.fdb_latexmk
+report-datn/*.log
+report-datn/*.out
+report-datn/*.synctex.gz
+report-datn/*.toc
+report-datn/*.lot
+report-datn/*.lof
+report-datn/*.xdv
+report-datn/*.bbl
+report-datn/*.blg
+
+# Superpowers SDD workspace
+.superpowers/
+

@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import math
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 from api.adapters.chunk_extractor import PyMuPDFChunkExtractor
 from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
 from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
@@ -71,6 +73,8 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 PDF_MAGIC_BYTES = b"%PDF-"
 MAX_SESSION_DOCUMENTS = 5
@@ -311,6 +315,237 @@ class DocumentService:
             links=links,
         )
 
+    async def attach_pdf(
+        self,
+        document_id: UUID,
+        file: UploadFile,
+        user_id: UUID,
+        db: AsyncSession,
+    ) -> DocumentUploadResponseData:
+        """Attach a full PDF file to an existing abstract_only document, performing CAS dedup."""
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        res = await db.execute(stmt)
+        doc = res.scalar_one_or_none()
+        if doc is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_FOUND",
+                    "message": f"Document '{document_id}' not found.",
+                    "field": "document_id",
+                },
+            )
+
+        initial_chunk = await file.read(1024)
+        if not initial_chunk.startswith(PDF_MAGIC_BYTES):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={
+                    "code": "INVALID_FILE_TYPE",
+                    "message": "File is not a valid PDF (missing %PDF- header magic bytes).",
+                    "field": "file",
+                },
+            )
+
+        hasher = hashlib.sha256()
+        hasher.update(initial_chunk)
+        total_size = len(initial_chunk)
+        chunks: list[bytes] = [initial_chunk]
+
+        while True:
+            chunk = await file.read(64 * 1024)
+            if not chunk:
+                break
+            total_size += len(chunk)
+            if total_size > MAX_FILE_SIZE_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+                    detail={
+                        "code": "FILE_TOO_LARGE",
+                        "message": (
+                            f"File exceeds maximum size limit of {MAX_FILE_SIZE_BYTES} bytes."
+                        ),
+                        "field": "file",
+                    },
+                )
+            hasher.update(chunk)
+            chunks.append(chunk)
+
+        content_hash = hasher.hexdigest()
+
+        # CAS Blob Check
+        stmt_blob = select(DocumentStorageBlobModel).where(
+            DocumentStorageBlobModel.content_hash == content_hash
+        )
+        res_blob = await db.execute(stmt_blob)
+        blob = res_blob.scalar_one_or_none()
+
+        if blob is not None:
+            blob.ref_count += 1
+        else:
+
+            async def _stream_chunks():
+                for c in chunks:
+                    yield c
+
+            storage_path, _ = await self.storage.save_blob(_stream_chunks(), content_hash)
+            blob = DocumentStorageBlobModel(
+                id=uuid4(),
+                content_hash=content_hash,
+                storage_path=storage_path,
+                file_size_bytes=total_size,
+                mime_type="application/pdf",
+                ref_count=1,
+            )
+            db.add(blob)
+            await db.flush()
+
+        doc.blob_id = blob.id
+        doc.content_hash = content_hash
+        doc.file_size_bytes = total_size
+        doc.status = "parsing"
+        doc.stage = "queued"
+        doc.progress = 0
+        doc.access_status = "open_access_pdf"
+        if file.filename:
+            doc.filename = file.filename
+
+        await db.commit()
+
+        doc_id_str = str(doc.id)
+        links = DocumentLinks(
+            self_url=f"/api/v1/documents/{doc_id_str}",
+            status_url=f"/api/v1/documents/{doc_id_str}/status",
+            file_url=f"/api/v1/documents/{doc_id_str}/file",
+            parse_url=f"/api/v1/documents/{doc_id_str}:parse",
+        )
+
+        return DocumentUploadResponseData(
+            id=doc.id,
+            filename=doc.filename,
+            file_size_bytes=doc.file_size_bytes,
+            content_hash=doc.content_hash,
+            status=doc.status,
+            stage=doc.stage,
+            progress=doc.progress,
+            is_persistent=doc.is_persistent,
+            created_at=doc.created_at,
+            links=links,
+            access_status=doc.access_status,
+        )
+
+    async def ingest_pdf_from_url(
+        self,
+        pdf_url: str,
+        db: AsyncSession | None = None,
+    ) -> tuple[str, int] | None:
+        """Download external open-access PDF, validate, and register into CAS storage.
+
+        Args:
+            pdf_url: Remote URL pointing to open-access PDF (e.g. arXiv, Unpaywall).
+            db: Optional active async database session to persist CAS blob record.
+
+        Returns:
+            Tuple of (content_hash, file_size_bytes) on success, or None on failure.
+        """
+        clean_url = pdf_url.strip()
+        if not clean_url.startswith(("http://", "https://")):
+            return None
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                response = await client.get(clean_url)
+                if response.status_code != 200:
+                    logger.warning(
+                        "PDF download returned non-200 status %d from %s",
+                        response.status_code,
+                        clean_url,
+                    )
+                    return None
+
+                content = getattr(response, "content", b"")
+                if not content:
+                    if hasattr(response, "aiter_bytes"):
+                        chunks_acc: list[bytes] = []
+                        async for c in response.aiter_bytes():
+                            chunks_acc.append(c)
+                        content = b"".join(chunks_acc)
+                    elif hasattr(response, "iter_bytes"):
+                        content = b"".join(response.iter_bytes())
+
+                if len(content) > MAX_FILE_SIZE_BYTES:
+                    logger.warning(
+                        "PDF download exceeds MAX_FILE_SIZE_BYTES (%d bytes) from %s",
+                        len(content),
+                        clean_url,
+                    )
+                    return None
+
+                if not content.startswith(PDF_MAGIC_BYTES):
+                    logger.warning(
+                        "Downloaded payload from %s missing %%PDF- magic bytes",
+                        clean_url,
+                    )
+                    return None
+
+                content_hash = hashlib.sha256(content).hexdigest()
+                file_size_bytes = len(content)
+
+                chunk_size = 64 * 1024
+                chunks = [content[i : i + chunk_size] for i in range(0, len(content), chunk_size)]
+
+                async def _stream_chunks():
+                    for chunk in chunks:
+                        yield chunk
+
+                storage_path, _ = await self.storage.save_blob(_stream_chunks(), content_hash)
+
+                if db is not None:
+                    stmt_blob = select(DocumentStorageBlobModel).where(
+                        DocumentStorageBlobModel.content_hash == content_hash
+                    )
+                    res_blob = await db.execute(stmt_blob)
+                    blob = res_blob.scalar_one_or_none()
+
+                    now = datetime.now(UTC)
+                    if blob is not None:
+                        blob.ref_count += 1
+                        if not await self.storage.blob_exists(content_hash):
+
+                            async def _stream_chunks_repair():
+                                for chunk in chunks:
+                                    yield chunk
+
+                            await self.storage.save_blob(_stream_chunks_repair(), content_hash)
+                    else:
+                        blob = DocumentStorageBlobModel(
+                            id=uuid4(),
+                            content_hash=content_hash,
+                            storage_path=storage_path,
+                            file_size_bytes=file_size_bytes,
+                            ref_count=1,
+                            status=BlobStatus.COMPLETED.value,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        try:
+                            async with _safe_nested_transaction(db):
+                                db.add(blob)
+                                await db.flush()
+                        except IntegrityError:
+                            res_blob = await db.execute(stmt_blob)
+                            blob = res_blob.scalar_one_or_none()
+                            if blob is not None:
+                                blob.ref_count += 1
+
+                return content_hash, file_size_bytes
+        except Exception as exc:
+            logger.warning("Exception during PDF ingestion from %s: %s", clean_url, exc)
+            return None
+
     async def list_documents(
         self,
         user_id: UUID,
@@ -548,6 +783,19 @@ class DocumentService:
                 },
             )
 
+        if doc.access_status == "abstract_only":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_ABSTRACT_ONLY",
+                    "message": (
+                        f"Document '{document_id}' is abstract-only and has no PDF file attached."
+                    ),
+                    "field": "access_status",
+                    "action": "Attach a PDF file to enable full-text reading.",
+                },
+            )
+
         content_hash = doc.content_hash
         if not await self.storage.blob_exists(content_hash):
             raise HTTPException(
@@ -776,6 +1024,7 @@ class DocumentService:
                         chunk_models = [
                             DocumentChunkModel(
                                 id=ec.id,
+                                user_id=doc.user_id,
                                 document_id=ec.document_id,
                                 chunk_index=ec.chunk_index,
                                 page_number=ec.page_number,
@@ -798,7 +1047,9 @@ class DocumentService:
                                 doc.updated_at = now
                                 await db.flush()
                         except Exception:
-                            pass
+                            logger.exception(
+                                "Failed to persist document chunks for %s", document_id
+                            )
 
                         # Ensure doc is active and unexpired
                         res = await db.execute(stmt)
@@ -935,7 +1186,7 @@ class DocumentService:
         document_id: UUID,
         user_id: UUID,
         db: AsyncSession,
-    ) -> None:
+    ) -> bool:
         """Purge a document according to Zero-Retention Guarantee & CAS Multi-Tenant Invariant.
 
         1. Enforce multi-tenant scoping: Document must exist and belong to `user_id`.
@@ -995,13 +1246,16 @@ class DocumentService:
             blob_res = await db.execute(blob_stmt)
             blob = blob_res.scalar_one_or_none()
 
+        purged_physical = False
         if blob is not None:
             blob.ref_count -= 1
             if blob.ref_count <= 0:
                 await db.delete(blob)
                 await self.storage.delete_blob(content_hash)
+                purged_physical = True
 
-        await db.flush()
+        await db.commit()
+        return purged_physical
 
     async def trigger_parse_document(
         self,
@@ -1592,6 +1846,7 @@ class DocumentService:
                     chunk_models = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -1748,6 +2003,7 @@ class DocumentService:
                     chunk_models = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -2048,6 +2304,7 @@ class DocumentService:
                     new_chunks = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -2224,6 +2481,7 @@ class DocumentService:
                     new_chunks = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,

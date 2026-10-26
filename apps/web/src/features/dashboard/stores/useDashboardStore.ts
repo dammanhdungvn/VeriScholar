@@ -1,6 +1,14 @@
 import { create } from "zustand";
 import type { SidebarState, AppMode, BoundingBox } from "@/types/dashboard";
 
+export type ReasoningEffortLevel =
+  | "light"
+  | "medium"
+  | "high"
+  | "extra_high"
+  | "off"
+  | "low";
+
 interface DashboardState {
   sidebarState: SidebarState;
   appMode: AppMode;
@@ -9,10 +17,14 @@ interface DashboardState {
   isUploadModalOpen: boolean;
   isVoiceModalOpen: boolean;
   isReasoningEnabled: boolean;
+  reasoningEffort: ReasoningEffortLevel;
+  selectedModel: string;
 
   // Actions
   toggleReasoning: () => void;
   setReasoningEnabled: (enabled: boolean) => void;
+  setReasoningEffort: (effort: ReasoningEffortLevel) => void;
+  resetReasoningEffort: () => void;
   toggleSidebar: () => void;
   setSidebarState: (state: SidebarState) => void;
   setAppMode: (mode: AppMode) => void;
@@ -56,12 +68,37 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   activeBbox: null,
   isUploadModalOpen: false,
   isVoiceModalOpen: false,
-  isReasoningEnabled: true,
+  isReasoningEnabled: false,
+  reasoningEffort: "light",
+  selectedModel: "5.6 Luna",
 
   toggleReasoning: () =>
-    set((state) => ({ isReasoningEnabled: !state.isReasoningEnabled })),
+    set((state) => {
+      const isOff = state.reasoningEffort === "light" || state.reasoningEffort === "off";
+      const nextEffort: ReasoningEffortLevel = isOff ? "high" : "light";
+      return {
+        reasoningEffort: nextEffort,
+        isReasoningEnabled: !isOff,
+      };
+    }),
 
-  setReasoningEnabled: (isReasoningEnabled) => set({ isReasoningEnabled }),
+  setReasoningEnabled: (isReasoningEnabled) =>
+    set({
+      isReasoningEnabled,
+      reasoningEffort: isReasoningEnabled ? "high" : "light",
+    }),
+
+  setReasoningEffort: (reasoningEffort) =>
+    set({
+      reasoningEffort,
+      isReasoningEnabled: reasoningEffort !== "light" && reasoningEffort !== "off",
+    }),
+
+  resetReasoningEffort: () =>
+    set({
+      reasoningEffort: "light",
+      isReasoningEnabled: false,
+    }),
 
   toggleSidebar: () =>
     set((state) => {
@@ -88,7 +125,9 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       activeBbox: null,
       isUploadModalOpen: false,
       isVoiceModalOpen: false,
-      isReasoningEnabled: true,
+      isReasoningEnabled: false,
+      reasoningEffort: "light",
+      selectedModel: "5.6 Luna",
     })
 }));
 

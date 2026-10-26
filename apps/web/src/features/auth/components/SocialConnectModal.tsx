@@ -101,27 +101,24 @@ export function SocialConnectModal({
             <div>
               <DialogTitle className="text-base sm:text-lg font-semibold text-ink dark:text-[#f5f3ed]">
                 {isGoogle
-                  ? "Xác thực qua Google Workspace"
+                  ? "Đăng nhập Google"
                   : isGitHub
-                    ? "Xác thực qua GitHub OAuth"
+                    ? "Đăng nhập GitHub"
                     : isOrcid
-                      ? "Liên kết định danh học thuật ORCID"
-                      : "Cổng xác thực học thuật liên kết"}
+                      ? "Liên kết ORCID"
+                      : "Liên kết tài khoản"}
               </DialogTitle>
-              <span className="text-2xs text-muted dark:text-[#9c988f]">
-                Institutional SSO Integration Notice
-              </span>
             </div>
           </div>
 
           <DialogDescription className="text-xs text-body dark:text-[#c4c0b6] leading-relaxed pt-2">
             {isGoogle
-              ? "Cổng xác thực Google Workspace for Education (OAuth 2.0) hiện đang trong tiến trình chứng nhận bảo mật và cấp quyền truy cập cấp viện trường."
+              ? "Cổng đăng nhập Google đang chờ cấu hình bổ sung. Vui lòng sử dụng tài khoản email."
               : isGitHub
-                ? "Đăng nhập nhanh hoặc liên kết tài khoản nhà nghiên cứu qua GitHub OAuth (hỗ trợ code exchange hoặc Personal Access Token)."
+                ? "Đăng nhập nhanh hoặc liên kết qua tài khoản GitHub."
                 : isOrcid
-                  ? "Cổng liên kết ORCID Member API (Open Researcher and Contributor ID) dành cho các trường viện đối tác sẽ được mở trong phiên bản Institutional Rollout."
-                  : "Tính năng đăng nhập qua dịch vụ liên kết đang được tích hợp theo chuẩn bảo mật học thuật."}
+                  ? "Cổng liên kết tài khoản định danh nghiên cứu ORCID."
+                  : "Dịch vụ liên kết tài khoản đang được hoàn thiện."}
           </DialogDescription>
         </DialogHeader>
 

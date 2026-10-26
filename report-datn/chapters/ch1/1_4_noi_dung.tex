@@ -1,0 +1,18 @@
+% !TEX root = ../../main.tex
+\section{Nội dung nghiên cứu và phương pháp tiếp cận}
+\label{sec:noi_dung}
+
+\subsection{Nội dung nghiên cứu}
+\label{subsec:noi_dung_nghien_cuu}
+Đề tài tập trung nghiên cứu và giải quyết các nội dung khoa học trọng tâm:
+\begin{itemize}
+    \item \textbf{Kiến trúc phần mềm phân tầng:} Nghiên cứu nguyên lý Kiến trúc Lục giác (\textit{Hexagonal Architecture / Ports and Adapters}) nhằm cô lập lõi miền nghiệp vụ học thuật thuần khiết khỏi hạ tầng cơ sở dữ liệu, dịch vụ đám mây và giao vận web.
+    \item \textbf{Truy xuất thông tin lai (Hybrid Search):} Nghiên cứu các thuật toán tìm kiếm vector gần đúng kết hợp thuật toán xếp hạng từ khóa toàn văn qua giải thuật Hợp nhất Xếp hạng Đảo ngược RRF.
+    \item \textbf{Xử lý tài liệu và tọa độ trực quan:} Nghiên cứu kỹ thuật bóc tách tài liệu PDF khoa học hai cột và thuật toán chuẩn hóa hệ tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1]$ trên dải giá trị chuẩn $[0..1000]$.
+    \item \textbf{Tác nhân thông minh tự phục hồi:} Nghiên cứu chu trình tác nhân ReAct (Suy luận -- Hành động -- Quan sát) trong việc tự động phân tích và khắc phục lỗi cú pháp biên dịch tài liệu học thuật trong môi trường hộp cát an toàn.
+    \item \textbf{Bảo mật và quyền riêng tư:} Nghiên cứu cơ chế bảo mật két sắt cá nhân (BYOK -- \textit{Bring Your Own Key}) mã hóa khóa API bằng thuật toán AES-256-GCM với nguyên tắc Zero-Retention trên bộ nhớ RAM.
+\end{itemize}
+
+\subsection{Phương pháp tiếp cận}
+\label{subsec:phuong_phap_tiep_can}
+Đề tài áp dụng phương pháp luận Phát triển Hướng Kiểm thử (TDD -- \textit{Test-Driven Development}) kết hợp cấu trúc Monorepo nhằm đảm bảo mọi quy tắc nghiệp vụ đều được kiểm chứng độc lập với hạ tầng kỹ thuật, duy trì tỷ lệ kiểm thử thành công 100\% qua 4 Cổng kiểm định tự động bắt buộc trước khi phát hành.

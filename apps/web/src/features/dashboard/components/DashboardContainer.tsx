@@ -4,8 +4,10 @@ import { DashboardTaskbar } from "./DashboardTaskbar";
 import { LibraryWorkspaceView } from "@/features/library/components/LibraryWorkspaceView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { HeroUploadDropzone } from "./HeroUploadDropzone";
+import { UnifiedHeroWorkspace } from "./UnifiedHeroWorkspace";
 import { DashboardWorkspace } from "./DashboardWorkspace";
 import { MobileDashboardHeader } from "./MobileDashboardHeader";
+import { discoveryApi, type ScholarlyPaper } from "@/features/discovery/api/discoveryApi";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useWorkspaceStore } from "../stores/useWorkspaceStore";
 import { useDashboardSessions } from "../hooks/useDashboardSessions";
@@ -38,6 +40,7 @@ export function DashboardContainer() {
   const setSession = useWorkspaceStore((s) => s.setSession);
   const setDocument = useWorkspaceStore((s) => s.setDocument);
   const setStatus = useWorkspaceStore((s) => s.setStatus);
+  const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
 
   const { ingest } = useDocumentIngestion();
 
@@ -144,6 +147,7 @@ export function DashboardContainer() {
     setActiveSessionId(undefined);
     setActiveBbox(null);
     resetChat();
+    resetWorkspace(); // Reset pending upload and document status
     navigate("/dashboard");
   };
 
@@ -206,6 +210,8 @@ export function DashboardContainer() {
     loadExistingSession(sessionId);
   };
 
+  const pendingInitialPromptRef = useRef<string | null>(null);
+
   /**
    * Bắt đầu luồng Ingestion tự động:
    * Upload CAS blob -> Tạo Session hợp lệ -> Trigger Parse & Embed -> Polling -> Workspace Active
@@ -224,9 +230,58 @@ export function DashboardContainer() {
         selectSession(result.sessionId);
         navigate(`/dashboard/${result.sessionId}`, { replace: true });
         loadExistingSession(result.sessionId);
+
+        // Auto-send user prompt if staged alongside file upload (Rule Item 10)
+        if (pendingInitialPromptRef.current) {
+          const prompt = pendingInitialPromptRef.current;
+          pendingInitialPromptRef.current = null;
+          setTimeout(() => {
+            sendMessage(prompt);
+          }, 350);
+        }
       }
     } catch {
+      pendingInitialPromptRef.current = null;
       // Error is set in useWorkspaceStore.errorMessage and handled by HeroUploadDropzone UI
+      if (!effectiveSessionId) {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  };
+
+  const handleSendChatWithFiles = async (prompt: string, files: File[]) => {
+    if (files.length === 0) {
+      if (prompt) sendMessage(prompt);
+      return;
+    }
+
+    if (prompt.trim()) {
+      pendingInitialPromptRef.current = prompt.trim();
+    }
+
+    await handleFileUpload(files[0]);
+  };
+
+  /**
+   * Khởi tạo phiên đọc tức thì từ kết quả bài báo khoa học (Zero-to-Reading)
+   */
+  const handleOpenPaper = async (paper: ScholarlyPaper) => {
+    try {
+      const res = await discoveryApi.openReading({
+        title: paper.title,
+        authors: paper.authors,
+        publication_year: paper.publication_year,
+        doi: paper.doi,
+        arxiv_id: paper.arxiv_id,
+        abstract: paper.abstract,
+        pdf_url: paper.pdf_url,
+      });
+      if (res?.session_id) {
+        selectSession(res.session_id);
+        navigate(`/dashboard/${res.session_id}`, { replace: true });
+        loadExistingSession(res.session_id);
+      }
+    } catch {
       if (!effectiveSessionId) {
         navigate("/dashboard", { replace: true });
       }
@@ -272,7 +327,7 @@ export function DashboardContainer() {
         {/* Expired / Archived Session Re-activation Alert Banner */}
         {activeSession?.is_archived && (
           <div className="h-9 px-4 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-xs text-amber-700 dark:text-amber-400 shrink-0 select-none">
-            <span>Phiên nghiên cứu này đã hết hạn lưu trữ theo chính sách Zero-Retention (30 ngày).</span>
+            <span>Phiên nghiên cứu này đã hết hạn lưu trữ (30 ngày).</span>
             <button
               type="button"
               onClick={() => setIsRestoreOpen(true)}
@@ -292,8 +347,20 @@ export function DashboardContainer() {
                 setAppMode("chat");
               }}
             />
+          ) : isProcessing || documentStatus === "error" ? (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <HeroUploadDropzone onIngest={handleFileUpload} />
+            </div>
           ) : showStandbyHero ? (
-            <HeroUploadDropzone onIngest={handleFileUpload} />
+            <UnifiedHeroWorkspace
+              inputText={inputText}
+              onChangeText={setInputText}
+              onSendChat={(text) => sendMessage(text)}
+              onSendChatWithFiles={handleSendChatWithFiles}
+              onIngestFile={handleFileUpload}
+              onOpenPaper={handleOpenPaper}
+              isGenerating={isGenerating}
+            />
           ) : (
             <DashboardWorkspace
               messages={messages}

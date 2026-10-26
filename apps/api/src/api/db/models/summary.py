@@ -16,6 +16,11 @@ class DocumentSummaryModel(IdentifiableTimestampedModel):
 
     __tablename__ = "document_summaries"
 
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     document_id: Mapped[UUID] = mapped_column(
         ForeignKey("documents.id", ondelete="CASCADE"),
         unique=True,

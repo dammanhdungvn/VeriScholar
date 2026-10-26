@@ -69,6 +69,7 @@ export function ForgotPasswordModal({
     await authApi.resetPassword({
       token: otp,
       new_password: newPassword,
+      email: email.trim(),
     });
     setOtpModalOpen(false);
   };
@@ -83,10 +84,10 @@ export function ForgotPasswordModal({
         <DialogContent className="sm:max-w-md bg-canvas dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] shadow-xl p-6 font-sans">
           <DialogHeader className="space-y-2 text-left">
             <DialogTitle className="font-display text-2xl font-normal text-ink dark:text-[#f5f3ed]">
-              Khôi phục mật khẩu học thuật
+              Khôi phục mật khẩu
             </DialogTitle>
             <DialogDescription className="text-xs text-muted dark:text-[#9c988f]">
-              Nhập địa chỉ email liên kết với tài khoản VeriScholar của bạn để nhận mã xác thực OTP đặt lại mật khẩu an toàn.
+              Nhập địa chỉ email tài khoản của bạn để nhận mã xác thực đặt lại mật khẩu.
             </DialogDescription>
           </DialogHeader>
 

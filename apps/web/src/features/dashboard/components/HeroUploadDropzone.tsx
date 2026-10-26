@@ -195,6 +195,14 @@ export function HeroUploadDropzone({ onIngest }: HeroUploadDropzoneProps) {
                 />
               </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => resetWorkspace()}
+              className="text-xs text-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200 transition-colors pt-1 cursor-pointer"
+            >
+              Hủy bỏ
+            </button>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-3.5">

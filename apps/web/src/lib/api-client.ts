@@ -1,8 +1,150 @@
 import type { SingleResponse, PaginatedResponse, ErrorResponse, PaginatedMeta, PaginationLinks } from "@/types/api";
-import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  AUTH_REFRESH_TOKEN_STORAGE_KEY,
+  useAuthStore,
+} from "@/features/auth/stores/useAuthStore";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "";
 const API_PREFIX = import.meta.env.VITE_API_PREFIX || "/api/v1";
+
+let isRefreshing = false;
+let refreshSubscribers: Array<{
+  resolve: (newToken: string) => void;
+  reject: (err: unknown) => void;
+}> = [];
+
+function notifyRefreshSubscribers(newToken: string): void {
+  const queue = refreshSubscribers;
+  refreshSubscribers = [];
+  for (const sub of queue) {
+    sub.resolve(newToken);
+  }
+}
+
+function rejectRefreshSubscribers(err: unknown): void {
+  const queue = refreshSubscribers;
+  refreshSubscribers = [];
+  for (const sub of queue) {
+    sub.reject(err);
+  }
+}
+
+function isPublicAuthEndpoint(endpoint: string): boolean {
+  const clean = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+  return (
+    clean.startsWith("/auth/login") ||
+    clean.startsWith("/auth/register") ||
+    clean.startsWith("/auth/refresh") ||
+    clean.startsWith("/auth/forgot-password") ||
+    clean.startsWith("/auth/reset-password") ||
+    clean.startsWith("/auth/verify-email")
+  );
+}
+
+/**
+ * Single-flight token refresh queue: ensures concurrent 401 responses trigger
+ * only a single POST /api/v1/auth/refresh request and distribute the new token
+ * to all waiting callers.
+ */
+export async function refreshAccessTokenQueued(): Promise<string | null> {
+  let refreshToken: string | null = null;
+  try {
+    refreshToken =
+      (typeof window !== "undefined"
+        ? localStorage.getItem(AUTH_REFRESH_TOKEN_STORAGE_KEY)
+        : null) || useAuthStore.getState().refreshToken;
+  } catch {
+    refreshToken = useAuthStore.getState().refreshToken;
+  }
+
+  if (!refreshToken) {
+    return null;
+  }
+
+  if (isRefreshing) {
+    return new Promise<string>((resolve, reject) => {
+      refreshSubscribers.push({ resolve, reject });
+    });
+  }
+
+  isRefreshing = true;
+  try {
+    const refreshUrl = resolveApiUrl("/auth/refresh");
+    const res = await fetch(refreshUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Request-ID": generateRequestId(),
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!res.ok) {
+      throw new Error(`Refresh failed with status ${res.status}`);
+    }
+
+    const body = (await res.json()) as SingleResponse<{
+      access_token?: string;
+      refresh_token?: string;
+      tokens?: { access_token: string; refresh_token?: string };
+    }>;
+    const payload = body?.data;
+    const newAccessToken = payload?.access_token || payload?.tokens?.access_token;
+    const newRefreshToken = payload?.refresh_token || payload?.tokens?.refresh_token;
+
+    if (!newAccessToken) {
+      throw new Error("Missing access_token in refresh response");
+    }
+
+    try {
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, newAccessToken);
+      if (newRefreshToken) {
+        localStorage.setItem(AUTH_REFRESH_TOKEN_STORAGE_KEY, newRefreshToken);
+      }
+    } catch {
+      // Ignore storage write issues
+    }
+
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      useAuthStore.getState().setAuth(currentUser, newAccessToken, newRefreshToken);
+    }
+
+    notifyRefreshSubscribers(newAccessToken);
+    return newAccessToken;
+  } catch (err) {
+    rejectRefreshSubscribers(err);
+    useAuthStore.getState().clearAuth();
+    return null;
+  } finally {
+    isRefreshing = false;
+  }
+}
+
+async function fetchWithAuthRetry(endpoint: string, options: RequestInit = {}): Promise<Response> {
+  const url = resolveApiUrl(endpoint);
+  const headers = buildHeaders(options);
+
+  const response = await fetch(url, {
+    ...options,
+    headers,
+  });
+
+  if (response.status === 401 && !isPublicAuthEndpoint(endpoint)) {
+    const newToken = await refreshAccessTokenQueued().catch(() => null);
+    if (newToken) {
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set("Authorization", `Bearer ${newToken}`);
+      return fetch(url, {
+        ...options,
+        headers: retryHeaders,
+      });
+    }
+  }
+
+  return response;
+}
 
 export class ApiError extends Error {
   readonly code: string;
@@ -45,8 +187,10 @@ export interface ApiPaginatedResult<T> {
 }
 
 export function resolveApiUrl(endpoint: string): string {
+  const runtimeBase = (globalThis as { __VITE_API_BASE_URL__?: string }).__VITE_API_BASE_URL__;
+  const baseUrl = runtimeBase ?? import.meta.env.VITE_API_BASE_URL ?? API_BASE_URL;
   const cleanEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
-  return `${API_BASE_URL}${API_PREFIX}${cleanEndpoint}`;
+  return `${baseUrl}${API_PREFIX}${cleanEndpoint}`;
 }
 
 export function generateRequestId(customId?: string): string {
@@ -109,13 +253,7 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = resolveApiUrl(endpoint);
-  const headers = buildHeaders(options);
-
-  const response = await fetch(url, {
-    ...options,
-    headers,
-  });
+  const response = await fetchWithAuthRetry(endpoint, options);
 
   if (response.status === 204) {
     return undefined as T;

@@ -134,3 +134,14 @@ Toàn bộ tài liệu nghiệp vụ chi tiết được phân rã thành các t
 | **PRD-05** | [`05-favorite-library-and-graphrag.md`](./05-favorite-library-and-graphrag.md) | Đánh dấu Star, Quản lý Cây thư mục đề tài nghiên cứu và Mạng lưới Đồ thị Tri thức học thuật 4 thực thể. | [`05-favorite-library-and-graphrag-spec.md`](../specs/05-favorite-library-and-graphrag-spec.md) |
 | **PRD-06** | [`06-agentic-overleaf-writing.md`](./06-agentic-overleaf-writing.md) | Màn hình viết bài LaTeX 3 cột, Quản lý bản thảo & hình ảnh, Trợ lý AI đồng tác giả và Biên dịch hộp cát an toàn. | [`06-agentic-overleaf-writing-spec.md`](../specs/06-agentic-overleaf-writing-spec.md) |
 | **PRD-07** | [`07-monitoring-and-langfuse.md`](./07-monitoring-and-langfuse.md) | Giám sát chất lượng phản hồi AI, Đánh giá độ tin cậy trích dẫn, Cảnh báo sự cố máy chủ và Kiểm tra sức khỏe hệ thống. | [`07-monitoring-and-langfuse-spec.md`](../specs/07-monitoring-and-langfuse-spec.md) |
+
+---
+
+## 7. Tài Liệu Tham Chiếu Báo Cáo & Bảo Vệ Đồ Án Tốt Nghiệp
+
+Dành cho tác giả khi biên soạn Thuyết minh Đồ án Tốt nghiệp và chuẩn bị slide bảo vệ trước Hội đồng:
+* **Giải thích bình dân, ẩn dụ thực tế & Use case:** Xem mục 1 trong [Sổ Tay Bảo Vệ Đồ Án Tốt Nghiệp — Chương 0](../THESIS_DEFENSE_GUIDE.md#chương-0-nền-tảng-kiến-trúc-18-bảng-csdl--kho-lưu-trữ-cas).
+* **Phân tích Tại sao bắt buộc & Có thể giản lược không:** Xem mục 2 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 0](../THESIS_DEFENSE_GUIDE.md#chương-0-nền-tảng-kiến-trúc-18-bảng-csdl--kho-lưu-trữ-cas).
+* **Bộ câu hỏi & câu trả lời phản biện Hội đồng (Q&A):** Xem mục 3 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 0](../THESIS_DEFENSE_GUIDE.md#chương-0-nền-tảng-kiến-trúc-18-bảng-csdl--kho-lưu-trữ-cas).
+* **Số liệu thực chứng kiểm thử:** Xem mục 4 trong [Sổ Tay Bảo Vệ Đồ Án — Chương 0](../THESIS_DEFENSE_GUIDE.md#chương-0-nền-tảng-kiến-trúc-18-bảng-csdl--kho-lưu-trữ-cas).
+

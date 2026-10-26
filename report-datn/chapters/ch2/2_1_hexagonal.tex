@@ -1,0 +1,98 @@
+% !TEX root = ../../main.tex
+\section[Kiến trúc phần mềm lục giác (Hexagonal Architecture)]{Kiến trúc phần mềm lục giác\\(Hexagonal Architecture)}
+\label{sec:hexagonal}
+
+\subsection{Nguyên lý phân tầng Ports and Adapters}
+\label{subsec:ports_and_adapters}
+Kiến trúc Lục giác (\textit{Hexagonal Architecture}), còn được biết đến với tên gọi mẫu thiết kế Cổng và Bộ điều hợp (\textit{Ports and Adapters}), do Alistair Cockburn khởi xướng năm 2005 \cite{cockburn2005}. Trọng tâm của kiến trúc này là giải quyết triệt để bài toán phụ thuộc chặt chẽ (\textit{tight coupling}) giữa logic nghiệp vụ cốt lõi của phần mềm với các công nghệ giao vận bên ngoài như hệ quản trị cơ sở dữ liệu, giao thức mạng, và giao diện người dùng.
+
+Hệ thống theo Kiến trúc Lục giác được cấu trúc thành ba phân vùng độc lập theo nguyên lý đảo ngược phụ thuộc (\textit{Dependency Inversion Principle}):
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Tầng lõi miền nghiệp vụ thuần khiết (\textit{Pure Core Domain}):} Nằm tại trung tâm của hệ thống, chỉ chứa các thực thể nghiệp vụ (\textit{Entities}), quy tắc logic và các thuật toán tính toán học thuật. Vùng này tuân thủ nguyên tắc cô lập tuyệt đối: chỉ sử dụng các cấu trúc dữ liệu bản địa của ngôn ngữ lập trình, hoàn toàn không phụ thuộc vào bất kỳ thư viện giao tiếp mạng, web framework hay hệ quản trị cơ sở dữ liệu nào.
+    \item \textbf{Tầng các cổng giao tiếp trừu tượng (\textit{Ports}):} Là các giao diện trừu tượng (\textit{Interfaces}) nằm trong tầng lõi nghiệp vụ. Cổng quy định hợp đồng giao tiếp chuẩn mà các thành phần bên ngoài bắt buộc phải tuân thủ để phục vụ nghiệp vụ (chẳng hạn như: cổng phân giải ấn phẩm học thuật, cổng bóc tách tài liệu PDF, hay cổng lưu trữ dữ liệu).
+    \item \textbf{Tầng các bộ điều hợp kỹ thuật (\textit{Adapters}):} Nằm ở lớp ngoài cùng của hệ thống, hiện thực hóa các Cổng trừu tượng để kết nối với các công nghệ thực tế (chẳng hạn như bộ điều hợp cơ sở dữ liệu quan hệ, bộ điều hợp dịch vụ tìm kiếm học thuật trực tuyến, hoặc bộ điều hợp mô hình trí tuệ nhân tạo).
+\end{enumerate}
+
+Mô hình phân tầng kiến trúc và ranh giới phân tách trừu tượng của hệ thống được mô tả theo dạng các khối năng lực module trong Hình~\ref{fig:hexagonal_arch}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.82, transform shape,
+    card/.style={draw=black!70, fill=gray!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
+    compbox/.style={draw=blue!80!black, fill=blue!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    portbox/.style={draw=teal!80!black, fill=teal!10, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    adaptbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
+]
+    % Khối 1: Tầng Điều Hợp Ngoại Vi (Adapters) - Bên trái
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_adapt) at (-5.6, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=orange!90!black] at (-5.6, 2.9) {BỘ ĐIỀU HỢP HẠ TẦNG (ADAPTERS)};
+    \node[adaptbox, minimum width=4.2cm] (ad1) at (-5.6, 1.8) {
+        \textbf{Bộ điều hợp Web / SSE}\\
+        \footnotesize Giao diện người dùng, Luồng sự kiện
+    };
+    \node[adaptbox, minimum width=4.2cm] (ad2) at (-5.6, 0.0) {
+        \textbf{Bộ điều hợp CSDL \& CAS}\\
+        \footnotesize PostgreSQL 16, pgvector, CAS
+    };
+    \node[adaptbox, minimum width=4.2cm] (ad3) at (-5.6, -1.8) {
+        \textbf{Bộ điều hợp Trí tuệ Nhân tạo}\\
+        \footnotesize Dịch vụ LLM, E2B MicroVM
+    };
+
+    % Khối 2: Cổng Giao Tiếp Trừu Tượng (Ports) - Ở giữa
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_ports) at (0, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=teal!90!black] at (0, 2.9) {CỔNG TRỪU TƯỢNG (PORTS)};
+    \node[portbox, minimum width=4.2cm] (p1) at (0, 1.8) {
+        \textbf{Cổng Phía Nhập (Inbound)}\\
+        \footnotesize Giao diện dịch vụ phân tích tài liệu
+    };
+    \node[portbox, minimum width=4.2cm] (p2) at (0, 0.0) {
+        \textbf{Cổng Lưu trữ (Persistence)}\\
+        \footnotesize Giao diện lưu trữ CSDL \& Vector
+    };
+    \node[portbox, minimum width=4.2cm] (p3) at (0, -1.8) {
+        \textbf{Cổng Trí tuệ Nhân tạo (AI)}\\
+        \footnotesize Giao diện sinh suy luận \& Hộp cát
+    };
+
+    % Khối 3: Tầng Lõi Miền Nghiệp Vụ (Pure Core Domain) - Bên phải
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_core) at (5.6, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=blue!90!black] at (5.6, 2.9) {LÕI NGHIỆP VỤ (CORE DOMAIN)};
+    \node[compbox, minimum width=4.2cm] (cor1) at (5.6, 1.8) {
+        \textbf{Thực thể Học thuật}\\
+        \footnotesize Document, PaperNode, Chunk
+    };
+    \node[compbox, minimum width=4.2cm] (cor2) at (5.6, 0.0) {
+        \textbf{Thuật toán Hợp nhất RRF}\\
+        \footnotesize Xếp hạng đảo ngược đa luồng
+    };
+    \node[compbox, minimum width=4.2cm] (cor3) at (5.6, -1.8) {
+        \textbf{Quy tắc Liêm chính Dữ liệu}\\
+        \footnotesize Khử trùng lặp, Xác thực định danh
+    };
+
+    % Mũi tên phụ thuộc hướng tâm
+    \draw[arrowstyle] (ad1.east) -- (p1.west);
+    \draw[arrowstyle] (ad2.east) -- (p2.west);
+    \draw[arrowstyle] (ad3.east) -- (p3.west);
+
+    \draw[arrowstyle] (p1.east) -- (cor1.west);
+    \draw[arrowstyle, dashed] (cor2.west) -- (p2.east);
+    \draw[arrowstyle, dashed] (cor3.west) -- (p3.east);
+\end{tikzpicture}
+\caption{Mô hình phân rã module và cấu trúc Cổng -- Điều hợp (Ports and Adapters)}
+\label{fig:hexagonal_arch}
+\end{figure}
+
+Luồng phụ thuộc trong hệ thống luôn có chiều hướng tâm: các bộ điều hợp kỹ thuật bên ngoài phụ thuộc vào các Cổng trong lõi, trong khi logic nghiệp vụ học thuật ở trung tâm hoàn toàn không biết gì về cơ sở hạ tầng thực tế bên dưới.
+
+\subsection{Luận giải lựa chọn Kiến trúc Lục giác cho VeriScholar}
+\label{subsec:luan_giai_hexagonal}
+Trong nghiên cứu khoa học và phát triển phần mềm trợ lý AI, việc áp dụng Kiến trúc Lục giác mang lại ba lợi thế chiến lược cốt lõi:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Khả năng thay thế linh hoạt các nhà cung cấp trí tuệ nhân tạo (\textit{Hot-swappable AI Providers}):} Trong lĩnh vực AI, các mô hình ngôn ngữ lớn (OpenAI, Anthropic, Google) và các dịch vụ chỉ mục học thuật liên tục cải tiến và thay đổi giao diện lập trình. Nhờ sự phân tách của Kiến trúc Lục giác, khi hệ thống cần chuyển đổi nhà cung cấp mô hình ngôn ngữ hoặc công cụ tìm kiếm, lập trình viên chỉ cần xây dựng thêm bộ điều hợp mới mà không phải sửa đổi bất kỳ dòng mã logic nghiệp vụ nào trong tầng lõi.
+    \item \textbf{Kiểm thử đơn vị độc lập và siêu tốc (\textit{Deterministic Unit Testing}):} Do lõi nghiệp vụ không phụ thuộc vào cơ sở dữ liệu hay mạng Internet, toàn bộ các quy tắc nghiệp vụ (xác thực tệp, kiểm tra mã định danh học giả, thuật toán mã hóa) đều có thể kiểm thử tự động với các Cổng giả lập (\textit{Mock Ports}) trong bộ nhớ. Toàn bộ các bài kiểm thử của hệ thống chạy hoàn tất trong vòng chưa đầy 3 giây mà không cần khởi động máy chủ cơ sở dữ liệu thực tế.
+    \item \textbf{Bảo toàn tính toàn vẹn nghiệp vụ học thuật:} Ngăn ngừa triệt để hiện tượng rò rỉ các ràng buộc kỹ thuật của cơ sở dữ liệu (như khóa ngoại, kiểu dữ liệu riêng biệt của từng hệ quản trị) vào trong quy trình suy luận học thuật của AI.
+\end{enumerate}

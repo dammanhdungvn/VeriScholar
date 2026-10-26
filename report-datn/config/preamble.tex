@@ -1,0 +1,228 @@
+% ==============================================================================
+% CONFIGURATION PREAMBLE: BÁO CÁO ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR
+% Tuân thủ 100% quy chuẩn Huong-dan-viet-DATN.md (HUMG)
+% ==============================================================================
+
+% 1. Thiết lập khổ giấy và căn lề trang chuẩn xác (HUMG: 2.5 - 2.5 - 3.5 - 2.5 cm)
+\usepackage[
+    a4paper,
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3.5cm,
+    right=2.5cm,
+    headheight=20pt
+]{geometry}
+
+% 2. Chuẩn hóa cỡ chữ 13pt (Word standard) và dãn dòng 1.5 lines
+\usepackage[fontsize=13pt]{scrextend}
+\usepackage{setspace}
+\onehalfspacing
+
+% Thụt lề đầu dòng đoạn văn 1.0cm và khoảng cách đoạn văn chuẩn học thuật
+\setlength{\parindent}{1.0cm}
+\setlength{\parskip}{3pt plus 1pt minus 1pt}
+
+% Chú thích chân trang (Footnote) đúng cỡ 10pt
+\renewcommand{\footnotesize}{\fontsize{10}{13}\selectfont}
+
+% 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa
+\usepackage{fontspec}
+\setmainfont{Liberation Serif}[
+    Path = /usr/share/fonts/truetype/liberation/,
+    UprightFont = LiberationSerif-Regular.ttf,
+    BoldFont = LiberationSerif-Bold.ttf,
+    ItalicFont = LiberationSerif-Italic.ttf,
+    BoldItalicFont = LiberationSerif-BoldItalic.ttf
+]
+\usepackage[provide=*,vietnamese]{babel}
+\addto\captionsvietnamese{%
+    \renewcommand{\contentsname}{MỤC LỤC}%
+    \renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}%
+    \renewcommand{\listfigurename}{DANH MỤC HÌNH ẢNH}%
+    \renewcommand{\bibname}{TÀI LIỆU THAM KHẢO}%
+}
+
+% 4. Các gói toán học, bảng biểu và đồ họa
+\usepackage{amsmath,amsfonts,amssymb}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, fit, calc, backgrounds}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{enumitem}
+
+% 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI, Cỡ chữ 12pt)
+\usepackage{caption}
+\DeclareCaptionFont{size12}{\fontsize{12}{15}\selectfont}
+\captionsetup[table]{
+    position=top,
+    font=size12,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Bảng}
+}
+\captionsetup[figure]{
+    position=bottom,
+    font=size12,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Hình}
+}
+
+% Quy chuẩn đánh số Bảng và Hình dùng dấu gạch nối (Chương-Số: 3-1, 3-2)
+\renewcommand{\thetable}{\thechapter-\arabic{table}}
+\renewcommand{\thefigure}{\thechapter-\arabic{figure}}
+
+% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) với đường kẻ đôi chuẩn HUMG
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{} % Xóa sạch cấu hình mặc định
+\fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
+\renewcommand{\headrule}{%
+    \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
+    \hrule width \headwidth height 0.4pt%
+}
+\fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
+\fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
+\renewcommand{\footrule}{%
+    \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
+    \hrule width \headwidth height 1.2pt%
+}
+
+% Áp dụng phong cách chuẩn cho trang mở đầu chương / plain
+\fancypagestyle{plain}{
+    \fancyhf{}
+    \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
+    \renewcommand{\headrule}{%
+        \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
+        \hrule width \headwidth height 0.4pt%
+    }
+    \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
+    \renewcommand{\footrule}{%
+        \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
+        \hrule width \headwidth height 1.2pt%
+    }
+}
+
+% 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
+\usepackage[titles]{tocloft}
+
+% Dấu chấm dẫn trang (leader dots) dày mịn, mật độ cao chuẩn MS Word (Ảnh 2)
+\renewcommand{\cftdotfill}[1]{\leaders\hbox to 0.33em{\hss.\hss}\hfill}
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
+
+% Tiền tố "CHƯƠNG " cho các chương có đánh số
+\renewcommand{\cftchappresnum}{CHƯƠNG }
+\renewcommand{\cftchapaftersnum}{:\ }
+\newlength{\cftchaplen}
+\settowidth{\cftchaplen}{CHƯƠNG 1:\ }
+\setlength{\cftchapnumwidth}{\cftchaplen}
+\cftsetindents{chapter}{0pt}{\cftchaplen}
+
+% Dấu chấm sau số thứ tự section, subsection và subsubsection (1.1., 2.1.1., 4.2.1.1.)
+\renewcommand{\cftsecaftersnum}{.}
+\newlength{\cftseclen}
+\settowidth{\cftseclen}{1.1.\ }
+\cftsetindents{section}{0.65cm}{\cftseclen}
+
+\renewcommand{\cftsubsecaftersnum}{.}
+\newlength{\cftsubseclen}
+\settowidth{\cftsubseclen}{2.1.1.\ }
+\cftsetindents{subsection}{1.3cm}{\cftsubseclen}
+
+\renewcommand{\cftsubsubsecaftersnum}{.}
+\newlength{\cftsubsubseclen}
+\settowidth{\cftsubsubseclen}{4.2.1.1.\ }
+\cftsetindents{subsubsection}{1.95cm}{\cftsubsubseclen}
+
+% Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương
+\setlength{\cftbeforechapskip}{2.5pt}
+\setlength{\cftbeforesecskip}{1.2pt}
+\setlength{\cftbeforesubsecskip}{0.8pt}
+\setlength{\cftbeforesubsubsecskip}{0.8pt}
+
+% Phông chữ trong mục lục: chuẩn mực, thanh thoát (Times regular, không đậm theo Ảnh 2)
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftchappagefont}{\normalfont}
+\renewcommand{\cftsecfont}{\normalfont}
+\renewcommand{\cftsecpagefont}{\normalfont}
+\renewcommand{\cftsubsecfont}{\normalfont}
+\renewcommand{\cftsubsecpagefont}{\normalfont}
+\renewcommand{\cftsubsubsecfont}{\normalfont}
+\renewcommand{\cftsubsubsecpagefont}{\normalfont}
+
+% --- Cấu hình Danh mục Bảng biểu (LoT) chuẩn HUMG (Ảnh 1) ---
+\renewcommand{\cfttabpresnum}{\bfseries Bảng~}
+\renewcommand{\cfttabaftersnum}{:}
+\newlength{\cfttablen}
+\settowidth{\cfttablen}{\bfseries Bảng~9-99:~}
+\setlength{\cfttabnumwidth}{\cfttablen}
+\cftsetindents{table}{0pt}{\cfttablen}
+\renewcommand{\cfttableader}{\cftdotfill{\cftdotsep}}
+
+% --- Cấu hình Danh mục Hình ảnh (LoF) chuẩn HUMG ---
+\renewcommand{\cftfigpresnum}{\bfseries Hình~}
+\renewcommand{\cftfigaftersnum}{:}
+\newlength{\cftfiglen}
+\settowidth{\cftfiglen}{\bfseries Hình~9-99:~}
+\setlength{\cftfignumwidth}{\cftfiglen}
+\cftsetindents{figure}{0pt}{\cftfiglen}
+\renewcommand{\cftfigleader}{\cftdotfill{\cftdotsep}}
+
+% 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
+\usepackage{titlesec}
+\setcounter{secnumdepth}{4}
+\setcounter{tocdepth}{3}
+
+% Định dạng tiêu đề chương chuẩn 16pt in hoa đậm căn giữa
+% Dạng block: CHƯƠNG X: TÊN CHƯƠNG (chương có số) hoặc TÊN CHƯƠNG (chương không số)
+\titleformat{\chapter}[block]
+  {\fontsize{16}{20}\selectfont\bfseries\centering}
+  {\MakeUppercase{\chaptertitlename}\ \thechapter:\ }
+  {0pt}
+  {\MakeUppercase}
+\titlespacing*{\chapter}{0pt}{-10pt}{18pt}
+
+% Mục cấp 1 (1.1, 2.1...): 14pt Đậm, căn trái
+\titleformat{\section}
+  {\fontsize{14}{18}\selectfont\bfseries}
+  {\thesection}{0.75em}{}
+\titlespacing*{\section}{0pt}{12pt}{6pt}
+
+% Tiểu mục cấp 2 (1.1.1, 2.1.1...): 13pt Đậm, căn trái
+\titleformat{\subsection}
+  {\fontsize{13}{17}\selectfont\bfseries}
+  {\thesubsection}{0.75em}{}
+\titlespacing*{\subsection}{0pt}{9pt}{4pt}
+
+% Tiểu mục cấp 3 (1.1.1.1, 2.1.1.1...): 13pt Đậm nghiêng, căn trái
+\titleformat{\subsubsection}
+  {\fontsize{13}{17}\selectfont\bfseries\itshape}
+  {\thesubsubsection}{0.75em}{}
+\titlespacing*{\subsubsection}{0pt}{6pt}{3pt}
+
+% Đoạn văn có tiêu đề (\paragraph): 13pt Đậm inline
+\titleformat{\paragraph}[runin]
+  {\fontsize{13}{17}\selectfont\bfseries}
+  {\theparagraph}{0.5em}{}[:]
+\titlespacing*{\paragraph}{0pt}{4pt}{0.75em}
+
+% 8. Liên kết siêu văn bản PDF học thuật
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,
+    citecolor=blue,
+    urlcolor=blue,
+    pdfauthor={Đàm Mạnh Dũng},
+    pdftitle={Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn}
+}

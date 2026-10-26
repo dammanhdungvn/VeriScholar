@@ -1,17 +1,13 @@
 import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  User,
   Settings,
   Sparkles,
   HelpCircle,
   LogOut,
-  Sun,
-  Moon,
   ChevronRight,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
-import { useTheme } from "@/hooks/useTheme";
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { cn } from "@/lib/utils";
 
@@ -27,15 +23,11 @@ export interface AvatarDropdownPopoverProps {
 export function AvatarDropdownPopover({
   isOpen,
   onClose,
-  side = "bottom",
-  align = "right",
   className,
   onOpenSettings,
 }: AvatarDropdownPopoverProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
-  const { theme, toggleTheme } = useTheme();
-  const isDark = theme === "dark";
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape or click outside
@@ -72,19 +64,26 @@ export function AvatarDropdownPopover({
   const initials = getScholarInitials(user?.full_name, user?.email);
 
   return (
-    <div
-      ref={popoverRef}
-      role="menu"
-      aria-label="Tùy chọn người dùng"
-      data-testid="avatar-dropdown-popover"
-      className={cn(
-        "absolute z-50 w-64 p-1.5 rounded-2xl bg-white dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none text-ink dark:text-zinc-100",
-        side === "top" ? "bottom-full mb-2" : "top-full mt-2",
-        align === "right" ? "right-0" : "left-0",
-        className
-      )}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <>
+      {/* Floating Backdrop Layer (Rule Item 3 - Floating overlay above all taskbar layers) */}
+      <div
+        className="fixed inset-0 z-[95] bg-black/5 dark:bg-black/20 backdrop-blur-[0.5px] transition-opacity cursor-default"
+        onClick={onClose}
+        aria-hidden="true"
+        data-testid="avatar-popover-backdrop"
+      />
+
+      <div
+        ref={popoverRef}
+        role="menu"
+        aria-label="Tùy chọn người dùng"
+        data-testid="avatar-dropdown-popover"
+        className={cn(
+          "fixed z-[100] w-64 p-1.5 rounded-2xl bg-white dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none text-ink dark:text-zinc-100",
+          className
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
       {/* 1. Header Card: [Avatar] Dam Manh Dung • Tài khoản cá nhân / email kèm ChevronRight */}
       <button
         type="button"
@@ -139,30 +138,10 @@ export function AvatarDropdownPopover({
               navigate("/settings");
             }
           }}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
-        >
-          <div className="flex items-center gap-2.5">
-            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>Nâng cấp gói</span>
-          </div>
-          <span className="text-3xs px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-medium font-mono">
-            Upgrade
-          </span>
-        </button>
-
-        {/* Hồ sơ cá nhân */}
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="popover-profile-btn"
-          onClick={() => {
-            onClose();
-            navigate("/profile");
-          }}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
         >
-          <User className="w-4 h-4 text-coral-600 dark:text-coral-400 shrink-0" />
-          <span>Hồ sơ cá nhân</span>
+          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>Nâng cấp gói</span>
         </button>
 
         {/* Cài đặt */}
@@ -183,24 +162,6 @@ export function AvatarDropdownPopover({
           <Settings className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
           <span>Cài đặt</span>
         </button>
-
-        {/* Chế độ giao diện: Sáng / Tối */}
-        <button
-          type="button"
-          role="menuitem"
-          data-testid="popover-theme-btn"
-          onClick={toggleTheme}
-          className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
-        >
-          <div className="flex items-center gap-2.5">
-            {isDark ? (
-              <Sun className="w-4 h-4 text-amber-400 shrink-0" />
-            ) : (
-              <Moon className="w-4 h-4 text-zinc-600 dark:text-zinc-400 shrink-0" />
-            )}
-            <span>Chế độ giao diện: {isDark ? "Tối" : "Sáng"}</span>
-          </div>
-        </button>
       </div>
 
       {/* Divider */}
@@ -208,7 +169,7 @@ export function AvatarDropdownPopover({
 
       {/* 3. Footer List */}
       <div className="space-y-0.5">
-        {/* Trợ giúp & Tài liệu */}
+        {/* Trợ giúp */}
         <button
           type="button"
           role="menuitem"
@@ -219,7 +180,7 @@ export function AvatarDropdownPopover({
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
         >
           <HelpCircle className="w-4 h-4 text-zinc-500 dark:text-zinc-400 shrink-0" />
-          <span>Trợ giúp & Tài liệu</span>
+          <span>Trợ giúp</span>
         </button>
 
         {/* Đăng xuất */}
@@ -239,5 +200,6 @@ export function AvatarDropdownPopover({
         </button>
       </div>
     </div>
+  </>
   );
 }
