@@ -1,66 +1,61 @@
 % !TEX root = ../../main.tex
-\section{Xác định tác nhân và biểu đồ ca sử dụng (Use Case)}
+\section{Phân rã năng lực chức năng và Đặc tả ca sử dụng cốt lõi}
 \label{sec:use_case}
 
-\subsection{Xác định các tác nhân trong hệ thống}
+\subsection{Xác định các tác nhân và vai trò tương tác}
 \label{subsec:tac_nhan}
 Hệ thống \VS\ phục vụ hai nhóm tác nhân chính:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Học giả (Scholar / Researcher):} Là tác nhân trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh, học viên cao học và sinh viên đại học tại VinUniversity). Học giả tương tác trực tiếp với 4 không gian làm việc của nền tảng: tra cứu ấn phẩm liên hợp, đọc hiểu tài liệu với sự hỗ trợ của trợ lý AI, đối chiếu số liệu trích dẫn qua khung viền tọa độ trực quan, khai phá đồ thị tri thức 4 thực thể và biên soạn bản thảo bài báo \LaTeX.
+    \item \textbf{Học giả (Scholar / Researcher):} Là tác nhân trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh, học viên cao học và sinh viên đại học tại VinUniversity). Học giả tương tác trực tiếp với các không gian làm việc của nền tảng: tra cứu ấn phẩm liên hợp, đọc hiểu tài liệu với sự hỗ trợ của trợ lý AI, đối chiếu số liệu trích dẫn qua khung viền tọa độ trực quan, khai phá đồ thị tri thức 4 thực thể và biên soạn bản thảo bài báo \LaTeX.
     \item \textbf{Quản trị viên hệ thống (System Administrator):} Chịu trách nhiệm theo dõi sức khỏe hệ thống, giám sát hạn ngạch sử dụng tài nguyên điện toán, cấu hình chính sách bảo mật, theo dõi các luồng sự kiện truy vết suy luận mô hình ngôn ngữ lớn (\textit{Trace Logs}) trên nền tảng Langfuse Cloud và bảo đảm tính sẵn sàng của môi trường máy ảo hộp cát.
 \end{enumerate}
 
-\subsection{Biểu đồ Ca sử dụng tổng quát của hệ thống}
+\subsection{Mô hình phân rã khối năng lực hệ thống toàn trình}
 \label{subsec:bieu_do_uc}
-Toàn bộ các ca sử dụng của hệ thống được nhóm thành 4 phân hệ chức năng tương ứng với 4 không gian làm việc học thuật, được mô hình hóa trong Hình~\ref{fig:use_case_diagram}.
+Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI hiện đại, toàn bộ năng lực chức năng của nền tảng \VS\ được mô hình hóa thành 3 khối tích hợp độc lập và mạch lạc trong Hình~\ref{fig:use_case_diagram}:
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.80, transform shape,
-    actor/.style={draw=black, fill=yellow!15, line width=1pt, align=center},
-    ucbox/.style={draw=blue!80!black, fill=blue!6, rounded corners=12pt, line width=0.9pt, align=center, inner sep=4pt, font=\footnotesize, minimum width=4.8cm, minimum height=0.8cm},
-    sysbox/.style={draw=black!70, fill=gray!3, rounded corners=6pt, line width=1.1pt, inner sep=10pt},
-    line/.style={draw=black!70, line width=0.8pt}
+    scale=0.78, transform shape,
+    bigcard/.style={draw=black!70, fill=gray!3, rounded corners=8pt, line width=1.1pt, inner sep=10pt},
+    subcard/.style={draw=blue!80!black, fill=white, rounded corners=6pt, line width=0.9pt, inner sep=8pt},
+    pill/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    secpill/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    conn/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=blue!70!black}
 ]
-    % Khung ranh giới hệ thống
-    \draw[sysbox] (-3.8, -5.6) rectangle (5.2, 4.6);
-    \node[anchor=north west, font=\bfseries\small, text=blue!80!black] at (-3.6, 4.4) {HỆ THỐNG TRỢ LÝ HỌC THUẬT VERISCHOLAR};
+    % Khung bao lớn tổng thể
+    \node[bigcard, minimum width=15.8cm, minimum height=10.2cm] (maincard) at (0, 0) {};
+    \node[anchor=north west, font=\bfseries\small, text=black!80] at (-7.6, 4.8) {\textbf{CÁC KHỐI NĂNG LỰC TÍCH HỢP HỆ THỐNG} \footnotesize (System Integration Components)};
 
-    % Tác nhân Học giả (bên trái)
-    \node[draw=blue!80!black, fill=yellow!12, rounded corners=4pt, line width=1pt, align=center, inner sep=6pt, font=\small] (scholar) at (-5.8, -0.6) {
-        \textbf{HỌC GIẢ}\\
-        \footnotesize (Scholar)
-    };
+    % Khối 1: Typical Retrieval Flow (Bên trên)
+    \node[subcard, minimum width=15.0cm, minimum height=2.8cm] (c_ret) at (0, 3.0) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.2, 4.1) {LUỒNG THU NHẬP VÀ TRUY XUẤT HỌC THUẬT (ACADEMIC RETRIEVAL FLOW)};
+    \node[pill, minimum width=2.4cm] (p1) at (-6.0, 2.7) {\textbf{Nạp ấn phẩm}\\Document loaders};
+    \node[pill, minimum width=2.4cm] (p2) at (-3.4, 2.7) {\textbf{Bóc tách 2 cột}\\Layout splitters};
+    \node[pill, minimum width=2.6cm] (p3) at (-0.6, 2.7) {\textbf{Mô hình nhúng}\\Embedding models};
+    \node[pill, minimum width=2.6cm] (p4) at (2.4, 2.7) {\textbf{Kho chỉ mục}\\Vector \& BM25};
+    \node[pill, minimum width=2.2cm] (p5) at (5.2, 2.7) {\textbf{Hợp nhất RRF}\\Retrievers};
+    \draw[conn] (p1) -- (p2);
+    \draw[conn] (p2) -- (p3);
+    \draw[conn] (p3) -- (p4);
+    \draw[conn] (p4) -- (p5);
 
-    % Tác nhân Quản trị viên (bên phải)
-    \node[draw=blue!80!black, fill=yellow!12, rounded corners=4pt, line width=1pt, align=center, inner sep=6pt, font=\small] (admin) at (7.0, -2.5) {
-        \textbf{QUẢN TRỊ VIÊN}\\
-        \footnotesize (Administrator)
-    };
+    % Khối 2: Agent Capabilities (Góc dưới trái)
+    \node[subcard, minimum width=7.2cm, minimum height=4.8cm] (c_agent) at (-3.9, -1.8) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=teal!90!black] at (-7.2, 0.3) {NĂNG LỰC TÁC NHÂN AI (AGENT CAPABILITIES)};
+    \node[pill, minimum width=6.4cm] (ag1) at (-3.9, -0.6) {\textbf{Tập công cụ ngoại vi (Tools)}\\Search, PDF Canvas Viewer, MicroVM};
+    \node[pill, minimum width=6.4cm] (ag2) at (-3.9, -1.8) {\textbf{Tự phản biện liêm chính (Reflection)}\\Kiểm định trích dẫn, phát hiện ảo giác};
+    \node[pill, minimum width=6.4cm] (ag3) at (-3.9, -3.0) {\textbf{Lập kế hoạch phân rã (Planning)}\\Chuỗi suy luận ReAct và chia nhỏ mục tiêu};
 
-    % Các Ca sử dụng
-    \node[ucbox] (uc1) at (0.6, 3.6) {UC-01: Đăng nhập OTP \& Quản lý khóa BYOK};
-    \node[ucbox] (uc2) at (0.6, 2.2) {UC-02: Tìm kiếm liên hợp \& Nạp bài CAS};
-    \node[ucbox] (uc3) at (0.6, 0.8) {UC-03: Hỏi đáp Hybrid RAG có tọa độ PDF};
-    \node[ucbox] (uc4) at (0.6, -0.6) {UC-04: Tạo ma trận tổng hợp đa bài báo};
-    \node[ucbox] (uc5) at (0.6, -2.0) {UC-05: Khám phá đồ thị tri thức GraphRAG};
-    \node[ucbox] (uc6) at (0.6, -3.4) {UC-06: Tự sửa lỗi biên dịch bản thảo \LaTeX};
-    \node[ucbox] (uc7) at (0.6, -4.8) {UC-07: Giám sát vết suy luận \& Quản trị hạ tầng};
-
-    % Đường nối Học giả
-    \draw[line] (scholar.east) -- (uc1.west);
-    \draw[line] (scholar.east) -- (uc2.west);
-    \draw[line] (scholar.east) -- (uc3.west);
-    \draw[line] (scholar.east) -- (uc4.west);
-    \draw[line] (scholar.east) -- (uc5.west);
-    \draw[line] (scholar.east) -- (uc6.west);
-
-    % Đường nối Quản trị viên
-    \draw[line] (admin.west) -- (uc7.east);
-    \draw[line] (admin.west) -- (uc1.east);
+    % Khối 3: Execution and State (Góc dưới phải)
+    \node[subcard, minimum width=7.2cm, minimum height=4.8cm] (c_exec) at (3.9, -1.8) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=purple!90!black] at (0.6, 0.3) {HẠ TẦNG THỰC THI VÀ TRẠNG THÁI (EXECUTION \& STATE)};
+    \node[secpill, minimum width=6.4cm] (ex1) at (3.9, -0.6) {\textbf{Máy ảo hộp cát E2B MicroVM}\\Biên dịch \LaTeX\ cô lập, ngăn ngừa RCE};
+    \node[secpill, minimum width=6.4cm] (ex2) at (3.9, -1.8) {\textbf{Cơ sở dữ liệu PostgreSQL 16}\\Mở rộng pgvector và lưu trữ khử trùng CAS};
+    \node[secpill, minimum width=6.4cm] (ex3) at (3.9, -3.0) {\textbf{Két sắt khóa cá nhân (BYOK)}\\Mã hóa AES-256-GCM, giải mã tạm thời trên RAM};
 \end{tikzpicture}
-\caption{Biểu đồ Ca sử dụng (Use Case Diagram) tổng quát của hệ thống VeriScholar}
+\caption{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}
 \label{fig:use_case_diagram}
 \end{figure}
 

@@ -2,62 +2,74 @@
 \section{Máy trạng thái tác nhân AI và Môi trường thực thi đám mây}
 \label{sec:react_agent}
 
-\subsection{Chu trình Suy luận -- Hành động -- Quan sát (ReAct)}
+\subsection[Mô hình Tác nhân AI Độc lập (Autonomous Agent)]{Mô hình Tác nhân AI Độc lập\\(LLM-Powered Autonomous Agent)}
 \label{subsec:chu_trinh_react}
-Phân hệ biên soạn và sửa lỗi bản thảo khoa học trong VeriScholar được điều khiển bởi một tác nhân trí tuệ nhân tạo xây dựng trên nền tảng máy trạng thái hữu hạn (\textit{StateGraph}), tuân thủ mô hình tương tác ReAct (\textit{Reasoning and Acting}) do Yao và các cộng sự đề xuất \cite{yao2022}.
+Trong nghiên cứu về các hệ thống trí tuệ nhân tạo hiện đại, mô hình Tác nhân Độc lập (\textit{Autonomous Agent}) do Lilian Weng tổng hợp \cite{weng2023agent} đã trở thành khuôn mẫu lý thuyết chuẩn mực của cộng đồng khoa học quốc tế. Mô hình định nghĩa một tác nhân thông minh hoàn chỉnh được vận hành bởi mô hình ngôn ngữ lớn (LLM) tại trung tâm, kết nối hài hòa với 4 trụ cột chức năng cốt lõi:
 
-Mô hình ReAct khắc phục nhược điểm của các mô hình ngôn ngữ đơn lẻ (vốn chỉ có khả năng sinh văn bản tĩnh và dễ mắc lỗi ảo giác) bằng cách thiết lập vòng lặp phản hồi đóng gồm 3 pha:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Pha Suy luận (\textit{Reasoning -- Thought}):} Tác nhân đọc yêu cầu của học giả cùng với tệp nhật ký lỗi biên dịch (\texttt{.log}), tiến hành phân tích nguyên nhân gốc rễ gây ra lỗi cú pháp (chẳng hạn: thiếu gói lệnh tiền đề, thiếu dấu đóng ngoặc nhọn, hoặc xung đột môi trường bảng).
-    \item \textbf{Pha Hành động (\textit{Acting -- Action}):} Tác nhân quyết định lựa chọn công cụ phù hợp từ tập công cụ, chẳng hạn như sửa đổi nội dung tệp nguồn, bổ sung cấu hình trong phần tiền đề, hoặc cập nhật trích dẫn thư mục.
-    \item \textbf{Pha Quan sát (\textit{Observation}):} Hệ thống thực thi hành động, gọi trình biên dịch trong môi trường cách ly và trả kết quả biên dịch mới về cho tác nhân. Tác nhân quan sát thông báo trả về: nếu biên dịch thành công (mã thoát 0), chu trình kết thúc; nếu phát sinh lỗi mới, tác nhân tiếp tục chu kỳ suy luận tiếp theo.
+    \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ làm việc ngắn hạn (\textit{Short-term Working Memory} lưu trữ ngữ cảnh hội thoại đa lượt và luồng sự kiện SSE) và bộ nhớ dài hạn (\textit{Long-term Memory} lưu trữ đồ thị tri thức 4 thực thể và kho vector nhúng HNSW).
+    \item \textbf{Lập kế hoạch (\textit{Planning}):} Chịu trách nhiệm phân rã bài toán phức tạp thành các mục tiêu con (\textit{Subgoal Decomposition}), thiết lập chuỗi suy luận (\textit{Chain of Thoughts}) và thực hiện phản tư tự sửa lỗi (\textit{Self-Reflection / Self-Critics}) nhằm loại bỏ triệt để hiện tượng ảo giác trích dẫn.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Cung cấp cho tác nhân khả năng tương tác thông qua các giao diện lập trình: bộ truy xuất lai \texttt{HybridRetriever()}, công cụ định vị \texttt{PDFCanvas()} và trình biên dịch cô lập \texttt{MicroVMCompiler()}.
+    \item \textbf{Hành động (\textit{Action}):} Thực thi các quyết định cụ thể dựa trên kế hoạch và kết quả từ công cụ, bao gồm truyền phát câu trả lời, vẽ khung viền vàng trên bản PDF gốc và vá lỗi cú pháp bản thảo \LaTeX.
 \end{enumerate}
 
-Chu trình vận hành khép kín của tác nhân ReAct và cơ chế tự sửa lỗi bản thảo được minh họa trong Hình~\ref{fig:react_agent_loop}.
+Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được minh họa chi tiết trong Hình~\ref{fig:react_agent_loop}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.88, transform shape,
-    box/.style={draw=blue!80!black, fill=blue!8, rounded corners=5pt, line width=1pt, align=center, inner sep=6pt, font=\small},
-    decision/.style={draw=orange!80!black, fill=orange!10, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\small},
-    arrow/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black}
+    scale=0.74, transform shape,
+    centerbox/.style={draw=red!70!black, fill=red!10, rounded corners=6pt, line width=1.2pt, align=center, inner sep=8pt, font=\bfseries\small},
+    pillarbox/.style={draw=black!70, fill=gray!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\bfseries\footnotesize},
+    leafbox/.style={draw=black!60, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=4pt, font=\scriptsize},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!70},
+    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.9pt, draw=black!50}
 ]
-    % Vòng lặp ReAct
-    \node[box, minimum width=4.5cm] (input) at (0, 3) {
-        \textbf{Nhận tệp lỗi \& Bản thảo}\\
-        \footnotesize Tệp nhật ký \texttt{.log} biên dịch thất bại
-    };
-    \node[box, fill=teal!10, draw=teal!80!black, minimum width=4.5cm] (reason) at (0, 1.4) {
-        \textbf{1. Pha Suy luận (\textit{Thought})}\\
-        \footnotesize Phân tích nguyên nhân lỗi cú pháp
-    };
-    \node[box, fill=purple!10, draw=purple!80!black, minimum width=4.5cm] (act) at (0, -0.2) {
-        \textbf{2. Pha Hành động (\textit{Action})}\\
-        \footnotesize Áp dụng công cụ vá lỗi mã nguồn \LaTeX
-    };
-    \node[box, fill=blue!12, draw=blue!80!black, minimum width=4.5cm] (compile) at (0, -1.8) {
-        \textbf{3. Biên dịch trong E2B MicroVM}\\
-        \footnotesize Thực thi cách ly an toàn tuyệt đối
-    };
-    \node[decision, minimum width=4cm] (check) at (0, -3.4) {
-        \textbf{Kiểm tra mã thoát (Exit Code)}\\
-        \footnotesize Thành công hay tiếp tục lỗi?
-    };
-    \node[box, fill=green!15, draw=green!60!black, right=1.6cm of check, minimum width=2.6cm] (success) {
-        \textbf{Xuất PDF}\\
-        \footnotesize Kết thúc chu trình
+    % Khối Agent ở trung tâm
+    \node[centerbox, minimum width=3.4cm, minimum height=1.4cm] (agent) at (0, 0) {
+        TÁC NHÂN AI\\
+        \footnotesize (\textit{LLM Agent Brain})
     };
 
-    % Đường nối
-    \draw[arrow] (input) -- (reason);
-    \draw[arrow] (reason) -- (act);
-    \draw[arrow] (act) -- (compile);
-    \draw[arrow] (compile) -- (check);
-    \draw[arrow] (check) -- node[above, font=\footnotesize\bfseries] {Pass (0)} (success);
-    \draw[arrow] (check.west) -- ++(-1.2,0) |- node[near end, left, font=\footnotesize\bfseries] {Lỗi ($N < 3$)} (reason.west);
+    % 1. Memory (Phía trên)
+    \node[pillarbox, minimum width=3.2cm] (memory) at (0, 2.5) {BỘ NHỚ (\textit{Memory})};
+    \node[leafbox, minimum width=3.2cm] (m_short) at (-2.3, 4.0) {Bộ nhớ ngắn hạn\\Ngữ cảnh hội thoại SSE};
+    \node[leafbox, minimum width=3.2cm] (m_long) at (2.3, 4.0) {Bộ nhớ dài hạn\\Vector HNSW \& GraphRAG};
+    \draw[arrowstyle] (agent) -- (memory);
+    \draw[arrowstyle] (memory) -- (m_short);
+    \draw[arrowstyle] (memory) -- (m_long);
+
+    % 2. Planning (Bên phải)
+    \node[pillarbox, minimum width=3.0cm] (plan) at (3.8, 0) {KẾ HOẠCH (\textit{Planning})};
+    \node[leafbox, minimum width=3.4cm] (p_refl) at (7.4, 1.8) {Tự phản tư (\textit{Reflection})};
+    \node[leafbox, minimum width=3.4cm] (p_crit) at (7.4, 0.6) {Kiểm định trích dẫn (\textit{Critics})};
+    \node[leafbox, minimum width=3.4cm] (p_cot) at (7.4, -0.6) {Chuỗi suy luận (\textit{Chain-of-Thought})};
+    \node[leafbox, minimum width=3.4cm] (p_sub) at (7.4, -1.8) {Phân rã mục tiêu (\textit{Subgoal})};
+    \draw[arrowstyle] (agent) -- (plan);
+    \draw[arrowstyle] (plan) -- (p_refl);
+    \draw[arrowstyle] (plan) -- (p_crit);
+    \draw[arrowstyle] (plan) -- (p_cot);
+    \draw[arrowstyle] (plan) -- (p_sub);
+    \draw[dasharrow] (memory.east) -| (p_refl.north);
+
+    % 3. Tools (Bên trái)
+    \node[pillarbox, minimum width=3.0cm] (tools) at (-3.8, 0) {CÔNG CỤ (\textit{Tools})};
+    \node[leafbox, minimum width=3.2cm] (t_ret) at (-7.4, 1.8) {\texttt{HybridRetriever()}};
+    \node[leafbox, minimum width=3.2cm] (t_pdf) at (-7.4, 0.6) {\texttt{PDFCanvasViewer()}};
+    \node[leafbox, minimum width=3.2cm] (t_e2b) at (-7.4, -0.6) {\texttt{MicroVMCompiler()}};
+    \node[leafbox, minimum width=3.2cm] (t_srch) at (-7.4, -1.8) {\texttt{AcademicSearch()}};
+    \draw[arrowstyle] (agent) -- (tools);
+    \draw[arrowstyle] (tools) -- (t_ret);
+    \draw[arrowstyle] (tools) -- (t_pdf);
+    \draw[arrowstyle] (tools) -- (t_e2b);
+    \draw[arrowstyle] (tools) -- (t_srch);
+
+    % 4. Action (Phía dưới)
+    \node[pillarbox, minimum width=3.2cm] (action) at (0, -2.5) {HÀNH ĐỘNG (\textit{Action})};
+    \draw[arrowstyle] (agent) -- (action);
+    \draw[dasharrow] (tools.south) |- (action.west);
 \end{tikzpicture}
-\caption{Chu trình Suy luận -- Hành động -- Quan sát (ReAct) tự động sửa lỗi bản thảo}
+\caption{Mô hình Kiến trúc Tư duy Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
 \label{fig:react_agent_loop}
 \end{figure}
 

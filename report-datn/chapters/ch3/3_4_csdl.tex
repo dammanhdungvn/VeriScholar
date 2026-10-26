@@ -1,69 +1,62 @@
 % !TEX root = ../../main.tex
-\section{Thiết kế cơ sở dữ liệu vật lý}
+\section{Thiết kế cơ sở dữ liệu và Lược đồ thực thể tri thức}
 \label{sec:thiet_ke_db}
 
-\subsection{Lược đồ quan hệ thực thể (ERD)}
+\subsection{Lược đồ thực thể tri thức và Dòng chảy dữ liệu học thuật}
 \label{subsec:erd}
-Hệ thống \VS\ sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 kết hợp tiện ích mở rộng \texttt{pgvector}. Cấu trúc dữ liệu bao gồm 16 bảng vật lý chuẩn hóa, được phân nhóm khoa học thành 4 cụm tri thức học thuật logic, bảo đảm tính toàn vẹn giao dịch ACID tuyệt đối và phân hoạch an toàn theo định danh người dùng:
+Hệ thống \VS\ sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 kết hợp tiện ích mở rộng \texttt{pgvector}. Thay vì xây dựng các cấu trúc dữ liệu rời rạc, các thực thể dữ liệu được tổ chức theo luồng chuyển hóa tri thức khoa học liền mạch giữa 4 cụm chức năng cốt lõi:
 
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Cụm Định danh học giả và Két sắt cá nhân (3 bảng):} \texttt{users} (thông tin tài khoản và mã định danh quốc tế ORCID iD), \texttt{email\_otps} (quản lý phiên đăng nhập không mật khẩu) và \texttt{user\_secrets} (két sắt lưu trữ khóa API cá nhân BYOK mã hóa AES-256-GCM AEAD).
-    \item \textbf{Cụm Ấn phẩm và Đoạn trích (4 bảng):} Gồm \texttt{documents}, \texttt{storage\_blobs}, \texttt{document\_chunks} và \texttt{discovery\_cache} lưu trữ hồ sơ, kho tệp CAS và đoạn trích tọa độ kèm vector 1536 chiều.
-    \item \textbf{Cụm Đồ thị tri thức học thuật 4 thực thể (4 bảng):} \texttt{paper\_nodes} (thực thể bài báo), \texttt{method\_nodes} (thực thể phương pháp và kỹ thuật đề xuất), \texttt{dataset\_nodes} (thực thể bộ dữ liệu chuẩn benchmark) và \texttt{metric\_results} (thực thể kết quả đo lường định lượng kèm đơn vị).
-    \item \textbf{Cụm Phiên đọc sâu, Ma trận và Bản thảo (5 bảng):} \texttt{reading\_sessions} (phiên nghiên cứu chuyên sâu của học giả), \texttt{chat\_messages} (lịch sử hỏi đáp kèm huy hiệu trích dẫn tọa độ), \texttt{comparison\_matrices} (bảng đối chiếu so sánh đa phương pháp), \texttt{draft\_projects} (dự án soạn thảo bài báo) và \texttt{draft\_files} (cây thư mục tệp mã nguồn \LaTeX).
+    \item \textbf{Cụm Định danh và Bảo mật (Identity \& Vault):} Lưu trữ thông tin học giả (\texttt{users}) gắn liền với mã định danh quốc tế ORCID iD, phiên xác thực OTP không mật khẩu (\texttt{email\_otps}) và két sắt lưu trữ khóa API cá nhân (\texttt{user\_secrets}) mã hóa AES-256-GCM.
+    \item \textbf{Cụm Ấn phẩm và Khử trùng lặp CAS (Document \& Storage):} Phân tách rạch ròi giữa hồ sơ ấn phẩm (\texttt{documents}) và khối tệp nhị phân trên đĩa cứng (\texttt{storage\_blobs}) thông qua mã băm SHA-256, giúp tiết kiệm 98\% dung lượng lưu trữ tệp trùng lặp.
+    \item \textbf{Cụm Đoạn trích và Đồ thị Tri thức (Chunks \& GraphRAG):} Mỗi đoạn trích (\texttt{document\_chunks}) lưu trữ tọa độ Bounding Box $[0..1000]$ và vector nhúng 1536 chiều, đồng thời liên kết trực tiếp với mạng đồ thị 4 thực thể (\texttt{paper\_nodes}, \texttt{method\_nodes}, \texttt{dataset\_nodes}, \texttt{metric\_results}).
+    \item \textbf{Cụm Tương tác và Soạn thảo (Sessions \& Drafts):} Quản lý phiên đọc hiểu chuyên sâu (\texttt{reading\_sessions}), lịch sử tin nhắn hỏi đáp (\texttt{chat\_messages}) và dự án biên soạn bản thảo (\texttt{draft\_projects}, \texttt{draft\_files}) gắn với máy ảo E2B Sandbox.
 \end{enumerate}
 
-Mô hình Lược đồ Quan hệ Thực thể (ERD) tổng quát liên kết 4 cụm tri thức được mô tả trong Hình~\ref{fig:erd_model}.
+Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật được mô tả trong Hình~\ref{fig:erd_model}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
-    clusterbox/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, inner sep=6pt},
-    tbl/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=4pt, font=\scriptsize, minimum width=3.4cm},
-    rel/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!70}
+    scale=0.78, transform shape,
+    clusterbox/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
+    ent/.style={draw=teal!80!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small, minimum width=3.8cm},
+    coreent/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\small, minimum width=3.8cm},
+    flow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
-    % Cụm 1: Identity & Vault (Góc trên trái)
-    \node[clusterbox, minimum width=7.2cm, minimum height=3.6cm] (c1) at (-4.2, 3.4) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.6, 5.0) {CỤM 1: ĐỊNH DANH \& KÉT SẮT BẢO MẬT};
-    \node[tbl] (tusers) at (-4.2, 4.2) {\textbf{users}\\id, email, full\_name, orcid\_id};
-    \node[tbl] (totp) at (-5.8, 2.6) {\textbf{email\_otps}\\id, user\_id, otp\_code};
-    \node[tbl] (tsec) at (-2.6, 2.6) {\textbf{user\_secrets}\\id, user\_id, enc\_api\_key};
-    \draw[rel] (totp) -- (tusers);
-    \draw[rel] (tsec) -- (tusers);
+    % 4 Cụm thực thể
+    \node[clusterbox, minimum width=15.6cm, minimum height=2.4cm] (c_top) at (0, 3.2) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.5, 4.2) {PHÂN VÙNG 1: ĐỊNH DANH HỌC GIẢ VÀ ẤN PHẨM KHỬ TRÙNG LẶP (CAS)};
+    \node[ent] (u) at (-5.0, 3.0) {\textbf{users}\\Mã định danh ORCID};
+    \node[ent] (sec) at (-5.0, 1.8) {\textbf{user\_secrets}\\Két sắt BYOK (AES-GCM)};
+    \node[coreent] (doc) at (0.2, 2.4) {\textbf{documents}\\Hồ sơ bài báo \& DOI};
+    \node[ent] (blob) at (5.4, 2.4) {\textbf{storage\_blobs}\\Mã băm SHA-256 CAS};
+    \draw[flow] (u) -- (sec);
+    \draw[flow] (u.east) -- node[above, font=\scriptsize] {sở hữu} (doc.west);
+    \draw[flow] (doc.east) -- node[above, font=\scriptsize] {trỏ tệp} (blob.west);
 
-    % Cụm 2: Document & CAS (Góc trên phải)
-    \node[clusterbox, minimum width=7.8cm, minimum height=3.6cm] (c2) at (4.4, 3.4) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (0.7, 5.0) {CỤM 2: ẤN PHẨM, KHO CAS \& ĐOẠN TRÍCH};
-    \node[tbl] (tdocs) at (2.4, 4.2) {\textbf{documents}\\id, user\_id, title, doi};
-    \node[tbl] (tcas) at (6.4, 4.2) {\textbf{storage\_blobs}\\id, sha256, ref\_count};
-    \node[tbl, minimum width=5.8cm] (tchunks) at (4.4, 2.6) {\textbf{document\_chunks}\\id, doc\_id, chunk\_text, bbox, embedding(1536)};
-    \draw[rel] (tdocs) -- (tcas);
-    \draw[rel] (tchunks) -- (tdocs);
-
-    % Cụm 3: GraphRAG 4 thực thể (Góc dưới phải)
-    \node[clusterbox, minimum width=7.8cm, minimum height=4.2cm] (c3) at (4.4, -1.2) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (0.7, 0.7) {CỤM 3: ĐỒ THỊ TRI THỨC HỌC THUẬT (GRAPHRAG)};
-    \node[tbl] (tpnode) at (2.4, -0.2) {\textbf{paper\_nodes}\\id, doc\_id, title, year};
-    \node[tbl] (tmnode) at (6.4, -0.2) {\textbf{method\_nodes}\\id, name, category};
-    \node[tbl] (tdnode) at (2.4, -2.2) {\textbf{dataset\_nodes}\\id, name, domain};
-    \node[tbl] (tmetric) at (6.4, -2.2) {\textbf{metric\_results}\\id, method\_id, metric, val};
-    \draw[rel] (tpnode) -- (tmnode);
-    \draw[rel] (tmnode) -- (tdnode);
-    \draw[rel] (tmnode) -- (tmetric);
-    \draw[rel] (tpnode) -- (tdocs);
-
-    % Cụm 4: Reading Sessions & Drafts (Góc dưới trái)
-    \node[clusterbox, minimum width=7.2cm, minimum height=4.2cm] (c4) at (-4.2, -1.2) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.6, 0.7) {CỤM 4: PHIÊN ĐỌC SÂU \& BẢN THẢO \LaTeX};
-    \node[tbl] (tsess) at (-4.2, -0.2) {\textbf{reading\_sessions}\\id, user\_id, session\_name};
-    \node[tbl] (tchat) at (-5.8, -2.2) {\textbf{chat\_messages}\\id, sess\_id, role, bbox};
-    \node[tbl] (tdraft) at (-2.6, -2.2) {\textbf{draft\_projects}\\id, user\_id, title, e2b\_id};
-    \draw[rel] (tchat) -- (tsess);
-    \draw[rel] (tsess) -- (tusers);
-    \draw[rel] (tdraft) -- (tusers);
+    \node[clusterbox, minimum width=15.6cm, minimum height=3.6cm] (c_bot) at (0, -1.0) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.5, 0.6) {PHÂN VÙNG 2: ĐOẠN TRÍCH TỌA ĐỘ VÀ ĐỒ THỊ TRI THỨC HỌC THUẬT (GRAPHRAG)};
+    \node[coreent, minimum width=4.6cm] (chk) at (-4.6, -1.0) {
+        \textbf{document\_chunks}\\
+        \footnotesize Tọa độ BBox $[0..1000]$\\
+        \footnotesize Vector HNSW 1536 chiều
+    };
+    \node[ent, minimum width=4.0cm] (graph) at (0.4, -1.0) {
+        \textbf{GraphRAG 4 thực thể}\\
+        \footnotesize Paper $\rightarrow$ Method\\
+        \footnotesize $\rightarrow$ Dataset $\rightarrow$ Metric
+    };
+    \node[ent, minimum width=4.0cm] (draft) at (5.4, -1.0) {
+        \textbf{draft\_projects}\\
+        \footnotesize Cây tệp mã nguồn \LaTeX\\
+        \footnotesize E2B Sandbox MicroVM
+    };
+    \draw[flow] (doc.south) -- ++(0,-0.6) -| (chk.north);
+    \draw[flow] (chk.east) -- node[above, font=\scriptsize] {trích xuất} (graph.west);
+    \draw[flow] (graph.east) -- node[above, font=\scriptsize] {đối chiếu} (draft.west);
 \end{tikzpicture}
-\caption{Lược đồ Quan hệ Thực thể (ERD) tổng quát phân tách theo 4 cụm tri thức học thuật}
+\caption{Lược đồ thực thể tri thức và Dòng chảy dữ liệu học thuật trong hệ thống}
 \label{fig:erd_model}
 \end{figure}
 

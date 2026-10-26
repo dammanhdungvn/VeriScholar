@@ -73,58 +73,74 @@ Nhằm đảm bảo tọa độ hiển thị nhất quán trên mọi kích thư
 x_{\text{norm}} = \text{round}\left(\frac{x}{W_{\text{page}}} \times 1000\right), \quad y_{\text{norm}} = \text{round}\left(\frac{y}{H_{\text{page}}} \times 1000\right)
 \end{equation}
 
-Quy trình truy xuất lai và cơ chế đồng bộ tọa độ hộp chữ nhật trên bản PDF gốc được mô tả trực quan trong Hình~\ref{fig:hybrid_rag_flow}.
+Quy trình xử lý dữ liệu và truy xuất lai hai luồng (Dual-Stream Hybrid RAG Pipeline) được mô hình hóa trực quan trong Hình~\ref{fig:hybrid_rag_flow}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    procbox/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
-    splitbox/.style={draw=teal!70!black, fill=teal!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
-    mergebox/.style={draw=purple!70!black, fill=purple!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
-    canvasbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=5pt, line width=1pt, align=center, inner sep=6pt, font=\small},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black}
+    sourcebox/.style={draw=blue!80!black, fill=blue!8, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
+    procbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=6pt, font=\small},
+    storebox/.style={draw=purple!80!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, align=center, inner sep=7pt, font=\small},
+    outputbox/.style={draw=green!70!black, fill=green!10, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
+    groupcard/.style={draw=black!50, fill=gray!3, rounded corners=6pt, dashed, line width=0.8pt, inner sep=6pt},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
-    % Node câu hỏi đầu vào
-    \node[procbox, minimum width=6cm] (q) at (0, 0) {
-        \textbf{Câu hỏi nghiên cứu của học giả}\\[2pt]
-        \footnotesize \textit{Ví dụ: "Hàm mất mát và độ chính xác của mô hình trên ImageNet?"}
+    % Vùng 1: Luồng nạp ấn phẩm và lập chỉ mục (Ingestion Stream) - Bên trên
+    \node[sourcebox, minimum width=3.4cm] (src) at (-6.2, 2.4) {
+        \textbf{Ấn phẩm PDF}\\
+        \footnotesize (Tài liệu nghiên cứu)
+    };
+    \node[procbox, minimum width=3.4cm] (loader) at (-2.2, 2.4) {
+        \textbf{Bóc tách 2 cột}\\
+        \footnotesize Gutter Detection
+    };
+    \node[procbox, minimum width=3.4cm] (chunks) at (1.8, 2.4) {
+        \textbf{Phân đoạn Chunks}\\
+        \footnotesize Tọa độ BBox $[0..1000]$
+    };
+    \node[procbox, minimum width=3.4cm] (embed) at (5.8, 2.4) {
+        \textbf{Nhúng Vector}\\
+        \footnotesize 1536d \& Từ khóa BM25
     };
 
-    % Nhánh Dense và Sparse
-    \node[splitbox, below left=1cm and -0.4cm of q, minimum width=4cm] (dense) {
-        \textbf{Truy xuất Dense Vector}\\
-        \footnotesize 1536 chiều, chỉ mục HNSW\\
-        \footnotesize Xếp hạng $r_{\text{dense}}(d)$
-    };
-    \node[splitbox, below right=1cm and -0.4cm of q, minimum width=4cm] (sparse) {
-        \textbf{Truy xuất Sparse BM25}\\
-        \footnotesize Khớp từ khóa, chỉ mục GIN\\
-        \footnotesize Xếp hạng $r_{\text{sparse}}(d)$
+    % Kho lưu trữ chỉ mục kép ở trung tâm
+    \node[storebox, minimum width=15.4cm, minimum height=1.2cm] (store) at (-0.2, 0.4) {
+        \textbf{KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL (DUAL-INDEX STORE)}\\
+        \footnotesize Chỉ mục phân cấp đồ thị HNSW Cosine $\parallel$ Chỉ mục ngược toàn văn Inverted GIN
     };
 
-    % Nhập RRF
-    \node[mergebox, below=2.6cm of q, minimum width=6.2cm] (rrf) {
-        \textbf{Động cơ hợp nhất xếp hạng đảo ngược (RRF $k=60$)}\\
-        \footnotesize $\text{RRF}(d) = \sum \frac{1}{60 + r_m(d)} \longrightarrow$ Trích xuất Top-$K$ đoạn văn
+    % Vùng 2: Luồng truy vấn và phản hồi (Query & Retrieval Stream) - Bên dưới
+    \node[sourcebox, minimum width=3.4cm] (query) at (-6.2, -1.8) {
+        \textbf{Câu hỏi Học giả}\\
+        \footnotesize (User Query)
+    };
+    \node[procbox, minimum width=3.4cm] (qproc) at (-2.2, -1.8) {
+        \textbf{Mã hóa truy vấn}\\
+        \footnotesize Dense + Sparse Tokens
+    };
+    \node[procbox, minimum width=3.4cm] (rrf) at (1.8, -1.8) {
+        \textbf{Hợp nhất RRF}\\
+        \footnotesize Xếp hạng đảo $k=60$
+    };
+    \node[outputbox, minimum width=3.4cm] (answer) at (5.8, -1.8) {
+        \textbf{Câu trả lời có Tọa độ}\\
+        \footnotesize Khung viền vàng $[0..1000]$
     };
 
-    % Trả lời và Highlight Bounding Box
-    \node[canvasbox, below=1cm of rrf, text width=11.5cm] (ground) {
-        \textbf{Trợ lý AI sinh câu trả lời kèm Huy hiệu Trích dẫn}\\[2pt]
-        \footnotesize Luồng SSE gửi chuỗi văn bản + Tọa độ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$\\[2pt]
-        \footnotesize $\Downarrow$\\[2pt]
-        \textbf{Tô sáng khung viền vàng trên trang PDF gốc trong vòng 1 giây}
-    };
+    % Kết nối luồng Ingestion
+    \draw[arrowstyle] (src) -- (loader);
+    \draw[arrowstyle] (loader) -- (chunks);
+    \draw[arrowstyle] (chunks) -- (embed);
+    \draw[arrowstyle] (embed.south) -- (embed.south |- store.north);
 
-    % Mũi tên kết nối
-    \draw[arrowstyle] (q.south) -| (dense.north);
-    \draw[arrowstyle] (q.south) -| (sparse.north);
-    \draw[arrowstyle] (dense.south) |- (rrf.west);
-    \draw[arrowstyle] (sparse.south) |- (rrf.east);
-    \draw[arrowstyle] (rrf.south) -- (ground.north);
+    % Kết nối luồng Query
+    \draw[arrowstyle] (query) -- (qproc);
+    \draw[arrowstyle] (qproc.north) -- (qproc.north |- store.south);
+    \draw[arrowstyle] (store.south -| rrf.north) -- (rrf.north);
+    \draw[arrowstyle] (rrf) -- (answer);
 \end{tikzpicture}
-\caption{Quy trình truy xuất lai Hybrid RAG và cơ chế đồng bộ tọa độ hộp chữ nhật trực quan}
+\caption{Mô hình luồng dữ liệu truy xuất lai (Dual-Stream Hybrid RAG Dataflow) chuẩn mực}
 \label{fig:hybrid_rag_flow}
 \end{figure}
 

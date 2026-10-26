@@ -13,59 +13,76 @@ Hệ thống theo Kiến trúc Lục giác được cấu trúc thành ba phân 
     \item \textbf{Tầng các bộ điều hợp kỹ thuật (\textit{Adapters}):} Nằm ở lớp ngoài cùng của hệ thống, hiện thực hóa các Cổng trừu tượng để kết nối với các công nghệ thực tế (chẳng hạn như bộ điều hợp cơ sở dữ liệu quan hệ, bộ điều hợp dịch vụ tìm kiếm học thuật trực tuyến, hoặc bộ điều hợp mô hình trí tuệ nhân tạo).
 \end{enumerate}
 
-Mô hình phân tầng kiến trúc và luồng phụ thuộc hướng tâm của hệ thống được minh họa chi tiết trong Hình~\ref{fig:hexagonal_arch}.
+Mô hình phân tầng kiến trúc và ranh giới phân tách trừu tượng của hệ thống được mô tả theo dạng các khối năng lực module trong Hình~\ref{fig:hexagonal_arch}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.80, transform shape,
-    corebox/.style={draw=blue!80!black, fill=blue!8, rounded corners=6pt, line width=1.2pt, align=center, inner sep=8pt},
-    portbox/.style={draw=teal!80!black, fill=teal!10, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
-    adaptbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black}
+    scale=0.82, transform shape,
+    card/.style={draw=black!70, fill=gray!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
+    compbox/.style={draw=blue!80!black, fill=blue!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    portbox/.style={draw=teal!80!black, fill=teal!10, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    adaptbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
-    % Tầng Lõi miền nghiệp vụ
-    \node[corebox, minimum width=6.2cm, minimum height=2.4cm] (core) at (0,0) {
-        \textbf{\large TẦNG LÕI MIỀN NGHIỆP VỤ}\\
-        \textbf{\textit{(Pure Core Domain)}}\\[4pt]
-        \small Thực thể học thuật: \textit{Document, PaperNode}\\
-        \small Quy tắc xác thực, định danh học giả, thuật toán RRF
+    % Khối 1: Tầng Điều Hợp Ngoại Vi (Adapters) - Bên trái
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_adapt) at (-5.6, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=orange!90!black] at (-5.6, 2.9) {BỘ ĐIỀU HỢP HẠ TẦNG (ADAPTERS)};
+    \node[adaptbox, minimum width=4.2cm] (ad1) at (-5.6, 1.8) {
+        \textbf{Bộ điều hợp Web / SSE}\\
+        \footnotesize Giao diện người dùng, Luồng sự kiện
+    };
+    \node[adaptbox, minimum width=4.2cm] (ad2) at (-5.6, 0.0) {
+        \textbf{Bộ điều hợp CSDL \& CAS}\\
+        \footnotesize PostgreSQL 16, pgvector, CAS
+    };
+    \node[adaptbox, minimum width=4.2cm] (ad3) at (-5.6, -1.8) {
+        \textbf{Bộ điều hợp Trí tuệ Nhân tạo}\\
+        \footnotesize Dịch vụ LLM, E2B MicroVM
     };
 
-    % Các Cổng trừu tượng (Ports)
-    \node[portbox, above=0.7cm of core, minimum width=5.5cm] (p_in) {
-        \textbf{Cổng Giao Tiếp Phía Nhập (Inbound Ports)}\\
-        \footnotesize Giao diện dịch vụ phân tích tài liệu, điều phối tác nhân
+    % Khối 2: Cổng Giao Tiếp Trừu Tượng (Ports) - Ở giữa
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_ports) at (0, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=teal!90!black] at (0, 2.9) {CỔNG TRỪU TƯỢNG (PORTS)};
+    \node[portbox, minimum width=4.2cm] (p1) at (0, 1.8) {
+        \textbf{Cổng Phía Nhập (Inbound)}\\
+        \footnotesize Giao diện dịch vụ phân tích tài liệu
     };
-    \node[portbox, below=0.7cm of core, minimum width=5.5cm] (p_out) {
-        \textbf{Cổng Giao Tiếp Phía Xuất (Outbound Ports)}\\
-        \footnotesize Giao diện lưu trữ CSDL, giải quyết ấn phẩm, môi trường Sandbox
+    \node[portbox, minimum width=4.2cm] (p2) at (0, 0.0) {
+        \textbf{Cổng Lưu trữ (Persistence)}\\
+        \footnotesize Giao diện lưu trữ CSDL \& Vector
+    };
+    \node[portbox, minimum width=4.2cm] (p3) at (0, -1.8) {
+        \textbf{Cổng Trí tuệ Nhân tạo (AI)}\\
+        \footnotesize Giao diện sinh suy luận \& Hộp cát
     };
 
-    % Các Bộ điều hợp ngoài (Adapters)
-    \node[adaptbox, above=0.7cm of p_in, minimum width=6.5cm] (ad_web) {
-        \textbf{Bộ Điều Hợp Giao Diện \& Giao Vận (Web Adapters)}\\
-        \footnotesize Giao diện web người dùng, Luồng sự kiện SSE, RESTful Controller
+    % Khối 3: Tầng Lõi Miền Nghiệp Vụ (Pure Core Domain) - Bên phải
+    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_core) at (5.6, 0) {};
+    \node[anchor=north, font=\bfseries\footnotesize, text=blue!90!black] at (5.6, 2.9) {LÕI NGHIỆP VỤ (CORE DOMAIN)};
+    \node[compbox, minimum width=4.2cm] (cor1) at (5.6, 1.8) {
+        \textbf{Thực thể Học thuật}\\
+        \footnotesize Document, PaperNode, Chunk
     };
-    \node[adaptbox, below left=0.7cm and -0.8cm of p_out, minimum width=3.4cm] (ad_db) {
-        \textbf{Bộ Điều Hợp CSDL}\\
-        \footnotesize PostgreSQL 16 + pgvector\\
-        \footnotesize Khử trùng lặp CAS
+    \node[compbox, minimum width=4.2cm] (cor2) at (5.6, 0.0) {
+        \textbf{Thuật toán Hợp nhất RRF}\\
+        \footnotesize Xếp hạng đảo ngược đa luồng
     };
-    \node[adaptbox, below right=0.7cm and -0.8cm of p_out, minimum width=3.4cm] (ad_ai) {
-        \textbf{Bộ Điều Hợp Dịch Vụ AI}\\
-        \footnotesize Mô hình ngôn ngữ lớn LLM\\
-        \footnotesize Máy ảo E2B Sandbox
+    \node[compbox, minimum width=4.2cm] (cor3) at (5.6, -1.8) {
+        \textbf{Quy tắc Liêm chính Dữ liệu}\\
+        \footnotesize Khử trùng lặp, Xác thực định danh
     };
 
     % Mũi tên phụ thuộc hướng tâm
-    \draw[arrowstyle] (ad_web) -- (p_in) node[midway, right, font=\footnotesize] {kích hoạt};
-    \draw[arrowstyle] (p_in) -- (core);
-    \draw[arrowstyle] (ad_db) -- (p_out) node[midway, left, font=\footnotesize] {hiện thực};
-    \draw[arrowstyle] (ad_ai) -- (p_out) node[midway, right, font=\footnotesize] {hiện thực};
-    \draw[arrowstyle, dashed] (core) -- (p_out) node[midway, right, font=\footnotesize] {gọi Cổng};
+    \draw[arrowstyle] (ad1.east) -- (p1.west);
+    \draw[arrowstyle] (ad2.east) -- (p2.west);
+    \draw[arrowstyle] (ad3.east) -- (p3.west);
+
+    \draw[arrowstyle] (p1.east) -- (cor1.west);
+    \draw[arrowstyle, dashed] (cor2.west) -- (p2.east);
+    \draw[arrowstyle, dashed] (cor3.west) -- (p3.east);
 \end{tikzpicture}
-\caption{Mô hình phân tầng Kiến trúc Lục giác (Ports and Adapters) của hệ thống}
+\caption{Mô hình phân rã module và cấu trúc Cổng -- Điều hợp (Ports and Adapters)}
 \label{fig:hexagonal_arch}
 \end{figure}
 

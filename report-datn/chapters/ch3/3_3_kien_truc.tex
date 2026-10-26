@@ -1,167 +1,115 @@
 % !TEX root = ../../main.tex
-\section{Thiết kế kiến trúc tổng thể của hệ thống}
+\section{Thiết kế kiến trúc suy luận và Vết thực thi tác nhân}
 \label{sec:kien_truc_tong_the}
 
-\subsection{Mô hình kiến trúc toàn trình theo chuẩn Paper khoa học}
+\subsection{Lưu đồ quyết định tự phản biện và Vòng lặp phản hồi đóng}
 \label{subsec:kien_truc_pipeline}
-Tuân thủ chuẩn mực thiết kế kiến trúc hướng người đọc của các bài báo khoa học quốc tế uy tín, hệ thống \VS\ được mô hình hóa thành một đường ống biến đổi tri thức toàn trình (\textit{End-to-End Academic Knowledge Pipeline}) bao gồm 4 phân tầng chức năng trừu tượng cao độ, được minh họa chi tiết trong Hình~\ref{fig:e2e_pipeline_arch}:
+Khác biệt với các hệ thống hỏi đáp một chiều, nền tảng \VS\ xây dựng chu trình truy xuất và tổng hợp câu trả lời theo mô hình Lưu đồ Quyết định Tự phản biện (\textit{Self-Reflective Decision Flowchart}) \cite{lewis2020}. Chu trình này thiết lập các trạm kiểm soát chất lượng dữ liệu khắt khe nhằm triệt tiêu ảo giác trích dẫn:
 
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Tầng Tiếp nhận và Phân rã Văn bản:}
-    Chịu trách nhiệm tiếp nhận các ấn phẩm khoa học thô định dạng PDF (\textit{Document Ingestion \& Layout-Aware Parsing}). Hệ thống áp dụng thuật toán băm mật mã SHA-256 để xác định địa chỉ nội dung (CAS), loại bỏ $98\%$ nguy cơ trùng lặp tệp nhị phân trên đĩa cứng. Văn bản sau đó được phân tích bố cục chuyên sâu: giải thuật nhận diện ranh giới cột (\textit{gutter detection}) bóc tách cấu trúc 2 cột đặc trưng của các bài báo khoa học mà không làm đứt đoạn ngữ cảnh. Mỗi khối văn bản được trích xuất siêu dữ liệu và chuẩn hóa tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1]$ trên dải nguyên $[0..1000]$.
-
-    \item \textbf{Tầng Lập chỉ mục Kép và Đồ thị Tri thức (\textit{Dual-Indexing \& Knowledge Graph}):}
-    Đoạn trích sau khi chuẩn hóa được đồng thời đưa vào 3 luồng xử lý tri thức:
-    \begin{itemize}
-        \item \textit{Chỉ mục ngữ nghĩa Dense Vector:} Ánh xạ văn bản thành vector nhúng 1536 chiều, lưu trữ và lập chỉ mục đồ thị phân cấp HNSW Cosine trên PostgreSQL \texttt{pgvector}.
-        \item \textit{Chỉ mục từ khóa BM25:} Lập bảng chỉ mục ngược toàn văn (\textit{Inverted Index}) dựa trên tần suất từ khóa BM25, tối ưu hóa khả năng khớp chính xác các thuật ngữ hiếm và số hiệu công thức.
-        \item \textit{Mạng đồ thị tri thức 4 thực thể (GraphRAG):} Tự động nhận diện và liên kết các thực thể \textit{Bài báo}, \textit{Phương pháp}, \textit{Bộ dữ liệu} và \textit{Kết quả đo lường}, bảo đảm toàn vẹn giao dịch ACID trên cơ sở dữ liệu quan hệ.
-    \end{itemize}
-
-    \item \textbf{Tầng Điều phối Tác nhân Thông minh (\textit{Agentic Orchestration Layer}):}
-    Đóng vai trò là bộ não điều hành của hệ thống, xây dựng trên máy trạng thái hữu hạn (\textit{StateGraph}). Tầng này điều phối các tác nhân chuyên trách: Tác nhân Đọc sâu (\textit{Deep Reading Agent}), Tác nhân Khai phá Đồ thị (\textit{Graph Reasoning Agent}) và Tác nhân Tự sửa lỗi bản thảo (\textit{Auto-healing \LaTeX\ Agent}). Chu trình suy luận ReAct được kết nối khép kín với môi trường máy ảo cách ly E2B Sandbox MicroVM nhằm ngăn chặn triệt để nguy cơ tấn công RCE từ cơ chế \verb|\write18|.
-
-    \item \textbf{Tầng Đối chiếu Trực quan và Két sắt Bảo mật (\textit{Visual Grounding \& Security Vault}):}
-    Bảo vệ khóa bí mật của người dùng theo nguyên tắc két sắt cá nhân (BYOK) mã hóa xác thực AES-256-GCM AEAD, giải mã tạm thời trên bộ nhớ RAM theo nguyên tắc Zero-Retention. Đồng thời, tầng này thiết lập kết nối truyền phát luồng sự kiện (SSE), điều khiển trình xem PDF Canvas vẽ khung viền vàng định vị chính xác vị trí câu văn nguồn trên tài liệu trong vòng 1 giây.
+    \item \textbf{Kiểm định độ đầy đủ ngữ cảnh (\textit{Sufficient Information Check}):} Sau khi thực hiện truy xuất lai HNSW và BM25, hệ thống đánh giá xem các đoạn trích có chứa đầy đủ bằng chứng học thuật để trả lời câu hỏi hay không. Nếu thiếu dữ liệu, tác nhân kích hoạt chu trình tinh chỉnh câu truy vấn (\textit{Query Refinement}) để mở rộng phạm vi tìm kiếm.
+    \item \textbf{Kiểm định liêm chính học thuật (\textit{Answer Grounding Check}):} Khi câu trả lời được sinh ra, hệ thống tự động đối chiếu từng khẳng định khoa học với tọa độ Bounding Box $[x_0, y_0, x_1, y_1]$ trên bản PDF gốc. Nếu độ tin cậy trích dẫn không đạt ngưỡng ($\text{IoU} < 0.85$), tác nhân kích hoạt nhánh đổi hướng chiến lược tiếp cận.
+    \item \textbf{Nhánh tự phục hồi biên dịch bản thảo (\textit{Autonomous Healing Loop}):} Khi biên dịch \LaTeX\ trong máy ảo E2B Sandbox gặp lỗi cú pháp, tác nhân đọc tệp \texttt{.log}, phân tích nguyên nhân và vá mã nguồn tự động với số chu kỳ thử nghiệm $N < 3$.
 \end{enumerate}
+
+Lưu đồ quyết định tự phản biện của hệ thống được minh họa chi tiết trong Hình~\ref{fig:e2e_pipeline_arch}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    layerbox/.style={draw=blue!80!black, fill=blue!4, rounded corners=6pt, line width=1pt, inner sep=8pt},
-    block/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    secblock/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    conn/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!70!black}
+    startbox/.style={draw=green!60!black, fill=green!10, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
+    procbox/.style={draw=blue!80!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
+    decision/.style={draw=purple!80!black, fill=purple!8, diamond, aspect=2, line width=1pt, align=center, inner sep=3pt, font=\footnotesize},
+    retbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
+    arrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
-    % Tầng 1: Ingestion
-    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l1) at (0, 4.5) {};
-    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, 5.5) {TẦNG 1: TIẾP NHẬN VÀ PHÂN RÃ VĂN BẢN (DOCUMENT INGESTION \& PARSING)};
-    \node[block, minimum width=3.2cm] (b_cas) at (-5.0, 4.3) {\textbf{Kho lưu trữ CAS}\\Khử trùng lặp SHA-256\\Đếm tham chiếu $98\%$};
-    \node[block, minimum width=3.8cm] (b_layout) at (-0.5, 4.3) {\textbf{Bóc tách bố cục 2 cột}\\Gutter Detection\\Bảo toàn ngữ cảnh đoạn};
-    \node[block, minimum width=3.6cm] (b_bbox) at (4.5, 4.3) {\textbf{Chuẩn hóa Bounding Box}\\Tọa độ $[0..1000]$\\Định vị trực quan Canvas};
-    \draw[conn] (b_cas) -- (b_layout);
-    \draw[conn] (b_layout) -- (b_bbox);
+    % Cột trung tâm dọc
+    \node[startbox, minimum width=4.2cm] (q) at (0, 6.2) {\textbf{Câu hỏi Học giả}\\(User Question)};
+    \node[procbox, minimum width=4.8cm] (enh) at (0, 4.6) {\textbf{Tăng cường truy vấn}\\(Query Enhancement)};
+    \node[procbox, minimum width=4.8cm] (ret) at (0, 3.0) {\textbf{Truy xuất tài liệu lai}\\(Retrieve Documents)};
+    \node[decision] (d1) at (0, 1.2) {Đủ thông tin?\\(\textit{Sufficient Info?})};
+    \node[procbox, minimum width=4.8cm] (gen) at (0, -0.8) {\textbf{Tổng hợp câu trả lời}\\(Generate Answer)};
+    \node[decision] (d2) at (0, -2.6) {Chất lượng trích dẫn OK?\\(\textit{Grounded \& IoU $\ge$ 0.85?})};
+    \node[decision] (d3) at (0, -4.6) {Thử hướng tiếp cận khác?\\(\textit{Try Different Approach?})};
+    \node[procbox, minimum width=4.4cm] (best) at (5.2, -4.6) {\textbf{Xuất kết quả tốt nhất}\\(Return Best Answer)};
+    \node[startbox, minimum width=4.0cm] (ans) at (5.2, -6.0) {\textbf{Trả lời kèm Tọa độ}\\(Return to User)};
+    \node[retbox, minimum width=4.2cm] (refine) at (-4.8, -4.6) {\textbf{Tinh chỉnh câu truy vấn}\\(Refine Query)};
 
-    % Tầng 2: Dual Indexing & Graph
-    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l2) at (0, 1.5) {};
-    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, 2.5) {TẦNG 2: LẬP CHỈ MỤC KÉP VÀ ĐỒ THỊ TRI THỨC (DUAL-INDEXING \& KNOWLEDGE GRAPH)};
-    \node[block, minimum width=4.0cm] (b_dense) at (-5.0, 1.3) {\textbf{Dense Semantic Index}\\Vector 1536 chiều\\Chỉ mục HNSW Cosine};
-    \node[block, minimum width=4.0cm] (b_sparse) at (0, 1.3) {\textbf{Sparse Keyword Index}\\Tần suất BM25\\Chỉ mục GIN Inverted};
-    \node[block, minimum width=4.0cm] (b_graph) at (5.0, 1.3) {\textbf{Đồ thị Tri thức 4 thực thể}\\Paper - Method - Data - Metric\\PostgreSQL ACID \& CTE};
+    % Đường nối chính
+    \draw[arrow] (q) -- (enh);
+    \draw[arrow] (enh) -- (ret);
+    \draw[arrow] (ret) -- (d1);
+    \draw[arrow] (d1) -- node[right, font=\footnotesize\bfseries] {Có (\textit{Yes})} (gen);
+    \draw[arrow] (gen) -- (d2);
+    \draw[arrow] (d2) -- node[right, font=\footnotesize\bfseries] {Không (\textit{No})} (d3);
+    \draw[arrow] (d2.east) -| node[near start, above, font=\footnotesize\bfseries] {Có (\textit{Yes})} (best.north);
+    \draw[arrow] (d3) -- node[above, font=\footnotesize\bfseries] {Không (\textit{No})} (best);
+    \draw[arrow] (best) -- (ans);
 
-    % Tầng 3: Agentic Orchestration
-    \node[layerbox, minimum width=15.5cm, minimum height=2.4cm] (l3) at (0, -1.8) {};
-    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, -0.7) {TẦNG 3: ĐIỀU PHỐI TÁC NHÂN THÔNG MINH (AGENTIC ORCHESTRATION \& EXECUTION)};
-    \node[block, minimum width=4.0cm] (b_rrf) at (-5.0, -2.0) {\textbf{Động cơ Hợp nhất RRF}\\Xếp hạng đảo ngược $k=60$\\Trích xuất Top-$K$ ngữ cảnh};
-    \node[block, minimum width=4.2cm] (b_agent) at (0, -2.0) {\textbf{Máy trạng thái LangGraph}\\Chu trình ReAct kín\\Thought $\rightarrow$ Action $\rightarrow$ Observe};
-    \node[block, minimum width=4.0cm] (b_box) at (5.0, -2.0) {\textbf{E2B Sandbox MicroVM}\\Thực thi cô lập an toàn\\Chặn RCE từ \texttt{\textbackslash write18}};
-    \draw[conn] (b_rrf) -- (b_agent);
-    \draw[conn] (b_agent) -- (b_box);
-
-    % Tầng 4: Visual Grounding & Security
-    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l4) at (0, -5.0) {};
-    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, -4.0) {TẦNG 4: ĐỐI CHIẾU TRỰC QUAN VÀ KÉT SẮT BẢO MẬT (VISUAL GROUNDING \& VAULT)};
-    \node[secblock, minimum width=5.5cm] (b_byok) at (-4.2, -5.2) {\textbf{Két sắt khóa cá nhân (BYOK)}\\AES-256-GCM AEAD Thẻ $T$\\RAM Zero-Retention};
-    \node[secblock, minimum width=6.5cm] (b_ground) at (3.5, -5.2) {\textbf{Luồng sự kiện SSE \& PDF Canvas}\\Khung viền vàng Golden Bounding Box\\Định vị trong 1 giây (IoU $\ge 0.85$)};
-
-    % Đường kết nối giữa các Tầng
-    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_dense.north);
-    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_sparse.north);
-    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_graph.north);
-
-    \draw[conn] (b_dense.south) -- ++(0,-0.4) -| (b_rrf.north);
-    \draw[conn] (b_sparse.south) -- ++(0,-0.4) -| (b_rrf.north);
-    \draw[conn] (b_graph.south) -- ++(0,-0.4) -| (b_agent.north);
-
-    \draw[conn] (b_agent.south) -- ++(0,-0.3) -| (b_ground.north);
-    \draw[conn] (b_byok.east) -- (b_ground.west);
+    % Đường phản hồi (Loop)
+    \draw[arrow] (d1.west) -| node[near start, above, font=\footnotesize\bfseries] {Không (\textit{No})} (refine.north);
+    \draw[arrow] (d3) -- node[above, font=\footnotesize\bfseries] {Có (\textit{Yes})} (refine);
+    \draw[arrow] (refine.west) -- ++(-1.0, 0) |- (ret.west);
 \end{tikzpicture}
-\caption{Mô hình Kiến trúc Toàn trình (End-to-End System Pipeline) của nền tảng VeriScholar}
+\caption{Lưu đồ Quyết định Tự phản biện và Vòng lặp Tự sửa lỗi (Self-Reflective Loop)}
 \label{fig:e2e_pipeline_arch}
 \end{figure}
 
-\subsection{Biểu đồ tuần tự cho luồng hỏi đáp Hybrid RAG có tọa độ}
+\subsection{Vết thực thi tác nhân tương tác đa bước (Agent Execution Trace)}
 \label{subsec:sequence_rag}
-Để làm rõ cơ chế tương tác thời gian thực giữa các thành phần kiến trúc, Hình~\ref{fig:sequence_rag_chat} mô tả biểu đồ tuần tự của chu trình hỏi đáp học thuật có minh chứng tọa độ trực quan:
+Nhằm làm sáng tỏ quy trình suy luận và gọi công cụ ngoại vi theo chu trình ReAct, Hình~\ref{fig:sequence_rag_chat} mô tả một vết thực thi mẫu (\textit{Agent Execution Trace}) khi tác nhân giải quyết yêu cầu trích xuất số liệu thực nghiệm và minh chứng tọa độ cho học giả:
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.78, transform shape,
-    lifeline/.style={draw=black!50, dashed, line width=0.8pt},
-    actorbox/.style={draw=blue!80!black, fill=blue!8, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\footnotesize},
-    msg/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=blue!70!black, font=\scriptsize},
-    retmsg/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.8pt, draw=teal!80!black, font=\scriptsize}
+    scale=0.80, transform shape,
+    tracebox/.style={draw=black!70, fill=white, rounded corners=5pt, line width=0.9pt, align=flush left, inner sep=8pt, text width=14.2cm, font=\small},
+    tag/.style={draw=black!60, rounded corners=3pt, line width=0.6pt, font=\scriptsize\bfseries, inner sep=3pt},
+    arrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=black!70}
 ]
-    % 5 Lifelines
-    \node[actorbox, minimum width=2.4cm] (scholar) at (0, 0) {\textbf{Học giả}\\(Scholar)};
-    \node[actorbox, minimum width=2.6cm] (web) at (3.2, 0) {\textbf{Giao diện Web}\\(Canvas Viewer)};
-    \node[actorbox, minimum width=2.8cm] (api) at (6.8, 0) {\textbf{Cổng Điều phối}\\(API Gateway)};
-    \node[actorbox, minimum width=2.8cm] (rrf) at (10.4, 0) {\textbf{Động cơ RRF}\\(Core Domain)};
-    \node[actorbox, minimum width=2.6cm] (db) at (13.8, 0) {\textbf{Hạ tầng Dữ liệu}\\(Postgres/LLM)};
+    % Khối 1: Prompt & Question
+    \node[tracebox, fill=blue!4] (b1) at (0, 4.4) {
+        \tikz \node[tag, fill=blue!15, text=blue!80!black] {HỌC GIẢ (USER QUERY)};\\[4pt]
+        \textbf{Câu hỏi:} ``Hàm mất mát và độ chính xác phân loại của mô hình trên ImageNet trong bài báo là bao nhiêu?''\\
+        \footnotesize \textit{Yêu cầu kèm minh chứng tọa độ khung viền vàng trên bản PDF gốc.}
+    };
 
-    % Các đường gióng thẳng đứng
-    \draw[lifeline] (scholar) -- (0, -8.2);
-    \draw[lifeline] (web) -- (3.2, -8.2);
-    \draw[lifeline] (api) -- (6.8, -8.2);
-    \draw[lifeline] (rrf) -- (10.4, -8.2);
-    \draw[lifeline] (db) -- (13.8, -8.2);
+    % Khối 2: Agent Thought 1
+    \node[tracebox, fill=yellow!6] (b2) at (0, 2.3) {
+        \tikz \node[tag, fill=yellow!25, text=yellow!70!black] {TÁC NHÂN AI (THOUGHT)};\\[4pt]
+        \textbf{Suy luận 1:} Để trả lời câu hỏi này, tôi cần tìm các đoạn văn bản mô tả hàm mục tiêu (\textit{objective function / loss}) và bảng kết quả thực nghiệm trên bộ dữ liệu ImageNet.\\
+        \textbf{Kế hoạch hành động:} Kích hoạt công cụ truy xuất lai kết hợp vector HNSW và từ khóa BM25.
+    };
 
-    % Luồng thông điệp
-    \draw[msg] (0, -1.0) -- node[above] {1. Nhập câu hỏi nghiên cứu} (3.2, -1.0);
-    \draw[msg] (3.2, -1.6) -- node[above] {2. Gửi yêu cầu hỏi đáp (HTTP POST)} (6.8, -1.6);
-    \draw[msg] (6.8, -2.2) -- node[above] {3. Giải mã BYOK trên RAM} (6.8, -2.7);
-    \draw (6.8, -2.2) -- (7.3, -2.2) -- (7.3, -2.7) -- (6.8, -2.7);
+    % Khối 3: Tool Call (Action & Observation)
+    \node[tracebox, fill=purple!4] (b3) at (0, 0.1) {
+        \tikz \node[tag, fill=purple!15, text=purple!80!black] {CÔNG CỤ NGOẠI VI (TOOL CALL: HybridRetriever)};\\[4pt]
+        \textbf{Truy vấn:} \texttt{HybridRetriever(query="loss function accuracy ImageNet", k=3)}\\[3pt]
+        \textbf{Kết quả thu nhận (Observation):}\\[2pt]
+        \raggedright \footnotesize • Đoạn trích 1 (Trang 4): ``We adopt Cross-Entropy Loss with label smoothing 0.1...'' — Tọa độ BBox: $[140, 220, 480, 260]$\\[2pt]
+        • Đoạn trích 2 (Trang 6): ``Top-1 accuracy achieves 88.5\% on ImageNet-1K benchmark...'' — Tọa độ BBox: $[520, 410, 890, 470]$
+    };
 
-    \draw[msg] (6.8, -3.2) -- node[above] {4. Truy vấn song song Dense \& Sparse} (13.8, -3.2);
-    \draw[retmsg] (13.8, -4.0) -- node[above] {5. Trả về kết quả HNSW \& BM25 thô} (10.4, -4.0);
+    % Khối 4: Agent Thought 2 & Coordinate Binding
+    \node[tracebox, fill=yellow!6] (b4) at (0, -2.1) {
+        \tikz \node[tag, fill=yellow!25, text=yellow!70!black] {TÁC NHÂN AI (THOUGHT \& VERIFICATION)};\\[4pt]
+        \textbf{Suy luận 2:} Đoạn trích 1 và Đoạn trích 2 chứa đầy đủ bằng chứng xác thực. Tiến hành đối chiếu liên kết trích dẫn và sinh câu trả lời kèm siêu dữ liệu tọa độ chuẩn hóa $[0..1000]$ cho Canvas Viewer.
+    };
 
-    \draw[msg] (10.4, -4.6) -- node[above] {6. Hợp nhất thứ hạng RRF $k=60$} (10.4, -5.1);
-    \draw (10.4, -4.6) -- (10.9, -4.6) -- (10.9, -5.1) -- (10.4, -5.1);
+    % Khối 5: Final Grounded Output
+    \node[tracebox, fill=green!4] (b5) at (0, -4.3) {
+        \tikz \node[tag, fill=green!20, text=green!60!black] {KẾT QUẢ XUẤT BẢN CÓ MINH CHỨNG (GROUNDED ANSWER)};\\[4pt]
+        \textbf{Phản hồi:} Mô hình sử dụng hàm mất mát \textbf{Cross-Entropy Loss} có làm mịn nhãn 0.1 [Trang 4] và đạt độ chính xác Top-1 là \textbf{88.5\%} trên ImageNet-1K [Trang 6].\\
+        \footnotesize $\checkmark$ \textit{Khung viền vàng đã được vẽ định vị trực tiếp trên bản PDF gốc trong vòng 1 giây với IoU $\ge 0.85$.}
+    };
 
-    \draw[msg] (10.4, -5.6) -- node[above] {7. Gửi Top-$K$ ngữ cảnh} (13.8, -5.6);
-    \draw[retmsg] (13.8, -6.4) -- node[above] {8. LLM sinh câu trả lời + Tọa độ BBox $[0..1000]$} (6.8, -6.4);
-
-    \draw[retmsg] (6.8, -7.0) -- node[above] {9. Luồng sự kiện SSE (Text + BBox)} (3.2, -7.0);
-    \draw[msg] (3.2, -7.6) -- node[above] {10. Tô sáng khung viền vàng trong 1 giây} (0, -7.6);
+    % Mũi tên liên kết vết thực thi
+    \draw[arrow] (b1) -- (b2);
+    \draw[arrow] (b2) -- (b3);
+    \draw[arrow] (b3) -- (b4);
+    \draw[arrow] (b4) -- (b5);
 \end{tikzpicture}
-\caption{Biểu đồ tuần tự (Sequence Diagram) cho chu trình hỏi đáp Hybrid RAG có tọa độ}
+\caption{Vết Thực thi Tác nhân Tương tác Đa bước (Multi-Step Agent Execution Trace)}
 \label{fig:sequence_rag_chat}
-\end{figure}
-
-\subsection{Biểu đồ chuyển trạng thái tác nhân tự sửa lỗi bản thảo}
-\label{subsec:state_react_latex}
-Phân hệ soạn thảo khoa học được vận hành bởi máy trạng thái hữu hạn LangGraph điều phối tác nhân ReAct. Hình~\ref{fig:state_diagram_latex} mô tả chi tiết các trạng thái vận hành và điều kiện chuyển tiếp của chu trình tự sửa lỗi biên dịch:
-
-\begin{figure}[htbp]
-\centering
-\begin{tikzpicture}[
-    scale=0.82, transform shape,
-    state/.style={draw=blue!80!black, fill=blue!8, rounded corners=6pt, line width=1pt, align=center, inner sep=6pt, font=\small, minimum width=3.4cm},
-    startstop/.style={draw=black, fill=black, circle, inner sep=3pt},
-    endstop/.style={draw=black, fill=black!20, double=black, circle, inner sep=3pt},
-    trans/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black, font=\footnotesize}
-]
-    % Các Trạng thái
-    \node[startstop] (start) at (-6.2, 0) {};
-    \node[state] (idle) at (-3.8, 0) {\textbf{Chờ yêu cầu}\\(\textit{IDLE})};
-    \node[state] (compile) at (0, 0) {\textbf{Biên dịch}\\(\textit{COMPILING})\\E2B Sandbox};
-    \node[state] (analyze) at (4.2, 0) {\textbf{Phân tích lỗi}\\(\textit{ANALYZING})\\Chu trình ReAct};
-    \node[state] (healing) at (4.2, -2.4) {\textbf{Vá mã nguồn}\\(\textit{HEALING})\\Tái tạo tệp .tex};
-    \node[state, fill=green!15, draw=green!60!black] (success) at (0, 2.2) {\textbf{Xuất PDF}\\(\textit{SUCCESS})};
-    \node[endstop] (stop) at (-3.8, 2.2) {};
-
-    % Các Mũi tên chuyển trạng thái
-    \draw[trans] (start) -- (idle);
-    \draw[trans] (idle) -- node[above] {Nhận lệnh biên dịch} (compile);
-    \draw[trans] (compile) -- node[right] {Mã thoát 0} (success);
-    \draw[trans] (success) -- node[above] {Trả tệp ấn phẩm} (stop);
-    \draw[trans] (compile) -- node[above] {Mã lỗi $> 0$} (analyze);
-    \draw[trans] (analyze) -- node[right] {Xác định cú pháp lỗi} (healing);
-    \draw[trans] (healing) -| node[near end, left] {Thử lại ($N < 3$)} (compile);
-    \draw[trans] (analyze) -- ++(0, 1.8) -| node[near end, above] {Vượt quá 3 lần: Báo cáo lỗi chi tiết} (idle);
-\end{tikzpicture}
-\caption{Biểu đồ chuyển trạng thái (State Diagram) của tác nhân tự phục hồi bản thảo \LaTeX}
-\label{fig:state_diagram_latex}
 \end{figure}
