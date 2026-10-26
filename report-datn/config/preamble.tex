@@ -29,6 +29,7 @@
 ]
 \usepackage[provide=*,vietnamese]{babel}
 \addto\captionsvietnamese{%
+    \renewcommand{\contentsname}{MỤC LỤC}%
     \renewcommand{\listtablename}{DANH MỤC BẢNG BIỂU}%
     \renewcommand{\listfigurename}{DANH MỤC HÌNH ẢNH}%
     \renewcommand{\bibname}{TÀI LIỆU THAM KHẢO}%
@@ -96,43 +97,52 @@
 % 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
 \usepackage[titles]{tocloft}
 
-% Dấu chấm dẫn trang (leader dots) cho tất cả các cấp (kể cả chapter)
+% Dấu chấm dẫn trang (leader dots) dày mịn, mật độ cao chuẩn MS Word (Ảnh 2)
+\renewcommand{\cftdotfill}[1]{\leaders\hbox to 0.33em{\hss.\hss}\hfill}
 \renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
 
-% Khoảng cách dấu chấm dày dặn (dotsep = 1) giống Word
-\renewcommand{\cftdotsep}{1}
-
 % Tiền tố "CHƯƠNG " cho các chương có đánh số
 \renewcommand{\cftchappresnum}{CHƯƠNG }
 \renewcommand{\cftchapaftersnum}{:\ }
 \newlength{\cftchaplen}
-\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1:\ }
-\addtolength{\cftchapnumwidth}{\cftchaplen}
+\settowidth{\cftchaplen}{CHƯƠNG 1:\ }
+\setlength{\cftchapnumwidth}{\cftchaplen}
+\cftsetindents{chapter}{0pt}{\cftchaplen}
 
-% Dấu chấm sau số thứ tự section và subsection (1.1., 1.2., 2.1.1.)
+% Dấu chấm sau số thứ tự section, subsection và subsubsection (1.1., 2.1.1., 4.2.1.1.)
 \renewcommand{\cftsecaftersnum}{.}
-\renewcommand{\cftsubsecaftersnum}{.}
-\renewcommand{\cftsubsubsecaftersnum}{.}
+\newlength{\cftseclen}
+\settowidth{\cftseclen}{1.1.\ }
+\cftsetindents{section}{0.65cm}{\cftseclen}
 
-% Thụt đầu dòng chuẩn xác theo phân cấp
-\cftsetindents{chapter}{0pt}{3.0cm}
-\cftsetindents{section}{0.5cm}{0.9cm}
-\cftsetindents{subsection}{1.0cm}{1.2cm}
-\cftsetindents{subsubsection}{1.5cm}{1.4cm}
+\renewcommand{\cftsubsecaftersnum}{.}
+\newlength{\cftsubseclen}
+\settowidth{\cftsubseclen}{2.1.1.\ }
+\cftsetindents{subsection}{1.3cm}{\cftsubseclen}
+
+\renewcommand{\cftsubsubsecaftersnum}{.}
+\newlength{\cftsubsubseclen}
+\settowidth{\cftsubsubseclen}{4.2.1.1.\ }
+\cftsetindents{subsubsection}{1.95cm}{\cftsubsubseclen}
 
 % Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương
-\setlength{\cftbeforechapskip}{4pt}
-\setlength{\cftbeforesecskip}{2pt}
-\setlength{\cftbeforesubsecskip}{1pt}
+\setlength{\cftbeforechapskip}{2.5pt}
+\setlength{\cftbeforesecskip}{1.2pt}
+\setlength{\cftbeforesubsecskip}{0.8pt}
+\setlength{\cftbeforesubsubsecskip}{0.8pt}
 
-% Phông chữ trong mục lục: chuẩn mực, thanh thoát
+% Phông chữ trong mục lục: chuẩn mực, thanh thoát (Times regular, không đậm theo Ảnh 2)
 \renewcommand{\cftchapfont}{\normalfont}
 \renewcommand{\cftchappagefont}{\normalfont}
 \renewcommand{\cftsecfont}{\normalfont}
 \renewcommand{\cftsecpagefont}{\normalfont}
+\renewcommand{\cftsubsecfont}{\normalfont}
+\renewcommand{\cftsubsecpagefont}{\normalfont}
+\renewcommand{\cftsubsubsecfont}{\normalfont}
+\renewcommand{\cftsubsubsecpagefont}{\normalfont}
 
 % 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
 \usepackage{titlesec}
