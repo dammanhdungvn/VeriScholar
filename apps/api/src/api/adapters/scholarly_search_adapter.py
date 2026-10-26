@@ -263,6 +263,15 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
                     seen_identifiers.add(key)
                     results.append(candidate)
 
+        # Academic Priority Re-ranking:
+        # Prioritize peer-reviewed papers at the top of the list, then by year descending
+        results.sort(
+            key=lambda p: (
+                0 if p.is_peer_reviewed else 1,
+                -(p.publication_year or 0),
+            )
+        )
+
         # If matches found and running under tests or limit satisfied, return immediately
         if results and (os.environ.get("PYTEST_CURRENT_TEST") or len(results) >= limit):
             return results[:limit]
@@ -294,6 +303,15 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
                             results.append(item)
         except Exception as exc:
             logger.warning("arxiv_search_upstream_error_fallback", error=str(exc))
+
+        # Academic Priority Re-ranking:
+        # Peer-reviewed papers at the top of results, then by publication year descending
+        results.sort(
+            key=lambda p: (
+                0 if p.is_peer_reviewed else 1,
+                -(p.publication_year or 0),
+            )
+        )
 
         return results[:limit]
 

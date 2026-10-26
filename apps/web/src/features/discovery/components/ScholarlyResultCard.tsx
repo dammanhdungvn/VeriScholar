@@ -99,7 +99,11 @@ export function ScholarlyResultCard({
             )}
 
             {paper.is_peer_reviewed && (
-              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20">
+              <span
+                data-testid="peer-reviewed-badge"
+                title="Bài báo đã qua hội đồng chuyên gia phản biện và công bố chính thức (Peer-Reviewed)"
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20"
+              >
                 <CheckCircle2 className="w-3 h-3 text-purple-600 dark:text-purple-400" />
                 <span>Đã bình duyệt</span>
               </span>

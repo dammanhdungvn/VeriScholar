@@ -194,6 +194,32 @@ body {
   background: #cc785c;
 }
 
+.dark ::-webkit-scrollbar-track,
+.dark::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dark ::-webkit-scrollbar-thumb,
+.dark::-webkit-scrollbar-thumb {
+  background: #332f28;
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover,
+.dark::-webkit-scrollbar-thumb:hover {
+  background: #cc785c;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #e6dfd8 #f5f0e8;
+}
+
+html.dark {
+  scrollbar-width: thin;
+  scrollbar-color: #332f28 transparent;
+}
+
 /* Scrollbar Helper Classes */
 .scrollbar-none {
   -ms-overflow-style: none !important;

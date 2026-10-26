@@ -1,4 +1,4 @@
-import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
+import { useState, useRef, useMemo, type DragEvent, type ChangeEvent } from "react";
 import { Search, MessageSquare, FileUp, X } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
@@ -52,10 +52,18 @@ export function UnifiedHeroWorkspace({
 
   const totalCount = searchResults.length;
   const peerReviewedCount = searchResults.filter((p) => Boolean(p.is_peer_reviewed)).length;
-  const displayedResults =
-    filterMode === "peer_reviewed"
-      ? searchResults.filter((p) => Boolean(p.is_peer_reviewed))
-      : searchResults;
+  const displayedResults = useMemo(() => {
+    const list =
+      filterMode === "peer_reviewed"
+        ? searchResults.filter((p) => Boolean(p.is_peer_reviewed))
+        : searchResults;
+    // Academic Priority Re-ranking: Prioritize peer-reviewed papers at top
+    return [...list].sort((a, b) => {
+      if (a.is_peer_reviewed && !b.is_peer_reviewed) return -1;
+      if (!a.is_peer_reviewed && b.is_peer_reviewed) return 1;
+      return (b.publication_year || 0) - (a.publication_year || 0);
+    });
+  }, [searchResults, filterMode]);
 
   const executeSearch = async (query: string) => {
     if (!query.trim()) return;
@@ -123,8 +131,16 @@ export function UnifiedHeroWorkspace({
     }
   };
 
+  const hasActiveContent = isSearching || searchResults.length > 0;
+
   return (
-    <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto my-auto relative z-10 select-none overflow-y-auto">
+    <div
+      className={`flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto relative z-10 select-none overflow-y-auto transition-all duration-300 ${
+        hasActiveContent
+          ? "justify-start pt-6 sm:pt-10 my-0"
+          : "justify-center my-auto"
+      }`}
+    >
       {/* 1. Academic Header & Greeting (Radical Minimalism, no verbose slogans) */}
       <div className="flex flex-col items-center text-center mb-6">
         <div className="w-11 h-11 rounded-2xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-2 shadow-xs flex items-center justify-center mb-3">
@@ -195,8 +211,8 @@ export function UnifiedHeroWorkspace({
       )}
 
       {searchResults.length > 0 && !isSearching && (
-        <div className="w-full mt-6 space-y-4">
-          <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1 flex-wrap gap-2">
+        <div className="w-full mt-6 space-y-3 pb-8">
+          <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1 flex-wrap gap-2 mb-2">
             {/* Pill filter toggle */}
             <div className="flex items-center gap-1 p-0.5 rounded-full bg-[#ede8df] dark:bg-[#252320] border border-[#ded8cd] dark:border-[#35322d]">
               <button
@@ -243,7 +259,7 @@ export function UnifiedHeroWorkspace({
               Không có bài báo đã bình duyệt trong kết quả tìm kiếm này.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 max-h-[50vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-1 gap-3 max-h-[58vh] overflow-y-auto pr-1.5 pt-1">
               {displayedResults.map((paper, idx) => (
                 <ScholarlyResultCard
                   key={`${paper.title}-${idx}`}
