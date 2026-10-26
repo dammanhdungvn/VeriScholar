@@ -3,19 +3,26 @@
 import hashlib
 from uuid import uuid4
 
+from api.db.models.blob import DocumentStorageBlobModel
 from api.db.models.document import DocumentModel
 from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
-from api.deps import get_current_user, get_scholarly_search_port
+from api.deps import (
+    get_current_user,
+    get_document_service,
+    get_scholarly_search_port,
+)
 from api.schemas.discovery import (
     DiscoverySearchRequest,
     OpenReadingRequest,
     OpenReadingResponse,
 )
 from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
+from api.services.document_service import DocumentService
 from core.ports.scholarly_search import IScholarlySearchPort, ScholarlyPaperSearchResult
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/discovery", tags=["Module 2: Discovery"])
@@ -75,33 +82,53 @@ async def open_reading_session(
     payload: OpenReadingRequest,
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
+    service: DocumentService = Depends(get_document_service),
 ) -> SingleResponseEnvelope[OpenReadingResponse]:
     """Create a research session and ingest paper metadata < 500ms for immediate reading."""
     clean_title = payload.title.strip()
-    has_pdf = bool(payload.pdf_url and payload.pdf_url.strip())
-    doc_status = "parsing" if has_pdf else "abstract_only"
-    access_status = "open_access_pdf" if has_pdf else "abstract_only"
+    has_pdf_url = bool(payload.pdf_url and payload.pdf_url.strip())
 
-    # Create dummy SHA-256 content_hash for initial metadata record
-    hash_seed = f"{payload.doi or payload.arxiv_id or clean_title}_{current_user.id}"
-    initial_hash = hashlib.sha256(hash_seed.encode("utf-8")).hexdigest()
+    ingest_result = None
+    if has_pdf_url:
+        ingest_result = await service.ingest_pdf_from_url(payload.pdf_url.strip(), db=db)
+
+    if ingest_result is not None:
+        content_hash, file_size_bytes = ingest_result
+        doc_status = "parsing"
+        access_status = "open_access_pdf"
+        progress = 10
+    else:
+        doc_status = "abstract_only"
+        access_status = "abstract_only"
+        file_size_bytes = 0
+        progress = 100
+        hash_seed = f"{payload.doi or payload.arxiv_id or clean_title}_{current_user.id}"
+        content_hash = hashlib.sha256(hash_seed.encode("utf-8")).hexdigest()
 
     doc_id = uuid4()
     session_id = uuid4()
 
+    blob_id = None
+    if ingest_result is not None:
+        stmt_blob = select(DocumentStorageBlobModel.id).where(
+            DocumentStorageBlobModel.content_hash == content_hash
+        )
+        blob_id = (await db.execute(stmt_blob)).scalar_one_or_none()
+
     new_doc = DocumentModel(
         id=doc_id,
         user_id=current_user.id,
+        blob_id=blob_id,
         filename=f"{clean_title[:80]}.pdf",
         title=clean_title,
         authors=payload.authors,
         publication_year=payload.publication_year,
         doi=payload.doi,
-        content_hash=initial_hash,
-        file_size_bytes=0,
+        content_hash=content_hash,
+        file_size_bytes=file_size_bytes,
         status=doc_status,
         stage="metadata_ingested",
-        progress=100 if not has_pdf else 10,
+        progress=progress,
         access_status=access_status,
         parsed_metadata={
             "abstract": payload.abstract,

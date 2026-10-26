@@ -1,3 +1,4 @@
+import httpx
 import pytest
 from httpx import AsyncClient
 
@@ -57,8 +58,17 @@ async def test_discovery_search_returns_scholarly_results(
 
 @pytest.mark.asyncio
 async def test_discovery_open_reading_creates_session_and_document(
-    async_client: AsyncClient, auth_headers: dict
+    async_client: AsyncClient, auth_headers: dict, monkeypatch: pytest.MonkeyPatch
 ):
+    original_get = httpx.AsyncClient.get
+
+    async def mock_get(self, url, *args, **kwargs):
+        if str(url).startswith("http://testserver") or not str(url).startswith("http"):
+            return await original_get(self, url, *args, **kwargs)
+        return httpx.Response(200, content=b"%PDF-1.4 sample content " + b"word " * 50)
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
     # 1. Open reading with full PDF URL
     payload_pdf = {
         "title": "Attention Is All You Need",

@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import logging
 import math
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -10,6 +11,7 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
+import httpx
 from api.adapters.chunk_extractor import PyMuPDFChunkExtractor
 from api.adapters.heuristic_summarizer import HeuristicGroundedSummarizer
 from api.adapters.pdf_structure_extractor import PyMuPDFStructureExtractor
@@ -71,6 +73,8 @@ from fastapi import HTTPException, UploadFile, status
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 PDF_MAGIC_BYTES = b"%PDF-"
 MAX_SESSION_DOCUMENTS = 5
@@ -433,6 +437,115 @@ class DocumentService:
             access_status=doc.access_status,
         )
 
+    async def ingest_pdf_from_url(
+        self,
+        pdf_url: str,
+        db: AsyncSession | None = None,
+    ) -> tuple[str, int] | None:
+        """Download external open-access PDF, validate, and register into CAS storage.
+
+        Args:
+            pdf_url: Remote URL pointing to open-access PDF (e.g. arXiv, Unpaywall).
+            db: Optional active async database session to persist CAS blob record.
+
+        Returns:
+            Tuple of (content_hash, file_size_bytes) on success, or None on failure.
+        """
+        clean_url = pdf_url.strip()
+        if not clean_url.startswith(("http://", "https://")):
+            return None
+
+        try:
+            async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+                response = await client.get(clean_url)
+                if response.status_code != 200:
+                    logger.warning(
+                        "PDF download returned non-200 status %d from %s",
+                        response.status_code,
+                        clean_url,
+                    )
+                    return None
+
+                content = getattr(response, "content", b"")
+                if not content:
+                    if hasattr(response, "aiter_bytes"):
+                        chunks_acc: list[bytes] = []
+                        async for c in response.aiter_bytes():
+                            chunks_acc.append(c)
+                        content = b"".join(chunks_acc)
+                    elif hasattr(response, "iter_bytes"):
+                        content = b"".join(response.iter_bytes())
+
+                if len(content) > MAX_FILE_SIZE_BYTES:
+                    logger.warning(
+                        "PDF download exceeds MAX_FILE_SIZE_BYTES (%d bytes) from %s",
+                        len(content),
+                        clean_url,
+                    )
+                    return None
+
+                if not content.startswith(PDF_MAGIC_BYTES):
+                    logger.warning(
+                        "Downloaded payload from %s missing %%PDF- magic bytes",
+                        clean_url,
+                    )
+                    return None
+
+                content_hash = hashlib.sha256(content).hexdigest()
+                file_size_bytes = len(content)
+
+                chunk_size = 64 * 1024
+                chunks = [content[i : i + chunk_size] for i in range(0, len(content), chunk_size)]
+
+                async def _stream_chunks():
+                    for chunk in chunks:
+                        yield chunk
+
+                storage_path, _ = await self.storage.save_blob(_stream_chunks(), content_hash)
+
+                if db is not None:
+                    stmt_blob = select(DocumentStorageBlobModel).where(
+                        DocumentStorageBlobModel.content_hash == content_hash
+                    )
+                    res_blob = await db.execute(stmt_blob)
+                    blob = res_blob.scalar_one_or_none()
+
+                    now = datetime.now(UTC)
+                    if blob is not None:
+                        blob.ref_count += 1
+                        if not await self.storage.blob_exists(content_hash):
+
+                            async def _stream_chunks_repair():
+                                for chunk in chunks:
+                                    yield chunk
+
+                            await self.storage.save_blob(_stream_chunks_repair(), content_hash)
+                    else:
+                        blob = DocumentStorageBlobModel(
+                            id=uuid4(),
+                            content_hash=content_hash,
+                            storage_path=storage_path,
+                            file_size_bytes=file_size_bytes,
+                            ref_count=1,
+                            status=BlobStatus.COMPLETED.value,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        try:
+                            async with _safe_nested_transaction(db):
+                                db.add(blob)
+                                await db.flush()
+                        except IntegrityError:
+                            res_blob = await db.execute(stmt_blob)
+                            blob = res_blob.scalar_one_or_none()
+                            if blob is not None:
+                                blob.ref_count += 1
+
+                return content_hash, file_size_bytes
+        except Exception as exc:
+            logger.warning("Exception during PDF ingestion from %s: %s", clean_url, exc)
+            return None
+
     async def list_documents(
         self,
         user_id: UUID,
@@ -667,6 +780,19 @@ class DocumentService:
                     "message": f"Document '{document_id}' not found.",
                     "field": "id",
                     "action": "Verify document ID or check permissions.",
+                },
+            )
+
+        if doc.access_status == "abstract_only":
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_ABSTRACT_ONLY",
+                    "message": (
+                        f"Document '{document_id}' is abstract-only and has no PDF file attached."
+                    ),
+                    "field": "access_status",
+                    "action": "Attach a PDF file to enable full-text reading.",
                 },
             )
 
