@@ -1,8 +1,8 @@
 # TÀI LIỆU THIẾT KẾ KIẾN TRÚC: HỆ THỐNG MỤC LỤC MASTER ROADMAP VÀ PHÂN RÃ VI MÔ (MICRO-MODULAR) BÁO CÁO ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR
 
-* **Ngày lập:** 2026-10-26
-* **Trạng thái:** Dự thảo hoàn chỉnh (Pending Builder Check & Approval)
-* **Tác giả:** Đàm Mạnh Dũng — Ngành Công nghệ Thông tin, Đại học Mỏ - Địa chất (HUMG)
+* **Ngày lập:** 2026-10-26 (Cập nhật chuẩn hóa theo mẫu thực tế HUMG)
+* **Trạng thái:** Dự thảo hoàn chỉnh đã đồng bộ mẫu HUMG K66/K67
+* **Tác giả:** Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B, Khoa Công nghệ Thông tin, Đại học Mỏ - Địa chất (HUMG)
 * **Đề tài:** *Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn*
 
 ---
@@ -47,11 +47,15 @@ Tài liệu này định hình kiến trúc **Phân rã Vi mô (Micro-Modular St
 ## 3. Các Ràng Buộc Kỹ Thuật (Constraints)
 
 1. **Trình biên dịch:** Bắt buộc **XeLaTeX** (`latexmk -xelatex`). Tuyệt đối cấm `pdfLaTeX` do xung đột bảng mã font tiếng Việt trên môi trường Linux.
-2. **Quy chuẩn trang in HUMG:**
+2. **Quy chuẩn trang in HUMG (Đồng bộ 100% mẫu đồ án Khoa CNTT):**
    * Khổ giấy: A4 (210 x 297 mm), in một mặt.
    * Căn lề: Trên 2.5 cm, Dưới 2.5 cm, Trái 3.5 cm (đóng gáy), Phải 2.5 cm.
    * Phông chữ: `Liberation Serif` (tương đương Times New Roman), cỡ chữ **13pt**, dãn dòng **1.5 lines** (`\onehalfspacing`).
-   * Số trang: Đánh góc dưới bên phải. Chân trang bên trái: `SVTH: Đàm Mạnh Dũng -- Ngành Công nghệ thông tin`.
+   * Tiêu đề đầu trang (Header): Góc trên bên trái: `\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}`, có đường kẻ ngang phân cách đầu trang (`\headrulewidth = 0.5pt`).
+   * Tiêu đề chân trang (Footer): Góc dưới bên trái: `\textit{SVTH: Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B}`, góc dưới bên phải: `\textit{\thepage}`, có đường kẻ ngang phân cách chân trang (`\footrulewidth = 0.5pt`).
+   * Phân trang La Mã / Ả Rập:
+     * Đánh số La Mã thường (`i, ii, iii...`): Dành cho `MỤC LỤC` (bắt đầu từ trang `i`), `DANH MỤC HÌNH ẢNH`, `DANH MỤC BẢNG BIỂU`, `DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT`.
+     * Đánh số Ả Rập (`1, 2, 3...`): Bắt đầu từ `LỜI CẢM ƠN` (trang 1), `LỜI MỞ ĐẦU` (trang 2), `CHƯƠNG 1` (trang 3 trở đi).
 3. **Quy chuẩn đặt tên bảng & hình:**
    * Bảng biểu: Tiêu đề đặt ở **TRÊN** bảng.
    * Hình ảnh: Tiêu đề đặt ở **DƯỚI** hình.
@@ -87,18 +91,18 @@ report-datn/
 │   └── commands.tex                 # Macro toán học, từ viết tắt, ký hiệu thuận tiện
 ├── frontmatter/
 │   ├── bia_phu.tex                  # Trang bìa phụ tiếng Việt theo Phụ lục 02 HUMG
-│   ├── loi_cam_on.tex               # Lời cảm ơn thầy cô hướng dẫn và gia đình
-│   ├── danh_muc_viet_tat.tex        # Bảng thuật ngữ viết tắt xếp ABC (sau Mục lục)
+│   ├── danh_muc_hinh.tex            # Danh mục hình ảnh tự động (\listoffigures)
 │   ├── danh_muc_bang.tex            # Danh mục bảng biểu tự động (\listoftables)
-│   ├── danh_muc_hinh.tex            # Danh mục hình vẽ tự động (\listoffigures)
-│   └── loi_mo_dau.tex               # Lời mở đầu dẫn nhập bối cảnh nghiên cứu
+│   ├── danh_muc_viet_tat.tex        # Bảng thuật ngữ viết tắt xếp ABC
+│   ├── loi_cam_on.tex               # Lời cảm ơn thầy cô hướng dẫn và gia đình (Trang 1)
+│   └── loi_mo_dau.tex               # Lời mở đầu dẫn nhập bối cảnh nghiên cứu (Trang 2)
 ├── chapters/
 │   ├── ch1/                         # [Micro-Modular] Thư mục chứa các mục con Chương 1
-│   │   ├── 1_1_boi_canh.tex
-│   │   ├── 1_2_dat_van_de.tex
+│   │   ├── 1_1_gioi_thieu.tex
+│   │   ├── 1_2_tinh_cap_thiet.tex
 │   │   ├── 1_3_muc_tieu.tex
-│   │   ├── 1_4_doi_tuong_pham_vi.tex
-│   │   ├── 1_5_phuong_phap.tex
+│   │   ├── 1_4_noi_dung.tex
+│   │   ├── 1_5_pham_vi.tex
 │   │   └── 1_6_bo_cuc.tex
 │   ├── ch1_tong_quan.tex            # Điều phối Chương 1 (nạp ch1/*.tex)
 │   ├── ch2/                         # [Micro-Modular] Thư mục chứa các mục con Chương 2
@@ -118,9 +122,9 @@ report-datn/
 │   ├── ch3_thiet_ke_he_thong.tex    # Điều phối Chương 3 (nạp ch3/*.tex)
 │   ├── ch4/                         # [Micro-Modular] Thư mục chứa các mục con Chương 4
 │   │   ├── 4_1_moi_truong.tex
-│   │   ├── 4_2_giao_dien.tex
-│   │   ├── 4_3_kiem_thu.tex
-│   │   └── 4_4_danh_gia_thuc_nghiem.tex
+│   │   ├── 4_2_1_giao_dien.tex
+│   │   ├── 4_2_2_kiem_thu.tex
+│   │   └── 4_2_3_danh_gia_thuc_nghiem.tex
 │   ├── ch4_thuc_nghiem.tex          # Điều phối Chương 4 (nạp ch4/*.tex)
 │   ├── ket_luan.tex                 # Kết luận và Hướng phát triển
 │   ├── tai_lieu_tham_khao.tex       # Tài liệu tham khảo chuẩn IEEE phân tách Việt - Anh
@@ -131,111 +135,102 @@ report-datn/
 └── RULES.md                         # Bộ quy tắc bất biến về văn phong và kỹ thuật
 ```
 
-### 5.2. Nội dung chi tiết Bản đồ Mục lục Master Roadmap (4 Cấp)
+### 5.2. Nội dung chi tiết Bản đồ Mục lục Master Roadmap (Đồng bộ 100% Hình 2 & 3 HUMG)
 
 ```text
-LỜI CẢM ƠN
-MỤC LỤC
-DANH MỤC KÝ HIỆU VÀ CHỮ VIẾT TẮT
-DANH MỤC BẢNG BIỂU
-DANH MỤC HÌNH VẼ
-LỜI MỞ ĐẦU
-
-CHƯƠNG 1: TỔNG QUAN VỀ ĐỀ TÀI
-  1.1. Bối cảnh nghiên cứu tại VinUniversity
-    1.1.1. Nhu cầu nghiên cứu và công bố quốc tế
-    1.1.2. Thực trạng quy trình nghiên cứu học thuật
-  1.2. Đặt vấn đề và giới hạn giải pháp
-    1.2.1. Hiện tượng ảo giác và kiểm chứng trích dẫn
-    1.2.2. Hạn chế của các công cụ học thuật
-  1.3. Mục tiêu và nhiệm vụ nghiên cứu
+MỤC LỤC ............................................................................................................... i
+DANH MỤC HÌNH ẢNH ................................................................................... vii
+DANH MỤC BẢNG BIỂU ................................................................................... x
+DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT .......................................... xii
+LỜI CẢM ƠN ........................................................................................................ 1
+LỜI MỞ ĐẦU ........................................................................................................ 2
+CHƯƠNG 1: TỔNG QUAN VỀ ĐỀ TÀI ............................................................. 3
+  1.1. Giới thiệu đề tài ........................................................................................... 3
+  1.2. Tính cấp thiết của đề tài ............................................................................... 4
+  1.3. Mục tiêu nghiên cứu .................................................................................... 4
     1.3.1. Mục tiêu tổng quát của đồ án
     1.3.2. Bốn mục tiêu kỹ thuật cụ thể
-  1.4. Đối tượng và phạm vi nghiên cứu
-    1.4.1. Đối tượng nghiên cứu và đối tượng thụ hưởng
-    1.4.2. Giới hạn phạm vi hệ thống
-  1.5. Phương pháp nghiên cứu và tiếp cận
-    1.5.1. Phương pháp nghiên cứu lý thuyết tài liệu
-    1.5.2. Phương pháp thực nghiệm và kiểm thử TDD
-  1.6. Bố cục báo cáo đồ án tốt nghiệp
+  1.4. Nội dung nghiên cứu.................................................................................... 5
+    1.4.1. Nghiên cứu cơ sở lý thuyết và công nghệ
+    1.4.2. Xây dựng và thực nghiệm hệ thống
+  1.5. Phạm vi nghiên cứu ..................................................................................... 5
+    1.5.1. Đối tượng nghiên cứu và đối tượng thụ hưởng
+    1.5.2. Giới hạn phạm vi hệ thống
+  1.6. Bố cục báo cáo đồ án tốt nghiệp .................................................................. 6
 
-CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ
-  2.1. Kiến trúc phần mềm lục giác (Hexagonal Architecture)
+CHƯƠNG 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ ....................................... 7
+  2.1. Kiến trúc phần mềm lục giác (Hexagonal Architecture) ............................ 7
     2.1.1. Nguyên lý phân tách Ports and Adapters
     2.1.2. Quy tắc phụ thuộc bất biến mô hình miền
     2.1.3. Luận giải lựa chọn kiến trúc lục giác
-  2.2. Kỹ thuật truy xuất lai (Hybrid RAG)
+  2.2. Kỹ thuật truy xuất lai (Hybrid RAG) ............................................................. 8
     2.2.1. Tìm kiếm Dense HNSW và Sparse BM25
     2.2.2. Thuật toán hợp nhất xếp hạng RRF
     2.2.3. Luận giải lựa chọn thuật toán RRF
-  2.3. Xử lý tài liệu PDF và Bounding Box
+  2.3. Xử lý tài liệu PDF và Bounding Box ............................................................ 9
     2.3.1. Cấu trúc tài liệu PDF đa cột
     2.3.2. Thuật toán chuẩn hóa tọa độ Bounding Box
     2.3.3. Luận giải chuẩn hóa tọa độ [0..1000]
-  2.4. Mạng tri thức học thuật 4-thực thể (GraphRAG)
+  2.4. Mạng tri thức học thuật 4-thực thể (GraphRAG) ........................................ 10
     2.4.1. Nguyên lý mạng tri thức học thuật
     2.4.2. Mô hình hóa 4 thực thể cốt lõi
     2.4.3. Luận giải triển khai GraphRAG trên PostgreSQL
-  2.5. Kiến trúc Agentic RAG và Tác nhân ReAct
+  2.5. Kiến trúc Agentic RAG và Tác nhân ReAct ................................................. 11
     2.5.1. Chu trình Suy luận - Hành động - Quan sát
     2.5.2. Cơ chế cách ly hộp cát đám mây
     2.5.3. Luận giải máy trạng thái LangGraph và E2B
-  2.6. Lưu trữ định danh CAS và Két sắt BYOK
+  2.6. Lưu trữ định danh CAS và Két sắt BYOK .................................................. 12
     2.6.1. Nguyên lý lưu trữ định danh nội dung
     2.6.2. Mã hóa xác thực AEAD và mô hình BYOK
     2.6.3. Luận giải tối ưu lưu trữ và bảo mật
 
-CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG
-  3.1. Khảo sát nghiệp vụ và quy trình nghiên cứu
+CHƯƠNG 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG ................................... 13
+  3.1. Khảo sát nghiệp vụ và quy trình nghiên cứu .............................................. 13
     3.1.1. Khảo sát nghiệp vụ nghiên cứu tại VinUniversity
     3.1.2. Mô hình hóa quy trình nghiệp vụ tổng thể
-  3.2. Xác định tác nhân và Biểu đồ Use Case
+  3.2. Xác định tác nhân và Biểu đồ Use Case ...................................................... 14
     3.2.1. Xác định các tác nhân hệ thống
     3.2.2. Biểu đồ ca sử dụng tổng quát (Use Case)
     3.2.3. Bảng đặc tả chi tiết ca sử dụng UC-03
-  3.3. Thiết kế kiến trúc phần mềm hệ thống
+  3.3. Thiết kế kiến trúc phần mềm hệ thống ........................................................ 15
     3.3.1. Kiến trúc phân tầng và Biểu đồ thành phần
     3.3.2. Biểu đồ lớp miền nghiệp vụ cốt lõi
     3.3.3. Biểu đồ triển khai hạ tầng hệ thống
-  3.4. Thiết kế tương tác và Biểu đồ tuần tự
+  3.4. Thiết kế tương tác và Biểu đồ tuần tự ......................................................... 16
     3.4.1. Biểu đồ tuần tự luồng nạp bài báo
     3.4.2. Biểu đồ tuần tự luồng hỏi đáp Bounding Box
     3.4.3. Biểu đồ tuần tự chu trình ReAct tự sửa lỗi
-  3.5. Thiết kế cơ sở dữ liệu và Từ điển dữ liệu
+  3.5. Thiết kế cơ sở dữ liệu và Từ điển dữ liệu .................................................... 17
     3.5.1. Lược đồ quan hệ thực thể (ERD 18 bảng)
     3.5.2. Cơ chế cô lập dữ liệu theo user_id
     3.5.3. Từ điển dữ liệu các bảng cơ sở dữ liệu
 
-CHƯƠNG 4: CÀI ĐẶT VÀ KẾT QUẢ THỰC NGHIỆM
-  4.1. Môi trường cài đặt và cấu hình triển khai
+CHƯƠNG 4: THỰC NGHIỆM ........................................................................... 18
+  4.1. Môi trường thực nghiệm ............................................................................ 18
     4.1.1. Cấu hình máy chủ Azure Ubuntu và gói phần mềm
     4.1.2. Cấu trúc Monorepo và quản lý cấu hình
-  4.2. Giao diện các phân hệ chức năng chính
-    4.2.1. Phân hệ Khám phá bài báo đa nguồn
-    4.2.2. Phân hệ Đọc sâu và Tô sáng Bounding Box
-    4.2.3. Phân hệ Bảng ngữ cảnh và Ma trận nghiên cứu
-    4.2.4. Phân hệ Thư viện tài liệu và GraphRAG
-    4.2.5. Phân hệ Trợ lý soạn thảo biên dịch LaTeX
-    4.2.6. Phân hệ Hồ sơ học giả két sắt BYOK
-  4.3. Kết quả kiểm thử tự động hệ thống
-    4.3.1. Chu trình kiểm thử tự động 4 Cổng
-    4.3.2. Bảng kết quả kiểm định chất lượng phần mềm
-  4.4. Đánh giá thực nghiệm và đo lường định lượng
-    4.4.1. Đo lường độ trễ CSDL và thời gian TTFT
-    4.4.2. Đánh giá hiệu quả truy xuất Hybrid RAG
-    4.4.3. Độ chính xác định vị Bounding Box (IoU)
-    4.4.4. Tỷ lệ tự sửa lỗi biên dịch LaTeX
-    4.4.5. Bằng chứng kiểm chứng thực tế trên Langfuse
-    4.4.6. Hiệu quả tối ưu dung lượng lưu trữ CAS
+    4.1.3. Triển khai các dịch vụ nền tảng hệ thống
+  4.2. Kết quả thực nghiệm .................................................................................. 19
+    4.2.1. Một số giao diện của hệ thống ............................................................ 19
+      4.2.1.1. Giao diện khám phá bài báo đa nguồn
+      4.2.1.2. Giao diện đọc sâu và tô sáng Bounding Box
+      4.2.1.3. Giao diện bảng ngữ cảnh và ma trận nghiên cứu
+      4.2.1.4. Giao diện thư viện tài liệu và GraphRAG
+      4.2.1.5. Giao diện trợ lý soạn thảo biên dịch LaTeX
+      4.2.1.6. Giao diện hồ sơ học giả và két sắt BYOK
+    4.2.2. Xây dựng các ca kiểm thử tự động hệ thống ...................................... 20
+      4.2.2.1. Chu trình kiểm thử tự động 4 Cổng xác minh
+      4.2.2.2. Bảng kết quả kiểm định chất lượng phần mềm
+    4.2.3. Kết quả thực nghiệm hệ thống ............................................................ 21
+      4.2.3.1. Đo lường độ trễ CSDL và thời gian TTFT
+      4.2.3.2. Đánh giá hiệu quả truy xuất Hybrid RAG
+      4.2.3.3. Độ chính xác định vị Bounding Box (IoU)
+      4.2.3.4. Tỷ lệ tự sửa lỗi biên dịch LaTeX
+      4.2.3.5. Bằng chứng kiểm chứng thực tế trên Langfuse
+      4.2.3.6. Hiệu quả tối ưu dung lượng lưu trữ CAS
 
-KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN
-  1. Kết quả đạt được của đồ án
-  2. Hạn chế hiện tại của hệ thống
-  3. Định hướng nghiên cứu phát triển tiếp theo
-
-TÀI LIỆU THAM KHẢO
-  Tài liệu tiếng Việt
-  Tài liệu tiếng Anh
+KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN ......................................................... 22
+TÀI LIỆU THAM KHẢO .................................................................................. 23
 
 PHỤ LỤC
   Phụ lục 1: Thuật toán hợp nhất xếp hạng RRF (Reciprocal Rank Fusion)
@@ -274,7 +269,8 @@ Trong quá trình Builder Check độc lập bởi subagent LaTeX Architect, hai
    * *Quyết định kỹ thuật:* Giữ nguyên `frontmatter/danh_muc_viet_tat.tex` theo đúng điều lệ bắt buộc của HUMG và bộ kiểm thử `tests/test_thesis_structure_and_compile.py`. Phần Phụ lục ở cuối đồ án (`chapters/phu_luc.tex`) được dành trọn vẹn cho việc công bố mã nguồn thuật toán cốt lõi:
      * **Phụ lục 1:** Thuật toán hợp nhất xếp hạng RRF (Reciprocal Rank Fusion).
      * **Phụ lục 2:** Thuật toán chuẩn hóa hệ tọa độ Bounding Box [0..1000].
-2. **Thứ tự nạp các thành phần Frontmatter:**
-   * *Vấn đề:* Đảm bảo tính nhất quán tuyệt đối giữa `main.tex`, văn bản hướng dẫn `Huong-dan-viet-DATN.md` (trang 197–205) và tài liệu thiết kế.
-   * *Quyết định kỹ thuật:* Giữ nguyên 100% thứ tự nạp chuẩn trong `main.tex`: `Lời cảm ơn` $\rightarrow$ `Mục lục` $\rightarrow$ `Danh mục ký hiệu và viết tắt` $\rightarrow$ `Danh mục bảng biểu` $\rightarrow$ `Danh mục hình vẽ` $\rightarrow$ `Lời mở đầu`. Section 5.2 đã được đồng bộ hóa chính xác theo thứ tự này.
+2. **Thứ tự nạp các thành phần Frontmatter và phân trang (Đồng bộ 100% Hình 2 mẫu của Khoa):**
+   * *Đánh số La Mã thường (i, ii...):* Bắt đầu từ `MỤC LỤC` (trang i) $\rightarrow$ `DANH MỤC HÌNH ẢNH` $\rightarrow$ `DANH MỤC BẢNG BIỂU` $\rightarrow$ `DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT`.
+   * *Đánh số Ả Rập (1, 2, 3...):* Bắt đầu từ `LỜI CẢM ƠN` (trang 1) $\rightarrow$ `LỜI MỞ ĐẦU` (trang 2) $\rightarrow$ `CHƯƠNG 1` (trang 3 trở đi).
+   * *Quyết định kỹ thuật:* Điều chỉnh cấu trúc `main.tex` khớp 100% với Hình 2 thực tế của Khoa CNTT HUMG. Section 5.1 và 5.2 đã được đồng bộ hóa hoàn toàn theo thứ tự này.
 

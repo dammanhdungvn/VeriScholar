@@ -30,38 +30,41 @@
 \fi
 
 % ------------------------------------------------------------------------------
-% I. PHẦN SƠ BỘ (FRONTMATTER - Đánh số trang La Mã thường i, ii, iii...)
+% I. PHẦN MỤC LỤC & DANH MỤC (FRONTMATTER - Đánh số trang La Mã thường i, ii, iii...)
 % ------------------------------------------------------------------------------
 \pagenumbering{roman}
 \setcounter{page}{1}
 
-% Lời cảm ơn
-\input{frontmatter/loi_cam_on}
-
-% Mục lục tự động
+% 1. Mục lục tự động (Bắt đầu từ trang i)
 \cleardoublepage
 \phantomsection
 \addcontentsline{toc}{chapter}{MỤC LỤC}
 \tableofcontents
 
-% Danh mục ký hiệu và chữ viết tắt
-\input{frontmatter/danh_muc_viet_tat}
-
-% Danh mục bảng biểu và hình vẽ
-\input{frontmatter/danh_muc_bang}
+% 2. Danh mục hình ảnh
 \input{frontmatter/danh_muc_hinh}
 
-% Lời mở đầu dẫn nhập
-\input{frontmatter/loi_mo_dau}
+% 3. Danh mục bảng biểu
+\input{frontmatter/danh_muc_bang}
+
+% 4. Danh mục các ký hiệu và chữ viết tắt
+\input{frontmatter/danh_muc_viet_tat}
 
 % ------------------------------------------------------------------------------
-% II. PHẦN THÂN BÀI (MAIN BODY - Đánh số trang Ả Rập 1, 2, 3...)
+% II. PHẦN NỘI DUNG (MAIN BODY - Đánh số trang Ả Rập 1, 2, 3...)
+% Bắt đầu từ Lời cảm ơn (trang 1), Lời mở đầu (trang 2), Chương 1 (trang 3)...
 % ------------------------------------------------------------------------------
 \cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
 
-% Chương 1: Tổng quan về đề tài
+% Lời cảm ơn (Trang 1)
+\input{frontmatter/loi_cam_on}
+
+% Lời mở đầu (Trang 2)
+\input{frontmatter/loi_mo_dau}
+
+% Chương 1: Tổng quan về đề tài (Trang 3 trở đi)
 \input{chapters/ch1_tong_quan}
 
 % Chương 2: Cơ sở lý thuyết và công nghệ sử dụng

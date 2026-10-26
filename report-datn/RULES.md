@@ -2,7 +2,7 @@
 
 > **Cơ sở pháp lý & Học thuật:** Tuân thủ 100% tài liệu hướng dẫn [`Huong-dan-viet-DATN.md`](./guide/Huong-dan-viet-DATN.md) của Trường Đại học Mỏ - Địa chất (HUMG) và kế thừa chuẩn mực văn phong từ 2 đồ án mẫu xuất sắc ([`Nguyễn Trung Hiếu`](./guide/2121050196_NguyenTrungHieu_BaoCaoDATN.md) và [`Nguyễn Quang Bắc`](./guide/NguyenQuangBac_Báo%20cáo%20DATN_final.md)).
 > **Đề tài chính thức:** *Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn*
-> **Tác giả:** Đàm Mạnh Dũng — Ngành Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất
+> **Tác giả:** Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B, Khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất
 > **Quy chuẩn kỹ thuật:** Mọi AI Agent hoặc tác giả trước khi chỉnh sửa/viết nội dung vào thư mục `report-datn/` bắt buộc phải đọc và tuân thủ tuyệt đối các điều luật trong văn bản này.
 
 ---
@@ -51,12 +51,16 @@ Mọi tệp nguồn phải đặt đúng vị trí trách nhiệm:
 * **Cỡ chữ (Font size):** Đúng cỡ **13pt** (`\usepackage[fontsize=13pt]{scrextend}`). Mật độ chữ bình thường, không nén hay kéo dãn.
 * **Dãn dòng (Line spacing):** Đặt ở chế độ **1.5 lines** (`\onehalfspacing` qua gói `setspace`).
 
-### 2.3. Quy Chuẩn Đánh Số Trang & Tiêu Đề Chân Trang (Header & Footer)
-* **Phần mở đầu (Frontmatter):** Đánh số thứ tự La Mã in thường (`i`, `ii`, `iii`, `iv`...).
-* **Phần thân bài (Main Body):** Bắt đầu từ Chương 1 đến hết Kết luận và Tài liệu tham khảo, đánh số thứ tự Ả Rập (`1`, `2`, `3`...).
-* **Vị trí số trang:** Đặt ở góc **dưới cùng bên phải** của mỗi trang giấy.
-* **Chân trang bên trái:** Ghi dòng chữ in nghiêng: `SVTH: Đàm Mạnh Dũng -- Ngành Công nghệ thông tin`.
-* **Đầu trang (Header):** Để trống, không kẻ đường gạch ngang gây rối mắt.
+### 2.3. Quy Chuẩn Đánh Số Trang & Tiêu Đề Đầu/Chân Trang (Header & Footer)
+* **Phần mở đầu (Frontmatter - Đánh số La Mã thường `i, ii...`):** Dành riêng cho `MỤC LỤC` (bắt đầu từ trang `i`), `DANH MỤC HÌNH ẢNH`, `DANH MỤC BẢNG BIỂU`, `DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT`.
+* **Phần nội dung (Main Body - Đánh số Ả Rập `1, 2, 3...`):** Bắt đầu đánh số 1 từ `LỜI CẢM ƠN` (trang 1), `LỜI MỞ ĐẦU` (trang 2), `CHƯƠNG 1` (trang 3 trở đi) đến hết Kết luận, Tài liệu tham khảo và Phụ lục.
+* **Tiêu đề đầu trang (Header):**
+  * Bên trái: In đậm `Đồ án tốt nghiệp ngành Công nghệ thông tin`.
+  * Có đường kẻ ngang phân cách đầu trang (`\headrulewidth = 0.5pt`).
+* **Tiêu đề chân trang (Footer):**
+  * Bên trái: Ghi dòng chữ in nghiêng `SVTH: Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B`.
+  * Bên phải: Số trang in nghiêng `\textit{\thepage}`.
+  * Có đường kẻ ngang phân cách chân trang (`\footrulewidth = 0.5pt`).
 
 ---
 
