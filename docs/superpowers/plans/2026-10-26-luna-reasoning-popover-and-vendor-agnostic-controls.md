@@ -47,7 +47,7 @@
   - `ReasoningEffortLevel = Literal["off", "low", "medium", "high"]`
   - `resolve_provider_reasoning_params(provider: str, level: ReasoningEffortLevel) -> dict[str, Any]` (chuyển đổi độc lập cho OpenAI, Gemini, Anthropic, DMR).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_reasoning_effort_core.py`:
 ```python
@@ -86,21 +86,21 @@ def test_invalid_effort_level_rejected():
         map_reasoning_effort_to_provider("openai", "ultra_max")  # type: ignore
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_reasoning_effort_core.py -v`  
 Expected: FAIL with `ModuleNotFoundError: No module named 'core.domain.value_objects.reasoning_effort'`.
 
-- [ ] **Step 3: Implement `packages/core/src/core/domain/value_objects/reasoning_effort.py`**
+- [x] **Step 3: Implement `packages/core/src/core/domain/value_objects/reasoning_effort.py`**
 
 Cài đặt kiểu `ReasoningEffortLevel` và hàm chuẩn hóa `map_reasoning_effort_to_provider(provider: str, level: str) -> dict[str, Any]` thuần Python Standard Library.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_reasoning_effort_core.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/core/domain/value_objects/reasoning_effort.py packages/core/tests/test_reasoning_effort_core.py
@@ -122,7 +122,7 @@ git commit -m "feat(core): add vendor-agnostic ReasoningEffortLevel VO and provi
   - Bổ sung trường `reasoning_effort: Optional[str] = "high"` vào `SessionChatMessageRequest`.
   - `SessionChatService` truyền `reasoning_effort` vào tầng gọi OpenAI/Luna SDK và lưu vết vào Langfuse span generation.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_reasoning_effort_endpoint.py`:
 ```python
@@ -142,21 +142,21 @@ def test_session_chat_request_schema_supports_reasoning_effort():
     assert req_off.reasoning_effort == "off"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_reasoning_effort_endpoint.py -v`  
 Expected: FAIL (nếu trường `reasoning_effort` chưa tồn tại trong `SessionChatMessageRequest`).
 
-- [ ] **Step 3: Update `SessionChatMessageRequest` and `SessionChatService`**
+- [x] **Step 3: Update `SessionChatMessageRequest` and `SessionChatService`**
 
 Thêm `reasoning_effort: Literal["off", "low", "medium", "high"] = "high"` vào schema và truyền vào `map_reasoning_effort_to_provider` khi khởi tạo request đến LLM client.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_reasoning_effort_endpoint.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/schemas/session.py apps/api/src/api/services/session_chat_service.py apps/api/tests/test_reasoning_effort_endpoint.py
@@ -185,7 +185,7 @@ git commit -m "feat(api): add reasoning_effort field to SessionChatMessageReques
     - Tuyệt đối không hiển thị icon Bàn tay.
     - Truyền `reasoningEffort` vào callback `onSend(text, reasoningEffort)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/dashboard/__tests__/DashboardChatInputBox.test.tsx`:
 ```tsx
@@ -231,12 +231,12 @@ describe("DashboardChatInputBox Component", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- DashboardChatInputBox`  
 Expected: FAIL (chưa có Popover và slider data-testid).
 
-- [ ] **Step 3: Implement `ReasoningPopover.tsx` and integrate into `DashboardChatInputBox.tsx`**
+- [x] **Step 3: Implement `ReasoningPopover.tsx` and integrate into `DashboardChatInputBox.tsx`**
 
 1. Tạo `apps/web/src/features/dashboard/components/ReasoningPopover.tsx` với thiết kế pixel-perfect bám sát 2 ảnh người dùng cung cấp:
    - Header hiển thị nấc hiện tại: `High` / `Medium` / `Low` / `Off` với màu xanh sáng.
@@ -249,12 +249,12 @@ Expected: FAIL (chưa có Popover và slider data-testid).
    - Khi `reasoningEffort === "off"`, icon Bộ não đổi màu xám mờ.
    - Không xuất hiện bất kỳ icon bàn tay nào.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm --prefix apps/web run test -- DashboardChatInputBox`  
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/features/dashboard/components/ReasoningPopover.tsx apps/web/src/features/dashboard/components/DashboardChatInputBox.tsx apps/web/src/features/dashboard/stores/useDashboardStore.ts apps/web/src/features/dashboard/__tests__/DashboardChatInputBox.test.tsx
@@ -265,17 +265,17 @@ git commit -m "feat(web): add 5.6-Luna ReasoningPopover with 4-step slider and m
 
 ### Task 4: End-to-End Verification across All 4 Verification Gates
 
-- [ ] **Step 1: Run Gate 1 (Python Linter & Formatter)**
+- [x] **Step 1: Run Gate 1 (Python Linter & Formatter)**
   `uv run ruff check . && uv run ruff format --check .` (Exit code 0).
 
-- [ ] **Step 2: Run Gate 2 (Backend & Core Pytest Suite)**
+- [x] **Step 2: Run Gate 2 (Backend & Core Pytest Suite)**
   `uv run pytest` (Exit code 0).
 
-- [ ] **Step 3: Run Gate 3 (Frontend Vitest Suite)**
+- [x] **Step 3: Run Gate 3 (Frontend Vitest Suite)**
   `npm --prefix apps/web run test` (Exit code 0).
 
-- [ ] **Step 4: Run Gate 4 (Frontend Production Build)**
+- [x] **Step 4: Run Gate 4 (Frontend Production Build)**
   `npm --prefix apps/web run build` (Exit code 0).
 
-- [ ] **Step 5: Commit & Finalize**
+- [x] **Step 5: Commit & Finalize**
   Đánh dấu hoàn thành toàn bộ kịch bản và chuẩn bị thực thi.
