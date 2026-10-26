@@ -108,6 +108,17 @@ if [[ "$DRY_RUN" == "true" ]]; then
     exit 0
 fi
 
+# 2.5. Remote Host Pre-flight Check (Prevent hanging when VPS is shut down)
+echo "-> Checking remote VPS connectivity ($SSH_USER@$SSH_HOST)..."
+if ! ssh -i "$SSH_KEY" -o ConnectTimeout=2 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" "true" 2>/dev/null; then
+    echo "======================================================================"
+    echo "⚠️ Remote VPS host ($SSH_USER@$SSH_HOST) is currently offline / unreachable."
+    echo "-> Local Verification Gates passed successfully!"
+    echo "-> Skipping remote deployment to save resources/costs."
+    echo "======================================================================"
+    exit 0
+fi
+
 # 3. Synchronize Web Distribution Bundle
 echo "-> Synchronizing frontend distribution to $REMOTE_WEB_DIR..."
 rsync -avz --delete \

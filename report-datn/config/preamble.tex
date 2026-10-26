@@ -64,6 +64,10 @@
     name={Hình}
 }
 
+% Quy chuẩn đánh số Bảng và Hình dùng dấu gạch nối (Chương-Số: 3-1, 3-2)
+\renewcommand{\thetable}{\thechapter-\arabic{table}}
+\renewcommand{\thefigure}{\thechapter-\arabic{figure}}
+
 % 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) với đường kẻ đôi chuẩn HUMG
 \usepackage{fancyhdr}
 \pagestyle{fancy}
@@ -145,6 +149,24 @@
 \renewcommand{\cftsubsecpagefont}{\normalfont}
 \renewcommand{\cftsubsubsecfont}{\normalfont}
 \renewcommand{\cftsubsubsecpagefont}{\normalfont}
+
+% --- Cấu hình Danh mục Bảng biểu (LoT) chuẩn HUMG (Ảnh 1) ---
+\renewcommand{\cfttabpresnum}{\bfseries Bảng~}
+\renewcommand{\cfttabaftersnum}{:}
+\newlength{\cfttablen}
+\settowidth{\cfttablen}{\bfseries Bảng~9-99:~}
+\setlength{\cfttabnumwidth}{\cfttablen}
+\cftsetindents{table}{0pt}{\cfttablen}
+\renewcommand{\cfttableader}{\cftdotfill{\cftdotsep}}
+
+% --- Cấu hình Danh mục Hình ảnh (LoF) chuẩn HUMG ---
+\renewcommand{\cftfigpresnum}{\bfseries Hình~}
+\renewcommand{\cftfigaftersnum}{:}
+\newlength{\cftfiglen}
+\settowidth{\cftfiglen}{\bfseries Hình~9-99:~}
+\setlength{\cftfignumwidth}{\cftfiglen}
+\cftsetindents{figure}{0pt}{\cftfiglen}
+\renewcommand{\cftfigleader}{\cftdotfill{\cftdotsep}}
 
 % 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
 \usepackage{titlesec}
