@@ -55,6 +55,14 @@ export interface DocumentDetailResponseData {
   folder_id?: string | null;
   pages_metadata: PageMetadataItem[];
   created_at: string;
+  access_status?: string | null;
+  abstract?: string | null;
+  parsed_metadata?: {
+    abstract?: string | null;
+    arxiv_id?: string | null;
+    venue?: string | null;
+    [key: string]: unknown;
+  } | null;
 }
 
 export interface DocumentUploadResponseData {
