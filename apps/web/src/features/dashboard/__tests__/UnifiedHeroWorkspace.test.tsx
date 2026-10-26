@@ -177,4 +177,109 @@ describe("UnifiedHeroWorkspace Component", () => {
     expect(screen.getByText("Paper One (Peer Reviewed)")).toBeInTheDocument();
     expect(screen.getByText("Paper Two (Preprint)")).toBeInTheDocument();
   });
+
+  describe("URL Guardrail & Empty State Handling", () => {
+    it("blocks untrusted URL without calling search API and displays polite notice", async () => {
+      const searchSpy = vi.spyOn(discoveryApi, "search");
+
+      render(
+        <UnifiedHeroWorkspace
+          inputText="https://pornhub.com/video"
+          onChangeText={vi.fn()}
+          onSendChat={vi.fn()}
+          onIngestFile={vi.fn()}
+          onOpenPaper={vi.fn()}
+        />
+      );
+
+      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+      expect(searchSpy).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(
+          /Hệ thống chỉ hỗ trợ liên kết từ các cổng học thuật uy tín/i
+        )
+      ).toBeInTheDocument();
+    });
+
+    it("extracts identifier from arXiv URL and passes ID to search API", async () => {
+      const searchSpy = vi
+        .spyOn(discoveryApi, "search")
+        .mockResolvedValue([]);
+
+      render(
+        <UnifiedHeroWorkspace
+          inputText="https://arxiv.org/abs/2305.18290"
+          onChangeText={vi.fn()}
+          onSendChat={vi.fn()}
+          onIngestFile={vi.fn()}
+          onOpenPaper={vi.fn()}
+        />
+      );
+
+      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+      expect(searchSpy).toHaveBeenCalledWith("2305.18290", 8);
+    });
+
+    it("extracts identifier from DOI URL and passes DOI to search API", async () => {
+      const searchSpy = vi
+        .spyOn(discoveryApi, "search")
+        .mockResolvedValue([]);
+
+      render(
+        <UnifiedHeroWorkspace
+          inputText="https://doi.org/10.1145/3805774"
+          onChangeText={vi.fn()}
+          onSendChat={vi.fn()}
+          onIngestFile={vi.fn()}
+          onOpenPaper={vi.fn()}
+        />
+      );
+
+      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+      expect(searchSpy).toHaveBeenCalledWith("10.1145/3805774", 8);
+    });
+
+    it("displays empty state with reset button when search returns 0 results and resets on click", async () => {
+      vi.spyOn(discoveryApi, "search").mockResolvedValue([]);
+      const onChangeText = vi.fn();
+
+      render(
+        <UnifiedHeroWorkspace
+          inputText="Unknown Query 12345"
+          onChangeText={onChangeText}
+          onSendChat={vi.fn()}
+          onIngestFile={vi.fn()}
+          onOpenPaper={vi.fn()}
+        />
+      );
+
+      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+      await waitFor(() => {
+        expect(
+          screen.getByText("Không tìm thấy bài báo phù hợp với yêu cầu này.")
+        ).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Làm mới" })).toBeInTheDocument();
+      });
+
+      // Click "Làm mới"
+      const resetBtn = screen.getByRole("button", { name: "Làm mới" });
+      fireEvent.click(resetBtn);
+
+      await waitFor(() => {
+        expect(
+          screen.queryByText("Không tìm thấy bài báo phù hợp với yêu cầu này.")
+        ).not.toBeInTheDocument();
+        expect(screen.getByText(/Kéo thả tệp PDF/i)).toBeInTheDocument();
+      });
+      expect(onChangeText).toHaveBeenCalledWith("");
+    });
+  });
 });

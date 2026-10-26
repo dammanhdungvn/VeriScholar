@@ -117,6 +117,10 @@ CURATED_SAMPLE_PAPERS: list[dict[str, Any]] = [
 ]
 
 
+ARXIV_ID_PATTERN = re.compile(r"^(\d{4}\.\d{4,5}(v\d+)?|[a-zA-Z\-]+(?:\.[a-zA-Z]+)?\/\d{7})$")
+DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[-._;()/:A-Za-z0-9]+$")
+
+
 class ScholarlySearchAdapter(IScholarlySearchPort):
     """Multi-source academic literature search adapter with resilient fallback."""
 
@@ -233,6 +237,16 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
         if not clean_query:
             return []
 
+        # Identifier recognition for direct lookup
+        normalized_query = clean_query
+        if normalized_query.lower().startswith("arxiv:"):
+            normalized_query = normalized_query[6:].strip()
+        elif normalized_query.lower().startswith("doi:"):
+            normalized_query = normalized_query[4:].strip()
+
+        is_arxiv_id = bool(ARXIV_ID_PATTERN.match(normalized_query))
+        is_doi = bool(DOI_PATTERN.match(normalized_query))
+
         results: list[ScholarlyPaperSearchResult] = []
         seen_identifiers: set[str] = set()
 
@@ -246,14 +260,29 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
                 )
             candidate = ScholarlyPaperSearchResult(**paper_dict)
 
-            # Keyword overlap check
-            p_title = candidate.title.lower()
-            p_abstract = (candidate.abstract or "").lower()
-            tokens = [t for t in q_lower.split() if len(t) > 2]
-            if any(t in p_title or t in p_abstract for t in tokens):
-                # Relevance filter: title similarity >= 0.2 if query >= 3 words
-                if not self._is_relevant_result(clean_query, candidate.title):
-                    continue
+            is_match = False
+            if is_arxiv_id and candidate.arxiv_id:
+                cand_id = candidate.arxiv_id.lower()
+                cand_clean = cand_id.split("v")[0]
+                norm_clean = normalized_query.lower().split("v")[0]
+                if cand_id == normalized_query.lower() or cand_clean == norm_clean:
+                    is_match = True
+            elif is_doi and candidate.doi:
+                cand_doi = candidate.doi.lower()
+                norm_doi = normalized_query.lower()
+                if cand_doi == norm_doi or norm_doi in cand_doi:
+                    is_match = True
+            elif not is_arxiv_id and not is_doi:
+                # Keyword overlap check
+                p_title = candidate.title.lower()
+                p_abstract = (candidate.abstract or "").lower()
+                tokens = [t for t in q_lower.split() if len(t) > 2]
+                if any(t in p_title or t in p_abstract for t in tokens):
+                    # Relevance filter: title similarity >= 0.2 if query >= 3 words
+                    if self._is_relevant_result(clean_query, candidate.title):
+                        is_match = True
+
+            if is_match:
                 # Peer-reviewed filter
                 if is_peer_reviewed_only and not candidate.is_peer_reviewed:
                     continue
@@ -278,21 +307,37 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
 
         # 2. Query arXiv API with timeout
         try:
-            arxiv_query = self._build_arxiv_query(clean_query)
-            params = {
-                "search_query": arxiv_query,
-                "sortBy": "relevance",
-                "start": 0,
-                "max_results": limit,
-            }
+            if is_arxiv_id:
+                params = {
+                    "id_list": normalized_query,
+                    "start": 0,
+                    "max_results": limit,
+                }
+            elif is_doi:
+                params = {
+                    "search_query": f'doi:"{normalized_query}"',
+                    "sortBy": "relevance",
+                    "start": 0,
+                    "max_results": limit,
+                }
+            else:
+                arxiv_query = self._build_arxiv_query(clean_query)
+                params = {
+                    "search_query": arxiv_query,
+                    "sortBy": "relevance",
+                    "start": 0,
+                    "max_results": limit,
+                }
+
             async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
                 resp = await client.get("https://export.arxiv.org/api/query", params=params)
                 if resp.status_code == 200:
                     parsed_results = self._parse_arxiv_atom(resp.text)
                     for item in parsed_results:
-                        # Relevance filter
-                        if not self._is_relevant_result(clean_query, item.title):
-                            continue
+                        # Relevance filter (applied only for keyword searches)
+                        if not is_arxiv_id and not is_doi:
+                            if not self._is_relevant_result(clean_query, item.title):
+                                continue
                         # Peer-reviewed filter
                         if is_peer_reviewed_only and not item.is_peer_reviewed:
                             continue

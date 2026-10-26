@@ -245,3 +245,113 @@ def test_scholarly_search_adapter_jaccard_and_classification_units():
     arxiv_q = ScholarlySearchAdapter._build_arxiv_query(q_rag)
     assert 'ti:"Retrieval-Augmented Generation for Large Language Models: A Survey"' in arxiv_q
     assert "ti:" in arxiv_q and "abs:" in arxiv_q
+
+
+@pytest.mark.asyncio
+async def test_discovery_search_direct_arxiv_id(async_client: AsyncClient, auth_headers: dict):
+    # Query for curated arXiv ID 2305.18290 (Direct Preference Optimization)
+    res = await async_client.post(
+        "/api/v1/discovery/search",
+        headers=auth_headers,
+        json={"query": "2305.18290"},
+    )
+    assert res.status_code == 200
+    papers = res.json()["data"]
+    assert len(papers) > 0
+    assert papers[0]["arxiv_id"] == "2305.18290"
+    assert "Direct Preference Optimization" in papers[0]["title"]
+
+
+@pytest.mark.asyncio
+async def test_discovery_search_direct_arxiv_id_upstream_api(
+    async_client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    captured_params = {}
+
+    class MockResponse:
+        status_code = 200
+        text = """<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/2404.10981v2</id>
+    <title>Sample Paper From Arxiv ID</title>
+    <summary>Abstract summary text...</summary>
+    <published>2024-04-16T00:00:00Z</published>
+    <author><name>Jane Doe</name></author>
+    <link href="https://arxiv.org/pdf/2404.10981v2.pdf" rel="related" type="application/pdf" title="pdf"/>
+  </entry>
+</feed>"""
+
+    original_get = httpx.AsyncClient.get
+
+    async def mock_get(self, url, *args, **kwargs):
+        if str(url).startswith("http://testserver") or not str(url).startswith("http"):
+            return await original_get(self, url, *args, **kwargs)
+        nonlocal captured_params
+        captured_params = kwargs.get("params") or {}
+        return MockResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    res = await async_client.post(
+        "/api/v1/discovery/search",
+        headers=auth_headers,
+        json={"query": "2404.10981v2"},
+    )
+    assert res.status_code == 200
+    assert captured_params.get("id_list") == "2404.10981v2"
+    papers = res.json()["data"]
+    assert len(papers) == 1
+    assert papers[0]["title"] == "Sample Paper From Arxiv ID"
+
+
+@pytest.mark.asyncio
+async def test_discovery_search_direct_doi(
+    async_client: AsyncClient, auth_headers: dict, monkeypatch
+):
+    # 1. Curated DOI lookup (ResNet)
+    res_curated = await async_client.post(
+        "/api/v1/discovery/search",
+        headers=auth_headers,
+        json={"query": "10.1109/CVPR.2016.90"},
+    )
+    assert res_curated.status_code == 200
+    papers = res_curated.json()["data"]
+    assert len(papers) > 0
+    assert papers[0]["doi"] == "10.1109/CVPR.2016.90"
+    assert "Deep Residual Learning" in papers[0]["title"]
+
+    # 2. Upstream DOI lookup
+    captured_params = {}
+
+    class MockResponse:
+        status_code = 200
+        text = """<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <entry>
+    <id>http://arxiv.org/abs/2101.00001</id>
+    <title>Paper Found By DOI</title>
+    <summary>Abstract summary...</summary>
+    <published>2021-01-01T00:00:00Z</published>
+    <author><name>John Smith</name></author>
+  </entry>
+</feed>"""
+
+    original_get = httpx.AsyncClient.get
+
+    async def mock_get(self, url, *args, **kwargs):
+        if str(url).startswith("http://testserver") or not str(url).startswith("http"):
+            return await original_get(self, url, *args, **kwargs)
+        nonlocal captured_params
+        captured_params = kwargs.get("params") or {}
+        return MockResponse()
+
+    monkeypatch.setattr(httpx.AsyncClient, "get", mock_get)
+
+    res = await async_client.post(
+        "/api/v1/discovery/search",
+        headers=auth_headers,
+        json={"query": "10.1145/3805774"},
+    )
+    assert res.status_code == 200
+    assert 'doi:"10.1145/3805774"' in captured_params.get("search_query", "")

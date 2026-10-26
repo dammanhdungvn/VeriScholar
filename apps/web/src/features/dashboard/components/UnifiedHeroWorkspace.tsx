@@ -7,6 +7,7 @@ import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { ScholarlyResultCard } from "@/features/discovery/components/ScholarlyResultCard";
 import { ScholarlySkeletonList } from "@/features/discovery/components/ScholarlySkeletonList";
 import { discoveryApi, type ScholarlyPaper } from "@/features/discovery/api/discoveryApi";
+import { parseScholarlyInput } from "@/features/discovery/lib/urlGuardrail";
 import type { ReasoningEffortLevel } from "@/features/dashboard/stores/useDashboardStore";
 
 interface UnifiedHeroWorkspaceProps {
@@ -42,6 +43,7 @@ export function UnifiedHeroWorkspace({
   const [searchResults, setSearchResults] = useState<ScholarlyPaper[]>([]);
   const [filterMode, setFilterMode] = useState<"all" | "peer_reviewed">("all");
   const [searchError, setSearchError] = useState<string | null>(null);
+  const [hasSearched, setHasSearched] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [openingPaperTitle, setOpeningPaperTitle] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,16 +67,40 @@ export function UnifiedHeroWorkspace({
     });
   }, [searchResults, filterMode]);
 
+  const handleResetSearch = () => {
+    setSearchResults([]);
+    setHasSearched(false);
+    setSearchError(null);
+    setFilterMode("all");
+    onChangeText("");
+  };
+
   const executeSearch = async (query: string) => {
-    if (!query.trim()) return;
+    const raw = query.trim();
+    if (!raw) return;
+
+    const parsed = parseScholarlyInput(raw);
+    if (parsed.type === "invalid_url") {
+      setSearchError(parsed.message);
+      setSearchResults([]);
+      setHasSearched(false);
+      return;
+    }
+
     setIsSearching(true);
     setSearchError(null);
     setFilterMode("all");
+
+    const searchQuery =
+      parsed.type === "scholarly_url" ? parsed.identifier : parsed.query;
+
     try {
-      const results = await discoveryApi.search(query.trim(), 8);
+      const results = await discoveryApi.search(searchQuery, 8);
       setSearchResults(results);
+      setHasSearched(true);
     } catch {
       setSearchError("Không thể kết nối máy chủ tìm kiếm. Vui lòng thử lại sau.");
+      setHasSearched(true);
     } finally {
       setIsSearching(false);
     }
@@ -131,7 +157,10 @@ export function UnifiedHeroWorkspace({
     }
   };
 
-  const hasActiveContent = isSearching || searchResults.length > 0;
+  const hasActiveContent =
+    isSearching ||
+    searchResults.length > 0 ||
+    (hasSearched && searchResults.length === 0 && !searchError);
 
   return (
     <div
@@ -157,7 +186,7 @@ export function UnifiedHeroWorkspace({
           type="button"
           onClick={() => {
             setMode("search");
-            setSearchResults([]);
+            handleResetSearch();
           }}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
             mode === "search"
@@ -173,7 +202,7 @@ export function UnifiedHeroWorkspace({
           type="button"
           onClick={() => {
             setMode("chat");
-            setSearchResults([]);
+            handleResetSearch();
           }}
           className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
             mode === "chat"
@@ -210,6 +239,22 @@ export function UnifiedHeroWorkspace({
         <div className="text-xs text-rose-500 py-3 text-center">{searchError}</div>
       )}
 
+      {/* 4b. Empty State Feedback */}
+      {hasSearched && searchResults.length === 0 && !isSearching && !searchError && (
+        <div className="w-full max-w-md my-8 flex flex-col items-center justify-center text-center p-6 rounded-2xl border border-[#ded8cd] dark:border-[#35322d] bg-white/60 dark:bg-[#201e1a]/60">
+          <p className="text-sm text-muted dark:text-zinc-400 mb-4">
+            Không tìm thấy bài báo phù hợp với yêu cầu này.
+          </p>
+          <button
+            type="button"
+            onClick={handleResetSearch}
+            className="px-4 py-1.5 rounded-full text-xs font-medium bg-[#cc785c] hover:bg-[#b8684e] text-white transition-all cursor-pointer shadow-xs"
+          >
+            Làm mới
+          </button>
+        </div>
+      )}
+
       {searchResults.length > 0 && !isSearching && (
         <div className="w-full mt-6 space-y-3 pb-8">
           <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1 flex-wrap gap-2 mb-2">
@@ -243,10 +288,7 @@ export function UnifiedHeroWorkspace({
 
             <button
               type="button"
-              onClick={() => {
-                setSearchResults([]);
-                setFilterMode("all");
-              }}
+              onClick={handleResetSearch}
               className="flex items-center gap-1 hover:text-ink dark:hover:text-zinc-200 transition-colors cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
@@ -274,7 +316,7 @@ export function UnifiedHeroWorkspace({
       )}
 
       {/* 5. Two Primary Starting Actions (Shown when no search results) */}
-      {searchResults.length === 0 && !isSearching && (
+      {searchResults.length === 0 && !isSearching && !hasSearched && (
         <div className="w-full max-w-2xl mt-5 flex flex-col gap-3.5">
           {/* Action A: Compact PDF Upload Dropzone (Minimal, zero internal jargon) */}
           <input
