@@ -1,48 +1,134 @@
 % !TEX root = ../../main.tex
 \section{Thiết kế cơ sở dữ liệu vật lý}
 \label{sec:thiet_ke_db}
+
 \subsection{Lược đồ quan hệ thực thể (ERD)}
 \label{subsec:erd}
-Hệ thống sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 gồm 16 bảng cốt lõi, được phân hoạch an toàn theo \texttt{user\_id} nhằm đảm bảo quyền riêng tư tuyệt đối cho các nghiên cứu của từng học giả.
+Hệ thống \VS\ sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 kết hợp tiện ích mở rộng \texttt{pgvector}. Cấu trúc dữ liệu bao gồm 16 bảng vật lý chuẩn hóa, được phân nhóm khoa học thành 4 cụm tri thức học thuật logic, bảo đảm tính toàn vẹn giao dịch ACID tuyệt đối và phân hoạch an toàn theo định danh người dùng:
 
-\subsection{Đặc tả các bảng cơ sở dữ liệu chính}
-\label{subsec:dac_ta_bang}
-Cấu trúc và ý nghĩa các trường của bảng lưu trữ đoạn trích được tổng hợp chi tiết trong Bảng~\ref{tab:document_chunks}:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Cụm Định danh học giả và Két sắt cá nhân (3 bảng):} \texttt{users} (thông tin tài khoản và mã định danh quốc tế ORCID iD), \texttt{email\_otps} (quản lý phiên đăng nhập không mật khẩu) và \texttt{user\_secrets} (két sắt lưu trữ khóa API cá nhân BYOK mã hóa AES-256-GCM AEAD).
+    \item \textbf{Cụm Ấn phẩm và Đoạn trích (4 bảng):} Gồm \texttt{documents}, \texttt{storage\_blobs}, \texttt{document\_chunks} và \texttt{discovery\_cache} lưu trữ hồ sơ, kho tệp CAS và đoạn trích tọa độ kèm vector 1536 chiều.
+    \item \textbf{Cụm Đồ thị tri thức học thuật 4 thực thể (4 bảng):} \texttt{paper\_nodes} (thực thể bài báo), \texttt{method\_nodes} (thực thể phương pháp và kỹ thuật đề xuất), \texttt{dataset\_nodes} (thực thể bộ dữ liệu chuẩn benchmark) và \texttt{metric\_results} (thực thể kết quả đo lường định lượng kèm đơn vị).
+    \item \textbf{Cụm Phiên đọc sâu, Ma trận và Bản thảo (5 bảng):} \texttt{reading\_sessions} (phiên nghiên cứu chuyên sâu của học giả), \texttt{chat\_messages} (lịch sử hỏi đáp kèm huy hiệu trích dẫn tọa độ), \texttt{comparison\_matrices} (bảng đối chiếu so sánh đa phương pháp), \texttt{draft\_projects} (dự án soạn thảo bài báo) và \texttt{draft\_files} (cây thư mục tệp mã nguồn \LaTeX).
+\end{enumerate}
+
+Mô hình Lược đồ Quan hệ Thực thể (ERD) tổng quát liên kết 4 cụm tri thức được mô tả trong Hình~\ref{fig:erd_model}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.76, transform shape,
+    clusterbox/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, inner sep=6pt},
+    tbl/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=4pt, font=\scriptsize, minimum width=3.4cm},
+    rel/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!70}
+]
+    % Cụm 1: Identity & Vault (Góc trên trái)
+    \node[clusterbox, minimum width=7.2cm, minimum height=3.6cm] (c1) at (-4.2, 3.4) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.6, 5.0) {CỤM 1: ĐỊNH DANH \& KÉT SẮT BẢO MẬT};
+    \node[tbl] (tusers) at (-4.2, 4.2) {\textbf{users}\\id, email, full\_name, orcid\_id};
+    \node[tbl] (totp) at (-5.8, 2.6) {\textbf{email\_otps}\\id, user\_id, otp\_code};
+    \node[tbl] (tsec) at (-2.6, 2.6) {\textbf{user\_secrets}\\id, user\_id, enc\_api\_key};
+    \draw[rel] (totp) -- (tusers);
+    \draw[rel] (tsec) -- (tusers);
+
+    % Cụm 2: Document & CAS (Góc trên phải)
+    \node[clusterbox, minimum width=7.8cm, minimum height=3.6cm] (c2) at (4.4, 3.4) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (0.7, 5.0) {CỤM 2: ẤN PHẨM, KHO CAS \& ĐOẠN TRÍCH};
+    \node[tbl] (tdocs) at (2.4, 4.2) {\textbf{documents}\\id, user\_id, title, doi};
+    \node[tbl] (tcas) at (6.4, 4.2) {\textbf{storage\_blobs}\\id, sha256, ref\_count};
+    \node[tbl, minimum width=5.8cm] (tchunks) at (4.4, 2.6) {\textbf{document\_chunks}\\id, doc\_id, chunk\_text, bbox, embedding(1536)};
+    \draw[rel] (tdocs) -- (tcas);
+    \draw[rel] (tchunks) -- (tdocs);
+
+    % Cụm 3: GraphRAG 4 thực thể (Góc dưới phải)
+    \node[clusterbox, minimum width=7.8cm, minimum height=4.2cm] (c3) at (4.4, -1.2) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (0.7, 0.7) {CỤM 3: ĐỒ THỊ TRI THỨC HỌC THUẬT (GRAPHRAG)};
+    \node[tbl] (tpnode) at (2.4, -0.2) {\textbf{paper\_nodes}\\id, doc\_id, title, year};
+    \node[tbl] (tmnode) at (6.4, -0.2) {\textbf{method\_nodes}\\id, name, category};
+    \node[tbl] (tdnode) at (2.4, -2.2) {\textbf{dataset\_nodes}\\id, name, domain};
+    \node[tbl] (tmetric) at (6.4, -2.2) {\textbf{metric\_results}\\id, method\_id, metric, val};
+    \draw[rel] (tpnode) -- (tmnode);
+    \draw[rel] (tmnode) -- (tdnode);
+    \draw[rel] (tmnode) -- (tmetric);
+    \draw[rel] (tpnode) -- (tdocs);
+
+    % Cụm 4: Reading Sessions & Drafts (Góc dưới trái)
+    \node[clusterbox, minimum width=7.2cm, minimum height=4.2cm] (c4) at (-4.2, -1.2) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.6, 0.7) {CỤM 4: PHIÊN ĐỌC SÂU \& BẢN THẢO \LaTeX};
+    \node[tbl] (tsess) at (-4.2, -0.2) {\textbf{reading\_sessions}\\id, user\_id, session\_name};
+    \node[tbl] (tchat) at (-5.8, -2.2) {\textbf{chat\_messages}\\id, sess\_id, role, bbox};
+    \node[tbl] (tdraft) at (-2.6, -2.2) {\textbf{draft\_projects}\\id, user\_id, title, e2b\_id};
+    \draw[rel] (tchat) -- (tsess);
+    \draw[rel] (tsess) -- (tusers);
+    \draw[rel] (tdraft) -- (tusers);
+\end{tikzpicture}
+\caption{Lược đồ Quan hệ Thực thể (ERD) tổng quát phân tách theo 4 cụm tri thức học thuật}
+\label{fig:erd_model}
+\end{figure}
+
+\subsection{Từ điển dữ liệu cho các bảng cơ sở dữ liệu cốt lõi}
+\label{subsec:tu_dien_du_lieu}
+Để làm sáng tỏ đặc tả vật lý và ràng buộc kỹ thuật của các cấu trúc dữ liệu lưu trữ, Bảng~\ref{tab:document_chunks} và Bảng~\ref{tab:document_storage_blobs} trình bày từ điển dữ liệu của các bảng phục vụ tính năng nạp tài liệu CAS và đối chiếu tọa độ trực quan:
 
 \begin{table}[htbp]
 \centering
-\caption{Đặc tả bảng dữ liệu \texttt{document\_chunks}}
+\small
+\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_chunks}}
 \label{tab:document_chunks}
-\begin{tabular}{p{3.5cm}p{3cm}p{2.5cm}p{5.5cm}}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
 \toprule
-\textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Index} & \textbf{Mô tả nghiệp vụ} \\
+\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
 \midrule
-\texttt{id} & UUID & Khóa chính & Định danh duy nhất của đoạn trích \\
-\texttt{document\_id} & UUID & Khóa ngoại & Khóa ngoại trỏ tới bảng \texttt{documents} \\
-\texttt{page\_number} & INTEGER & Index B-Tree & Số thứ tự trang giấy trong tài liệu PDF \\
-\texttt{chunk\_text} & TEXT & Không & Nội dung văn bản của đoạn trích \\
-\texttt{bbox} & JSONB & Không & Tọa độ hộp định vị $[x_0, y_0, x_1, y_1]$ chuẩn hóa \\
-\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao \\
+\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\
+\texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\
+\texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\
+\texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\
+\texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\
+\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao cosine tương đồng \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-Bên cạnh đó, cấu trúc bảng quản lý kho tệp nhị phân định danh nội dung (CAS) phục vụ cơ chế chống trùng lặp tệp và đếm tham chiếu được thể hiện trong Bảng~\ref{tab:document_storage_blobs}:
+\begin{table}[htbp]
+\centering
+\small
+\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_storage\_blobs}}
+\label{tab:document_storage_blobs}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.9cm}}
+\toprule
+\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
+\midrule
+\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của khối tệp nhị phân trên đĩa \\
+\texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân (Khử trùng CAS) \\
+\texttt{file\_size\_bytes} & BIGINT & Không & Kích thước tệp tin tính theo đơn vị bytes \\
+\texttt{mime\_type} & VARCHAR(64) & Không & Định dạng MIME chuẩn của tài liệu (\texttt{application/pdf}) \\
+\texttt{storage\_path} & TEXT & Không & Đường dẫn lưu trữ phân cấp 2 tầng trên hệ thống tệp \\
+\texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu đang tham chiếu tới khối tệp \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tiếp theo, Bảng~\ref{tab:user_secrets} trình bày cấu trúc bảo mật của bảng \texttt{user\_secrets} bảo vệ khóa API cá nhân của người dùng:
 
 \begin{table}[htbp]
 \centering
-\caption{Đặc tả bảng dữ liệu \texttt{document\_storage\_blobs}}
-\label{tab:document_storage_blobs}
-\begin{tabular}{p{4cm}p{3cm}p{2.5cm}p{5cm}}
+\small
+\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{user\_secrets}}
+\label{tab:user_secrets}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
 \toprule
-\textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Index} & \textbf{Mô tả nghiệp vụ} \\
+\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
 \midrule
-\texttt{id} & UUID & Khóa chính & Định danh duy nhất của khối tệp nhị phân \\
-\texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân của tệp PDF \\
-\texttt{file\_size\_bytes} & BIGINT & Không & Dung lượng tệp tính theo bytes \\
-\texttt{mime\_type} & VARCHAR(64) & Không & Định dạng chuẩn tệp (\texttt{application/pdf}) \\
-\texttt{storage\_path} & TEXT & Không & Đường dẫn tệp 2 tầng trên hệ thống tệp máy chủ \\
-\texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu tham chiếu tới khối tệp \\
+\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\
+\texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\
+\texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\
+\texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\
+\texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\
+\texttt{created\_at} & TIMESTAMPTZ & Không & Dấu thời gian khởi tạo bản ghi trong két sắt \\
 \bottomrule
 \end{tabular}
 \end{table}

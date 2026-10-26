@@ -14,6 +14,7 @@ export interface DashboardChatInputBoxProps {
   onRemoveContextChip?: () => void;
   onContextChipClick?: (chip: ActiveContextChip) => void;
   placeholder?: string;
+  showReasoning?: boolean;
 }
 
 export function DashboardChatInputBox({
@@ -26,6 +27,7 @@ export function DashboardChatInputBox({
   onRemoveContextChip,
   onContextChipClick,
   placeholder,
+  showReasoning = true,
 }: DashboardChatInputBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,7 @@ export function DashboardChatInputBox({
   return (
     <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 select-text relative">
       {/* Main Unified ChatGPT-style Chat Pill Box */}
-      <div className="bg-[#fbf9f5] dark:bg-[#212120] border border-[#e5dfd4] dark:border-[#38342e] focus-within:border-coral-500/50 dark:focus-within:border-sky-400/50 focus-within:ring-3 focus-within:ring-coral-500/10 dark:focus-within:ring-sky-400/10 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-200 overflow-hidden relative">
+      <div className="bg-[#fbf9f5] dark:bg-[#212120] border border-[#e5dfd4] dark:border-[#38342e] focus-within:border-coral-500/50 dark:focus-within:border-[#cc785c]/60 focus-within:ring-3 focus-within:ring-coral-500/10 dark:focus-within:ring-[#cc785c]/15 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-200 relative">
         {/* Context Chip (Zero-Click Contextual Evidence) */}
         {contextChip && (
           <div
@@ -170,36 +172,40 @@ export function DashboardChatInputBox({
 
           {/* Right Controls: Reasoning Brain Icon, Mic, Send Button */}
           <div className="flex items-center gap-1.5 sm:gap-2 relative">
-            <ReasoningPopover
-              isOpen={isPopoverOpen}
-              onClose={() => setIsPopoverOpen(false)}
-            />
+            {showReasoning && (
+              <>
+                <ReasoningPopover
+                  isOpen={isPopoverOpen}
+                  onClose={() => setIsPopoverOpen(false)}
+                />
 
-            {/* Socratic Reasoning Button with Brain Icon (Pure icon without text) */}
-            <button
-              type="button"
-              onClick={handleReasoningButtonClick}
-              data-testid="toggle-reasoning-btn"
-              aria-label="Cài đặt Mức độ Suy luận 5.6 Luna"
-              title={`Mức độ Suy luận: ${reasoningEffort.toUpperCase()}. Nhấp để tinh chỉnh.`}
-              className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
-                reasoningEffort !== "off"
-                  ? "bg-sky-500/15 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 ring-1 ring-sky-400/40 shadow-2xs"
-                  : "bg-black/[0.04] dark:bg-white/[0.05] text-muted dark:text-zinc-500 hover:bg-black/[0.08] dark:hover:bg-white/[0.08]"
-              }`}
-            >
-              <Brain
-                className={`w-4 h-4 transition-transform ${
-                  reasoningEffort !== "off"
-                    ? "text-sky-600 dark:text-sky-400 scale-105"
-                    : "text-muted dark:text-zinc-500"
-                }`}
-              />
-              {reasoningEffort !== "off" && (
-                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 ring-2 ring-white dark:ring-[#212120]" />
-              )}
-              <span className="sr-only">Suy luận Socratic</span>
-            </button>
+                {/* Socratic Reasoning Button with Brain Icon (Pure icon without text) */}
+                <button
+                  type="button"
+                  onClick={handleReasoningButtonClick}
+                  data-testid="toggle-reasoning-btn"
+                  aria-label="Cài đặt Mức độ Suy luận 5.6 Luna"
+                  title={`Mức độ Suy luận: ${reasoningEffort.toUpperCase()}. Nhấp để tinh chỉnh.`}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
+                    reasoningEffort !== "off"
+                      ? "bg-sky-500/15 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 ring-1 ring-sky-400/40 shadow-2xs"
+                      : "bg-black/[0.04] dark:bg-white/[0.05] text-muted dark:text-zinc-500 hover:bg-black/[0.08] dark:hover:bg-white/[0.08]"
+                  }`}
+                >
+                  <Brain
+                    className={`w-4 h-4 transition-transform ${
+                      reasoningEffort !== "off"
+                        ? "text-sky-600 dark:text-sky-400 scale-105"
+                        : "text-muted dark:text-zinc-500"
+                    }`}
+                  />
+                  {reasoningEffort !== "off" && (
+                    <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 ring-2 ring-white dark:ring-[#212120]" />
+                  )}
+                  <span className="sr-only">Suy luận Socratic</span>
+                </button>
+              </>
+            )}
 
             {/* Voice Input Mic */}
             <button

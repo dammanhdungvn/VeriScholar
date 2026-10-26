@@ -1,24 +1,167 @@
 % !TEX root = ../../main.tex
 \section{Thiết kế kiến trúc tổng thể của hệ thống}
 \label{sec:kien_truc_tong_the}
-\subsection{Kiến trúc 4 phân tầng monorepo}
-\label{subsec:kien_truc_4_tang}
-Kiến trúc phần mềm của \VS\ được tổ chức thành 4 phân tầng tách bạch trách nhiệm:
-\begin{enumerate}
-    \item \textbf{Tầng Giao diện người dùng (\texttt{apps/web}):} Xây dựng trên React 19, Tailwind CSS, Zustand state management và PDF Canvas Viewer, hỗ trợ hiển thị luồng SSE và vẽ lớp phủ Canvas tọa độ.
-    \item \textbf{Tầng Giao vận API (\texttt{apps/api}):} Cung cấp các RESTful API và các luồng sự kiện Server-Sent Events (SSE) trên FastAPI, quản lý phiên làm việc JWT và kết nối CSDL bất đồng bộ qua SQLAlchemy 2.0 Async.
-    \item \textbf{Tầng Lõi miền nghiệp vụ (\texttt{packages/core}):} Lõi logic thuần khiết, độc lập hoàn toàn với I/O và framework, chứa các thuật toán tính toán RRF, chuẩn hóa tọa độ và mô hình miền.
-    \item \textbf{Tầng Dữ liệu và Hạ tầng ngoài:} CSDL quan hệ PostgreSQL 16 kết hợp \texttt{pgvector}, Kho CAS tệp nhị phân trên hệ thống tệp cục bộ và môi trường đám mây E2B Sandbox.
+
+\subsection{Mô hình kiến trúc toàn trình theo chuẩn Paper khoa học}
+\label{subsec:kien_truc_pipeline}
+Tuân thủ chuẩn mực thiết kế kiến trúc hướng người đọc của các bài báo khoa học quốc tế uy tín, hệ thống \VS\ được mô hình hóa thành một đường ống biến đổi tri thức toàn trình (\textit{End-to-End Academic Knowledge Pipeline}) bao gồm 4 phân tầng chức năng trừu tượng cao độ, được minh họa chi tiết trong Hình~\ref{fig:e2e_pipeline_arch}:
+
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Tầng Tiếp nhận và Phân rã Văn bản:}
+    Chịu trách nhiệm tiếp nhận các ấn phẩm khoa học thô định dạng PDF (\textit{Document Ingestion \& Layout-Aware Parsing}). Hệ thống áp dụng thuật toán băm mật mã SHA-256 để xác định địa chỉ nội dung (CAS), loại bỏ $98\%$ nguy cơ trùng lặp tệp nhị phân trên đĩa cứng. Văn bản sau đó được phân tích bố cục chuyên sâu: giải thuật nhận diện ranh giới cột (\textit{gutter detection}) bóc tách cấu trúc 2 cột đặc trưng của các bài báo khoa học mà không làm đứt đoạn ngữ cảnh. Mỗi khối văn bản được trích xuất siêu dữ liệu và chuẩn hóa tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1]$ trên dải nguyên $[0..1000]$.
+
+    \item \textbf{Tầng Lập chỉ mục Kép và Đồ thị Tri thức (\textit{Dual-Indexing \& Knowledge Graph}):}
+    Đoạn trích sau khi chuẩn hóa được đồng thời đưa vào 3 luồng xử lý tri thức:
+    \begin{itemize}
+        \item \textit{Chỉ mục ngữ nghĩa Dense Vector:} Ánh xạ văn bản thành vector nhúng 1536 chiều, lưu trữ và lập chỉ mục đồ thị phân cấp HNSW Cosine trên PostgreSQL \texttt{pgvector}.
+        \item \textit{Chỉ mục từ khóa BM25:} Lập bảng chỉ mục ngược toàn văn (\textit{Inverted Index}) dựa trên tần suất từ khóa BM25, tối ưu hóa khả năng khớp chính xác các thuật ngữ hiếm và số hiệu công thức.
+        \item \textit{Mạng đồ thị tri thức 4 thực thể (GraphRAG):} Tự động nhận diện và liên kết các thực thể \textit{Bài báo}, \textit{Phương pháp}, \textit{Bộ dữ liệu} và \textit{Kết quả đo lường}, bảo đảm toàn vẹn giao dịch ACID trên cơ sở dữ liệu quan hệ.
+    \end{itemize}
+
+    \item \textbf{Tầng Điều phối Tác nhân Thông minh (\textit{Agentic Orchestration Layer}):}
+    Đóng vai trò là bộ não điều hành của hệ thống, xây dựng trên máy trạng thái hữu hạn (\textit{StateGraph}). Tầng này điều phối các tác nhân chuyên trách: Tác nhân Đọc sâu (\textit{Deep Reading Agent}), Tác nhân Khai phá Đồ thị (\textit{Graph Reasoning Agent}) và Tác nhân Tự sửa lỗi bản thảo (\textit{Auto-healing \LaTeX\ Agent}). Chu trình suy luận ReAct được kết nối khép kín với môi trường máy ảo cách ly E2B Sandbox MicroVM nhằm ngăn chặn triệt để nguy cơ tấn công RCE từ cơ chế \verb|\write18|.
+
+    \item \textbf{Tầng Đối chiếu Trực quan và Két sắt Bảo mật (\textit{Visual Grounding \& Security Vault}):}
+    Bảo vệ khóa bí mật của người dùng theo nguyên tắc két sắt cá nhân (BYOK) mã hóa xác thực AES-256-GCM AEAD, giải mã tạm thời trên bộ nhớ RAM theo nguyên tắc Zero-Retention. Đồng thời, tầng này thiết lập kết nối truyền phát luồng sự kiện (SSE), điều khiển trình xem PDF Canvas vẽ khung viền vàng định vị chính xác vị trí câu văn nguồn trên tài liệu trong vòng 1 giây.
 \end{enumerate}
 
-\subsection{Biểu đồ tuần tự cho luồng hỏi đáp Hybrid RAG có minh chứng tọa độ}
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.76, transform shape,
+    layerbox/.style={draw=blue!80!black, fill=blue!4, rounded corners=6pt, line width=1pt, inner sep=8pt},
+    block/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    secblock/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    conn/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!70!black}
+]
+    % Tầng 1: Ingestion
+    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l1) at (0, 4.5) {};
+    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, 5.5) {TẦNG 1: TIẾP NHẬN VÀ PHÂN RÃ VĂN BẢN (DOCUMENT INGESTION \& PARSING)};
+    \node[block, minimum width=3.2cm] (b_cas) at (-5.0, 4.3) {\textbf{Kho lưu trữ CAS}\\Khử trùng lặp SHA-256\\Đếm tham chiếu $98\%$};
+    \node[block, minimum width=3.8cm] (b_layout) at (-0.5, 4.3) {\textbf{Bóc tách bố cục 2 cột}\\Gutter Detection\\Bảo toàn ngữ cảnh đoạn};
+    \node[block, minimum width=3.6cm] (b_bbox) at (4.5, 4.3) {\textbf{Chuẩn hóa Bounding Box}\\Tọa độ $[0..1000]$\\Định vị trực quan Canvas};
+    \draw[conn] (b_cas) -- (b_layout);
+    \draw[conn] (b_layout) -- (b_bbox);
+
+    % Tầng 2: Dual Indexing & Graph
+    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l2) at (0, 1.5) {};
+    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, 2.5) {TẦNG 2: LẬP CHỈ MỤC KÉP VÀ ĐỒ THỊ TRI THỨC (DUAL-INDEXING \& KNOWLEDGE GRAPH)};
+    \node[block, minimum width=4.0cm] (b_dense) at (-5.0, 1.3) {\textbf{Dense Semantic Index}\\Vector 1536 chiều\\Chỉ mục HNSW Cosine};
+    \node[block, minimum width=4.0cm] (b_sparse) at (0, 1.3) {\textbf{Sparse Keyword Index}\\Tần suất BM25\\Chỉ mục GIN Inverted};
+    \node[block, minimum width=4.0cm] (b_graph) at (5.0, 1.3) {\textbf{Đồ thị Tri thức 4 thực thể}\\Paper - Method - Data - Metric\\PostgreSQL ACID \& CTE};
+
+    % Tầng 3: Agentic Orchestration
+    \node[layerbox, minimum width=15.5cm, minimum height=2.4cm] (l3) at (0, -1.8) {};
+    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, -0.7) {TẦNG 3: ĐIỀU PHỐI TÁC NHÂN THÔNG MINH (AGENTIC ORCHESTRATION \& EXECUTION)};
+    \node[block, minimum width=4.0cm] (b_rrf) at (-5.0, -2.0) {\textbf{Động cơ Hợp nhất RRF}\\Xếp hạng đảo ngược $k=60$\\Trích xuất Top-$K$ ngữ cảnh};
+    \node[block, minimum width=4.2cm] (b_agent) at (0, -2.0) {\textbf{Máy trạng thái LangGraph}\\Chu trình ReAct kín\\Thought $\rightarrow$ Action $\rightarrow$ Observe};
+    \node[block, minimum width=4.0cm] (b_box) at (5.0, -2.0) {\textbf{E2B Sandbox MicroVM}\\Thực thi cô lập an toàn\\Chặn RCE từ \texttt{\textbackslash write18}};
+    \draw[conn] (b_rrf) -- (b_agent);
+    \draw[conn] (b_agent) -- (b_box);
+
+    % Tầng 4: Visual Grounding & Security
+    \node[layerbox, minimum width=15.5cm, minimum height=2.2cm] (l4) at (0, -5.0) {};
+    \node[anchor=north west, font=\bfseries\footnotesize, text=blue!90!black] at (-7.5, -4.0) {TẦNG 4: ĐỐI CHIẾU TRỰC QUAN VÀ KÉT SẮT BẢO MẬT (VISUAL GROUNDING \& VAULT)};
+    \node[secblock, minimum width=5.5cm] (b_byok) at (-4.2, -5.2) {\textbf{Két sắt khóa cá nhân (BYOK)}\\AES-256-GCM AEAD Thẻ $T$\\RAM Zero-Retention};
+    \node[secblock, minimum width=6.5cm] (b_ground) at (3.5, -5.2) {\textbf{Luồng sự kiện SSE \& PDF Canvas}\\Khung viền vàng Golden Bounding Box\\Định vị trong 1 giây (IoU $\ge 0.85$)};
+
+    % Đường kết nối giữa các Tầng
+    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_dense.north);
+    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_sparse.north);
+    \draw[conn] (b_bbox.south) -- ++(0,-0.4) -| (b_graph.north);
+
+    \draw[conn] (b_dense.south) -- ++(0,-0.4) -| (b_rrf.north);
+    \draw[conn] (b_sparse.south) -- ++(0,-0.4) -| (b_rrf.north);
+    \draw[conn] (b_graph.south) -- ++(0,-0.4) -| (b_agent.north);
+
+    \draw[conn] (b_agent.south) -- ++(0,-0.3) -| (b_ground.north);
+    \draw[conn] (b_byok.east) -- (b_ground.west);
+\end{tikzpicture}
+\caption{Mô hình Kiến trúc Toàn trình (End-to-End System Pipeline) của nền tảng VeriScholar}
+\label{fig:e2e_pipeline_arch}
+\end{figure}
+
+\subsection{Biểu đồ tuần tự cho luồng hỏi đáp Hybrid RAG có tọa độ}
 \label{subsec:sequence_rag}
-Luồng tương tác giữa các thành phần phần mềm trong chu trình hỏi đáp học thuật được tổ chức theo 6 bước tuần tự:
-\begin{enumerate}[label=(\arabic*)]
-    \item \textbf{Khởi tạo câu hỏi:} Học giả nhập câu hỏi nghiên cứu tại thành phần \texttt{DeepReadingChatPanel} trên trình duyệt.
-    \item \textbf{Truyền phát yêu cầu:} Trình duyệt gửi yêu cầu HTTP POST tới endpoint \texttt{/api/v1/sessions/\{id\}/chat} của \texttt{apps/api}.
-    \item \textbf{Truy xuất lai song song:} Backend giải mã khóa cá nhân BYOK trên RAM và đồng thời kích hoạt 2 truy vấn độc lập: truy vấn vector ngữ nghĩa trên bảng \texttt{document\_chunks} (\texttt{pgvector}) và truy vấn từ khóa BM25 trên chỉ mục toàn văn.
-    \item \textbf{Hợp nhất RRF:} Tầng lõi nghiệp vụ nhận hai danh sách kết quả, áp dụng thuật toán RRF với tham số $k=60$ để tái sắp xếp và chọn lọc top $K$ đoạn văn bản có độ tin cậy cao nhất.
-    \item \textbf{Tổng hợp ngữ cảnh và truyền phát SSE:} Mô hình LLM tạo sinh câu trả lời kèm siêu dữ liệu tọa độ định vị $[x_0, y_0, x_1, y_1]$ và số thứ tự trang. Kết quả được truyền phát tức thì về trình duyệt qua kênh Server-Sent Events (SSE).
-    \item \textbf{Định vị trực quan trên Canvas:} Thành phần \texttt{PDFCanvasViewer} bắt sự kiện tọa độ từ luồng SSE, thực hiện phép co dãn tỷ lệ từ dải chuẩn hóa $[0..1000]$ sang độ phân giải thực tế của màn hình và vẽ khung viền vàng tô sáng ngay tức thì.
-\end{enumerate}
+Để làm rõ cơ chế tương tác thời gian thực giữa các thành phần kiến trúc, Hình~\ref{fig:sequence_rag_chat} mô tả biểu đồ tuần tự của chu trình hỏi đáp học thuật có minh chứng tọa độ trực quan:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.78, transform shape,
+    lifeline/.style={draw=black!50, dashed, line width=0.8pt},
+    actorbox/.style={draw=blue!80!black, fill=blue!8, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\footnotesize},
+    msg/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=blue!70!black, font=\scriptsize},
+    retmsg/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.8pt, draw=teal!80!black, font=\scriptsize}
+]
+    % 5 Lifelines
+    \node[actorbox, minimum width=2.4cm] (scholar) at (0, 0) {\textbf{Học giả}\\(Scholar)};
+    \node[actorbox, minimum width=2.6cm] (web) at (3.2, 0) {\textbf{Giao diện Web}\\(Canvas Viewer)};
+    \node[actorbox, minimum width=2.8cm] (api) at (6.8, 0) {\textbf{Cổng Điều phối}\\(API Gateway)};
+    \node[actorbox, minimum width=2.8cm] (rrf) at (10.4, 0) {\textbf{Động cơ RRF}\\(Core Domain)};
+    \node[actorbox, minimum width=2.6cm] (db) at (13.8, 0) {\textbf{Hạ tầng Dữ liệu}\\(Postgres/LLM)};
+
+    % Các đường gióng thẳng đứng
+    \draw[lifeline] (scholar) -- (0, -8.2);
+    \draw[lifeline] (web) -- (3.2, -8.2);
+    \draw[lifeline] (api) -- (6.8, -8.2);
+    \draw[lifeline] (rrf) -- (10.4, -8.2);
+    \draw[lifeline] (db) -- (13.8, -8.2);
+
+    % Luồng thông điệp
+    \draw[msg] (0, -1.0) -- node[above] {1. Nhập câu hỏi nghiên cứu} (3.2, -1.0);
+    \draw[msg] (3.2, -1.6) -- node[above] {2. Gửi yêu cầu hỏi đáp (HTTP POST)} (6.8, -1.6);
+    \draw[msg] (6.8, -2.2) -- node[above] {3. Giải mã BYOK trên RAM} (6.8, -2.7);
+    \draw (6.8, -2.2) -- (7.3, -2.2) -- (7.3, -2.7) -- (6.8, -2.7);
+
+    \draw[msg] (6.8, -3.2) -- node[above] {4. Truy vấn song song Dense \& Sparse} (13.8, -3.2);
+    \draw[retmsg] (13.8, -4.0) -- node[above] {5. Trả về kết quả HNSW \& BM25 thô} (10.4, -4.0);
+
+    \draw[msg] (10.4, -4.6) -- node[above] {6. Hợp nhất thứ hạng RRF $k=60$} (10.4, -5.1);
+    \draw (10.4, -4.6) -- (10.9, -4.6) -- (10.9, -5.1) -- (10.4, -5.1);
+
+    \draw[msg] (10.4, -5.6) -- node[above] {7. Gửi Top-$K$ ngữ cảnh} (13.8, -5.6);
+    \draw[retmsg] (13.8, -6.4) -- node[above] {8. LLM sinh câu trả lời + Tọa độ BBox $[0..1000]$} (6.8, -6.4);
+
+    \draw[retmsg] (6.8, -7.0) -- node[above] {9. Luồng sự kiện SSE (Text + BBox)} (3.2, -7.0);
+    \draw[msg] (3.2, -7.6) -- node[above] {10. Tô sáng khung viền vàng trong 1 giây} (0, -7.6);
+\end{tikzpicture}
+\caption{Biểu đồ tuần tự (Sequence Diagram) cho chu trình hỏi đáp Hybrid RAG có tọa độ}
+\label{fig:sequence_rag_chat}
+\end{figure}
+
+\subsection{Biểu đồ chuyển trạng thái tác nhân tự sửa lỗi bản thảo}
+\label{subsec:state_react_latex}
+Phân hệ soạn thảo khoa học được vận hành bởi máy trạng thái hữu hạn LangGraph điều phối tác nhân ReAct. Hình~\ref{fig:state_diagram_latex} mô tả chi tiết các trạng thái vận hành và điều kiện chuyển tiếp của chu trình tự sửa lỗi biên dịch:
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.82, transform shape,
+    state/.style={draw=blue!80!black, fill=blue!8, rounded corners=6pt, line width=1pt, align=center, inner sep=6pt, font=\small, minimum width=3.4cm},
+    startstop/.style={draw=black, fill=black, circle, inner sep=3pt},
+    endstop/.style={draw=black, fill=black!20, double=black, circle, inner sep=3pt},
+    trans/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=blue!70!black, font=\footnotesize}
+]
+    % Các Trạng thái
+    \node[startstop] (start) at (-6.2, 0) {};
+    \node[state] (idle) at (-3.8, 0) {\textbf{Chờ yêu cầu}\\(\textit{IDLE})};
+    \node[state] (compile) at (0, 0) {\textbf{Biên dịch}\\(\textit{COMPILING})\\E2B Sandbox};
+    \node[state] (analyze) at (4.2, 0) {\textbf{Phân tích lỗi}\\(\textit{ANALYZING})\\Chu trình ReAct};
+    \node[state] (healing) at (4.2, -2.4) {\textbf{Vá mã nguồn}\\(\textit{HEALING})\\Tái tạo tệp .tex};
+    \node[state, fill=green!15, draw=green!60!black] (success) at (0, 2.2) {\textbf{Xuất PDF}\\(\textit{SUCCESS})};
+    \node[endstop] (stop) at (-3.8, 2.2) {};
+
+    % Các Mũi tên chuyển trạng thái
+    \draw[trans] (start) -- (idle);
+    \draw[trans] (idle) -- node[above] {Nhận lệnh biên dịch} (compile);
+    \draw[trans] (compile) -- node[right] {Mã thoát 0} (success);
+    \draw[trans] (success) -- node[above] {Trả tệp ấn phẩm} (stop);
+    \draw[trans] (compile) -- node[above] {Mã lỗi $> 0$} (analyze);
+    \draw[trans] (analyze) -- node[right] {Xác định cú pháp lỗi} (healing);
+    \draw[trans] (healing) -| node[near end, left] {Thử lại ($N < 3$)} (compile);
+    \draw[trans] (analyze) -- ++(0, 1.8) -| node[near end, above] {Vượt quá 3 lần: Báo cáo lỗi chi tiết} (idle);
+\end{tikzpicture}
+\caption{Biểu đồ chuyển trạng thái (State Diagram) của tác nhân tự phục hồi bản thảo \LaTeX}
+\label{fig:state_diagram_latex}
+\end{figure}

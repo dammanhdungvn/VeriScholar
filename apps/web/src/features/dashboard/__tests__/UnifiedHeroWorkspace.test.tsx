@@ -20,9 +20,10 @@ describe("UnifiedHeroWorkspace Component", () => {
     expect(screen.getByText(/Đối thoại AI/i)).toBeInTheDocument();
     expect(screen.getByText(/Attention Mechanism/i)).toBeInTheDocument();
     expect(screen.getByText(/Kéo thả tệp PDF/i)).toBeInTheDocument();
+    expect(screen.queryByTestId("toggle-reasoning-btn")).not.toBeInTheDocument();
   });
 
-  it("switches to chat mode and renders reasoning placeholder", () => {
+  it("switches to chat mode and renders reasoning control button", () => {
     render(
       <UnifiedHeroWorkspace
         inputText=""
@@ -36,7 +37,10 @@ describe("UnifiedHeroWorkspace Component", () => {
     const chatModeBtn = screen.getByText(/Đối thoại AI/i);
     fireEvent.click(chatModeBtn);
 
-    expect(screen.getByPlaceholderText(/độ sâu suy luận/i)).toBeInTheDocument();
+    expect(
+      screen.getByPlaceholderText(/Đặt câu hỏi hoặc yêu cầu phân tích học thuật/i)
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("toggle-reasoning-btn")).toBeInTheDocument();
   });
 
   it("executes search when topic chip is clicked and displays result cards", async () => {

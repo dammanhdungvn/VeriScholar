@@ -1,5 +1,5 @@
 import { useState, useRef, type DragEvent, type ChangeEvent } from "react";
-import { Search, MessageSquare, FileUp, Sparkles, X, Loader2 } from "lucide-react";
+import { Search, MessageSquare, FileUp, X, Loader2 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { useTheme } from "@/hooks/useTheme";
@@ -56,7 +56,7 @@ export function UnifiedHeroWorkspace({
       const results = await discoveryApi.search(query.trim(), 8);
       setSearchResults(results);
     } catch {
-      setSearchError("Không thể tìm kiếm bài báo lúc này. Vui lòng thử lại sau.");
+      setSearchError("Không thể kết nối máy chủ tìm kiếm. Vui lòng thử lại sau.");
     } finally {
       setIsSearching(false);
     }
@@ -115,17 +115,14 @@ export function UnifiedHeroWorkspace({
 
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto my-auto relative z-10 select-none overflow-y-auto">
-      {/* 1. Header & Greeting */}
+      {/* 1. Academic Header & Greeting (Radical Minimalism, no verbose slogans) */}
       <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-2.5 shadow-xs flex items-center justify-center mb-3">
+        <div className="w-11 h-11 rounded-2xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-2 shadow-xs flex items-center justify-center mb-3">
           <AcademicLogo size="sm" inverted={isDark} showWordmark={false} />
         </div>
         <h1 className="font-sans text-2xl sm:text-3xl md:text-4xl tracking-tight text-ink dark:text-[#f7f5ef] font-semibold">
           Không gian nghiên cứu, {userGreetingName}
         </h1>
-        <p className="text-xs sm:text-sm text-muted dark:text-zinc-400 mt-1 max-w-md font-sans">
-          Tìm kiếm bài báo học thuật, phân tích PDF hoặc đối thoại suy luận cùng AI.
-        </p>
       </div>
 
       {/* 2. Mode Selector Pill Tabs */}
@@ -171,19 +168,20 @@ export function UnifiedHeroWorkspace({
           onSend={handleSend}
           isGenerating={isGenerating || isSearching}
           onUploadFile={onIngestFile}
+          showReasoning={mode === "chat"}
           placeholder={
             mode === "search"
-              ? "Nhập tên bài báo, tác giả hoặc từ khóa (ví dụ: Attention, Transformer)..."
-              : "Đặt câu hỏi hoặc yêu cầu phân tích học thuật (chọn độ sâu suy luận ở nút trên)..."
+              ? "Nhập tên bài báo hoặc tác giả (ví dụ: Attention, Transformer)..."
+              : "Đặt câu hỏi hoặc yêu cầu phân tích học thuật..."
           }
         />
       </div>
 
-      {/* 4. Dynamic Content: Search Results OR Starting Actions */}
+      {/* 4. Dynamic Content: Search Results */}
       {isSearching && (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted dark:text-zinc-400">
           <Loader2 className="w-4 h-4 animate-spin text-[#cc785c]" />
-          <span>Đang tìm kiếm bài báo trên các kho học thuật mở...</span>
+          <span>Đang tìm kiếm bài báo...</span>
         </div>
       )}
 
@@ -194,7 +192,7 @@ export function UnifiedHeroWorkspace({
       {searchResults.length > 0 && !isSearching && (
         <div className="w-full mt-6 space-y-4">
           <div className="flex items-center justify-between text-xs text-muted dark:text-zinc-400 px-1">
-            <span>Tìm thấy {searchResults.length} bài báo khoa học phù hợp:</span>
+            <span>Tìm thấy {searchResults.length} bài báo:</span>
             <button
               type="button"
               onClick={() => setSearchResults([])}
@@ -220,8 +218,8 @@ export function UnifiedHeroWorkspace({
 
       {/* 5. Two Primary Starting Actions (Shown when no search results) */}
       {searchResults.length === 0 && !isSearching && (
-        <div className="w-full max-w-2xl mt-6 flex flex-col gap-4">
-          {/* Action A: Compact PDF Upload Dropzone */}
+        <div className="w-full max-w-2xl mt-5 flex flex-col gap-3.5">
+          {/* Action A: Compact PDF Upload Dropzone (Minimal, zero internal jargon) */}
           <input
             type="file"
             ref={fileInputRef}
@@ -236,37 +234,28 @@ export function UnifiedHeroWorkspace({
             onDragLeave={handleDrag}
             onDrop={handleDrop}
             onClick={() => fileInputRef.current?.click()}
-            className={`w-full py-4 px-6 rounded-2xl border border-dashed transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer select-none ${
+            className={`w-full py-3.5 px-5 rounded-2xl border border-dashed transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer select-none ${
               isDragActive
                 ? "border-[#cc785c] bg-[#cc785c]/10 text-[#cc785c]"
-                : "border-[#e0d9cd] dark:border-[#33302b] bg-white/50 dark:bg-[#1f1d1a]/50 hover:border-[#cc785c]/50 text-muted dark:text-zinc-400"
+                : "border-[#ded8cd] dark:border-[#33302b] bg-white/40 dark:bg-[#1f1d1a]/40 hover:border-[#cc785c]/60 text-muted dark:text-zinc-400"
             }`}
           >
-            <div className="w-8 h-8 rounded-xl bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center shrink-0">
-              <FileUp className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center shrink-0">
+              <FileUp className="w-3.5 h-3.5" />
             </div>
-            <div className="flex flex-col text-left">
-              <span className="text-xs font-semibold text-ink dark:text-zinc-200">
-                Kéo thả tệp PDF bài báo vào đây hoặc duyệt tệp
-              </span>
-              <span className="text-[11px] text-muted dark:text-zinc-400">
-                Hỗ trợ tệp PDF học thuật tới 50 MB, tự động bóc tách 2 cột và lưu trữ CAS
-              </span>
-            </div>
+            <span className="text-xs font-medium text-ink dark:text-zinc-300">
+              Kéo thả tệp PDF bài báo vào đây hoặc duyệt tệp (tối đa 50 MB)
+            </span>
           </div>
 
-          {/* Action B: Topic Chips Grid */}
+          {/* Action B: Balanced Topic Chips */}
           <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            <span className="text-[11px] font-medium text-muted dark:text-zinc-400 flex items-center gap-1 mr-1">
-              <Sparkles className="w-3 h-3 text-[#cc785c]" />
-              <span>Gợi ý chủ đề:</span>
-            </span>
             {TOPIC_CHIPS.map((chip) => (
               <button
                 key={chip.label}
                 type="button"
                 onClick={() => handleChipClick(chip.query)}
-                className="px-3 py-1 rounded-full text-xs font-medium border border-[#ded8cd] dark:border-[#35322d] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-300 hover:border-[#cc785c] hover:text-[#cc785c] transition-all cursor-pointer shadow-2xs"
+                className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-[#ded8cd] dark:border-[#35322d] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-300 hover:border-[#cc785c] hover:text-[#cc785c] transition-all cursor-pointer shadow-2xs"
               >
                 {chip.label}
               </button>
