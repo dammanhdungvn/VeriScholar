@@ -23,8 +23,6 @@ export interface AvatarDropdownPopoverProps {
 export function AvatarDropdownPopover({
   isOpen,
   onClose,
-  side = "bottom",
-  align = "right",
   className,
   onOpenSettings,
 }: AvatarDropdownPopoverProps) {

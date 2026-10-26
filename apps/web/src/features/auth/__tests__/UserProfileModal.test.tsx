@@ -95,9 +95,12 @@ describe("UserProfileModal 3 Tabs Component", () => {
     fireEvent.change(orcidInput, { target: { value: "0000-0002-1825-0097" } });
     fireEvent.click(screen.getByText(/Lưu hồ sơ/i));
 
-    await waitFor(() => {
-      expect(latestUpdatedUser?.orcid_id).toBe("0000-0002-1825-0097");
-    });
+    await waitFor(
+      () => {
+        expect(latestUpdatedUser?.orcid_id).toBe("0000-0002-1825-0097");
+      },
+      { timeout: 10000 }
+    );
 
     // 2. Tab 3: Switch Theme to Dark
     fireEvent.click(screen.getByText(/Giao diện/i));
@@ -114,11 +117,14 @@ describe("UserProfileModal 3 Tabs Component", () => {
     fireEvent.click(screen.getByText(/Lưu & Xác thực khóa/i));
 
     const expectedSuffix = testByokKey.trim().slice(-4);
-    await waitFor(() => {
-      expect(screen.getByTestId("byok-masked-badge")).toHaveTextContent(
-        `sk-proj-...${expectedSuffix}`
-      );
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByTestId("byok-masked-badge")).toHaveTextContent(
+          `sk-proj-...${expectedSuffix}`
+        );
+      },
+      { timeout: 10000 }
+    );
 
     // 4. Verify via authApi.getMe() directly against live backend
     const meProfile = await authApi.getMe();

@@ -69,7 +69,7 @@ describe("DashboardChatInputBox Component", () => {
     const handleSend = vi.fn();
     const handleSendWithFiles = vi.fn();
 
-    const { rerender } = render(
+    render(
       <DashboardChatInputBox
         mode="chat"
         inputText="Tóm tắt paper này"

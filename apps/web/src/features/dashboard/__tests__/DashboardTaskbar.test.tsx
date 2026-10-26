@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { DashboardTaskbar } from "../components/DashboardTaskbar";
@@ -15,7 +15,9 @@ describe("DashboardTaskbar Component", () => {
         id: "usr-123",
         email: "dungdam.gg15@gmail.com",
         full_name: "Đàm Mạnh Dũng",
-        role: "scholar",
+        role: "researcher",
+        is_verified: true,
+        created_at: "2026-10-26T00:00:00Z",
       },
     });
   });
