@@ -10,7 +10,7 @@
     bottom=2.5cm,
     left=3.5cm,
     right=2.5cm,
-    headheight=15pt
+    headheight=20pt
 ]{geometry}
 
 % 2. Chuẩn hóa cỡ chữ 13pt (Word standard) và dãn dòng 1.5 lines
@@ -61,25 +61,78 @@
     name={Hình}
 }
 
-% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header)
+% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) với đường kẻ đôi chuẩn HUMG
 \usepackage{fancyhdr}
 \pagestyle{fancy}
 \fancyhf{} % Xóa sạch cấu hình mặc định
 \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
-\renewcommand{\headrulewidth}{0.5pt} % Kẻ đường ngang phân cách đầu trang
+\renewcommand{\headrule}{%
+    \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
+    \hrule width \headwidth height 0.4pt%
+}
 \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
 \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
-\renewcommand{\footrulewidth}{0.5pt} % Kẻ đường ngang phân cách chân trang
+\renewcommand{\footrule}{%
+    \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
+    \hrule width \headwidth height 1.2pt%
+}
 
 % Áp dụng phong cách chuẩn cho trang mở đầu chương / plain
 \fancypagestyle{plain}{
     \fancyhf{}
     \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
-    \renewcommand{\headrulewidth}{0.5pt}
+    \renewcommand{\headrule}{%
+        \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
+        \hrule width \headwidth height 0.4pt%
+    }
     \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
     \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
-    \renewcommand{\footrulewidth}{0.5pt}
+    \renewcommand{\footrule}{%
+        \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
+        \hrule width \headwidth height 1.2pt%
+    }
 }
+
+% 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
+\usepackage[titles]{tocloft}
+
+% Dấu chấm dẫn trang (leader dots) cho tất cả các cấp (kể cả chapter)
+\renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
+\renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
+
+% Khoảng cách dấu chấm dày dặn (dotsep = 1) giống Word
+\renewcommand{\cftdotsep}{1}
+
+% Tiền tố "CHƯƠNG " cho các chương có đánh số
+\renewcommand{\cftchappresnum}{CHƯƠNG }
+\renewcommand{\cftchapaftersnum}{:\ }
+\newlength{\cftchaplen}
+\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1:\ }
+\addtolength{\cftchapnumwidth}{\cftchaplen}
+
+% Dấu chấm sau số thứ tự section và subsection (1.1., 1.2., 2.1.1.)
+\renewcommand{\cftsecaftersnum}{.}
+\renewcommand{\cftsubsecaftersnum}{.}
+\renewcommand{\cftsubsubsecaftersnum}{.}
+
+% Thụt đầu dòng chuẩn xác theo phân cấp
+\cftsetindents{chapter}{0pt}{3.0cm}
+\cftsetindents{section}{0.5cm}{0.9cm}
+\cftsetindents{subsection}{1.0cm}{1.2cm}
+\cftsetindents{subsubsection}{1.5cm}{1.4cm}
+
+% Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương
+\setlength{\cftbeforechapskip}{4pt}
+\setlength{\cftbeforesecskip}{2pt}
+\setlength{\cftbeforesubsecskip}{1pt}
+
+% Phông chữ trong mục lục: chuẩn mực, thanh thoát
+\renewcommand{\cftchapfont}{\normalfont}
+\renewcommand{\cftchappagefont}{\normalfont}
+\renewcommand{\cftsecfont}{\normalfont}
+\renewcommand{\cftsecpagefont}{\normalfont}
 
 % 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
 \usepackage{titlesec}
