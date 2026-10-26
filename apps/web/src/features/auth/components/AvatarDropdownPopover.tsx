@@ -66,19 +66,26 @@ export function AvatarDropdownPopover({
   const initials = getScholarInitials(user?.full_name, user?.email);
 
   return (
-    <div
-      ref={popoverRef}
-      role="menu"
-      aria-label="Tùy chọn người dùng"
-      data-testid="avatar-dropdown-popover"
-      className={cn(
-        "absolute z-50 w-64 p-1.5 rounded-2xl bg-white dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none text-ink dark:text-zinc-100",
-        side === "top" ? "bottom-full mb-2" : "top-full mt-2",
-        align === "right" ? "right-0" : "left-0",
-        className
-      )}
-      onClick={(e) => e.stopPropagation()}
-    >
+    <>
+      {/* Floating Backdrop Layer (Rule Item 3 - Floating overlay above all taskbar layers) */}
+      <div
+        className="fixed inset-0 z-[95] bg-black/5 dark:bg-black/20 backdrop-blur-[0.5px] transition-opacity cursor-default"
+        onClick={onClose}
+        aria-hidden="true"
+        data-testid="avatar-popover-backdrop"
+      />
+
+      <div
+        ref={popoverRef}
+        role="menu"
+        aria-label="Tùy chọn người dùng"
+        data-testid="avatar-dropdown-popover"
+        className={cn(
+          "fixed z-[100] w-64 p-1.5 rounded-2xl bg-white dark:bg-[#201e1b] border border-hairline dark:border-[#38332c] shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 select-none text-ink dark:text-zinc-100",
+          className
+        )}
+        onClick={(e) => e.stopPropagation()}
+      >
       {/* 1. Header Card: [Avatar] Dam Manh Dung • Tài khoản cá nhân / email kèm ChevronRight */}
       <button
         type="button"
@@ -195,5 +202,6 @@ export function AvatarDropdownPopover({
         </button>
       </div>
     </div>
+  </>
   );
 }
