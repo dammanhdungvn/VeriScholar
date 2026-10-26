@@ -93,3 +93,54 @@ def test_thesis_no_undefined_references():
         log_content = log_path.read_text(encoding="utf-8", errors="replace")
         assert "LaTeX Warning: There were undefined references." not in log_content
         assert "LaTeX Warning: Citation" not in log_content
+
+
+def test_thesis_ch4_section_4_1_environment_and_monorepo():
+    """Kiểm tra cấu trúc và nội dung học thuật chi tiết của Mục 4.1:
+    - 4.1.1: Cấu hình hạ tầng phần cứng & phần mềm (Azure Ubuntu 24.04 LTS, 4 vCPU, 16GB RAM,
+      PostgreSQL pgvector, Python 3.12 uv, React 19, E2B MicroVM, Langfuse Cloud).
+    - 4.1.2: Phân tách kiến trúc Monorepo 3 phân vùng và rào chắn kiểm thử AST tự động.
+    - Bảng so sánh tab:monorepo_structure đối chiếu quy tắc ranh giới 3 phân vùng.
+    """
+    sec4_1_file = Path("report-datn/chapters/ch4/4_1_moi_truong.tex")
+    assert sec4_1_file.exists(), "4_1_moi_truong.tex must exist"
+    content = sec4_1_file.read_text(encoding="utf-8")
+
+    # 1. Kiểm tra các tham số hạ tầng đám mây và công nghệ nền tảng (4.1.1)
+    required_infrastructure_tokens = [
+        "Azure Ubuntu 24.04 LTS",
+        "4 vCPU",
+        "16GB RAM",
+        "PostgreSQL 16.2",
+        "pgvector",
+        "Python 3.12",
+        "uv",
+        "FastAPI",
+        "SQLAlchemy 2.0 Async",
+        "Node.js 22",
+        "React 19",
+        "Tailwind CSS",
+        "Zustand",
+        "E2B Sandbox MicroVM",
+        "Langfuse Cloud",
+    ]
+    for token in required_infrastructure_tokens:
+        assert token in content, f"Missing required infrastructure token in 4.1: {token}"
+
+    # 2. Kiểm tra phân tách Monorepo 3 phân vùng (4.1.2)
+    required_monorepo_tokens = [
+        "packages/core",
+        "apps/api",
+        "apps/web",
+        "test_architecture_boundary.py",
+    ]
+    content_normalized = content.replace(r"\_", "_")
+    for token in required_monorepo_tokens:
+        assert token in content_normalized, (
+            f"Missing required monorepo/boundary token in 4.1: {token}"
+        )
+
+    # 3. Kiểm tra nhãn bảng so sánh kiến trúc ranh giới
+    assert "\\label{tab:monorepo_structure}" in content, (
+        "Missing \\label{tab:monorepo_structure} in 4_1_moi_truong.tex"
+    )

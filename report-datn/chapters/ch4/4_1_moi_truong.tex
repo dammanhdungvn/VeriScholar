@@ -1,17 +1,52 @@
 % !TEX root = ../../main.tex
-\section{Môi trường cài đặt và triển khai hệ thống}
+\section{Môi trường cài đặt và Kiến trúc Monorepo}
 \label{sec:moi_truong}
+
 \subsection{Cấu hình môi trường phần cứng và phần mềm}
 \label{subsec:cau_hinh_moi_truong}
-Hệ thống \VS\ được cài đặt và kiểm nghiệm thực tế trên môi trường máy chủ đám mây Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM) với các phần mềm nền tảng:
+Hệ thống \VS\ được thiết lập, kiểm nghiệm và vận hành thực tế trên môi trường máy chủ đám mây Azure Ubuntu 24.04 LTS (kiến trúc x86\_64, 4 vCPU, 16GB RAM) với các phần mềm nền tảng và dịch vụ đám mây chuyên dụng:
 \begin{itemize}
-    \item \textbf{Hệ quản trị cơ sở dữ liệu:} PostgreSQL 16.2 kết hợp tiện ích mở rộng \texttt{pgvector} v0.7.0.
-    \item \textbf{Môi trường thực thi Backend:} Python 3.12, trình quản lý gói siêu tốc \texttt{uv}, FastAPI và SQLAlchemy 2.0 Async.
-    \item \textbf{Môi trường thực thi Frontend:} Node.js 22, React 19, Tailwind CSS, Zustand và Vite.
-    \item \textbf{Môi trường thực thi hộp cát đám mây:} E2B Sandbox MicroVM phục vụ chu trình tự sửa lỗi biên dịch \LaTeX.
-    \item \textbf{Nền tảng quan sát và giám sát LLM:} Langfuse Cloud (Project ID: \texttt{cmv8ub9jl00nvad0je39ueywo}).
+    \item \textbf{Hạ tầng phần cứng và hệ điều hành:} Máy chủ ảo Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM, ổ cứng SSD NVMe) cung cấp tài nguyên điện toán ổn định, cấu hình nhóm an ninh mạng (NSG) giới hạn cổng truy cập ngoài qua HTTPS (cổng 443), HTTP (cổng 80) và SSH (cổng 22), cô lập các dịch vụ nội bộ tại giao diện mạng cục bộ (\texttt{127.0.0.1}).
+    \item \textbf{Hệ quản trị cơ sở dữ liệu:} Hệ thống triển khai PostgreSQL 16.2 cùng tiện ích \texttt{pgvector} v0.7.0 (tương thích các container v0.8.6). CSDL tích hợp chỉ mục tìm kiếm vector HNSW (\textit{Hierarchical Navigable Small World}) cho vector 1536 chiều và chỉ mục BM25 (\textit{Full-Text Search}) đa ngôn ngữ, bảo đảm trọn vẹn tính nhất quán giao dịch ACID.
+    \item \textbf{Hệ thống lưu trữ bộ đệm và điều phối phiên:} Redis 7.0 (bản phân phối Alpine) đóng vai trò trung tâm lưu trữ dữ liệu tạm thời tốc độ cao, hỗ trợ kiểm soát tần suất truy cập (\textit{Rate Limiting}), lưu trữ mã xác thực OTP và khóa phiên phân tán.
+    \item \textbf{Môi trường thực thi Backend:} Ngôn ngữ Python 3.12, trình quản lý gói và môi trường ảo siêu tốc \texttt{uv}, khung phát triển dịch vụ bất đồng bộ FastAPI và thư viện ánh xạ đối tượng quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg} hướng hiệu năng cao.
+    \item \textbf{Môi trường thực thi Frontend:} Nền tảng Node.js 22 LTS, thư viện giao diện người dùng React 19, khung tiện ích tạo kiểu Tailwind CSS, thư viện điều phối trạng thái luồng dữ liệu Zustand và công cụ đóng gói bản dựng thương mại siêu tốc Vite. Giao diện tích hợp công cụ kết xuất PDF Canvas Viewer hỗ trợ đồng bộ hóa tọa độ trực quan tức thời.
+    \item \textbf{Môi trường thực thi hộp cát đám mây:} E2B Sandbox MicroVM (công nghệ ảo hóa siêu nhẹ Firecracker) cung cấp không gian thực thi cô lập an toàn tuyệt đối phục vụ chu trình ReAct tự động biên dịch, phân tích nhật ký lỗi và vá lỗi mã nguồn \LaTeX\ theo thời gian thực mà không gây nguy cơ mất an toàn cho hệ thống máy chủ chính.
+    \item \textbf{Nền tảng quan sát và giám sát LLM:} Nền tảng Langfuse Cloud (Project ID: \texttt{cmv8ub9jl00nvad0je39ueywo}) phục vụ việc ghi nhận vết truy vết thực thi (\textit{Execution Traces}), đo lường độ trễ từng bước, giám sát lượng token tiêu thụ và đối soát chi phí vận hành mô hình ngôn ngữ lớn.
 \end{itemize}
 
-\subsection{Tổ chức kho mã nguồn Monorepo}
+\subsection{Kiến trúc kho mã nguồn Monorepo và rào chắn kiểm thử ranh giới AST}
 \label{subsec:monorepo}
-Kho mã nguồn được cấu trúc theo mô hình Monorepo chặt chẽ gồm ba không gian chính: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết, không phụ thuộc I/O), \texttt{apps/api} (tầng dịch vụ web FastAPI cung cấp RESTful API và SSE) và \texttt{apps/web} (giao diện người dùng React 19).
+Nhằm tối ưu hóa năng suất phát triển, thống nhất quy chuẩn chất lượng và triệt tiêu nguy cơ suy thoái ranh giới kiến trúc phần mềm, hệ thống \VS\ được tổ chức theo mô hình Monorepo (kho mã nguồn đơn nhất) kết hợp chặt chẽ với nguyên lý Kiến trúc Lục giác (\textit{Hexagonal Architecture}). Toàn bộ mã nguồn dự án được phân chia thành 3 phân vùng trách nhiệm độc lập:
+\begin{itemize}
+    \item \textbf{Phân vùng lõi nghiệp vụ thuần khiết (\texttt{packages/core}):} Là trung tâm tri thức của toàn bộ hệ thống, chứa các thực thể học thuật (\textit{Entities}), giá trị đối tượng (\textit{Value Objects}) và các giao diện cổng trừu tượng (\textit{Ports}) như cổng phân giải bài báo, trích xuất tài liệu và lưu trữ nội dung bất biến. Phân vùng này chỉ sử dụng thư viện chuẩn của Python và Pydantic để kiểm thực dữ liệu, tuyệt đối độc lập và không phụ thuộc vào bất kỳ thư viện vào/ra (I/O), web framework hay cơ sở dữ liệu nào.
+    \item \textbf{Phân vùng dịch vụ và bộ điều hợp hạ tầng (\texttt{apps/api}):} Đóng vai trò là các bộ điều hợp (\textit{Adapters}) hiện thực hóa các cổng giao tiếp được định nghĩa từ tầng lõi. Phân vùng này chịu trách nhiệm kết nối trực tiếp với PostgreSQL qua SQLAlchemy 2.0 Async, bộ đệm Redis, các cổng dịch vụ bên ngoài (Exa, Semantic Scholar, arXiv, E2B MicroVM) và cung cấp các điểm cuối RESTful API cùng 5 tuyến truyền phát dòng sự kiện máy chủ (SSE).
+    \item \textbf{Phân vùng giao diện người dùng (\texttt{apps/web}):} Ứng dụng trang đơn (\textit{Single Page Application}) xây dựng trên nền tảng React 19, Zustand và Tailwind CSS, giao tiếp với tầng dịch vụ hoàn toàn thông qua giao thức HTTP/2 và các luồng truyền phát SSE không qua bộ đệm.
+\end{itemize}
+
+Để bảo đảm tính toàn vẹn của mô hình kiến trúc và ngăn ngừa triệt để các sai sót phát sinh từ phía lập trình viên, hệ thống thiết lập cơ chế rào chắn kiểm thử cơ học tự động (\textit{Automated Mechanical Enforcement}) thông qua cây cú pháp trừu tượng AST (Abstract Syntax Tree). Tại thư mục \texttt{apps/api/tests/}, kịch bản kiểm thử ranh giới kiến trúc \texttt{test\_architecture\_boundary.py} sử dụng thư viện chuẩn \texttt{ast} của Python để tự động phân tích tĩnh cấu trúc mã nguồn:
+\begin{enumerate}
+    \item \textbf{Kiểm soát nhập khẩu mô-đun bị cấm:} Kịch bản duyệt toàn bộ cây cú pháp của các tệp nguồn trong \texttt{packages/core/src/core/domain/} và \texttt{ports/}. Nếu phát hiện bất kỳ câu lệnh \texttt{import} hoặc \texttt{from ... import} nào dẫn chiếu tới các mô-đun hạ tầng và web (như \texttt{fastapi}, \texttt{sqlalchemy}, \texttt{redis}, \texttt{httpx}, \texttt{e2b}, \texttt{langfuse}, hoặc gói \texttt{apps.api}), bài kiểm thử sẽ lập tức báo lỗi và chấm dứt tiến trình kiểm định (Exit code 1).
+    \item \textbf{Triệt tiêu vết tích kỹ thuật lỗi thời:} Tự động quét toàn bộ mã nguồn tầng dịch vụ và lõi để bảo đảm không còn bất kỳ dấu vết nào của các công nghệ cũ đã bị loại bỏ khỏi kiến trúc hệ thống (như \texttt{aiosqlite}, \texttt{sqlite3}, \texttt{neo4j}, \texttt{ComparisonMatrix}, \texttt{DeBERTa}).
+\end{enumerate}
+
+Bảng~\ref{tab:monorepo_structure} tổng hợp chi tiết cấu trúc phân vùng kho mã nguồn Monorepo, vai trò kiến trúc tương ứng và quy tắc ranh giới cơ học được kiểm chứng tự động bởi hệ thống.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Cấu trúc phân vùng kho mã nguồn Monorepo và quy tắc ranh giới kiến trúc}
+\label{tab:monorepo_structure}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{4.2cm}}
+\toprule
+\textbf{Phân vùng} & \textbf{Vai trò kiến trúc} & \textbf{Công nghệ chủ đạo} & \textbf{Quy tắc ranh giới \& AST} \\
+\midrule
+\texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (\textit{Domain \& Ports}) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\
+\addlinespace
+\texttt{apps/api} & Tầng hạ tầng dịch vụ \& Bộ điều hợp (\textit{Adapters}) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\
+\addlinespace
+\texttt{apps/web} & Giao diện người dùng học thuật (\textit{Frontend SPA}) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\
+\bottomrule
+\end{tabular}
+\end{table}
