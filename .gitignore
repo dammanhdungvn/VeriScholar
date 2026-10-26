@@ -111,3 +111,7 @@ report-datn/*.lof
 report-datn/*.xdv
 report-datn/*.bbl
 report-datn/*.blg
+
+# Superpowers SDD workspace
+.superpowers/
+
