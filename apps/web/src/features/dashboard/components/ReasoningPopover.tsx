@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { RotateCcw, ChevronRight } from "lucide-react";
 import {
   useDashboardStore,
@@ -15,14 +15,17 @@ const EFFORT_LEVELS: Array<{
   label: string;
   percent: number;
 }> = [
-  { id: "off", label: "Off", percent: 0 },
-  { id: "low", label: "Low", percent: 33.33 },
-  { id: "medium", label: "Medium", percent: 66.66 },
-  { id: "high", label: "High", percent: 100 },
+  { id: "light", label: "Light", percent: 0 },
+  { id: "medium", label: "Medium", percent: 33.33 },
+  { id: "high", label: "High", percent: 66.66 },
+  { id: "extra_high", label: "Extra High", percent: 100 },
 ];
 
 export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+
   const reasoningEffort = useDashboardStore((s) => s.reasoningEffort);
   const selectedModel = useDashboardStore((s) => s.selectedModel);
   const setReasoningEffort = useDashboardStore((s) => s.setReasoningEffort);
@@ -56,22 +59,68 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
     };
   }, [isOpen, onClose]);
 
+  const updateLevelFromPointer = useCallback(
+    (clientX: number) => {
+      if (!trackRef.current) return;
+      const rect = trackRef.current.getBoundingClientRect();
+      const width = rect.width > 0 ? rect.width : 240;
+      const relativeX = clientX - rect.left;
+      const ratio = Math.max(0, Math.min(1, relativeX / width));
+      const stepIndex = Math.round(ratio * 3);
+      const clampedIndex = isNaN(stepIndex) ? 0 : Math.max(0, Math.min(3, stepIndex));
+      if (EFFORT_LEVELS[clampedIndex]) {
+        setReasoningEffort(EFFORT_LEVELS[clampedIndex].id);
+      }
+    },
+    [setReasoningEffort]
+  );
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // Ignore if unsupported in jsdom
+    }
+    updateLevelFromPointer(e.clientX);
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return;
+    updateLevelFromPointer(e.clientX);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false);
+      try {
+        e.currentTarget.releasePointerCapture(e.pointerId);
+      } catch {
+        // Ignore if already released
+      }
+    }
+  };
+
   if (!isOpen) return null;
 
   const currentLevelConfig =
-    EFFORT_LEVELS.find((l) => l.id === reasoningEffort) || EFFORT_LEVELS[3];
+    EFFORT_LEVELS.find((l) => l.id === reasoningEffort) || EFFORT_LEVELS[0];
   const activePercent = currentLevelConfig.percent;
 
   const getDisplayLabel = (effort: ReasoningEffortLevel) => {
     switch (effort) {
+      case "light":
       case "off":
-        return "Off";
+        return "Light";
       case "low":
-        return "Low";
       case "medium":
         return "Medium";
       case "high":
         return "High";
+      case "extra_high":
+        return "Extra High";
+      default:
+        return "Light";
     }
   };
 
@@ -88,7 +137,9 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
         <span
           data-testid="reasoning-effort-label"
           className={`text-sm font-medium tracking-wide ${
-            reasoningEffort === "off" ? "text-zinc-400" : "text-sky-400"
+            reasoningEffort === "light" || reasoningEffort === "off"
+              ? "text-zinc-400"
+              : "text-sky-400"
           }`}
         >
           {getDisplayLabel(reasoningEffort)}
@@ -97,7 +148,7 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
           type="button"
           onClick={resetReasoningEffort}
           data-testid="reasoning-reset-btn"
-          title="Khôi phục mặc định (High)"
+          title="Khôi phục mặc định (Light)"
           aria-label="Khôi phục mặc định"
           className="text-zinc-400 hover:text-white p-1 rounded-full hover:bg-white/10 transition-colors cursor-pointer"
         >
@@ -111,16 +162,24 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
         <ChevronRight className="w-3 h-3 opacity-70" />
       </div>
 
-      {/* Stepped Slider Track with 4 points */}
+      {/* Stepped Interactive Slider Track with Mouse Drag Support (Rule Item 7) */}
       <div
+        ref={trackRef}
         data-testid="reasoning-slider"
-        className="relative px-2 py-2 cursor-pointer"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onMouseDown={handlePointerDown as unknown as React.MouseEventHandler<HTMLDivElement>}
+        onMouseMove={handlePointerMove as unknown as React.MouseEventHandler<HTMLDivElement>}
+        onMouseUp={handlePointerUp as unknown as React.MouseEventHandler<HTMLDivElement>}
+        className="relative px-2 py-3 cursor-ew-resize touch-none select-none"
       >
         {/* Inactive Track */}
         <div className="relative w-full h-2 rounded-full bg-zinc-700/80 overflow-hidden">
           {/* Active Highlight Track */}
           <div
-            className="h-full bg-sky-500 transition-all duration-200"
+            className="h-full bg-sky-500 transition-all duration-150"
             style={{ width: `${activePercent}%` }}
           />
         </div>
@@ -142,7 +201,7 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
 
         {/* Draggable/Animated Thumb */}
         <div
-          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4.5 h-4.5 rounded-full bg-white shadow-md pointer-events-none transition-all duration-200"
+          className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-4.5 h-4.5 rounded-full bg-white shadow-md pointer-events-none transition-all duration-150"
           style={{ left: `calc(8px + (100% - 16px) * ${activePercent / 100})` }}
         />
 
@@ -153,7 +212,10 @@ export function ReasoningPopover({ isOpen, onClose }: ReasoningPopoverProps) {
               key={step.id}
               type="button"
               data-testid={`reasoning-step-${step.id}`}
-              onClick={() => setReasoningEffort(step.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setReasoningEffort(step.id);
+              }}
               aria-label={`Đặt mức suy luận: ${step.label}`}
               className="flex-1 h-full cursor-pointer focus:outline-none"
             />

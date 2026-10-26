@@ -15,6 +15,13 @@ def test_session_chat_request_schema_supports_reasoning_effort():
     req_off = SessionChatMessageRequest(message="Phân tích", reasoning_effort="off")
     assert req_off.reasoning_effort == "off"
 
+    # Luna 5.6 aliases: light & extra_high
+    req_light = SessionChatMessageRequest(question="Tóm tắt", reasoning_effort="light")
+    assert req_light.reasoning_effort == "light"
+
+    req_extra = SessionChatMessageRequest(question="Đào sâu", reasoning_effort="extra_high")
+    assert req_extra.reasoning_effort == "extra_high"
+
 
 def test_session_chat_request_rejects_invalid_effort():
     with pytest.raises(Exception):

@@ -15,6 +15,7 @@ export interface DashboardChatInputBoxProps {
   onContextChipClick?: (chip: ActiveContextChip) => void;
   placeholder?: string;
   showReasoning?: boolean;
+  mode?: "search" | "chat";
 }
 
 export function DashboardChatInputBox({
@@ -28,6 +29,7 @@ export function DashboardChatInputBox({
   onContextChipClick,
   placeholder,
   showReasoning = true,
+  mode = "chat",
 }: DashboardChatInputBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -149,26 +151,30 @@ export function DashboardChatInputBox({
 
         {/* Bottom Controls Toolbar Strip */}
         <div className="flex items-center justify-between px-3 pb-2.5 pt-0.5">
-          {/* Left Controls: + Attachment icon */}
-          <div className="flex items-center gap-1.5">
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".pdf"
-              className="hidden"
-              aria-label="Đính kèm bài báo PDF"
-              onChange={handleFileChange}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              title="Đính kèm bài báo PDF hoặc tác vụ (+ Do anything)"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span className="sr-only">+ Do anything</span>
-            </button>
-          </div>
+          {/* Left Controls: + Attachment icon (Hidden in search mode, Rule Item 5) */}
+          {mode !== "search" ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf"
+                className="hidden"
+                aria-label="Đính kèm bài báo PDF"
+                onChange={handleFileChange}
+              />
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                title="Đính kèm bài báo PDF hoặc tác vụ (+ Do anything)"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span className="sr-only">+ Do anything</span>
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
 
           {/* Right Controls: Reasoning Brain Icon, Mic, Send Button */}
           <div className="flex items-center gap-1.5 sm:gap-2 relative">
@@ -187,19 +193,19 @@ export function DashboardChatInputBox({
                   aria-label="Cài đặt Mức độ Suy luận 5.6 Luna"
                   title={`Mức độ Suy luận: ${reasoningEffort.toUpperCase()}. Nhấp để tinh chỉnh.`}
                   className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
-                    reasoningEffort !== "off"
+                    reasoningEffort !== "light" && reasoningEffort !== "off"
                       ? "bg-sky-500/15 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 ring-1 ring-sky-400/40 shadow-2xs"
                       : "bg-black/[0.04] dark:bg-white/[0.05] text-muted dark:text-zinc-500 hover:bg-black/[0.08] dark:hover:bg-white/[0.08]"
                   }`}
                 >
                   <Brain
                     className={`w-4 h-4 transition-transform ${
-                      reasoningEffort !== "off"
+                      reasoningEffort !== "light" && reasoningEffort !== "off"
                         ? "text-sky-600 dark:text-sky-400 scale-105"
                         : "text-muted dark:text-zinc-500"
                     }`}
                   />
-                  {reasoningEffort !== "off" && (
+                  {reasoningEffort !== "light" && reasoningEffort !== "off" && (
                     <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 ring-2 ring-white dark:ring-[#212120]" />
                   )}
                   <span className="sr-only">Suy luận Socratic</span>
@@ -207,15 +213,17 @@ export function DashboardChatInputBox({
               </>
             )}
 
-            {/* Voice Input Mic */}
-            <button
-              type="button"
-              onClick={() => setVoiceModalOpen(true)}
-              title="Nhập bằng giọng nói"
-              className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
-            >
-              <Mic className="w-4 h-4" />
-            </button>
+            {/* Voice Input Mic (Hidden in search mode, Rule Item 5) */}
+            {mode !== "search" && (
+              <button
+                type="button"
+                onClick={() => setVoiceModalOpen(true)}
+                title="Nhập bằng giọng nói"
+                className="w-8 h-8 rounded-full flex items-center justify-center text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <Mic className="w-4 h-4" />
+              </button>
+            )}
 
             {/* Circular Upward Arrow Send Button (ChatGPT/Codex Style) */}
             <button

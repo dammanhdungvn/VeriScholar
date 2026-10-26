@@ -1,7 +1,13 @@
 import { create } from "zustand";
 import type { SidebarState, AppMode, BoundingBox } from "@/types/dashboard";
 
-export type ReasoningEffortLevel = "off" | "low" | "medium" | "high";
+export type ReasoningEffortLevel =
+  | "light"
+  | "medium"
+  | "high"
+  | "extra_high"
+  | "off"
+  | "low";
 
 interface DashboardState {
   sidebarState: SidebarState;
@@ -62,35 +68,36 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   activeBbox: null,
   isUploadModalOpen: false,
   isVoiceModalOpen: false,
-  isReasoningEnabled: true,
-  reasoningEffort: "high",
+  isReasoningEnabled: false,
+  reasoningEffort: "light",
   selectedModel: "5.6 Luna",
 
   toggleReasoning: () =>
     set((state) => {
-      const nextEffort: ReasoningEffortLevel = state.reasoningEffort === "off" ? "high" : "off";
+      const isOff = state.reasoningEffort === "light" || state.reasoningEffort === "off";
+      const nextEffort: ReasoningEffortLevel = isOff ? "high" : "light";
       return {
         reasoningEffort: nextEffort,
-        isReasoningEnabled: nextEffort !== "off",
+        isReasoningEnabled: !isOff,
       };
     }),
 
   setReasoningEnabled: (isReasoningEnabled) =>
     set({
       isReasoningEnabled,
-      reasoningEffort: isReasoningEnabled ? "high" : "off",
+      reasoningEffort: isReasoningEnabled ? "high" : "light",
     }),
 
   setReasoningEffort: (reasoningEffort) =>
     set({
       reasoningEffort,
-      isReasoningEnabled: reasoningEffort !== "off",
+      isReasoningEnabled: reasoningEffort !== "light" && reasoningEffort !== "off",
     }),
 
   resetReasoningEffort: () =>
     set({
-      reasoningEffort: "high",
-      isReasoningEnabled: true,
+      reasoningEffort: "light",
+      isReasoningEnabled: false,
     }),
 
   toggleSidebar: () =>
@@ -118,8 +125,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       activeBbox: null,
       isUploadModalOpen: false,
       isVoiceModalOpen: false,
-      isReasoningEnabled: true,
-      reasoningEffort: "high",
+      isReasoningEnabled: false,
+      reasoningEffort: "light",
       selectedModel: "5.6 Luna",
     })
 }));
