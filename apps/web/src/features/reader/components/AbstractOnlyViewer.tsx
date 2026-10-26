@@ -1,5 +1,5 @@
 import React, { useState, useRef } from "react";
-import { Upload, FileText, ExternalLink, Loader2, AlertCircle } from "lucide-react";
+import { Upload, ExternalLink, Loader2, AlertCircle } from "lucide-react";
 import { documentsApi } from "@/features/documents/api/documentsApi";
 import type { DocumentDetailResponseData } from "@/types/document";
 import { cn } from "@/lib/utils";

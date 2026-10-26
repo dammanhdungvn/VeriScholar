@@ -821,7 +821,15 @@ export function DashboardWorkspace({
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
-        {isRealDocument && activeDocumentId ? (
+        {isRealDocument && activeDocumentId && (documentDetail?.access_status === "abstract_only" || documentDetail?.status === "abstract_only") ? (
+          <AbstractOnlyViewer
+            document={documentDetail}
+            onPdfAttached={() => {
+              queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.detail(activeDocumentId) });
+              queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.list() });
+            }}
+          />
+        ) : isRealDocument && activeDocumentId ? (
           <PdfCanvasViewer
             documentId={activeDocumentId}
             documentDetail={documentDetail}
