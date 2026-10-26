@@ -65,11 +65,11 @@ flowchart TD
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
-| **Discovery API** | `apps/api/src/api/v1/endpoints/discovery.py` | **CREATE** | Tạo mới 2 endpoint: `POST /api/v1/discovery/search` (tìm bài báo ngoài) và `POST /api/v1/discovery/open-reading` (khởi tạo phiên đọc từ kết quả tìm kiếm). Mount vào `api_v1_router`. |
+| **Discovery API** | `apps/api/src/api/v1/endpoints/discovery.py` | **IMPLEMENTED** | 2 endpoint: `POST /api/v1/discovery/search` (tìm kiếm chính xác cao, lọc rác và hỗ trợ cờ `is_peer_reviewed_only`) và `POST /api/v1/discovery/open-reading` (khởi tạo phiên đọc tức thì 1-click). |
 | **Documents API** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | **KEEP** | Giữ nguyên CRUD tài liệu: `POST /upload`, `GET /`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`, `POST /{id}:parse`. |
 | **Ingestion Pipeline** | [`apps/api/src/api/services/document_service.py`](../../apps/api/src/api/services/document_service.py) | **MODIFY** | Bổ sung logic phân biệt 2 trạng thái `ready` (cho abstract-only) và `parsing` $\rightarrow$ `ready` (cho full PDF), bóc tách Bounding Box PyMuPDF và sinh embedding `Vector(1536)`. |
-| **Exa & arXiv Adapter** | `packages/core/src/core/services/` & `apps/api/src/api/adapters/` | **MODIFY** | Tách cổng trừu tượng `IScholarlySearchPort` trong Core và cài đặt Adapter gọi Exa AI SDK (`category="research paper"`) + Semantic Scholar + arXiv. |
-| **Discovery UI** | [`apps/web/src/features/discovery/components/DiscoveryPage.tsx`](../../apps/web/src/features/discovery/components/DiscoveryPage.tsx) | **MODIFY** | Thay thế code tìm kiếm nhầm trong danh sách tài liệu local cũ bằng gọi API `POST /api/v1/discovery/search`, hiển thị thẻ kết quả với 2 nút tương ứng. |
+| **Scholarly Search Adapter** | `packages/core/src/core/ports/scholarly_search.py` & `apps/api/src/api/adapters/scholarly_search_adapter.py` | **IMPLEMENTED** | Cổng `IScholarlySearchPort` và Adapter tích hợp arXiv chính xác (truy vấn `ti:`/`abs:`), bộ lọc Jaccard tương đồng tiêu đề $\ge 0.2$ chống bài rác/lạc đề và phân loại nguồn bình duyệt `is_peer_reviewed`. |
+| **Discovery UI & Hub** | `apps/web/src/features/discovery/` & `apps/web/src/features/dashboard/components/` | **IMPLEMENTED** | `UnifiedHeroWorkspace.tsx` hợp nhất tìm kiếm và đối thoại, `ScholarlySkeletonList.tsx` hiển thị skeleton loading, `ScholarlyResultCard.tsx` siêu tinh gọn (tối đa 2 tác giả, khử LaTeX, line-clamp-2) kèm bộ lọc nút gạt `[Tất cả]` / `[Đã bình duyệt]`. |
 | **Documents UI** | `apps/web/src/features/documents/` | **KEEP** | Danh sách tài liệu, Modal upload PDF kéo thả, thanh tiến trình parse tài liệu. |
 
 ---
@@ -133,8 +133,9 @@ Khi có lỗi phát sinh, backend trả về cấu trúc lỗi đồng nhất tu
 - **Request Body:**
   ```json
   {
-    "query": "Direct Preference Optimization language models",
-    "limit": 10
+    "query": "Retrieval-Augmented Generation for Large Language Models: A Survey",
+    "limit": 10,
+    "is_peer_reviewed_only": false
   }
   ```
 - **Response (HTTP 200 OK):**
@@ -151,7 +152,8 @@ Khi có lỗi phát sinh, backend trả về cấu trúc lỗi đồng nhất tu
         "arxiv_id": "2305.18290",
         "abstract": "While standard RLHF pipelines are complex and unstable...",
         "access_status": "open_access_pdf",
-        "pdf_url": "https://arxiv.org/pdf/2305.18290.pdf"
+        "pdf_url": "https://arxiv.org/pdf/2305.18290.pdf",
+        "is_peer_reviewed": true
       },
       {
         "title": "A general theoretical paradigm for preference learning",
@@ -162,7 +164,8 @@ Khi có lỗi phát sinh, backend trả về cấu trúc lỗi đồng nhất tu
         "arxiv_id": null,
         "abstract": "Preference optimization has become the standard technique...",
         "access_status": "abstract_only",
-        "pdf_url": null
+        "pdf_url": null,
+        "is_peer_reviewed": true
       }
     ],
     "meta": {
@@ -171,6 +174,22 @@ Khi có lỗi phát sinh, backend trả về cấu trúc lỗi đồng nhất tu
     }
   }
   ```
+
+##### Thuật Toán Tìm Kiếm Chính Xác & Bộ Lọc Nguồn Học Thuật (Precision & Relevance Engine)
+1. **Truy vấn trường tiêu đề & tóm tắt (Field-targeted Querying):** Thay vì truy vấn mở (`all:`), hệ thống phát sinh truy vấn phối hợp: `ti:"{clean_query}" OR (ti:{tokens} AND abs:{tokens})` kèm tham số `sortBy=relevance`, đảm bảo ưu tiên tuyệt đối các bài báo có tiêu đề sát với chủ đề nghiên cứu.
+2. **Bộ lọc tương đồng tiêu đề (Jaccard Token Overlap $\ge 0.2$):** Tính điểm tương đồng Jaccard giữa các từ khóa không chứa stopword của câu truy vấn và tiêu đề bài báo trả về. Với các câu truy vấn từ 3 từ trở lên, nếu độ tương đồng $< 0.2$, bài báo bị loại bỏ hoàn toàn (ngăn chặn triệt để hiện tượng tìm kiếm mô hình ngôn ngữ lại ra bài báo vật lý hạt nhân CMS/LHCb).
+3. **Phân loại nguồn bình duyệt (`_classify_peer_reviewed`):** Tự động gán `is_peer_reviewed = True` nếu bài báo xuất bản tại các hội nghị/tạp chí uy tín (NeurIPS, ICML, CVPR, ACL, IEEE, ACM, Nature, Science, Springer,...) hoặc sở hữu DOI chính thức từ nhà xuất bản (khác tiền tố preprint `10.48550/arxiv`).
+4. **Bộ lọc nguồn bình duyệt (`is_peer_reviewed_only`):** Khi cờ này kích hoạt, danh sách kết quả chỉ giữ lại các bài báo có `is_peer_reviewed == True`.
+
+##### Đặc Tả Giao Diện Tìm Kiếm Tinh Gọn (Radical Minimalist UI & Skeleton Loading)
+1. **`ScholarlySkeletonList.tsx`:** Khi `isSearching === true`, hiển thị 3 khung thẻ giả lập nhấp nháy êm ái (`animate-pulse`) với viền `border-hairline`, kèm spinner `Loader2` quay tròn trên nút gửi tròn. Vùng kéo thả PDF tự động ẩn để nhường không gian cho kết quả.
+2. **`ScholarlyResultCard.tsx`:**
+   - **Tác giả (`formatScholarlyAuthors`):** Tối đa 2 tác giả, nếu $> 2$ hiển thị `${authors[0]}, ${authors[1]} và cộng sự` (`et al.`).
+   - **Làm sạch tiêu đề (`sanitizeAcademicTitle`):** Khử sạch các ký hiệu toán học LaTeX thô (`$`, `\to`, `\mu`,...).
+   - **Tóm tắt (Abstract):** Cố định tối đa 2 dòng (`line-clamp-2`) trên mọi thiết bị; kèm nút mở rộng/thu gọn.
+   - **Nhãn tag:** Tag pill thanh mảnh `Open Access PDF` (xanh ngọc), `Tóm tắt` (xám) và `Đã bình duyệt` (tím nhạt kèm icon tích xanh nhỏ).
+   - **Đường dẫn trực tiếp:** Thẻ link mở tab mới an toàn tới DOI và arXiv bản gốc.
+3. **Bộ lọc chuyển đổi nguồn tại `UnifiedHeroWorkspace.tsx`:** Thanh nút gạt mềm (Pill toggle) `[ Tất cả (N) ]` | `[ Đã bình duyệt (M) ]` cho phép lọc tức thì danh sách hiển thị.
 
 #### 2. Mở phiên đọc từ kết quả tìm kiếm (`POST /api/v1/discovery/open-reading`)
 - **Mục đích:** Tạo tức thì bài báo và phiên đọc sâu mới (Zero-to-Reading) chỉ trong 1 request duy nhất.

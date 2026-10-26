@@ -60,15 +60,23 @@ flowchart LR
 ### UC-DISC-01: Khám Phá Bài Báo Học Thuật Theo Chủ Đề
 * **Tác nhân:** Học giả khám phá.
 * **Điều kiện tiên quyết:** Đang ở Màn hình chính (`Dashboard`) hoặc Trang Khám phá (`Discovery`).
-* **Sự kiện kích hoạt:** Nhập từ khóa hoặc câu hỏi chủ đề vào ô tìm kiếm và bấm "Tìm kiếm".
+* **Sự kiện kích hoạt:** Nhập từ khóa hoặc câu hỏi chủ đề vào ô tìm kiếm và bấm "Tìm kiếm" (hoặc nhấn Enter).
 * **Luồng chuẩn (Happy Path):**
-  1. Người dùng nhập câu truy vấn học thuật bằng Tiếng Việt hoặc Tiếng Anh (ví dụ: *"Self-attention mechanisms in medical imaging"*).
-  2. Hệ thống tìm kiếm trên các kho học thuật mở quốc tế, khử trùng lặp theo mã DOI và hiển thị danh sách kết quả liên quan nhất.
-  3. Mỗi bài báo hiển thị đầy đủ thẻ thông tin: Tiêu đề, Tác giả, Năm xuất bản, Nơi công bố, Mã định danh DOI / arXiv, Đoạn tóm tắt và nhãn trạng thái truy cập:
-     * **`[🟢 Có sẵn PDF Open Access]`**: Bài báo có bản toàn văn PDF miễn phí.
-     * **`[🟡 Chỉ có Tóm tắt]`**: Bài báo thuộc nguồn thu phí, chỉ có thông tin tóm tắt.
+  1. Người dùng nhập câu truy vấn học thuật bằng Tiếng Việt hoặc Tiếng Anh (ví dụ: *"Retrieval-Augmented Generation for Large Language Models: A Survey"*).
+  2. **Phản hồi tức thì (Instant Skeleton Feedback):** Ngay khi kích hoạt tìm kiếm, hệ thống hiển thị danh sách 3 thẻ Skeleton phát sáng (`animate-pulse`) và nút gửi hiển thị biểu tượng quay trạng thái, loại bỏ hoàn toàn cảm giác ngộ nhận hệ thống bị treo.
+  3. **Truy vấn chính xác & Lọc rác (Relevance Gate):** Hệ thống tìm kiếm trên các kho học thuật mở quốc tế theo trường tiêu đề và tóm tắt, áp dụng bộ lọc tương đồng từ khóa trên tiêu đề để loại bỏ triệt để các bài báo sai lệch chuyên môn (như bài vật lý hạt nhân lọt vào truy vấn khoa học máy tính).
+  4. **Thẻ kết quả tinh gọn chống tràn (Radical Minimalist Card Layout):** Mỗi bài báo được trình bày chuẩn mực theo các quy tắc:
+     * **Tác giả:** Hiển thị tối đa 2 tác giả; nếu nhiều hơn sẽ rút gọn dạng `${authors[0]}, ${authors[1]} và cộng sự` (`et al.`) nhằm chống vỡ bố cục trước các bài báo có hàng chục đến hàng trăm tác giả.
+     * **Tiêu đề:** Tự động khử sạch các ký hiệu mã toán học LaTeX thô (như `$B^0_s\to\mu^+\mu^-$` chuyển thành văn bản chuẩn dễ đọc).
+     * **Đoạn tóm tắt (Abstract):** Khống chế cứng trong tối đa 2 dòng hiển thị (`line-clamp-2`) trên mọi kích thước màn hình, kèm nút mở rộng/thu gọn tinh gọn.
+     * **Nhãn phân cấp học thuật:**
+       * `[🟢 Có sẵn PDF Open Access]`: Bài báo có bản toàn văn PDF miễn phí.
+       * `[🟡 Chỉ có Tóm tắt]`: Bài báo thuộc nguồn thu phí (Paywall).
+       * `[🟣 Đã bình duyệt]`: Bài báo đã qua phản biện chính thức tại các hội nghị/tạp chí danh tiếng hoặc có DOI nhà xuất bản.
+     * **Đường dẫn trực tiếp:** Liên kết mở trực tiếp tới DOI hoặc arXiv gốc trong tab mới an toàn.
+  5. **Bộ lọc nguồn lai (Hybrid Quality Filter):** Cung cấp thanh nút gạt mềm (Pill toggle) `[Tất cả ({total})]` và `[Đã bình duyệt ({peerReviewedCount})]`, giúp học giả lọc tức thì các bài đã qua thẩm định khoa học nghiêm ngặt để trích dẫn vào luận văn.
 * **Kết quả đầu ra (Post-conditions):**
-  * Danh sách các bài báo học thuật khớp nhất được hiển thị kèm nhãn phân biệt rõ trạng thái toàn văn hay tóm tắt.
+  * Danh sách bài báo học thuật chuẩn xác được hiển thị trong bố cục tinh gọn, không tràn lề, hỗ trợ chuyển đổi bộ lọc nguồn tức thời.
 * **Luồng ngoại lệ (Exception Flows):**
   * *1a. Từ khóa tìm kiếm để trống hoặc không có kết quả khớp:* Hệ thống nhắc người dùng nhập từ khóa hợp lệ hoặc gợi ý mở rộng thuật ngữ chuyên ngành bằng tiếng Anh.
   * *1b. Cổng tìm kiếm học thuật quốc tế phản hồi chậm quá 15 giây:* Hệ thống ngắt chờ an toàn, hiển thị thông báo kết nối nguồn học thuật ngoài đang bận và gợi ý thử lại hoặc tự tải tệp PDF từ máy tính.
