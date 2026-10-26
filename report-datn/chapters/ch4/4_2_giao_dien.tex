@@ -17,91 +17,91 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
-    subsys_disc/.style={draw=teal!80!black, fill=teal!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
-    subsys_read/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
-    subsys_prof/.style={draw=purple!80!black, fill=purple!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
-    subsys_writ/.style={draw=orange!80!black, fill=orange!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
+    scale=0.70, transform shape,
+    subsys_disc/.style={draw=teal!80!black, fill=teal!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
+    subsys_read/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
+    subsys_prof/.style={draw=purple!80!black, fill=purple!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
+    subsys_writ/.style={draw=orange!80!black, fill=orange!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
     header/.style={font=\bfseries\small, align=center, inner sep=2pt},
-    card/.style={draw=gray!35, fill=white, rounded corners=3pt, line width=0.6pt, font=\scriptsize, text width=6.8cm, inner sep=4pt},
+    card/.style={draw=gray!35, fill=white, rounded corners=3pt, line width=0.5pt, font=\scriptsize, text width=5.6cm, inner sep=3pt},
     flowarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!80!black},
     bidir/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1pt, draw=purple!80!black, dashed}
 ]
     % 1. Phân hệ Khám phá (Top-Left)
-    \node[subsys_disc] (disc) at (-4.2, 3.4) {
+    \node[subsys_disc] (disc) at (-4.5, 4.0) {
         \begin{center}
-            \textbf{\textcolor{teal!90!black}{1. PHÂN HỆ KHÁM PHÁ TÀI LIỆU KHOA HỌC}}\\
+            \textbf{\textcolor{teal!90!black}{1. KHÁM PHÁ TÀI LIỆU}}\\
             \scriptsize (\textit{Scholarly Discovery Subsystem})
         \end{center}
-        \vspace{-2pt}
-        \begin{tikzpicture}[node distance=5pt]
-            \node[card] (c1) {$\bullet$ \textbf{Thanh tìm kiếm hợp nhất:} arXiv, Semantic Scholar, Exa AI};
-            \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [\textbf{Đã bình duyệt} (\textit{Peer-Reviewed})]; Tái xếp hạng ưu tiên};
-            \node[card, below=of c2] (c3) {$\bullet$ \textbf{Hiệu ứng tải mượt:} 3 thẻ khung xương giả lập (\texttt{animate-pulse})};
-            \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Làm sạch \LaTeX, rút gọn tác giả, co giãn tóm tắt};
+        \vspace{-3pt}
+        \begin{tikzpicture}[node distance=3pt]
+            \node[card] (c1) {$\bullet$ \textbf{Tìm kiếm hợp nhất:} arXiv, Semantic Scholar, Exa AI};
+            \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [\textbf{Đã bình duyệt}]; Ưu tiên xếp hạng};
+            \node[card, below=of c2] (c3) {$\bullet$ \textbf{Hiệu ứng tải mượt:} 3 thẻ khung xương (\texttt{animate-pulse})};
+            \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Lọc mã \LaTeX, rút gọn tác giả, co giãn tóm tắt};
         \end{tikzpicture}
     };
 
     % 2. Phân hệ Đọc sâu (Top-Right)
-    \node[subsys_read] (read) at (4.2, 3.4) {
+    \node[subsys_read] (read) at (4.5, 4.0) {
         \begin{center}
-            \textbf{\textcolor{blue!90!black}{2. PHÂN HỆ ĐỌC SÂU VÀ MINH CHỨNG NGUỒN}}\\
-            \scriptsize (\textit{Deep Reading \& Bounding Box Subsystem})
+            \textbf{\textcolor{blue!90!black}{2. ĐỌC SÂU \& MINH CHỨNG}}\\
+            \scriptsize (\textit{Deep Reading \& Grounding Subsystem})
         \end{center}
-        \vspace{-2pt}
-        \begin{tikzpicture}[node distance=5pt]
-            \node[card] (r1) {$\bullet$ \textbf{Khung kép (Dual-pane):} PDF Canvas 2 cột (trái) \& Chat SSE (phải)};
-            \node[card, below=of r1] (r2) {$\bullet$ \textbf{Thẻ minh chứng số:} Gắn nhãn trích dẫn tọa độ $[x_{\min}, y_{\min}, x_{\max}, y_{\max}]$};
-            \node[card, below=of r2] (r3) {$\bullet$ \textbf{Tô sáng Bounding Box:} Viền vàng nhấp nháy 1 giây ($IoU \ge 0{,}85$)};
-            \node[card, below=of r3] (r4) {$\bullet$ \textbf{Định vị tự động:} Cuộn trang tức thời trong thời gian $< 1$ giây};
+        \vspace{-3pt}
+        \begin{tikzpicture}[node distance=3pt]
+            \node[card] (r1) {$\bullet$ \textbf{Khung kép:} PDF Canvas 2 cột (trái) \& Trợ lý SSE (phải)};
+            \node[card, below=of r1] (r2) {$\bullet$ \textbf{Thẻ minh chứng số:} Gắn nhãn tọa độ $[x_{\min}, y_{\min}, x_{\max}, y_{\max}]$};
+            \node[card, below=of r2] (r3) {$\bullet$ \textbf{Tô sáng Bounding Box:} Viền vàng nhấp nháy 1s ($IoU \ge 0{,}85$)};
+            \node[card, below=of r3] (r4) {$\bullet$ \textbf{Định vị tự động:} Cuộn trang tức thời trong thời gian $< 1$s};
         \end{tikzpicture}
     };
 
     % 3. Phân hệ Hồ sơ học giả & BYOK (Bottom-Left)
-    \node[subsys_prof] (prof) at (-4.2, -3.2) {
+    \node[subsys_prof] (prof) at (-4.5, -4.0) {
         \begin{center}
-            \textbf{\textcolor{purple!90!black}{3. PHÂN HỆ HỒ SƠ HỌC GIẢ VÀ KHO TÀI LIỆU}}\\
+            \textbf{\textcolor{purple!90!black}{3. HỒ SƠ HỌC GIẢ \& KHO TÀI LIỆU}}\\
             \scriptsize (\textit{Scholar Profile \& Storage Vault Subsystem})
         \end{center}
-        \vspace{-2pt}
-        \begin{tikzpicture}[node distance=5pt]
-            \node[card] (p1) {$\bullet$ \textbf{Nạp tệp kéo--thả:} Hỗ trợ đa tệp PDF kéo thả trực tiếp};
-            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Băm nội dung SHA-256 (tiết kiệm 98\% dung lượng)};
-            \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết định danh chuẩn quốc tế \textbf{ORCID} iD 16 chữ số};
-            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa AES-256-GCM, bảo toàn trên RAM (Zero-Retention)};
+        \vspace{-3pt}
+        \begin{tikzpicture}[node distance=3pt]
+            \node[card] (p1) {$\bullet$ \textbf{Nạp tệp kéo--thả:} Hỗ trợ đa tệp PDF tiện lợi};
+            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Băm SHA-256 (tiết kiệm 98\% dung lượng)};
+            \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết quốc tế \textbf{ORCID} iD 16 chữ số};
+            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa AES-256-GCM trên RAM (Zero-Retention)};
         \end{tikzpicture}
     };
 
     % 4. Phân hệ Soạn thảo & Tự sửa lỗi (Bottom-Right)
-    \node[subsys_writ] (writ) at (4.2, -3.2) {
+    \node[subsys_writ] (writ) at (4.5, -4.0) {
         \begin{center}
-            \textbf{\textcolor{orange!90!black}{4. PHÂN HỆ SOẠN THẢO VÀ TỰ SỬA LỖI \LaTeX}}\\
-            \scriptsize (\textit{LaTeX Authoring \& Self-Healing Subsystem})
+            \textbf{\textcolor{orange!90!black}{4. SOẠN THẢO \& SỬA LỖI}}\\
+            \scriptsize (\textit{Authoring \& Self-Healing Subsystem})
         \end{center}
-        \vspace{-2pt}
-        \begin{tikzpicture}[node distance=5pt]
-            \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu cú pháp \LaTeX};
-            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} Máy ảo vi mô \textbf{E2B} biên dịch cô lập, triệt tiêu mã độc};
-            \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Tự động đọc tệp nhật ký lỗi $\to$ Lập luận $\to$ Sinh bản vá vi phẫu};
-            \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ thành công $> 90\%$};
+        \vspace{-3pt}
+        \begin{tikzpicture}[node distance=3pt]
+            \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu \LaTeX};
+            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} Máy ảo vi mô \textbf{E2B} biên dịch cô lập};
+            \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Đọc log lỗi $\to$ Lập luận $\to$ Vá lỗi vi phẫu};
+            \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ $> 90\%$};
         \end{tikzpicture}
     };
 
     % Mũi tên luân chuyển dữ liệu
     \draw[flowarrow] (disc.east) -- (read.west) 
-        node[midway, above, font=\scriptsize\bfseries, text=teal!80!black] {Nạp PDF mở};
+        node[midway, above=3pt, font=\scriptsize\bfseries, text=teal!80!black] {Nạp PDF mở};
 
-    \draw[flowarrow] (read.south) -- (writ.north)
-        node[midway, right, font=\scriptsize\bfseries, text=blue!80!black] {Trích xuất BibTeX};
+    \draw[flowarrow] (read.south) -- (writ.north) 
+        node[midway, right=3pt, font=\scriptsize\bfseries, text=blue!80!black] {Xuất BibTeX};
 
-    \draw[flowarrow] (prof.north) -- (disc.south)
-        node[midway, left, font=\scriptsize\bfseries, text=purple!80!black] {Lọc theo hồ sơ};
+    \draw[flowarrow] (prof.north) -- (disc.south) 
+        node[midway, left=3pt, font=\scriptsize\bfseries, text=purple!80!black] {Lọc hồ sơ};
 
-    \draw[flowarrow] (prof.east) -- (writ.west)
-        node[midway, above, font=\scriptsize\bfseries, text=purple!80!black] {Nạp khóa BYOK};
+    \draw[flowarrow] (prof.east) -- (writ.west) 
+        node[midway, above=3pt, font=\scriptsize\bfseries, text=purple!80!black] {Nạp khóa BYOK};
 
-    \draw[bidir] (read.south west) -- (prof.north east)
-        node[midway, above, sloped, font=\tiny\bfseries, text=gray!80!black] {Lưu trữ \& Đối chiếu CAS};
+    \draw[bidir, shorten <=4pt, shorten >=4pt] (read.south west) -- (prof.north east) 
+        node[midway, fill=white, inner sep=3pt, rounded corners=2pt, draw=purple!30, font=\scriptsize\bfseries, text=purple!80!black] {Lưu trữ \& CAS};
 \end{tikzpicture}
 \caption{Mô hình kiến trúc không gian tương tác người--máy bốn phân hệ VeriScholar}
 \label{fig:ui_layout_architecture}
