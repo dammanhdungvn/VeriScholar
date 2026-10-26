@@ -76,6 +76,21 @@ async def _get_otp_cache(key: str) -> dict[str, Any] | None:
     return None
 
 
+async def _delete_otp_cache(key: str) -> None:
+    """Evict OTP from in-memory cache and Redis."""
+    _otp_cache.pop(key, None)
+    try:
+        import redis.asyncio as aioredis
+
+        client = aioredis.from_url(
+            settings.REDIS_URL, decode_responses=True, socket_connect_timeout=0.5
+        )
+        await client.delete(f"verischolar:otp:{key}")
+        await client.aclose()
+    except Exception:
+        pass
+
+
 class AuthService:
     """Service handling user registration, authentication, JWT tokens, and account profile."""
 
@@ -912,7 +927,18 @@ class AuthService:
         clean_token = token.strip()
 
         # Check if 6-digit OTP code was provided
-        if len(clean_token) == 6 and clean_token.isdigit() and email:
+        if len(clean_token) == 6 and clean_token.isdigit():
+            if not email:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail={
+                        "code": "EMAIL_REQUIRED_FOR_OTP",
+                        "message": (
+                            "Vui lòng cung cấp địa chỉ email khi sử dụng mã xác thực OTP 6 số."
+                        ),
+                        "action": "Include email in the request.",
+                    },
+                )
             normalized_email = email.strip().lower()
             cached = await _get_otp_cache(f"reset:{normalized_email}")
             if cached and cached.get("code") == clean_token:
@@ -978,6 +1004,8 @@ class AuthService:
 
         user.hashed_password = self.hash_password(new_password)
         await self.db.commit()
+        if email and len(clean_token) == 6 and clean_token.isdigit():
+            await _delete_otp_cache(f"reset:{email.strip().lower()}")
 
     async def verify_email(self, email: str, token_or_code: str) -> UserModel:
         """Verify scholarly email address using 6-digit OTP code or JWT token."""
@@ -1027,6 +1055,7 @@ class AuthService:
         user.is_verified = True
         await self.db.commit()
         await self.db.refresh(user)
+        await _delete_otp_cache(f"verify:{normalized_email}")
         return user
 
     async def resend_verification(self, email: str) -> str:

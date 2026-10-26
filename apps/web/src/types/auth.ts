@@ -63,6 +63,7 @@ export interface PasswordResetRequest {
 export interface PasswordResetConfirm {
   token: string;
   new_password: string;
+  email?: string;
 }
 
 export interface ChangePasswordPayload {

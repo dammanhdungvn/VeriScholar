@@ -69,3 +69,93 @@ async def test_update_profile_orcid_and_byok(async_client: AsyncClient, auth_hea
     assert data["has_byok"] is True
     assert data["byok_masked"] == "sk-proj-...cdef"
     assert data["theme_preference"] == "dark"
+
+
+@pytest.mark.asyncio
+async def test_forgot_password_and_reset_with_otp_flow(async_client: AsyncClient):
+    email = f"reset.scholar.{uuid4().hex[:8]}@univ.edu.vn"
+    initial_password = "InitialPass123@"
+    new_password = "UpdatedPass456@"
+
+    # 1. Register account
+    reg_res = await async_client.post(
+        "/api/v1/auth/register",
+        json={
+            "email": email,
+            "password": initial_password,
+            "full_name": "TS. Đàm Mạnh Dũng",
+        },
+    )
+    assert reg_res.status_code == 201
+
+    # 2. Request forgot password OTP
+    forgot_res = await async_client.post(
+        "/api/v1/auth/forgot-password",
+        json={"email": email},
+    )
+    assert forgot_res.status_code == 200
+    forgot_data = forgot_res.json()["data"]
+    otp_code = forgot_data.get("otp_code")
+    assert otp_code is not None
+    assert len(otp_code) == 6 and otp_code.isdigit()
+
+    # 3. Attempt reset with 6-digit OTP but WITHOUT email -> 400 EMAIL_REQUIRED_FOR_OTP
+    no_email_res = await async_client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": otp_code,
+            "new_password": new_password,
+        },
+    )
+    assert no_email_res.status_code == 400
+    assert no_email_res.json()["error"]["code"] == "EMAIL_REQUIRED_FOR_OTP"
+
+    # 4. Attempt reset with wrong OTP code -> 400 INVALID_RESET_CODE
+    wrong_otp_res = await async_client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": "000000",
+            "new_password": new_password,
+            "email": email,
+        },
+    )
+    assert wrong_otp_res.status_code == 400
+    assert wrong_otp_res.json()["error"]["code"] == "INVALID_RESET_CODE"
+
+    # 5. Reset with valid OTP code and email -> 200 OK
+    reset_res = await async_client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": otp_code,
+            "new_password": new_password,
+            "email": email,
+        },
+    )
+    assert reset_res.status_code == 200
+
+    # 6. Replay attack: re-using the same OTP should now fail because cache is evicted
+    replay_res = await async_client.post(
+        "/api/v1/auth/reset-password",
+        json={
+            "token": otp_code,
+            "new_password": new_password,
+            "email": email,
+        },
+    )
+    assert replay_res.status_code == 400
+    assert replay_res.json()["error"]["code"] == "INVALID_RESET_CODE"
+
+    # 7. Old password no longer works
+    old_login_res = await async_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": initial_password},
+    )
+    assert old_login_res.status_code == 401
+
+    # 8. New password succeeds
+    new_login_res = await async_client.post(
+        "/api/v1/auth/login",
+        json={"email": email, "password": new_password},
+    )
+    assert new_login_res.status_code == 200
+    assert new_login_res.json()["data"]["user"]["email"] == email

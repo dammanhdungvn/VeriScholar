@@ -197,11 +197,11 @@ export function OtpVerificationModal({
           </div>
           <DialogTitle className="text-xl sm:text-2xl font-serif font-bold text-ink dark:text-[#f7f5f0] tracking-tight">
             {mode === "registration"
-              ? "Xác thực Email học thuật"
-              : "Khôi phục mật khẩu tài khoản"}
+              ? "Xác thực email"
+              : "Khôi phục mật khẩu"}
           </DialogTitle>
           <DialogDescription className="text-xs sm:text-sm text-muted dark:text-[#a8a49a] leading-relaxed">
-            Chúng tôi đã gửi mã xác thực 6 chữ số tới địa chỉ email:
+            Mã xác thực 6 chữ số đã được gửi tới:
           </DialogDescription>
           <div className="p-3.5 rounded-xl bg-amber-500/8 dark:bg-amber-400/8 border border-amber-500/20 dark:border-amber-400/20 flex items-center gap-2.5">
             <Mail className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
