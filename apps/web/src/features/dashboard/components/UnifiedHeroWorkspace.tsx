@@ -6,7 +6,7 @@ import { useTheme } from "@/hooks/useTheme";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { ScholarlyResultCard } from "@/features/discovery/components/ScholarlyResultCard";
 import { discoveryApi, type ScholarlyPaper } from "@/features/discovery/api/discoveryApi";
-import type { ReasoningEffortLevel } from "@/features/dashboard/components/ReasoningPopover";
+import type { ReasoningEffortLevel } from "@/features/dashboard/stores/useDashboardStore";
 
 interface UnifiedHeroWorkspaceProps {
   inputText: string;

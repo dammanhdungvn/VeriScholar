@@ -4,8 +4,10 @@ import { DashboardTaskbar } from "./DashboardTaskbar";
 import { LibraryWorkspaceView } from "@/features/library/components/LibraryWorkspaceView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
 import { HeroUploadDropzone } from "./HeroUploadDropzone";
+import { UnifiedHeroWorkspace } from "./UnifiedHeroWorkspace";
 import { DashboardWorkspace } from "./DashboardWorkspace";
 import { MobileDashboardHeader } from "./MobileDashboardHeader";
+import { discoveryApi, type ScholarlyPaper } from "@/features/discovery/api/discoveryApi";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import { useWorkspaceStore } from "../stores/useWorkspaceStore";
 import { useDashboardSessions } from "../hooks/useDashboardSessions";
@@ -233,6 +235,32 @@ export function DashboardContainer() {
     }
   };
 
+  /**
+   * Khởi tạo phiên đọc tức thì từ kết quả bài báo khoa học (Zero-to-Reading)
+   */
+  const handleOpenPaper = async (paper: ScholarlyPaper) => {
+    try {
+      const res = await discoveryApi.openReading({
+        title: paper.title,
+        authors: paper.authors,
+        publication_year: paper.publication_year,
+        doi: paper.doi,
+        arxiv_id: paper.arxiv_id,
+        abstract: paper.abstract,
+        pdf_url: paper.pdf_url,
+      });
+      if (res?.session_id) {
+        selectSession(res.session_id);
+        navigate(`/dashboard/${res.session_id}`, { replace: true });
+        loadExistingSession(res.session_id);
+      }
+    } catch {
+      if (!effectiveSessionId) {
+        navigate("/dashboard", { replace: true });
+      }
+    }
+  };
+
   const isProcessing =
     documentStatus === "uploading" ||
     documentStatus === "validating" ||
@@ -292,8 +320,19 @@ export function DashboardContainer() {
                 setAppMode("chat");
               }}
             />
+          ) : isProcessing || documentStatus === "error" ? (
+            <div className="flex-1 flex items-center justify-center p-4">
+              <HeroUploadDropzone onIngest={handleFileUpload} />
+            </div>
           ) : showStandbyHero ? (
-            <HeroUploadDropzone onIngest={handleFileUpload} />
+            <UnifiedHeroWorkspace
+              inputText={inputText}
+              onChangeText={setInputText}
+              onSendChat={(text) => sendMessage(text)}
+              onIngestFile={handleFileUpload}
+              onOpenPaper={handleOpenPaper}
+              isGenerating={isGenerating}
+            />
           ) : (
             <DashboardWorkspace
               messages={messages}
