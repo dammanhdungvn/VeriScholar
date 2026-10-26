@@ -14,10 +14,12 @@ SSH_HOST="${SSH_HOST:-48.193.46.15}"
 SSH_USER="${SSH_USER:-VeriScholar}"
 REMOTE_DIR="${REMOTE_DIR:-/home/VeriScholar/Workspace/VeriScholar}"
 REMOTE_WEB_DIR="${REMOTE_WEB_DIR:-/var/www/verischolar/web}"
+REMOTE_CONTAINER="${REMOTE_CONTAINER:-verischolar-postgres-dev}"
 PUBLIC_URL="${PUBLIC_URL:-https://verischolar.duckdns.org}"
 
 DRY_RUN=false
 SKIP_GATE=false
+SYNC_DB=true
 
 usage() {
     cat <<EOF
@@ -26,6 +28,7 @@ Usage: scripts/deploy_to_vps.sh [OPTIONS]
 Options:
   --dry-run       Simulate the deployment steps without modifying remote files
   --skip-gate     Skip the local 4 Verification Gates before deployment
+  --no-sync-db    Skip synchronizing local Dev PostgreSQL database to VPS
   --help, -h      Display this help message and exit
 
 Environment Variables:
@@ -47,6 +50,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --skip-gate)
             SKIP_GATE=true
+            shift
+            ;;
+        --no-sync-db)
+            SYNC_DB=false
             shift
             ;;
         --help|-h)
@@ -124,7 +131,13 @@ rsync -avz \
     --exclude='report-datn' \
     . "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
 
-# 5. Remote Environment Sync & Service Restart
+# 5. Database Synchronization (Local Dev DB -> VPS)
+if [[ "$SYNC_DB" == "true" ]]; then
+    echo "-> Synchronizing local Dev PostgreSQL database to VPS container ($REMOTE_CONTAINER)..."
+    uv run python scripts/sync_db_to_vps.py
+fi
+
+# 6. Remote Environment Sync & Service Restart
 echo "-> Updating remote dependencies and restarting verischolar-api.service..."
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" bash <<REMOTE_SCRIPT
 set -euo pipefail

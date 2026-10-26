@@ -10,6 +10,7 @@ def test_deploy_script_help():
     assert res.returncode == 0
     assert "Usage: scripts/deploy_to_vps.sh" in res.stdout
     assert "--dry-run" in res.stdout
+    assert "--no-sync-db" in res.stdout
 
 
 def test_deploy_script_dry_run_with_skip_gate():
