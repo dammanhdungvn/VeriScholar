@@ -82,6 +82,115 @@ describe("UnifiedHeroWorkspace Component", () => {
     );
   });
 
+  it("renders search results inside horizontal snap carousel track with scrollbar-none and card dimensions", async () => {
+    vi.spyOn(discoveryApi, "search").mockResolvedValue([
+      {
+        title: "Paper 1",
+        authors: ["Author 1"],
+        publication_year: 2024,
+        access_status: "open_access_pdf",
+      },
+      {
+        title: "Paper 2",
+        authors: ["Author 2"],
+        publication_year: 2024,
+        access_status: "open_access_pdf",
+      },
+    ]);
+
+    render(
+      <UnifiedHeroWorkspace
+        inputText="Transformer"
+        onChangeText={vi.fn()}
+        onSendChat={vi.fn()}
+        onIngestFile={vi.fn()}
+        onOpenPaper={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("scholarly-carousel-track")).toBeInTheDocument();
+    });
+
+    const carouselTrack = screen.getByTestId("scholarly-carousel-track");
+    expect(carouselTrack).toHaveClass("overflow-x-auto", "scrollbar-none", "snap-x", "snap-mandatory");
+
+    // Check that cards are wrapped in snap-start items
+    const cardItems = screen.getAllByTestId("scholarly-carousel-item");
+    expect(cardItems).toHaveLength(2);
+    expect(cardItems[0]).toHaveClass("shrink-0", "snap-start");
+  });
+
+  it("renders carousel navigation chevrons and triggers smooth scrolling", async () => {
+    vi.spyOn(discoveryApi, "search").mockResolvedValue([
+      {
+        title: "Paper 1",
+        authors: ["Author 1"],
+        publication_year: 2024,
+        access_status: "open_access_pdf",
+      },
+      {
+        title: "Paper 2",
+        authors: ["Author 2"],
+        publication_year: 2024,
+        access_status: "open_access_pdf",
+      },
+    ]);
+
+    render(
+      <UnifiedHeroWorkspace
+        inputText="Transformer"
+        onChangeText={vi.fn()}
+        onSendChat={vi.fn()}
+        onIngestFile={vi.fn()}
+        onOpenPaper={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
+
+    await waitFor(() => {
+      expect(screen.getByTestId("scholarly-carousel-track")).toBeInTheDocument();
+    });
+
+    const carouselTrack = screen.getByTestId("scholarly-carousel-track");
+    const scrollByMock = vi.fn();
+    carouselTrack.scrollBy = scrollByMock;
+
+    // Simulate track overflow where scrolling right is available
+    Object.defineProperty(carouselTrack, "scrollLeft", { configurable: true, value: 0 });
+    Object.defineProperty(carouselTrack, "clientWidth", { configurable: true, value: 400 });
+    Object.defineProperty(carouselTrack, "scrollWidth", { configurable: true, value: 1200 });
+
+    fireEvent.scroll(carouselTrack);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("carousel-next-btn")).toBeInTheDocument();
+    });
+    expect(screen.queryByTestId("carousel-prev-btn")).not.toBeInTheDocument();
+
+    // Click next button
+    fireEvent.click(screen.getByTestId("carousel-next-btn"));
+    expect(scrollByMock).toHaveBeenCalledWith({ left: 380, behavior: "smooth" });
+
+    // Now simulate being scrolled to middle where both left and right are available
+    Object.defineProperty(carouselTrack, "scrollLeft", { configurable: true, value: 380 });
+    fireEvent.scroll(carouselTrack);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("carousel-prev-btn")).toBeInTheDocument();
+      expect(screen.getByTestId("carousel-next-btn")).toBeInTheDocument();
+    });
+
+    // Click prev button
+    fireEvent.click(screen.getByTestId("carousel-prev-btn"));
+    expect(scrollByMock).toHaveBeenCalledWith({ left: -380, behavior: "smooth" });
+  });
+
   it("renders scholarly skeleton list while search is pending and hides dropzone", async () => {
     let resolveSearch: (val: any) => void;
     const searchPromise = new Promise((resolve) => {

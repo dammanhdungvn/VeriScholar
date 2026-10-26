@@ -1,5 +1,5 @@
-import { useState, useRef, useMemo, type DragEvent, type ChangeEvent } from "react";
-import { Search, MessageSquare, FileUp, X } from "lucide-react";
+import { useState, useRef, useMemo, useCallback, useEffect, type DragEvent, type ChangeEvent } from "react";
+import { Search, MessageSquare, FileUp, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { useTheme } from "@/hooks/useTheme";
@@ -46,7 +46,25 @@ export function UnifiedHeroWorkspace({
   const [hasSearched, setHasSearched] = useState(false);
   const [isDragActive, setIsDragActive] = useState(false);
   const [openingPaperTitle, setOpeningPaperTitle] = useState<string | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const carouselRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const updateScrollButtons = useCallback(() => {
+    const el = carouselRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 5);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 5);
+  }, []);
+
+  const scrollCarousel = (direction: "left" | "right") => {
+    carouselRef.current?.scrollBy?.({
+      left: direction === "left" ? -380 : 380,
+      behavior: "smooth",
+    });
+  };
 
   const userGreetingName = user?.full_name
     ? user.full_name.split(" ").slice(-2).join(" ")
@@ -67,11 +85,29 @@ export function UnifiedHeroWorkspace({
     });
   }, [searchResults, filterMode]);
 
+  useEffect(() => {
+    updateScrollButtons();
+    const el = carouselRef.current;
+    if (!el) return;
+
+    const frameId = requestAnimationFrame(updateScrollButtons);
+    el.addEventListener("scroll", updateScrollButtons, { passive: true });
+    window.addEventListener("resize", updateScrollButtons);
+
+    return () => {
+      cancelAnimationFrame(frameId);
+      el.removeEventListener("scroll", updateScrollButtons);
+      window.removeEventListener("resize", updateScrollButtons);
+    };
+  }, [displayedResults, updateScrollButtons]);
+
   const handleResetSearch = () => {
     setSearchResults([]);
     setHasSearched(false);
     setSearchError(null);
     setFilterMode("all");
+    setCanScrollLeft(false);
+    setCanScrollRight(false);
     onChangeText("");
   };
 
@@ -164,7 +200,9 @@ export function UnifiedHeroWorkspace({
 
   return (
     <div
-      className={`flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto relative z-10 select-none overflow-y-auto transition-all duration-300 ${
+      className={`flex-1 flex flex-col items-center p-4 sm:p-6 md:p-8 w-full ${
+        searchResults.length > 0 ? "max-w-5xl" : "max-w-4xl"
+      } mx-auto relative z-10 select-none overflow-y-auto scrollbar-none transition-all duration-300 ${
         hasActiveContent
           ? "justify-start pt-6 sm:pt-10 my-0"
           : "justify-center my-auto"
@@ -301,15 +339,54 @@ export function UnifiedHeroWorkspace({
               Không có bài báo đã bình duyệt trong kết quả tìm kiếm này.
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-3 max-h-[58vh] overflow-y-auto pr-1.5 pt-1">
-              {displayedResults.map((paper, idx) => (
-                <ScholarlyResultCard
-                  key={`${paper.title}-${idx}`}
-                  paper={paper}
-                  onOpenReading={handlePaperClick}
-                  isLoading={openingPaperTitle === paper.title}
-                />
-              ))}
+            <div className="relative w-full mt-2">
+              {/* Left Navigation Arrow */}
+              {canScrollLeft && (
+                <button
+                  type="button"
+                  onClick={() => scrollCarousel("left")}
+                  data-testid="carousel-prev-btn"
+                  aria-label="Cuộn sang trái"
+                  className="absolute -left-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-[#201e1a]/90 backdrop-blur-xs border border-[#ded8cd] dark:border-[#35322d] shadow-md flex items-center justify-center text-ink dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-[#2a2723] transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Horizontal Snap Rail */}
+              <div
+                ref={carouselRef}
+                onScroll={updateScrollButtons}
+                data-testid="scholarly-carousel-track"
+                className="flex gap-4 overflow-x-auto scrollbar-none snap-x snap-mandatory py-2 px-1"
+              >
+                {displayedResults.map((paper, idx) => (
+                  <div
+                    key={`${paper.title}-${idx}`}
+                    data-testid="scholarly-carousel-item"
+                    className="w-[320px] sm:w-[380px] shrink-0 snap-start flex flex-col"
+                  >
+                    <ScholarlyResultCard
+                      paper={paper}
+                      onOpenReading={handlePaperClick}
+                      isLoading={openingPaperTitle === paper.title}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Right Navigation Arrow */}
+              {canScrollRight && (
+                <button
+                  type="button"
+                  onClick={() => scrollCarousel("right")}
+                  data-testid="carousel-next-btn"
+                  aria-label="Cuộn sang phải"
+                  className="absolute -right-3 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-white/90 dark:bg-[#201e1a]/90 backdrop-blur-xs border border-[#ded8cd] dark:border-[#35322d] shadow-md flex items-center justify-center text-ink dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-[#2a2723] transition-all cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              )}
             </div>
           )}
         </div>

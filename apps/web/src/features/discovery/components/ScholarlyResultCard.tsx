@@ -81,7 +81,7 @@ export function ScholarlyResultCard({
   const isOpenAccess = paper.access_status === "open_access_pdf";
 
   return (
-    <div className="p-5 rounded-xl border border-hairline bg-white dark:bg-[#1c1b18] hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 shadow-xs flex flex-col justify-between gap-4">
+    <div className="h-full p-5 rounded-xl border border-hairline bg-white dark:bg-[#1c1b18] hover:border-zinc-300 dark:hover:border-zinc-700 transition-all duration-200 shadow-xs flex flex-col justify-between gap-4">
       <div className="space-y-2">
         {/* Header row: Access badge, Peer-Reviewed tag & Year */}
         <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -118,7 +118,7 @@ export function ScholarlyResultCard({
         </div>
 
         {/* Paper Title (Sanitized of raw LaTeX) */}
-        <h3 className="text-base font-semibold font-anthropic-serif text-ink dark:text-zinc-100 leading-snug">
+        <h3 className="text-base font-semibold font-anthropic-serif text-ink dark:text-zinc-100 leading-snug line-clamp-2">
           {sanitizeAcademicTitle(paper.title)}
         </h3>
 
@@ -193,7 +193,7 @@ export function ScholarlyResultCard({
       </div>
 
       {/* Action footer */}
-      <div className="pt-3 border-t border-hairline flex items-center justify-end gap-2">
+      <div className="mt-auto pt-3 border-t border-hairline flex items-center justify-end gap-2">
         <button
           type="button"
           onClick={() => onOpenReading(paper)}
