@@ -120,12 +120,15 @@ rsync -avz \
     --exclude='apps/web/dist' \
     --exclude='apps/web/node_modules' \
     --exclude='.superpowers/sdd' \
+    --exclude='temp' \
+    --exclude='report-datn' \
     . "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
 
 # 5. Remote Environment Sync & Service Restart
 echo "-> Updating remote dependencies and restarting verischolar-api.service..."
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" bash <<REMOTE_SCRIPT
 set -euo pipefail
+export PATH="\$HOME/.local/bin:\$PATH"
 cd "$REMOTE_DIR"
 uv sync --all-packages --frozen
 sudo systemctl restart verischolar-api.service
@@ -136,13 +139,27 @@ REMOTE_SCRIPT
 
 # 6. Post-Deployment Live Verification Probe
 echo "-> Probing live health check at $PUBLIC_URL/health..."
-HEALTH_STATUS=$(curl -fsS --max-time 15 "$PUBLIC_URL/health" || echo "FAIL")
+MAX_ATTEMPTS=10
+ATTEMPT=1
+HEALTH_STATUS="FAIL"
+
+while [[ $ATTEMPT -le $MAX_ATTEMPTS ]]; do
+    if HEALTH_STATUS=$(curl -fsS --max-time 10 "$PUBLIC_URL/health" 2>/dev/null); then
+        if [[ "$HEALTH_STATUS" == *"ok"* ]]; then
+            break
+        fi
+    fi
+    echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS: Waiting for backend startup (2s)..."
+    sleep 2
+    ATTEMPT=$((ATTEMPT + 1))
+done
+
 if [[ "$HEALTH_STATUS" == *"ok"* ]]; then
     echo "======================================================================"
     echo "🚀 Deployment Successful! Product is live at:"
     echo "   $PUBLIC_URL"
     echo "======================================================================"
 else
-    echo "Error: Post-deployment health check failed: $HEALTH_STATUS" >&2
+    echo "Error: Post-deployment health check failed after $MAX_ATTEMPTS attempts." >&2
     exit 1
 fi
