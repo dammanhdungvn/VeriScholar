@@ -128,7 +128,7 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
         updateStage(
           "validating",
           25,
-          "Đang khởi tạo không gian phiên nghiên cứu học thuật..."
+          "Đang tạo phiên nghiên cứu..."
         );
         const session = await dashboardApi.createSession({
           title: `Nghiên cứu: ${cleanTitle}`,
@@ -145,7 +145,7 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
       updateStage(
         "uploading",
         50,
-        "Đang tải tệp PDF lên máy chủ an toàn CAS & liên kết phiên..."
+        "Đang tải tệp PDF lên..."
       );
       const doc = await documentsApi.uploadDocument(file, targetSessionId);
       const displayTitle = doc.title || cleanTitle;
@@ -155,7 +155,7 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
       updateStage(
         "parsing",
         70,
-        "Đang phân tích layout 2 cột, bóc tách công thức LaTeX & bảng biểu..."
+        "Đang xử lý nội dung tài liệu..."
       );
       await documentsApi.parseDocument(doc.id, {
         chunk_size: 512,
@@ -179,23 +179,23 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
           );
         }
 
-        // Cập nhật message theo từng stage học thuật từ backend (Swagger)
-        let stageMessage = "Đang hoàn tất lập chỉ mục vector không gian...";
+        // Cập nhật message theo từng stage từ backend
+        let stageMessage = "Đang xử lý tài liệu...";
         let stageTarget = 85;
         if (statusRes.stage === "validation") {
-          stageMessage = "Đang thẩm định mật độ học thuật của bài báo...";
+          stageMessage = "Đang kiểm tra tài liệu...";
           stageTarget = 60;
         } else if (statusRes.stage === "layout_detection") {
-          stageMessage = "Đang nhận diện bố cục 2 cột & phát hiện bảng biểu...";
+          stageMessage = "Đang phân tích cấu trúc trang...";
           stageTarget = 70;
         } else if (statusRes.stage === "running_ocr" || statusRes.stage === "ocr") {
-          stageMessage = "Đang bóc tách văn bản vi mô & công thức LaTeX...";
+          stageMessage = "Đang nhận diện văn bản...";
           stageTarget = 78;
         } else if (statusRes.stage === "chunking") {
-          stageMessage = "Đang phân đoạn ngữ cảnh chunks theo đoạn văn...";
+          stageMessage = "Đang trích xuất nội dung...";
           stageTarget = 86;
         } else if (statusRes.stage === "embedding") {
-          stageMessage = "Đang hoàn tất lập chỉ mục vector không gian...";
+          stageMessage = "Đang chuẩn bị phiên đọc...";
           stageTarget = 92;
         }
 

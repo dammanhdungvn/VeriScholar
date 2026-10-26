@@ -275,7 +275,7 @@ export function DocumentLibraryModal({
                               {doc.title || doc.filename}
                             </h5>
                             {doc.is_persistent && (
-                              <span title="Tài liệu đã lưu vĩnh viễn (Persistent CAS)">
+                              <span title="Tài liệu đã lưu">
                                 <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
                               </span>
                             )}

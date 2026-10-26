@@ -10,6 +10,7 @@ import {
   Search,
   Archive,
   BookOpen,
+  CheckCircle2,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -370,7 +371,7 @@ export function DashboardTaskbar({
             )}
           </div>
 
-          {/* User Details (when expanded): Dam Manh Dung • Tài khoản cá nhân */}
+          {/* User Details (when expanded): Verified checkmark + email */}
           <div
             className={cn(
               "flex flex-col min-w-0 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] overflow-hidden",
@@ -379,11 +380,14 @@ export function DashboardTaskbar({
                 : "max-w-0 opacity-0 ml-0 pointer-events-none"
             )}
           >
-            <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-serif leading-tight">
-              {user?.full_name ?? "Dam Manh Dung"}
-            </span>
-            <span className="text-3xs text-muted dark:text-zinc-400 truncate font-sans leading-tight mt-0.5">
-              Tài khoản cá nhân
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="text-xs font-semibold text-ink dark:text-zinc-100 truncate font-serif leading-tight">
+                {user?.full_name ?? "Dam Manh Dung"}
+              </span>
+              <CheckCircle2 className="w-3 h-3 text-[#cc785c] shrink-0" />
+            </div>
+            <span className="text-3xs text-muted dark:text-zinc-400 truncate font-mono leading-tight mt-0.5">
+              {user?.email || "dammanhdungvn@gmail.com"}
             </span>
           </div>
         </button>

@@ -52,7 +52,7 @@ export function RestoreArchivedModal({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="Khôi phục phiên nghiên cứu đã hết hạn TTL"
+      aria-label="Khôi phục phiên nghiên cứu đã lưu trữ"
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150 text-xs"
     >
       <div className="w-full max-w-md bg-canvas dark:bg-[#1a1917] rounded-lg shadow-2xl border border-hairline dark:border-[#2f2b26] flex flex-col overflow-hidden">
