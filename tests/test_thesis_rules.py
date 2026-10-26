@@ -93,3 +93,34 @@ def test_thesis_reference_count_within_cap():
 
     assert "20" in rules_content and "tài liệu tham khảo" in rules_content
     assert "20" in agents_content and "tài liệu tham khảo" in agents_content
+
+
+def test_ch3_uc01_two_tier_discovery_spec():
+    """Kiểm tra sự hiện diện và tính toàn vẹn của Bảng đặc tả ca sử dụng UC-01
+    (Khám phá bài báo học thuật hai tầng tin cậy) trong Chương 3.
+    """
+    uc_file = Path("report-datn/chapters/ch3/3_2_usecase.tex")
+    assert uc_file.exists(), "3_2_usecase.tex must exist"
+
+    content = uc_file.read_text(encoding="utf-8")
+
+    # Kiểm tra nhãn bảng đặc tả UC-01
+    assert "\\label{tab:uc_01_spec}" in content, (
+        "Missing \\label{tab:uc_01_spec} in 3_2_usecase.tex"
+    )
+
+    # Kiểm tra vị trí: tab:uc_01_spec phải xuất hiện trước tab:uc_03_spec
+    pos_uc01 = content.find("\\label{tab:uc_01_spec}")
+    pos_uc03 = content.find("\\label{tab:uc_03_spec}")
+    assert pos_uc03 != -1, "Missing \\label{tab:uc_03_spec} in 3_2_usecase.tex"
+    assert pos_uc01 < pos_uc03, "tab:uc_01_spec must appear before tab:uc_03_spec"
+
+    # Kiểm tra các từ khóa kỹ thuật cốt lõi của động cơ kiểm soát độ tin cậy 2 tầng
+    assert "Jaccard" in content, "UC-01 must specify Jaccard token overlap filter"
+    assert "0.2" in content or "0{,}2" in content, "UC-01 must specify threshold 0.2"
+    assert "Skeleton" in content or "skeleton" in content, (
+        "UC-01 must specify instant skeleton loading"
+    )
+    assert "bình duyệt" in content or "peer-reviewed" in content, (
+        "UC-01 must specify peer-reviewed filtering"
+    )

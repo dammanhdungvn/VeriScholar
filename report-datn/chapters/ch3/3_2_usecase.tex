@@ -61,9 +61,41 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
 
 \subsection{Đặc tả chi tiết các ca sử dụng cốt lõi}
 \label{subsec:dac_ta_uc_chi_tiet}
-Nhằm làm rõ bản chất vận hành, đề tài tiến hành đặc tả chi tiết hai ca sử dụng tiêu biểu của hệ thống: UC-03 (\textit{Hỏi đáp Hybrid RAG có tọa độ}) và UC-06 (\textit{Tác nhân tự sửa lỗi bản thảo \LaTeX}).
+Nhằm làm rõ bản chất vận hành, đề tài tiến hành đặc tả chi tiết ba ca sử dụng tiêu biểu đại diện cho toàn bộ chu trình trải nghiệm học thuật: UC-01 (\textit{Khám phá bài báo học thuật hai tầng tin cậy}), UC-03 (\textit{Hỏi đáp Hybrid RAG có tọa độ}) và UC-06 (\textit{Tác nhân tự sửa lỗi bản thảo \LaTeX}).
 
-Bảng~\ref{tab:uc_03_spec} trình bày chi tiết đặc tả ca sử dụng UC-03 theo chuẩn phân tích nghiệp vụ (BA).
+Trước hết, Bảng~\ref{tab:uc_01_spec} trình bày đặc tả chi tiết ca sử dụng UC-01 về quy trình tìm kiếm bài báo khoa học kết hợp động cơ kiểm soát độ tin cậy hai tầng (\textit{Two-Tier Verification Engine}): tầng hạ tầng xử lý truy vấn trường mục tiêu và bộ lọc từ khóa Jaccard, tầng giao diện hỗ trợ chuyển đổi bộ lọc nguồn bình duyệt tức thì.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Bảng đặc tả chi tiết ca sử dụng UC-01 (Khám phá bài báo học thuật hai tầng tin cậy)}
+\label{tab:uc_01_spec}
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{11.2cm}}
+\toprule
+\textbf{Thuộc tính} & \textbf{Nội dung đặc tả nghiệp vụ} \\
+\midrule
+\textbf{Mã ca sử dụng} & UC-01-SCHOLARLY-DISCOVERY \\
+\textbf{Tên ca sử dụng} & Khám phá bài báo học thuật theo chủ đề có kiểm soát độ tin cậy và phân tầng bình duyệt \\
+\textbf{Tác nhân chính} & Học giả (Scholar / Researcher) \\
+\textbf{Mục đích} & Cho phép học giả tra cứu nhanh các ấn phẩm học thuật liên quan đến chủ đề nghiên cứu từ các kho lưu trữ mở quốc tế (arXiv, Semantic Scholar), loại bỏ các kết quả lạc đề bằng giải thuật kiểm định độ tương đồng từ khóa và hỗ trợ phân tầng lọc nguồn bình duyệt. \\
+\textbf{Tiền điều kiện} & Học giả đang truy cập hệ thống tại Trang điều khiển trung tâm (\textit{Dashboard}) hoặc Không gian Khám phá (\textit{Discovery Workspace}) và có kết nối mạng tới các cổng học thuật. \\
+\textbf{Hậu điều kiện} & Danh sách bài báo đạt chuẩn độ tin cậy được hiển thị dạng thẻ tinh gọn chống tràn bố cục, phân tách rõ trạng thái truy cập mở (\textit{Open Access PDF}) và nguồn đã bình duyệt (\textit{Peer-Reviewed}), sẵn sàng mở phiên đọc tức thì. \\
+\textbf{Luồng sự kiện chính} & 
+1. Học giả nhập câu truy vấn hoặc từ khóa chủ đề nghiên cứu (tiếng Việt hoặc tiếng Anh) vào ô tìm kiếm trung tâm và gửi yêu cầu.\\
+& 2. Giao diện người dùng lập tức phản hồi tức thì (\textit{Instant Skeleton Feedback}) qua 3 thẻ giả lập hiệu ứng phát sáng mờ và biểu tượng quay trạng thái, triệt tiêu cảm giác chờ đợi.\\
+& 3. Tầng dịch vụ chuyển đổi câu truy vấn sang biểu thức truy vấn trường mục tiêu (\textit{Field-targeted Querying}) kết hợp tiêu đề và tóm tắt: \texttt{ti:"..." OR (ti:... AND abs:...)} kèm sắp xếp theo mức độ phù hợp.\\
+& 4. Tầng hạ tầng kích hoạt bộ lọc độ tương đồng tiêu đề (Tier 1 Backend): tính điểm trùng lặp từ tố Jaccard (\textit{Jaccard Token Overlap}) giữa truy vấn và tiêu đề bài báo; tự động loại bỏ các ấn phẩm có $\text{Jaccard} < 0{,}2$ đối với câu truy vấn từ 3 từ trở lên nhằm ngăn chặn triệt để bài báo lạc đề.\\
+& 5. Hệ thống phân loại nguồn bình duyệt (\textit{Peer-Reviewed Classification}) dựa trên danh mục nhà xuất bản, kỷ yếu hội nghị uy tín (NeurIPS, ICML, CVPR, Nature, Science, IEEE, ACM,...) hoặc mã định danh DOI chính thức.\\
+& 6. Giao diện hiển thị danh sách thẻ kết quả tinh gọn chống tràn bố cục (Tier 2 Frontend): giới hạn tối đa 2 tác giả kèm \textit{et al.}, tự động làm sạch mã \LaTeX\ thô, cố định tóm tắt trong 2 dòng, và cung cấp nút gạt mềm (\textit{Pill toggle}) lọc nhanh các bài đã qua bình duyệt.\\
+\textbf{Luồng ngoại lệ} & 
+1a. Từ khóa tìm kiếm để trống hoặc không trả về ấn phẩm phù hợp: Hệ thống đưa ra thông báo trung thực và gợi ý mở rộng thuật ngữ chuyên ngành tiếng Anh tương đương.\\
+& 1b. Cổng dịch vụ học thuật quốc tế phản hồi chậm quá thời hạn (quá 15 giây): Hệ thống ngắt chờ an toàn, thông báo trạng thái kết nối và hỗ trợ học giả tải trực tiếp tệp PDF sẵn có từ thiết bị cá nhân. \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tiếp theo, Bảng~\ref{tab:uc_03_spec} trình bày chi tiết đặc tả ca sử dụng UC-03 theo chuẩn phân tích nghiệp vụ (BA).
 
 \begin{table}[htbp]
 \centering
@@ -92,7 +124,7 @@ Bảng~\ref{tab:uc_03_spec} trình bày chi tiết đặc tả ca sử dụng UC
 \end{tabular}
 \end{table}
 
-Tiếp theo, Bảng~\ref{tab:uc_06_spec} trình bày đặc tả ca sử dụng UC-06 về cơ chế tự động sửa lỗi biên dịch bản thảo khoa học trong môi trường hộp cát an toàn.
+Cuối cùng, Bảng~\ref{tab:uc_06_spec} trình bày đặc tả ca sử dụng UC-06 về cơ chế tự động sửa lỗi biên dịch bản thảo khoa học trong môi trường hộp cát an toàn.
 
 \begin{table}[htbp]
 \centering
