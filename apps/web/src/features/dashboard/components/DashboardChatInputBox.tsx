@@ -1,13 +1,15 @@
 import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
-import { Plus, Mic, ArrowUp, Paperclip, X, Brain, Loader2 } from "lucide-react";
+import { Plus, Mic, ArrowUp, Paperclip, X, Brain, Loader2, FileText } from "lucide-react";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import type { ActiveContextChip } from "../stores/useWorkspaceStore";
 import { ReasoningPopover } from "./ReasoningPopover";
+import { cn } from "@/lib/utils";
 
 export interface DashboardChatInputBoxProps {
   inputText: string;
   onChangeText: (text: string) => void;
   onSend: (text?: string) => void;
+  onSendWithFiles?: (text: string, files: File[]) => void;
   isGenerating?: boolean;
   onUploadFile?: (file: File) => void;
   contextChip?: ActiveContextChip | null;
@@ -18,10 +20,17 @@ export interface DashboardChatInputBoxProps {
   mode?: "search" | "chat";
 }
 
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function DashboardChatInputBox({
   inputText,
   onChangeText,
   onSend,
+  onSendWithFiles,
   isGenerating = false,
   onUploadFile,
   contextChip = null,
@@ -35,6 +44,9 @@ export function DashboardChatInputBox({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [stagedFiles, setStagedFiles] = useState<File[]>([]);
+  const [isDragOver, setIsDragOver] = useState(false);
+
   const setVoiceModalOpen = useDashboardStore((s) => s.setVoiceModalOpen);
   const reasoningEffort = useDashboardStore((s) => s.reasoningEffort);
 
@@ -53,8 +65,68 @@ export function DashboardChatInputBox({
     }
   }, [contextChip]);
 
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    if (mode === "search") return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (mode === "search") return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    if (mode === "search") return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const droppedFiles = Array.from(e.dataTransfer.files).filter(
+        (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
+      );
+      if (droppedFiles.length > 0) {
+        setStagedFiles((prev) => [...prev, ...droppedFiles]);
+      }
+    }
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files).filter(
+        (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
+      );
+      if (selectedFiles.length > 0) {
+        setStagedFiles((prev) => [...prev, ...selectedFiles]);
+      }
+    }
+    e.target.value = "";
+  };
+
+  const handleRemoveStagedFile = (index: number) => {
+    setStagedFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendMessage = () => {
     if (isGenerating) return;
+
+    if (stagedFiles.length > 0) {
+      if (onSendWithFiles) {
+        onSendWithFiles(inputText.trim(), stagedFiles);
+      } else if (onUploadFile) {
+        stagedFiles.forEach(onUploadFile);
+        if (inputText.trim()) {
+          onSend(inputText.trim());
+        }
+      }
+      setStagedFiles([]);
+      onChangeText("");
+      return;
+    }
 
     if (contextChip) {
       const quoteHeader = `📎 [${contextChip.documentTitle || "Tài liệu"} - Trang ${contextChip.pageNumber}]: "${contextChip.text}"`;
@@ -66,7 +138,8 @@ export function DashboardChatInputBox({
       onChangeText("");
       onRemoveContextChip?.();
     } else if (inputText.trim()) {
-      onSend();
+      onSend(inputText.trim());
+      onChangeText("");
     }
   };
 
@@ -77,25 +150,61 @@ export function DashboardChatInputBox({
     }
   };
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && onUploadFile) {
-      onUploadFile(file);
-    }
-    e.target.value = "";
-  };
-
   const handleReasoningButtonClick = () => {
     setIsPopoverOpen((prev) => !prev);
   };
 
   const hasText = inputText.trim().length > 0;
-  const canSend = (hasText || Boolean(contextChip)) && !isGenerating;
+  const hasFiles = stagedFiles.length > 0;
+  const canSend = (hasText || hasFiles || Boolean(contextChip)) && !isGenerating;
 
   return (
     <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 select-text relative">
-      {/* Main Unified ChatGPT-style Chat Pill Box */}
-      <div className="bg-[#fbf9f5] dark:bg-[#212120] border border-[#e5dfd4] dark:border-[#38342e] focus-within:border-coral-500/50 dark:focus-within:border-[#cc785c]/60 focus-within:ring-3 focus-within:ring-coral-500/10 dark:focus-within:ring-[#cc785c]/15 rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] transition-all duration-200 relative">
+      {/* Main Unified ChatGPT-style Chat Pill Box with Direct Drag & Drop */}
+      <div
+        data-testid="chat-input-pill-container"
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={cn(
+          "transition-all duration-200 relative rounded-3xl shadow-[0_4px_24px_rgba(0,0,0,0.05)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.45)] border",
+          isDragOver
+            ? "border-[#cc785c] ring-3 ring-[#cc785c]/25 bg-[#cc785c]/5 dark:bg-[#cc785c]/10"
+            : "bg-[#fbf9f5] dark:bg-[#212120] border-[#e5dfd4] dark:border-[#38342e] focus-within:border-coral-500/50 dark:focus-within:border-[#cc785c]/60 focus-within:ring-3 focus-within:ring-coral-500/10 dark:focus-within:ring-[#cc785c]/15"
+        )}
+      >
+        {/* Staged File Attachments (Rule Item 10) */}
+        {stagedFiles.length > 0 && (
+          <div
+            data-testid="staged-files-container"
+            className="px-4 pt-3 pb-0 flex flex-wrap gap-2 items-center"
+          >
+            {stagedFiles.map((file, idx) => (
+              <div
+                key={`${file.name}-${idx}`}
+                data-testid="staged-file-chip"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#ede8df] dark:bg-[#2a2723] border border-[#ded8cd] dark:border-[#3a3630] text-xs text-ink dark:text-zinc-200 animate-in fade-in zoom-in-95 duration-100"
+              >
+                <FileText className="w-3.5 h-3.5 text-[#cc785c] shrink-0" />
+                <span className="font-medium max-w-[160px] truncate" title={file.name}>
+                  {file.name}
+                </span>
+                <span className="text-3xs text-muted dark:text-zinc-400 font-mono">
+                  ({formatFileSize(file.size)})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleRemoveStagedFile(idx)}
+                  aria-label={`Xóa tệp ${file.name}`}
+                  title="Gỡ tệp này"
+                  className="p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-muted hover:text-ink dark:hover:text-zinc-100 transition-colors cursor-pointer"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
         {/* Context Chip (Zero-Click Contextual Evidence) */}
         {contextChip && (
           <div
@@ -157,7 +266,8 @@ export function DashboardChatInputBox({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".pdf"
+                multiple
+                accept=".pdf,application/pdf"
                 className="hidden"
                 aria-label="Đính kèm bài báo PDF"
                 onChange={handleFileChange}

@@ -13,6 +13,7 @@ interface UnifiedHeroWorkspaceProps {
   inputText: string;
   onChangeText: (text: string) => void;
   onSendChat: (text: string, reasoningEffort?: ReasoningEffortLevel) => void;
+  onSendChatWithFiles?: (prompt: string, files: File[]) => void;
   onIngestFile: (file: File) => void | Promise<void>;
   onOpenPaper: (paper: ScholarlyPaper) => void | Promise<void>;
   isGenerating?: boolean;
@@ -29,6 +30,7 @@ export function UnifiedHeroWorkspace({
   inputText,
   onChangeText,
   onSendChat,
+  onSendChatWithFiles,
   onIngestFile,
   onOpenPaper,
   isGenerating = false,
@@ -145,6 +147,19 @@ export function UnifiedHeroWorkspace({
     }
   };
 
+  const handleSendWithFiles = (prompt: string, files: File[]) => {
+    if (onSendChatWithFiles) {
+      onSendChatWithFiles(prompt, files);
+    } else {
+      if (files[0]) {
+        onIngestFile(files[0]);
+      }
+      if (prompt) {
+        onSendChat(prompt);
+      }
+    }
+  };
+
   const handleChipClick = (query: string) => {
     onChangeText(query);
     setMode("search");
@@ -227,6 +242,7 @@ export function UnifiedHeroWorkspace({
           inputText={inputText}
           onChangeText={onChangeText}
           onSend={handleSend}
+          onSendWithFiles={handleSendWithFiles}
           isGenerating={isGenerating || isSearching}
           onUploadFile={onIngestFile}
           showReasoning={mode === "chat"}

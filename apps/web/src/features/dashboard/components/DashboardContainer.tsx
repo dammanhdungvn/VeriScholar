@@ -210,6 +210,8 @@ export function DashboardContainer() {
     loadExistingSession(sessionId);
   };
 
+  const pendingInitialPromptRef = useRef<string | null>(null);
+
   /**
    * Bắt đầu luồng Ingestion tự động:
    * Upload CAS blob -> Tạo Session hợp lệ -> Trigger Parse & Embed -> Polling -> Workspace Active
@@ -228,13 +230,36 @@ export function DashboardContainer() {
         selectSession(result.sessionId);
         navigate(`/dashboard/${result.sessionId}`, { replace: true });
         loadExistingSession(result.sessionId);
+
+        // Auto-send user prompt if staged alongside file upload (Rule Item 10)
+        if (pendingInitialPromptRef.current) {
+          const prompt = pendingInitialPromptRef.current;
+          pendingInitialPromptRef.current = null;
+          setTimeout(() => {
+            sendMessage(prompt);
+          }, 350);
+        }
       }
     } catch {
+      pendingInitialPromptRef.current = null;
       // Error is set in useWorkspaceStore.errorMessage and handled by HeroUploadDropzone UI
       if (!effectiveSessionId) {
         navigate("/dashboard", { replace: true });
       }
     }
+  };
+
+  const handleSendChatWithFiles = async (prompt: string, files: File[]) => {
+    if (files.length === 0) {
+      if (prompt) sendMessage(prompt);
+      return;
+    }
+
+    if (prompt.trim()) {
+      pendingInitialPromptRef.current = prompt.trim();
+    }
+
+    await handleFileUpload(files[0]);
   };
 
   /**
@@ -331,6 +356,7 @@ export function DashboardContainer() {
               inputText={inputText}
               onChangeText={setInputText}
               onSendChat={(text) => sendMessage(text)}
+              onSendChatWithFiles={handleSendChatWithFiles}
               onIngestFile={handleFileUpload}
               onOpenPaper={handleOpenPaper}
               isGenerating={isGenerating}
