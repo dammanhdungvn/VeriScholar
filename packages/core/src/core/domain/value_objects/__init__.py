@@ -11,6 +11,10 @@ from core.domain.value_objects.enums import (
     ThemePreference,
 )
 from core.domain.value_objects.page_metadata import PageDimensions, PageMetadata
+from core.domain.value_objects.reasoning_effort import (
+    ReasoningEffortLevel,
+    map_reasoning_effort_to_provider,
+)
 from core.domain.value_objects.viewport_state import ViewportState
 
 __all__ = [
@@ -21,8 +25,10 @@ __all__ = [
     "DocumentStatus",
     "PageDimensions",
     "PageMetadata",
+    "ReasoningEffortLevel",
     "SessionActiveTab",
     "SessionTurnFinishReason",
     "ThemePreference",
     "ViewportState",
+    "map_reasoning_effort_to_provider",
 ]
