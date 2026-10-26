@@ -12,8 +12,8 @@ export function PasswordStrengthMeter({ password, className }: PasswordStrengthM
   const strength = evaluatePasswordStrength(password);
 
   return (
-    <div className={cn("mt-1.5 space-y-1 font-sans select-none", className)}>
-      {/* Sleek 2px segmented progress bar */}
+    <div className={cn("mt-1.5 font-sans select-none", className)}>
+      {/* Sleek segmented progress bar */}
       <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4].map((tier) => (
           <div
@@ -24,21 +24,6 @@ export function PasswordStrengthMeter({ password, className }: PasswordStrengthM
             )}
           />
         ))}
-      </div>
-
-      <div className="flex items-center justify-between text-3xs text-muted dark:text-[#9c988f]">
-        <span>Độ an toàn:</span>
-        <span
-          className={cn(
-            "font-medium",
-            strength.score <= 1 && "text-error",
-            strength.score === 2 && "text-amber-500",
-            strength.score === 3 && "text-accent-teal",
-            strength.score >= 4 && "text-success"
-          )}
-        >
-          {strength.label}
-        </span>
       </div>
     </div>
   );

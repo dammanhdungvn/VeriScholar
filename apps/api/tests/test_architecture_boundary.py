@@ -428,6 +428,7 @@ def test_no_engineering_brag_or_forbidden_copy_in_frontend():
         "Nhà nghiên cứu Khoa học",
         "• Đang hoạt động",
         "bits)",
+        "Độ an toàn:",
     )
 
     violations: list[str] = []
