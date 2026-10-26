@@ -15,11 +15,12 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    expect(screen.getByText(/Không gian nghiên cứu/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Workspace" })).toBeInTheDocument();
     expect(screen.getByText(/Tìm bài báo/i)).toBeInTheDocument();
-    expect(screen.getByText(/Đối thoại AI/i)).toBeInTheDocument();
+    expect(screen.getByText(/Nghiên cứu/i)).toBeInTheDocument();
     expect(screen.getByText(/Attention Mechanism/i)).toBeInTheDocument();
-    expect(screen.getByText(/Kéo thả tệp PDF/i)).toBeInTheDocument();
+    // Standalone dropzone is removed (Rule Item 9)
+    expect(screen.queryByText(/Kéo thả tệp PDF bài báo vào đây/i)).not.toBeInTheDocument();
     expect(screen.queryByTestId("toggle-reasoning-btn")).not.toBeInTheDocument();
   });
 
@@ -34,11 +35,11 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    const chatModeBtn = screen.getByText(/Đối thoại AI/i);
+    const chatModeBtn = screen.getByText(/Nghiên cứu/i);
     fireEvent.click(chatModeBtn);
 
     expect(
-      screen.getByPlaceholderText(/Đặt câu hỏi hoặc yêu cầu phân tích học thuật/i)
+      screen.getByPlaceholderText(/Đặt câu hỏi nghiên cứu, kéo thả PDF hoặc yêu cầu tóm tắt/i)
     ).toBeInTheDocument();
     expect(screen.getByTestId("toggle-reasoning-btn")).toBeInTheDocument();
   });
@@ -108,7 +109,7 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
     fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
     await waitFor(() => {
@@ -150,7 +151,7 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
     fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
     await waitFor(() => {
@@ -208,7 +209,7 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
     fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
     // Skeleton list is rendered with data-testid="scholarly-skeleton-list"
@@ -260,7 +261,7 @@ describe("UnifiedHeroWorkspace Component", () => {
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+    const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
     fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
     await waitFor(() => {
@@ -301,7 +302,7 @@ describe("UnifiedHeroWorkspace Component", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
       fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
       expect(searchSpy).not.toHaveBeenCalled();
@@ -327,7 +328,7 @@ describe("UnifiedHeroWorkspace Component", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
       fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
       expect(searchSpy).toHaveBeenCalledWith("2305.18290", 8);
@@ -348,7 +349,7 @@ describe("UnifiedHeroWorkspace Component", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
       fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
       expect(searchSpy).toHaveBeenCalledWith("10.1145/3805774", 8);
@@ -368,7 +369,7 @@ describe("UnifiedHeroWorkspace Component", () => {
         />
       );
 
-      const searchInput = screen.getByPlaceholderText(/Nhập tên bài báo/i);
+      const searchInput = screen.getByPlaceholderText(/Tìm kiếm bài báo khoa học/i);
       fireEvent.keyDown(searchInput, { key: "Enter", code: "Enter" });
 
       await waitFor(() => {
@@ -386,7 +387,7 @@ describe("UnifiedHeroWorkspace Component", () => {
         expect(
           screen.queryByText("Không tìm thấy bài báo phù hợp với yêu cầu này.")
         ).not.toBeInTheDocument();
-        expect(screen.getByText(/Kéo thả tệp PDF/i)).toBeInTheDocument();
+        expect(screen.getByText(/Attention Mechanism/i)).toBeInTheDocument();
       });
       expect(onChangeText).toHaveBeenCalledWith("");
     });

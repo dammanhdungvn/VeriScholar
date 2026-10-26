@@ -1,7 +1,6 @@
-import { useState, useRef, useMemo, useCallback, useEffect, type DragEvent, type ChangeEvent } from "react";
-import { Search, MessageSquare, FileUp, X, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useRef, useMemo, useCallback, useEffect } from "react";
+import { Search, Sparkles, X, ChevronLeft, ChevronRight } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
-import { useAuthStore } from "@/features/auth/stores/useAuthStore";
 import { useTheme } from "@/hooks/useTheme";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { ScholarlyResultCard } from "@/features/discovery/components/ScholarlyResultCard";
@@ -36,7 +35,6 @@ export function UnifiedHeroWorkspace({
 }: UnifiedHeroWorkspaceProps) {
   const { theme } = useTheme();
   const isDark = theme === "dark";
-  const { user } = useAuthStore();
 
   const [mode, setMode] = useState<"search" | "chat">("search");
   const [isSearching, setIsSearching] = useState(false);
@@ -44,12 +42,10 @@ export function UnifiedHeroWorkspace({
   const [filterMode, setFilterMode] = useState<"all" | "peer_reviewed">("all");
   const [searchError, setSearchError] = useState<string | null>(null);
   const [hasSearched, setHasSearched] = useState(false);
-  const [isDragActive, setIsDragActive] = useState(false);
   const [openingPaperTitle, setOpeningPaperTitle] = useState<string | null>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
   const carouselRef = useRef<HTMLDivElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateScrollButtons = useCallback(() => {
     const el = carouselRef.current;
@@ -65,10 +61,6 @@ export function UnifiedHeroWorkspace({
       behavior: "smooth",
     });
   };
-
-  const userGreetingName = user?.full_name
-    ? user.full_name.split(" ").slice(-2).join(" ")
-    : user?.email?.split("@")[0] || "Học giả";
 
   const totalCount = searchResults.length;
   const peerReviewedCount = searchResults.filter((p) => Boolean(p.is_peer_reviewed)).length;
@@ -168,31 +160,6 @@ export function UnifiedHeroWorkspace({
     }
   };
 
-  const handleDrag = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setIsDragActive(true);
-    } else if (e.type === "dragleave") {
-      setIsDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onIngestFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onIngestFile(e.target.files[0]);
-    }
-  };
-
   const hasActiveContent =
     isSearching ||
     searchResults.length > 0 ||
@@ -208,17 +175,17 @@ export function UnifiedHeroWorkspace({
           : "justify-center my-auto"
       }`}
     >
-      {/* 1. Academic Header & Greeting (Radical Minimalism, no verbose slogans) */}
+      {/* 1. Academic Header & Workspace (Radical Minimalism, Rule Item 4) */}
       <div className="flex flex-col items-center text-center mb-6">
         <div className="w-11 h-11 rounded-2xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-2 shadow-xs flex items-center justify-center mb-3">
           <AcademicLogo size="sm" inverted={isDark} showWordmark={false} />
         </div>
         <h1 className="font-sans text-2xl sm:text-3xl md:text-4xl tracking-tight text-ink dark:text-[#f7f5ef] font-semibold">
-          Không gian nghiên cứu, {userGreetingName}
+          Workspace
         </h1>
       </div>
 
-      {/* 2. Mode Selector Pill Tabs */}
+      {/* 2. Mode Selector Pill Tabs (Rule Item 6: "Nghiên cứu") */}
       <div className="flex items-center gap-1.5 p-1 rounded-full bg-[#ede8df] dark:bg-[#252320] border border-[#ded8cd] dark:border-[#35322d] mb-4">
         <button
           type="button"
@@ -248,14 +215,15 @@ export function UnifiedHeroWorkspace({
               : "text-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200"
           }`}
         >
-          <MessageSquare className="w-3.5 h-3.5" />
-          <span>Đối thoại AI</span>
+          <Sparkles className="w-3.5 h-3.5" />
+          <span>Nghiên cứu</span>
         </button>
       </div>
 
       {/* 3. Central Multi-purpose Chat / Search Input Box */}
       <div className="w-full max-w-2xl">
         <DashboardChatInputBox
+          mode={mode}
           inputText={inputText}
           onChangeText={onChangeText}
           onSend={handleSend}
@@ -264,8 +232,8 @@ export function UnifiedHeroWorkspace({
           showReasoning={mode === "chat"}
           placeholder={
             mode === "search"
-              ? "Nhập tên bài báo hoặc tác giả (ví dụ: Attention, Transformer)..."
-              : "Đặt câu hỏi hoặc yêu cầu phân tích học thuật..."
+              ? "Tìm kiếm bài báo khoa học theo tiêu đề, tác giả, DOI hoặc arXiv ID..."
+              : "Đặt câu hỏi nghiên cứu, kéo thả PDF hoặc yêu cầu tóm tắt..."
           }
         />
       </div>
@@ -392,51 +360,19 @@ export function UnifiedHeroWorkspace({
         </div>
       )}
 
-      {/* 5. Two Primary Starting Actions (Shown when no search results) */}
+      {/* 5. Scholarly Topic Exploration Chips (Rule Item 9: standalone dropzone removed) */}
       {searchResults.length === 0 && !isSearching && !hasSearched && (
-        <div className="w-full max-w-2xl mt-5 flex flex-col gap-3.5">
-          {/* Action A: Compact PDF Upload Dropzone (Minimal, zero internal jargon) */}
-          <input
-            type="file"
-            ref={fileInputRef}
-            onChange={handleFileInputChange}
-            accept=".pdf,application/pdf"
-            className="hidden"
-          />
-
-          <div
-            onDragEnter={handleDrag}
-            onDragOver={handleDrag}
-            onDragLeave={handleDrag}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`w-full py-3.5 px-5 rounded-2xl border border-dashed transition-all duration-200 flex items-center justify-center gap-3 cursor-pointer select-none ${
-              isDragActive
-                ? "border-[#cc785c] bg-[#cc785c]/10 text-[#cc785c]"
-                : "border-[#ded8cd] dark:border-[#33302b] bg-white/40 dark:bg-[#1f1d1a]/40 hover:border-[#cc785c]/60 text-muted dark:text-zinc-400"
-            }`}
-          >
-            <div className="w-7 h-7 rounded-lg bg-[#cc785c]/10 text-[#cc785c] flex items-center justify-center shrink-0">
-              <FileUp className="w-3.5 h-3.5" />
-            </div>
-            <span className="text-xs font-medium text-ink dark:text-zinc-300">
-              Kéo thả tệp PDF bài báo vào đây hoặc duyệt tệp (tối đa 50 MB)
-            </span>
-          </div>
-
-          {/* Action B: Balanced Topic Chips */}
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            {TOPIC_CHIPS.map((chip) => (
-              <button
-                key={chip.label}
-                type="button"
-                onClick={() => handleChipClick(chip.query)}
-                className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-[#ded8cd] dark:border-[#35322d] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-300 hover:border-[#cc785c] hover:text-[#cc785c] transition-all cursor-pointer shadow-2xs"
-              >
-                {chip.label}
-              </button>
-            ))}
-          </div>
+        <div className="w-full max-w-2xl mt-4 flex flex-wrap items-center justify-center gap-2">
+          {TOPIC_CHIPS.map((chip) => (
+            <button
+              key={chip.label}
+              type="button"
+              onClick={() => handleChipClick(chip.query)}
+              className="px-3.5 py-1.5 rounded-full text-xs font-medium border border-[#ded8cd] dark:border-[#35322d] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-300 hover:border-[#cc785c] hover:text-[#cc785c] transition-all cursor-pointer shadow-2xs"
+            >
+              {chip.label}
+            </button>
+          ))}
         </div>
       )}
     </div>
