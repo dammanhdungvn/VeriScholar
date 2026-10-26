@@ -249,6 +249,51 @@ LIMIT 5;
 1. **Nút `[⏹️ Dừng trả lời]`:** Khi luồng SSE đang nhận dữ liệu, nút Gửi chuyển thành nút Dừng màu đỏ. Bấm nút sẽ gọi `AbortController.abort()`, ngắt ngay kết nối stream và giữ lại các đoạn chữ đã in ra.
 2. **Nút `[🔄 Reset Chat]`:** Trên thanh tiêu đề chat, nút Reset mở modal xác nhận: *"Bạn có muốn xóa toàn bộ lịch sử hỏi đáp của phiên đọc này để bắt đầu lại không?"*. Xác nhận sẽ gọi `DELETE /api/v1/sessions/{id}/messages`.
 
+### C. Thanh Nhập Liệu Tối Giản & Popover Tinh Chỉnh Suy Luận Đa Nhà Cung Cấp (Vendor-Agnostic Reasoning Popover)
+
+Theo định hướng giao diện tối giản 80/20 và loại bỏ hoàn toàn các thành phần dư thừa (như icon bàn tay), thanh nhập liệu được chuẩn hóa thành một khối Pill thống nhất (`DashboardChatInputBox.tsx`) với cơ chế điều khiển suy luận sâu tách lớp độc lập với nhà cung cấp:
+
+```
++-------------------------------------------------------------------------+
+|                               [ High ] (↺)                             |
+|                                5.6 Luna >                               |
+|                     (•)-------(•)-------(•)=======●                     |
+|                     Off       Low       Med      High                   |
++-------------------------------------------------------------------------+
+| [+] Đính kèm PDF... | Đặt câu hỏi về tài liệu...        | [🧠]  [↑]     |
++-------------------------------------------------------------------------+
+```
+
+1. **Thanh Nhập Liệu Chuẩn Hóa (Chat Input Pill):**
+   - **Bên trái:** Nút `+` (`+ Do anything` / Đính kèm bài báo PDF hoặc thêm ngữ cảnh).
+   - **Trung tâm:** `textarea` tự động co giãn độ cao theo độ dài văn bản (tối đa 240px).
+   - **Bên phải:**
+     - Nút **Bộ não (Reasoning Control)**: Kích hoạt Popover tinh chỉnh mức độ tư duy. Khi đang bật (`low`/`medium`/`high`), icon có viền sáng xanh dương nhạt.
+     - Nút **Gửi (ArrowUp)**: Nút tròn mũi tên gửi câu hỏi.
+     - *(Tuyệt đối không hiển thị icon Bàn tay hay các icon tính năng chưa hoàn thiện)*.
+
+2. **Popover Tinh Chỉnh Suy Luận (Reasoning Popover):**
+   - **Vị trí hiển thị:** Nổi ngay phía trên icon Bộ não, tự động đóng khi nhấp ra ngoài (click-outside).
+   - **Tiêu đề trạng thái:** Hiển thị mức độ hiện tại bằng chữ lớn màu xanh dương (ví dụ: `High` với mã màu `#38bdf8`), kèm icon reset/hoàn tác ở góc phải để trở về mức mặc định `High`.
+   - **Định danh mô hình:** Ghi rõ `5.6 Luna >` (cho phép người dùng nhận diện mô hình đang tương tác).
+   - **Thanh trượt 4 nấc (Stepped Slider):** Gồm 4 điểm dừng định lượng:
+     - `Off`: Tắt suy luận, mô hình trả lời trực tiếp tốc độ cao.
+     - `Low`: Suy luận ngắn gọn, tập trung trả lời câu hỏi trực tiếp.
+     - `Medium`: Suy luận cân bằng, rà soát logic trước khi phản hồi.
+     - `High`: Suy luận chuyên sâu (Socratic Deep Reasoning), mổ xẻ đa chiều các bằng chứng khoa học.
+
+3. **Kiến Trúc Lục Giác & Ánh Xạ Adapter Độc Lập Nhà Cung Cấp (Vendor-Agnostic Mapping):**
+   Để bảo đảm hệ thống không bị "khóa cứng" vào OpenAI (Vendor Lock-in), tầng Domain và UI chỉ giao tiếp qua Value Object trung lập:
+   $$\text{ReasoningEffortLevel} \in \{\text{'off'},\ \text{'low'},\ \text{'medium'},\ \text{'high'}\}$$
+   Tầng Adapter (`apps/api/src/api/adapters/`) chịu trách nhiệm ánh xạ tương thích với từng SDK được cấu hình:
+
+| Nhà cung cấp / Model | Nấc `Off` | Nấc `Low` | Nấc `Medium` | Nấc `High` |
+| :--- | :--- | :--- | :--- | :--- |
+| **OpenAI (`5.6-luna`, `o3`)** | Bỏ qua hoặc `null` | `reasoning_effort="low"` | `reasoning_effort="medium"` | `reasoning_effort="high"` |
+| **Google Gemini (Thinking)** | `thinking_budget=0` | `thinking_budget=1024` | `thinking_budget=4096` | `thinking_budget=16384` |
+| **Anthropic Claude (Thinking)** | `type="disabled"` | `budget_tokens=2048` | `budget_tokens=8192` | `budget_tokens=32768` |
+| **Local / DMR (DeepSeek R1)** | Thêm chỉ thị trả lời nhanh | Kích hoạt nấc CoT ngắn | Kích hoạt CoT tiêu chuẩn | Kích hoạt CoT chuyên sâu |
+
 ---
 
 ## 7. Tập Tin Neo Tham Chiếu Trong Codebase (Codebase Anchors)
