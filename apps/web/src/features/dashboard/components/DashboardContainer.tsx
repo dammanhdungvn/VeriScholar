@@ -40,6 +40,7 @@ export function DashboardContainer() {
   const setSession = useWorkspaceStore((s) => s.setSession);
   const setDocument = useWorkspaceStore((s) => s.setDocument);
   const setStatus = useWorkspaceStore((s) => s.setStatus);
+  const resetWorkspace = useWorkspaceStore((s) => s.resetWorkspace);
 
   const { ingest } = useDocumentIngestion();
 
@@ -146,6 +147,7 @@ export function DashboardContainer() {
     setActiveSessionId(undefined);
     setActiveBbox(null);
     resetChat();
+    resetWorkspace(); // Reset pending upload and document status
     navigate("/dashboard");
   };
 

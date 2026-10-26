@@ -25,7 +25,7 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
     file: File,
     onSessionCreated?: (sessionId: string) => void,
     existingSessionId?: string
-  ) => {
+  ): Promise<{ documentId: string; sessionId: string } | null> => {
     // 1. Client Pre-validation
     if (!file.name.toLowerCase().endsWith(".pdf")) {
       const err = new Error("Chỉ chấp nhận tệp định dạng PDF (.pdf).");
@@ -59,6 +59,12 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
 
     const progressTimer = setInterval(() => {
       if (isAborted) {
+        clearInterval(progressTimer);
+        return;
+      }
+
+      if (useWorkspaceStore.getState().documentStatus === "idle") {
+        isAborted = true;
         clearInterval(progressTimer);
         return;
       }
@@ -166,8 +172,20 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
       // 2.3. Polling trạng thái xử lý file (GET /api/v1/documents/{id}/status)
       let attempts = 0;
       while (attempts < maxPollAttempts) {
+        if (isAborted || useWorkspaceStore.getState().documentStatus === "idle") {
+          isAborted = true;
+          clearInterval(progressTimer);
+          return null;
+        }
+
         attempts++;
         const statusRes = await documentsApi.getStatus(doc.id);
+
+        if (isAborted || useWorkspaceStore.getState().documentStatus === "idle") {
+          isAborted = true;
+          clearInterval(progressTimer);
+          return null;
+        }
 
         if (statusRes.status === "completed") {
           break;
@@ -211,12 +229,21 @@ export function useDocumentIngestion(options: UseDocumentIngestionOptions = {}) 
         await new Promise((resolve) => setTimeout(resolve, pollingIntervalMs));
       }
 
+      if (isAborted || useWorkspaceStore.getState().documentStatus === "idle") {
+        isAborted = true;
+        clearInterval(progressTimer);
+        return null;
+      }
+
       // 3. Backend đã xong -> Chờ thanh tiến trình hoàn tất hành trình 0% -> 100%
       await waitForSmoothCompletion();
       return { documentId: doc.id, sessionId: targetSessionId };
     } catch (err: unknown) {
       isAborted = true;
       clearInterval(progressTimer);
+      if (useWorkspaceStore.getState().documentStatus === "idle") {
+        return null;
+      }
       let message = "Không thể xử lý tệp PDF. Vui lòng thử lại.";
       if (err instanceof ApiError) {
         message = err.message;
