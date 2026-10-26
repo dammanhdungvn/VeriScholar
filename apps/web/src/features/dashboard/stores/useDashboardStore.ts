@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import type { SidebarState, AppMode, BoundingBox } from "@/types/dashboard";
 
+export type ReasoningEffortLevel = "off" | "low" | "medium" | "high";
+
 interface DashboardState {
   sidebarState: SidebarState;
   appMode: AppMode;
@@ -9,10 +11,14 @@ interface DashboardState {
   isUploadModalOpen: boolean;
   isVoiceModalOpen: boolean;
   isReasoningEnabled: boolean;
+  reasoningEffort: ReasoningEffortLevel;
+  selectedModel: string;
 
   // Actions
   toggleReasoning: () => void;
   setReasoningEnabled: (enabled: boolean) => void;
+  setReasoningEffort: (effort: ReasoningEffortLevel) => void;
+  resetReasoningEffort: () => void;
   toggleSidebar: () => void;
   setSidebarState: (state: SidebarState) => void;
   setAppMode: (mode: AppMode) => void;
@@ -57,11 +63,35 @@ export const useDashboardStore = create<DashboardState>((set) => ({
   isUploadModalOpen: false,
   isVoiceModalOpen: false,
   isReasoningEnabled: true,
+  reasoningEffort: "high",
+  selectedModel: "5.6 Luna",
 
   toggleReasoning: () =>
-    set((state) => ({ isReasoningEnabled: !state.isReasoningEnabled })),
+    set((state) => {
+      const nextEffort: ReasoningEffortLevel = state.reasoningEffort === "off" ? "high" : "off";
+      return {
+        reasoningEffort: nextEffort,
+        isReasoningEnabled: nextEffort !== "off",
+      };
+    }),
 
-  setReasoningEnabled: (isReasoningEnabled) => set({ isReasoningEnabled }),
+  setReasoningEnabled: (isReasoningEnabled) =>
+    set({
+      isReasoningEnabled,
+      reasoningEffort: isReasoningEnabled ? "high" : "off",
+    }),
+
+  setReasoningEffort: (reasoningEffort) =>
+    set({
+      reasoningEffort,
+      isReasoningEnabled: reasoningEffort !== "off",
+    }),
+
+  resetReasoningEffort: () =>
+    set({
+      reasoningEffort: "high",
+      isReasoningEnabled: true,
+    }),
 
   toggleSidebar: () =>
     set((state) => {
@@ -89,6 +119,8 @@ export const useDashboardStore = create<DashboardState>((set) => ({
       isUploadModalOpen: false,
       isVoiceModalOpen: false,
       isReasoningEnabled: true,
+      reasoningEffort: "high",
+      selectedModel: "5.6 Luna",
     })
 }));
 

@@ -1,7 +1,8 @@
-import { useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent, type ChangeEvent } from "react";
 import { Plus, Mic, ArrowUp, Paperclip, X, Brain } from "lucide-react";
 import { useDashboardStore } from "../stores/useDashboardStore";
 import type { ActiveContextChip } from "../stores/useWorkspaceStore";
+import { ReasoningPopover } from "./ReasoningPopover";
 
 export interface DashboardChatInputBoxProps {
   inputText: string;
@@ -27,9 +28,9 @@ export function DashboardChatInputBox({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const setVoiceModalOpen = useDashboardStore((s) => s.setVoiceModalOpen);
-  const isReasoningEnabled = useDashboardStore((s) => s.isReasoningEnabled);
-  const toggleReasoning = useDashboardStore((s) => s.toggleReasoning);
+  const reasoningEffort = useDashboardStore((s) => s.reasoningEffort);
 
   // Auto-resize textarea height up to 240px
   useEffect(() => {
@@ -79,7 +80,7 @@ export function DashboardChatInputBox({
   };
 
   const handleReasoningButtonClick = () => {
-    toggleReasoning();
+    setIsPopoverOpen((prev) => !prev);
   };
 
   const hasText = inputText.trim().length > 0;
@@ -165,32 +166,33 @@ export function DashboardChatInputBox({
           </div>
 
           {/* Right Controls: Reasoning Brain Icon, Mic, Send Button */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 relative">
+            <ReasoningPopover
+              isOpen={isPopoverOpen}
+              onClose={() => setIsPopoverOpen(false)}
+            />
+
             {/* Socratic Reasoning Button with Brain Icon (Pure icon without text) */}
             <button
               type="button"
               onClick={handleReasoningButtonClick}
               data-testid="toggle-reasoning-btn"
-              aria-label="Chế độ Suy luận Socratic (Deep Reasoning)"
-              title={
-                isReasoningEnabled
-                  ? "Chế độ Suy luận Socratic: Đang BẬT. Nhấp để tắt."
-                  : "Chế độ Suy luận Socratic: Đang TẮT. Nhấp để bật."
-              }
+              aria-label="Cài đặt Mức độ Suy luận 5.6 Luna"
+              title={`Mức độ Suy luận: ${reasoningEffort.toUpperCase()}. Nhấp để tinh chỉnh.`}
               className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
-                isReasoningEnabled
+                reasoningEffort !== "off"
                   ? "bg-sky-500/15 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 ring-1 ring-sky-400/40 shadow-2xs"
-                  : "bg-black/[0.04] dark:bg-white/[0.05] text-muted dark:text-zinc-400 hover:bg-black/[0.08] dark:hover:bg-white/[0.08]"
+                  : "bg-black/[0.04] dark:bg-white/[0.05] text-muted dark:text-zinc-500 hover:bg-black/[0.08] dark:hover:bg-white/[0.08]"
               }`}
             >
               <Brain
                 className={`w-4 h-4 transition-transform ${
-                  isReasoningEnabled
+                  reasoningEffort !== "off"
                     ? "text-sky-600 dark:text-sky-400 scale-105"
-                    : "text-muted dark:text-zinc-400"
+                    : "text-muted dark:text-zinc-500"
                 }`}
               />
-              {isReasoningEnabled && (
+              {reasoningEffort !== "off" && (
                 <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-sky-500 dark:bg-sky-400 ring-2 ring-white dark:ring-[#212120]" />
               )}
               <span className="sr-only">Suy luận Socratic</span>
