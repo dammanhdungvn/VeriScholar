@@ -119,18 +119,12 @@ Thêm Bảng `tab:uc_01_spec` trước Bảng `tab:uc_03_spec` với các thuộ
 * Tích hợp máy ảo hộp cát E2B MicroVM và dự án giám sát suy luận Langfuse Cloud.
 
 #### Tiểu mục 4.2: Giao diện các phân hệ chính của VeriScholar (`4_2_giao_dien.tex`)
-* **4.2.1 Phân hệ Khám phá tài liệu khoa học:**
-  - Mô tả thanh tìm kiếm nghiên cứu thống nhất (`UnifiedHeroWorkspace`).
-  - Hiệu ứng phản hồi Skeleton tức thì (`ScholarlySkeletonList`).
-  - Thiết kế thẻ kết quả chống tràn (`ScholarlyResultCard`): giới hạn tác giả, khử \LaTeX, line-clamp-2, nhãn tag pill thanh mảnh với icon tích xanh nhỏ `[Đã bình duyệt]`.
-  - Nút gạt mềm chuyển đổi nguồn lai `[Tất cả]` / `[Đã bình duyệt]`.
-* **4.2.2 Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box:**
-  - Thiết kế màn hình đọc sâu chia đôi song song: Canvas đọc PDF 2 cột bên trái, Khung trò chuyện hỏi đáp thông minh bên phải.
-  - Cơ chế truyền phát SSE và vẽ khung viền vàng định vị câu văn trong 1 giây với $\text{IoU} \ge 0.85$.
-* **4.2.3 Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả:**
-  - Modal tải tệp PDF kéo thả với tiến trình bóc tách 2 cột ngầm.
-  - Lưu trữ khử trùng lặp CAS SHA-256 (tiết kiệm 98% dung lượng tệp trùng).
-  - Hồ sơ học giả liên kết ORCID iD và Két sắt khóa cá nhân BYOK mã hóa AES-256-GCM trên RAM.
+* **Hình thức thể hiện trực quan:** Sử dụng **Sơ đồ Bố cục Tương tác Vector TikZ chuẩn Paper Khoa học** (Hình `fig:ui_layout_architecture`: *Kiến trúc bố cục không gian tương tác người-máy của 4 phân hệ chính VeriScholar*), bảo đảm độ sắc nét vector tuyệt đối trên bản in A4 và đồng bộ 100% với ngôn ngữ thị giác của Chương 2 và Chương 3.
+* **Nội dung 4 phân hệ chính:**
+  - **4.2.1 Phân hệ Khám phá tài liệu khoa học:** Thanh tìm kiếm nghiên cứu thống nhất (`UnifiedHeroWorkspace`), hiệu ứng phản hồi Skeleton tức thì (`ScholarlySkeletonList`), thẻ kết quả chống tràn (`ScholarlyResultCard`), nút gạt mềm lọc bài bình duyệt `[Tất cả]` / `[Đã bình duyệt]`.
+  - **4.2.2 Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box:** Thiết kế chia đôi song song (Canvas đọc PDF 2 cột và Khung trò chuyện SSE), cơ chế nhảy trang tự động và vẽ khung viền vàng định vị câu văn trong 1 giây với $\text{IoU} \ge 0.85$.
+  - **4.2.3 Phân hệ Quản lý tài liệu và Hồ sơ học giả:** Modal nạp PDF kéo thả bóc tách 2 cột ngầm, lưu trữ khử trùng CAS SHA-256, liên kết ORCID iD, Két sắt khóa cá nhân BYOK (AES-256-GCM trên RAM).
+  - **4.2.4 Phân hệ Soạn thảo và Biên dịch tự phục hồi bản thảo \LaTeX:** Không gian soạn thảo bản thảo nghiên cứu, kết nối máy ảo E2B Sandbox MicroVM, chu trình ReAct tự đọc log và vá lỗi cú pháp với tỷ lệ thành công 92%.
 
 #### Tiểu mục 4.3: Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh (`4_3_kiem_thu.tex`)
 * Cập nhật Bảng 4.1 chuẩn xác với số liệu thực nghiệm:
@@ -141,16 +135,17 @@ Thêm Bảng `tab:uc_01_spec` trước Bảng `tab:uc_03_spec` với các thuộ
 * Phân tích kiểm thử ranh giới kiến trúc Lục giác AST và kiểm tra triệt tiêu liên kết `file://`.
 
 #### Tiểu mục 4.4: Số liệu thực nghiệm định lượng và đối chiếu Langfuse Cloud (`4_4_so_lieu.tex`)
-* Bảng tổng hợp các chỉ số thực nghiệm định lượng:
-  - Độ trễ kết nối cơ sở dữ liệu (`/health/ready`): 1.66 ms.
-  - Thời gian phản hồi token đầu tiên (TTFT) qua SSE: 1.15 giây.
-  - Độ chính xác định vị hộp tọa độ Bounding Box: IoU trung bình 0.88.
-  - Tỷ lệ tác nhân ReAct tự sửa lỗi \LaTeX\ trong E2B Sandbox: 92%.
-  - Tỷ lệ màng lọc Jaccard loại bỏ bài báo sai lệch chuyên ngành: 100%.
-* Đối chiếu vết thực thi thực tế trên Langfuse Cloud:
-  - Trace ID kiểm thử toàn trình BYOK: `f8d087c559790eafd0812e6293d23a34` (99 tokens, \$0.00032175, 3.32s).
-  - Trace ID cập nhật hồ sơ và mã hóa khóa: `9423ed4e264360d619c4e0494900f4f5`.
-  - Trace ID hỏi đáp học thuật SSE có minh chứng tọa độ: `c308e29caa04f439ca0ff1b851412f8b`.
+* **Quyết định thẩm định (Builder Call):** Sử dụng trực tiếp bộ số liệu thực nghiệm chuẩn và các vết truy vết (Trace ID) đã được đo lường thực tế từ hệ thống và Langfuse Cloud để đưa vào Bảng 4.2 và phân tích theo cấu trúc kim tự tháp Minto Pyramid, không chạy lại kịch bản benchmark giả lập:
+  - Bảng tổng hợp các chỉ số thực nghiệm định lượng:
+    * Độ trễ kết nối cơ sở dữ liệu (`/health/ready`): 1.66 ms.
+    * Thời gian phản hồi token đầu tiên (TTFT) qua SSE: 1.15 giây.
+    * Độ chính xác định vị hộp tọa độ Bounding Box: IoU trung bình 0.88.
+    * Tỷ lệ tác nhân ReAct tự sửa lỗi \LaTeX\ trong E2B Sandbox: 92%.
+    * Tỷ lệ màng lọc Jaccard loại bỏ bài báo sai lệch chuyên ngành: 100%.
+  - Đối chiếu vết thực thi thực tế trên Langfuse Cloud:
+    * Trace ID kiểm thử toàn trình BYOK: `f8d087c559790eafd0812e6293d23a34` (99 tokens, \$0.00032175, 3.32s).
+    * Trace ID cập nhật hồ sơ và mã hóa khóa: `9423ed4e264360d619c4e0494900f4f5`.
+    * Trace ID hỏi đáp học thuật SSE có minh chứng tọa độ: `c308e29caa04f439ca0ff1b851412f8b`.
 
 ---
 
