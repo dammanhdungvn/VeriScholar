@@ -13,6 +13,7 @@ export interface DashboardChatInputBoxProps {
   contextChip?: ActiveContextChip | null;
   onRemoveContextChip?: () => void;
   onContextChipClick?: (chip: ActiveContextChip) => void;
+  placeholder?: string;
 }
 
 export function DashboardChatInputBox({
@@ -24,6 +25,7 @@ export function DashboardChatInputBox({
   contextChip = null,
   onRemoveContextChip,
   onContextChipClick,
+  placeholder,
 }: DashboardChatInputBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -133,9 +135,10 @@ export function DashboardChatInputBox({
             onChange={(e) => onChangeText(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={
-              contextChip
+              placeholder ||
+              (contextChip
                 ? "Đặt câu hỏi về đoạn trích dẫn này hoặc nhấn Enter để giải thích chi tiết..."
-                : "Tôi có thể giúp gì cho bạn hôm nay?"
+                : "Tôi có thể giúp gì cho bạn hôm nay?")
             }
             rows={1}
             className="w-full bg-transparent text-ink dark:text-[#f5f3ed] placeholder-muted/70 dark:placeholder-zinc-500 text-sm sm:text-base focus:outline-none resize-none min-h-[44px] max-h-[220px] leading-relaxed font-anthropic-sans"
