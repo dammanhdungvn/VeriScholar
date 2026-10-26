@@ -91,6 +91,7 @@ report-datn/
 │   └── commands.tex                 # Macro toán học, từ viết tắt, ký hiệu thuận tiện
 ├── frontmatter/
 │   ├── bia_phu.tex                  # Trang bìa phụ tiếng Việt theo Phụ lục 02 HUMG
+│   ├── muc_luc.tex                  # Mục lục tự động độc lập (\tableofcontents) (Trang i)
 │   ├── danh_muc_hinh.tex            # Danh mục hình ảnh tự động (\listoffigures)
 │   ├── danh_muc_bang.tex            # Danh mục bảng biểu tự động (\listoftables)
 │   ├── danh_muc_viet_tat.tex        # Bảng thuật ngữ viết tắt xếp ABC

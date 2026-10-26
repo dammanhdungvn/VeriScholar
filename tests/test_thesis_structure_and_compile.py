@@ -5,6 +5,7 @@ from pathlib import Path
 def test_thesis_files_exist():
     required_files = [
         "report-datn/main.tex",
+        "report-datn/frontmatter/muc_luc.tex",
         "report-datn/frontmatter/loi_cam_on.tex",
         "report-datn/frontmatter/loi_mo_dau.tex",
         "report-datn/frontmatter/danh_muc_viet_tat.tex",
