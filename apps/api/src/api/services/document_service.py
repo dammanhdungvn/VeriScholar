@@ -1024,6 +1024,7 @@ class DocumentService:
                         chunk_models = [
                             DocumentChunkModel(
                                 id=ec.id,
+                                user_id=doc.user_id,
                                 document_id=ec.document_id,
                                 chunk_index=ec.chunk_index,
                                 page_number=ec.page_number,
@@ -1046,7 +1047,9 @@ class DocumentService:
                                 doc.updated_at = now
                                 await db.flush()
                         except Exception:
-                            pass
+                            logger.exception(
+                                "Failed to persist document chunks for %s", document_id
+                            )
 
                         # Ensure doc is active and unexpired
                         res = await db.execute(stmt)
@@ -1843,6 +1846,7 @@ class DocumentService:
                     chunk_models = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -1999,6 +2003,7 @@ class DocumentService:
                     chunk_models = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -2299,6 +2304,7 @@ class DocumentService:
                     new_chunks = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
@@ -2475,6 +2481,7 @@ class DocumentService:
                     new_chunks = [
                         DocumentChunkModel(
                             id=ec.id,
+                            user_id=doc.user_id,
                             document_id=ec.document_id,
                             chunk_index=ec.chunk_index,
                             page_number=ec.page_number,
