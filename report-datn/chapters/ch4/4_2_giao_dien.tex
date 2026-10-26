@@ -1,14 +1,178 @@
 % !TEX root = ../../main.tex
 \section{Giao diện các phân hệ chính của VeriScholar}
 \label{sec:giao_dien}
+
+Trong thiết kế hệ thống tương tác người--máy (Human-Computer Interaction -- HCI) phục vụ nghiên cứu khoa học, rào cản lớn nhất đối với năng suất học giả là tình trạng phân mảnh ngữ cảnh (\textit{context fragmentation}). Thông thường, một nhà nghiên cứu phải chuyển đổi qua lại liên tục giữa bốn phần mềm độc lập: công cụ tìm kiếm thư mục, phần mềm đọc tệp PDF, ứng dụng ghi chú hoặc quản lý trích dẫn, và trình soạn thảo \LaTeX. Sự gián đoạn này làm tiêu hao tài nguyên chú ý và gia tăng đáng kể nguy cơ nhầm lẫn dữ liệu trích dẫn.
+
+Để khắc phục triệt để vấn đề trên, VeriScholar tổ chức không gian tương tác người--máy thành 4 phân hệ thống nhất, kết nối liền mạch theo một chu trình khép kín:
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item \textbf{Phân hệ Khám phá tài liệu khoa học:} Thu thập, chuẩn hóa và phân loại tức thì các ấn phẩm học thuật từ nhiều kho lưu trữ toàn cầu.
+    \item \textbf{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box:} Khung hiển thị song song kết hợp trình đọc PDF hai cột với trợ lý suy luận nhân quả, kiểm chứng nguồn trích dẫn trực tiếp trên trang tài liệu.
+    \item \textbf{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả:} Khử trùng lặp lưu trữ theo nội dung (CAS), định danh học giả quốc tế ORCID và két sắt mã hóa khóa cá nhân (BYOK).
+    \item \textbf{Phân hệ Soạn thảo và Tự phục hồi bản thảo \LaTeX:} Môi trường biên tập trực tuyến với khả năng tự động phân tích nhật ký lỗi biên dịch và tạo bản vá sửa lỗi tự động trong môi trường máy ảo cách ly.
+\end{enumerate}
+
+Kiến trúc không gian tương tác người--máy và luồng luân chuyển dữ liệu giữa 4 phân hệ chính được mô hình hóa trong Hình~\ref{fig:ui_layout_architecture}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.74, transform shape,
+    subsys_disc/.style={draw=teal!80!black, fill=teal!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
+    subsys_read/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
+    subsys_prof/.style={draw=purple!80!black, fill=purple!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
+    subsys_writ/.style={draw=orange!80!black, fill=orange!3, rounded corners=6pt, line width=1pt, text width=7.2cm, inner sep=6pt},
+    header/.style={font=\bfseries\small, align=center, inner sep=2pt},
+    card/.style={draw=gray!35, fill=white, rounded corners=3pt, line width=0.6pt, font=\scriptsize, text width=6.8cm, inner sep=4pt},
+    flowarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!80!black},
+    bidir/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1pt, draw=purple!80!black, dashed}
+]
+    % 1. Phân hệ Khám phá (Top-Left)
+    \node[subsys_disc] (disc) at (-4.2, 3.4) {
+        \begin{center}
+            \textbf{\textcolor{teal!90!black}{1. PHÂN HỆ KHÁM PHÁ TÀI LIỆU KHOA HỌC}}\\
+            \scriptsize (\textit{Scholarly Discovery Subsystem})
+        \end{center}
+        \vspace{-2pt}
+        \begin{tikzpicture}[node distance=5pt]
+            \node[card] (c1) {$\bullet$ \textbf{Thanh tìm kiếm hợp nhất:} arXiv, Semantic Scholar, Exa AI};
+            \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [\textbf{Đã bình duyệt} (\textit{Peer-Reviewed})]; Tái xếp hạng ưu tiên};
+            \node[card, below=of c2] (c3) {$\bullet$ \textbf{Hiệu ứng tải mượt:} 3 thẻ khung xương giả lập (\texttt{animate-pulse})};
+            \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Làm sạch \LaTeX, rút gọn tác giả, co giãn tóm tắt};
+        \end{tikzpicture}
+    };
+
+    % 2. Phân hệ Đọc sâu (Top-Right)
+    \node[subsys_read] (read) at (4.2, 3.4) {
+        \begin{center}
+            \textbf{\textcolor{blue!90!black}{2. PHÂN HỆ ĐỌC SÂU VÀ MINH CHỨNG NGUỒN}}\\
+            \scriptsize (\textit{Deep Reading \& Bounding Box Subsystem})
+        \end{center}
+        \vspace{-2pt}
+        \begin{tikzpicture}[node distance=5pt]
+            \node[card] (r1) {$\bullet$ \textbf{Khung kép (Dual-pane):} PDF Canvas 2 cột (trái) \& Chat SSE (phải)};
+            \node[card, below=of r1] (r2) {$\bullet$ \textbf{Thẻ minh chứng số:} Gắn nhãn trích dẫn tọa độ $[x_{\min}, y_{\min}, x_{\max}, y_{\max}]$};
+            \node[card, below=of r2] (r3) {$\bullet$ \textbf{Tô sáng Bounding Box:} Viền vàng nhấp nháy 1 giây ($IoU \ge 0{,}85$)};
+            \node[card, below=of r3] (r4) {$\bullet$ \textbf{Định vị tự động:} Cuộn trang tức thời trong thời gian $< 1$ giây};
+        \end{tikzpicture}
+    };
+
+    % 3. Phân hệ Hồ sơ học giả & BYOK (Bottom-Left)
+    \node[subsys_prof] (prof) at (-4.2, -3.2) {
+        \begin{center}
+            \textbf{\textcolor{purple!90!black}{3. PHÂN HỆ HỒ SƠ HỌC GIẢ VÀ KHO TÀI LIỆU}}\\
+            \scriptsize (\textit{Scholar Profile \& Storage Vault Subsystem})
+        \end{center}
+        \vspace{-2pt}
+        \begin{tikzpicture}[node distance=5pt]
+            \node[card] (p1) {$\bullet$ \textbf{Nạp tệp kéo--thả:} Hỗ trợ đa tệp PDF kéo thả trực tiếp};
+            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Băm nội dung SHA-256 (tiết kiệm 98\% dung lượng)};
+            \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết định danh chuẩn quốc tế \textbf{ORCID} iD 16 chữ số};
+            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa AES-256-GCM, bảo toàn trên RAM (Zero-Retention)};
+        \end{tikzpicture}
+    };
+
+    % 4. Phân hệ Soạn thảo & Tự sửa lỗi (Bottom-Right)
+    \node[subsys_writ] (writ) at (4.2, -3.2) {
+        \begin{center}
+            \textbf{\textcolor{orange!90!black}{4. PHÂN HỆ SOẠN THẢO VÀ TỰ SỬA LỖI \LaTeX}}\\
+            \scriptsize (\textit{LaTeX Authoring \& Self-Healing Subsystem})
+        \end{center}
+        \vspace{-2pt}
+        \begin{tikzpicture}[node distance=5pt]
+            \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu cú pháp \LaTeX};
+            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} Máy ảo vi mô \textbf{E2B} biên dịch cô lập, triệt tiêu mã độc};
+            \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Tự động đọc tệp nhật ký lỗi $\to$ Lập luận $\to$ Sinh bản vá vi phẫu};
+            \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ thành công $> 90\%$};
+        \end{tikzpicture}
+    };
+
+    % Mũi tên luân chuyển dữ liệu
+    \draw[flowarrow] (disc.east) -- (read.west) 
+        node[midway, above, font=\scriptsize\bfseries, text=teal!80!black] {Nạp PDF mở};
+
+    \draw[flowarrow] (read.south) -- (writ.north)
+        node[midway, right, font=\scriptsize\bfseries, text=blue!80!black] {Trích xuất BibTeX};
+
+    \draw[flowarrow] (prof.north) -- (disc.south)
+        node[midway, left, font=\scriptsize\bfseries, text=purple!80!black] {Lọc theo hồ sơ};
+
+    \draw[flowarrow] (prof.east) -- (writ.west)
+        node[midway, above, font=\scriptsize\bfseries, text=purple!80!black] {Nạp khóa BYOK};
+
+    \draw[bidir] (read.south west) -- (prof.north east)
+        node[midway, above, sloped, font=\tiny\bfseries, text=gray!80!black] {Lưu trữ \& Đối chiếu CAS};
+\end{tikzpicture}
+\caption{Mô hình kiến trúc không gian tương tác người--máy bốn phân hệ VeriScholar}
+\label{fig:ui_layout_architecture}
+\end{figure}
+
 \subsection{Phân hệ Khám phá tài liệu khoa học}
 \label{subsec:ui_discovery}
-Giao diện phân hệ Khám phá cho phép học giả tìm kiếm đồng thời qua Exa AI, arXiv và Semantic Scholar, hiển thị kết quả phân loại rõ ràng giữa bài có tệp PDF mở (\textit{Open Access}) và bài báo thu phí, hỗ trợ nạp bài tức thì vào thư viện nghiên cứu cá nhân.
+
+Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, loại bỏ hoàn toàn các thành phần trang trí dư thừa để người nghiên cứu tập trung cao độ vào bản chất tri thức. Khi người dùng truy cập, phân hệ hiển thị thanh tìm kiếm trung tâm (\textit{Search Hero}) kết hợp các thẻ chủ đề nghiên cứu gợi ý (\textit{Topic Chips}) như cơ chế chú ý (\textit{Attention Mechanism}), mạng nơ-ron đồ thị (\textit{Graph Neural Networks}), hay mô hình khuếch tán (\textit{Diffusion Models}). Phân hệ tích hợp các cơ chế giao diện chuyên sâu nhằm nâng cao trải nghiệm học thuật:
+
+\begin{enumerate}[label=\textbf{\alph*.}]
+    \item \textbf{Hiệu ứng chờ tải mượt mà với khung xương giả lập (\texttt{animate-pulse}):} Trong các hệ thống học thuật truyền thống, việc truy vấn đồng thời qua các giao diện lập trình ứng dụng (API) phân tán bên ngoài thường mất từ 1,5 đến 3,0 giây, dễ gây cảm giác giao diện bị đóng băng nếu chỉ sử dụng biểu tượng xoay tròn (\textit{spinner}). VeriScholar áp dụng kỹ thuật hiển thị 3 thẻ khung xương giả lập (\textit{Skeleton Cards}) kích hoạt lớp hiệu ứng \texttt{animate-pulse} của Tailwind CSS. Khung xương mô phỏng chính xác cấu trúc hình học của thẻ kết quả thực tế (vị trí dải huy hiệu trạng thái, 2 thanh tiêu đề, 1 thanh thông tin tác giả và 2 thanh nội dung tóm tắt). Giải pháp này duy trì tính ổn định của bố cục trang, triệt tiêu hiện tượng giật chuyển layout (Cumulative Layout Shift -- CLS) và giảm thiểu đáng kể nhận thức về độ trễ mạng (\textit{perceived latency}) của học giả.
+    
+    \item \textbf{Bộ lọc phân loại dạng viên nhộng (\textit{Pill Toggle}) và Ưu tiên bình duyệt:} Giao diện cung cấp nút gạt chuyển đổi trạng thái gồm hai chế độ: \textit{Tất cả} và \textit{Đã bình duyệt} (\textit{Peer-Reviewed}). Hệ thống tự động đếm và hiển thị số lượng bài báo tương ứng theo thời gian thực (ví dụ: \textit{Tất cả (8)} và \textit{Đã bình duyệt (5)}). Khi kích hoạt bộ lọc, thuật toán tái xếp hạng ưu tiên học thuật (\textit{Academic Priority Re-ranking}) sẽ lập tức sắp xếp các bài báo đã trải qua quy trình phản biện nghiêm ngặt lên đầu danh sách, sau đó phân cấp giảm dần theo năm công bố, giúp nhà nghiên cứu nhanh chóng tiếp cận nguồn tri thức có độ tin cậy khoa học cao nhất.
+    
+    \item \textbf{Thẻ bài báo chống tràn bố cục (\textit{Anti-Overflow Scholarly Card}):} Nhằm xử lý đặc thù đa dạng của dữ liệu học thuật, khối hiển thị kết quả tích hợp ba cơ chế chuẩn hóa chuyên dụng:
+    \begin{itemize}
+        \item \textit{Làm sạch mã \LaTeX\ thô trong tiêu đề:} Nhiều kho lưu trữ như arXiv chứa các biểu thức toán học chưa qua xử lý trong tiêu đề (ví dụ: \texttt{\$\textbackslash to\$}, \texttt{\$\textbackslash alpha\$}, \texttt{\$\textbackslash textbf\{...\}\$}). Hàm chuẩn hóa tự động chuyển đổi các ký tự này sang dạng ký tự biểu diễn khoa học đọc được hoặc loại bỏ dấu bao bọc, ngăn ngừa hoàn toàn nguy cơ tràn vỡ giao diện.
+        \item \textit{Rút gọn danh sách đồng tác giả:} Đối với các công trình có số lượng tác giả lớn, hệ thống áp dụng quy tắc thu gọn học thuật: chỉ hiển thị tối đa 2 tác giả đầu tiên kết hợp hậu tố ``và cộng sự'', vừa bảo đảm tính súc tích, vừa giữ đúng chuẩn mực trích dẫn quốc tế.
+        \item \textit{Co giãn tóm tắt hai dòng linh hoạt:} Phần tóm tắt (\textit{Abstract}) áp dụng thuộc tính \texttt{line-clamp-2} nhằm giới hạn mặc định hiển thị ở hai dòng đầu. Học giả có thể mở rộng toàn văn khi cần nghiên cứu sâu hoặc thu gọn lại để thuận tiện quét nhanh danh sách tài liệu.
+    \end{itemize}
+    
+    \item \textbf{Chỉ báo trạng thái truy cập và Nạp tài liệu tức thì:} Mỗi thẻ bài báo được gắn nhãn trực quan phân biệt giữa tài liệu có tệp toàn văn mở (\textit{Open Access PDF} -- chỉ báo chấm xanh lục) và bài báo thu phí chỉ có bản tóm tắt (\textit{Tóm tắt} -- chỉ báo xám). Đối với các bài có tệp mở, giao diện cung cấp nút hành động trực tiếp cho phép người dùng chuyển thẳng tệp vào Phân hệ Đọc sâu chỉ bằng một thao tác nhấp chuột.
+\end{enumerate}
 
 \subsection{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box}
 \label{subsec:ui_deep_reading}
-Giao diện đọc sâu gồm hai khung hiển thị song song: khung đọc bản PDF gốc bên trái và khung trò chuyện thông minh bên phải. Khi AI trích dẫn câu trả lời, trình duyệt tự động nhảy tới đúng trang tài liệu và vẽ khung viền vàng định vị chính xác vị trí đoạn văn gốc trong vòng 1 giây.
 
-\subsection{Phân hệ Hồ sơ học giả và Két sắt khóa cá nhân}
+Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học giả phân tích, đối thoại và kiểm chứng trực tiếp từng luận điểm của bài báo khoa học. Giao diện được cấu trúc theo mô hình hai khung hiển thị song song (\textit{Dual-pane layout}):
+
+\begin{itemize}
+    \item \textbf{Khung hiển thị tài liệu PDF Canvas (bên trái):} Sử dụng bộ kết xuất đồ họa Canvas tối ưu hóa cho tài liệu học thuật hai cột tiêu chuẩn quốc tế. Khung hiển thị hỗ trợ các chức năng thu phóng tỷ lệ mượt mà, điều hướng trang linh hoạt, giữ trọn vẹn bố cục ấn bản gốc bao gồm văn bản, công thức toán học và biểu đồ minh họa.
+    \item \textbf{Khung hội thoại trợ lý thông minh SSE (bên phải):} Tích hợp giao diện đàm thoại theo thời gian thực dựa trên luồng truyền phát sự kiện từ máy chủ (Server-Sent Events -- SSE). Khung hội thoại hiển thị quá trình lập luận của tác nhân và trả lời câu hỏi kèm các thẻ trích dẫn nguồn số hóa (ví dụ: $[1]$, $[2]$).
+\end{itemize}
+
+Điểm đột phá về tương tác người--máy của phân hệ nằm ở \textbf{cơ chế định vị và tô sáng tọa độ Bounding Box viền vàng}:
+
+\begin{enumerate}[label=\textbf{\arabic*.}]
+    \item Khi học giả nhấp chuột vào một thẻ trích dẫn hoặc chỉ số tham chiếu trong câu trả lời của trợ lý AI, hệ thống tiếp nhận bộ siêu dữ liệu minh chứng chứa số trang và bộ tứ tọa độ chuẩn hóa $B = [x_{\min}, y_{\min}, x_{\max}, y_{\max}]$.
+    \item Trình xem PDF Canvas lập tức thực hiện cuộn trang tự động (\textit{smooth auto-scroll}) đưa đúng trang tài liệu chứa nguồn trích dẫn vào trung tâm tầm nhìn của người đọc.
+    \item Một lớp phủ đồ họa (Overlay Layer) kích hoạt hiệu ứng nhấp nháy (\textit{focus flash animation}) vẽ khung viền vàng nổi bật bao quanh chính xác đoạn văn bản gốc trong thời gian đúng 1 giây, trước khi chuyển về trạng thái viền sáng tĩnh.
+    \item Độ chính xác hình học của vùng tô sáng đạt chỉ số giao diện trên diện tích hợp $IoU \ge 0{,}85$ so với vùng văn bản gốc của tác giả, với tổng độ trễ điều hướng và hiển thị dưới 1 giây. Cơ chế này xóa bỏ hoàn toàn hiện tượng học giả phải đọc dò thủ công hàng chục trang tài liệu để kiểm chứng một câu trả lời, hiện thực hóa nguyên tắc minh chứng tuyệt đối trong nghiên cứu khoa học.
+\end{enumerate}
+
+\subsection{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả}
 \label{subsec:ui_profile}
-Giao diện quản lý hồ sơ học giả (\texttt{UserProfileModal} và \texttt{ScholarSettingsView}) cho phép liên kết mã định danh học giả ORCID iD 16 chữ số, cấu hình tùy chọn mô hình ngôn ngữ và mã hóa lưu trữ khóa API OpenAI cá nhân (BYOK) bằng thuật toán AES-256-GCM.
+
+Phân hệ Quản lý tài liệu và Hồ sơ học giả đảm nhiệm chức năng lưu trữ an toàn, tổ chức thư viện nghiên cứu cá nhân và bảo mật dữ liệu riêng tư của từng nhà khoa học:
+
+\begin{enumerate}[label=\textbf{\alph*.}]
+    \item \textbf{Hộp thoại nạp tài liệu kéo--thả và Khử trùng lặp CAS:} Giao diện hỗ trợ học giả tải lên các tệp tài liệu PDF cá nhân bằng thao tác kéo--thả tiện lợi (\textit{Drag-and-Drop Modal}). Quá trình tải lên được liên kết trực tiếp với cơ chế băm nội dung SHA-256 của tầng lưu trữ hướng nội dung (Content-Addressed Storage -- CAS). Khi tệp được đưa vào giao diện, hệ thống tính toán giá trị băm $H(F)$ ngay tại máy khách và máy chủ; nếu tệp đã tồn tại trong kho lưu trữ chung, hệ thống lập tức tái sử dụng bản ghi vật lý mà không tốn dung lượng lưu trữ mới. Cơ chế này giúp tiết kiệm tới 98\% tài nguyên lưu trữ đĩa và rút ngắn thời gian nạp tệp xuống mức gần như tức thời.
+    
+    \item \textbf{Liên kết định danh học giả quốc tế ORCID iD:} Trong giao diện quản lý hồ sơ cá nhân (\texttt{UserProfileModal}), học giả có thể liên kết tài khoản với mã định danh quốc tế chuẩn ISO 27729 (Open Researcher and Contributor ID -- ORCID iD) gồm 16 chữ số, ví dụ \texttt{0000-0002-1825-0097}. Khi định danh được xác thực thành công, giao diện hiển thị biểu tượng tích xanh học thuật cạnh tên nhà nghiên cứu thay vì sử dụng các huy hiệu cồng kềnh, tuân thủ nguyên tắc thiết kế tối giản cấp sản phẩm.
+    
+    \item \textbf{Két sắt khóa bảo mật cá nhân (BYOK) trên bộ nhớ RAM:} Nhằm tôn trọng quyền tự chủ dữ liệu và bảo mật tuyệt đối các công trình nghiên cứu chưa công bố, VeriScholar trang bị cơ chế ``Tự mang khóa bí mật'' (Bring Your Own Key -- BYOK). Học giả có thể tự cấu hình khóa API OpenAI của riêng mình. Khóa được mã hóa bằng thuật toán đối xứng AES-256-GCM với khóa dẫn xuất bảo vệ trong phiên làm việc. Dưới quy chuẩn \textit{Zero-Retention trên RAM}, khóa giải mã chỉ tồn tại tạm thời trong bộ nhớ đệm phục vụ yêu cầu suy luận tức thời, tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng hay xuất hiện trong tệp nhật ký hệ thống.
+\end{enumerate}
+
+\subsection{Phân hệ Soạn thảo và Tự phục hồi bản thảo \LaTeX}
+\label{subsec:ui_writing}
+
+Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu, hỗ trợ học giả chuyển hóa các tri thức đã đọc và tổng hợp thành bản thảo bài báo khoa học chất lượng cao theo đúng quy chuẩn ấn bản quốc tế:
+
+\begin{enumerate}[label=\textbf{\alph*.}]
+    \item \textbf{Môi trường soạn thảo chuyên dụng với Monaco Editor:} Giao diện tích hợp trình biên tập mã nguồn Monaco Editor (nền tảng của Visual Studio Code), cung cấp đầy đủ các tiện ích soạn thảo cao cấp: tô màu cú pháp \LaTeX\ thời gian thực, gợi ý lệnh tự động, tự động đóng cặp môi trường toán học, và hỗ trợ cây thư mục dự án đa tệp trực quan (quản lý tệp chính \texttt{main.tex}, các chương nội dung, tệp thư viện trích dẫn \texttt{references.bib} và thư mục hình ảnh).
+    
+    \item \textbf{Biên dịch cô lập trong môi trường máy ảo vi mô E2B MicroVM:} Nhằm ngăn chặn các nguy cơ tấn công an ninh mạng thông qua các macro lệnh độc hại của \LaTeX\ (như lệnh thực thi shell hệ thống \texttt{\textbackslash write18}), toàn bộ tiến trình biên dịch \texttt{xelatex} và \texttt{latexmk} được chuyển giao thực thi cách ly hoàn toàn bên trong máy ảo vi mô E2B Sandbox MicroVM. Môi trường này được khởi tạo động trong thời gian dưới 150 mili-giây, cung cấp đầy đủ các gói lệnh TeX Live tiêu chuẩn và tự động thu hồi ngay sau khi xuất bản tệp tài liệu PDF, bảo đảm an toàn tuyệt đối cho máy chủ trung tâm.
+    
+    \item \textbf{Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop):} Khi quá trình biên dịch thất bại (mã trạng thái kết thúc khác 0), thay vì để học giả phải tự lần mò qua hàng nghìn dòng thông báo lỗi phức tạp của tệp nhật ký \texttt{main.log}, hệ thống tự động kích hoạt chu trình tác nhân tự phục hồi ReAct:
+    \begin{itemize}
+        \item \textit{Bước Suy nghĩ (Thought):} Tác nhân bóc tách tệp log, nhận diện nguyên nhân gốc rễ gây lỗi (ví dụ: thiếu thẻ đóng môi trường \texttt{\textbackslash end\{figure\}}, ký tự đặc biệt chưa được thoát mã như \texttt{\_} hay \texttt{\&}, hoặc nhãn trích dẫn bị xung đột).
+        \item \textit{Bước Hành động (Action):} Tác nhân xác định chính xác số dòng mã nguồn và tạo bản vá vi phẫu (\textit{Surgical Unified Diff}) sửa đổi tối thiểu đoạn mã bị lỗi mà không làm biến dạng các phần nội dung khác.
+        \item \textit{Bước Quan sát (Observation):} Bản vá được chuyển vào máy ảo E2B Sandbox để thực thi biên dịch lại. Chu trình lặp lại cho đến khi mã trạng thái thành công (bằng 0), đạt tỷ lệ tự sửa lỗi vượt trên 90\% và hiển thị bản thảo PDF hoàn chỉnh trực tiếp trên khung xem trước thời gian thực (\textit{Live Preview Pane}).
+    \end{itemize}
+\end{enumerate}

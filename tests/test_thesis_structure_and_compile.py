@@ -41,18 +41,22 @@ def test_thesis_files_exist():
 
 
 def test_thesis_compilation():
-    res = subprocess.run(
-        [
-            "xelatex",
-            "-interaction=nonstopmode",
-            "-file-line-error",
-            "main.tex",
-        ],
-        cwd="report-datn",
-        capture_output=True,
-        text=True,
+    res = None
+    for _ in range(2):
+        res = subprocess.run(
+            [
+                "xelatex",
+                "-interaction=nonstopmode",
+                "-file-line-error",
+                "main.tex",
+            ],
+            cwd="report-datn",
+            capture_output=True,
+            text=True,
+        )
+    assert res is not None and res.returncode == 0, (
+        f"XeLaTeX compilation failed with log:\n{res.stdout[-1500:] if res else ''}"
     )
-    assert res.returncode == 0, f"XeLaTeX compilation failed with log:\n{res.stdout[-1500:]}"
     assert Path("report-datn/main.pdf").exists()
 
 
@@ -144,3 +148,52 @@ def test_thesis_ch4_section_4_1_environment_and_monorepo():
     assert "\\label{tab:monorepo_structure}" in content, (
         "Missing \\label{tab:monorepo_structure} in 4_1_moi_truong.tex"
     )
+
+
+def test_thesis_ch4_section_4_2_ui_subsystems():
+    """Kiểm tra cấu trúc và nội dung học thuật chi tiết của Mục 4.2:
+    - Sơ đồ vector TikZ fig:ui_layout_architecture thể hiện kiến trúc 4 phân hệ tương tác.
+    - 4.2.1 Phân hệ Khám phá tài liệu khoa học (subsec:ui_discovery):
+      Skeleton animate-pulse, thẻ chống tràn, lọc Đã bình duyệt.
+    - 4.2.2 Phân hệ Đọc sâu và Bounding Box (subsec:ui_deep_reading):
+      Khung kép PDF Canvas và Chat SSE, Bounding Box viền vàng.
+    - 4.2.3 Phân hệ Quản lý tài liệu & Hồ sơ học giả (subsec:ui_profile):
+      Khử trùng lặp CAS SHA-256, liên kết ORCID, két sắt BYOK AES-256-GCM.
+    - 4.2.4 Phân hệ Soạn thảo & Tự sửa lỗi LaTeX (subsec:ui_writing):
+      Monaco Editor, E2B MicroVM Sandbox, chu trình ReAct.
+    """
+    sec4_2_file = Path("report-datn/chapters/ch4/4_2_giao_dien.tex")
+    assert sec4_2_file.exists(), "4_2_giao_dien.tex must exist"
+    content = sec4_2_file.read_text(encoding="utf-8")
+
+    # 1. Kiểm tra sơ đồ vector TikZ và nhãn hình ảnh
+    assert "\\label{fig:ui_layout_architecture}" in content, (
+        "Missing \\label{fig:ui_layout_architecture} in 4_2_giao_dien.tex"
+    )
+    assert "\\begin{tikzpicture}" in content, "Missing \\begin{tikzpicture} in 4_2_giao_dien.tex"
+
+    # 2. Kiểm tra 4 tiểu mục bắt buộc
+    required_subsections = [
+        "\\label{subsec:ui_discovery}",
+        "\\label{subsec:ui_deep_reading}",
+        "\\label{subsec:ui_profile}",
+        "\\label{subsec:ui_writing}",
+    ]
+    for sub in required_subsections:
+        assert sub in content, f"Missing subsection label in 4.2: {sub}"
+
+    # 3. Kiểm tra các thuật ngữ kỹ thuật cốt lõi của 4 phân hệ
+    required_keywords = [
+        "animate-pulse",
+        "Đã bình duyệt",
+        "Bounding Box",
+        "CAS",
+        "ORCID",
+        "BYOK",
+        "AES-256-GCM",
+        "Monaco",
+        "E2B",
+        "ReAct",
+    ]
+    for kw in required_keywords:
+        assert kw in content, f"Missing core technical keyword in 4.2: {kw}"
