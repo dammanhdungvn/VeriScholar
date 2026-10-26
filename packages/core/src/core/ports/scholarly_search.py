@@ -26,12 +26,21 @@ class ScholarlyPaperSearchResult(BaseModel):
     pdf_url: str | None = Field(
         default=None, description="Direct URL to open-access PDF if available"
     )
+    is_peer_reviewed: bool = Field(
+        default=False,
+        description="Whether paper is published in peer-reviewed venue or non-preprint DOI",
+    )
 
 
 class IScholarlySearchPort(ABC):
     """Abstract port defining external academic literature search contract."""
 
     @abstractmethod
-    async def search(self, query: str, limit: int = 10) -> list[ScholarlyPaperSearchResult]:
+    async def search(
+        self,
+        query: str,
+        limit: int = 10,
+        is_peer_reviewed_only: bool = False,
+    ) -> list[ScholarlyPaperSearchResult]:
         """Search academic literature across scholarly sources with unified deduplication."""
         pass

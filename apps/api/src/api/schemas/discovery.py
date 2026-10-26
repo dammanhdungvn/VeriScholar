@@ -10,6 +10,10 @@ class DiscoverySearchRequest(BaseModel):
 
     query: str = Field(min_length=1, max_length=500, description="Academic search query or DOI")
     limit: int = Field(default=10, ge=1, le=50, description="Maximum number of search results")
+    is_peer_reviewed_only: bool = Field(
+        default=False,
+        description="Filter to only return peer-reviewed publications",
+    )
 
 
 class OpenReadingRequest(BaseModel):

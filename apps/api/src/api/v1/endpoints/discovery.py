@@ -54,7 +54,11 @@ async def search_scholarly_literature(
             },
         )
 
-    results = await search_port.search(clean_query, limit=payload.limit)
+    results = await search_port.search(
+        clean_query,
+        limit=payload.limit,
+        is_peer_reviewed_only=payload.is_peer_reviewed_only,
+    )
     return SingleResponseEnvelope(
         data=results,
         meta=ResponseMeta(total_results=len(results)),
