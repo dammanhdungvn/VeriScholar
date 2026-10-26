@@ -137,17 +137,17 @@
 **Files:**
 - Run: `./scripts/deploy_to_vps.sh`
 
-- [ ] **Step 5.1: Chạy Cổng 1 - Linter & Formatter Python**
-  `uv run ruff check . && uv run ruff format --check .`
-- [ ] **Step 5.2: Chạy Cổng 2 - Backend Pytest Suite**
-  `uv run pytest`
-- [ ] **Step 5.3: Chạy Cổng 3 - Frontend Vitest Suite**
-  `npm --prefix apps/web run test`
-- [ ] **Step 5.4: Chạy Cổng 4 - Production Web Build**
-  `npm --prefix apps/web run build`
-- [ ] **Step 5.5: Triển khai 1-Click Rollout lên VPS**
-  Thực thi `./scripts/deploy_to_vps.sh` để đồng bộ code và bundle web mới nhất lên `https://verischolar.duckdns.org`.
-- [ ] **Step 5.6: Kiểm chứng trực tiếp trên máy chủ VPS**
+- [x] **Step 5.1: Chạy Cổng 1 - Linter & Formatter Python**
+  `uv run ruff check . && uv run ruff format --check .` (PASS - 152 files)
+- [x] **Step 5.2: Chạy Cổng 2 - Backend Pytest Suite**
+  `uv run pytest` (PASS - 84/84 tests)
+- [x] **Step 5.3: Chạy Cổng 3 - Frontend Vitest Suite**
+  `npm --prefix apps/web run test` (PASS - 24/24 tests)
+- [x] **Step 5.4: Chạy Cổng 4 - Production Web Build**
+  `npm --prefix apps/web run build` (PASS - exit code 0)
+- [x] **Step 5.5: Triển khai 1-Click Rollout lên VPS**
+  Thực thi `./scripts/deploy_to_vps.sh` để đồng bộ code và bundle web mới nhất lên `https://verischolar.duckdns.org` (bundle: `assets/index-DP_3HI-j.js`).
+- [x] **Step 5.6: Kiểm chứng trực tiếp trên máy chủ VPS**
   - Chạy `curl -fsS https://verischolar.duckdns.org/health` (xác nhận 200).
-  - Chạy `POST /api/v1/discovery/search` với từ khóa *"Retrieval-Augmented Generation for Large Language Models: A Survey"*, xác nhận 100% kết quả là bài RAG Survey, không chứa bài vật lý hạt nhân.
-- [ ] **Step 5.7: Đóng Goal với `<!-- GOAL_COMPLETE -->`**
+  - Chạy `POST /api/v1/discovery/search` với từ khóa *"Retrieval-Augmented Generation for Large Language Models: A Survey"*, xác nhận 100% kết quả là bài RAG Survey, loại bỏ hoàn toàn các bài vật lý hạt nhân CMS/LHCb 2014.
+- [x] **Step 5.7: Đóng Goal với `<!-- GOAL_COMPLETE -->`**
