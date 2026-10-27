@@ -797,6 +797,204 @@ class SessionChatService:
         # tau < 0.20 -> ACTIVE_ABSTENTION
         return "ACTIVE_ABSTENTION", candidate_chunks, True
 
+    async def retrieve_and_prepare_context(
+        self,
+        session_id: UUID,
+        user_id: UUID,
+        question: str,
+        target_doc_ids: list[UUID] | None = None,
+        chat_history: list[dict[str, Any]] | None = None,
+        limit: int = 8,
+    ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], bool]:
+        """Orchestrate query transformation, hybrid search, CRAG evaluation,
+        and spatial citation extraction.
+
+        Transforms query via Condense Type II and HyDE vector.
+        Retrieves hybrid chunks (Vector + FTS RRF k=60).
+        Evaluates CRAG confidence tau and conditionally expands adjacent chunks.
+        Builds citation list with normalized bounding boxes [x0, y0, x1, y1, page].
+
+        Returns:
+            tuple of (selected_chunks, citations, abstain)
+        """
+        # 1. Resolve target document IDs if not provided
+        if target_doc_ids is None:
+            docs_stmt = (
+                select(SessionDocumentModel.document_id)
+                .where(SessionDocumentModel.session_id == session_id)
+                .order_by(SessionDocumentModel.display_order.asc())
+            )
+            docs_res = await self.db.execute(docs_stmt)
+            target_doc_ids = list(docs_res.scalars().all())
+
+        if not target_doc_ids:
+            return [], [], False
+
+        # 2. Transform query via Condense Type II & HyDE Cross-Lingual Generator
+        condensed_query, hyde_vec = await self.transform_query(
+            raw_query=question,
+            chat_history=chat_history or [],
+        )
+
+        # 3. Retrieve hybrid chunks (PostgreSQL CTE Vector + FTS RRF k=60)
+        hybrid_candidates = await self.retrieve_hybrid_chunks(
+            session_id=session_id,
+            user_id=user_id,
+            query_text=condensed_query,
+            query_embedding=hyde_vec,
+            limit=limit,
+            target_doc_ids=target_doc_ids,
+        )
+
+        selected_chunks: list[dict[str, Any]] = []
+        citations: list[dict[str, Any]] = []
+        abstain = False
+
+        if hybrid_candidates:
+            # 4. Evaluate CRAG and conditionally expand context
+            crag_verdict, crag_chunks, crag_abstain = await self.evaluate_crag_and_expand(
+                hybrid_candidates
+            )
+            abstain = crag_abstain
+            selected_chunks = crag_chunks
+
+            if not crag_abstain:
+                for idx, item in enumerate(crag_chunks, start=1):
+                    raw_bboxes = item.get("bounding_boxes") or []
+                    page_num = item.get("page_number") or 1
+                    norm_bboxes: list[list[float | int]] = []
+                    if raw_bboxes:
+                        for b in raw_bboxes:
+                            if isinstance(b, (list, tuple)):
+                                if len(b) == 4:
+                                    norm_bboxes.append(
+                                        [
+                                            float(b[0]),
+                                            float(b[1]),
+                                            float(b[2]),
+                                            float(b[3]),
+                                            page_num,
+                                        ]
+                                    )
+                                elif len(b) >= 5:
+                                    norm_bboxes.append(
+                                        [
+                                            float(b[0]),
+                                            float(b[1]),
+                                            float(b[2]),
+                                            float(b[3]),
+                                            int(b[4]),
+                                        ]
+                                    )
+                                else:
+                                    norm_bboxes.append([0.1, 0.1, 0.9, 0.2, page_num])
+                            else:
+                                norm_bboxes.append([0.1, 0.1, 0.9, 0.2, page_num])
+                    else:
+                        norm_bboxes = [[0.1, 0.1, 0.9, 0.2, page_num]]
+
+                    citations.append(
+                        {
+                            "citation_id": f"cit_{idx}",
+                            "document_id": str(item["document_id"]),
+                            "document_title": (
+                                item.get("document_title")
+                                or item.get("filename")
+                                or "Tài liệu học thuật"
+                            ),
+                            "page_number": page_num,
+                            "chunk_index": item.get("chunk_index"),
+                            "bounding_boxes": norm_bboxes,
+                            "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
+                        }
+                    )
+        else:
+            # Fallback to lexical chunk ranking across active documents
+            chunk_stmt = (
+                select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
+                .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                .where(DocumentChunkModel.document_id.in_(target_doc_ids))
+            )
+            chunk_res = await self.db.execute(chunk_stmt)
+            all_chunks = chunk_res.all()
+
+            ranked_chunks = self._score_and_rank_chunks(all_chunks, question)
+            current_tokens = 0
+            max_chunks = limit
+            global_token_budget = 3500
+            relevance_cutoff = 0.35
+
+            for item, score in ranked_chunks:
+                if score < relevance_cutoff:
+                    continue
+                chk = item[0] if hasattr(item, "__getitem__") else item
+                cnt = getattr(chk, "content", "") or ""
+                if not cnt.strip() or len(cnt.strip()) < 20:
+                    continue
+                tok_cnt = getattr(chk, "token_count", None) or max(1, int(len(cnt.split()) * 1.3))
+                if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
+                    break
+
+                doc_title = item[1] if len(item) > 1 else None
+                doc_fn = item[2] if len(item) > 2 else None
+
+                page_num = chk.page_number or 1
+                raw_bboxes = chk.bounding_boxes or []
+                norm_bboxes = []
+                if raw_bboxes:
+                    for b in raw_bboxes:
+                        if isinstance(b, (list, tuple)):
+                            if len(b) == 4:
+                                norm_bboxes.append(
+                                    [float(b[0]), float(b[1]), float(b[2]), float(b[3]), page_num]
+                                )
+                            elif len(b) >= 5:
+                                norm_bboxes.append(
+                                    [float(b[0]), float(b[1]), float(b[2]), float(b[3]), int(b[4])]
+                                )
+                            else:
+                                norm_bboxes.append([0.1, 0.1, 0.9, 0.2, page_num])
+                        else:
+                            norm_bboxes.append([0.1, 0.1, 0.9, 0.2, page_num])
+                else:
+                    norm_bboxes = [[0.1, 0.1, 0.9, 0.2, page_num]]
+
+                chunk_dict = {
+                    "chunk_id": str(chk.id),
+                    "id": str(chk.id),
+                    "document_id": str(chk.document_id),
+                    "chunk_index": chk.chunk_index,
+                    "page_number": page_num,
+                    "content": cnt,
+                    "text_content": cnt,
+                    "bounding_boxes": norm_bboxes,
+                    "token_count": tok_cnt,
+                    "document_title": doc_title or doc_fn or "Tài liệu học thuật",
+                    "filename": doc_fn,
+                    "rrf_score": score,
+                    "cosine_sim": score,
+                    "max_cosine_sim": score,
+                }
+                selected_chunks.append(chunk_dict)
+                current_tokens += tok_cnt
+                if len(selected_chunks) >= max_chunks:
+                    break
+
+            for idx, chk_dict in enumerate(selected_chunks, start=1):
+                citations.append(
+                    {
+                        "citation_id": f"cit_{idx}",
+                        "document_id": chk_dict["document_id"],
+                        "document_title": chk_dict["document_title"],
+                        "page_number": chk_dict["page_number"],
+                        "chunk_index": chk_dict.get("chunk_index"),
+                        "bounding_boxes": chk_dict["bounding_boxes"],
+                        "score": round(max(0.35, min(1.0, chk_dict["rrf_score"])), 2),
+                    }
+                )
+
+        return selected_chunks, citations, abstain
+
     def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
         """Rank document chunks dynamically based on query lexical and concept overlap.
 
@@ -1562,12 +1760,6 @@ class SessionChatService:
         except Exception as ex:
             logger.debug("could_not_load_turn_history", error=str(ex))
 
-        # Query Improvement: Condense Type II & HyDE Cross-Lingual Generator
-        condensed_query, hyde_vec = await self.transform_query(
-            raw_query=request.question,
-            chat_history=chat_history_for_transform,
-        )
-
         if target_doc_ids:
             # Check for abstract-only or parsing documents
             abs_stmt = select(DocumentModel).where(
@@ -1591,124 +1783,38 @@ class SessionChatService:
                 name="retrieval",
                 input={
                     "target_doc_ids": [str(d) for d in target_doc_ids],
-                    "condensed_query": condensed_query,
+                    "question": request.question,
                 },
                 metadata={"target_docs_count": len(target_doc_ids)},
                 as_type="retriever",
             ) as ret_span:
-                # Primary: PostgreSQL CTE Hybrid RRF k=60 search
-                hybrid_candidates = await self.retrieve_hybrid_chunks(
+                retrieved_chunks, citations, crag_abstain = await self.retrieve_and_prepare_context(
                     session_id=session_id,
                     user_id=user_id,
-                    query_text=condensed_query,
-                    query_embedding=hyde_vec,
-                    limit=8,
+                    question=request.question,
                     target_doc_ids=target_doc_ids,
+                    chat_history=chat_history_for_transform,
+                    limit=8,
                 )
-                ret_span.set_output({"total_chunks": len(hybrid_candidates)})
-
-            if hybrid_candidates:
-                crag_verdict, crag_chunks, crag_abstain = await self.evaluate_crag_and_expand(
-                    hybrid_candidates
-                )
-                ret_span.set_metadata(
+                for item in retrieved_chunks:
+                    selected_chunks.append((item, item.get("rrf_score", 0.5)))
+                ret_span.set_output(
                     {
-                        "crag_verdict": crag_verdict,
+                        "total_chunks": len(retrieved_chunks),
+                        "citations_count": len(citations),
                         "crag_abstain": crag_abstain,
-                        "candidates_count": len(hybrid_candidates),
-                        "expanded_chunks_count": len(crag_chunks),
                     }
                 )
 
-                if crag_abstain:
-                    thought_abstain = (
-                        "Độ tin cậy truy xuất dưới ngưỡng an toàn (tau < 0.20). "
-                        "Kích hoạt cơ chế từ chối học thuật chủ động "
-                        "(CRAG Active Abstention) để ngăn ngừa ảo giác."
-                    )
-                    evt_crag = emit("reasoning", {"thought": thought_abstain})
-                    if evt_crag:
-                        yield evt_crag
-                else:
-                    for idx, item in enumerate(crag_chunks, start=1):
-                        selected_chunks.append((item, item.get("rrf_score", 0.5)))
-                        citations.append(
-                            {
-                                "citation_id": f"cit_{idx}",
-                                "document_id": str(item["document_id"]),
-                                "document_title": (
-                                    item.get("document_title") or "Tài liệu học thuật"
-                                ),
-                                "page_number": item.get("page_number") or 1,
-                                "bounding_boxes": item.get("bounding_boxes")
-                                or [[0.1, 0.1, 0.9, 0.2, 1]],
-                                "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
-                            }
-                        )
-            else:
-                chunk_stmt = (
-                    select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
-                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
-                    .where(DocumentChunkModel.document_id.in_(target_doc_ids))
+            if crag_abstain:
+                thought_abstain = (
+                    "Độ tin cậy truy xuất dưới ngưỡng an toàn (tau < 0.20). "
+                    "Kích hoạt cơ chế từ chối học thuật chủ động "
+                    "(CRAG Active Abstention) để ngăn ngừa ảo giác."
                 )
-                chunk_res = await self.db.execute(chunk_stmt)
-                all_chunks = chunk_res.all()
-
-                with self.ai_tracing.span(
-                    name="reranking",
-                    input={"query": request.question, "total_chunks": len(all_chunks)},
-                    as_type="tool",
-                ) as rank_span:
-                    ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
-                    current_tokens = 0
-                    max_chunks = 8
-                    global_token_budget = 3500
-                    relevance_cutoff = 0.35
-
-                    for item, score in ranked_chunks:
-                        if score < relevance_cutoff:
-                            continue
-                        chk = item[0] if hasattr(item, "__getitem__") else item
-                        cnt = getattr(chk, "content", "") or ""
-                        if not cnt.strip() or len(cnt.strip()) < 20:
-                            continue
-                        tok_cnt = getattr(chk, "token_count", None) or max(
-                            1, int(len(cnt.split()) * 1.3)
-                        )
-                        if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
-                            break
-                        selected_chunks.append((item, score))
-                        current_tokens += tok_cnt
-                        if len(selected_chunks) >= max_chunks:
-                            break
-
-                    rank_span.set_output(
-                        {
-                            "selected_chunks_count": len(selected_chunks),
-                            "total_tokens_budgeted": current_tokens,
-                        }
-                    )
-
-                for idx, (item, score) in enumerate(selected_chunks, start=1):
-                    try:
-                        chunk = item[0]
-                        doc_title = item[1] if len(item) > 1 else None
-                        doc_fn = item[2] if len(item) > 2 else None
-                    except (TypeError, IndexError, KeyError):
-                        chunk = item
-                        doc_title = getattr(chunk, "title", None)
-                        doc_fn = getattr(chunk, "filename", None)
-
-                    citations.append(
-                        {
-                            "citation_id": f"cit_{idx}",
-                            "document_id": str(chunk.document_id),
-                            "document_title": doc_title or doc_fn or "Tài liệu học thuật",
-                            "page_number": chunk.page_number or 1,
-                            "bounding_boxes": chunk.bounding_boxes or [[0.1, 0.1, 0.9, 0.2, 1]],
-                            "score": round(max(0.35, min(1.0, score)), 2),
-                        }
-                    )
+                evt_crag = emit("reasoning", {"thought": thought_abstain})
+                if evt_crag:
+                    yield evt_crag
 
         # 2. Semantic Intent & Ambiguity Classification
         with self.ai_tracing.span(
@@ -1778,18 +1884,20 @@ class SessionChatService:
                     "QUY TẮC PHẢN HỒI:\n"
                     "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
                     "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
-                    "2. Gắn trích dẫn inline dạng số: Khi đưa ra số liệu, công thức hay luận điểm "
-                    "then chốt lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn inline bằng số trong ngoặc "
-                    "vuông (ví dụ: [1], [2]) NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa luận điểm đó. "
-                    "Số trích dẫn [1], [2] tương ứng với thứ tự các đoạn tài liệu được cung cấp "
-                    "trong ngữ cảnh (1 cho tài liệu/chunk đầu tiên, 2 cho tài liệu/chunk tiếp "
-                    "theo, v.v.). Tuyệt đối KHÔNG viết [^cit], [^cit_X], hay [^\\text{cit}]. "
-                    "CHỈ trích dẫn [1], [2] khi trong ngữ cảnh thực sự có nội dung bằng chứng rõ "
-                    "ràng cho chi tiết. Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa "
-                    "trích dẫn.\n"
-                    "3. Hiển thị công thức toán học: Định dạng chuẩn LaTeX KaTeX. "
-                    "Sử dụng \\[ ... \\] hoặc $$ ... $$ cho công thức hiển thị riêng dòng, "
-                    "và \\( ... \\) hoặc $ ... $ cho công thức inline trong dòng.\n"
+                    "2. Gắn trích dẫn inline chuẩn xác: Khi đưa ra số liệu, công thức "
+                    "hay luận điểm then chốt lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn chính xác "
+                    "dạng số trong ngoặc vuông (ví dụ: [1], [2]) hoặc thẻ neo ngữ nghĩa "
+                    "[cite:chunk_id:page:concept_name] NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa "
+                    "luận điểm đó. Số trích dẫn [1], [2] tương ứng với thứ tự các đoạn tài liệu "
+                    "được cung cấp trong ngữ cảnh (1 cho tài liệu/chunk đầu tiên, "
+                    "2 cho tài liệu/chunk tiếp theo, v.v.). Tuyệt đối KHÔNG viết [^cit], "
+                    "[^cit_X], hay [^\\text{cit}]. CHỈ trích dẫn khi trong ngữ cảnh thực sự "
+                    "có nội dung bằng chứng rõ ràng cho chi tiết. "
+                    "Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa trích dẫn.\n"
+                    "3. Hiển thị công thức toán học KaTeX: Bắt buộc xuất các công thức toán học "
+                    "nhiều dòng, định lý hoặc công thức trọng tâm dưới dạng KaTeX hiển thị riêng "
+                    "dòng bằng $$...$$ (hoặc \\[ ... \\]), và sử dụng \\( ... \\) hoặc $...$ "
+                    "cho công thức inline trong dòng.\n"
                     "4. Vẽ sơ đồ / mindmap / kiến trúc: Khi người dùng yêu cầu vẽ mindmap, "
                     "kiến trúc, sơ đồ hoặc flowchart (hoặc khi cần trực quan hóa luồng dữ liệu), "
                     "hãy sử dụng khối mã code ```mermaid ... ``` với cú pháp Mermaid chuẩn (ví dụ: "
