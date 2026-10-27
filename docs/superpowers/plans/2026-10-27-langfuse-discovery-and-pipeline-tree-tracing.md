@@ -119,7 +119,7 @@ Expected: FAIL.
 Run: `uv run pytest apps/api/tests/unit/test_discovery_langfuse_tracing.py -v`
 Expected: 100% tests pass.
 
-- [ ] **Step 5: Commit & Auto VPS Sync**
+- [x] **Step 5: Commit & Auto VPS Sync** (Commit: `85aae38`)
 ```bash
 git add apps/api/src/api/adapters/scholarly_search_adapter.py apps/api/src/api/v1/endpoints/discovery.py apps/api/src/api/deps.py apps/api/tests/unit/test_discovery_langfuse_tracing.py
 git commit -m "feat(observability): instrument complete tree tracing on langfuse for discovery search pipeline"
@@ -133,22 +133,22 @@ bash scripts/deploy_to_vps.sh --fast
 **Files:**
 - Repository-wide verification across all 4 gates.
 
-- [ ] **Step 1: Run Gate 1 (Python Linter & Formatter)**
+- [x] **Step 1: Run Gate 1 (Python Linter & Formatter)**
 Run: `uv run ruff check . && uv run ruff format --check .`
-Expected: 0 errors, 0 format warnings.
+Expected: 0 errors, 0 format warnings. (Passed: 162 files formatted, 0 errors).
 
-- [ ] **Step 2: Run Gate 2 (Backend Unit & Integration Tests)**
+- [x] **Step 2: Run Gate 2 (Backend Unit & Integration Tests)**
 Run: `uv run pytest`
-Expected: 100% tests passed.
+Expected: 100% tests passed. (Passed: 121 passed in 22.95s).
 
-- [ ] **Step 3: Run Gate 3 (Frontend Unit Tests)**
+- [x] **Step 3: Run Gate 3 (Frontend Unit Tests)**
 Run: `npm --prefix apps/web run test`
-Expected: 100% tests passed.
+Expected: 100% tests passed. (Passed: 16 test files, 72 passed).
 
-- [ ] **Step 4: Run Gate 4 (Production Build Frontend)**
+- [x] **Step 4: Run Gate 4 (Production Build Frontend)**
 Run: `npm --prefix apps/web run build`
-Expected: Exit code 0, build thành công.
+Expected: Exit code 0, build thành công. (Passed: Vite build in 1.68s).
 
-- [ ] **Step 5: Live Verification & Deploy to VPS**
+- [x] **Step 5: Live Verification & Deploy to VPS**
 Run: `bash scripts/deploy_to_vps.sh --fast`
-Expected: Exit code 0, triển khai thành công lên `https://verischolar.duckdns.org`.
+Expected: Exit code 0, triển khai thành công lên `https://verischolar.duckdns.org`. (Passed: HTTP 200, Live at https://verischolar.duckdns.org).
