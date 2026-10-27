@@ -154,30 +154,18 @@ export function DocumentTabBar({
           );
         })}
 
-        {/* Add new document to session (Max 5 or Eviction Dialog) */}
-        <button
-          type="button"
-          onClick={() => {
-            if (openDocumentIds.length >= 5) {
-              setIsEvictionOpen(true);
-            } else {
-              onAddDocument();
-            }
-          }}
-          aria-label={
-            openDocumentIds.length >= 5
-              ? "Phiên đã đạt tối đa 5 bài báo (Quản lý đóng bớt tab)"
-              : "Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
-          }
-          className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-surface-cream-strong/60 dark:hover:bg-[#2a2723] transition-colors border border-dashed border-hairline dark:border-[#3a352f] cursor-pointer"
-          title={
-            openDocumentIds.length >= 5
-              ? "Đã đạt tối đa 5 bài báo. Nhấp để đóng bớt tab."
-              : "Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
-          }
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
+        {/* Add new document to session (Strictly capped at 5 papers per specs; hidden when full) */}
+        {openDocumentIds.length < 5 && (
+          <button
+            type="button"
+            onClick={onAddDocument}
+            aria-label="Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
+            className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-surface-cream-strong/60 dark:hover:bg-[#2a2723] transition-colors border border-dashed border-hairline dark:border-[#3a352f] cursor-pointer"
+            title="Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Eviction Dialog when 5 tabs reached */}
