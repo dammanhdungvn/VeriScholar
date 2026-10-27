@@ -408,6 +408,29 @@ export function PdfCanvasViewer({
     }
   }, [currentPage, activeBbox, readingMode, pdfDoc, scrollContainer]);
 
+  // Listen for global scholar:focus-bbox event for cross-component Visual Grounding
+  useEffect(() => {
+    const handleFocusBbox = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        documentId?: string;
+        pageNumber?: number;
+        boundingBoxes?: BoundingBox[];
+      }>;
+      const { documentId: targetDocId, pageNumber } = customEvent.detail || {};
+      if (targetDocId && targetDocId !== documentId) {
+        useReaderStore.getState().setActiveDocumentId(targetDocId);
+      }
+      if (pageNumber && pageNumber !== currentPage) {
+        setCurrentPage(pageNumber);
+      }
+    };
+
+    window.addEventListener("scholar:focus-bbox", handleFocusBbox);
+    return () => {
+      window.removeEventListener("scholar:focus-bbox", handleFocusBbox);
+    };
+  }, [documentId, currentPage, setCurrentPage]);
+
   // Metadata dimensions lookup map
   const pageDimensionsMap = useMemo(() => {
     const map = new Map<number, [number, number]>();
