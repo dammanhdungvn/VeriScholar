@@ -80,92 +80,98 @@ Quy trình xử lý dữ liệu và truy xuất lai hai luồng (Dual-Stream Hyb
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
-    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
-    procbox/.style={draw=teal!80!black, fill=teal!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
-    storecard/.style={draw=purple!85!black, fill=purple!3, rounded corners=7pt, line width=1.1pt, inner sep=6pt},
-    indexbox/.style={draw=purple!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\small},
-    rrfbox/.style={draw=orange!85!black, fill=orange!8, rounded corners=5pt, line width=1pt, align=center, inner sep=5pt, font=\small},
-    outputbox/.style={draw=green!70!black, fill=green!8, rounded corners=5pt, line width=1pt, align=center, inner sep=5pt, font=\small},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=blue!85!black},
-    ingestarrow/.style={-{Stealth[length=2.5mm]}, line width=0.9pt, draw=teal!80!black},
-    rankarrow/.style={-{Stealth[length=2.5mm]}, line width=0.9pt, draw=orange!85!black}
+    scale=0.74, transform shape,
+    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.9cm, font=\small},
+    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    procbox/.style={draw=teal!80!black, fill=teal!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    indexbox/.style={draw=purple!80!black, fill=white, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, text width=5.0cm},
+    storecard/.style={draw=purple!80!black, fill=purple!3, rounded corners=8pt, line width=1.2pt},
+    rrfbox/.style={draw=orange!90!black, fill=orange!8, rounded corners=5pt, line width=1.2pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    outputbox/.style={draw=green!70!black, fill=green!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!85!black},
+    ingestarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!85!black},
+    rankarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=orange!90!black}
 ]
     % ==========================================================================
-    % 1. LUỒNG NẠP ẤN PHẨM & LẬP CHỈ MỤC KÉP (INGESTION STREAM) - BÊN TRÊN
+    % 1. LUỒNG TIẾP NHẬN & CHỈ MỤC HÓA (INGESTION PIPELINE) - BÊN TRÊN
     % ==========================================================================
-    \node[sourcebox, minimum width=3.2cm] (src) at (-5.7, 2.6) {
+    \node[sourcebox, text width=2.5cm] (src) at (-5.4, 3.6) {
         \textbf{Ấn phẩm PDF}\\[2pt]
-        \footnotesize Bài báo nghiên cứu 2 cột
+        \footnotesize Bài báo 2 cột
     };
-    \node[procbox, minimum width=3.2cm] (loader) at (-1.9, 2.6) {
+    \node[procbox, text width=2.5cm] (loader) at (-1.8, 3.6) {
         \textbf{Bóc tách 2 cột}\\[2pt]
         \footnotesize Gutter Detection
     };
-    \node[procbox, minimum width=3.2cm] (chunks) at (1.9, 2.6) {
+    \node[procbox, text width=2.5cm] (chunks) at (1.8, 3.6) {
         \textbf{Phân đoạn Chunks}\\[2pt]
-        \footnotesize Tọa độ BBox $[0..1000]$
+        \footnotesize BBox $[0..1000]$
     };
-    \node[procbox, minimum width=3.2cm] (embed) at (5.7, 2.6) {
+    \node[procbox, text width=2.5cm] (embed) at (5.4, 3.6) {
         \textbf{Mã hóa biểu diễn}\\[2pt]
-        \footnotesize Dense 1536d $\parallel$ BM25
+        \footnotesize Dense $\parallel$ BM25
     };
 
-    \draw[ingestarrow] (src) -- (loader);
-    \draw[ingestarrow] (loader) -- (chunks);
-    \draw[ingestarrow] (chunks) -- (embed);
+    \draw[ingestarrow] (src.east) -- (loader.west);
+    \draw[ingestarrow] (loader.east) -- (chunks.west);
+    \draw[ingestarrow] (chunks.east) -- (embed.west);
 
     % ==========================================================================
     % 2. KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL (DUAL-INDEX STORE) - TRUNG TÂM
     % ==========================================================================
-    \node[storecard, minimum width=15.2cm, minimum height=2.2cm] (store_card) at (0, 0.5) {};
-    \node[font=\bfseries\footnotesize, text=purple!90!black] at (0, 1.35) {KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL + PGVECTOR (DUAL-INDEX STORE)};
+    \node[storecard, minimum width=15.4cm, minimum height=2.4cm] (store_card) at (0, 0.5) {};
+    \node[anchor=south, fill=purple!12, draw=purple!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, 1.7) {KHO CHỈ MỤC KÉP POSTGRESQL 16};
 
-    \node[indexbox, minimum width=6.8cm] (idx_dense) at (-3.6, 0.45) {
+    \node[indexbox] (idx_dense) at (-3.8, 0.45) {
         \textbf{Chỉ mục Vector HNSW (Dense)}\\[1pt]
         \footnotesize Không gian 1536d $\parallel$ Cosine Similarity
     };
-    \node[indexbox, minimum width=6.8cm] (idx_sparse) at (3.6, 0.45) {
+    \node[indexbox] (idx_sparse) at (3.8, 0.45) {
         \textbf{Chỉ mục Ngược GIN (Sparse)}\\[1pt]
         \footnotesize Từ điển từ khóa thưa $\parallel$ Thuật toán BM25
     };
 
-    % Đường nạp dữ liệu từ Ingestion vào 2 chỉ mục
-    \draw[ingestarrow] (embed.south) -- ++(0,-0.35) -| (idx_sparse.north) node[pos=0.7, right=2pt, font=\tiny\bfseries] {Nạp BM25};
-    \draw[ingestarrow] (embed.south) -- ++(0,-0.35) -| (idx_dense.north) node[pos=0.7, left=2pt, font=\tiny\bfseries] {Nạp Vector};
+    % Nạp dữ liệu từ Ingestion vào 2 chỉ mục
+    \draw[ingestarrow] (chunks.south) -- ++(0, -0.45) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Nạp Vector} ++(-6.1, 0) -- ([xshift=-15pt]idx_dense.north);
+    \draw[ingestarrow] (embed.south) -- ++(0, -0.45) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Nạp BM25} ++(-1.1, 0) -- ([xshift=15pt]idx_sparse.north);
 
     % ==========================================================================
     % 3. LUỒNG TRUY VẤN LAI & HỢP NHẤT RRF (QUERY & FUSION STREAM) - BÊN DƯỚI
     % ==========================================================================
-    \node[sourcebox, minimum width=2.8cm] (query) at (-6.2, -1.9) {
+    \node[sourcebox, text width=2.4cm] (query) at (-6.0, -3.3) {
         \textbf{Câu hỏi Học giả}\\[2pt]
         \footnotesize (User Query)
     };
-    \node[procbox, minimum width=2.9cm] (qproc) at (-2.9, -1.9) {
+    \node[procbox, text width=2.6cm] (qproc) at (-2.6, -3.3) {
         \textbf{Mã hóa truy vấn}\\[2pt]
         \footnotesize Dense $\mathbf{u}$ $\parallel$ Sparse $Q$
     };
-    \node[rrfbox, minimum width=3.3cm] (rrf) at (1.8, -1.9) {
+    \node[rrfbox, text width=3.2cm] (rrf) at (1.8, -3.3) {
         \textbf{Hợp nhất RRF ($k=60$)}\\[2pt]
         \footnotesize $\text{Score}(d) = \sum \frac{1}{60 + r_m(d)}$
     };
-    \node[outputbox, minimum width=3.2cm] (answer) at (5.8, -1.9) {
+    \node[outputbox, text width=2.8cm] (answer) at (6.0, -3.3) {
         \textbf{Phản hồi có Tọa độ}\\[2pt]
         \footnotesize Golden BBox $[0..1000]$
     };
 
-    \draw[arrowstyle] (query) -- (qproc);
+    \draw[arrowstyle] (query.east) -- (qproc.west);
 
-    % Truy vấn 2 luồng song song vào 2 chỉ mục
-    \draw[arrowstyle] (qproc.north) -- (idx_dense.south -| qproc.north) node[midway, left=2pt, font=\tiny\bfseries] {Vector $\mathbf{u}$};
-    \draw[arrowstyle] (qproc.north) -- ++(0, 0.4) -| (idx_sparse.south) node[pos=0.75, left=2pt, font=\tiny\bfseries] {Từ khóa $Q$};
+    % Truy vấn 2 luồng hoàn toàn trực giao, 2 hành lang độc lập:
+    % 1. Vector u: trục đứng thẳng tắp từ qproc lên idx_dense (x = -3.8)
+    \draw[arrowstyle] ([xshift=-34pt]qproc.north) -- node[midway, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Vector $\mathbf{u}$} ([xshift=-34pt]qproc.north |- idx_dense.south);
+    
+    % 2. Từ khóa Q: hành lang trên y = -1.2 sang idx_sparse
+    \draw[arrowstyle] ([xshift=20pt]qproc.north) -- ([xshift=20pt]qproc.north |- 0, -1.2) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Từ khóa $Q$} ([xshift=-22pt]idx_sparse.south |- 0, -1.2) -- ([xshift=-22pt]idx_sparse.south);
 
-    % Trả về 2 bảng thứ hạng và hội tụ tại RRF
-    \draw[rankarrow] (idx_dense.south -| rrf.north west) -- (rrf.north west) node[midway, left=2pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{dense}}$};
-    \draw[rankarrow] (idx_sparse.south -| rrf.north east) -- (rrf.north east) node[midway, right=2pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{bm25}}$};
+    % 3. Trả về thứ hạng Dense: hành lang dưới y = -1.8 về rrf
+    \draw[rankarrow] ([xshift=24pt]idx_dense.south) -- ([xshift=24pt]idx_dense.south |- 0, -1.8) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{dense}}$} ([xshift=-28pt]rrf.north |- 0, -1.8) -- ([xshift=-28pt]rrf.north);
+
+    % 4. Trả về thứ hạng Sparse: hành lang dưới y = -1.8 về rrf
+    \draw[rankarrow] ([xshift=24pt]idx_sparse.south) -- ([xshift=24pt]idx_sparse.south |- 0, -1.8) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{bm25}}$} ([xshift=28pt]rrf.north |- 0, -1.8) -- ([xshift=28pt]rrf.north);
 
     % RRF chuyển sang khối tạo câu trả lời
-    \draw[arrowstyle] (rrf) -- (answer);
+    \draw[arrowstyle] (rrf.east) -- (answer.west);
 \end{tikzpicture}
 \caption{Mô hình luồng dữ liệu truy xuất lai (Dual-Stream Hybrid RAG Dataflow) chuẩn mực}
 \label{fig:hybrid_rag_flow}

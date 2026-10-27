@@ -82,19 +82,21 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
     };
 
     % Mũi tên tuần tự dọc
+    \draw[arrow_down] (h_asis) -- (a1);
     \draw[arrow_down] (a1) -- (a2);
     \draw[arrow_down] (a2) -- (a3);
     \draw[arrow_down] (a3) -- (a4);
 
+    \draw[arrow_down] (h_tobe) -- (b1);
     \draw[arrow_down] (b1) -- (b2);
     \draw[arrow_down] (b2) -- (b3);
     \draw[arrow_down] (b3) -- (b4);
 
-    % Mũi tên chuyển đổi giữa 2 luồng
-    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tối ưu};
-    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Minh chứng};
-    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tự động};
-    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tự sửa};
+    % Mũi tên chuyển đổi giữa 2 luồng (kèm huy hiệu trắng sắc nét, không chạm viền)
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tối ưu};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự sửa};
 \end{tikzpicture}
 \caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
 \label{fig:workflow_as_is_to_be}

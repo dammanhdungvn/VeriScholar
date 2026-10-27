@@ -19,31 +19,31 @@ Cấu trúc đồ thị mạng lưới 4 thực thể cùng các mối liên k�
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.86, transform shape,
-    papernode/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
-    methodnode/.style={draw=teal!80!black, fill=teal!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
-    datanode/.style={draw=purple!80!black, fill=purple!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
-    metricnode/.style={draw=orange!80!black, fill=orange!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    scale=0.78, transform shape,
+    papernode/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    methodnode/.style={draw=teal!80!black, fill=teal!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    datanode/.style={draw=purple!80!black, fill=purple!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    metricnode/.style={draw=orange!80!black, fill=orange!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
     edgearrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!70},
     labelbox/.style={font=\scriptsize\bfseries, fill=white, inner sep=2pt, rounded corners=2pt}
 ]
     % 4 Thực thể cốt lõi (4 Core Entities)
-    \node[papernode, minimum width=4.4cm] (paper) at (0, 3.2) {
+    \node[papernode, minimum width=4.4cm] (paper) at (0, 2.6) {
         \textbf{Bài báo Khoa học (\textit{Paper})}\\[2pt]
         \footnotesize \textit{Title, DOI, Year, Authors, Abstract}
     };
     
-    \node[methodnode, minimum width=4.4cm] (method) at (0, 0.4) {
+    \node[methodnode, minimum width=4.4cm] (method) at (0, 0.2) {
         \textbf{Phương pháp Đề xuất (\textit{Method})}\\[2pt]
         \footnotesize \textit{Name, Category, Architecture, Task}
     };
     
-    \node[datanode, minimum width=4.2cm] (dataset) at (-4.5, -2.6) {
+    \node[datanode, minimum width=4.2cm] (dataset) at (-4.2, -2.3) {
         \textbf{Bộ dữ liệu Chuẩn (\textit{Dataset})}\\[2pt]
         \footnotesize \textit{Name, Domain, Benchmark, Split}
     };
     
-    \node[metricnode, minimum width=4.2cm] (metric) at (4.5, -2.6) {
+    \node[metricnode, minimum width=4.2cm] (metric) at (4.2, -2.3) {
         \textbf{Kết quả Đo lường (\textit{MetricResult})}\\[2pt]
         \footnotesize \textit{MetricName, Value, Unit, Baseline}
     };
