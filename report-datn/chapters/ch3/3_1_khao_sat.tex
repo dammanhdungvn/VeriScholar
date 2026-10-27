@@ -36,49 +36,49 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, text width=6.6cm},
-    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, text width=6.6cm},
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
     arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
     trans_arrow/.style={-{Stealth[length=2.8mm]}, line width=1.3pt, draw=teal!80!black, dashed}
 ]
     % Cột AS-IS (Truyền thống)
-    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=6.8cm, inner sep=5pt] (h_asis) at (-4.3, 4.4) {QUY TRÌNH HIỆN TẠI (AS-IS)};
+    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_asis) at (-4.4, 4.4) {QUY TRÌNH HIỆN TẠI (AS-IS)};
     
-    \node[box_asis] (a1) at (-4.3, 3.0) {
+    \node[box_asis] (a1) at (-4.4, 3.0) {
         \textbf{1. Tìm kiếm phân mảnh thủ công}\\
-        \footnotesize Google Scholar / arXiv riêng rẽ; Tải trùng lặp tệp PDF lớn
+        \footnotesize Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
     };
-    \node[box_asis] (a2) at (-4.3, 0.8) {
+    \node[box_asis] (a2) at (-4.4, 0.8) {
         \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
-        \footnotesize Bóc tách thô mất 2 cột; Mất dấu ngữ cảnh, rà soát thủ công
+        \footnotesize Bóc tách thô mất 2 cột; Mất dấu ngữ cảnh học thuật
     };
-    \node[box_asis] (a3) at (-4.3, -1.4) {
+    \node[box_asis] (a3) at (-4.4, -1.4) {
         \textbf{3. Lập bảng so sánh thủ công}\\
-        \footnotesize Ghi chú Excel / Notion; Bỏ sót các liên kết bắc cầu
+        \footnotesize Ghi chú Excel / Notion; Bỏ sót liên kết bắc cầu
     };
-    \node[box_asis] (a4) at (-4.3, -3.6) {
+    \node[box_asis] (a4) at (-4.4, -3.6) {
         \textbf{4. Soạn thảo \& Tự dò lỗi \LaTeX}\\
-        \footnotesize Chuyển sang Overleaf; Đọc tệp log hàng giờ để sửa lỗi
+        \footnotesize Chuyển sang Overleaf; Đọc tệp nhật ký dò lỗi thủ công
     };
 
     % Cột TO-BE (Đề xuất)
-    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=6.8cm, inner sep=5pt] (h_tobe) at (4.3, 4.4) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_tobe) at (4.4, 4.4) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
-    \node[box_tobe] (b1) at (4.3, 3.0) {
+    \node[box_tobe] (b1) at (4.4, 3.0) {
         \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
         \footnotesize Tìm kiếm đa nguồn; Tiết kiệm 98\% dung lượng lưu trữ
     };
-    \node[box_tobe] (b2) at (4.3, 0.8) {
+    \node[box_tobe] (b2) at (4.4, 0.8) {
         \textbf{2. Đọc sâu có minh chứng tọa độ}\\
-        \footnotesize Agentic Hybrid RAG; Tô sáng khung vàng 1s ($IoU \ge 0{,}85$)
+        \footnotesize Agentic Hybrid RAG; Khung vàng 1s ($\text{IoU} \ge 0{,}85$)
     };
-    \node[box_tobe] (b3) at (4.3, -1.4) {
+    \node[box_tobe] (b3) at (4.4, -1.4) {
         \textbf{3. Mạng tri thức tự động (GraphRAG)}\\
-        \footnotesize Đồ thị 4 thực thể; Truy vấn đối chiếu đa bài báo với CTE
+        \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo qua CTE
     };
-    \node[box_tobe] (b4) at (4.3, -3.6) {
+    \node[box_tobe] (b4) at (4.4, -3.6) {
         \textbf{4. Tác nhân tự sửa lỗi \LaTeX}\\
-        \footnotesize Chu trình ReAct trong E2B MicroVM; Vá lỗi tự động $> 90\%$
+        \footnotesize Máy ảo E2B MicroVM; Tự động vá lỗi $> 90\%$
     };
 
     % Mũi tên tuần tự dọc

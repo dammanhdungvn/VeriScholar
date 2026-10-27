@@ -43,34 +43,42 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
 
     % Khối 2: Agent Capabilities (Góc dưới trái)
     \node[subcard, minimum width=7.3cm, minimum height=6.2cm, below=14pt of c_ret.south west, anchor=north west] (c_agent) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=teal!90!black] (t_ag) at ([xshift=10pt, yshift=-8pt]c_agent.north west) {NĂNG LỰC TÁC NHÂN AI};
-    \node[pill, minimum width=6.6cm, text width=6.4cm, below=10pt of t_ag.south west, anchor=north west] (ag1) {
+    \node[anchor=north west, font=\bfseries\scriptsize, text=teal!90!black] (t_ag) at ([xshift=10pt, yshift=-8pt]c_agent.north west) {NĂNG LỰC TÁC NHÂN AI (HỌC GIẢ TƯƠNG TÁC)};
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=8pt of t_ag.south west, anchor=north west] (ag1) {
         \textbf{Tập công cụ ngoại vi (Tools)}\\
         \footnotesize Tìm kiếm học thuật, PDF Canvas Viewer, MicroVM
     };
-    \node[pill, minimum width=6.6cm, text width=6.4cm, below=12pt of ag1.south west, anchor=north west] (ag2) {
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=7pt of ag1.south west, anchor=north west] (ag2) {
         \textbf{Tự phản biện liêm chính (Reflection)}\\
-        \footnotesize Kiểm định trích dẫn, phát hiện ảo giác
+        \footnotesize Kiểm định trích dẫn $\text{IoU} \ge 0{,}85$, phát hiện ảo giác
     };
-    \node[pill, minimum width=6.6cm, text width=6.4cm, below=12pt of ag2.south west, anchor=north west] (ag3) {
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=7pt of ag2.south west, anchor=north west] (ag3) {
         \textbf{Lập kế hoạch phân rã (Planning)}\\
         \footnotesize Chuỗi suy luận ReAct và chia nhỏ mục tiêu
+    };
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=7pt of ag3.south west, anchor=north west] (ag4) {
+        \textbf{Tương tác Học giả (Scholar Interaction)}\\
+        \footnotesize Phiên đọc hiểu sâu, truyền luồng SSE định vị khung vàng
     };
 
     % Khối 3: Execution and State (Góc dưới phải)
     \node[subcard, minimum width=7.3cm, minimum height=6.2cm, below=14pt of c_ret.south east, anchor=north east] (c_exec) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=purple!90!black] (t_ex) at ([xshift=10pt, yshift=-8pt]c_exec.north west) {HẠ TẦNG THỰC THI VÀ TRẠNG THÁI};
-    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=10pt of t_ex.south west, anchor=north west] (ex1) {
+    \node[anchor=north west, font=\bfseries\scriptsize, text=purple!90!black] (t_ex) at ([xshift=10pt, yshift=-8pt]c_exec.north west) {HẠ TẦNG THỰC THI VÀ QUẢN TRỊ HỆ THỐNG};
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=8pt of t_ex.south west, anchor=north west] (ex1) {
         \textbf{Máy ảo hộp cát E2B MicroVM}\\
-        \footnotesize Biên dịch \LaTeX\ cô lập, ngăn ngừa RCE
+        \footnotesize Biên dịch \LaTeX\ cô lập, ngăn ngừa tấn công RCE
     };
-    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=12pt of ex1.south west, anchor=north west] (ex2) {
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=7pt of ex1.south west, anchor=north west] (ex2) {
         \textbf{Cơ sở dữ liệu PostgreSQL 16}\\
         \footnotesize Mở rộng pgvector và lưu trữ khử trùng CAS
     };
-    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=12pt of ex2.south west, anchor=north west] (ex3) {
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=7pt of ex2.south west, anchor=north west] (ex3) {
         \textbf{Két sắt khóa cá nhân (BYOK)}\\
         \footnotesize Mã hóa an toàn cá nhân, giải mã tạm thời trên RAM
+    };
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=7pt of ex3.south west, anchor=north west] (ex4) {
+        \textbf{Giám sát Quản trị (Admin Monitoring)}\\
+        \footnotesize Langfuse Cloud LLM Tracing, kiểm soát hạn ngạch
     };
 \end{tikzpicture}
 \caption[Mô hình phân rã cấu trúc năng lực của hệ thống VeriScholar]{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}

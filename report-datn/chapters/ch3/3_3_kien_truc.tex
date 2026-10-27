@@ -127,8 +127,8 @@ Nhằm làm sáng tỏ quy trình suy luận và gọi công cụ ngoại vi the
     };
 
     % Khối 2: Agent Thought 1
-    \node[tracebox, fill=amber!5, below=14pt of b1] (b2) {
-        \tikz \node[tag, fill=amber!20, text=orange!80!black] {TÁC NHÂN AI (THOUGHT)};\\[4pt]
+    \node[tracebox, fill=orange!6, below=14pt of b1] (b2) {
+        \tikz \node[tag, fill=orange!15, text=orange!80!black] {TÁC NHÂN AI (THOUGHT)};\\[4pt]
         \textbf{Suy luận 1:} Để trả lời câu hỏi này, tôi cần tìm các đoạn văn bản mô tả hàm mục tiêu (\textit{objective function / loss}) và bảng kết quả thực nghiệm trên bộ dữ liệu ImageNet.\\
         \textbf{Kế hoạch hành động:} Kích hoạt công cụ truy xuất lai kết hợp vector HNSW và từ khóa BM25.
     };
@@ -143,8 +143,8 @@ Nhằm làm sáng tỏ quy trình suy luận và gọi công cụ ngoại vi the
     };
 
     % Khối 4: Agent Thought 2 & Coordinate Binding
-    \node[tracebox, fill=amber!5, below=14pt of b3] (b4) {
-        \tikz \node[tag, fill=amber!20, text=orange!80!black] {TÁC NHÂN AI (THOUGHT \& VERIFICATION)};\\[4pt]
+    \node[tracebox, fill=orange!6, below=14pt of b3] (b4) {
+        \tikz \node[tag, fill=orange!15, text=orange!80!black] {TÁC NHÂN AI (THOUGHT \& VERIFICATION)};\\[4pt]
         \textbf{Suy luận 2:} Đoạn trích 1 và Đoạn trích 2 chứa đầy đủ bằng chứng xác thực. Tiến hành đối chiếu liên kết trích dẫn và sinh câu trả lời kèm siêu dữ liệu tọa độ chuẩn hóa $[0..1000]$ cho Canvas Viewer.
     };
 
