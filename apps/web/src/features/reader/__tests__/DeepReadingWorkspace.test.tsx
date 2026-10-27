@@ -52,7 +52,7 @@ describe("Deep Reading Workspace & Visual Grounding (PRD-03 / Plan 03)", () => {
     ).toBeInTheDocument();
   });
 
-  it("2. DocumentTabBar opens Tab Eviction Dialog when max 5 tabs reached and user adds 6th", () => {
+  it("2. DocumentTabBar hides add button when 5 tabs open, and shows it when a tab is closed", () => {
     const mockDocs: DocumentListItem[] = [
       { id: "doc-1", filename: "paper1.pdf", title: "Paper One", is_persistent: false, status: "completed", created_at: "" },
       { id: "doc-2", filename: "paper2.pdf", title: "Paper Two", is_persistent: false, status: "completed", created_at: "" },
@@ -66,7 +66,7 @@ describe("Deep Reading Workspace & Visual Grounding (PRD-03 / Plan 03)", () => {
     const onCloseDoc = vi.fn();
     const onAddDoc = vi.fn();
 
-    render(
+    const { rerender } = render(
       <DocumentTabBar
         documents={mockDocs}
         openDocumentIds={openIds}
@@ -77,22 +77,26 @@ describe("Deep Reading Workspace & Visual Grounding (PRD-03 / Plan 03)", () => {
       />
     );
 
-    // Click the '+' button when 5 tabs are already open
-    const addBtn = screen.getByTitle("Đã đạt tối đa 5 bài báo. Nhấp để đóng bớt tab.");
+    // The '+' button must be completely hidden when 5 tabs are open
+    expect(screen.queryByTitle(/Tối đa 5 bài/i)).not.toBeInTheDocument();
+
+    // User closes a tab (now 4 tabs open)
+    rerender(
+      <DocumentTabBar
+        documents={mockDocs.slice(1)}
+        openDocumentIds={["doc-2", "doc-3", "doc-4", "doc-5"]}
+        activeDocumentId="doc-2"
+        onSelectDocument={onSelectDoc}
+        onCloseDocument={onCloseDoc}
+        onAddDocument={onAddDoc}
+      />
+    );
+
+    // Add button is visible again
+    const addBtn = screen.getByTitle("Nạp thêm bài báo vào phiên (Tối đa 5 bài)");
     expect(addBtn).toBeInTheDocument();
     fireEvent.click(addBtn);
-
-    // Eviction dialog should appear
-    expect(screen.getByTestId("tab-eviction-dialog")).toBeInTheDocument();
-    expect(screen.getByText("Đã đạt giới hạn 5 bài báo")).toBeInTheDocument();
-
-    // Closing a tab from eviction dialog triggers onCloseDoc and onAddDoc
-    const evictBtns = screen.getAllByRole("button", { name: "Đóng tab này" });
-    expect(evictBtns).toHaveLength(5);
-    fireEvent.click(evictBtns[0]);
-
-    expect(onCloseDoc).toHaveBeenCalledWith("doc-1");
-    expect(onAddDoc).toHaveBeenCalled();
+    expect(onAddDoc).toHaveBeenCalledTimes(1);
   });
 
   it("3. CitationBadge click switches document, sets active bbox, and dispatches scholar:focus-bbox", () => {
