@@ -164,11 +164,20 @@ describe("DashboardContainer handleNewSession", () => {
     const textarea = screen.getByPlaceholderText(/Đặt câu hỏi nghiên cứu/i);
     fireEvent.change(textarea, { target: { value: "summay these paper" } });
 
+    // Verify queryClient invalidated session list
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
     // Press Enter to submit
     fireEvent.keyDown(textarea, { key: "Enter", shiftKey: false });
 
-    // File 1 must be ingested
+    // File 1 must be ingested with existingSessionId=undefined on standby hero
     expect(mockIngest).toHaveBeenCalledWith(file1, expect.any(Function), undefined);
+
+    await vi.waitFor(() => {
+      expect(invalidateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ queryKey: expect.arrayContaining(["dashboard", "sessions"]) })
+      );
+    });
 
     // Files 2 and 3 must also be uploaded to the session
     await vi.waitFor(() => {

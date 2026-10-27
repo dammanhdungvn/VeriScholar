@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
+import { DASHBOARD_QUERY_KEYS } from "../hooks/useDashboardQueries";
 import { DashboardTaskbar } from "./DashboardTaskbar";
 import { LibraryWorkspaceView } from "@/features/library/components/LibraryWorkspaceView";
 import { DashboardAmbientBackground } from "./DashboardAmbientBackground";
@@ -15,7 +17,7 @@ import { useStreamingChat } from "../hooks/useStreamingChat";
 import { useDocumentIngestion } from "../hooks/useDocumentIngestion";
 import { DashboardErrorBoundary } from "@/components/ui/DashboardErrorBoundary";
 import { RestoreArchivedModal } from "@/features/sessions/components/RestoreArchivedModal";
-import { useRestoreArchivedSessionMutation, useSessionDetail } from "@/features/sessions/hooks/useSessionsQuery";
+import { useRestoreArchivedSessionMutation, useSessionDetail, SESSION_QUERY_KEYS } from "@/features/sessions/hooks/useSessionsQuery";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { DocumentLibraryModal } from "@/features/documents/components/DocumentLibraryModal";
 import { documentsApi } from "@/features/documents/api/documentsApi";
@@ -23,6 +25,7 @@ import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import type { DocumentListItem } from "@/types/document";
 
 export function DashboardContainer() {
+  const queryClient = useQueryClient();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
 
@@ -216,16 +219,21 @@ export function DashboardContainer() {
    * Upload CAS blob -> Tạo Session hợp lệ -> Trigger Parse & Embed -> Polling -> Workspace Active
    */
   const handleFileUpload = async (file: File) => {
+    // If routeSessionId is not present, we are in Standby Hero -> always create a fresh session!
+    const targetSessionIdToPass = routeSessionId || undefined;
     try {
       const result = await ingest(
         file,
         (createdSessionId) => {
           selectSession(createdSessionId);
-          navigate(`/dashboard/${createdSessionId}`, { replace: true });
+          queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
+          queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.all });
         },
-        effectiveSessionId
+        targetSessionIdToPass
       );
       if (result?.sessionId) {
+        queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
+        queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.all });
         selectSession(result.sessionId);
         setSession(result.sessionId);
         setStatus("completed", 100);
@@ -234,7 +242,7 @@ export function DashboardContainer() {
         loadExistingSession(result.sessionId);
       }
     } catch {
-      if (!effectiveSessionId) {
+      if (!routeSessionId) {
         navigate("/dashboard", { replace: true });
       }
     }
@@ -247,16 +255,19 @@ export function DashboardContainer() {
     }
 
     const trimmedPrompt = prompt.trim();
+    // If routeSessionId is not present, we are in Standby Hero -> always create a fresh session!
+    const targetSessionIdToPass = routeSessionId || undefined;
 
     try {
-      // 1. Ingest first file to create the research session
+      // 1. Ingest first file to create/attach to research session
       const firstResult = await ingest(
         files[0],
         (createdSessionId) => {
           selectSession(createdSessionId);
-          navigate(`/dashboard/${createdSessionId}`, { replace: true });
+          queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
+          queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.all });
         },
-        effectiveSessionId
+        targetSessionIdToPass
       );
 
       if (!firstResult?.sessionId) {
@@ -264,6 +275,9 @@ export function DashboardContainer() {
       }
 
       const targetSessionId = firstResult.sessionId;
+      queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEYS.allSessions });
+      queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.all });
+
       const allDocIds: string[] = [firstResult.documentId];
 
       // 2. Upload any additional staged files (files 1..N) into the same session
@@ -294,7 +308,7 @@ export function DashboardContainer() {
         await sendMessage(trimmedPrompt, undefined, targetSessionId);
       }
     } catch {
-      if (!effectiveSessionId) {
+      if (!routeSessionId) {
         navigate("/dashboard", { replace: true });
       }
     }
