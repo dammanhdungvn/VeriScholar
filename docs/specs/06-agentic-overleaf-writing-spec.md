@@ -48,37 +48,47 @@ Phân hệ này chịu trách nhiệm trọn vẹn toàn bộ chu trình soạn 
 ```mermaid
 flowchart TD
     subgraph StudioUI ["Không Gian Soạn Thảo Học Thuật 3 Cột (Agentic LaTeX IDE)"]
-        EditorPane["Cột 1: Cây Dự Án & Trình Soạn Thảo Mã Nguồn LaTeX/BibTeX"]
-        PreviewPane["Cột 2: Khung Xem Trước Bản Dựng PDF & Xuất Gói Camera-Ready"]
-        AssistantPane["Cột 3: Trợ Lý Soạn Thảo Tự Hành (Luồng SSE Trực Tiếp)"]
+        EditorPane["Cột 1: Cây Dự Án & Trình Soạn Thảo Mã Nguồn (Monaco Editor)"]
+        PreviewPane["Cột 2: Khung Xem Trước PDF & Đồng Bộ Hai Chiều SyncTeX"]
+        AssistantPane["Cột 3: Trợ Lý Soạn Thảo Tự Hành (Luồng SSE Unbuffered)"]
     end
 
     subgraph OrchestrationLayer ["Tầng Điều Phối Bản Thảo & Kiểm Soát Phiên Bản"]
         OCCGuard["Kiểm Soát Đồng Thời Lạc Quan (OCC Version & ETag)"]
-        SnapshotVault["Kho Lưu Ảnh Chụp Bản Thảo (1-Click Undo Snapshot)"]
+        SnapshotVault["Kho Lưu Ảnh Chụp Toàn Dự Án (1-Click Undo Snapshot)"]
         ReActStream["Kênh Điều Phối Tác Nhân LangGraph Qua SSE"]
+        SyncTexBridge["Cầu Nối Đồng Bộ Tọa Độ Hai Chiều (SyncTeX Bridge)"]
     end
 
     subgraph AgentCore ["Động Cơ Tác Nhân Tự Sửa Lỗi (LangGraph ReAct Engine)"]
-        Planner["Bộ Lập Kế Hoạch & Chống Dao Động (Anti-Oscillation)"]
+        Planner["Bộ Lập Kế Hoạch & Chống Dao Động (Anti-Oscillation SHA-256)"]
         GraphTool["Công Cụ Truy Xuất Tri Thức Đồ Thị (GraphRAG Tool)"]
         PatchTool["Công Cụ Vá Mã Nguồn LaTeX & Đồng Bộ BibTeX"]
-        CompileTool["Công Cụ Biên Dịch Cô Lập ( tối đa 3 vòng Tự Sửa Lỗi)"]
+        CompileTool["Công Cụ Biên Dịch Cô Lập (Tối Đa 3 Vòng Tự Sửa Lỗi)"]
     end
 
-    subgraph CloudSandbox ["Môi Trường Hộp Cát Vi Máy Ảo (E2B Firecracker Micro-VM)"]
-        LatexCompiler["Trình Biên Dịch Cô Lập (Chặn Shell-Escape, Giới Hạn 15 Giây)"]
+    subgraph CloudSandbox ["Hạ Tầng Hộp Cát Vi Máy Ảo Chuẩn Overleaf CLSI (E2B Sandbox)"]
+        LatexmkRunner["Động Cơ Điều Phối Đa Vòng (latexmk -cd -f -synctex=1)"]
+        EngineSelector["Bộ Chọn Động Cơ (pdflatex hoặc xelatex Cho Tiếng Việt)"]
+        IncrementalCache["Bộ Nhớ Đệm Gia Tăng Dự Án (auxdir Cache per Draft)"]
+        LogParser["Bộ Bóc Tách Nhật Ký Có Cấu Trúc (Structured Log Parser)"]
     end
 
     EditorPane --> OCCGuard
     EditorPane --> SnapshotVault
+    EditorPane --> SyncTexBridge
+    PreviewPane --> SyncTexBridge
     PreviewPane --> OCCGuard
     AssistantPane --> ReActStream
     ReActStream --> Planner
     Planner --> GraphTool
     Planner --> PatchTool
     Planner --> CompileTool
-    CompileTool --> LatexCompiler
+    CompileTool --> LatexmkRunner
+    LatexmkRunner --> EngineSelector
+    LatexmkRunner --> IncrementalCache
+    LatexmkRunner --> LogParser
+    LogParser --> Planner
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -282,7 +292,68 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
 
 ---
 
-### G. Ma Trận Mã Lỗi Chuẩn Hóa (Deterministic Error Codes Matrix)
+### G. Đồng Bộ Hai Chiều SyncTeX REST Endpoints
+
+1. **Forward Search: Từ Dòng Code Sang Trang PDF (`POST /api/v1/drafts/{id}/synctex:forward`):**
+   - **Request Body:**
+     ```json
+     {
+       "file": "main.tex",
+       "line": 42,
+       "column": 1
+     }
+     ```
+   - **Response (`HTTP 200 OK`):**
+     ```json
+     {
+       "page": 2,
+       "h": 145.2,
+       "v": 320.5,
+       "width": 420.0,
+       "height": 18.0
+     }
+     ```
+   - **Hành vi UI:** Trình xem PDF tự động cuộn đến `page: 2` và hiển thị khung vàng highlight tạm thời tại tọa độ `(h, v)`.
+
+2. **Inverse Search: Từ Điểm Nhấp PDF Về Dòng Code (`POST /api/v1/drafts/{id}/synctex:inverse`):**
+   - **Request Body:**
+     ```json
+     {
+       "page": 2,
+       "x": 160.0,
+       "y": 325.0
+     }
+     ```
+   - **Response (`HTTP 200 OK`):**
+     ```json
+     {
+       "file": "main.tex",
+       "line": 42,
+       "column": 5
+     }
+     ```
+   - **Hành vi UI:** Monaco Editor tự động cuộn đến `line: 42`, đặt con trỏ nhấp nháy và làm sáng nhẹ dòng code tương ứng.
+
+---
+
+### H. Dọn Dẹp Bộ Nhớ Đệm & Biên Dịch Sạch (`POST /api/v1/drafts/{id}/compile:clear-cache`)
+- **Mục đích:** Xóa sạch toàn bộ tệp trung gian trong thư mục `/tmp/drafts/{id}/cache/` (`.aux`, `.bbl`, `.toc`, `.fls`) và thực thi lại `latexmk` từ đầu để giải quyết triệt để các xung đột macro bị kẹt trong cache.
+- **Response (`HTTP 200 OK`):**
+  ```json
+  {
+    "success": true,
+    "data": {
+      "draft_id": "draft-uuid",
+      "cache_cleared": true,
+      "pdf_preview_url": "/api/v1/drafts/draft-uuid/preview.pdf",
+      "logs": "Output written on output.pdf (2 pages)..."
+    }
+  }
+  ```
+
+---
+
+### I. Ma Trận Mã Lỗi Chuẩn Hóa (Deterministic Error Codes Matrix)
 
 Bảng ma trận dưới đây quy định toàn bộ các mã lỗi tất định của Phân hệ Soạn Thảo & Agentic LaTeX, đảm bảo bất kỳ mô hình AI hoặc lập trình viên nào cũng có thể cài đặt logic xử lý lỗi chính xác 100% mà không bị sai lệch:
 
@@ -361,37 +432,74 @@ flowchart TD
    - Trả về danh sách cấu trúc cây thư mục dự án: `main.tex`, `references.bib`, và danh sách tên chính xác của các file ảnh trong `figures/` (ví dụ: `figures/architecture_diagram.png`). Giúp Agent viết chính xác câu lệnh `\includegraphics{figures/...}` không bao giờ bị lỗi sai tên file.
 3. **`query_library_graph_rag(query: str, top_k: int = 5)`**:
    - Gọi trực tiếp phân hệ GraphRAG (Spec 05) để tìm kiếm các phương pháp, bộ dữ liệu và kết quả thực nghiệm từ kho bài báo yêu thích của người dùng để viết phần Tổng quan hoặc So sánh phương pháp.
-4. **`compile_latex_e2b()`**:
+4. **`compile_latex_e2b(clear_cache: bool = False)`**:
    - Đóng gói toàn bộ `main.tex`, `references.bib` và toàn bộ hình ảnh trong thư mục `figures/` từ bảng `draft_assets`.
-   - Chạy qua Hạ tầng biên dịch 2 tầng (Mục 5.B).
-   - Trả về kết quả: `success: bool`, `logs: str`, `errors: list[LatexSyntaxError]`, `pdf_url: str | None`.
+   - Chạy qua Hạ tầng biên dịch chuẩn Overleaf CLSI (Mục 5.B).
+   - Trả về kết quả: `success: bool`, `logs: str`, `errors: list[LatexDiagnostic]`, `pdf_url: str | None`, `synctex_path: str | None`.
 
 ---
 
-### B. Hạ Tầng Biên Dịch 2 Tầng (2-Tier Compilation Architecture)
-Để tối ưu hóa chi phí đám mây và giảm độ trễ phản hồi cho người dùng, hệ thống phân tách thành 2 tầng biên dịch:
+### B. Động Cơ Biên Dịch Chuẩn Overleaf CLSI Trên E2B Sandbox
+Học hỏi từ kiến trúc `overleaf/clsi`, hệ thống sử dụng `latexmk` làm động cơ điều phối chính bên trong E2B MicroVM Sandbox:
 
-```mermaid
-flowchart LR
-    Source["Mã LaTeX & BibTeX"] --> Tier1["Tầng 1: Fast AST Syntax Linter (< 200ms)"]
-    Tier1 -->|"Lỗi ngoặc / Macro chưa đóng"| ImmediateError["Báo Ngay Cho Agent Tự Sửa Lỗi Cục Bộ"]
-    Tier1 -->|"Cú pháp hợp lệ"| Tier2["Tầng 2: E2B Sandbox MicroVM (15s Timeout)"]
-    Tier2 -->|"stderr có lỗi biên dịch"| AgentFeedback["Phản Hồi Cho Agent Đọc Log & Vá Mã"]
-    Tier2 -->|"Mã thoát 0"| SuccessPDF["Xuất File PDF Thành Công"]
+```bash
+latexmk -cd -f -jobname=output -auxdir=/tmp/drafts/{id}/cache -outdir=/tmp/drafts/{id}/output -synctex=1 -interaction=batchmode {engine_flag} main.tex
 ```
 
-1. **Tầng 1 — Bộ Kiểm Tra Cú Pháp AST Cục Bộ (Fast AST Linter < 200ms):**
-   - Chạy trên máy chủ API cục bộ sử dụng parser regex/AST thuần Python.
-   - Kiểm tra các lỗi phổ biến mà không cần gọi sandbox ngoài: thiếu dấu đóng mở môi trường (`\begin{...}` không có `\end{...}`), thiếu dấu ngoặc nhọn `{...}`, hoặc mất cân bằng công thức toán inline/display (`$`, `$$`).
-   - Nếu phát hiện lỗi: Trả về kết quả lỗi ngay lập tức trong $< 200$ms để Agent sửa lại, tiết kiệm 100% thời gian khởi tạo container và chi phí API E2B.
-2. **Tầng 2 — Động Cơ Biên Dịch Hộp Cát Vi Máy Ảo (E2B Cloud Sandbox MicroVM):**
-   - Khi vượt qua Tầng 1, gói tài liệu được đẩy lên thư mục `/tmp/verischolar-latex/` trong môi trường vi máy ảo cô lập E2B Firecracker MicroVM.
-   - Chạy lệnh biên dịch thực thụ: `tectonic --untrusted --outdir /tmp/verischolar-latex main.tex` (hoặc `pdflatex -> bibtex -> pdflatex -> pdflatex` với cờ bắt buộc `--no-shell-escape` và giới hạn cứng `timeout = 15 giây`).
-   - Môi trường hoàn toàn cách ly, ngăn chặn tuyệt đối mọi hành vi khai thác qua lỗ hổng TeX `\write18` hoặc đọc tệp hệ điều hành (`/etc/passwd`).
+1. **Bộ Chọn Động Cơ Tự Động (Automatic Engine Selector):**
+   - **Mặc định (`pdflatex`):** `engine_flag = "-pdf"` dành cho các mẫu hội nghị tiếng Anh tiêu chuẩn (IEEE, ACM, Springer, arXiv).
+   - **Tự động kích hoạt `XeLaTeX` (`xelatex`):** Nếu `main.tex` chứa `\usepackage{fontspec}` hoặc các chỉ thị tiếng Việt Unicode (như trong `report-datn`), hệ thống tự động gán `engine_flag = "-xelatex"`, đảm bảo hiển thị hoàn hảo 144 nguyên âm tiếng Việt có dấu.
+2. **Cờ Bắt Buộc An Toàn & Đa Vòng (Robust Flags):**
+   - **`-cd`:** Chuyển vào thư mục nguồn trước khi biên dịch.
+   - **`-f` (Force):** Tiếp tục tạo ra bản dựng PDF và file log ngay cả khi có cảnh báo hoặc lỗi không nghiêm trọng.
+   - **`-interaction=batchmode`:** Chặn 100% tình trạng tiến trình treo vô hạn chờ nhập bàn phím.
+   - **`-synctex=1`:** Luôn xuất file `output.synctex.gz` phục vụ điều hướng hai chiều.
 
 ---
 
-### C. Cơ Chế Chống Dao Động Mã Băm (Anti-Oscillation Guard với SHA-256)
+### C. Bộ Nhớ Đệm Biên Dịch Gia Tăng (Incremental Project Build Cache)
+Để đạt tốc độ biên dịch $< 1.5$ giây như Overleaf:
+1. Thư mục `/tmp/drafts/{id}/cache/` được giữ cố định theo từng bản thảo trong suốt phiên làm việc.
+2. Các tệp trung gian (`.aux`, `.bbl`, `.toc`, `.fls`, `.fdb_latexmk`) được tái sử dụng qua các lần biên dịch, tránh việc phải quét lại toàn bộ tài liệu từ đầu.
+3. **Cơ chế dọn dẹp cache an toàn:** Khi người dùng bấm `[🧹 Xóa đệm & Dựng lại]` hoặc khi gặp lỗi cấu trúc macro trong `.aux`, hệ thống gọi endpoint `POST :compile:clear-cache` xóa sạch thư mục cache và biên dịch sạch hoàn toàn từ đầu.
+
+---
+
+### D. Bộ Bóc Tách Nhật Ký Có Cấu Trúc (Structured LaTeX Log Parser)
+Thay vì nạp hàng trăm dòng log `stderr` thô vào prompt của AI, hệ thống cài đặt bộ parser bóc tách file `output.log` thành cấu trúc JSON chuẩn:
+
+```python
+class LatexDiagnostic(TypedDict):
+    file: str
+    line: int
+    column: int | None
+    severity: Literal["error", "warning", "badbox"]
+    message: str
+    context: str | None
+    hint: str | None
+```
+
+- **Quy tắc bóc tách:** Nhận diện các mẫu lỗi kinh điển của LaTeX:
+  - `! Undefined control sequence`: Lỗi gõ sai lệnh macro (ví dụ: `\alig` $\rightarrow$ gợi ý `\align`).
+  - `! Missing $ inserted`: Quên đóng mở công thức toán.
+  - `! LaTeX Error: File '...' not found`: Thiếu ảnh trong `figures/` hoặc thiếu gói package.
+  - `! LaTeX Error: Environment ... undefined`: Thiếu môi trường hoặc quên `\usepackage`.
+- Mảng `list[LatexDiagnostic]` này được truyền trực tiếp vào LangGraph ReAct Planner, giúp Agent vá lỗi chính xác tuyệt đối mà không lãng phí token suy luận.
+
+---
+
+### E. Cầu Nối Đồng Bộ Tọa Độ Hai Chiều SyncTeX (Two-Way SyncTeX Bridge)
+Hệ thống sử dụng tiện ích nhị phân `synctex` đọc file nén `output.synctex.gz` trong container:
+1. **Forward Search (`synctex view -i line:col:file -m page -o output.pdf`):**
+   - Nhận vị trí con trỏ trong Monaco Editor `(file, line, col)`.
+   - Trả về số trang và hộp giới hạn `(page, h, v, width, height)`. Frontend vẽ khung viền vàng trên PDF Canvas tại Cột 2.
+2. **Inverse Search (`synctex edit -o page:x:y:output.pdf`):**
+   - Nhận tọa độ nhấp đúp của người dùng trên trang PDF `(page, x, y)`.
+   - Trả về tên file và dòng mã nguồn `(file, line)`. Frontend tự động cuộn Monaco Editor tại Cột 1 và đặt con trỏ nhấp nháy tại dòng đó.
+
+---
+
+### F. Cơ Chế Chống Dao Động Mã Băm (Anti-Oscillation Guard với SHA-256)
 Trong quá trình tự sửa lỗi cú pháp LaTeX, mô hình AI đôi khi rơi vào bẫy "sửa qua sửa lại" giữa hai phương án sai (ví dụ: vòng 1 sửa `\cite{a}` thành `\cite{b}` gây lỗi, vòng 2 lại sửa ngược `\cite{b}` về `\cite{a}`).
 
 Hệ thống cài đặt thuật toán giám sát dao động mã băm trạng thái:
@@ -402,11 +510,11 @@ Hệ thống cài đặt thuật toán giám sát dao động mã băm trạng t
 
 ---
 
-### D. Định Nghĩa LangGraph StateGraph & Bộ Trạng Thái Tác Nhân
+### G. Định Nghĩa LangGraph StateGraph & Bộ Trạng Thái Tác Nhân
 Trợ lý AI được xây dựng trên `langgraph` với sơ đồ trạng thái kiểu mẫu:
 
 ```python
-from typing import Annotated, TypedDict
+from typing import Annotated, Literal, TypedDict
 from langchain_core.messages import BaseMessage
 import operator
 
@@ -421,6 +529,7 @@ class LatexWritingState(TypedDict):
     patch_hashes: Annotated[list[str], operator.add]
     messages: Annotated[list[BaseMessage], operator.add]
     pdf_preview_url: str | None
+    diagnostics: list[LatexDiagnostic]
     compile_error: str | None
     is_completed: bool
 ```
@@ -429,12 +538,12 @@ class LatexWritingState(TypedDict):
 - **`save_snapshot_node`:** Ghi nhận `previous_snapshot` vào PostgreSQL đúng một lần trước Attempt 1.
 - **`planner_node`:** Suy luận yêu cầu người dùng, quyết định công cụ cần gọi (tra cứu GraphRAG, liệt kê ảnh, hoặc cập nhật văn bản).
 - **`tools_node`:** Thực thi các công cụ qua LangChain ToolNode.
-- **`compile_node`:** Thực hiện biên dịch 2 tầng (Tier 1 AST Linter $\rightarrow$ Tier 2 E2B Sandbox).
+- **`compile_node`:** Thực hiện biên dịch qua `latexmk` và bóc tách lỗi qua `Structured Log Parser`.
 - **`router_edge`:** Nếu biên dịch thành công $\rightarrow$ Chuyển `end_node`; Nếu thất bại và `compile_attempts < 3` và không bị dao động SHA-256 $\rightarrow$ Chuyển `self_heal_node`; Ngược lại $\rightarrow$ Chuyển `end_node` kèm cảnh báo.
 
 ---
 
-### E. Triệt Tiêu Hoàn Toàn Trình Xem Trước Giả Lập (Deprecation Notice & Hexagonal Purity)
+### H. Triệt Tiêu Hoàn Toàn Trình Xem Trước Giả Lập (Deprecation Notice & Hexagonal Purity)
 > [!CAUTION]
 > **Xóa Bỏ Vĩnh Viễn Hàm Preview PyMuPDF Giả Lập & Bảo Toàn Kiến Trúc Lục Giác:**  
 > Toàn bộ logic tại hàm `_generate_in_memory_pdf_preview()` trong file `packages/core/src/core/services/latex_compiler.py` (vốn import `fitz` cắt bỏ `\section{...}` và vẽ text thô) bị **xóa bỏ hoàn toàn**.  
@@ -504,6 +613,10 @@ sequenceDiagram
 | `test_academic_skeleton_generation` | `packages/core/tests/test_draft_skeleton.py` | Tạo draft từ danh sách 3 papers | `main.tex` chứa đúng 3 citekey, `references.bib` hợp lệ cú pháp. |
 | `test_deterministic_bibtex_character_escaping` | `packages/core/tests/test_draft_skeleton.py` | Tiêu đề bài báo chứa `&`, `%`, `_`, `$`, `#` | Tự động thoát thành `\&`, `\%`, `\_`, `\$`, `\#` trong BibTeX. |
 | `test_tier_1_ast_syntax_linter_unclosed_env` | `packages/core/tests/test_draft_linter.py` | Mã LaTeX thiếu `\end{equation}` hoặc dấu `$` | Báo lỗi cú pháp trong < 200ms mà không cần gọi sandbox ngoài. |
+| `test_latexmk_engine_detection_xelatex` | `packages/core/tests/test_latexmk_runner.py` | Phát hiện `fontspec` hoặc tiếng Việt Unicode | Lệnh biên dịch tự động cấu hình cờ `-xelatex`. |
+| `test_structured_log_parser_error_extraction` | `packages/core/tests/test_latex_log_parser.py` | Bóc tách file `output.log` phức tạp | Trả về danh sách `LatexDiagnostic` JSON chuẩn có số dòng và gợi ý. |
+| `test_synctex_forward_and_inverse_coordinates` | `apps/api/tests/test_drafts_synctex.py` | Gửi tọa độ dòng mã và tọa độ nhấp PDF | Trả về chính xác hộp giới hạn trang PDF và dòng code tương ứng. |
+| `test_clear_cache_and_recompile_endpoint` | `apps/api/tests/test_drafts_cache.py` | Gọi `POST :compile:clear-cache` | Xóa sạch thư mục cache `auxdir` và biên dịch sạch thành công. |
 | `test_anti_oscillation_guard_detects_cycle` | `packages/core/tests/test_latex_agent.py` | Agent sinh bản vá có mã băm SHA-256 trùng bản vá trước | Ngắt vòng lặp ReAct ngay lập tức, trả về cảnh báo an toàn. |
 | `test_asset_security_filename_sanitization` | `packages/core/tests/test_draft_asset_security.py` | Tải lên file ảnh có tên `../../etc/passwd` | Ném lỗi `ZipSlipSecurityError`, mã HTTP `400 BAD REQUEST`. |
 | `test_draft_occ_optimistic_locking` | `apps/api/tests/test_drafts_occ.py` | 2 requests cùng sửa version 1 đồng thời | Request 1 thành công (version 2), Request 2 nhận mã lỗi `412`. |
@@ -520,9 +633,12 @@ sequenceDiagram
 - [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 3 kịch bản: Cầu nối Khung sườn học thuật, Quản lý ảnh `figures/`, và Vòng lặp ReAct tự sửa lỗi biên dịch tự trị.
 - [ ] Cầu nối từ Đọc sang Viết tự động khởi tạo sẵn `main.tex` và `references.bib` hợp lệ 100% cú pháp, hiển thị bản dựng PDF xem trước tức thì trên Cột 2 mà không gặp lỗi.
 - [ ] Tiêu đề và tác giả chứa ký tự đặc biệt (`&`, `%`, `_`, `$`, `#`) được thoát tự động trước khi ghi vào `references.bib`.
-- [ ] Hạ tầng biên dịch 2 tầng (Tier 1 AST Linter < 200ms, Tier 2 E2B MicroVM Sandbox với 15s timeout) hoạt động trơn tru.
+- [ ] Động cơ biên dịch sử dụng `latexmk` chuẩn Overleaf CLSI với cờ `-cd -f -jobname=output -auxdir=... -synctex=1 -interaction=batchmode`, tự động chọn `pdflatex` hoặc `xelatex`.
+- [ ] Bộ nhớ đệm gia tăng (Incremental Project Cache) per-draft duy trì tệp `.aux`, `.bbl` giúp thời gian biên dịch lại $< 1.5$s, kèm endpoint `:compile:clear-cache`.
+- [ ] Tính năng SyncTeX hai chiều (Forward và Inverse Search) hoạt động chuẩn xác giữa Monaco Editor và PDF Viewer.
+- [ ] Bộ bóc tách nhật ký có cấu trúc (Structured Log Parser) phân tích file `.log` thành mảng `LatexDiagnostic` JSON nạp vào LangGraph ReAct Planner.
 - [ ] Cơ chế Anti-Oscillation Guard với SHA-256 chặn đứng 100% nguy cơ lặp vòng lặp vá lỗi vô hạn.
 - [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`, bảo toàn tuyệt đối kiến trúc lục giác cho `packages/core/`.
 - [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click cả `main.tex` và `references.bib`.
-- [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.G được cài đặt đầy đủ theo chuẩn Error Envelope.
-- [ ] Toàn bộ 10 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.I được cài đặt đầy đủ theo chuẩn Error Envelope.
+- [ ] Toàn bộ 14 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

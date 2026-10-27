@@ -95,17 +95,17 @@ flowchart TD
 
 ---
 
-### UC-WRITE-02: Không Gian Soạn Thảo Học Thuật 3 Cột & Hoàn Tác 1-Click
+### UC-WRITE-02: Không Gian Soạn Thảo Học Thuật 3 Cột, SyncTeX 2 Chiều & Hoàn Tác 1-Click
 - **Tác nhân:** Nhà Nghiên Cứu.
 - **Điều kiện tiên quyết:** Người dùng đã mở một bản thảo nghiên cứu.
 - **Sự kiện kích hoạt:** Tương tác soạn thảo, biên dịch hoặc hoàn tác trên giao diện 3 cột.
 - **Luồng chuẩn (Happy Path):**
-  1. **Cột 1 (Trái) — Cây tệp & Trình soạn thảo:** Chuyển đổi giữa nội dung bài báo chính, danh mục trích dẫn và danh mục hình ảnh; hỗ trợ gõ chỉnh sửa trực tiếp, nút `[⚙️ Biên dịch PDF]` và nút `[↩️ Hoàn tác]`.
-  2. **Cột 2 (Giữa) — Bản xem trước PDF:** Hiển thị trực tiếp bản in PDF sắc nét được biên dịch thực tế, kèm nút tải gói nộp bài.
+  1. **Cột 1 (Trái) — Cây tệp & Trình soạn thảo:** Chuyển đổi giữa `main.tex`, `references.bib` và `figures/`; hỗ trợ gõ code, nút `[⚙️ Biên dịch]`, nút `[🧹 Xóa đệm & Dựng lại]` và nút `[↩️ Hoàn tác]`.
+  2. **Cột 2 (Giữa) — Bản xem trước PDF & SyncTeX 2 chiều:** Hiển thị trực tiếp bản in PDF sắc nét. Hỗ trợ Forward Search (đặt con trỏ code $\rightarrow$ nhảy khung vàng trên PDF) và Inverse Search (nhấp đúp trên PDF $\rightarrow$ cuộn con trỏ Monaco tới đúng dòng code).
   3. **Cột 3 (Phải) — Khung đối thoại Đồng tác giả AI:** Lưu trữ bền vững lịch sử trao đổi và hiển thị huy hiệu tiến trình hành động của AI theo thời gian thực qua luồng SSE.
-  4. **Hoàn tác 1-Click Bản Chụp Toàn Dự Án (`Composite Project Snapshot Undo`):** Trước mỗi lượt AI chỉnh sửa bản thảo, hệ thống tự động lưu bản chụp trạng thái gốc của toàn bộ dự án (`main.tex`, `references.bib`, số phiên bản). Nếu không ưng ý với kết quả của AI, tác giả bấm `[↩️ Hoàn tác]` để khôi phục ngay lập tức 100% cả nội dung bài báo lẫn danh mục trích dẫn về đúng trạng thái trước khi AI can thiệp.
+  4. **Hoàn tác 1-Click Toàn Dự Án (`Composite Snapshot Undo`):** Trước mỗi lượt AI chỉnh sửa bản thảo, hệ thống tự động lưu bản chụp trạng thái gốc của toàn bộ dự án (`main.tex`, `references.bib`, số phiên bản). Nếu không ưng ý, tác giả bấm `[↩️ Hoàn tác]` để khôi phục ngay lập tức 100% về trạng thái trước can thiệp.
 - **Kết quả đầu ra (Post-conditions):**
-  - Mọi cập nhật hợp lệ được lưu trữ kèm kiểm soát phiên bản; tác giả luôn nắm quyền hoàn tác 1-Click sau khi AI chỉnh sửa.
+  - Mọi cập nhật hợp lệ được lưu trữ kèm kiểm soát phiên bản; điều hướng SyncTeX mượt mà và tác giả luôn nắm quyền hoàn tác 1-Click.
 - **Luồng ngoại lệ (Exception Flows):**
   - *2a. Xung đột phiên bản khi lưu đồng thời từ hai tab trình duyệt khác nhau:* Hệ thống từ chối ghi đè mù quáng và thông báo rõ bản thảo đã được cập nhật ở phiên khác, yêu cầu tải lại bản mới nhất.
   - *2b. Bấm Hoàn tác khi chưa có bản sao lưu trước đó:* Hệ thống thông báo hiện không có thay đổi nào của AI cần hoàn tác và giữ nguyên nội dung hiện tại.
@@ -133,17 +133,17 @@ flowchart TD
 - **Sự kiện kích hoạt:** Hệ thống gửi gói bản thảo tới Động cơ Biên dịch.
 - **Luồng chuẩn (Happy Path & 2-Tier Self-Healing Loop):**
   1. **Tầng 1 — Bộ lọc cú pháp nhanh (Fast AST Syntax Linter < 200ms):** Quét cục bộ kiểm tra đóng mở dấu ngoặc công thức toán (`$`, `$$`, `\begin{...}\end{...}`) trước khi gửi mạng, phát hiện lỗi cú pháp sơ đẳng lập tức.
-  2. **Tầng 2 — Động cơ Biên dịch Vi máy ảo Cô lập (E2B Cloud Sandbox MicroVM):** Thực thi dựng bản in PDF trong môi trường đám mây cô lập an toàn (chặn tuyệt đối `--shell-escape` và các lệnh truy cập hệ thống bên ngoài) với thời gian giới hạn tối đa **15 giây**.
+  2. **Tầng 2 — Động cơ Biên dịch Vi máy ảo Cô lập (E2B Cloud Sandbox MicroVM):** Thực thi dựng PDF qua `latexmk` đa vòng (hỗ trợ cả `-pdf` và `-xelatex` tiếng Việt Unicode), kích hoạt **Bộ nhớ đệm gia tăng (Incremental Cache)** tái sử dụng `.aux`, `.bbl` giúp thời gian dựng lại $< 1.5$s trong môi trường cô lập an toàn (`--no-shell-escape`, timeout 15s).
   3. Nếu biên dịch thành công ngay lần đầu: Bản in PDF mới nhất hiển thị ngay tại Cột 2.
   4. **Vòng lặp tự vá lỗi tự trị (Tối đa 3 lần thử kèm chống dao động):** Nếu biên dịch thất bại do lỗi cú pháp hoặc xung đột gói lệnh:
-     - Đồng tác giả AI tự động đọc nhật ký lỗi biên dịch (`stderr`), xác định số dòng bị lỗi và tự chỉnh sửa mã nguồn để vá lỗi.
+     - Đồng tác giả AI tự động đọc mảng lỗi JSON từ **Bộ bóc tách Log có cấu trúc (Structured Log Parser)**, xác định chính xác số dòng và gợi ý khắc phục để sửa mã nguồn.
      - Hệ thống kiểm tra mã băm SHA-256 của từng bản vá; nếu phát hiện trạng thái dao động lặp lại (Anti-Oscillation Guard), tiến trình dừng lại ngay để tránh vòng lặp vô hạn.
      - AI tự động gửi biên dịch lại cho đến khi thành công (tối đa 3 lần thử liên tiếp).
-     - Cột 3 hiển thị huy hiệu trạng thái trực quan từng bước: *`⚠️ Phát hiện lỗi cú pháp` $\rightarrow$ `✍️ AI đang tự vá lỗi` $\rightarrow$ `⚙️ Biên dịch lại (Lần 2/3)` $\rightarrow$ `🎉 Hoàn tất!`*.
+     - Cột 3 hiển thị huy hiệu trạng thái trực quan: *`⚠️ Phát hiện lỗi` $\rightarrow$ `✍️ AI đang tự vá lỗi` $\rightarrow$ `⚙️ Biên dịch lại (Lần 2/3)` $\rightarrow$ `🎉 Hoàn tất!`*.
 - **Kết quả đầu ra (Post-conditions):**
-  - Bản in PDF biên dịch thành công được cập nhật lên Cột 2; nếu quá 3 lần thử vẫn còn lỗi, hệ thống dừng vòng lặp an toàn và hiển thị rõ dòng lỗi để tác giả kiểm tra hoặc bấm Hoàn tác.
+  - Bản in PDF biên dịch thành công được cập nhật lên Cột 2; nếu quá 3 lần thử vẫn còn lỗi, hệ thống dừng an toàn, hiển thị rõ dòng lỗi và cho phép tác giả hoàn tác 1-Click về bản gốc.
 - **Luồng ngoại lệ (Exception Flows):**
-  - *4a. Quá thời gian biên dịch 15 giây (do hình ảnh quá nặng hoặc vòng lặp lệnh vô hạn):* Hệ thống tự động ngắt tiến trình biên dịch hộp cát, giữ nguyên bản xem trước PDF hợp lệ gần nhất và thông báo tác giả tối ưu hóa hình ảnh hoặc kiểm tra lại lệnh lặp.
+  - *4a. Quá thời gian biên dịch 15 giây hoặc lỗi cache nghiêm trọng:* Hệ thống tự động ngắt tiến trình, cho phép bấm `[🧹 Xóa đệm & Dựng lại]` để dọn sạch thư mục cache và biên dịch sạch từ đầu.
   - *4b. Hết ngân sách 3 lần tự sửa lỗi mà vẫn chưa biên dịch được:* Hệ thống dừng vòng lặp ngay lập tức để bảo vệ hạn ngạch AI, hiển thị thông báo kèm nhật ký dòng lỗi và cho phép tác giả hoàn tác 1-Click về bản gốc.
 
 ---
