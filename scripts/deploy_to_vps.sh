@@ -19,6 +19,7 @@ PUBLIC_URL="${PUBLIC_URL:-https://verischolar.duckdns.org}"
 
 DRY_RUN=false
 SKIP_GATE=false
+FAST_MODE=false
 SYNC_DB=true
 
 usage() {
@@ -26,6 +27,7 @@ usage() {
 Usage: scripts/deploy_to_vps.sh [OPTIONS]
 
 Options:
+  --fast          Fast sync for in-plan tasks (instant probe, skips gates 1-3, builds frontend & syncs in ~5s)
   --dry-run       Simulate the deployment steps without modifying remote files
   --skip-gate     Skip the local 4 Verification Gates before deployment
   --no-sync-db    Skip synchronizing local Dev PostgreSQL database to VPS
@@ -44,6 +46,11 @@ EOF
 # Parse CLI arguments
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --fast)
+            FAST_MODE=true
+            SKIP_GATE=true
+            shift
+            ;;
         --dry-run)
             DRY_RUN=true
             shift
@@ -82,8 +89,23 @@ if [[ ! -f "$SSH_KEY" ]]; then
 fi
 chmod 400 "$SSH_KEY" 2>/dev/null || true
 
-# 2. Local Verification Gates
-if [[ "$SKIP_GATE" != "true" ]]; then
+# 2. Remote Host Pre-flight Probe (Instant 1s Failover before any builds or tests)
+if [[ "$DRY_RUN" != "true" ]]; then
+    echo "-> Probing remote VPS reachability ($SSH_USER@$SSH_HOST:22)..."
+    if ! ssh -i "$SSH_KEY" -o ConnectTimeout=1 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" "true" 2>/dev/null; then
+        echo "======================================================================"
+        echo "⚠️ Remote VPS host ($SSH_USER@$SSH_HOST) is currently offline / unreachable."
+        echo "-> Skipping remote deployment to save cloud computing costs."
+        echo "======================================================================"
+        exit 0
+    fi
+fi
+
+# 3. Verification & Build
+if [[ "$FAST_MODE" == "true" ]]; then
+    echo "-> [Fast Mode] Rebuilding frontend bundle (skipping gates 1-3)..."
+    npm --prefix apps/web run build
+elif [[ "$SKIP_GATE" != "true" ]]; then
     echo "-> [Gate 1/4] Running Ruff linter & format check..."
     uv run ruff check .
     uv run ruff format --check .
@@ -105,17 +127,6 @@ fi
 
 if [[ "$DRY_RUN" == "true" ]]; then
     echo "[DRY-RUN] Simulation completed. Deployment target would be: $PUBLIC_URL"
-    exit 0
-fi
-
-# 2.5. Remote Host Pre-flight Check (Prevent hanging when VPS is shut down)
-echo "-> Checking remote VPS connectivity ($SSH_USER@$SSH_HOST)..."
-if ! ssh -i "$SSH_KEY" -o ConnectTimeout=2 -o BatchMode=yes -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" "true" 2>/dev/null; then
-    echo "======================================================================"
-    echo "⚠️ Remote VPS host ($SSH_USER@$SSH_HOST) is currently offline / unreachable."
-    echo "-> Local Verification Gates passed successfully!"
-    echo "-> Skipping remote deployment to save resources/costs."
-    echo "======================================================================"
     exit 0
 fi
 
