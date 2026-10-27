@@ -181,7 +181,7 @@ USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 Học hỏi từ kiến trúc của **Connected Papers**, hệ thống tự động phát hiện mối quan hệ họ hàng học thuật giữa các bài báo trong kho thông qua hai độ đo thư mục học cổ điển:
 
 1. **Ghép cặp Thư mục (Bibliographic Coupling CTE):**
-   Hai bài báo $A$ và $B$ có liên kết ghép cặp thư mục nếu cùng dẫn chiếu $\ge 2$ tài liệu tham khảo chung:
+   Hai bài báo $A$ và $B$ có liên kết ghép cặp thư mục nếu cùng dẫn chiếu $\ge 2$ tài liệu tham khảo chung (ngưỡng mặc định `:min_shared_references = 2`):
    ```sql
    WITH paper_citations AS (
        SELECT source_node_id AS paper_id, target_node_id AS cited_ref_id
@@ -205,7 +205,7 @@ Học hỏi từ kiến trúc của **Connected Papers**, hệ thống tự đ�
 
 ---
 
-### B. Khử Nhập Nhằng Ngữ Nghĩa & Gộp Đỉnh Hub (Semantic Entity Disambiguation Algorithm)
+### C. Khử Nhập Nhằng Ngữ Nghĩa & Gộp Đỉnh Hub (Semantic Entity Disambiguation Algorithm)
 Trong thực tế học thuật, cùng một phương pháp thường được viết dưới nhiều biến thể tên gọi khác nhau (ví dụ: *"Transformer"*, *"The Transformer model"*, *"Transformer architecture"*). Nếu chỉ chuẩn hóa chuỗi đơn giản qua `LOWER(TRIM(name))`, đồ thị sẽ bị phân mảnh thành nhiều đỉnh rời rạc, làm tê liệt khả năng đối chiếu SOTA.
 
 Quy trình khử nhập nhằng ngữ nghĩa được thực thi tất định theo thuật toán sau:
@@ -258,8 +258,9 @@ flowchart TD
 
 ## 4. Hợp Đồng API REST & Bảng Mã Lỗi (REST Contracts & Error Codes)
 
-### A. Tra Cứu Tri Thức Đồ Thị Kép (`POST /api/v1/library/graph-query`)
+### A. Tra Cứu Tri Thức Đồ Thị Kép (`POST /api/v1/library/graph:query` & `/api/v1/library/graph-query`)
 - **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Route chuẩn:** `POST /api/v1/library/graph:query` (chuẩn Nginx không đệm streaming `proxy_buffering off`) kèm route alias `POST /api/v1/library/graph-query`.
 - **Request Body:**
   ```json
   {
@@ -288,10 +289,10 @@ flowchart TD
         { "id": "uuid-5", "type": "MetricResult", "name": "Top-1 Accuracy: 88.55%", "degree_centrality": 2, "role": "metric" }
       ],
       "edges": [
-        { "source": "uuid-2", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-101", "page_number": 3 },
-        { "source": "uuid-3", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-202", "page_number": 2 },
-        { "source": "uuid-1", "target": "uuid-4", "type": "ACHIEVES", "evidence_chunk_id": "chunk-108", "page_number": 8 },
-        { "source": "uuid-1", "target": "uuid-5", "type": "ACHIEVES", "evidence_chunk_id": "chunk-205", "page_number": 5 }
+        { "document_id": "uuid-doc-1", "source": "uuid-2", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-101", "page_number": 3 },
+        { "document_id": "uuid-doc-2", "source": "uuid-3", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-202", "page_number": 2 },
+        { "document_id": "uuid-doc-1", "source": "uuid-1", "target": "uuid-4", "type": "ACHIEVES", "evidence_chunk_id": "chunk-108", "page_number": 8 },
+        { "document_id": "uuid-doc-2", "source": "uuid-1", "target": "uuid-5", "type": "ACHIEVES", "evidence_chunk_id": "chunk-205", "page_number": 5 }
       ]
     },
     "meta": {
@@ -324,7 +325,7 @@ flowchart TD
 
 ---
 
-### B. Bật/Tắt Yêu Thích Bài Báo (`POST /api/v1/documents/{document_id}:toggle-star`)
+### C. Bật/Tắt Yêu Thích Bài Báo (`POST /api/v1/documents/{document_id}:toggle-star`)
 - **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
 - **Request Body:**
   ```json
@@ -451,7 +452,7 @@ WITH anchor_nodes AS (
         metadata_json,
         1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
     FROM graph_nodes
-    WHERE user_id = :user_id
+    WHERE user_id = :user_id AND embedding IS NOT NULL
     ORDER BY embedding <=> CAST(:query_vec AS vector)
     LIMIT :top_k
 ),
@@ -494,7 +495,7 @@ evidence_chunks AS (
         c.document_id,
         c.page_number,
         c.content AS chunk_text,
-        c.bbox
+        c.bounding_boxes AS bbox
     FROM document_chunks c
     WHERE c.id IN (
         SELECT evidence_chunk_id 

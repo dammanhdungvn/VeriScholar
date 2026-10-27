@@ -99,8 +99,8 @@ flowchart TD
 | **Model CSDL Draft** | [`apps/api/src/api/db/models/draft.py`](../../apps/api/src/api/db/models/draft.py) | **MODIFY** | Bổ sung các cột đã thiết kế ở Spec 00: `bib_content`, `source_session_id`, `pdf_preview_storage_path`, `previous_snapshot`. |
 | **Model CSDL Assets** | `apps/api/src/api/db/models/draft_asset.py` | **NEW** | Bảng `draft_assets` quản lý file trong thư mục `figures/` tích hợp lưu trữ CAS. |
 | **Model CSDL Messages** | `apps/api/src/api/db/models/draft_message.py` | **NEW** | Bảng `draft_messages` lưu vết lịch sử chat, các tool calls và lượt biên dịch. |
-| **Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](../../packages/core/src/core/services/latex_compiler.py) | **MODIFY** | **Xóa bỏ vĩnh viễn** hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`. Toàn bộ quá trình biên dịch chạy qua E2B Cloud Sandbox / binary `tectonic` thật. |
-| **LangGraph Agent** | `packages/core/src/core/services/latex_agent.py` | **NEW** | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần). |
+| **Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](../../packages/core/src/core/services/latex_compiler.py) | **MODIFY** | **Xóa bỏ vĩnh viễn** hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`. Toàn bộ quá trình biên dịch chạy qua E2B Cloud Sandbox / binary `tectonic` thật; `packages/core/` cung cấp `latex_log_parser.py` thuần Python chuẩn hóa lỗi `LatexDiagnostic`. |
+| **LangGraph Agent** | `apps/api/src/api/agents/latex_agent.py` | **NEW** | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần), bảo đảm cách ly Hexagonal Isolation (không đưa LangGraph hay I/O adapters vào `packages/core/`). |
 | **E2B Dockerfile** | `deploy/e2b.Dockerfile` | **NEW** | Dockerfile xây dựng Custom E2B Template chứa đầy đủ môi trường TeX Live và `tectonic`. |
 | **Frontend Workspace** | `apps/web/src/features/writing/` | **MODIFY** | Tích hợp SSE unbuffered cho Cột 3, nút `[↩️ Hoàn tác]` trên HeaderBar, hiển thị cây thư mục file kèm `figures/`. |
 
@@ -237,7 +237,9 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
   }
   ```
 
-### D. Tương Tác Agentic Streaming Unbuffered (`POST /api/v1/drafts/{id}/assist`)
+### D. Tương Tác Agentic Streaming Unbuffered (`POST /api/v1/drafts/{id}/chat:stream` & `/assist`)
+- **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
+- **Route chuẩn:** `POST /api/v1/drafts/{id}/chat:stream` (chuẩn Nginx không đệm streaming `proxy_buffering off`) kèm route alias `POST /api/v1/drafts/{id}/assist`.
 - **Request Body:**
   ```json
   {
@@ -460,8 +462,9 @@ latexmk -cd -f -jobname=output -auxdir=/tmp/drafts/{id}/cache -outdir=/tmp/draft
 ### C. Bộ Nhớ Đệm Biên Dịch Gia Tăng (Incremental Project Build Cache)
 Để đạt tốc độ biên dịch $< 1.5$ giây như Overleaf:
 1. Thư mục `/tmp/drafts/{id}/cache/` được giữ cố định theo từng bản thảo trong suốt phiên làm việc.
-2. Các tệp trung gian (`.aux`, `.bbl`, `.toc`, `.fls`, `.fdb_latexmk`) được tái sử dụng qua các lần biên dịch, tránh việc phải quét lại toàn bộ tài liệu từ đầu.
+2. **Chiến lược Bền bỉ Bộ nhớ đệm (Cache Archive Strategy):** Do sandbox E2B có thể tắt theo vòng đời VM, hệ thống tự động lưu `cache.tar.gz` của draft vào lưu trữ máy chủ/CAS sau mỗi lần biên dịch thành công. Khi biên dịch lại, backend giải nén `cache.tar.gz` nạp vào `/tmp/drafts/{id}/cache/` trước khi chạy `latexmk`, duy trì nguyên vẹn các tệp trung gian (`.aux`, `.bbl`, `.toc`, `.fls`, `.fdb_latexmk`).
 3. **Cơ chế dọn dẹp cache an toàn:** Khi người dùng bấm `[🧹 Xóa đệm & Dựng lại]` hoặc khi gặp lỗi cấu trúc macro trong `.aux`, hệ thống gọi endpoint `POST :compile:clear-cache` xóa sạch thư mục cache và biên dịch sạch hoàn toàn từ đầu.
+4. **Thực thi SyncTeX Siêu Tốc Cục Bộ (< 20ms):** Sau khi `latexmk` biên dịch thành công, cả `output.pdf` và `output.synctex.gz` được tải về lưu trữ cục bộ của draft trên server. Các endpoint `synctex:forward` và `synctex:inverse` gọi trực tiếp công cụ `synctex` cục bộ trên host server (`/usr/bin/synctex`), phản hồi tức thì dưới 20ms mà không cần khởi tạo lại E2B MicroVM cho các thao tác trỏ chuột.
 
 ---
 
@@ -572,7 +575,7 @@ Mọi thay đổi kỹ thuật của phân hệ Soạn Thảo & Agentic LaTeX ph
 | **Drafts Endpoints** | [`apps/api/src/api/v1/endpoints/drafts.py`](../../apps/api/src/api/v1/endpoints/drafts.py) | Tham chiếu CRUD bản thảo, OCC ETag/If-Match, endpoint `:undo` và `:export-bundle`. |
 | **Draft Logic Service** | [`apps/api/src/api/services/draft_service.py`](../../apps/api/src/api/services/draft_service.py) | Tham chiếu cách điều phối StateGraph LangGraph, quản trị snapshot và đóng gói bundle gửi sang E2B Sandbox. |
 | **LaTeX Compiler Service** | [`packages/core/src/core/services/latex_compiler.py`](../../packages/core/src/core/services/latex_compiler.py) | Biên dịch thực tế qua binary `tectonic` hoặc E2B Cloud Sandbox (loại bỏ hoàn toàn giả lập PyMuPDF). |
-| **LangGraph Agent & Tools** | `packages/core/src/core/services/latex_agent.py` | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần). |
+| **LangGraph Agent & Tools** | `apps/api/src/api/agents/latex_agent.py` | Cài đặt `StateGraph` với 4 công cụ chuyên biệt và vòng lặp tự sửa lỗi ReAct (tối đa 3 lần), bảo đảm cách ly Hexagonal Isolation. |
 | **Writing Workspace UI** | `apps/web/src/features/writing/components/WritingWorkspace.tsx` | Không gian làm việc 3 cột (Quản lý file & Editor, Preview PDF, Assistant Chat). |
 
 ---
