@@ -14,7 +14,7 @@ async def test_ensure_database_schema_runs_idempotently():
         await ensure_database_schema(conn)
         await ensure_database_schema(conn)  # 2nd run to verify idempotency
 
-        # Verify 18 tables exist
+        # Verify 19 tables exist
         res = await conn.execute(
             text("""
             SELECT table_name FROM information_schema.tables 
@@ -38,6 +38,7 @@ async def test_ensure_database_schema_runs_idempotently():
             "folders",
             "graph_nodes",
             "graph_edges",
+            "folder_community_summaries",
             "drafts",
             "draft_assets",
             "draft_messages",
