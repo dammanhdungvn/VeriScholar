@@ -155,9 +155,14 @@ def get_session_service(
 def get_session_chat_service(
     db: AsyncSession = Depends(get_db),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
 ) -> SessionChatService:
     """Dependency providing SessionChatService instance bound to request database session."""
-    return SessionChatService(db=db, ai_tracing=ai_tracing)
+    real_ai_tracing = get_ai_tracing_service() if hasattr(ai_tracing, "dependency") else ai_tracing
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return SessionChatService(db=db, ai_tracing=real_ai_tracing, embedding_service=real_embedding)
 
 
 def get_note_service(
