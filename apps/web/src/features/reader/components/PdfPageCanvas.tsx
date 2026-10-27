@@ -47,6 +47,12 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
   const [isVisible, setIsVisible] = useState(false);
   const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null);
 
+  // Refs for tracking priority dynamically without re-triggering render hook on scroll
+  const isCurrentPageRef = useRef(isCurrentPage);
+  isCurrentPageRef.current = isCurrentPage;
+  const currentPageNumberRef = useRef(currentPageNumber);
+  currentPageNumberRef.current = currentPageNumber;
+
   // 1. Render Lookahead Observer: pre-render canvases within 800px lookahead buffer
   useEffect(() => {
     const el = containerRef.current;
@@ -107,9 +113,9 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
 
     let isCancelled = false;
     let cancelIdle: (() => void) | null = null;
-    const priority = isCurrentPage
+    const priority = isCurrentPageRef.current
       ? 0
-      : Math.abs(pageNumber - (currentPageNumber || pageNumber));
+      : Math.abs(pageNumber - (currentPageNumberRef.current || pageNumber));
 
     const executeRender = async (setCancelHandler: (cancel: () => void) => void) => {
       try {
@@ -134,8 +140,14 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
 
         // Retina / High-DPI screen sharp scaling (clamped to max 2 for memory efficiency)
         const dpr = typeof window !== "undefined" ? Math.min(window.devicePixelRatio || 1, 2) : 1;
-        canvas.width = Math.floor(scaledWidth * dpr);
-        canvas.height = Math.floor(scaledHeight * dpr);
+        const targetCanvasWidth = Math.floor(scaledWidth * dpr);
+        const targetCanvasHeight = Math.floor(scaledHeight * dpr);
+
+        // Guard against unnecessary canvas clearing: setting width/height wipes HTML5 canvas
+        if (canvas.width !== targetCanvasWidth || canvas.height !== targetCanvasHeight) {
+          canvas.width = targetCanvasWidth;
+          canvas.height = targetCanvasHeight;
+        }
         canvas.style.width = `${scaledWidth}px`;
         canvas.style.height = `${scaledHeight}px`;
 
@@ -205,7 +217,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
       if (cancelIdle) cancelIdle();
       pdfRenderQueue.cancel(taskId);
     };
-  }, [pdfDoc, pageNumber, zoomRatio, rotationDeg, isVisible, isCurrentPage, taskId, currentPageNumber]);
+  }, [pdfDoc, pageNumber, zoomRatio, rotationDeg, isVisible, taskId]);
 
   // Estimate aspect ratio from fallback metadata if canvas not yet sized
   const aspectWidth = fallbackDimensions?.[0] || 595;
@@ -283,13 +295,10 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
           onClear={onClearHighlight}
         />
 
-        {/* Loading placeholder skeleton */}
-        {(!isRendered || isRendering) && (
+        {/* Loading placeholder skeleton: only visible on initial page render, never flickers during scroll */}
+        {!isRendered && (
           <div
-            className={cn(
-              "absolute inset-0 flex flex-col items-center justify-center bg-[#faf8f5]/90 dark:bg-[#1a1917]/90 backdrop-blur-2xs transition-opacity duration-200",
-              isRendered && "opacity-0 pointer-events-none"
-            )}
+            className="absolute inset-0 flex flex-col items-center justify-center bg-[#faf8f5]/90 dark:bg-[#1a1917]/90 backdrop-blur-2xs transition-opacity duration-200"
           >
             <div className="w-7 h-7 rounded-full border-2 border-primary/20 border-t-primary animate-spin mb-2" />
             <span className="text-[11px] font-mono text-muted animate-pulse">
