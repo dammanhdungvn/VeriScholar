@@ -1,5 +1,8 @@
+import shutil
 import subprocess
 from pathlib import Path
+
+import pytest
 
 
 def test_thesis_files_exist():
@@ -41,6 +44,8 @@ def test_thesis_files_exist():
 
 
 def test_thesis_compilation():
+    if not shutil.which("xelatex"):
+        pytest.skip("XeLaTeX not available in test environment")
     res = None
     for _ in range(2):
         res = subprocess.run(

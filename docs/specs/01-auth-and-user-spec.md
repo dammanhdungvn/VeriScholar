@@ -221,7 +221,7 @@ Khi xảy ra lỗi, backend trả về cấu trúc JSON đồng nhất tuân th�
     "meta": { "request_id": "req_892a01bf23cd" }
   }
   ```
-- **Fallback Môi trường Dev:** Nếu `SMTP_HOST` chưa cấu hình, mã OTP được ghi ra file log [`storage/logs/auth-emails.log`](../../storage/logs/auth-emails.log) để lập trình viên copy kiểm thử.
+- **Fallback Môi trường Dev:** Nếu `SMTP_HOST` chưa cấu hình, mã OTP được ghi ra file log `storage/logs/auth-emails.log` để lập trình viên copy kiểm thử.
 
 #### 8. Đặt lại mật khẩu (`POST /api/v1/auth/reset-password`)
 - **Request Body:**

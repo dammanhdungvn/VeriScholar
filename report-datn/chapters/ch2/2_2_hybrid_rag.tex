@@ -81,65 +81,90 @@ Quy trình xử lý dữ liệu và truy xuất lai hai luồng (Dual-Stream Hyb
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    sourcebox/.style={draw=blue!80!black, fill=blue!8, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
-    procbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=6pt, font=\small},
-    storebox/.style={draw=purple!80!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, align=center, inner sep=7pt, font=\small},
-    outputbox/.style={draw=green!70!black, fill=green!10, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
-    groupcard/.style={draw=black!50, fill=gray!3, rounded corners=6pt, dashed, line width=0.8pt, inner sep=6pt},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
+    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
+    procbox/.style={draw=teal!80!black, fill=teal!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
+    storecard/.style={draw=purple!85!black, fill=purple!3, rounded corners=7pt, line width=1.1pt, inner sep=6pt},
+    indexbox/.style={draw=purple!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\small},
+    rrfbox/.style={draw=orange!85!black, fill=orange!8, rounded corners=5pt, line width=1pt, align=center, inner sep=5pt, font=\small},
+    outputbox/.style={draw=green!70!black, fill=green!8, rounded corners=5pt, line width=1pt, align=center, inner sep=5pt, font=\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=blue!85!black},
+    ingestarrow/.style={-{Stealth[length=2.5mm]}, line width=0.9pt, draw=teal!80!black},
+    rankarrow/.style={-{Stealth[length=2.5mm]}, line width=0.9pt, draw=orange!85!black}
 ]
-    % Vùng 1: Luồng nạp ấn phẩm và lập chỉ mục (Ingestion Stream) - Bên trên
-    \node[sourcebox, minimum width=3.4cm] (src) at (-6.2, 2.4) {
-        \textbf{Ấn phẩm PDF}\\
-        \footnotesize (Tài liệu nghiên cứu)
+    % ==========================================================================
+    % 1. LUỒNG NẠP ẤN PHẨM & LẬP CHỈ MỤC KÉP (INGESTION STREAM) - BÊN TRÊN
+    % ==========================================================================
+    \node[sourcebox, minimum width=3.2cm] (src) at (-5.7, 2.6) {
+        \textbf{Ấn phẩm PDF}\\[2pt]
+        \footnotesize Bài báo nghiên cứu 2 cột
     };
-    \node[procbox, minimum width=3.4cm] (loader) at (-2.2, 2.4) {
-        \textbf{Bóc tách 2 cột}\\
+    \node[procbox, minimum width=3.2cm] (loader) at (-1.9, 2.6) {
+        \textbf{Bóc tách 2 cột}\\[2pt]
         \footnotesize Gutter Detection
     };
-    \node[procbox, minimum width=3.4cm] (chunks) at (1.8, 2.4) {
-        \textbf{Phân đoạn Chunks}\\
+    \node[procbox, minimum width=3.2cm] (chunks) at (1.9, 2.6) {
+        \textbf{Phân đoạn Chunks}\\[2pt]
         \footnotesize Tọa độ BBox $[0..1000]$
     };
-    \node[procbox, minimum width=3.4cm] (embed) at (5.8, 2.4) {
-        \textbf{Nhúng Vector}\\
-        \footnotesize 1536d \& Từ khóa BM25
+    \node[procbox, minimum width=3.2cm] (embed) at (5.7, 2.6) {
+        \textbf{Mã hóa biểu diễn}\\[2pt]
+        \footnotesize Dense 1536d $\parallel$ BM25
     };
 
-    % Kho lưu trữ chỉ mục kép ở trung tâm
-    \node[storebox, minimum width=15.4cm, minimum height=1.2cm] (store) at (-0.2, 0.4) {
-        \textbf{KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL (DUAL-INDEX STORE)}\\
-        \footnotesize Chỉ mục phân cấp đồ thị HNSW Cosine $\parallel$ Chỉ mục ngược toàn văn Inverted GIN
+    \draw[ingestarrow] (src) -- (loader);
+    \draw[ingestarrow] (loader) -- (chunks);
+    \draw[ingestarrow] (chunks) -- (embed);
+
+    % ==========================================================================
+    % 2. KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL (DUAL-INDEX STORE) - TRUNG TÂM
+    % ==========================================================================
+    \node[storecard, minimum width=15.2cm, minimum height=2.2cm] (store_card) at (0, 0.5) {};
+    \node[font=\bfseries\footnotesize, text=purple!90!black] at (0, 1.35) {KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL + PGVECTOR (DUAL-INDEX STORE)};
+
+    \node[indexbox, minimum width=6.8cm] (idx_dense) at (-3.6, 0.45) {
+        \textbf{Chỉ mục Vector HNSW (Dense)}\\[1pt]
+        \footnotesize Không gian 1536d $\parallel$ Cosine Similarity
+    };
+    \node[indexbox, minimum width=6.8cm] (idx_sparse) at (3.6, 0.45) {
+        \textbf{Chỉ mục Ngược GIN (Sparse)}\\[1pt]
+        \footnotesize Từ điển từ khóa thưa $\parallel$ Thuật toán BM25
     };
 
-    % Vùng 2: Luồng truy vấn và phản hồi (Query & Retrieval Stream) - Bên dưới
-    \node[sourcebox, minimum width=3.4cm] (query) at (-6.2, -1.8) {
-        \textbf{Câu hỏi Học giả}\\
+    % Đường nạp dữ liệu từ Ingestion vào 2 chỉ mục
+    \draw[ingestarrow] (embed.south) -- ++(0,-0.35) -| (idx_sparse.north) node[pos=0.7, right=2pt, font=\tiny\bfseries] {Nạp BM25};
+    \draw[ingestarrow] (embed.south) -- ++(0,-0.35) -| (idx_dense.north) node[pos=0.7, left=2pt, font=\tiny\bfseries] {Nạp Vector};
+
+    % ==========================================================================
+    % 3. LUỒNG TRUY VẤN LAI & HỢP NHẤT RRF (QUERY & FUSION STREAM) - BÊN DƯỚI
+    % ==========================================================================
+    \node[sourcebox, minimum width=2.8cm] (query) at (-6.2, -1.9) {
+        \textbf{Câu hỏi Học giả}\\[2pt]
         \footnotesize (User Query)
     };
-    \node[procbox, minimum width=3.4cm] (qproc) at (-2.2, -1.8) {
-        \textbf{Mã hóa truy vấn}\\
-        \footnotesize Dense + Sparse Tokens
+    \node[procbox, minimum width=2.9cm] (qproc) at (-2.9, -1.9) {
+        \textbf{Mã hóa truy vấn}\\[2pt]
+        \footnotesize Dense $\mathbf{u}$ $\parallel$ Sparse $Q$
     };
-    \node[procbox, minimum width=3.4cm] (rrf) at (1.8, -1.8) {
-        \textbf{Hợp nhất RRF}\\
-        \footnotesize Xếp hạng đảo $k=60$
+    \node[rrfbox, minimum width=3.3cm] (rrf) at (1.8, -1.9) {
+        \textbf{Hợp nhất RRF ($k=60$)}\\[2pt]
+        \footnotesize $\text{Score}(d) = \sum \frac{1}{60 + r_m(d)}$
     };
-    \node[outputbox, minimum width=3.4cm] (answer) at (5.8, -1.8) {
-        \textbf{Câu trả lời có Tọa độ}\\
-        \footnotesize Khung viền vàng $[0..1000]$
+    \node[outputbox, minimum width=3.2cm] (answer) at (5.8, -1.9) {
+        \textbf{Phản hồi có Tọa độ}\\[2pt]
+        \footnotesize Golden BBox $[0..1000]$
     };
 
-    % Kết nối luồng Ingestion
-    \draw[arrowstyle] (src) -- (loader);
-    \draw[arrowstyle] (loader) -- (chunks);
-    \draw[arrowstyle] (chunks) -- (embed);
-    \draw[arrowstyle] (embed.south) -- (embed.south |- store.north);
-
-    % Kết nối luồng Query
     \draw[arrowstyle] (query) -- (qproc);
-    \draw[arrowstyle] (qproc.north) -- (qproc.north |- store.south);
-    \draw[arrowstyle] (store.south -| rrf.north) -- (rrf.north);
+
+    % Truy vấn 2 luồng song song vào 2 chỉ mục
+    \draw[arrowstyle] (qproc.north) -- (idx_dense.south -| qproc.north) node[midway, left=2pt, font=\tiny\bfseries] {Vector $\mathbf{u}$};
+    \draw[arrowstyle] (qproc.north) -- ++(0, 0.4) -| (idx_sparse.south) node[pos=0.75, left=2pt, font=\tiny\bfseries] {Từ khóa $Q$};
+
+    % Trả về 2 bảng thứ hạng và hội tụ tại RRF
+    \draw[rankarrow] (idx_dense.south -| rrf.north west) -- (rrf.north west) node[midway, left=2pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{dense}}$};
+    \draw[rankarrow] (idx_sparse.south -| rrf.north east) -- (rrf.north east) node[midway, right=2pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{bm25}}$};
+
+    % RRF chuyển sang khối tạo câu trả lời
     \draw[arrowstyle] (rrf) -- (answer);
 \end{tikzpicture}
 \caption{Mô hình luồng dữ liệu truy xuất lai (Dual-Stream Hybrid RAG Dataflow) chuẩn mực}

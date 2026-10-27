@@ -13,9 +13,12 @@ def test_deploy_script_help():
     assert "--no-sync-db" in res.stdout
 
 
-def test_deploy_script_dry_run_with_skip_gate():
+def test_deploy_script_dry_run_with_skip_gate(tmp_path):
     script_path = Path("scripts/deploy_to_vps.sh")
-    env = {**os.environ, "SSH_KEY": "/home/dammanhdungvn/Downloads/VPS/VeriScholar_key.pem"}
+    dummy_key = tmp_path / "dummy_key.pem"
+    dummy_key.write_text("dummy private key")
+    dummy_key.chmod(0o400)
+    env = {**os.environ, "SSH_KEY": str(dummy_key)}
     res = subprocess.run(
         ["bash", str(script_path), "--dry-run", "--skip-gate"],
         capture_output=True,
