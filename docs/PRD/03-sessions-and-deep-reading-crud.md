@@ -108,24 +108,26 @@ flowchart LR
 
 ---
 
-### UC-SESS-04: Hỏi Đáp Học Sâu Tiếng Việt & Bảo Chứng Khung Viền Vàng (Visual Grounding)
+### UC-SESS-04: Hỏi Đáp Học Sâu Tiếng Việt & Bảo Chứng Khung Viền Vàng (Visual Grounding Advanced RAG)
 * **Tác nhân:** Học giả đọc sâu.
 * **Điều kiện tiên quyết:** Đang trong phiên đọc, có ít nhất 1 bài báo đang mở.
 * **Sự kiện kích hoạt:** Nhập câu hỏi vào ô Chat AI bên phải và bấm Gửi (hoặc nhấn Enter).
 * **Luồng chuẩn (Happy Path):**
-  1. Học giả đặt câu hỏi bằng Tiếng Việt (ví dụ: *"Tác giả đề xuất hàm mất mát Loss Function như thế nào và kết quả BLEU score đạt bao nhiêu?"*).
-  2. Trợ lý AI phản hồi trực tiếp bằng Tiếng Việt với văn phong sư phạm mạch lạc; các công thức toán được hiển thị chuẩn LaTeX sắc nét.
-  3. **Huy hiệu Dẫn chứng Bấm-Để-Kiểm-Chứng:** Ở cuối mỗi kết luận, công thức hoặc số liệu thực nghiệm, AI đều gắn huy hiệu dẫn chứng dạng **`[📄 Tên bài • Trang X]`**.
-  4. **Kiểm chứng trong 1 giây (Visual Grounding):** Khi người dùng bấm vào huy hiệu dẫn chứng:
+  1. **Đặt câu hỏi tự nhiên (Đa ngôn ngữ):** Học giả đặt câu hỏi bằng Tiếng Việt (ví dụ: *"Công thức Answer Relevance (AR) trong bài báo Ragas được tính thế nào và các biến số có ý nghĩa gì?"*).
+  2. **Cầu nối ngữ nghĩa xuyên ngôn ngữ (Cross-Lingual HyDE Bridging):** Hệ thống kích hoạt cơ chế sinh đoạn văn học thuật giả định (Hypothetical Document Embeddings - HyDE) bằng tiếng Anh để thu hẹp khoảng cách từ vựng giữa câu hỏi Tiếng Việt và văn bản khoa học Tiếng Anh gốc, truy xuất chính xác đoạn văn và công thức toán học trên bài báo.
+  3. **Bảo toàn công thức toán học đa dòng (CRAG Multiline Formula Window Expansion):** Nếu công thức toán học hoặc bảng biểu kéo dài qua nhiều dòng hoặc nằm ở ranh giới giữa các đoạn văn, hệ thống tự động mở rộng cửa sổ ngữ cảnh lân cận để gom trọn vẹn biểu thức, tuyệt đối không làm đứt đoạn ký hiệu toán học.
+  4. **Phản hồi sư phạm chuẩn LaTeX:** Trợ lý AI phản hồi trực tiếp bằng Tiếng Việt với văn phong sư phạm mạch lạc; toàn bộ công thức toán được hiển thị chuẩn LaTeX sắc nét qua bộ dựng KaTeX.
+  5. **Huy hiệu Dẫn chứng Bấm-Để-Kiểm-Chứng:** Ở cuối mỗi kết luận, công thức hoặc số liệu thực nghiệm, AI đều gắn huy hiệu dẫn chứng dạng **`[📄 Tên bài • Trang X]`**.
+  6. **Kiểm chứng tức thì (Visual Grounding):** Khi người dùng bấm vào huy hiệu dẫn chứng:
      - Khung đọc PDF bên trái tự động chuyển sang đúng Tab bài báo đó (nếu đang ở tab khác).
      - Cuộn mượt mà đến đúng Trang X.
-     - Tự động vẽ một **Khung viền màu vàng (`Bounding Box`)** bao quanh chính xác đoạn văn hoặc bảng biểu gốc trên trang PDF để người dùng đối chiếu bằng mắt thường ngay lập tức.
-  5. Người dùng có thể bấm nút `[⏹️ Dừng trả lời]` nếu muốn ngắt câu trả lời giữa chừng, hoặc bấm `[🔄 Làm mới đoạn chat]` để xóa lịch sử hỏi đáp của phiên và bắt đầu chuỗi câu hỏi mới.
+     - Tự động vẽ một **Khung viền màu vàng (`Golden Bounding Box`)** bao quanh chính xác công thức toán, đoạn văn hoặc bảng biểu gốc trên trang PDF để người dùng đối chiếu bằng mắt thường ngay lập tức.
+  7. Người dùng có thể bấm nút `[⏹️ Dừng trả lời]` nếu muốn ngắt câu trả lời giữa chừng, hoặc bấm `[🔄 Làm mới đoạn chat]` để xóa lịch sử hỏi đáp của phiên và bắt đầu chuỗi câu hỏi mới.
 * **Kết quả đầu ra (Post-conditions):**
-  * Câu trả lời Tiếng Việt kèm các huy hiệu bảo chứng và tọa độ Khung viền vàng được lưu vào lịch sử phiên đọc; học giả kiểm chứng được tận mắt vị trí số liệu gốc trên trang PDF.
+  * Câu trả lời Tiếng Việt kèm các huy hiệu bảo chứng và tọa độ Khung viền vàng được lưu vào lịch sử phiên đọc; học giả kiểm chứng được tận mắt vị trí số liệu gốc trên trang PDF với độ chính xác $\text{IoU} \ge 0.85$.
 * **Luồng ngoại lệ:**
-  * *4a. Câu hỏi về số liệu hoặc thông tin không tồn tại trong các bài báo đang mở (Zero-Hallucination Refusal):* Trợ lý AI bắt buộc từ chối suy đoán và trả lời rõ: *"Thông tin hoặc số liệu bạn hỏi hiện không được đề cập trong các bài báo đang mở trong phiên đọc này."* Tuyệt đối không tự lấy số liệu từ trí nhớ bên ngoài mà không có dẫn chứng trong bài.
-  * *4b. Hỏi đáp khi bài báo mới thêm vẫn đang bóc tách toàn văn ngầm:* Hệ thống vẫn trả lời ngay dựa trên phần Tóm tắt (Abstract) của bài báo đó và hiển thị dòng chú thích minh bạch: *"Bài báo [Tên bài] đang được hoàn tất phân tích toàn văn ngầm; câu trả lời hiện tại dựa trên phần Tóm tắt."*
+  * *4a. Câu hỏi về số liệu hoặc thông tin không tồn tại trong các bài báo đang mở (Zero-Hallucination Active Abstention):* Trợ lý AI bắt buộc từ chối suy đoán và trả lời rõ: *"Thông tin hoặc số liệu bạn hỏi hiện không được đề cập trong các bài báo đang mở trong phiên đọc này."* Tuyệt đối không tự lấy số liệu từ trí nhớ bên ngoài mà không có dẫn chứng trong bài.
+  * *4b. Hỏi đáp khi bài báo mới thêm vẫn đang bóc tách toàn văn ngầm:* Hệ thống vẫn trả lời ngay dựa trên bản Tóm tắt (Summary Index) của bài báo đó và hiển thị dòng chú thích minh bạch: *"Bài báo [Tên bài] đang được hoàn tất phân tích toàn văn ngầm; câu trả lời hiện tại dựa trên phần Tóm tắt."*
 
 ---
 
@@ -199,5 +201,7 @@ Feature: Ghim trích dẫn nhúng vào sổ tay
 
 1. **Giới Hạn Ngữ Cảnh 5 Bài Báo:** Mỗi phiên đọc chỉ cho phép tối đa 5 bài báo mở đồng thời để bảo đảm giới hạn ngữ cảnh của mô hình ngôn ngữ và tránh hiện tượng pha loãng sự chú ý.
 2. **Khung Đọc Luôn Giữ Bản Gốc:** Khung đọc bên trái luôn là bản gốc PDF tiếng Anh để bảo đảm tính chuẩn xác của tài liệu khoa học; không tự ý dịch đè lên văn bản gốc trên canvas.
-3. **Bảo Chứng 100% Cho Số Liệu:** Mọi câu trả lời của AI có chứa số liệu thực nghiệm hoặc kết quả định lượng bắt buộc phải gắn huy hiệu dẫn chứng có thể bấm để kích hoạt khung viền vàng.
+3. **Bảo Chứng 100% Cho Số Liệu & Công Thức:** Mọi câu trả lời của AI có chứa số liệu thực nghiệm, công thức toán học hoặc kết quả định lượng bắt buộc phải gắn huy hiệu dẫn chứng có thể bấm để kích hoạt Khung viền vàng với độ chính xác $\text{IoU} \ge 0.85$.
 4. **Cô Lập Phiên Độc Lập:** Xóa một phiên đọc chỉ xóa lịch sử trao đổi trong phiên đó, tuyệt đối không làm mất các file PDF trong kho tài liệu chung của học giả.
+5. **Bảo Toàn Chỉ Mục Kép Bắt Buộc (Dual-Index Completeness):** Mọi tài liệu PDF được nạp vào hệ thống (upload cá nhân hoặc "Mở Đọc Sâu") bắt buộc phải được tính toán đầy đủ cả `Summary Index` (dành cho câu hỏi bao quát vĩ mô) và `Vector Store Index` (mảng 1536 chiều dense vector kết hợp tọa độ Bounding Box, tuyệt đối không để vector `NULL`).
+6. **Liêm Chính Học Thuật & Chủ Động Từ Chối (Active Abstention):** Khi câu hỏi yêu cầu dữ liệu hoặc công thức không tồn tại trong tài liệu (điểm tương đồng kiểm định $\tau < 0.20$), AI bắt buộc chủ động thông báo không tìm thấy thông tin trong bài, nghiêm cấm suy đoán hoặc bịa đặt số liệu từ bên ngoài.

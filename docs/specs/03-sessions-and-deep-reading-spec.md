@@ -38,44 +38,91 @@ Phân hệ này là không gian làm việc trung tâm nhất của VeriScholar 
 - **Thanh Tab trên:** Quản lý 1–5 bài báo mở đồng thời trong phiên đọc (`DocumentTabBar.tsx`).
 - **Ngăn trượt:** Sổ tay ghi chú (`NotesPanelContainer.tsx`) bám sát tài liệu gốc.
 
+### A. Kiến Trúc Tổng Thể 2 Tầng (2-Tier Architecture Visualization)
+
+Phân hệ Deep Reading vận hành theo mô hình **Agentic Dual-Index Advanced RAG** tách biệt tường minh 2 giai đoạn:
+
+#### 1. Sơ Đồ Tầng 1: Quy Trình Nạp Bài Báo & Đánh Chỉ Mục Kép (Offline Ingestion Pipeline)
+*(Kích hoạt 1 lần duy nhất khi người dùng tải PDF lên hoặc chọn "Mở Đọc Sâu", xử lý bất đồng bộ qua BackgroundTasks)*
+
 ```mermaid
 flowchart TD
-    subgraph InputContext ["Ngữ Cảnh Đầu Vào Phiên Đọc Đa Tài Liệu"]
-        ScholarQuery["Câu Hỏi Học Thuật & Vùng Bôi Đen PDF"]
-        ActiveTabs["Ngữ Cảnh Tối Đa 5 Bài Báo Trong Phiên"]
-    end
+    PDF["1. File PDF Bài Báo Khoa Học (<= 50MB)"] --> Parser["2. PyMuPDF Layout Engine: Nhận diện 2 cột & BBox [0..1000]"]
+    
+    Parser --> Branch{"3. Phân Rã Dữ Liệu 2 Tầng"}
+    
+    %% Nhánh Macro (Summary)
+    Branch -->|"Nhánh Vĩ mô (Macro)"| SumExtract["4A. Summary Extractor: Trích xuất Title, Abstract, Headings, Kết luận"]
+    SumExtract --> SumStore[("Summary Index: Bảng documents.summary_metadata")]
+    
+    %% Nhánh Micro (Chunks)
+    Branch -->|"Nhánh Vi mô (Micro)"| Chunker["4B. Fine Chunking Engine: Đoạn 512 tokens + Overlap 50 tokens"]
+    Chunker --> EmbedWorker["5. OpenAI text-embedding-3-small: Sinh Vector Dense 1536 chiều"]
+    Chunker --> LexicalWorker["6. PostgreSQL Full-Text Parser: Tạo to_tsvector english content"]
+    
+    EmbedWorker --> VecStore[("Vector Store Index: PostgreSQL pgvector HNSW")]
+    LexicalWorker --> FTSStore[("Inverted Index: PostgreSQL GIN tsvector")]
+    Chunker --> BBoxStore[("Evidence Store: Bảng document_chunks kèm JSONB BBoxes")]
 
-    subgraph HybridRetrieval ["Động Cơ Truy Xuất Lai (Hybrid RAG Engine)"]
-        DenseSearch["Truy Xuất Ngữ Nghĩa Đặc (HNSW Cosine Vector)"]
-        SparseSearch["Truy Xuất Từ Khóa Thưa (PostgreSQL BM25 FTS)"]
-        RRF["Hợp Nhất Xếp Hạng Nghịch Đảo (RRF k=60)"]
-
-        DenseSearch --> RRF
-        SparseSearch --> RRF
-    end
-
-    subgraph GroundedGeneration ["Tầng Sinh Phản Hồi Neo Bằng Chứng & Đồng Bộ Thị Giác"]
-        PromptGuard["Bộ Chắn Chống Bịa Đặt & Neo Trích Dẫn"]
-        SSEStream["Luồng Phản Hồi SSE (Token + Citation + Bridge Hint)"]
-        BBoxCanvas["Đồng Bộ Cuộn Trang & Tô Sáng BBox [0..1000]"]
-
-        PromptGuard --> SSEStream --> BBoxCanvas
-    end
-
-    ScholarQuery --> DenseSearch
-    ScholarQuery --> SparseSearch
-    ActiveTabs --> DenseSearch
-    ActiveTabs --> SparseSearch
-    RRF -->|"Top-K Đoạn Văn Kèm Tọa Độ"| PromptGuard
+    classDef proc fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
+    classDef store fill:#f8fafc,stroke:#1d4ed8,stroke-width:2px;
+    class Parser,SumExtract,Chunker,EmbedWorker,LexicalWorker proc;
+    class SumStore,VecStore,FTSStore,BBoxStore store;
 ```
 
-### Bảng Kiểm Kê Thành Phần Mã Nguồn
+#### 2. Sơ Đồ Tầng 2: Trợ Lý Hỏi Đáp & Suy Luận Đọc Sâu (Online Agentic Inference Runtime)
+*(Kích hoạt thời gian thực mỗi khi học giả đặt câu hỏi trong phiên đọc PDF)*
+
+```mermaid
+flowchart TD
+    UserQuery(["Query Học Giả (VD: 'Công thức AR tính thế nào?')"]) --> AgentBox
+
+    subgraph AgentBox ["Agents (Lõi Điều Phối)"]
+        Condense["1. Condense History (Type II): Ghép 5 lượt chat gần nhất"] --> HyDE["2. HyDE Generator: Sinh Virtual Document Tiếng Anh"]
+        HyDE --> Router{"3. Query Router: Phân loại ý định"}
+    end
+
+    %% Định tuyến
+    Router -->|"Hỏi tổng quan bài báo"| ReadSummary["Đọc Summary Index"]
+    Router -->|"Truy vết công thức / số liệu"| HybridRetriever["Dual-Stream Retrieval"]
+
+    %% Đọc từ kho dữ liệu đã được Tầng 1 chuẩn bị
+    ReadSummary -.-> SumStore[("Summary Index")]
+    HybridRetriever -.->|"HNSW Cosine <=>"| VecStore[("Vector Store Index")]
+    HybridRetriever -.->|"BM25 ts_rank_cd"| FTSStore[("Inverted Index GIN")]
+
+    %% Reranking & CRAG
+    VecStore & FTSStore --> RRF["4. Reciprocal Rank Fusion (k=60)"]
+    RRF --> CRAG{"5. CRAG Evaluator (Ngưỡng tau = 0.35)"}
+    
+    CRAG -->|"Tin cậy cao (tau >= 0.35)"| EvidencePack["Top Evidence Chunks + Bounding Boxes"]
+    CRAG -->|"Công thức bị đứt đoạn / Mơ hồ"| Expand["Window Expansion [i-1, i+1]"] --> EvidencePack
+    CRAG -->|"Không liên quan (tau < 0.20)"| Abstain["Chủ động từ chối (Active Abstention)"]
+
+    %% Sinh câu trả lời & Thị giác
+    EvidencePack --> LLM["6. LLM Reasoner Engine"]
+    UserQuery --> LLM
+    LLM -.->|"Tool Choice (Yêu cầu mở rộng ngữ cảnh)"| Router
+    
+    LLM --> StreamOut["7. SSE Streaming & Markdown KaTeX"]
+    StreamOut --> Canvas["8. PDF Canvas Highlight (Golden Bounding Box)"]
+
+    classDef agentStyle fill:#eff6ff,stroke:#2563eb,stroke-width:2px;
+    classDef storageStyle fill:#f8fafc,stroke:#1d4ed8,stroke-width:2px;
+    classDef viewStyle fill:#f0fdf4,stroke:#16a34a,stroke-width:2px;
+    class AgentBox,RRF agentStyle;
+    class SumStore,VecStore,FTSStore storageStyle;
+    class Canvas,StreamOut viewStyle;
+```
+
+### B. Bảng Kiểm Kê Thành Phần Mã Nguồn
 | Thành phần | Đường dẫn File | Trạng thái | Nội dung chi tiết |
 |---|---|---|---|
 | **Sessions API** | [`apps/api/src/api/v1/endpoints/sessions.py`](../../apps/api/src/api/v1/endpoints/sessions.py) | **MODIFY** | Đã có Session CRUD. Cần bổ sung `DELETE /api/v1/sessions/{id}/documents/{doc_id}` để đóng 1 bài báo khỏi thanh Tab (giải phóng slot 5 bài). |
 | **Chat SSE Endpoint** | `POST /api/v1/sessions/{id}/messages` trong `sessions.py` | **MODIFY** | Chuẩn hóa sự kiện SSE unbuffered: `token`, `citation`, `bridge_hint`, `done`, `error`; bổ sung `DELETE /api/v1/sessions/{id}/messages` (Reset Chat). |
 | **Notes API** | [`apps/api/src/api/v1/endpoints/notes.py`](../../apps/api/src/api/v1/endpoints/notes.py) | **KEEP** | Giữ nguyên CRUD ghi chú: `POST /`, `GET /`, `GET /{id}`, `PATCH /{id}`, `DELETE /{id}`. |
-| **Chat Service** | [`apps/api/src/api/services/session_chat_service.py`](../../apps/api/src/api/services/session_chat_service.py) | **MODIFY** | Nâng cấp truy vấn Hybrid Search (Vector Cosine qua `pgvector` + FTS `content_tsv` qua RRF `k=60`) thay thế chấm điểm RAM cũ. |
+| **Embedding Service** | `apps/api/src/api/services/embedding_service.py` | **CREATE** | Động cơ sinh vector Dense 1536 chiều bằng OpenAI `text-embedding-3-small` với cơ chế batching ($\le 128$ chunks/call). |
+| **Chat Service** | [`apps/api/src/api/services/session_chat_service.py`](../../apps/api/src/api/services/session_chat_service.py) | **MODIFY** | Tích hợp Agent Query Transformation (Condense + HyDE), Dual-Stream HNSW Cosine + BM25 tsvector qua RRF $k=60$, CRAG thresholding và Window Expansion. |
 | **PDF Canvas** | `apps/web/src/features/reader/components/PdfCanvasViewer.tsx` | **KEEP** | Render canvas PDF, lớp vẽ `BboxHighlightLayer.tsx`, sự kiện lắng nghe cuộn trang. |
 | **Abstract Viewer** | `apps/web/src/features/reader/components/AbstractCardViewer.tsx` | **CREATE** | Tạo mới component hiển thị thẻ tóm tắt học thuật khi bài báo ở trạng thái `abstract_only`. |
 | **Selection Menu** | `apps/web/src/features/reader/components/ScholarSelectionMenu.tsx` | **KEEP** | Menu nổi khi bôi đen văn bản: `[💬 Đưa vào Chat]`, `[📝 Vào sổ tay]`, `[📋 Trích dẫn]`. |
@@ -183,32 +230,186 @@ Khi người dùng mở lại phiên đọc, giao diện khôi phục chính xá
 
 ---
 
-## 5. Thiết Kế Thuật Toán Hybrid RAG & Hàng Rào Chống Ảo Giác (Grounding Guardrail)
+## 5. Thiết Kế Thuật Toán Advanced RAG & Hàng Rào Chống Ảo Giác (Academic Advanced RAG Engine)
 
-### A. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60)
-Thay vì xếp hạng từ khóa bằng Python trong RAM, `SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion (RRF):
+### A. Mô Hình Phân Tách Hai Tầng (Two-Tier Architectural Decoupling)
+
+Để bảo đảm tính ổn định và triệt tiêu toàn bộ điểm mù kỹ thuật, hệ thống phân định rõ ràng giữa hai giai đoạn:
+
+1. **Tầng 1 (Offline Ingestion & Dual Indexing Pipeline):**
+   - Xảy ra khi tài liệu được tải lên hoặc khi người dùng bấm "Mở Đọc Sâu" từ kết quả tìm kiếm.
+   - Chạy bất đồng bộ qua `BackgroundTasks` trong FastAPI, đảm bảo không khóa luồng I/O người dùng.
+   - **Bất biến kỹ thuật bắt buộc:** 100% chunks phải được sinh vector Dense 1536 chiều qua model `text-embedding-3-small`, tuyệt đối cấm lưu `embedding = NULL`.
+   - Sinh đồng thời **Summary Index** (Abstract, đề mục, kết luận) và **Vector Store Index** (512-token chunks kèm mảng Bounding Box chuẩn hóa $[0..1000]$).
+
+2. **Tầng 2 (Online Agentic Inference & Visual Grounding Runtime):**
+   - Kích hoạt mỗi khi học giả gửi câu hỏi trong phiên đọc.
+   - Vận hành theo mô hình Agentic RAG với vòng lặp phản hồi (`Tool Choice`), xóa bỏ rào cản đa ngôn ngữ bằng `HyDE` và bảo toàn công thức toán học đa dòng qua cơ chế `CRAG Window Expansion`.
+
+---
+
+### B. Đặc Tả 7 Khối Chức Năng Tiền Định (Deterministic Component I/O Contracts)
+
+Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghiêm ngặt hợp đồng đầu vào (Input) và đầu ra kỳ vọng (Expected Output) của từng khối:
+
+```
++-----------------------------------------------------------------------------------+
+| 1. INDEXING (PyMuPDF Layout-Aware Chunking + text-embedding-3-small + tsvector)    |
+| Input: File PDF gốc (<= 50MB, <= 100 trang)                                       |
+| Output: Bảng document_chunks có embedding vector(1536) & bounding_boxes JSONB      |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 2. QUERY IMPROVEMENT (Condense History Type II + HyDE English Virtual Document)   |
+| Input: user_query (Tiếng Việt/Anh) + 5 turns chat_history                         |
+| Output: standalone_query (text) + hyde_vector (1536-dim float array)              |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 3. QUERY ROUTING (Semantic Scope Router)                                          |
+| Input: standalone_query + session_scope                                            |
+| Output: ROUTE_TYPE ("SUMMARY_INDEX" hoặc "DEEP_CHUNKS")                            |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 4. RETRIEVE & RANKING (Dual-Stream Hybrid Search + RRF k=60)                      |
+| Input: hyde_vector (Dense) + standalone_query (Sparse) + active_doc_ids           |
+| Output: Top 5 candidate chunks kèm rrf_score & cosine_similarity                  |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 5. CRAG EVALUATION & WINDOW EXPANSION (Confidence Gate & Multiline Expansion)     |
+| Input: Top candidate chunks + max cosine_similarity (tau)                         |
+| Process: tau >= 0.35 (Correct) | 0.20 <= tau < 0.35 (Ambiguous) -> [i-1, i+1]     |
+| Output: final_evidence_chunks (đã bao trọn công thức) HOẶC cờ ABSTAIN              |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 6. PROMPT AUGMENTATION (Evidence Packager & Citation Anchors)                     |
+| Input: final_evidence_chunks + standalone_query                                    |
+| Output: Augmented System Prompt cô lập với chỉ thị gắn thẻ [cite:chunk_id:page]   |
++-----------------------------------------------------------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------+
+| 7. GENERATION & VISUAL PROOF (Streaming Reasoner & Golden BBox Canvas)            |
+| Input: Augmented Prompt gửi tới LLM (GPT-4o / Claude 3.5 Sonnet)                  |
+| Output: SSE Stream (Markdown KaTeX) + Trích xuất tọa độ BBox vẽ khung vàng        |
++-----------------------------------------------------------------------------------+
+```
+
+#### Chi tiết Hợp đồng Dữ liệu từng Khối:
+
+1. **Khối 1: INDEXING & DUAL STORE PIPELINE**
+   * **Input:** File PDF nhị phân (`bytes`), `document_id` (UUID), `user_id` (UUID).
+   * **Process:** 
+     - PyMuPDF chia cột đọc (Gutter Detection). Cắt lát: 512 tokens, bước trượt 50 tokens.
+     - Chuẩn hóa tọa độ Bounding Box về $[0..1000]$: `{"x": float, "y": float, "width": float, "height": float}`.
+     - Gọi `OpenAI text-embedding-3-small` theo batch $\le 128$ chunks để tính vector dense 1536 chiều.
+     - Phân tích từ khóa toàn văn tạo cột `content_tsv` bằng `to_tsvector('english', content)`.
+   * **Expected Output:**
+     ```json
+     {
+       "document_id": "6439868d-b7e0-4bd4-9db5-ff94f1ff3adc",
+       "chunk_index": 19,
+       "page_number": 3,
+       "content": "Answer Relevance (AR) is defined as...",
+       "embedding": [0.0124, -0.0451, ..., 0.0892],
+       "bounding_boxes": [{"x": 120.5, "y": 450.2, "width": 410.0, "height": 85.4}]
+     }
+     ```
+
+2. **Khối 2: QUERY IMPROVEMENT (Chat Engine Type II & HyDE)**
+   * **Input:** `raw_query` (string), `chat_history` (list 5 turns gần nhất).
+   * **Process:**
+     - LLM tạo `condensed_query` độc lập ngữ cảnh.
+     - HyDE Prompt sinh đoạn văn giả định học thuật Tiếng Anh (Virtual Document) dài 100-150 từ chứa các thuật ngữ toán học kỳ vọng.
+     - Gọi `embedding_service` để vector hóa Virtual Document thành $\mathbf{u}_{\text{hyde}} \in \mathbb{R}^{1536}$.
+   * **Expected Output:**
+     ```json
+     {
+       "condensed_query": "Công thức tính Answer Relevance (AR) trong Ragas",
+       "hyde_text": "Answer Relevance (AR) in Ragas is calculated by generating synthetic questions...",
+       "hyde_vector": [0.0115, -0.0389, ..., 0.0711]
+     }
+     ```
+
+3. **Khối 3: QUERY ROUTING (Semantic Scope Router)**
+   * **Input:** `condensed_query`, `active_document_ids`.
+   * **Process:** Phân loại ý định người dùng (Ý định vĩ mô như Tóm tắt/Đóng góp $\rightarrow$ `SUMMARY_INDEX`; Ý định vi mô như Công thức/Thực nghiệm/Số liệu $\rightarrow$ `DEEP_CHUNKS`).
+   * **Expected Output:** `{"route": "DEEP_CHUNKS", "target_doc_ids": ["6439868d-..."]}`.
+
+4. **Khối 4: RETRIEVE & RANKING (Dual-Stream Hybrid Search + RRF)**
+   * **Input:** `hyde_vector`, `condensed_query`, `active_doc_ids`, `user_id`.
+   * **Process:** Thực thi câu lệnh SQL CTE kết hợp HNSW Cosine distance và Full-Text Search ts_rank_cd qua thuật toán Reciprocal Rank Fusion ($k=60$).
+   * **Expected Output:** Danh sách Top 5 candidate chunks có điểm RRF cao nhất.
+
+5. **Khối 5: CRAG EVALUATION & WINDOW EXPANSION**
+   * **Input:** Top candidate chunks, điểm tương đồng cao nhất $\tau = \max(\text{cosine\_similarity})$.
+   * **Process:**
+     - **$\tau \ge 0.35$ (Correct):** Giữ nguyên Top chunks.
+     - **$0.20 \le \tau < 0.35$ (Ambiguous / Multiline Formula Split):** Tự động truy vấn bổ sung các chunk lân cận $[i-1, i+1]$ trên cùng trang để gom trọn vẹn công thức hoặc định lý.
+     - **$\tau < 0.20$ (Incorrect):** Bật cờ `abstain = True`, không gửi context rác cho LLM.
+   * **Expected Output:**
+     ```json
+     {
+       "crag_verdict": "AMBIGUOUS_EXPANDED",
+       "final_chunks": [
+         {"chunk_index": 18, "page": 3, "content": "..."},
+         {"chunk_index": 19, "page": 3, "content": "AR = (1/n) * sum(cos(q, q_i))..."},
+         {"chunk_index": 20, "page": 3, "content": "where q is the query vector..."}
+       ],
+       "abstain": false
+     }
+     ```
+
+6. **Khối 6: PROMPT AUGMENTATION**
+   * **Input:** `final_chunks`, `condensed_query`.
+   * **Process:** Ghép các chunk vào khối `[CONTEXT]` với chỉ thị: Mỗi câu khẳng định hoặc công thức toán học bắt buộc phải gắn thẻ neo `[cite:chunk_id:page]`.
+   * **Expected Output:** Chuỗi Prompt được kiểm duyệt sạch sẽ.
+
+7. **Khối 7: GENERATION & VISUAL PROOF (Streaming & Golden Bounding Box)**
+   * **Input:** Augmented Prompt.
+   * **Process:** LLM sinh streaming token; Backend regex tách thẻ `[cite:chunk_id:page]` và đẩy event SSE `citation` chứa mảng `bounding_boxes`. Frontend React Canvas nhận sự kiện, tự động cuộn trang và vẽ **Khung viền vàng nhấp nháy** bao quanh công thức.
+   * **Expected Output:** Phản hồi hiển thị chuẩn KaTeX kèm Bounding Box vàng chính xác $\text{IoU} \ge 0.85$.
+
+---
+
+### C. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60)
+
+`SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** qua vector HyDE và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion ($k=60$):
 
 ```sql
 WITH vector_ranks AS (
-    SELECT id, document_id, page_number, text_content, bounding_boxes,
-           ROW_NUMBER() OVER (ORDER BY embedding <=> :query_vector) AS rank_vec
+    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+           (1.0 - (embedding <=> :hyde_vector)) AS cosine_sim,
+           ROW_NUMBER() OVER (ORDER BY embedding <=> :hyde_vector) AS rank_vec
     FROM document_chunks
     WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
-    LIMIT 20
+      AND embedding IS NOT NULL
+    LIMIT 25
 ),
 fts_ranks AS (
-    SELECT id, document_id, page_number, text_content, bounding_boxes,
-           ROW_NUMBER() OVER (ORDER BY ts_rank_cd(content_tsv, to_tsquery('simple', :fts_query)) DESC) AS rank_fts
+    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+           ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) AS fts_score,
+           ROW_NUMBER() OVER (ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) DESC) AS rank_fts
     FROM document_chunks
     WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
-      AND content_tsv @@ to_tsquery('simple', :fts_query)
-    LIMIT 20
+      AND content_tsv @@ plainto_tsquery('english', :fts_query)
+    LIMIT 25
 )
 SELECT COALESCE(v.id, f.id) AS chunk_id,
        COALESCE(v.document_id, f.document_id) AS document_id,
+       COALESCE(v.chunk_index, f.chunk_index) AS chunk_index,
        COALESCE(v.page_number, f.page_number) AS page_number,
-       COALESCE(v.text_content, f.text_content) AS text_content,
+       COALESCE(v.content, f.content) AS text_content,
        COALESCE(v.bounding_boxes, f.bounding_boxes) AS bounding_boxes,
+       COALESCE(v.cosine_sim, 0.0) AS max_cosine_sim,
        (COALESCE(1.0 / (60 + v.rank_vec), 0.0) + COALESCE(1.0 / (60 + f.rank_fts), 0.0)) AS rrf_score
 FROM vector_ranks v
 FULL OUTER JOIN fts_ranks f ON v.id = f.id
@@ -216,15 +417,27 @@ ORDER BY rrf_score DESC
 LIMIT 5;
 ```
 
-### B. Hàng Rào Bảo Vệ Theo Trạng Thái Tài Liệu (Guardrail Rules)
-1. **Nếu tài liệu đang parse (`status='parsing'`):**
-   - Chỉ nạp đoạn văn Abstract (chunk 0) vào ngữ cảnh RAG.
-   - System Prompt tự động bổ sung chỉ thị: *"Tài liệu toàn văn đang được bóc tách ngầm. Chỉ trả lời dựa trên tóm tắt và thông báo cho người dùng biết dữ liệu đầy đủ sắp sẵn sàng."*
-2. **Nếu tài liệu chỉ có Abstract (`status='abstract_only'`):**
-   - Nghiêm cấm mô hình tự suy diễn hoặc bịa đặt các bảng số liệu thực nghiệm hay công thức chi tiết không xuất hiện trong Abstract.
-3. **Định dạng Huy Hiệu Bảo Chứng Bắt Buộc:**
-   - Mỗi câu chứa thông tin trích dẫn từ bài báo bắt buộc có cấu trúc tag: `[[cite:citation_id]]`.
-   - Frontend tự động chuyển đổi tag này thành huy hiệu bấm được: `[📄 Tên bài • Trang X]`.
+---
+
+### D. Hàng Rào Bảo Vệ & Cơ Chế Agent Feedback Loop (Tool Choice)
+
+1. **Vòng lặp Phản hồi của Agent (Feedback Loop):**
+   - Khi LLM nhận thấy `Retrieval Context` bị ngắt quãng giữa công thức hoặc thiếu định nghĩa biến số, LLM kích hoạt sự kiện gọi công cụ ngầm (`Tool Choice: expand_context(document_id, page_number, chunk_index, direction="both")`).
+   - Service tự động nạp bổ sung chunk $[i-1, i+1]$ và tái kích hoạt lượt suy luận trước khi gửi token ra giao diện.
+
+2. **Hàng rào Bảo vệ theo Trạng thái Tài liệu (Guardrail Rules):**
+   - **Tài liệu đang xử lý (`status='parsing'`):** Chỉ nạp bản tóm tắt từ `documents.summary_metadata` vào ngữ cảnh; kèm thông báo tiến trình bóc tách ngầm cho học giả.
+   - **Tài liệu chỉ có Tóm tắt (`status='abstract_only'`):** Tuyệt đối cấm suy diễn số liệu thực nghiệm chi tiết; hướng dẫn học giả tải file PDF cá nhân lên để đọc sâu.
+   - **Chủ động từ chối (Active Abstention):** Khi điểm $\tau < 0.20$, hệ thống trả về thông báo trung thực: *"Tài liệu không đề cập đến công thức hoặc dữ liệu này"*, triệt tiêu 100% ảo giác.
+
+---
+
+### E. Bảng Phân Tích Khắc Phục Triệt Để 2 Lỗi Kỹ Thuật Đã Chứng Minh
+
+| Lỗi phát hiện trên thực tế | Nguyên nhân gốc rễ trong mã nguồn | Giải pháp Advanced RAG chuẩn hóa trong Spec |
+| :--- | :--- | :--- |
+| **"AI bảo không có công thức $AR$ trong bài báo Ragas"** | 1. `document_service.py` lưu `embedding = None` khi nạp file.<br/>2. `session_chat_service.py` gọi hàm tìm kiếm nhưng truyền `query_embedding = None`.<br/>3. Tìm kiếm từ khóa Tiếng Việt *"Công thức AR"* trên bài báo Tiếng Anh trả về 0 kết quả. | **Khối 1 (Indexing):** Ép buộc gọi `embedding_service` sinh vector 1536 chiều.<br/>**Khối 2 (HyDE):** Tự động sinh Virtual Document Tiếng Anh và đối soát qua chỉ mục HNSW vector, khớp trúng Chunk 19/20 trên Trang 3. |
+| **"Khung viền vàng Bounding Box bị lệch trang hoặc biến mất"** | 1. Do truy vấn rỗng, hệ thống lấy nhầm chunk Trang 1 (Abstract) hoặc không có tọa độ.<br/>2. Các bài báo "Mở Đọc Sâu" bị kẹt ở `status='processing'` với 0 chunks do quên gọi background worker. | **Khối 4 & 5 (RRF & CRAG):** RRF đưa đúng chunk Trang 3 lên đầu bảng; CRAG mở rộng cửa sổ bao trọn công thức. Sửa `open_reading_session` kích hoạt background ingestion tự động. |
 
 ---
 
