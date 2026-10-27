@@ -21,15 +21,15 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
     scale=0.80, transform shape,
     centerbox/.style={draw=red!80!black, fill=red!8, rounded corners=6pt, line width=1.3pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
     pillar/.style={draw=black!75, fill=gray!12, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
-    leaf/.style={draw=black!70, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    leaf/.style={draw=black!70, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\fontsize{9pt}{11pt}\selectfont},
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
     dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.85pt, draw=black!55},
     tree_line/.style={draw=black!80, line width=1.0pt}
 ]
     % Khối Tác nhân AI ở Trung tâm (Central LLM Brain)
-    \node[centerbox, minimum width=2.6cm, minimum height=1.3cm] (agent) at (0, 0) {
+    \node[centerbox, minimum width=2.8cm, minimum height=1.3cm] (agent) at (0, 0) {
         TÁC NHÂN AI\\
-        \footnotesize (\textit{LLM Agent})
+        \footnotesize (\textit{LLM Agent Brain})
     };
 
     % 1. Trụ cột BỘ NHỚ (Memory - Phía trên)
@@ -39,13 +39,13 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
     };
     \draw[arrowstyle] (agent.north) -- (memory.south);
 
-    \node[leaf, minimum width=3.3cm, text width=3.1cm] (m_short) at (-2.4, 4.0) {
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (m_short) at (-2.5, 4.0) {
         \textbf{Bộ nhớ ngắn hạn}\\
-        \scriptsize Ngữ cảnh hội thoại \& SSE
+        \scriptsize (Working Memory)
     };
-    \node[leaf, minimum width=3.3cm, text width=3.1cm] (m_long) at (2.4, 4.0) {
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (m_long) at (2.5, 4.0) {
         \textbf{Bộ nhớ dài hạn}\\
-        \scriptsize Đồ thị tri thức \& Vector
+        \scriptsize (Knowledge Memory)
     };
     % Nhánh phân tách trực giao đến 2 khối bộ nhớ
     \draw[tree_line] (memory.north) -- (0, 3.1);
@@ -59,29 +59,25 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
     };
     \draw[arrowstyle] (agent.east) -- (plan.west);
 
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (p_refl) at (7.4, 2.4) {
-        \textbf{Tự phản tư (\textit{Reflection})}\\
-        \scriptsize Tự đánh giá \& Sửa lỗi
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_refl) at (7.3, 2.4) {
+        \textbf{Tự phản tư (Reflection)}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (p_crit) at (7.4, 0.8) {
-        \textbf{Kiểm định trích dẫn}\\
-        \scriptsize Rà soát liêm chính $\text{IoU} \ge 0{,}85$
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_crit) at (7.3, 0.8) {
+        \textbf{Kiểm định trích dẫn}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (p_cot) at (7.4, -0.8) {
-        \textbf{Chuỗi suy luận (\textit{CoT})}\\
-        \scriptsize Phân tích logic đa bước
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_cot) at (7.3, -0.8) {
+        \textbf{Chuỗi suy luận (CoT)}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (p_sub) at (7.4, -2.4) {
-        \textbf{Phân rã mục tiêu}\\
-        \scriptsize Chia nhỏ bài toán phức tạp
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_sub) at (7.3, -2.4) {
+        \textbf{Phân rã mục tiêu}
     };
     % Nhánh phân tách trực giao đến 4 khối lập kế hoạch
-    \draw[tree_line] (plan.east) -- (5.1, 0);
-    \draw[tree_line] (5.1, -2.4) -- (5.1, 2.4);
-    \draw[arrowstyle] (5.1, 2.4) -- (p_refl.west);
-    \draw[arrowstyle] (5.1, 0.8) -- (p_crit.west);
-    \draw[arrowstyle] (5.1, -0.8) -- (p_cot.west);
-    \draw[arrowstyle] (5.1, -2.4) -- (p_sub.west);
+    \draw[tree_line] (plan.east) -- (4.85, 0);
+    \draw[tree_line] (4.85, -2.4) -- (4.85, 2.4);
+    \draw[arrowstyle] (4.85, 2.4) -- (p_refl.west);
+    \draw[arrowstyle] (4.85, 0.8) -- (p_crit.west);
+    \draw[arrowstyle] (4.85, -0.8) -- (p_cot.west);
+    \draw[arrowstyle] (4.85, -2.4) -- (p_sub.west);
 
     % 3. Trụ cột CÔNG CỤ NGOẠI VI (Tools - Bên trái)
     \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (tools) at (-3.2, 0) {
@@ -90,29 +86,25 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
     };
     \draw[arrowstyle] (agent.west) -- (tools.east);
 
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (t_ret) at (-7.4, 2.4) {
-        \textbf{Bộ truy xuất lai}\\
-        \scriptsize Hợp nhất Vector \& BM25
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_ret) at (-7.3, 2.4) {
+        \textbf{Truy xuất tri thức lai}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (t_pdf) at (-7.4, 0.8) {
-        \textbf{Định vị Canvas}\\
-        \scriptsize BBox chuẩn hóa $[0..1000]$
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_pdf) at (-7.3, 0.8) {
+        \textbf{Định vị PDF Canvas}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (t_e2b) at (-7.4, -0.8) {
-        \textbf{Hộp cát biên dịch}\\
-        \scriptsize E2B MicroVM cô lập an toàn
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_e2b) at (-7.3, -0.8) {
+        \textbf{Hộp cát Firecracker}
     };
-    \node[leaf, minimum width=3.5cm, text width=3.3cm] (t_srch) at (-7.4, -2.4) {
-        \textbf{Tìm kiếm học thuật}\\
-        \scriptsize Phân giải định danh DOI
+    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_srch) at (-7.3, -2.4) {
+        \textbf{Tìm kiếm học thuật DOI}
     };
     % Nhánh phân tách trực giao đến 4 khối công cụ
-    \draw[tree_line] (tools.west) -- (-5.1, 0);
-    \draw[tree_line] (-5.1, -2.4) -- (-5.1, 2.4);
-    \draw[arrowstyle] (-5.1, 2.4) -- (t_ret.east);
-    \draw[arrowstyle] (-5.1, 0.8) -- (t_pdf.east);
-    \draw[arrowstyle] (-5.1, -0.8) -- (t_e2b.east);
-    \draw[arrowstyle] (-5.1, -2.4) -- (t_srch.east);
+    \draw[tree_line] (tools.west) -- (-4.85, 0);
+    \draw[tree_line] (-4.85, -2.4) -- (-4.85, 2.4);
+    \draw[arrowstyle] (-4.85, 2.4) -- (t_ret.east);
+    \draw[arrowstyle] (-4.85, 0.8) -- (t_pdf.east);
+    \draw[arrowstyle] (-4.85, -0.8) -- (t_e2b.east);
+    \draw[arrowstyle] (-4.85, -2.4) -- (t_srch.east);
 
     % 4. Trụ cột HÀNH ĐỘNG (Action - Phía dưới)
     \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (action) at (0, -2.1) {
@@ -121,13 +113,11 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
     };
     \draw[arrowstyle] (agent.south) -- (action.north);
 
-    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_resp) at (-2.6, -4.2) {
-        \textbf{Truyền phát câu trả lời}\\
-        \scriptsize Luồng SSE \& Trích dẫn gốc
+    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_resp) at (-2.5, -3.9) {
+        \textbf{Truyền phát câu trả lời}
     };
-    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_bbox) at (2.6, -4.2) {
-        \textbf{Định vị khung viền}\\
-        \scriptsize Golden BBox trên PDF Canvas
+    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_bbox) at (2.5, -3.9) {
+        \textbf{Định vị khung viền vàng}
     };
     % Nhánh phân tách trực giao đến 2 khối hành động
     \draw[tree_line] (action.south) -- (0, -3.1);
