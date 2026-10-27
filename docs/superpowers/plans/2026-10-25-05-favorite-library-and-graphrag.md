@@ -1,10 +1,13 @@
-# Favorite Library, Hierarchical Topic Folders & 4-Entity PostgreSQL GraphRAG Implementation Plan
+# Favorite Library, Hierarchical Topic Folders & Dual-Level PostgreSQL GraphRAG Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Hiện thực hóa Kho Bài Báo Yêu Thích (`/library`), Cây Thư Mục Đề Tài phân cấp (`folders`), Động cơ bóc tách Đồ Thị Tri Thức Học Thuật 4 Thực Thể thuần PostgreSQL 16+ `pgvector` với cơ chế Hợp Nhất Đỉnh Trùng Tên (Canonical Hub Merging) và Truy Vấn Tổng Hợp Đa Bài Báo (`POST /api/v1/library/graph-query`).
+**Goal:** Hiện thực hóa Kho Bài Báo Yêu Thích (`/library`), Cây Thư Mục Đề Tài phân cấp (`folders`), Động cơ bóc tách Đồ Thị Tri Thức Học Thuật 4 Thực Thể thuần PostgreSQL 16+ `pgvector` với cơ chế Hợp Nhất Đỉnh Hub Ngữ Nghĩa (Semantic Disambiguation Cosine $\ge 0.90$), Động cơ Thư mục học Bibliometrics (Connected Papers Prior/Derivative Works), và Truy Vấn Kép Vi Mô & Vĩ Mô (Dual-Level Local & Global GraphRAG qua `POST /api/v1/library/graph:query`).
 
-**Architecture:** Tuân thủ Kiến trúc Lục giác: Bộ chuẩn hóa tên định danh `canonical_name = lower(trim(name))` và xác thực 4 loại thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) + 4 loại quan hệ (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`) nằm trong `packages/core/src/core/services/graph_extractor.py`; tầng ứng dụng trong `apps/api` thực thi Upsert `ON CONFLICT (user_id, node_type, canonical_name) DO UPDATE` trên `graph_nodes`, quản lý dọn dẹp đỉnh mồ côi khi Unstar, và thực thi truy vấn 2 bước (HNSW Vector Anchor $\rightarrow$ 1-Hop Edge Expansion); tầng giao diện `apps/web` hiển thị cây thư mục, lưới bài báo đã Star và sơ đồ mini-graph `cytoscape`.
+**Architecture:** Tuân thủ nghiêm ngặt Kiến trúc Lục giác (Hexagonal Isolation):
+- `packages/core/`: Lõi miền nghiệp vụ thuần khiết Python Standard Library + `pydantic`. Chứa bộ chuẩn hóa `normalize_canonical_name()`, Pydantic validator 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) & 4 quan hệ (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`), bộ phát hiện vòng lặp thư mục `detect_folder_cycle()`, và công thức thư mục học.
+- `apps/api/`: Mô hình SQLAlchemy (`GraphNodeModel`, `GraphEdgeModel`, `FolderCommunitySummaryModel`), DDL với chỉ mục HNSW Cosine trên cột `embedding vector(1536)`, tác vụ nền nạp tăng dần LightRAG ($< 3$s) kết hợp cosine $\ge 0.90$ khử nhập nhằng, truy vấn 2 bước SQL CTE kết hợp Lexical Graph (`document_chunks.bounding_boxes`) và Domain Graph, định tuyến truy vấn kép `mode: "local" | "global" | "hybrid"`, và dọn dẹp đỉnh mồ côi an toàn khi Unstar.
+- `apps/web/`: Cây thư mục đề tài bên trái, lưới bài báo đã Star ở giữa, hộp tra cứu kép GraphRAG ở trên và sơ đồ mạng tri thức tương tác `cytoscape` (kích thước đỉnh theo Degree Centrality, nhấp đúp cạnh mở trang PDF có Bounding Box viền vàng).
 
 **Tech Stack:** Python 3.12, FastAPI (`BackgroundTasks`), SQLAlchemy 2.0 Async, PostgreSQL 16+ (`pgvector` HNSW), React 19, TypeScript, Tailwind CSS, Cytoscape.js.
 
@@ -14,33 +17,33 @@
 
 ## Global Constraints
 
-- Tuyệt đối cấm sử dụng cơ sở dữ liệu đồ thị ngoài (như Neo4j). Toàn bộ đồ thị tri thức lưu trong 2 bảng PostgreSQL `graph_nodes` và `graph_edges`.
+- Tuyệt đối cấm sử dụng cơ sở dữ liệu đồ thị ngoài (như Neo4j). Toàn bộ đồ thị tri thức lưu trong các bảng PostgreSQL `graph_nodes`, `graph_edges`, và `folder_community_summaries`.
 - Chỉ chấp nhận duy nhất 4 nhãn thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) và 4 kiểu cạnh (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`).
-- Áp dụng **Canonical Hub Merging** trong phạm vi từng học giả: `UNIQUE (user_id, node_type, canonical_name)` với `document_id NULL REFERENCES documents(id) ON DELETE SET NULL`.
+- Áp dụng **Semantic Entity Disambiguation Hubs** trong phạm vi từng học giả: Nếu Cosine $\ge 0.90$, gộp vào Hub có sẵn; nếu không, tạo đỉnh mới trong `graph_nodes`.
 - Khi xóa một thư mục đề tài (`DELETE /api/v1/folders/{id}`), các bài báo bên trong chỉ được gán `folder_id = NULL`, tuyệt đối không bị xóa khỏi kho tài liệu của học giả.
 - Khi bỏ đánh dấu yêu thích (`Unstar`), xóa các cạnh `graph_edges` của bài báo đó và chỉ xóa các đỉnh `graph_nodes` không còn bất kỳ cạnh nào liên kết tới (bảo toàn các đỉnh Hub dùng chung với bài báo khác).
 - Toàn bộ liên kết trong tài liệu Markdown dùng đường dẫn tương đối.
 - Bốn Cổng Xác Minh Bắt Buộc (`ruff`, `pytest`, `npm test`, `npm build`) phải đạt exit code 0 sau mỗi task.
+- Chạy `bash scripts/deploy_to_vps.sh --fast` sau mỗi lần git commit thành công.
 
 ---
 
 ## Review Focus
 
-1. **Folder Hierarchy Cycle Prevention:** Khi người dùng di chuyển thư mục $A$ vào bên trong thư mục con/cháu của chính nó ($A \rightarrow B \rightarrow A$), API `PATCH /api/v1/folders/{id}` phải phát hiện vòng lặp phân cấp và từ chối với mã lỗi `400 FOLDER_CYCLE_DETECTED`.
-2. **Divergent Empirical Metric Results Across Papers:** Khi Bài báo A và Bài báo B báo cáo 2 con số khác nhau cho cùng một phương pháp trên cùng một tập dữ liệu (ví dụ: `BLEU: 28.4 (Vaswani 2017, p.8)` vs `BLEU: 27.9 (Replication 2019, p.5)`), hệ thống phải lưu thành 2 thực thể `MetricResult` riêng biệt gắn kèm `evidence_chunk_id` và `page_number` của từng bài báo nguồn thay vì ghi đè làm mất số liệu đối chứng.
+1. **Folder Hierarchy Cycle Prevention:** Khi người dùng di chuyển thư mục $A$ vào bên trong thư mục con/cháu của chính nó ($A \rightarrow B \rightarrow A$), API `PATCH /api/v1/folders/{id}` phải phát hiện vòng lặp phân cấp và từ chối với mã lỗi `400 CYCLIC_FOLDER_HIERARCHY`.
+2. **Contextual Metric Tuple Binding Across Papers:** Khi hai bài báo báo cáo số liệu khác nhau cho cùng một phương pháp trên cùng tập dữ liệu (ví dụ: `BLEU: 28.4` trên test set vs `BLEU: 27.9` trên val set), hệ thống phải lưu thành 2 thực thể `MetricResult` riêng biệt gắn kèm bộ 6 tham số ngữ cảnh `(dataset, task, split, metric_name, value, page_number)` và `evidence_chunk_id` thay vì ghi đè.
 3. **Shared Canonical Hub Preservation on Unstar:** Khi Bài báo 1 và Bài báo 2 cùng liên kết tới đỉnh Hub `Method: "transformer"`, việc bỏ Star Bài báo 1 chỉ xóa cạnh của Bài báo 1; đỉnh `Method: "transformer"` và cạnh của Bài báo 2 phải còn nguyên vẹn 100%.
-4. **Multi-Tenant Graph Isolation:** Truy vấn HNSW Vector Anchor trên `graph_nodes` và mở rộng cạnh 1-Hop trên `graph_edges` bắt buộc luôn có điều kiện `WHERE user_id = :current_user_id` để không bao giờ trộn lẫn tri thức giữa hai học giả.
-5. **Theoretical Survey Paper Graceful Extraction:** Khi bài báo được Star là bài tổng quan lý thuyết thuần túy (không có bảng số liệu thực nghiệm), bộ trích xuất chỉ tạo đỉnh `Paper` và `Method` mà không văng lỗi thiếu `Dataset` hay `MetricResult`.
+4. **Multi-Tenant Scholar Isolation in Vector CTE:** Truy vấn HNSW Vector Anchor trên `graph_nodes` và mở rộng cạnh 1-Hop trên `graph_edges` bắt buộc luôn có điều kiện `WHERE user_id = :current_user_id AND embedding IS NOT NULL` để không bao giờ trộn lẫn tri thức giữa hai học giả.
+5. **Bounding Box Traceability Invariant:** Cạnh thực nghiệm trong subgraph response bắt buộc mang theo `document_id`, `evidence_chunk_id` và `page_number` để nhấp đúp trên Cytoscape kích hoạt mở đúng trang PDF và hiển thị viền vàng Bounding Box.
 
 ---
 
 ## Implementation Tasks
 
-### Task 1: 4-Entity Schema Validator, Canonical Name Normalizer & Folder Cycle Guard (`packages/core`)
+### Task 1: 4-Entity Schema Validator, Canonical Normalizer & Folder Cycle Guard (`packages/core`)
 
 **Files:**
 - Create: `packages/core/src/core/services/graph_extractor.py`
-- Modify: `packages/core/src/core/domain/entities/folder.py`
 - Test: `packages/core/tests/test_graph_domain_and_folders.py`
 
 **Interfaces:**
@@ -49,7 +52,7 @@
   - `VALID_NODE_TYPES = ("Paper", "Method", "Dataset", "MetricResult")`
   - `VALID_EDGE_TYPES = ("PROPOSES", "EVALUATED_ON", "ACHIEVES", "CITES")`
   - `normalize_canonical_name(raw_name: str) -> str`
-  - `ExtractedGraphPayload` (Pydantic model kiểm tra nghiêm ngặt schema 4 thực thể & 4 quan hệ)
+  - `ExtractedGraphPayload` (Pydantic model kiểm tra nghiêm ngặt schema 4 thực thể & 4 quan hệ với bộ 6 tham số `context_tuple`)
   - `detect_folder_cycle(folder_id: UUID, new_parent_id: UUID | None, parent_map: dict[UUID, UUID | None]) -> bool`.
 
 - [ ] **Step 1: Write the failing test**
@@ -70,10 +73,39 @@ def test_normalize_canonical_name_lowercases_and_collapses_spaces():
     assert normalize_canonical_name("  Transformer   Architecture \n") == "transformer architecture"
 
 
-def test_extracted_graph_payload_rejects_invalid_entity_type():
+def test_extracted_graph_payload_validates_strict_schema():
+    payload = {
+        "entities": [
+            {"type": "Paper", "name": "Attention Is All You Need", "page_number": 1},
+            {"type": "Method", "name": "Transformer", "page_number": 3},
+            {
+                "type": "MetricResult",
+                "name": "BLEU: 28.4",
+                "page_number": 8,
+                "context_tuple": {
+                    "dataset": "WMT-2014 En-De",
+                    "task": "Translation",
+                    "split": "test",
+                    "metric_name": "BLEU",
+                    "value": 28.4,
+                    "unit": "points",
+                },
+            },
+        ],
+        "relations": [
+            {"source_name": "Attention Is All You Need", "target_name": "Transformer", "type": "PROPOSES", "page_number": 3},
+            {"source_name": "Transformer", "target_name": "BLEU: 28.4", "type": "ACHIEVES", "page_number": 8},
+        ],
+    }
+    validated = ExtractedGraphPayload.model_validate(payload)
+    assert len(validated.entities) == 3
+    assert len(validated.relations) == 2
+
+
+def test_extracted_graph_payload_rejects_invalid_entity_or_edge_type():
     with pytest.raises(ValidationError):
         ExtractedGraphPayload.model_validate({
-            "entities": [{"type": "Author", "name": "Vaswani"}],
+            "entities": [{"type": "Author", "name": "Vaswani", "page_number": 1}],
             "relations": [],
         })
 
@@ -93,102 +125,252 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'core.services.graph_e
 
 - [ ] **Step 3: Implement `packages/core/src/core/services/graph_extractor.py`**
 
-Cài đặt `normalize_canonical_name`, `ExtractedGraphPayload` và `detect_folder_cycle` thuần Python Standard Library + `pydantic`.
+Cài đặt `normalize_canonical_name`, `ExtractedGraphPayload`, và `detect_folder_cycle` thuần Python Standard Library + `pydantic`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_graph_domain_and_folders.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit & Gate verification**
 
 ```bash
 git add packages/core/src/core/services/graph_extractor.py packages/core/tests/test_graph_domain_and_folders.py
 git commit -m "feat(core): add 4-entity graph schema validator, canonical normalizer, and folder cycle detector"
+bash scripts/deploy_to_vps.sh --fast
 ```
 
 ---
 
-### Task 2: Canonical Hub Upsert, Unstar Orphan Pruning & 2-Step GraphRAG Traversal Service (`apps/api`)
+### Task 2: Database Schema & SQLAlchemy Models (`graph_nodes`, `graph_edges`, `folder_community_summaries`) (`apps/api`)
 
 **Files:**
-- Create: `apps/api/src/api/services/graph_rag_service.py`
-- Modify: `apps/api/src/api/v1/endpoints/documents.py`
-- Create: `apps/api/src/api/v1/endpoints/library.py`
-- Modify: `apps/api/src/api/v1/endpoints/folders.py`
-- Test: `apps/api/tests/test_graph_rag_lifecycle_and_query.py`
+- Modify: `apps/api/src/api/db/models/graph.py`
+- Modify: `apps/api/src/api/db/session.py`
+- Test: `apps/api/tests/test_graph_models.py`
 
 **Interfaces:**
-- Consumes: `GraphNodeModel`, `GraphEdgeModel`, `ExtractedGraphPayload`, `normalize_canonical_name`, `detect_folder_cycle`.
+- Consumes: SQLAlchemy 2.0 Async, `pgvector.sqlalchemy.Vector`.
 - Produces:
-  - `GraphRAGService.ingest_paper_graph(db: AsyncSession, user_id: UUID, document_id: UUID, payload: ExtractedGraphPayload)` (Upsert `graph_nodes` theo `(user_id, node_type, canonical_name)`, tạo `graph_edges`).
-  - `GraphRAGService.prune_document_graph(db: AsyncSession, user_id: UUID, document_id: UUID)` (Xóa cạnh thuộc `document_id`, xóa đỉnh mồ côi không còn cạnh nào nối tới, giữ nguyên đỉnh Hub dùng chung).
-  - `POST /api/v1/library/graph-query` (HNSW Vector Anchor top-k $\rightarrow$ 1-Hop `graph_edges` expansion $\rightarrow$ câu trả lời tổng hợp kèm `subgraph {nodes, edges}`).
+  - `GraphNodeModel`: `id`, `user_id`, `node_type`, `canonical_name`, `metadata_json`, `embedding: Vector(1536)`.
+  - `GraphEdgeModel`: `id`, `user_id`, `document_id`, `source_node_id`, `target_node_id`, `edge_type`, `metadata_json`, `evidence_chunk_id`, `page_number`.
+  - `FolderCommunitySummaryModel`: `id`, `user_id`, `folder_id`, `summary_text`, `key_findings`, `embedding: Vector(1536)`.
 
 - [ ] **Step 1: Write the failing test**
 
-Tạo `apps/api/tests/test_graph_rag_lifecycle_and_query.py` kiểm tra:
-1. Nạp 2 bài báo cùng đề cập `Method: "Transformer"` $\rightarrow$ chỉ sinh 1 dòng `GraphNodeModel` cho `"transformer"` nhưng có 2 cạnh `PROPOSES` từ 2 bài báo.
-2. Bỏ Star bài báo 1 (`prune_document_graph`) $\rightarrow$ xóa cạnh của bài báo 1, giữ nguyên đỉnh Hub `"transformer"` cho bài báo 2; khi bỏ Star nốt bài báo 2 $\rightarrow$ đỉnh mồ côi được dọn sạch.
-3. `POST /api/v1/library/graph-query` trả về đúng `answer` và `subgraph` 1-hop chỉ trong phạm vi `user_id` hiện tại.
+Cập nhật `apps/api/tests/test_graph_models.py` kiểm tra khởi tạo `GraphNodeModel`, `GraphEdgeModel` có `page_number` và `evidence_chunk_id`, cùng `FolderCommunitySummaryModel`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `uv run pytest apps/api/tests/test_graph_rag_lifecycle_and_query.py -v`
+Run: `uv run pytest apps/api/tests/test_graph_models.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `graph_rag_service.py`, `library.py`, and update `documents.py` & `folders.py`**
+- [ ] **Step 3: Implement models in `apps/api/src/api/db/models/graph.py` & DDL in `session.py`**
 
-Cài đặt đầy đủ logic Upsert Canonical Hub, dọn dẹp đỉnh mồ côi khi Unstar, kiểm tra chống vòng lặp thư mục trong `folders.py`, và mount router `library.py`.
+Cập nhật model và DDL `ensure_database_schema()`.
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `uv run pytest apps/api/tests/test_graph_rag_lifecycle_and_query.py -v`
+Run: `uv run pytest apps/api/tests/test_graph_models.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit & Gate verification**
 
 ```bash
-git add apps/api/src/api/services/graph_rag_service.py apps/api/src/api/v1/endpoints/library.py apps/api/src/api/v1/endpoints/documents.py apps/api/src/api/v1/endpoints/folders.py apps/api/tests/test_graph_rag_lifecycle_and_query.py
-git commit -m "feat(api): implement PostgreSQL 4-entity GraphRAG service, canonical hub merging, and orphan pruning"
+git add apps/api/src/api/db/models/graph.py apps/api/src/api/db/session.py apps/api/tests/test_graph_models.py
+git commit -m "feat(api): upgrade graph SQLAlchemy models with community summaries and evidence foreign keys"
+bash scripts/deploy_to_vps.sh --fast
 ```
 
 ---
 
-### Task 3: Frontend Favorite Library Workspace, Folders Tree & Interactive Cytoscape Subgraph (`apps/web`)
+### Task 3: Incremental Extraction & Semantic Entity Disambiguation Service (Cosine $\ge 0.90$) (`apps/api`)
+
+**Files:**
+- Create: `apps/api/src/api/services/graph_extraction_service.py`
+- Test: `apps/api/tests/test_graph_extraction_service.py`
+
+**Interfaces:**
+- Consumes: `EmbeddingService`, `GraphNodeModel`, `GraphEdgeModel`, `ExtractedGraphPayload`.
+- Produces:
+  - `GraphExtractionService.extract_paper_entities(document_id: UUID, text: str) -> ExtractedGraphPayload`: Trích xuất 4 thực thể qua OpenAI Structured Outputs.
+  - `GraphExtractionService.ingest_paper_graph(db: AsyncSession, user_id: UUID, document_id: UUID, payload: ExtractedGraphPayload)`: Nạp tăng dần LightRAG trong $< 3$s. Đối chiếu vector cosine với các đỉnh hiện có; nếu Cosine $\ge 0.90$, gộp vào Hub có sẵn; nếu không, tạo đỉnh mới và sinh vector 1536d.
+  - `GraphExtractionService.prune_document_graph(db: AsyncSession, user_id: UUID, document_id: UUID)`: Xóa các cạnh của `document_id` và quét dọn đỉnh mồ côi (bảo toàn đỉnh Hub có bài khác tham chiếu).
+
+- [ ] **Step 1: Write the failing test**
+
+Tạo `apps/api/tests/test_graph_extraction_service.py` kiểm thử:
+1. Gắn sao bài báo A có phương pháp "Transformer" $\rightarrow$ tạo Hub.
+2. Gắn sao bài báo B có phương pháp "The Transformer architecture" (Cosine $\ge 0.90$) $\rightarrow$ tái sử dụng Hub bài báo A và thêm alias.
+3. Bỏ sao bài báo A $\rightarrow$ Hub vẫn còn nguyên vì bài báo B đang dùng.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest apps/api/tests/test_graph_extraction_service.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Implement `apps/api/src/api/services/graph_extraction_service.py`**
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `uv run pytest apps/api/tests/test_graph_extraction_service.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit & Gate verification**
+
+```bash
+git add apps/api/src/api/services/graph_extraction_service.py apps/api/tests/test_graph_extraction_service.py
+git commit -m "feat(api): implement incremental LightRAG extraction with cosine 0.90 semantic disambiguation"
+bash scripts/deploy_to_vps.sh --fast
+```
+
+---
+
+### Task 4: Dual-Level Query Engine & Connected Papers Bibliometrics Service (`apps/api`)
+
+**Files:**
+- Create: `apps/api/src/api/services/graph_rag_service.py`
+- Test: `apps/api/tests/test_graph_rag_query.py`
+- Test: `apps/api/tests/test_graph_bibliometrics.py`
+
+**Interfaces:**
+- Consumes: PostgreSQL CTE, `GraphNodeModel`, `GraphEdgeModel`, `FolderCommunitySummaryModel`, `DocumentChunkModel`.
+- Produces:
+  - `GraphRAGService.query_graph(user_id: UUID, query: str, mode: Literal["local", "global", "hybrid"], folder_id: UUID | None, top_k: int)`:
+    - `local`: Thực thi 2-step CTE (`anchor_nodes` qua HNSW Cosine $\rightarrow$ 1-Hop `connected_edges` $\rightarrow$ `document_chunks.bounding_boxes AS bbox`).
+    - `global`: Tra cứu trên `folder_community_summaries` kết hợp Hubs.
+    - `hybrid`: Kết hợp cả hai.
+  - `GraphRAGService.compute_bibliometrics(user_id: UUID, folder_id: UUID | None)`:
+    - Tính toán Ghép cặp Thư mục (Bibliographic Coupling) giữa các bài báo có chung $\ge 2$ tài liệu tham khảo.
+    - Xác định **Tác phẩm Cội nguồn (Prior Works)** (In-Degree cao nhất) và **Tác phẩm Phái sinh (Derivative Works)** (Out-Degree cao nhất).
+
+- [ ] **Step 1: Write the failing tests**
+
+Tạo `apps/api/tests/test_graph_rag_query.py` và `test_graph_bibliometrics.py`.
+
+- [ ] **Step 2: Run tests to verify they fail**
+
+Run: `uv run pytest apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Implement `apps/api/src/api/services/graph_rag_service.py`**
+
+- [ ] **Step 4: Run tests to verify they pass**
+
+Run: `uv run pytest apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit & Gate verification**
+
+```bash
+git add apps/api/src/api/services/graph_rag_service.py apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py
+git commit -m "feat(api): implement dual-level GraphRAG CTE traversal and bibliographic coupling engine"
+bash scripts/deploy_to_vps.sh --fast
+```
+
+---
+
+### Task 5: REST API Endpoints & Nginx Route Sync (`apps/api`)
+
+**Files:**
+- Create: `apps/api/src/api/v1/endpoints/library.py`
+- Modify: `apps/api/src/api/v1/endpoints/documents.py`
+- Modify: `apps/api/src/api/v1/endpoints/folders.py`
+- Modify: `apps/api/src/api/main.py`
+- Test: `apps/api/tests/test_library_endpoints.py`
+
+**Interfaces:**
+- Endpoints:
+  - `POST /api/v1/library/graph:query` (kèm route alias `/graph-query`)
+  - `GET /api/v1/folders/{id}/bibliometrics`
+  - `POST /api/v1/documents/{id}:toggle-star` (kích hoạt `FastAPI BackgroundTasks` gọi `GraphExtractionService`)
+  - `PATCH /api/v1/folders/{id}` (chặn vòng lặp với `400 CYCLIC_FOLDER_HIERARCHY`)
+
+- [ ] **Step 1: Write the failing test**
+
+Tạo `apps/api/tests/test_library_endpoints.py`.
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `uv run pytest apps/api/tests/test_library_endpoints.py -v`
+Expected: FAIL
+
+- [ ] **Step 3: Implement endpoints and register in `apps/api/src/api/main.py`**
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `uv run pytest apps/api/tests/test_library_endpoints.py -v`
+Expected: PASS
+
+- [ ] **Step 5: Commit & Gate verification**
+
+```bash
+git add apps/api/src/api/v1/endpoints/library.py apps/api/src/api/v1/endpoints/documents.py apps/api/src/api/v1/endpoints/folders.py apps/api/src/api/main.py apps/api/tests/test_library_endpoints.py
+git commit -m "feat(api): expose library graph-query, bibliometrics, and star-toggle endpoints"
+bash scripts/deploy_to_vps.sh --fast
+```
+
+---
+
+### Task 6: Frontend Favorite Library Workspace, Folders Tree & Interactive Cytoscape Subgraph (`apps/web`)
 
 **Files:**
 - Modify: `apps/web/src/features/library/components/LibraryWorkspaceView.tsx`
 - Create: `apps/web/src/features/library/components/KnowledgeSubgraphViewer.tsx`
+- Create: `apps/web/src/features/library/components/BibliometricsPriorWorksCard.tsx`
 - Test: `apps/web/src/features/library/__tests__/LibraryAndGraphRAG.test.tsx`
 
 **Interfaces:**
-- Consumes: `GET /api/v1/folders/tree`, `POST /api/v1/documents/{id}:toggle-star`, `POST /api/v1/library/graph-query`.
+- Consumes: `POST /api/v1/library/graph:query`, `GET /api/v1/folders/{id}/bibliometrics`, `POST /api/v1/documents/{id}:toggle-star`.
 - Produces:
-  - `LibraryWorkspaceView` hiển thị cây thư mục đề tài bên trái, lưới bài báo đã Star ở giữa và hộp hỏi đáp tổng hợp GraphRAG ở trên.
-  - `KnowledgeSubgraphViewer` trực quan hóa 4 loại thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) bằng màu sắc học thuật rõ ràng kèm bảng đối chiếu số liệu thực nghiệm có trích dẫn số trang.
+  - `LibraryWorkspaceView`: Cây thư mục đề tài, lưới bài báo đã Star, và hộp hỏi đáp thông minh 3 chế độ (`local`, `global`, `hybrid`).
+  - `KnowledgeSubgraphViewer`: Sơ đồ Cytoscape có kích thước đỉnh theo Degree Centrality, nhấp đúp cạnh mở trang PDF có Bounding Box viền vàng.
+  - `BibliometricsPriorWorksCard`: Thẻ hiển thị các Tác phẩm Cội nguồn kinh điển và Tác phẩm Phái sinh.
 
 - [ ] **Step 1: Write the failing test**
 
-Tạo `apps/web/src/features/library/__tests__/LibraryAndGraphRAG.test.tsx` kiểm tra hiển thị cây thư mục, thao tác Star/Unstar và hiển thị kết quả tra cứu `subgraph` từ `/api/v1/library/graph-query`.
+Tạo `apps/web/src/features/library/__tests__/LibraryAndGraphRAG.test.tsx`.
 
 - [ ] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- LibraryAndGraphRAG`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `KnowledgeSubgraphViewer.tsx` and update `LibraryWorkspaceView.tsx`**
+- [ ] **Step 3: Implement components in `apps/web/src/features/library/`**
 
-Xây dựng component hiển thị đồ thị 4 thực thể và nâng cấp không gian Kho Yêu Thích bám sát `SPEC-05`.
+- [ ] **Step 4: Run test to verify it passes**
 
-- [ ] **Step 4: Run all 4 verification gates to confirm 100% pass**
+Run: `npm --prefix apps/web run test -- LibraryAndGraphRAG`
+Expected: PASS
 
-Run: `uv run ruff check . && uv run pytest && npm --prefix apps/web run test && npm --prefix apps/web run build`
-Expected: 100% PASS (exit code 0)
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/web/src/features/library/
-git commit -m "feat(web): add 4-entity KnowledgeSubgraphViewer and upgrade LibraryWorkspaceView"
+git commit -m "feat(web): add interactive Cytoscape knowledge graph viewer and bibliometrics cards"
+bash scripts/deploy_to_vps.sh --fast
 ```
+
+---
+
+### Task 7: End-to-End Verification, 4 Mandatory Verification Gates & Rollout
+
+- [ ] **Step 1: Run Gate 1 (Python Linter & Formatter)**
+  Run: `uv run ruff check . && uv run ruff format --check .`
+  Expected: exit code 0
+
+- [ ] **Step 2: Run Gate 2 (Backend & Architecture Boundary Tests)**
+  Run: `uv run pytest`
+  Expected: exit code 0 (146+ tests passed)
+
+- [ ] **Step 3: Run Gate 3 (Frontend Unit Tests)**
+  Run: `npm --prefix apps/web run test`
+  Expected: exit code 0 (84+ tests passed)
+
+- [ ] **Step 4: Run Gate 4 (Production Build)**
+  Run: `npm --prefix apps/web run build`
+  Expected: exit code 0
+
+- [ ] **Step 5: Remote VPS Deployment Sync**
+  Run: `bash scripts/deploy_to_vps.sh --fast`
+  Expected: exit code 0 (cập nhật live hoặc nhận diện offline an toàn)
