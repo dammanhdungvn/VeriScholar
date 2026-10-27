@@ -36,13 +36,13 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
-    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
     arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
     trans_arrow/.style={-{Stealth[length=2.8mm]}, line width=1.3pt, draw=teal!80!black, dashed}
 ]
     % Cột AS-IS (Truyền thống)
-    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_asis) at (-4.4, 4.4) {QUY TRÌNH HIỆN TẠI (AS-IS)};
+    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_asis) at (-4.4, 4.6) {QUY TRÌNH HIỆN TẠI (AS-IS)};
     
     \node[box_asis] (a1) at (-4.4, 3.0) {
         \textbf{1. Tìm kiếm phân mảnh thủ công}\\
@@ -62,7 +62,7 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
     };
 
     % Cột TO-BE (Đề xuất)
-    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_tobe) at (4.4, 4.4) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_tobe) at (4.4, 4.6) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
     \node[box_tobe] (b1) at (4.4, 3.0) {
         \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
