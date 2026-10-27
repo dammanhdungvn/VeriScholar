@@ -26,9 +26,21 @@ class CreateDraftRequest(BaseModel):
         description="Initial LaTeX or Markdown text body.",
         examples=["\\section{Introduction}\nDeep learning has revolutionized NLP."],
     )
+    bib_content: str | None = Field(
+        default=None,
+        description="Initial BibTeX bibliography content.",
+    )
     format: Literal["latex", "markdown"] = Field(
         default="latex",
         description="Source markup format.",
+    )
+    template: str | None = Field(
+        default=None,
+        description="Template style (e.g. 'academic_skeleton', 'blank').",
+    )
+    source_session_id: UUID | None = Field(
+        default=None,
+        description="Optional research session ID to initialize skeleton from reading papers.",
     )
 
 
@@ -46,6 +58,10 @@ class UpdateDraftRequest(BaseModel):
     content: str | None = Field(
         default=None,
         description="Updated text body.",
+    )
+    bib_content: str | None = Field(
+        default=None,
+        description="Updated BibTeX bibliography.",
     )
     format: Literal["latex", "markdown"] | None = Field(
         default=None,
@@ -71,7 +87,12 @@ class DraftResponse(BaseModel):
     user_id: UUID
     title: str
     content: str
+    bib_content: str = ""
     format: str
+    template: str | None = None
+    source_session_id: UUID | None = None
+    pdf_preview_url: str | None = None
+    previous_snapshot: dict | None = None
     version: int
     created_at: datetime
     updated_at: datetime
@@ -247,3 +268,108 @@ class DraftAssetListResponse(BaseModel):
     draft_id: UUID
     items: list[DraftAssetResponse]
     total: int
+
+
+# ==============================================================================
+# Overleaf CLSI, SyncTeX & Streaming Chat Schemas
+# ==============================================================================
+
+
+class DraftChatStreamRequest(BaseModel):
+    """Payload to initiate unbuffered SSE writing agent interaction."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    prompt: str | None = Field(
+        default=None,
+        description="User instruction or prompt for the writing agent.",
+    )
+    message: str | None = Field(
+        default=None,
+        description="Alias for prompt.",
+    )
+    current_content: str | None = Field(
+        default=None,
+        description="Client-side latest draft LaTeX text.",
+    )
+    current_bib_content: str | None = Field(
+        default=None,
+        description="Client-side latest BibTeX bibliography text.",
+    )
+    version: int | None = Field(
+        default=None,
+        ge=1,
+        description="Draft version for concurrency check.",
+    )
+
+
+class DraftSyncTexForwardRequest(BaseModel):
+    """Payload to navigate from source code line/column to PDF page coordinates."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    file: str = Field(
+        default="main.tex",
+        description="Source file name (default 'main.tex').",
+    )
+    line: int = Field(
+        ge=1,
+        description="Line number in LaTeX source code.",
+    )
+    column: int = Field(
+        default=1,
+        ge=1,
+        description="Column number in LaTeX source code.",
+    )
+
+
+class DraftSyncTexForwardResponse(BaseModel):
+    """PDF coordinates returned by forward SyncTeX search."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    page: int
+    h: float
+    v: float
+    width: float
+    height: float
+
+
+class DraftSyncTexInverseRequest(BaseModel):
+    """Payload to navigate from PDF point click to source code line/column."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    page: int = Field(
+        ge=1,
+        description="PDF page number (1-indexed).",
+    )
+    x: float = Field(
+        description="Horizontal coordinate on the PDF page.",
+    )
+    y: float = Field(
+        description="Vertical coordinate on the PDF page.",
+    )
+
+
+class DraftSyncTexInverseResponse(BaseModel):
+    """Source file and line returned by inverse SyncTeX search."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    file: str
+    line: int
+    column: int
+
+
+class DraftCompileClearCacheResponse(BaseModel):
+    """Response returned upon clearing compilation cache and recompiling."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    draft_id: UUID
+    cache_cleared: bool = True
+    success: bool
+    pdf_preview_url: str | None = None
+    logs: str = ""
+    diagnostics: list[dict] = Field(default_factory=list)

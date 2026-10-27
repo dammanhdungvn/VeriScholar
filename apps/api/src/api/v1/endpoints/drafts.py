@@ -1,7 +1,9 @@
 """API Endpoints for Academic Research Writing & Drafts (Module 2)."""
 
 import io
+import json
 import math
+from collections.abc import AsyncIterator
 from uuid import UUID, uuid4
 
 import structlog
@@ -18,7 +20,13 @@ from api.schemas.draft import (
     DraftAssetResponse,
     DraftAssistRequest,
     DraftAssistResponse,
+    DraftChatStreamRequest,
+    DraftCompileClearCacheResponse,
     DraftResponse,
+    DraftSyncTexForwardRequest,
+    DraftSyncTexForwardResponse,
+    DraftSyncTexInverseRequest,
+    DraftSyncTexInverseResponse,
     LatexSyntaxErrorResponse,
     UpdateDraftRequest,
 )
@@ -30,6 +38,7 @@ from api.schemas.envelope import (
 )
 from api.schemas.error import ErrorResponse
 from api.services.draft_service import DraftService
+from core.domain.entities.draft import can_call_costly_ai
 from core.domain.exceptions import (
     AssetQuotaExceededError,
     ConcurrencyConflictError,
@@ -131,7 +140,20 @@ async def create_draft(
     current_user: UserModel = Depends(get_current_user),
     draft_service: DraftService = Depends(get_draft_service),
 ) -> SingleResponseEnvelope[DraftResponse]:
-    draft = await draft_service.create_draft(user_id=current_user.id, request=request)
+    try:
+        draft = await draft_service.create_draft(user_id=current_user.id, request=request)
+    except KeyError as exc:
+        if "SOURCE_SESSION_NOT_FOUND" in str(exc):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "SOURCE_SESSION_NOT_FOUND",
+                    "message": "Không tìm thấy phiên nghiên cứu nguồn tương ứng.",
+                    "field": "source_session_id",
+                },
+            )
+        raise
+
     response.headers["Location"] = f"/api/v1/drafts/{draft.id}"
     response.headers["ETag"] = f'"{draft.version}"'
     return SingleResponseEnvelope(
@@ -371,6 +393,67 @@ async def delete_draft(
 
 
 @router.post(
+    "/{id}:undo",
+    response_model=SingleResponseEnvelope[DraftResponse],
+    summary="Hoàn tác thay đổi của AI (Undo AI Changes)",
+    description="Khôi phục main.tex và references.bib về trạng thái previous_snapshot.",
+    responses={
+        200: {"description": "Bản thảo đã được hoàn tác về snapshot trước."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {"model": ErrorResponse, "description": "Vai trò không có quyền sửa đổi."},
+        404: {"model": ErrorResponse, "description": "Bản thảo không tồn tại."},
+        409: {"model": ErrorResponse, "description": "Không có snapshot để hoàn tác."},
+    },
+)
+@router.post(
+    "/{id}/undo",
+    response_model=SingleResponseEnvelope[DraftResponse],
+    include_in_schema=False,
+)
+async def undo_draft(
+    id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftResponse]:
+    try:
+        restored_draft = await draft_service.undo_draft_snapshot(
+            user_id=current_user.id,
+            draft_id=id,
+            user_email=current_user.email,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+                "action": "Only editors and owners can undo draft changes.",
+            },
+        ) from exc
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "NO_UNDO_SNAPSHOT_AVAILABLE",
+                "message": "Không có bản sao lưu trước đó để thực hiện thao tác hoàn tác.",
+                "action": "Nút hoàn tác chỉ khả dụng sau khi AI đã can thiệp.",
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(
+        data=DraftResponse.model_validate(restored_draft),
+    )
+
+
+@router.post(
     "/{id}/compile",
     response_model=SingleResponseEnvelope[CompileDraftResponse],
     summary="Biên dịch bản thảo với sandbox tự vá lỗi (Compile Draft)",
@@ -433,6 +516,66 @@ async def compile_draft(
         logs=result.logs,
         retries_attempted=result.retries_attempted,
         is_sandboxed=result.is_sandboxed,
+    )
+    return SingleResponseEnvelope(data=response_data)
+
+
+@router.post(
+    "/{id}/compile:clear-cache",
+    response_model=SingleResponseEnvelope[DraftCompileClearCacheResponse],
+    summary="Xóa bộ nhớ đệm và biên dịch lại sạch (Compile Clear Cache)",
+    description=(
+        "Xóa bộ nhớ đệm /tmp/drafts/{id}/cache/ và biên dịch lại từ đầu bằng Overleaf CLSI."
+    ),
+    responses={
+        200: {"description": "Kết quả biên dịch sạch."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {"model": ErrorResponse, "description": "Không có quyền biên dịch."},
+        404: {"model": ErrorResponse, "description": "Bản thảo không tồn tại."},
+    },
+)
+@router.post(
+    "/{id}/compile/clear-cache",
+    response_model=SingleResponseEnvelope[DraftCompileClearCacheResponse],
+    include_in_schema=False,
+)
+async def compile_clear_cache(
+    id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftCompileClearCacheResponse]:
+    try:
+        result = await draft_service.compile_draft_clsi(
+            user_id=current_user.id,
+            draft_id=id,
+            clear_cache=True,
+            user_email=current_user.email,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    except DraftRoleForbiddenError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    pdf_url = f"/api/v1/drafts/{id}/preview.pdf" if result.get("pdf_path") else None
+    response_data = DraftCompileClearCacheResponse(
+        draft_id=id,
+        cache_cleared=True,
+        success=result.get("success", False),
+        pdf_preview_url=pdf_url,
+        logs=result.get("logs", ""),
+        diagnostics=result.get("diagnostics", []),
     )
     return SingleResponseEnvelope(data=response_data)
 
@@ -500,6 +643,110 @@ async def get_draft_preview(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={"Content-Disposition": f'inline; filename="draft_{id.hex[:8]}_preview.pdf"'},
+    )
+
+
+@router.post(
+    "/{id}/synctex:forward",
+    response_model=SingleResponseEnvelope[DraftSyncTexForwardResponse],
+    summary="Đồng bộ thuận SyncTeX: Dòng code -> Tọa độ PDF (Forward Search)",
+    responses={
+        200: {"description": "Tọa độ trang PDF."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        404: {"model": ErrorResponse, "description": "Bản thảo hoặc PDF không tồn tại."},
+    },
+)
+@router.post(
+    "/{id}/synctex/forward",
+    response_model=SingleResponseEnvelope[DraftSyncTexForwardResponse],
+    include_in_schema=False,
+)
+async def synctex_forward_endpoint(
+    id: UUID,
+    request: DraftSyncTexForwardRequest,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftSyncTexForwardResponse]:
+    try:
+        coords = await draft_service.synctex_forward(
+            user_id=current_user.id,
+            draft_id=id,
+            file=request.file,
+            line=request.line,
+            column=request.column,
+            user_email=current_user.email,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PDF_NOT_COMPILED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(
+        data=DraftSyncTexForwardResponse.model_validate(coords),
+    )
+
+
+@router.post(
+    "/{id}/synctex:inverse",
+    response_model=SingleResponseEnvelope[DraftSyncTexInverseResponse],
+    summary="Đồng bộ nghịch SyncTeX: Nhấp điểm PDF -> Dòng code (Inverse Search)",
+    responses={
+        200: {"description": "Tệp và dòng mã nguồn tương ứng."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        404: {"model": ErrorResponse, "description": "Bản thảo hoặc PDF không tồn tại."},
+    },
+)
+@router.post(
+    "/{id}/synctex/inverse",
+    response_model=SingleResponseEnvelope[DraftSyncTexInverseResponse],
+    include_in_schema=False,
+)
+async def synctex_inverse_endpoint(
+    id: UUID,
+    request: DraftSyncTexInverseRequest,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> SingleResponseEnvelope[DraftSyncTexInverseResponse]:
+    try:
+        loc = await draft_service.synctex_inverse(
+            user_id=current_user.id,
+            draft_id=id,
+            page=request.page,
+            x=request.x,
+            y=request.y,
+            user_email=current_user.email,
+        )
+    except KeyError:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    except FileNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "PDF_NOT_COMPILED",
+                "message": str(exc),
+            },
+        ) from exc
+
+    return SingleResponseEnvelope(
+        data=DraftSyncTexInverseResponse.model_validate(loc),
     )
 
 
@@ -655,6 +902,108 @@ async def assist_draft(
         suggested_at=datetime.now(UTC),
     )
     return SingleResponseEnvelope(data=response_data)
+
+
+@router.post(
+    "/{id}/chat:stream",
+    summary="Tương tác AI Co-Author phát luồng SSE không đệm (Chat Stream)",
+    description="Phát luồng Server-Sent Events (SSE) theo chuẩn ReAct Agentic Overleaf CLSI.",
+    responses={
+        200: {
+            "content": {"text/event-stream": {}},
+            "description": "Luồng SSE unbuffered thời gian thực.",
+        },
+        400: {"model": ErrorResponse, "description": "Prompt rỗng hoặc không hợp lệ."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực."},
+        403: {"model": ErrorResponse, "description": "Không có quyền gọi AI trợ lý."},
+        404: {"model": ErrorResponse, "description": "Bản thảo không tồn tại."},
+        412: {"model": ErrorResponse, "description": "Xung đột phiên bản (OCC)."},
+    },
+)
+@router.post(
+    "/{id}/chat/stream",
+    include_in_schema=False,
+)
+async def chat_stream(
+    id: UUID,
+    request: DraftChatStreamRequest,
+    current_user: UserModel = Depends(get_current_user),
+    draft_service: DraftService = Depends(get_draft_service),
+) -> StreamingResponse:
+    effective_prompt = (request.prompt or request.message or "").strip()
+    if not effective_prompt:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail={
+                "code": "EMPTY_PROMPT_CONTENT",
+                "message": "Yêu cầu gửi tới trợ lý AI không được để trống.",
+                "action": "Provide a non-empty prompt for the coauthor agent.",
+            },
+        )
+
+    # Check existence & permissions first before starting stream
+    draft, role = await draft_service.get_user_draft_role(
+        draft_id=id,
+        user_id=current_user.id,
+        user_email=current_user.email,
+    )
+    if not draft or not role:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DRAFT_NOT_FOUND",
+                "message": f"Bản thảo {id} không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    if not can_call_costly_ai(role):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "FORBIDDEN_ROLE_RESTRICTED",
+                "message": (
+                    f"Role '{role.value}' is strictly forbidden from invoking costly AI assistant"
+                ),
+            },
+        )
+    if request.version is not None and draft.version != request.version:
+        raise HTTPException(
+            status_code=status.HTTP_412_PRECONDITION_FAILED,
+            detail={
+                "code": "CONCURRENCY_CONFLICT",
+                "message": (
+                    f"Resource version conflict: expected {request.version}, "
+                    f"current {draft.version}"
+                ),
+            },
+        )
+
+    async def sse_generator() -> AsyncIterator[str]:
+        try:
+            async for ev in draft_service.stream_chat_assist(
+                user_id=current_user.id,
+                draft_id=id,
+                message=effective_prompt,
+                current_content=request.current_content,
+                current_bib_content=request.current_bib_content,
+                version=request.version,
+                user_email=current_user.email,
+            ):
+                ev_name = ev.get("event") or ev.get("type", "message")
+                ev_data = ev.get("data", {})
+                yield f"event: {ev_name}\ndata: {json.dumps(ev_data, ensure_ascii=False)}\n\n"
+        except Exception as exc:
+            err_data = {"error": str(exc)}
+            yield f"event: error\ndata: {json.dumps(err_data, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        sse_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # ==============================================================================

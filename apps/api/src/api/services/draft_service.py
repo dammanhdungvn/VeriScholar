@@ -7,14 +7,19 @@ import io
 import os
 import re
 import zipfile
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator, AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 from uuid import UUID, uuid4
 
 import structlog
+from api.agents.latex_agent import LatexCoauthorAgent
+from api.db.models.document import DocumentModel
 from api.db.models.draft import DraftModel
+from api.db.models.draft_message import DraftMessageModel
+from api.db.models.session import ResearchSessionModel, SessionDocumentModel
 from api.schemas.draft import (
     CreateDraftAssetRequest,
     CreateDraftRequest,
@@ -22,6 +27,7 @@ from api.schemas.draft import (
     UpdateDraftRequest,
 )
 from api.services.ai_tracing_service import AITracingService
+from api.services.clsi_latex_compiler import CLSILatexCompiler
 from core.domain.entities.draft import (
     DraftRole,
     can_call_costly_ai,
@@ -36,12 +42,17 @@ from core.domain.exceptions import (
     MaliciousAssetContentError,
 )
 from core.services.draft_asset_security import DraftAssetSecurityValidator
+from core.services.draft_skeleton import generate_academic_skeleton
 from core.services.latex_compiler import E2BLatexCompiler, SandboxedLatexCompiler
 from core.services.latex_healer import AgenticLatexHealer
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.draft")
+
+_draft_pdf_cache: dict[UUID, bytes] = {}
+_draft_assets_cache: dict[UUID, list[dict]] = {}
+_draft_share_cache: dict[UUID, dict] = {}
 
 
 def _load_e2b_config() -> tuple[str | None, str | None]:
@@ -200,14 +211,22 @@ DEFAULT_STARTER_LATEX_TEMPLATE = (
 class DraftService:
     """Service managing academic writing drafts with strict tenant isolation and OCC."""
 
+    _draft_pdf_cache: dict[UUID, bytes] = _draft_pdf_cache
+    _draft_assets_cache: dict[UUID, list[dict]] = _draft_assets_cache
+    _draft_share_cache: dict[UUID, dict] = _draft_share_cache
+
     def __init__(
         self,
         db: AsyncSession,
         ai_tracing: AITracingService | None = None,
         latex_compiler: SandboxedLatexCompiler | None = None,
+        clsi_compiler: CLSILatexCompiler | None = None,
     ) -> None:
         self.db = db
         self.ai_tracing = ai_tracing or AITracingService()
+        self._draft_pdf_cache = _draft_pdf_cache
+        self._draft_assets_cache = _draft_assets_cache
+        self._draft_share_cache = _draft_share_cache
         if latex_compiler is None:
             e2b_api_key, e2b_template = _load_e2b_config()
             remote_compiler = (
@@ -217,6 +236,7 @@ class DraftService:
             )
             latex_compiler = SandboxedLatexCompiler(remote_compiler=remote_compiler)
         self.latex_compiler = latex_compiler
+        self.clsi_compiler = clsi_compiler or CLSILatexCompiler(work_dir="/tmp/drafts")
 
     @asynccontextmanager
     async def _transaction(self) -> AsyncIterator[None]:
@@ -229,8 +249,93 @@ class DraftService:
             async with self.db.begin():
                 yield
 
+    async def create_draft_from_session(
+        self,
+        user_id: UUID,
+        source_session_id: UUID,
+        title: str | None = None,
+    ) -> DraftModel:
+        """Create a new research draft initialized from a reading session's library papers."""
+        now = datetime.now(UTC)
+        sess_stmt = select(ResearchSessionModel).where(
+            ResearchSessionModel.id == source_session_id,
+            ResearchSessionModel.user_id == user_id,
+        )
+        session = (await self.db.execute(sess_stmt)).scalar_one_or_none()
+        if not session:
+            raise KeyError("SOURCE_SESSION_NOT_FOUND")
+
+        # Query documents linked to the session
+        docs_stmt = (
+            select(DocumentModel)
+            .join(SessionDocumentModel, DocumentModel.id == SessionDocumentModel.document_id)
+            .where(SessionDocumentModel.session_id == source_session_id)
+            .order_by(SessionDocumentModel.display_order.asc())
+        )
+        docs = list((await self.db.execute(docs_stmt)).scalars().all())
+
+        papers: list[dict] = []
+        for doc in docs:
+            raw_authors = doc.authors or []
+            if isinstance(raw_authors, list) and raw_authors:
+                first_author = str(raw_authors[0]).split()[-1]
+            else:
+                first_author = "scholar"
+            author_clean = re.sub(r"[^a-zA-Z0-9]", "", first_author).lower() or "scholar"
+            year_val = doc.publication_year or 2024
+            cite_key = f"{author_clean}{year_val}_{doc.id.hex[:4]}"
+            papers.append(
+                {
+                    "id": str(doc.id),
+                    "citation_key": cite_key,
+                    "title": doc.title or doc.filename or "Untitled Research",
+                    "authors": raw_authors,
+                    "year": year_val,
+                }
+            )
+
+        draft_title = title.strip() if title and title.strip() else session.title
+        main_tex, bib_content = generate_academic_skeleton(
+            title=draft_title,
+            papers=papers,
+            notes=[],
+        )
+
+        draft = DraftModel(
+            user_id=user_id,
+            source_session_id=source_session_id,
+            title=draft_title,
+            content=main_tex,
+            bib_content=bib_content,
+            format="latex",
+            template="academic_skeleton",
+            version=1,
+            created_at=now,
+            updated_at=now,
+        )
+
+        async with self._transaction():
+            self.db.add(draft)
+
+        await self.db.refresh(draft)
+        logger.info(
+            "draft_created_from_session",
+            user_id=str(user_id),
+            draft_id=str(draft.id),
+            session_id=str(source_session_id),
+            papers_count=len(papers),
+        )
+        return draft
+
     async def create_draft(self, user_id: UUID, request: CreateDraftRequest) -> DraftModel:
         """Create a new research writing draft."""
+        if request.source_session_id:
+            return await self.create_draft_from_session(
+                user_id=user_id,
+                source_session_id=request.source_session_id,
+                title=request.title,
+            )
+
         now = datetime.now(UTC)
         title = request.title.strip() if request.title else "Untitled Draft"
         content = request.content
@@ -247,11 +352,17 @@ class DraftService:
                     rf"\title{{\textbf{{\Large {safe_title}}}}}",
                 )
 
+        bib_content = request.bib_content or ""
+        template_style = request.template or "blank"
+
         draft = DraftModel(
             user_id=user_id,
+            source_session_id=None,
             title=title,
             content=content,
+            bib_content=bib_content,
             format=request.format,
+            template=template_style,
             version=1,
             created_at=now,
             updated_at=now,
@@ -393,12 +504,16 @@ class DraftService:
             if request.content is not None:
                 draft.content = request.content
 
+            if request.bib_content is not None:
+                draft.bib_content = request.bib_content
+
             if request.format is not None:
                 draft.format = request.format
 
             draft.version += 1
             draft.updated_at = datetime.now(UTC)
 
+        self._draft_pdf_cache.pop(draft_id, None)
         await self.db.refresh(draft)
         logger.info("draft_updated", draft_id=str(draft_id), new_version=draft.version)
         return draft
@@ -536,12 +651,18 @@ class DraftService:
             )
 
         # 1. Fetch or compile PDF
-        pdf_bytes = await self.get_draft_preview_pdf(
-            user_id=user_id,
-            draft_id=draft_id,
-            user_email=user_email,
-        )
+        is_fallback = False
+        try:
+            pdf_bytes = await self.get_draft_preview_pdf(
+                user_id=user_id,
+                draft_id=draft_id,
+                user_email=user_email,
+            )
+        except Exception:
+            pdf_bytes = None
+
         if not pdf_bytes:
+            is_fallback = True
             pdf_bytes = (
                 b"%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj "
                 b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj "
@@ -552,43 +673,54 @@ class DraftService:
             )
 
         # 2. Extract or build references.bib
-        cite_keys = set(re.findall(r"\\cite\{([a-zA-Z0-9_:-]+)\}", draft.content or ""))
-        bib_entries: list[str] = [
-            "% VeriScholar Auto-Generated Academic Bibliography",
-            f"% Generated for Draft: {draft.title} ({draft.id})",
-            f"% Generated at: {datetime.now(UTC).isoformat()}",
-            "",
-        ]
-        if cite_keys:
-            for key in sorted(cite_keys):
-                bib_entries.append(
-                    f"@article{{{key},\n"
-                    f"  author = {{Author, A. and Scholar, B.}},\n"
-                    f"  title = {{{{{key.replace('_', ' ').title()}}}}},\n"
-                    f"  journal = {{arXiv preprint}},\n"
-                    f"  year = {{2026}}\n"
-                    f"}}\n"
-                )
+        if draft.bib_content and draft.bib_content.strip():
+            bib_content = draft.bib_content.strip() + "\n"
         else:
-            bib_entries.append(
-                "@article{vaswani2017attention,\n"
-                "  title={Attention is all you need},\n"
-                "  author={Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and "
-                "Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and "
-                "Kaiser, Lukasz and Polosukhin, Illia},\n"
-                "  journal={Advances in Neural Information Processing Systems},\n"
-                "  volume={30},\n"
-                "  year={2017}\n"
-                "}\n"
-            )
+            cite_keys = set(re.findall(r"\\cite\{([a-zA-Z0-9_:-]+)\}", draft.content or ""))
+            bib_entries: list[str] = [
+                "% VeriScholar Auto-Generated Academic Bibliography",
+                f"% Generated for Draft: {draft.title} ({draft.id})",
+                f"% Generated at: {datetime.now(UTC).isoformat()}",
+                "",
+            ]
+            if cite_keys:
+                for key in sorted(cite_keys):
+                    bib_entries.append(
+                        f"@article{{{key},\n"
+                        f"  author = {{Author, A. and Scholar, B.}},\n"
+                        f"  title = {{{{{key.replace('_', ' ').title()}}}}},\n"
+                        f"  journal = {{arXiv preprint}},\n"
+                        f"  year = {{2026}}\n"
+                        f"}}\n"
+                    )
+            else:
+                bib_entries.append(
+                    "@article{vaswani2017attention,\n"
+                    "  title={Attention is all you need},\n"
+                    "  author={Vaswani, Ashish and Shazeer, Noam and Parmar, Niki and "
+                    "Uszkoreit, Jakob and Jones, Llion and Gomez, Aidan N and "
+                    "Kaiser, Lukasz and Polosukhin, Illia},\n"
+                    "  journal={Advances in Neural Information Processing Systems},\n"
+                    "  volume={30},\n"
+                    "  year={2017}\n"
+                    "}\n"
+                )
 
-        bib_content = "\n".join(bib_entries)
+            bib_content = "\n".join(bib_entries)
 
         # 3. Main source filename
         main_filename = "main.tex" if draft.format == "latex" else "main.md"
 
         # 4. README instructions
+        warning_header = ""
+        if is_fallback:
+            warning_header = (
+                "Bản thảo chưa được biên dịch thành công lần cuối, vui lòng chạy tectonic "
+                "hoặc pdflatex theo hướng dẫn bên dưới để kiểm tra lỗi cú pháp.\n\n"
+            )
+
         readme_content = (
+            f"{warning_header}"
             f"VeriScholar Academic Submission Bundle\n"
             f"======================================\n\n"
             f"Title: {draft.title}\n"
@@ -620,6 +752,13 @@ class DraftService:
             zf.writestr("README.txt", readme_content)
             zf.writestr("figures/.gitkeep", "")
 
+            # Include any registered assets
+            assets = _draft_assets_cache.get(draft_id, [])
+            for asset in assets:
+                fname = asset.get("filename")
+                if fname:
+                    zf.writestr(f"figures/{fname}", b"")
+
         zip_bytes = buf.getvalue()
         logger.info(
             "draft_bundle_exported",
@@ -628,6 +767,263 @@ class DraftService:
             zip_size_bytes=len(zip_bytes),
         )
         return zip_bytes
+
+    async def undo_draft_snapshot(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        user_email: str | None = None,
+    ) -> DraftModel:
+        """Revert draft content and bib_content to previous_snapshot and clear the snapshot."""
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if not can_edit_draft_source(role):
+            raise DraftRoleForbiddenError(
+                f"Role '{role.value}' is strictly forbidden from modifying draft source"
+            )
+
+        if not draft.previous_snapshot:
+            raise ValueError("NO_UNDO_SNAPSHOT_AVAILABLE")
+
+        snapshot = draft.previous_snapshot
+        restored_content = snapshot.get("content", draft.content)
+        restored_bib = snapshot.get("bib_content", draft.bib_content)
+
+        async with self._transaction():
+            draft.content = restored_content
+            draft.bib_content = restored_bib
+            draft.previous_snapshot = None
+            draft.version += 1
+            draft.updated_at = datetime.now(UTC)
+
+        self._draft_pdf_cache.pop(draft_id, None)
+        await self.db.refresh(draft)
+        logger.info(
+            "draft_undo_applied",
+            draft_id=str(draft_id),
+            user_id=str(user_id),
+            restored_version=draft.version,
+        )
+        return draft
+
+    async def stream_chat_assist(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        message: str,
+        current_content: str | None = None,
+        current_bib_content: str | None = None,
+        version: int | None = None,
+        user_email: str | None = None,
+    ) -> AsyncGenerator[dict[str, Any], None]:
+        """Stream unbuffered SSE events from LatexCoauthorAgent with OCC and snapshot."""
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if not can_call_costly_ai(role):
+            raise DraftRoleForbiddenError(
+                f"Role '{role.value}' is strictly forbidden from calling costly AI"
+            )
+
+        if version is not None and draft.version != version:
+            raise ConcurrencyConflictError(
+                f"Draft version conflict: expected {version}, current {draft.version}"
+            )
+
+        # Apply client-sent content if present
+        if current_content is not None:
+            draft.content = current_content
+        if current_bib_content is not None:
+            draft.bib_content = current_bib_content
+
+        # Snapshot invariant: Capture snapshot before first agent edits if none exists
+        snapshot_to_save = None
+        if draft.previous_snapshot is None:
+            snapshot_to_save = {
+                "content": draft.content,
+                "bib_content": draft.bib_content,
+                "version": draft.version,
+                "saved_at": datetime.now(UTC).isoformat(),
+            }
+
+        assets = _draft_assets_cache.get(draft_id, [])
+        agent = LatexCoauthorAgent(compiler=self.clsi_compiler)
+
+        final_main_tex = draft.content
+        final_bib_content = draft.bib_content
+        compile_attempts = 0
+        final_answer = None
+
+        async for event in agent.run(
+            draft_id=draft_id,
+            user_id=user_id,
+            message=message,
+            main_tex=draft.content,
+            bib_content=draft.bib_content,
+            assets=assets,
+            db=self.db,
+        ):
+            ev_type = event.get("type") or event.get("event")
+            ev_data = event.get("data", {})
+
+            if ev_type == "content_update":
+                target_file = ev_data.get("target_file", "main.tex")
+                content = ev_data.get("content", "")
+                if target_file == "main.tex":
+                    final_main_tex = content
+                elif target_file == "references.bib":
+                    final_bib_content = content
+            elif ev_type == "compile_attempt":
+                compile_attempts = ev_data.get("attempt", compile_attempts + 1)
+            elif ev_type == "done":
+                if "main_tex" in ev_data and ev_data["main_tex"]:
+                    final_main_tex = ev_data["main_tex"]
+                if "bib_content" in ev_data and ev_data["bib_content"]:
+                    final_bib_content = ev_data["bib_content"]
+                final_answer = ev_data.get("final_answer")
+
+            yield event
+
+        # Post-execution persistence
+        async with self._transaction():
+            if snapshot_to_save is not None:
+                draft.previous_snapshot = snapshot_to_save
+            draft.content = final_main_tex
+            draft.bib_content = final_bib_content
+            draft.version += 1
+            draft.updated_at = datetime.now(UTC)
+
+            # Record user turn
+            user_msg = DraftMessageModel(
+                user_id=user_id,
+                draft_id=draft_id,
+                role="user",
+                content=message,
+            )
+            self.db.add(user_msg)
+
+            # Record assistant turn
+            assistant_msg = DraftMessageModel(
+                user_id=user_id,
+                draft_id=draft_id,
+                role="assistant",
+                content=final_answer or "Hoàn thành.",
+                compile_attempts=compile_attempts,
+            )
+            self.db.add(assistant_msg)
+
+        await self.db.refresh(draft)
+        logger.info(
+            "draft_stream_completed",
+            draft_id=str(draft_id),
+            new_version=draft.version,
+            compile_attempts=compile_attempts,
+        )
+
+    async def compile_draft_clsi(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        clear_cache: bool = False,
+        user_email: str | None = None,
+    ) -> dict[str, Any]:
+        """Compile draft using Overleaf CLSI compiler with caching control."""
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        if not can_compile_draft(role):
+            raise DraftRoleForbiddenError(
+                f"Role '{role.value}' is strictly forbidden from compiling LaTeX"
+            )
+
+        assets = _draft_assets_cache.get(draft_id, [])
+        result = await self.clsi_compiler.compile(
+            draft_id=draft_id,
+            main_tex=draft.content,
+            bib_content=draft.bib_content,
+            assets=assets,
+            clear_cache=clear_cache,
+        )
+        if result.get("pdf_path") and os.path.exists(result["pdf_path"]):
+            try:
+                with open(result["pdf_path"], "rb") as f:
+                    _draft_pdf_cache[draft_id] = f.read()
+            except Exception:
+                pass
+
+        logger.info(
+            "draft_clsi_compiled",
+            draft_id=str(draft_id),
+            success=result.get("success"),
+            clear_cache=clear_cache,
+        )
+        return result
+
+    async def synctex_forward(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        file: str,
+        line: int,
+        column: int = 1,
+        user_email: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute SyncTeX forward search (code line/col -> PDF coordinates)."""
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        return await self.clsi_compiler.synctex_forward(
+            draft_id=draft_id,
+            file=file,
+            line=line,
+            column=column,
+        )
+
+    async def synctex_inverse(
+        self,
+        user_id: UUID,
+        draft_id: UUID,
+        page: int,
+        x: float,
+        y: float,
+        user_email: str | None = None,
+    ) -> dict[str, Any]:
+        """Execute SyncTeX inverse search (PDF coordinate click -> code line/col)."""
+        draft, role = await self.get_user_draft_role(
+            draft_id=draft_id,
+            user_id=user_id,
+            user_email=user_email,
+        )
+        if not draft or not role:
+            raise KeyError(f"Draft {draft_id} not found")
+
+        return await self.clsi_compiler.synctex_inverse(
+            draft_id=draft_id,
+            page=page,
+            x=x,
+            y=y,
+        )
 
     async def assist_draft(
         self,
@@ -841,8 +1237,3 @@ class DraftService:
             items.append(DraftAssetResponse(**item_copy))
 
         return items
-
-
-_draft_pdf_cache: dict[UUID, bytes] = {}
-_draft_assets_cache: dict[UUID, list[dict]] = {}
-_draft_share_cache: dict[UUID, dict] = {}
