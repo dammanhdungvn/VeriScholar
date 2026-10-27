@@ -121,11 +121,30 @@ ARXIV_ID_PATTERN = re.compile(r"^(\d{4}\.\d{4,5}(v\d+)?|[a-zA-Z\-]+(?:\.[a-zA-Z]
 DOI_PATTERN = re.compile(r"^10\.\d{4,9}/[-._;()/:A-Za-z0-9]+$")
 
 
+_UNSET = object()
+
+
 class ScholarlySearchAdapter(IScholarlySearchPort):
     """Multi-source academic literature search adapter with resilient fallback."""
 
-    def __init__(self, timeout_seconds: float = 10.0) -> None:
+    def __init__(
+        self,
+        timeout_seconds: float = 10.0,
+        exa_api_key: str | None | Any = _UNSET,
+    ) -> None:
         self.timeout_seconds = timeout_seconds
+        if exa_api_key is not _UNSET:
+            self.exa_api_key = exa_api_key
+        else:
+            self.exa_api_key = os.getenv("EXA_API_KEY")
+            if not self.exa_api_key:
+                try:
+                    from api.core.config import settings
+
+                    if settings.EXA_API_KEY:
+                        self.exa_api_key = settings.EXA_API_KEY.get_secret_value()
+                except Exception:
+                    pass
 
     @staticmethod
     def _classify_peer_reviewed(venue: str | None, doi: str | None) -> bool:
@@ -226,6 +245,177 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
             return f'ti:"{clean_phrase}" OR ({ti_tokens} AND {abs_tokens})'
         return f'ti:"{clean_phrase}"'
 
+    @classmethod
+    def _parse_exa_item(cls, item: dict[str, Any]) -> ScholarlyPaperSearchResult | None:
+        """Parse raw Exa search result dictionary into ScholarlyPaperSearchResult."""
+        raw_title = item.get("title")
+        title = " ".join(str(raw_title).split()) if raw_title else "Untitled"
+
+        raw_author = item.get("author") or item.get("authors")
+        authors: list[str] = []
+        if isinstance(raw_author, list):
+            authors = [str(a).strip() for a in raw_author if str(a).strip()]
+        elif isinstance(raw_author, str) and raw_author.strip():
+            authors = [a.strip() for a in raw_author.split(",") if a.strip()]
+
+        pub_date = item.get("publishedDate") or item.get("published_date")
+        publication_year: int | None = None
+        if pub_date:
+            if isinstance(pub_date, int):
+                publication_year = pub_date
+            elif isinstance(pub_date, str):
+                match = re.search(r"\b(19\d\d|20\d\d)\b", pub_date)
+                if match:
+                    publication_year = int(match.group(1))
+                else:
+                    match_any = re.search(r"\d{4}", pub_date)
+                    if match_any:
+                        publication_year = int(match_any.group(0))
+
+        url = str(item.get("url") or "").strip()
+        text_content = str(item.get("text") or "").strip()
+
+        # Extract DOI from explicit field, url or text
+        doi: str | None = None
+        if item.get("doi"):
+            cand = str(item["doi"]).strip()
+            if DOI_PATTERN.match(cand):
+                doi = cand
+            else:
+                m = re.search(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", cand)
+                if m:
+                    doi = m.group(0).rstrip(".,;)>]")
+
+        if not doi and url:
+            m = re.search(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", url)
+            if m:
+                doi = m.group(0).rstrip(".,;)>]")
+
+        if not doi and text_content:
+            m = re.search(r"10\.\d{4,9}/[-._;()/:A-Za-z0-9]+", text_content)
+            if m:
+                doi = m.group(0).rstrip(".,;)>]")
+
+        # Extract arXiv ID
+        arxiv_id: str | None = None
+        if "arxiv.org" in url.lower():
+            m = re.search(
+                r"arxiv\.org/(?:abs|pdf)/([a-zA-Z\-]+(?:\.[a-zA-Z]+)?/\d{7}|\d{4}\.\d{4,5}(?:v\d+)?)",
+                url,
+                re.IGNORECASE,
+            )
+            if m:
+                arxiv_id = m.group(1).removesuffix(".pdf")
+                if not doi:
+                    doi = f"10.48550/arXiv.{arxiv_id}"
+
+        # Abstract
+        abstract: str | None = None
+        if text_content:
+            abstract = " ".join(text_content.split())
+        elif item.get("highlights"):
+            raw_hl = item["highlights"]
+            if isinstance(raw_hl, list):
+                abstract = " ".join(str(h).strip() for h in raw_hl if h)
+            elif isinstance(raw_hl, str):
+                abstract = raw_hl.strip()
+        if abstract:
+            abstract = " ".join(abstract.split())
+
+        # PDF URL
+        pdf_url: str | None = None
+        if arxiv_id:
+            pdf_url = f"https://arxiv.org/pdf/{arxiv_id}.pdf"
+        elif url and url.lower().endswith(".pdf"):
+            pdf_url = url
+
+        access_status = "open_access_pdf" if pdf_url else "abstract_only"
+
+        # Venue and Peer-reviewed classification
+        venue = item.get("venue")
+        if not venue and arxiv_id:
+            venue = "arXiv"
+
+        is_peer_reviewed = cls._classify_peer_reviewed(venue, doi)
+
+        return ScholarlyPaperSearchResult(
+            title=title,
+            authors=authors,
+            publication_year=publication_year,
+            venue=venue,
+            doi=doi,
+            arxiv_id=arxiv_id,
+            abstract=abstract,
+            access_status=access_status,
+            pdf_url=pdf_url,
+            is_peer_reviewed=is_peer_reviewed,
+        )
+
+    async def _search_exa(
+        self,
+        query: str,
+        limit: int = 10,
+        api_key: str | None = None,
+    ) -> list[ScholarlyPaperSearchResult]:
+        """Execute neural academic literature search using Exa AI API."""
+        resolved_key = api_key or self.exa_api_key or os.getenv("EXA_API_KEY")
+        if not resolved_key:
+            logger.debug("exa_search_skipped_missing_api_key")
+            return []
+
+        clean_query = query.strip()
+        if not clean_query:
+            return []
+
+        headers = {
+            "x-api-key": resolved_key,
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "query": clean_query,
+            "numResults": limit,
+            "type": "neural",
+            "useAutoprompt": True,
+            "category": "research paper",
+            "contents": {
+                "text": {"maxCharacters": 1000},
+                "highlights": {"numSentences": 2},
+            },
+        }
+
+        try:
+            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                resp = await client.post(
+                    "https://api.exa.ai/search",
+                    headers=headers,
+                    json=payload,
+                )
+                if resp.status_code != 200:
+                    logger.warning(
+                        "exa_search_upstream_error",
+                        status_code=resp.status_code,
+                        response=resp.text[:200],
+                    )
+                    return []
+                data = resp.json()
+        except Exception as exc:
+            logger.warning("exa_search_request_failed", error=str(exc))
+            return []
+
+        results: list[ScholarlyPaperSearchResult] = []
+        raw_items = data.get("results") if isinstance(data, dict) else []
+        if not isinstance(raw_items, list):
+            return []
+
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            parsed = self._parse_exa_item(item)
+            if parsed:
+                results.append(parsed)
+
+        return results
+
     async def search(
         self,
         query: str,
@@ -250,8 +440,27 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
         results: list[ScholarlyPaperSearchResult] = []
         seen_identifiers: set[str] = set()
 
+        def add_result(p: ScholarlyPaperSearchResult) -> bool:
+            if is_peer_reviewed_only and not p.is_peer_reviewed:
+                return False
+            key = (p.doi or p.arxiv_id or p.title).lower()
+            keys = {key}
+            if p.doi:
+                keys.add(p.doi.strip().lower())
+            if p.arxiv_id:
+                cand_id = p.arxiv_id.strip().lower()
+                keys.add(cand_id)
+                keys.add(cand_id.split("v")[0])
+            if p.title:
+                keys.add(p.title.strip().lower())
+
+            if any(k in seen_identifiers for k in keys):
+                return False
+            seen_identifiers.update(keys)
+            results.append(p)
+            return True
+
         # 1. Check curated literature first for instantaneous high-precision matches
-        q_lower = clean_query.lower()
         for paper_data in CURATED_SAMPLE_PAPERS:
             paper_dict = dict(paper_data)
             if "is_peer_reviewed" not in paper_dict:
@@ -273,24 +482,25 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
                 if cand_doi == norm_doi or norm_doi in cand_doi:
                     is_match = True
             elif not is_arxiv_id and not is_doi:
-                # Keyword overlap check
-                p_title = candidate.title.lower()
-                p_abstract = (candidate.abstract or "").lower()
-                tokens = [t for t in q_lower.split() if len(t) > 2]
-                if any(t in p_title or t in p_abstract for t in tokens):
-                    # Relevance filter: title similarity >= 0.2 if query >= 3 words
-                    if self._is_relevant_result(clean_query, candidate.title):
-                        is_match = True
+                # Require query tokens to match candidate title or abstract meaningfully
+                q_tokens = self._tokenize_for_similarity(clean_query)
+                p_text = f"{candidate.title} {candidate.abstract or ''}".lower()
+                p_tokens = self._tokenize_for_similarity(p_text)
+                if q_tokens:
+                    overlap = q_tokens & p_tokens
+                    is_token_match = (
+                        len(overlap) == len(q_tokens)
+                        if len(q_tokens) <= 2
+                        else (len(overlap) / len(q_tokens) >= 0.6)
+                    )
+                else:
+                    is_token_match = False
+
+                if is_token_match and self._is_relevant_result(clean_query, candidate.title):
+                    is_match = True
 
             if is_match:
-                # Peer-reviewed filter
-                if is_peer_reviewed_only and not candidate.is_peer_reviewed:
-                    continue
-
-                key = candidate.doi or candidate.arxiv_id or candidate.title
-                if key not in seen_identifiers:
-                    seen_identifiers.add(key)
-                    results.append(candidate)
+                add_result(candidate)
 
         # Academic Priority Re-ranking:
         # Prioritize peer-reviewed papers at the top of the list, then by year descending
@@ -305,7 +515,13 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
         if results and (os.environ.get("PYTEST_CURRENT_TEST") or len(results) >= limit):
             return results[:limit]
 
-        # 2. Query arXiv API with timeout
+        # 2. Exa AI Neural Search for keyword queries
+        if not is_arxiv_id and not is_doi:
+            exa_items = await self._search_exa(clean_query, limit=limit)
+            for item in exa_items:
+                add_result(item)
+
+        # 3. Query arXiv API with timeout
         try:
             if is_arxiv_id:
                 params = {
@@ -338,14 +554,7 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
                         if not is_arxiv_id and not is_doi:
                             if not self._is_relevant_result(clean_query, item.title):
                                 continue
-                        # Peer-reviewed filter
-                        if is_peer_reviewed_only and not item.is_peer_reviewed:
-                            continue
-
-                        key = item.doi or item.arxiv_id or item.title
-                        if key not in seen_identifiers:
-                            seen_identifiers.add(key)
-                            results.append(item)
+                        add_result(item)
         except Exception as exc:
             logger.warning("arxiv_search_upstream_error_fallback", error=str(exc))
 
