@@ -11,13 +11,21 @@ from core.services.guardrails import (
     InputGuardrailResult,
     OutputGuardrailResult,
 )
+from core.services.socratic_roadmap import (
+    BridgeHintPayload,
+    extract_and_strip_bridge_hint,
+    extract_scholarly_identifiers,
+)
 
 __all__ = [
     "AcademicPaperValidator",
     "AIGuardrailsService",
+    "BridgeHintPayload",
     "ExaAcademicResolverAdapter",
     "GlobalAcademicCache",
     "InMemoryAcademicResolverAdapter",
     "InputGuardrailResult",
     "OutputGuardrailResult",
+    "extract_and_strip_bridge_hint",
+    "extract_scholarly_identifiers",
 ]
