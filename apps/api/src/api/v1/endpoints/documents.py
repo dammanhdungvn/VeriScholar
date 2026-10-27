@@ -3,7 +3,9 @@
 from typing import Any
 from uuid import UUID, uuid4
 
+import structlog
 from api.db.models.document import DocumentModel
+from api.db.models.folder import FolderModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import SessionDocumentModel
 from api.db.models.user import UserModel
@@ -12,6 +14,7 @@ from api.deps import (
     get_academic_resolver,
     get_current_user,
     get_document_service,
+    get_graph_extraction_service,
     get_idempotency_port,
 )
 from api.schemas.document import (
@@ -34,16 +37,21 @@ from api.schemas.document import (
     DocumentStructureEnvelope,
     DocumentSummaryEnvelope,
     DocumentSummaryGenerateRequest,
+    DocumentToggleStarEnvelope,
+    DocumentToggleStarRequest,
+    DocumentToggleStarResponseData,
     DocumentUploadEnvelope,
 )
 from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.services.document_service import DocumentService
+from api.services.graph_extraction_service import GraphExtractionService
 from core.domain.entities.document import DocumentStage, DocumentStatus
 from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Body,
     Depends,
     File,
@@ -59,6 +67,8 @@ from fastapi import (
 from fastapi.responses import JSONResponse, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = structlog.get_logger("api.endpoints.documents")
 
 router = APIRouter(prefix="/documents", tags=["Module 1: Documents"])
 
@@ -469,15 +479,90 @@ async def star_document(
     )
 
 
+async def run_graph_extraction_background(
+    document_id: UUID,
+    user_id: UUID,
+    graph_extraction_service: GraphExtractionService,
+) -> None:
+    from api.db.models.chunk import DocumentChunkModel
+    from api.db.session import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as session:
+            stmt = (
+                select(DocumentChunkModel.content)
+                .where(
+                    DocumentChunkModel.document_id == document_id,
+                    DocumentChunkModel.user_id == user_id,
+                )
+                .order_by(DocumentChunkModel.chunk_index)
+            )
+            chunks_res = await session.execute(stmt)
+            chunk_texts = chunks_res.scalars().all()
+            text_content = "\n\n".join(chunk_texts)
+            if not text_content:
+                doc_res = await session.execute(
+                    select(DocumentModel).where(
+                        DocumentModel.id == document_id,
+                        DocumentModel.user_id == user_id,
+                    )
+                )
+                doc = doc_res.scalar_one_or_none()
+                if doc:
+                    text_content = f"Paper: {doc.title or doc.filename}"
+
+            payload = await graph_extraction_service.extract_paper_entities(
+                document_id=document_id,
+                text=text_content,
+            )
+            await graph_extraction_service.ingest_paper_graph(
+                db=session,
+                user_id=user_id,
+                document_id=document_id,
+                payload=payload,
+            )
+            await session.commit()
+    except Exception as err:
+        logger.warning(
+            "graph_extraction_background_failed",
+            document_id=str(document_id),
+            error=str(err),
+        )
+
+
+async def run_graph_prune_background(
+    document_id: UUID,
+    user_id: UUID,
+    graph_extraction_service: GraphExtractionService,
+) -> None:
+    from api.db.session import AsyncSessionLocal
+
+    try:
+        async with AsyncSessionLocal() as session:
+            await graph_extraction_service.prune_document_graph(
+                db=session,
+                user_id=user_id,
+                document_id=document_id,
+            )
+            await session.commit()
+    except Exception as err:
+        logger.warning(
+            "graph_prune_background_failed",
+            document_id=str(document_id),
+            error=str(err),
+        )
+
+
 @router.post(
     "/{document_id}:toggle-star",
     status_code=status.HTTP_200_OK,
-    response_model=DocumentStarEnvelope,
+    response_model=DocumentToggleStarEnvelope,
     summary="Đảo ngược trạng thái lưu bài báo (Toggle Star)",
     description="Chuyển đổi trạng thái lưu trữ giữa starred và unstarred.",
     responses={
         200: {"description": "Đảo ngược trạng thái star bài báo thành công."},
-        404: {"description": "Không tìm thấy bài báo."},
+        400: {"model": ErrorResponse, "description": "Dữ liệu yêu cầu không hợp lệ."},
+        404: {"model": ErrorResponse, "description": "Không tìm thấy bài báo hoặc thư mục."},
     },
 )
 async def toggle_star_document(
@@ -485,19 +570,111 @@ async def toggle_star_document(
         ...,
         description="UUID của bài báo khoa học cần đảo ngược trạng thái star",
     ),
+    payload: DocumentToggleStarRequest | None = Body(
+        default=None,
+        openapi_examples={
+            "without_folder": {
+                "summary": "Đảo ngược không chỉ định thư mục",
+                "value": {"folder_id": None},
+            },
+            "with_folder": {
+                "summary": "Đảo ngược kèm chỉ định thư mục",
+                "value": {"folder_id": "8a391512-4217-48f1-a1b7-d1fa18600d89"},
+            },
+        },
+    ),
+    background_tasks: BackgroundTasks = BackgroundTasks(),
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
-    service: DocumentService = Depends(get_document_service),
-) -> DocumentStarEnvelope:
+    graph_extraction_service: GraphExtractionService = Depends(get_graph_extraction_service),
+) -> DocumentToggleStarEnvelope:
     """Toggle persistent library retention status of a document."""
-    data = await service.toggle_star(
-        document_id=document_id,
-        user_id=current_user.id,
-        db=db,
+    # 1. Query document with multi-tenant scoping
+    doc_stmt = select(DocumentModel).where(
+        DocumentModel.id == document_id,
+        DocumentModel.user_id == current_user.id,
     )
-    return DocumentStarEnvelope(
+    doc_res = await db.execute(doc_stmt)
+    doc = doc_res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DOCUMENT_NOT_FOUND",
+                "message": "Không tìm thấy tài liệu khoa học yêu cầu.",
+                "field": "document_id",
+                "action": "Kiểm tra ID tài liệu từ danh sách hợp lệ.",
+            },
+        )
+
+    # 2. If folder_id specified, verify folder belongs to user
+    folder_id = payload.folder_id if payload else None
+    if folder_id is not None:
+        folder_stmt = select(FolderModel).where(
+            FolderModel.id == folder_id,
+            FolderModel.user_id == current_user.id,
+        )
+        folder_res = await db.execute(folder_stmt)
+        if not folder_res.scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "FOLDER_NOT_FOUND",
+                    "message": "Không tìm thấy thư mục đề tài yêu cầu.",
+                    "field": "folder_id",
+                    "action": "Chọn thư mục tồn tại trong cây thư mục cá nhân.",
+                },
+            )
+
+    # 3. Toggle star state
+    is_currently_starred = bool(doc.is_starred or doc.is_persistent)
+    if not is_currently_starred:
+        doc.is_starred = True
+        doc.is_persistent = True
+        if folder_id is not None:
+            doc.folder_id = folder_id
+        graph_extraction_status = "queued"
+        background_tasks.add_task(
+            run_graph_extraction_background,
+            document_id=doc.id,
+            user_id=current_user.id,
+            graph_extraction_service=graph_extraction_service,
+        )
+    else:
+        doc.is_starred = False
+        doc.is_persistent = False
+        doc.folder_id = None
+        graph_extraction_status = "pruned"
+        background_tasks.add_task(
+            run_graph_prune_background,
+            document_id=doc.id,
+            user_id=current_user.id,
+            graph_extraction_service=graph_extraction_service,
+        )
+        # Also execute prune on current session for immediate consistency
+        await graph_extraction_service.prune_document_graph(
+            db=db,
+            user_id=current_user.id,
+            document_id=doc.id,
+        )
+
+    await db.commit()
+    await db.refresh(doc)
+
+    data_payload = DocumentToggleStarResponseData(
+        document_id=doc.id,
+        is_starred=doc.is_starred,
+        folder_id=doc.folder_id,
+        graph_extraction_status=graph_extraction_status,
+    )
+
+    return DocumentToggleStarEnvelope(
         success=True,
-        data=data,
+        data=data_payload,
+        document_id=doc.id,
+        is_starred=doc.is_starred,
+        folder_id=doc.folder_id,
+        graph_extraction_status=graph_extraction_status,
         meta=ResponseMeta(),
     )
 

@@ -8,14 +8,18 @@ from uuid import UUID
 
 import structlog
 from api.db.models.user import UserModel
+from api.db.session import get_db
 from api.deps import (
     get_current_user,
     get_folder_service,
+    get_graph_rag_service,
     get_library_synthesis_service,
 )
-from api.schemas.envelope import SingleResponseEnvelope
+from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.schemas.folder import (
+    BibliometricsEnvelope,
+    BibliometricsResponseData,
     FolderCreateRequest,
     FolderDocumentAssignRequest,
     FolderResponseData,
@@ -26,8 +30,10 @@ from api.schemas.folder import (
     HierarchicalRagQueryResponseData,
 )
 from api.services.folder_service import FolderService
+from api.services.graph_rag_service import GraphRAGService
 from api.services.library_synthesis_service import LibrarySynthesisService
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Path, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.endpoints.folders")
 
@@ -160,6 +166,58 @@ async def get_folder(
     """Get single folder by ID."""
     folder = await folder_service.get_folder(user_id=current_user.id, folder_id=id)
     return FolderSingleEnvelope(data=folder)
+
+
+# ==============================================================================
+# 6b. GET /api/v1/folders/{id}/bibliometrics (Connected Papers Bibliometrics)
+# ==============================================================================
+@router.get(
+    "/{id}/bibliometrics",
+    response_model=BibliometricsEnvelope,
+    summary="Mạng Ghép Cặp Thư Mục Học & Tác Phẩm Cội Nguồn (Connected Papers Bibliometrics)",
+    description=(
+        "Truy vấn mạng ghép cặp thư mục học (Bibliographic Coupling) và xếp hạng "
+        "Tác phẩm Cội nguồn (Prior Works) vs Tác phẩm Phái sinh (Derivative Works) trong thư mục."
+    ),
+    responses={
+        200: {"description": "Kết quả phân tích thư mục học thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực người dùng."},
+        404: {"model": ErrorResponse, "description": "Thư mục không tồn tại."},
+    },
+)
+async def get_folder_bibliometrics(
+    id: UUID = Path(..., description="UUID của thư mục đề tài nghiên cứu"),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    folder_service: FolderService = Depends(get_folder_service),
+    graph_rag_service: GraphRAGService = Depends(get_graph_rag_service),
+) -> BibliometricsEnvelope:
+    """Retrieve Connected Papers bibliographic coupling network and prior/derivative works."""
+    # Ensure folder exists and belongs to authenticated scholar
+    await folder_service.get_folder(user_id=current_user.id, folder_id=id)
+
+    result = await graph_rag_service.compute_bibliometrics(
+        db=db,
+        user_id=current_user.id,
+        folder_id=id,
+    )
+
+    data_payload = BibliometricsResponseData(
+        folder_id=result["folder_id"],
+        prior_works=result["prior_works"],
+        derivative_works=result["derivative_works"],
+        coupling_edges=result["coupling_edges"],
+    )
+
+    return BibliometricsEnvelope(
+        success=True,
+        data=data_payload,
+        folder_id=result["folder_id"],
+        prior_works=result["prior_works"],
+        derivative_works=result["derivative_works"],
+        coupling_edges=result["coupling_edges"],
+        meta=ResponseMeta(),
+    )
 
 
 # ==============================================================================

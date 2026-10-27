@@ -27,6 +27,8 @@ from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
 from api.services.embedding_service import EmbeddingService
 from api.services.folder_service import FolderService
+from api.services.graph_extraction_service import GraphExtractionService
+from api.services.graph_rag_service import GraphRAGService
 from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
 from api.services.session_chat_service import SessionChatService
@@ -201,6 +203,26 @@ def get_library_synthesis_service(
 ) -> LibrarySynthesisService:
     """Dependency providing LibrarySynthesisService bound to request database session."""
     return LibrarySynthesisService(db=db, ai_tracing=ai_tracing, cache=idempotency_port)
+
+
+def get_graph_rag_service(
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
+) -> GraphRAGService:
+    """Dependency providing GraphRAGService for dual-level knowledge graph queries."""
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return GraphRAGService(embedding_service=real_embedding)
+
+
+def get_graph_extraction_service(
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
+) -> GraphExtractionService:
+    """Dependency providing GraphExtractionService for academic graph parsing & ingestion."""
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return GraphExtractionService(embedding_service=real_embedding)
 
 
 async def get_current_user(

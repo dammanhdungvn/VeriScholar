@@ -13,6 +13,7 @@ from api.schemas.folder import (
     FolderTreeItem,
     FolderUpdateRequest,
 )
+from core.services.graph_extractor import detect_folder_cycle
 from fastapi import HTTPException, status
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -85,7 +86,12 @@ class FolderService:
         if not folder:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Thư mục không tồn tại.",
+                detail={
+                    "code": "FOLDER_NOT_FOUND",
+                    "message": "Không tìm thấy thư mục đề tài yêu cầu.",
+                    "field": "folder_id",
+                    "action": "Chọn thư mục tồn tại trong cây thư mục cá nhân.",
+                },
             )
 
         doc_count = await self._get_document_count(user_id, folder_id)
@@ -178,29 +184,46 @@ class FolderService:
         if not folder:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Thư mục không tồn tại.",
+                detail={
+                    "code": "FOLDER_NOT_FOUND",
+                    "message": "Không tìm thấy thư mục đề tài yêu cầu.",
+                    "field": "folder_id",
+                    "action": "Chọn thư mục tồn tại trong cây thư mục cá nhân.",
+                },
             )
 
         if payload.parent_id is not None:
-            if payload.parent_id == folder_id:
+            # Query all user folders to construct parent_map for cycle detection
+            all_stmt = select(FolderModel).where(FolderModel.user_id == user_id)
+            all_folders = (await self.db.execute(all_stmt)).scalars().all()
+            parent_map = {f.id: f.parent_id for f in all_folders}
+
+            if detect_folder_cycle(
+                folder_id=folder_id,
+                new_parent_id=payload.parent_id,
+                parent_map=parent_map,
+            ):
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Không thể di chuyển thư mục vào chính nó.",
-                )
-            # Cycle detection: target parent cannot be a descendant of folder_id
-            if await self._is_descendant(user_id, folder_id, payload.parent_id):
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=(
-                        "Không thể di chuyển thư mục vào trong một thư mục con của nó "
-                        "(Circular hierarchy)."
-                    ),
+                    detail={
+                        "code": "CYCLIC_FOLDER_HIERARCHY",
+                        "message": (
+                            "Không thể di chuyển thư mục vào chính nó hoặc vào thư mục con của nó."
+                        ),
+                        "field": "parent_id",
+                        "action": "Chọn thư mục cha hợp lệ không gây vòng lặp.",
+                    },
                 )
             parent = await self._get_user_folder(user_id, payload.parent_id)
             if not parent:
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Thư mục cha mới không tồn tại.",
+                    detail={
+                        "code": "FOLDER_NOT_FOUND",
+                        "message": "Không tìm thấy thư mục đề tài yêu cầu.",
+                        "field": "parent_id",
+                        "action": "Chọn thư mục tồn tại trong cây thư mục cá nhân.",
+                    },
                 )
             folder.parent_id = payload.parent_id
 
