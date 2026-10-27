@@ -155,6 +155,19 @@ export const sessionsApi = {
   },
 
   /**
+   * DELETE /api/v1/sessions/{id}/documents/{document_id}
+   * Đóng một tab bài báo khỏi phiên nghiên cứu (204 No Content)
+   */
+  async removeDocumentFromSession(
+    sessionId: string,
+    documentId: string
+  ): Promise<void> {
+    return apiClient<void>(`/sessions/${sessionId}/documents/${documentId}`, {
+      method: "DELETE",
+    });
+  },
+
+  /**
    * 52. POST /api/v1/sessions/{id}/messages
    * Gửi câu hỏi & Stream SSE (Cross-Document Namespacing)
    */

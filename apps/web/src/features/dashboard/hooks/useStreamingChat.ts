@@ -54,7 +54,9 @@ export function useStreamingChat({
   const [prevSessionId, setPrevSessionId] = useState(activeSessionId);
   if (activeSessionId !== prevSessionId) {
     setPrevSessionId(activeSessionId);
-    setMessages([]);
+    if (!isGenerating) {
+      setMessages([]);
+    }
   }
 
   // Clean up animation frames and abort ongoing streams on unmount
@@ -87,19 +89,21 @@ export function useStreamingChat({
   }, []);
 
   const sendMessage = useCallback(
-    async (explicitPrompt?: string, customRequestId?: string) => {
+    async (explicitPrompt?: string, customRequestId?: string, targetSessionId?: string) => {
       const textToSend = (explicitPrompt ?? inputText).trim();
       if (!textToSend || isGenerating) return;
 
       setInputText("");
       isCancelledRef.current = false;
 
+      let effectiveSessionId = targetSessionId || activeSessionId;
+
       const userMsgId = `user-${Date.now()}`;
       const assistantMsgId = `asst-${Date.now()}`;
 
       const userMessage: ChatMessage = {
         id: userMsgId,
-        session_id: activeSessionId ?? "session-default",
+        session_id: effectiveSessionId ?? "session-default",
         role: "user",
         content: textToSend,
         created_at: new Date().toISOString(),
@@ -107,7 +111,7 @@ export function useStreamingChat({
 
       const initialAssistantMessage: ChatMessage = {
         id: assistantMsgId,
-        session_id: activeSessionId ?? "session-default",
+        session_id: effectiveSessionId ?? "session-default",
         role: "assistant",
         content: "",
         created_at: new Date().toISOString(),
@@ -116,8 +120,6 @@ export function useStreamingChat({
 
       setMessages((prev) => [...prev, userMessage, initialAssistantMessage]);
       setIsGenerating(true);
-
-      let effectiveSessionId = activeSessionId;
       if (!effectiveSessionId) {
         try {
           const titleSnippet = textToSend.slice(0, 32);
@@ -415,6 +417,7 @@ export function useStreamingChat({
 
   const loadExistingSession = useCallback(
     async (sessionId: string) => {
+      if (isGenerating) return;
       stopGeneration();
       try {
         const response = await sessionsApi.listSessionMessages(sessionId);
@@ -445,7 +448,7 @@ export function useStreamingChat({
       }
       setMessages([]);
     },
-    [stopGeneration]
+    [stopGeneration, isGenerating]
   );
 
   return {

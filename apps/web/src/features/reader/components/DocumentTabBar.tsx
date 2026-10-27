@@ -21,6 +21,8 @@ interface DocumentTabBarProps {
   onAddDocument: () => void;
   onToggleStar?: (documentId: string) => void;
   onDeleteDocument?: (documentId: string) => void;
+  showEvictionDialog?: boolean;
+  onCloseEvictionDialog?: () => void;
 }
 
 export function DocumentTabBar({
@@ -32,9 +34,15 @@ export function DocumentTabBar({
   onAddDocument,
   onToggleStar,
   onDeleteDocument,
+  showEvictionDialog,
+  onCloseEvictionDialog,
 }: DocumentTabBarProps) {
   const [docToDelete, setDocToDelete] = useState<DocumentListItem | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEvictionOpen, setIsEvictionOpen] = useState(false);
+
+  const effectiveEvictionOpen =
+    showEvictionDialog !== undefined ? showEvictionDialog : isEvictionOpen;
 
   const docMap = new Map(documents.map((d) => [d.id, d]));
 
@@ -146,19 +154,100 @@ export function DocumentTabBar({
           );
         })}
 
-        {/* Add new document to session (Max 5) */}
-        {openDocumentIds.length < 5 && (
-          <button
-            type="button"
-            onClick={onAddDocument}
-            aria-label="Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
-            className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-surface-cream-strong/60 dark:hover:bg-[#2a2723] transition-colors border border-dashed border-hairline dark:border-[#3a352f] cursor-pointer"
-            title="Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
-          >
-            <Plus className="w-3.5 h-3.5" />
-          </button>
-        )}
+        {/* Add new document to session (Max 5 or Eviction Dialog) */}
+        <button
+          type="button"
+          onClick={() => {
+            if (openDocumentIds.length >= 5) {
+              setIsEvictionOpen(true);
+            } else {
+              onAddDocument();
+            }
+          }}
+          aria-label={
+            openDocumentIds.length >= 5
+              ? "Phiên đã đạt tối đa 5 bài báo (Quản lý đóng bớt tab)"
+              : "Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
+          }
+          className="flex items-center justify-center w-7 h-7 rounded-md text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-surface-cream-strong/60 dark:hover:bg-[#2a2723] transition-colors border border-dashed border-hairline dark:border-[#3a352f] cursor-pointer"
+          title={
+            openDocumentIds.length >= 5
+              ? "Đã đạt tối đa 5 bài báo. Nhấp để đóng bớt tab."
+              : "Nạp thêm bài báo vào phiên (Tối đa 5 bài)"
+          }
+        >
+          <Plus className="w-3.5 h-3.5" />
+        </button>
       </div>
+
+      {/* Eviction Dialog when 5 tabs reached */}
+      <Dialog
+        open={effectiveEvictionOpen}
+        onOpenChange={(open) => {
+          setIsEvictionOpen(open);
+          if (!open) onCloseEvictionDialog?.();
+        }}
+      >
+        <DialogContent className="max-w-md" data-testid="tab-eviction-dialog">
+          <DialogHeader>
+            <div className="flex items-center gap-2 text-amber-600 mb-1">
+              <AlertTriangle className="w-5 h-5 shrink-0" />
+              <DialogTitle className="text-base font-serif font-bold text-ink dark:text-zinc-100">
+                Đã đạt giới hạn 5 bài báo
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-muted leading-relaxed">
+              Phiên đọc sâu hỗ trợ tối đa 5 bài báo đồng thời để bảo đảm tốc độ và độ chuẩn xác phân tích cao nhất. Chọn bài báo bạn muốn đóng để nhường chỗ cho tài liệu mới:
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-2 space-y-1.5 max-h-60 overflow-y-auto">
+            {openDocumentIds.map((id) => {
+              const d = docMap.get(id);
+              const title = d?.title || d?.filename || `Bài báo ${id.slice(0, 6)}`;
+              return (
+                <div
+                  key={id}
+                  className="flex items-center justify-between p-2 rounded-md border border-hairline dark:border-zinc-800 bg-surface-cream/50 dark:bg-zinc-900/50 hover:bg-surface-cream dark:hover:bg-zinc-800 transition-colors"
+                >
+                  <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                    <FileText className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-xs font-medium truncate text-ink dark:text-zinc-200">
+                      {title}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20"
+                    onClick={() => {
+                      onCloseDocument(id);
+                      setIsEvictionOpen(false);
+                      onCloseEvictionDialog?.();
+                      onAddDocument();
+                    }}
+                  >
+                    Đóng tab này
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="mt-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setIsEvictionOpen(false);
+                onCloseEvictionDialog?.();
+              }}
+            >
+              Hủy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Dialog for Permanent Document Deletion */}
       <Dialog open={Boolean(docToDelete)} onOpenChange={(open) => !open && setDocToDelete(null)}>

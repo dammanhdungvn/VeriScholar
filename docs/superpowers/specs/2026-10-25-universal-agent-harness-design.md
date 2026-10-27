@@ -4,7 +4,7 @@
 **Ngày ban hành:** 2026-10-25  
 **Trạng thái:** DỰ THẢO THIẾT KẾ (DESIGN DOCUMENT V1)  
 **Nhánh triển khai:** `refactor/mvp-cleanup-and-directory`  
-**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](../../../temp/.agents))  
+**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`.agents/`](../../../.agents))  
 **Cơ sở nghiệp vụ:** Bộ tài liệu [`docs/PRD/`](../../PRD) và [`docs/specs/`](../../specs) (Commit ``5706f11``)
 
 ---
@@ -17,7 +17,7 @@ Khi lập trình dự án phức tạp cùng các Agent AI (như Antigravity CLI
 3. **Thiếu tính xác định khi chạy thử (Non-Deterministic Sandboxing):** Mỗi lần kiểm thử tính năng RAG hoặc GraphRAG, nếu AI phải gọi API OpenAI/Exa thật thì vừa tốn chi phí, vừa chậm, vừa dễ gãy do mạng; nếu để AI tự viết dữ liệu test ngẫu nhiên thì dữ liệu thiếu chuẩn mực học thuật (thiếu Bounding Box, sai schema 4 thực thể).
 
 **Giải pháp:**  
-Học hỏi từ kiến trúc xuất sắc của Langfuse ([`temp/.agents/`](../../../temp/.agents)), VeriScholar xây dựng một **Khung Điều Hướng Tác Nhân Đa Nền Tảng Thuần Dự Án (Repo-Owned Universal Agent Harness)** tinh gọn, hoạt động như một "hệ điều hành quy chuẩn" cho mọi Agent AI tham gia phát triển dự án.
+Học hỏi từ kiến trúc xuất sắc của Langfuse ([`.agents/`](../../../.agents)), VeriScholar xây dựng một **Khung Điều Hướng Tác Nhân Đa Nền Tảng Thuần Dự Án (Repo-Owned Universal Agent Harness)** tinh gọn, hoạt động như một "hệ điều hành quy chuẩn" cho mọi Agent AI tham gia phát triển dự án.
 
 ---
 

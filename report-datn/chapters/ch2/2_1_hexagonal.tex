@@ -18,69 +18,98 @@ Mô hình phân tầng kiến trúc và ranh giới phân tách trừu tượng 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.82, transform shape,
-    card/.style={draw=black!70, fill=gray!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
-    compbox/.style={draw=blue!80!black, fill=blue!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    portbox/.style={draw=teal!80!black, fill=teal!10, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    adaptbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
+    scale=0.80, transform shape,
+    card_driving/.style={draw=orange!80!black, fill=orange!3, rounded corners=8pt, line width=1pt, inner sep=8pt},
+    card_core/.style={draw=blue!85!black, fill=blue!3, rounded corners=8pt, line width=1.1pt, inner sep=8pt},
+    card_driven/.style={draw=teal!85!black, fill=teal!3, rounded corners=8pt, line width=1pt, inner sep=8pt},
+    compbox/.style={draw=blue!80!black, fill=white, rounded corners=5pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    portbox/.style={draw=teal!80!black, fill=teal!10, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\small},
+    adaptbox_dr/.style={draw=orange!80!black, fill=white, rounded corners=5pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    adaptbox_dn/.style={draw=teal!80!black, fill=white, rounded corners=5pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!85!black},
+    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=1.0pt, draw=teal!85!black}
 ]
-    % Khối 1: Tầng Điều Hợp Ngoại Vi (Adapters) - Bên trái
-    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_adapt) at (-5.6, 0) {};
-    \node[anchor=north, font=\bfseries\footnotesize, text=orange!90!black] at (-5.6, 2.9) {BỘ ĐIỀU HỢP HẠ TẦNG (ADAPTERS)};
-    \node[adaptbox, minimum width=4.2cm] (ad1) at (-5.6, 1.8) {
-        \textbf{Bộ điều hợp Web / SSE}\\
-        \footnotesize Giao diện người dùng, Luồng sự kiện
+    % --------------------------------------------------------------------------
+    % Khối 1: Tầng Điều Hợp Điều Khiển (Driving Adapters) - Bên trái
+    % --------------------------------------------------------------------------
+    \node[card_driving, minimum width=4.4cm, minimum height=6.0cm] (c_driving) at (-5.6, 0) {};
+    \node[align=center, font=\linespread{1.0}\selectfont\bfseries\scriptsize, text=orange!90!black] at (-5.6, 2.55) {BỘ ĐIỀU HỢP ĐIỀU KHIỂN\\[2pt](DRIVING ADAPTERS)};
+    
+    \node[adaptbox_dr, minimum width=3.8cm] (ad_web) at (-5.6, 1.1) {
+        \textbf{Bộ điều hợp Web / SSE}\\[2pt]
+        \footnotesize Giao diện học giả, Luồng sự kiện
     };
-    \node[adaptbox, minimum width=4.2cm] (ad2) at (-5.6, 0.0) {
-        \textbf{Bộ điều hợp CSDL \& CAS}\\
+    \node[adaptbox_dr, minimum width=3.8cm] (ad_api) at (-5.6, -1.0) {
+        \textbf{Bộ điều hợp Tiếp nhận API}\\[2pt]
+        \footnotesize Nhận tài liệu PDF \& Truy vấn
+    };
+
+    % --------------------------------------------------------------------------
+    % Khối 2: Tầng Lõi Nghiệp Vụ & Cổng Giao Tiếp (Core & Ports) - Ở giữa
+    % --------------------------------------------------------------------------
+    \node[card_core, minimum width=6.0cm, minimum height=6.0cm] (c_core) at (0.1, 0) {};
+    \node[align=center, font=\linespread{1.0}\selectfont\bfseries\scriptsize, text=blue!90!black] at (0.1, 2.55) {LÕI NGHIỆP VỤ \& CỔNG GIAO TIẾP\\[2pt](CORE DOMAIN \& PORTS)};
+    
+    % Cổng Phía Nhập (Inbound Port)
+    \node[portbox, minimum width=5.2cm] (p_in) at (0.1, 1.45) {
+        \textbf{Cổng Phía Nhập (Inbound Port)}\\[2pt]
+        \footnotesize Giao diện Dịch vụ Phân tích \& Truy vấn Học thuật
+    };
+
+    % Lõi miền nghiệp vụ thuần khiết
+    \node[compbox, minimum width=5.2cm, fill=blue!8] (core) at (0.1, 0.05) {
+        \textbf{LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT}\\[2pt]
+        \footnotesize Thực thể Học thuật (\textit{PaperNode, Chunk, BBox})\\[1pt]
+        \footnotesize Thuật toán Hợp nhất RRF $\parallel$ Kiểm định Liêm chính
+    };
+
+    % Cổng Phía Xuất (Outbound Ports)
+    \node[portbox, minimum width=2.5cm] (p_store) at (-1.3, -1.5) {
+        \textbf{Cổng Lưu trữ}\\[2pt]
+        \footnotesize CSDL \& Vector
+    };
+    \node[portbox, minimum width=2.5cm] (p_ai) at (1.5, -1.5) {
+        \textbf{Cổng Trí tuệ AI}\\[2pt]
+        \footnotesize Suy luận \& Hộp cát
+    };
+
+    % --------------------------------------------------------------------------
+    % Khối 3: Tầng Điều Hợp Hạ Tầng (Driven Adapters) - Bên phải
+    % --------------------------------------------------------------------------
+    \node[card_driven, minimum width=4.4cm, minimum height=6.0cm] (c_driven) at (5.8, 0) {};
+    \node[align=center, font=\linespread{1.0}\selectfont\bfseries\scriptsize, text=teal!90!black] at (5.8, 2.55) {BỘ ĐIỀU HỢP HẠ TẦNG\\[2pt](DRIVEN ADAPTERS)};
+    
+    \node[adaptbox_dn, minimum width=3.8cm] (ad_db) at (5.8, 1.4) {
+        \textbf{Bộ điều hợp CSDL \& CAS}\\[2pt]
         \footnotesize PostgreSQL 16, pgvector, CAS
     };
-    \node[adaptbox, minimum width=4.2cm] (ad3) at (-5.6, -1.8) {
-        \textbf{Bộ điều hợp Trí tuệ Nhân tạo}\\
-        \footnotesize Dịch vụ LLM, E2B MicroVM
+    \node[adaptbox_dn, minimum width=3.8cm] (ad_llm) at (5.8, 0.0) {
+        \textbf{Bộ điều hợp Dịch vụ LLM}\\[2pt]
+        \footnotesize Mô hình ngôn ngữ lớn, Embedding
+    };
+    \node[adaptbox_dn, minimum width=3.8cm] (ad_e2b) at (5.8, -1.4) {
+        \textbf{Bộ điều hợp Hộp cát E2B}\\[2pt]
+        \footnotesize MicroVM Firecracker cô lập
     };
 
-    % Khối 2: Cổng Giao Tiếp Trừu Tượng (Ports) - Ở giữa
-    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_ports) at (0, 0) {};
-    \node[anchor=north, font=\bfseries\footnotesize, text=teal!90!black] at (0, 2.9) {CỔNG TRỪU TƯỢNG (PORTS)};
-    \node[portbox, minimum width=4.2cm] (p1) at (0, 1.8) {
-        \textbf{Cổng Phía Nhập (Inbound)}\\
-        \footnotesize Giao diện dịch vụ phân tích tài liệu
-    };
-    \node[portbox, minimum width=4.2cm] (p2) at (0, 0.0) {
-        \textbf{Cổng Lưu trữ (Persistence)}\\
-        \footnotesize Giao diện lưu trữ CSDL \& Vector
-    };
-    \node[portbox, minimum width=4.2cm] (p3) at (0, -1.8) {
-        \textbf{Cổng Trí tuệ Nhân tạo (AI)}\\
-        \footnotesize Giao diện sinh suy luận \& Hộp cát
-    };
+    % --------------------------------------------------------------------------
+    % Đường kết nối & Luồng phụ thuộc hướng tâm
+    % --------------------------------------------------------------------------
+    % Driving Adapters -> Inbound Port
+    \draw[arrowstyle] (ad_web.east) -- (p_in.west);
+    \draw[arrowstyle] (ad_api.east) -- (p_in.west);
 
-    % Khối 3: Tầng Lõi Miền Nghiệp Vụ (Pure Core Domain) - Bên phải
-    \node[card, minimum width=4.8cm, minimum height=6.2cm] (c_core) at (5.6, 0) {};
-    \node[anchor=north, font=\bfseries\footnotesize, text=blue!90!black] at (5.6, 2.9) {LÕI NGHIỆP VỤ (CORE DOMAIN)};
-    \node[compbox, minimum width=4.2cm] (cor1) at (5.6, 1.8) {
-        \textbf{Thực thể Học thuật}\\
-        \footnotesize Document, PaperNode, Chunk
-    };
-    \node[compbox, minimum width=4.2cm] (cor2) at (5.6, 0.0) {
-        \textbf{Thuật toán Hợp nhất RRF}\\
-        \footnotesize Xếp hạng đảo ngược đa luồng
-    };
-    \node[compbox, minimum width=4.2cm] (cor3) at (5.6, -1.8) {
-        \textbf{Quy tắc Liêm chính Dữ liệu}\\
-        \footnotesize Khử trùng lặp, Xác thực định danh
-    };
+    % Inbound Port -> Core
+    \draw[arrowstyle] (p_in.south) -- (core.north);
 
-    % Mũi tên phụ thuộc hướng tâm
-    \draw[arrowstyle] (ad1.east) -- (p1.west);
-    \draw[arrowstyle] (ad2.east) -- (p2.west);
-    \draw[arrowstyle] (ad3.east) -- (p3.west);
+    % Core -> Outbound Ports
+    \draw[arrowstyle] (core.south -| p_store.north) -- (p_store.north);
+    \draw[arrowstyle] (core.south -| p_ai.north) -- (p_ai.north);
 
-    \draw[arrowstyle] (p1.east) -- (cor1.west);
-    \draw[arrowstyle, dashed] (cor2.west) -- (p2.east);
-    \draw[arrowstyle, dashed] (cor3.west) -- (p3.east);
+    % Driven Adapters -> Outbound Ports (Đảo ngược phụ thuộc)
+    \draw[dasharrow] (ad_db.west) -- (p_store.east);
+    \draw[dasharrow] (ad_llm.west) -- (p_ai.east);
+    \draw[dasharrow] (ad_e2b.west) -- (p_ai.east);
 \end{tikzpicture}
 \caption{Mô hình phân rã module và cấu trúc Cổng -- Điều hợp (Ports and Adapters)}
 \label{fig:hexagonal_arch}

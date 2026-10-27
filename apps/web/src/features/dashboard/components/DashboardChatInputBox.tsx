@@ -90,7 +90,7 @@ export function DashboardChatInputBox({
         (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
       );
       if (droppedFiles.length > 0) {
-        setStagedFiles((prev) => [...prev, ...droppedFiles]);
+        setStagedFiles((prev) => [...prev, ...droppedFiles].slice(0, 5));
       }
     }
   };
@@ -101,7 +101,7 @@ export function DashboardChatInputBox({
         (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
       );
       if (selectedFiles.length > 0) {
-        setStagedFiles((prev) => [...prev, ...selectedFiles]);
+        setStagedFiles((prev) => [...prev, ...selectedFiles].slice(0, 5));
       }
     }
     e.target.value = "";
@@ -114,13 +114,15 @@ export function DashboardChatInputBox({
   const handleSendMessage = () => {
     if (isGenerating) return;
 
+    const currentText = (textareaRef.current?.value ?? inputText).trim();
+
     if (stagedFiles.length > 0) {
       if (onSendWithFiles) {
-        onSendWithFiles(inputText.trim(), stagedFiles);
+        onSendWithFiles(currentText, stagedFiles);
       } else if (onUploadFile) {
         stagedFiles.forEach(onUploadFile);
-        if (inputText.trim()) {
-          onSend(inputText.trim());
+        if (currentText) {
+          onSend(currentText);
         }
       }
       setStagedFiles([]);
@@ -130,15 +132,15 @@ export function DashboardChatInputBox({
 
     if (contextChip) {
       const quoteHeader = `📎 [${contextChip.documentTitle || "Tài liệu"} - Trang ${contextChip.pageNumber}]: "${contextChip.text}"`;
-      const fullPrompt = inputText.trim()
-        ? `${quoteHeader}\n\n${inputText.trim()}`
+      const fullPrompt = currentText
+        ? `${quoteHeader}\n\n${currentText}`
         : `Hãy giải thích chi tiết ý nghĩa và luận điểm trong đoạn trích sau (Trang ${contextChip.pageNumber}):\n\n"${contextChip.text}"`;
 
       onSend(fullPrompt);
       onChangeText("");
       onRemoveContextChip?.();
-    } else if (inputText.trim()) {
-      onSend(inputText.trim());
+    } else if (currentText) {
+      onSend(currentText);
       onChangeText("");
     }
   };

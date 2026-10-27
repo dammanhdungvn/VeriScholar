@@ -690,6 +690,36 @@ async def add_document_to_session(
 
 
 # ==============================================================================
+# 51b. DELETE /api/v1/sessions/{id}/documents/{document_id} (Đóng tab bài báo)
+# ==============================================================================
+@router.delete(
+    "/{id}/documents/{document_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="# 51b. Đóng tab bài báo trong phiên và tự động gán lại active_document_id",
+    responses={
+        204: {"description": "Đã gỡ bài báo khỏi phiên làm việc thành công."},
+        404: {
+            "model": ErrorResponse,
+            "description": "Phiên hoặc tài liệu không tồn tại trong phiên.",
+        },
+    },
+)
+async def remove_document_from_session(
+    id: UUID,
+    document_id: UUID,
+    current_user: UserModel = Depends(get_current_user),
+    session_service: SessionService = Depends(get_session_service),
+) -> Response:
+    """Remove a document from active session tabs and reassign active_document_id if needed."""
+    await session_service.remove_document_from_session(
+        session_id=id,
+        document_id=document_id,
+        user_id=current_user.id,
+    )
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# ==============================================================================
 # 52. POST /api/v1/sessions/{id}/messages (Hỏi đáp đa bài báo & Stream SSE)
 # ==============================================================================
 @router.post(

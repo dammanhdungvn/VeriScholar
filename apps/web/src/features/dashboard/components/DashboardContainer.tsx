@@ -18,6 +18,7 @@ import { RestoreArchivedModal } from "@/features/sessions/components/RestoreArch
 import { useRestoreArchivedSessionMutation, useSessionDetail } from "@/features/sessions/hooks/useSessionsQuery";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { DocumentLibraryModal } from "@/features/documents/components/DocumentLibraryModal";
+import { documentsApi } from "@/features/documents/api/documentsApi";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import type { DocumentListItem } from "@/types/document";
 
@@ -210,8 +211,6 @@ export function DashboardContainer() {
     loadExistingSession(sessionId);
   };
 
-  const pendingInitialPromptRef = useRef<string | null>(null);
-
   /**
    * Bắt đầu luồng Ingestion tự động:
    * Upload CAS blob -> Tạo Session hợp lệ -> Trigger Parse & Embed -> Polling -> Workspace Active
@@ -228,21 +227,13 @@ export function DashboardContainer() {
       );
       if (result?.sessionId) {
         selectSession(result.sessionId);
+        setSession(result.sessionId);
+        setStatus("completed", 100);
+        useReaderStore.getState().setOpenDocumentIds([result.documentId]);
         navigate(`/dashboard/${result.sessionId}`, { replace: true });
         loadExistingSession(result.sessionId);
-
-        // Auto-send user prompt if staged alongside file upload (Rule Item 10)
-        if (pendingInitialPromptRef.current) {
-          const prompt = pendingInitialPromptRef.current;
-          pendingInitialPromptRef.current = null;
-          setTimeout(() => {
-            sendMessage(prompt);
-          }, 350);
-        }
       }
     } catch {
-      pendingInitialPromptRef.current = null;
-      // Error is set in useWorkspaceStore.errorMessage and handled by HeroUploadDropzone UI
       if (!effectiveSessionId) {
         navigate("/dashboard", { replace: true });
       }
@@ -255,11 +246,58 @@ export function DashboardContainer() {
       return;
     }
 
-    if (prompt.trim()) {
-      pendingInitialPromptRef.current = prompt.trim();
-    }
+    const trimmedPrompt = prompt.trim();
 
-    await handleFileUpload(files[0]);
+    try {
+      // 1. Ingest first file to create the research session
+      const firstResult = await ingest(
+        files[0],
+        (createdSessionId) => {
+          selectSession(createdSessionId);
+          navigate(`/dashboard/${createdSessionId}`, { replace: true });
+        },
+        effectiveSessionId
+      );
+
+      if (!firstResult?.sessionId) {
+        return;
+      }
+
+      const targetSessionId = firstResult.sessionId;
+      const allDocIds: string[] = [firstResult.documentId];
+
+      // 2. Upload any additional staged files (files 1..N) into the same session
+      if (files.length > 1) {
+        for (let i = 1; i < files.length; i++) {
+          try {
+            const uploadedDoc = await documentsApi.uploadDocument(files[i], targetSessionId, true);
+            if (uploadedDoc?.id) {
+              allDocIds.push(uploadedDoc.id);
+            }
+          } catch (err) {
+            console.warn(`Failed to upload auxiliary file ${files[i].name}:`, err);
+          }
+        }
+      }
+
+      // 3. Register all uploaded documents so all tabs are visible
+      useReaderStore.getState().setOpenDocumentIds(allDocIds);
+
+      // 4. Update session state and navigation
+      selectSession(targetSessionId);
+      setSession(targetSessionId);
+      setStatus("completed", 100);
+      navigate(`/dashboard/${targetSessionId}`, { replace: true });
+
+      // 5. If user provided a prompt alongside files, dispatch it directly to targetSessionId
+      if (trimmedPrompt) {
+        await sendMessage(trimmedPrompt, undefined, targetSessionId);
+      }
+    } catch {
+      if (!effectiveSessionId) {
+        navigate("/dashboard", { replace: true });
+      }
+    }
   };
 
   /**

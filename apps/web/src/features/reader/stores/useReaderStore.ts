@@ -122,7 +122,10 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
 
   setCurrentPage: (page) =>
     set((state) => ({
-      currentPage: Math.max(1, Math.min(state.totalPages, page)),
+      currentPage:
+        state.totalPages > 1
+          ? Math.max(1, Math.min(state.totalPages, page))
+          : Math.max(1, page),
     })),
 
   setTotalPages: (total) =>

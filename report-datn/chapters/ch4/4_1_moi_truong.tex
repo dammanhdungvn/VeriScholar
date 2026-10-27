@@ -9,6 +9,7 @@ Hệ thống \VS\ được thiết lập, kiểm nghiệm và vận hành thực
     \item \textbf{Hạ tầng phần cứng và hệ điều hành:} Máy chủ ảo Azure Ubuntu 24.04 LTS (x86\_64, 4 vCPU, 16GB RAM, ổ cứng SSD NVMe) cung cấp tài nguyên điện toán ổn định, cấu hình nhóm an ninh mạng (NSG) giới hạn cổng truy cập ngoài qua HTTPS (cổng 443), HTTP (cổng 80) và SSH (cổng 22), cô lập các dịch vụ nội bộ tại giao diện mạng cục bộ (\texttt{127.0.0.1}).
     \item \textbf{Hệ quản trị cơ sở dữ liệu:} Hệ thống triển khai PostgreSQL 16.2 cùng tiện ích \texttt{pgvector} v0.7.0 (tương thích các container v0.8.6). CSDL tích hợp chỉ mục tìm kiếm vector HNSW (\textit{Hierarchical Navigable Small World}) cho vector 1536 chiều và chỉ mục BM25 (\textit{Full-Text Search}) đa ngôn ngữ, bảo đảm trọn vẹn tính nhất quán giao dịch ACID.
     \item \textbf{Hệ thống lưu trữ bộ đệm và điều phối phiên:} Redis 7.0 (bản phân phối Alpine) đóng vai trò trung tâm lưu trữ dữ liệu tạm thời tốc độ cao, hỗ trợ kiểm soát tần suất truy cập (\textit{Rate Limiting}), lưu trữ mã xác thực OTP và khóa phiên phân tán.
+    \item \textbf{Đóng gói container và điều phối dịch vụ:} Nền tảng Docker Engine kết hợp Docker Compose chịu trách nhiệm ảo hóa và điều phối cụm dịch vụ hạ tầng gồm PostgreSQL 16 \texttt{pgvector} và Redis 7 Alpine. Quy trình đóng gói áp dụng kỹ thuật xây dựng đa tầng (\textit{Multi-stage Build}) với tệp \texttt{Dockerfile.api} cho tầng dịch vụ Backend và \texttt{Dockerfile.web} cho tầng giao diện người dùng Nginx, bảo đảm tính nhất quán tuyệt đối giữa môi trường phát triển cục bộ và môi trường máy chủ sản xuất.
     \item \textbf{Môi trường thực thi Backend:} Ngôn ngữ Python 3.12, trình quản lý gói và môi trường ảo siêu tốc \texttt{uv}, khung phát triển dịch vụ bất đồng bộ FastAPI và thư viện ánh xạ đối tượng quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg} hướng hiệu năng cao.
     \item \textbf{Môi trường thực thi Frontend:} Nền tảng Node.js 22 LTS, thư viện giao diện người dùng React 19, khung tiện ích tạo kiểu Tailwind CSS, thư viện điều phối trạng thái luồng dữ liệu Zustand và công cụ đóng gói bản dựng thương mại siêu tốc Vite. Giao diện tích hợp công cụ kết xuất PDF Canvas Viewer hỗ trợ đồng bộ hóa tọa độ trực quan tức thời.
     \item \textbf{Môi trường thực thi hộp cát đám mây:} E2B Sandbox MicroVM (công nghệ ảo hóa siêu nhẹ Firecracker) cung cấp không gian thực thi cô lập an toàn tuyệt đối phục vụ chu trình ReAct tự động biên dịch, phân tích nhật ký lỗi và vá lỗi mã nguồn \LaTeX\ theo thời gian thực mà không gây nguy cơ mất an toàn cho hệ thống máy chủ chính.
@@ -34,19 +35,17 @@ Bảng~\ref{tab:monorepo_structure} tổng hợp chi tiết cấu trúc phân v�
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Cấu trúc phân vùng kho mã nguồn Monorepo và quy tắc ranh giới kiến trúc}
 \label{tab:monorepo_structure}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{2.9cm}>{\raggedright\arraybackslash}p{3.8cm}>{\raggedright\arraybackslash}p{4.2cm}}
-\toprule
-\textbf{Phân vùng} & \textbf{Vai trò kiến trúc} & \textbf{Công nghệ chủ đạo} & \textbf{Quy tắc ranh giới \& AST} \\
-\midrule
-\texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (\textit{Domain \& Ports}) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\
-\addlinespace
-\texttt{apps/api} & Tầng hạ tầng dịch vụ \& Bộ điều hợp (\textit{Adapters}) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\
-\addlinespace
-\texttt{apps/web} & Giao diện người dùng học thuật (\textit{Frontend SPA}) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}p{4.1cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Phân vùng} & \centering\textbf{Vai trò kiến trúc} & \centering\textbf{Công nghệ chủ đạo} & \centering\textbf{Quy tắc ranh giới \& AST} \tabularnewline \hline
+1 & \texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (\textit{Domain \& Ports}) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\ \hline
+2 & \texttt{apps/api} & Tầng hạ tầng dịch vụ \& Bộ điều hợp (\textit{Adapters}) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\ \hline
+3 & \texttt{apps/web} & Giao diện người dùng học thuật (\textit{Frontend SPA}) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\ \hline
 \end{tabular}
 \end{table}

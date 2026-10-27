@@ -18,56 +18,117 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
-    centerbox/.style={draw=red!70!black, fill=red!10, rounded corners=6pt, line width=1.2pt, align=center, inner sep=8pt, font=\bfseries\small},
-    pillarbox/.style={draw=black!70, fill=gray!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\bfseries\footnotesize},
-    leafbox/.style={draw=black!60, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=4pt, font=\scriptsize},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!70},
-    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.9pt, draw=black!50}
+    scale=0.72, transform shape,
+    centerbox/.style={draw=red!80!black, fill=red!6, rounded corners=7pt, line width=1.2pt, align=center, inner sep=7pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    pillar_mem/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    pillar_tool/.style={draw=teal!80!black, fill=teal!6, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    pillar_plan/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    pillar_act/.style={draw=orange!80!black, fill=orange!6, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    leaf_mem/.style={draw=blue!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize},
+    leaf_tool/.style={draw=teal!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize},
+    leaf_plan/.style={draw=purple!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize},
+    leaf_act/.style={draw=orange!75!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!75},
+    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.85pt, draw=black!55}
 ]
-    % Khối Agent ở trung tâm
-    \node[centerbox, minimum width=3.4cm, minimum height=1.4cm] (agent) at (0, 0) {
+    % --------------------------------------------------------------------------
+    % Khối Tác nhân AI ở Trung tâm (Hub - Central Brain)
+    % --------------------------------------------------------------------------
+    \node[centerbox, minimum width=3.6cm, minimum height=1.4cm] (agent) at (0, 0) {
         TÁC NHÂN AI\\
         \footnotesize (\textit{LLM Agent Brain})
     };
 
-    % 1. Memory (Phía trên)
-    \node[pillarbox, minimum width=3.2cm] (memory) at (0, 2.5) {BỘ NHỚ (\textit{Memory})};
-    \node[leafbox, minimum width=3.2cm] (m_short) at (-2.3, 4.0) {Bộ nhớ ngắn hạn\\Ngữ cảnh hội thoại SSE};
-    \node[leafbox, minimum width=3.2cm] (m_long) at (2.3, 4.0) {Bộ nhớ dài hạn\\Vector HNSW \& GraphRAG};
+    % --------------------------------------------------------------------------
+    % 1. Trụ cột BỘ NHỚ (Memory - Phía trên)
+    % --------------------------------------------------------------------------
+    \node[pillar_mem, minimum width=3.2cm] (memory) at (0, 2.3) {BỘ NHỚ (\textit{Memory})};
+    \node[leaf_mem, minimum width=3.6cm] (m_short) at (-2.4, 3.8) {
+        \textbf{BỘ NHỚ NGẮN HẠN}\\[2pt]
+        \tiny Ngữ cảnh hội thoại \& Luồng sự kiện SSE
+    };
+    \node[leaf_mem, minimum width=3.6cm] (m_long) at (2.4, 3.8) {
+        \textbf{BỘ NHỚ DÀI HẠN}\\[2pt]
+        \tiny Đồ thị GraphRAG \& Chỉ mục Vector HNSW
+    };
     \draw[arrowstyle] (agent) -- (memory);
     \draw[arrowstyle] (memory) -- (m_short);
     \draw[arrowstyle] (memory) -- (m_long);
 
-    % 2. Planning (Bên phải)
-    \node[pillarbox, minimum width=3.0cm] (plan) at (3.8, 0) {KẾ HOẠCH (\textit{Planning})};
-    \node[leafbox, minimum width=3.4cm] (p_refl) at (7.4, 1.8) {Tự phản tư (\textit{Reflection})};
-    \node[leafbox, minimum width=3.4cm] (p_crit) at (7.4, 0.6) {Kiểm định trích dẫn (\textit{Critics})};
-    \node[leafbox, minimum width=3.4cm] (p_cot) at (7.4, -0.6) {Chuỗi suy luận (\textit{Chain-of-Thought})};
-    \node[leafbox, minimum width=3.4cm] (p_sub) at (7.4, -1.8) {Phân rã mục tiêu (\textit{Subgoal})};
+    % --------------------------------------------------------------------------
+    % 2. Trụ cột LẬP KẾ HOẠCH (Planning - Bên phải)
+    % --------------------------------------------------------------------------
+    \node[pillar_plan, minimum width=3.0cm] (plan) at (3.6, 0) {KẾ HOẠCH (\textit{Planning})};
+    \node[leaf_plan, minimum width=3.7cm] (p_refl) at (7.4, 1.95) {
+        \textbf{TỰ PHẢN TƯ (\textit{Reflection})}\\[2pt]
+        \tiny Tự đánh giá \& Sửa lỗi suy luận
+    };
+    \node[leaf_plan, minimum width=3.7cm] (p_crit) at (7.4, 0.65) {
+        \textbf{KIỂM ĐỊNH TRÍCH DẪN}\\[2pt]
+        \tiny Rà soát tính liêm chính \& Số liệu
+    };
+    \node[leaf_plan, minimum width=3.7cm] (p_cot) at (7.4, -0.65) {
+        \textbf{CHUỖI SUY LUẬN (\textit{CoT})}\\[2pt]
+        \tiny Phân tích logic đa bước tuần tự
+    };
+    \node[leaf_plan, minimum width=3.7cm] (p_sub) at (7.4, -1.95) {
+        \textbf{PHÂN RÃ MỤC TIÊU}\\[2pt]
+        \tiny Chia nhỏ bài toán nghiên cứu phức tạp
+    };
     \draw[arrowstyle] (agent) -- (plan);
     \draw[arrowstyle] (plan) -- (p_refl);
     \draw[arrowstyle] (plan) -- (p_crit);
     \draw[arrowstyle] (plan) -- (p_cot);
     \draw[arrowstyle] (plan) -- (p_sub);
-    \draw[dasharrow] (memory.east) -| (p_refl.north);
 
-    % 3. Tools (Bên trái)
-    \node[pillarbox, minimum width=3.0cm] (tools) at (-3.8, 0) {CÔNG CỤ (\textit{Tools})};
-    \node[leafbox, minimum width=3.2cm] (t_ret) at (-7.4, 1.8) {\texttt{HybridRetriever()}};
-    \node[leafbox, minimum width=3.2cm] (t_pdf) at (-7.4, 0.6) {\texttt{PDFCanvasViewer()}};
-    \node[leafbox, minimum width=3.2cm] (t_e2b) at (-7.4, -0.6) {\texttt{MicroVMCompiler()}};
-    \node[leafbox, minimum width=3.2cm] (t_srch) at (-7.4, -1.8) {\texttt{AcademicSearch()}};
+    % --------------------------------------------------------------------------
+    % 3. Trụ cột CÔNG CỤ NGOẠI VI (Tools - Bên trái)
+    % --------------------------------------------------------------------------
+    \node[pillar_tool, minimum width=3.0cm] (tools) at (-3.6, 0) {CÔNG CỤ (\textit{Tools})};
+    \node[leaf_tool, minimum width=3.7cm] (t_ret) at (-7.4, 1.95) {
+        \textbf{BỘ TRUY XUẤT LAI}\\[2pt]
+        \tiny Hợp nhất Vector HNSW \& BM25
+    };
+    \node[leaf_tool, minimum width=3.7cm] (t_pdf) at (-7.4, 0.65) {
+        \textbf{ĐỊNH VỊ CANVAS}\\[2pt]
+        \tiny Bóc tách BBox chuẩn hóa $[0..1000]$
+    };
+    \node[leaf_tool, minimum width=3.7cm] (t_e2b) at (-7.4, -0.65) {
+        \textbf{HỘP CÁT BIÊN DỊCH}\\[2pt]
+        \tiny MicroVM Firecracker cô lập an toàn
+    };
+    \node[leaf_tool, minimum width=3.7cm] (t_srch) at (-7.4, -1.95) {
+        \textbf{TÌM KIẾM HỌC THUẬT}\\[2pt]
+        \tiny Phân giải định danh DOI \& Trích dẫn
+    };
     \draw[arrowstyle] (agent) -- (tools);
     \draw[arrowstyle] (tools) -- (t_ret);
     \draw[arrowstyle] (tools) -- (t_pdf);
     \draw[arrowstyle] (tools) -- (t_e2b);
     \draw[arrowstyle] (tools) -- (t_srch);
 
-    % 4. Action (Phía dưới)
-    \node[pillarbox, minimum width=3.2cm] (action) at (0, -2.5) {HÀNH ĐỘNG (\textit{Action})};
+    % --------------------------------------------------------------------------
+    % 4. Trụ cột HÀNH ĐỘNG (Action - Phía dưới)
+    % --------------------------------------------------------------------------
+    \node[pillar_act, minimum width=3.2cm] (action) at (0, -2.3) {HÀNH ĐỘNG (\textit{Action})};
+    \node[leaf_act, minimum width=3.6cm] (a_resp) at (-2.4, -3.8) {
+        \textbf{TRUYỀN PHÁT CÂU TRẢ LỜI}\\[2pt]
+        \tiny Luồng sự kiện SSE \& Trích dẫn gốc
+    };
+    \node[leaf_act, minimum width=3.6cm] (a_bbox) at (2.4, -3.8) {
+        \textbf{ĐỊNH VỊ KHUNG VIỀN}\\[2pt]
+        \tiny Render Golden BBox trên PDF Canvas
+    };
     \draw[arrowstyle] (agent) -- (action);
-    \draw[dasharrow] (tools.south) |- (action.west);
+    \draw[arrowstyle] (action) -- (a_resp);
+    \draw[arrowstyle] (action) -- (a_bbox);
+
+    % --------------------------------------------------------------------------
+    % Vòng lặp phản tư và tương tác liên trụ cột (ReAct Feedback Loop)
+    % --------------------------------------------------------------------------
+    \draw[dasharrow] (memory.east) to[out=0, in=120] (p_refl.north);
+    \draw[dasharrow] (tools.south) to[out=270, in=180] (action.west);
+    \draw[dasharrow] (action.east) to[out=0, in=270] (plan.south);
 \end{tikzpicture}
 \caption{Mô hình Kiến trúc Tư duy Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
 \label{fig:react_agent_loop}

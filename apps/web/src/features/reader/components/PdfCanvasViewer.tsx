@@ -6,6 +6,7 @@ import { PdfPageCanvas } from "./PdfPageCanvas";
 import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
 import { ScholarSelectionMenu } from "./ScholarSelectionMenu";
 import { useReaderStore } from "../stores/useReaderStore";
+import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore";
 import { useTheme } from "@/hooks/useTheme";
 import type { BoundingBox } from "@/types/api";
 import type { DocumentDetailResponseData } from "@/types/document";
@@ -407,6 +408,32 @@ export function PdfCanvasViewer({
       }
     }
   }, [currentPage, activeBbox, readingMode, pdfDoc, scrollContainer]);
+
+  // Listen for global scholar:focus-bbox event for cross-component Visual Grounding
+  useEffect(() => {
+    const handleFocusBbox = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        documentId?: string;
+        pageNumber?: number;
+        boundingBoxes?: BoundingBox[];
+      }>;
+      const { documentId: targetDocId, pageNumber, boundingBoxes } = customEvent.detail || {};
+      if (targetDocId && targetDocId !== documentId) {
+        useReaderStore.getState().setActiveDocumentId(targetDocId);
+      }
+      if (pageNumber && pageNumber !== currentPage) {
+        setCurrentPage(pageNumber);
+      }
+      if (boundingBoxes && boundingBoxes.length > 0) {
+        useDashboardStore.getState().setActiveBbox(boundingBoxes[0]);
+      }
+    };
+
+    window.addEventListener("scholar:focus-bbox", handleFocusBbox);
+    return () => {
+      window.removeEventListener("scholar:focus-bbox", handleFocusBbox);
+    };
+  }, [documentId, currentPage, setCurrentPage]);
 
   // Metadata dimensions lookup map
   const pageDimensionsMap = useMemo(() => {

@@ -3,7 +3,7 @@
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu Thiết kế:** [`2026-10-25-universal-agent-harness-design.md`](../superpowers/specs/2026-10-25-universal-agent-harness-design.md) (Commit ``5b76b36``)  
-**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`temp/.agents/`](../../temp/.agents))  
+**Tham chiếu thực tiễn:** Kiến trúc Agent Harness của Langfuse ([`.agents/`](../../.agents))  
 **Phân hệ kỹ thuật:** Kỹ Nghệ Khung Tác Nhân & Công Thái Học Lập Trình AI (Agent Harness & Ergonomics Engineering)  
 **Mục tiêu:** Thiết lập khung điều phối tác nhân đa nền tảng (Antigravity CLI, Cursor, Claude Code, Codex), tối ưu hóa cửa sổ ngữ cảnh qua Progressive Disclosure, cung cấp môi trường chạy thử xác định 100% offline và thiết lập rào chắn kiểm thử kiến trúc cơ học bằng mã tự động.
 

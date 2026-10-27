@@ -18,12 +18,12 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
 \centering
 \begin{tikzpicture}[
     scale=0.70, transform shape,
-    subsys_disc/.style={draw=teal!80!black, fill=teal!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
-    subsys_read/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
-    subsys_prof/.style={draw=purple!80!black, fill=purple!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
-    subsys_writ/.style={draw=orange!80!black, fill=orange!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt},
+    subsys_disc/.style={draw=teal!80!black, fill=teal!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt, font=\linespread{1.0}\selectfont},
+    subsys_read/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt, font=\linespread{1.0}\selectfont},
+    subsys_prof/.style={draw=purple!80!black, fill=purple!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt, font=\linespread{1.0}\selectfont},
+    subsys_writ/.style={draw=orange!80!black, fill=orange!3, rounded corners=6pt, line width=1pt, text width=6.0cm, inner sep=4pt, font=\linespread{1.0}\selectfont},
     header/.style={font=\bfseries\small, align=center, inner sep=2pt},
-    card/.style={draw=gray!35, fill=white, rounded corners=3pt, line width=0.5pt, font=\scriptsize, text width=5.6cm, inner sep=3pt},
+    card/.style={draw=gray!35, fill=white, rounded corners=3pt, line width=0.5pt, font=\linespread{1.0}\selectfont\scriptsize, text width=5.6cm, inner sep=3pt},
     flowarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!80!black},
     bidir/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1pt, draw=purple!80!black, dashed}
 ]
@@ -66,9 +66,9 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
             \node[card] (p1) {$\bullet$ \textbf{Nạp tệp kéo--thả:} Hỗ trợ đa tệp PDF tiện lợi};
-            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Băm SHA-256 (tiết kiệm 98\% dung lượng)};
+            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Định danh nội dung tệp (tiết kiệm 98\% dung lượng)};
             \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết quốc tế \textbf{ORCID} iD 16 chữ số};
-            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa AES-256-GCM trên RAM (Zero-Retention)};
+            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa an toàn cá nhân (bảo vệ quyền riêng tư)};
         \end{tikzpicture}
     };
 

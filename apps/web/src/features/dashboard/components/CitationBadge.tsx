@@ -21,12 +21,30 @@ export function CitationBadge({ citation, onOpenReferences: _onOpenReferences }:
   );
 
   const handleClick = () => {
+    const docId = citation.paper_id;
+    if (docId) {
+      useReaderStore.getState().setActiveDocumentId(docId);
+    }
+
+    const targetPage = citation.bbox ? citation.bbox[4] || citation.page || 1 : citation.page || 1;
+
     if (citation.bbox) {
       setActiveBbox(citation.bbox);
-      const targetPage = citation.bbox[4] || citation.page || 1;
       useReaderStore.getState().setCurrentPage(targetPage);
     } else if (citation.page) {
       useReaderStore.getState().setCurrentPage(citation.page);
+    }
+
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("scholar:focus-bbox", {
+          detail: {
+            documentId: docId,
+            pageNumber: targetPage,
+            boundingBoxes: citation.bbox ? [citation.bbox] : [],
+          },
+        })
+      );
     }
   };
 

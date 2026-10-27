@@ -6,7 +6,7 @@
 \label{subsec:boi_canh_vinuni}
 Tại VinUniversity, định hướng phát triển trường đại học nghiên cứu tinh hoa theo chuẩn mực quốc tế đặt ra yêu cầu rất cao đối với các công trình công bố khoa học của đội ngũ giảng viên, nghiên cứu sinh và sinh viên. Các ấn phẩm bắt buộc phải hướng tới các hội nghị chuyên ngành hàng đầu (như NeurIPS, ICML, CVPR, SIGIR, KDD) và các tạp chí khoa học uy tín thuộc danh mục Q1/Q2 (IEEE Transactions, ACM Computing Surveys, Springer Nature).
 
-Trong môi trường học thuật chuyên sâu này, tính liêm chính học thuật (\textit{Academic Integrity}) là yêu cầu bất biến tối thượng. Mọi khẳng định khoa học, số liệu thực nghiệm và chỉ số đo lường trích dẫn đều bắt buộc phải có minh chứng nguồn gốc xác thực, tuyệt đối không chấp nhận các sai sót do trích dẫn sai lệch hay số liệu suy đoán không có căn cứ.
+Trong môi trường học thuật chuyên sâu, tính liêm chính học thuật (\textit{Academic Integrity}) là yêu cầu bất biến tối thượng. Mọi khẳng định khoa học, số liệu thực nghiệm và chỉ số đo lường trích dẫn đều bắt buộc phải có minh chứng nguồn gốc xác thực, tuyệt đối không chấp nhận các sai sót do trích dẫn sai lệch hay số liệu suy đoán không có căn cứ.
 
 \subsection{Phân tích quy trình nghiên cứu truyền thống (Luồng AS-IS)}
 \label{subsec:luong_as_is}
@@ -35,61 +35,53 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.78, transform shape,
-    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small, text width=6.6cm},
-    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small, text width=6.6cm},
+    scale=0.76, transform shape,
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=6.9cm},
     arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
-    trans_arrow/.style={-{Stealth[length=3mm]}, line width=1.5pt, draw=teal!80!black, dashed}
+    trans_arrow/.style={-{Stealth[length=2.8mm]}, line width=1.3pt, draw=teal!80!black, dashed}
 ]
     % Cột AS-IS (Truyền thống)
-    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7cm, inner sep=5pt] (h_asis) at (-4.2, 4.2) {QUY TRÌNH HIỆN TẠI (AS-IS)};
+    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_asis) at (-4.4, 4.4) {QUY TRÌNH HIỆN TẠI (AS-IS)};
     
-    \node[box_asis] (a1) at (-4.2, 2.8) {
+    \node[box_asis] (a1) at (-4.4, 3.0) {
         \textbf{1. Tìm kiếm phân mảnh thủ công}\\
-        \footnotesize Google Scholar / arXiv riêng rẽ\\
-        \footnotesize $\times$ Tải trùng lặp tệp PDF lớn lãng phí đĩa
+        \footnotesize Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
     };
-    \node[box_asis] (a2) at (-4.2, 0.8) {
+    \node[box_asis] (a2) at (-4.4, 0.8) {
         \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
-        \footnotesize Bóc tách thô làm mất bố cục 2 cột\\
-        \footnotesize $\times$ Mất dấu ngữ cảnh, rà soát trang thủ công
+        \footnotesize Bóc tách thô mất 2 cột; Mất dấu ngữ cảnh học thuật
     };
-    \node[box_asis] (a3) at (-4.2, -1.2) {
+    \node[box_asis] (a3) at (-4.4, -1.4) {
         \textbf{3. Lập bảng so sánh thủ công}\\
-        \footnotesize Ghi chú Excel / Notion rời rạc\\
-        \footnotesize $\times$ Bỏ sót liên kết bắc cầu giữa các bài báo
+        \footnotesize Ghi chú Excel / Notion; Bỏ sót liên kết bắc cầu
     };
-    \node[box_asis] (a4) at (-4.2, -3.2) {
+    \node[box_asis] (a4) at (-4.4, -3.6) {
         \textbf{4. Soạn thảo \& Tự dò lỗi \LaTeX}\\
-        \footnotesize Chuyển ngữ cảnh sang Overleaf\\
-        \footnotesize $\times$ Đọc tệp log hàng giờ để sửa lỗi cú pháp
+        \footnotesize Chuyển sang Overleaf; Đọc tệp nhật ký dò lỗi thủ công
     };
 
     % Cột TO-BE (Đề xuất)
-    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7cm, inner sep=5pt] (h_tobe) at (4.2, 4.2) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.1cm, inner sep=5pt] (h_tobe) at (4.4, 4.4) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
-    \node[box_tobe] (b1) at (4.2, 2.8) {
+    \node[box_tobe] (b1) at (4.4, 3.0) {
         \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
-        \footnotesize Tìm kiếm đa nguồn thống nhất\\
-        \footnotesize $\checkmark$ Tiết kiệm 98\% dung lượng lưu trữ tệp
+        \footnotesize Tìm kiếm đa nguồn; Tiết kiệm 98\% dung lượng lưu trữ
     };
-    \node[box_tobe] (b2) at (4.2, 0.8) {
+    \node[box_tobe] (b2) at (4.4, 0.8) {
         \textbf{2. Đọc sâu có minh chứng tọa độ}\\
-        \footnotesize Agentic Hybrid RAG (Dense + BM25)\\
-        \footnotesize $\checkmark$ Tô sáng khung viền vàng trong 1 giây (IoU $\ge$ 0.85)
+        \footnotesize Agentic Hybrid RAG; Khung vàng 1s ($\text{IoU} \ge 0{,}85$)
     };
-    \node[box_tobe] (b3) at (4.2, -1.2) {
+    \node[box_tobe] (b3) at (4.4, -1.4) {
         \textbf{3. Mạng tri thức tự động (GraphRAG)}\\
-        \footnotesize Đồ thị 4 thực thể trên PostgreSQL ACID\\
-        \footnotesize $\checkmark$ Truy vấn so sánh đa bài báo tức thì với CTE
+        \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo qua CTE
     };
-    \node[box_tobe] (b4) at (4.2, -3.2) {
+    \node[box_tobe] (b4) at (4.4, -3.6) {
         \textbf{4. Tác nhân tự sửa lỗi \LaTeX}\\
-        \footnotesize Chu trình ReAct trong E2B MicroVM\\
-        \footnotesize $\checkmark$ Tự động phân tích log và vá lỗi $>90\%$
+        \footnotesize Máy ảo E2B MicroVM; Tự động vá lỗi $> 90\%$
     };
 
-    % Mũi tên tuần tự
+    % Mũi tên tuần tự dọc
     \draw[arrow_down] (a1) -- (a2);
     \draw[arrow_down] (a2) -- (a3);
     \draw[arrow_down] (a3) -- (a4);
@@ -99,10 +91,10 @@ Sự chuyển đổi mang tính đột phá giữa quy trình truyền thống (
     \draw[arrow_down] (b3) -- (b4);
 
     % Mũi tên chuyển đổi giữa 2 luồng
-    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tối ưu};
-    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Minh chứng};
-    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tự động};
-    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, above, font=\tiny\bfseries, text=teal!80!black] {Tự sửa};
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tối ưu};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!80!black] {Tự sửa};
 \end{tikzpicture}
 \caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
 \label{fig:workflow_as_is_to_be}

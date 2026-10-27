@@ -50,6 +50,7 @@ import { NotesPanelContainer } from "@/features/notes/components/NotesPanelConta
 import { CreateNoteDialog } from "@/features/notes/components/CreateNoteDialog";
 import { AddDocumentModal } from "@/features/sessions/components/AddDocumentModal";
 import { SessionSettingsModal } from "@/features/sessions/components/SessionSettingsModal";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import { WorkspaceToolsMenu } from "./WorkspaceToolsMenu";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
@@ -453,8 +454,25 @@ export function DashboardWorkspace({
     setActiveDocumentId(docId);
   };
 
-  const handleCloseDoc = (docId: string) => {
+  const handleCloseDoc = async (docId: string) => {
     removeOpenDocument(docId);
+    if (activeDocumentId === docId) {
+      const remaining = openDocumentIds.filter((id) => id !== docId);
+      if (remaining.length > 0) {
+        setActiveDocumentId(remaining[0]);
+        setDocument(remaining[0], null);
+      } else {
+        setActiveDocumentId("");
+        setDocument("", null);
+      }
+    }
+    if (effectiveSessionId && docId !== "doc-default") {
+      try {
+        await sessionsApi.removeDocumentFromSession(effectiveSessionId, docId);
+      } catch (err) {
+        console.error("Failed to remove document from session:", err);
+      }
+    }
   };
 
   const handleDeleteDoc = async (docId: string) => {
@@ -468,8 +486,10 @@ export function DashboardWorkspace({
       const remaining = openDocumentIds.filter((id) => id !== docId);
       if (remaining.length > 0) {
         setActiveDocumentId(remaining[0]);
+        setDocument(remaining[0], null);
       } else {
         setActiveDocumentId("");
+        setDocument("", null);
       }
     }
     queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.lists() });

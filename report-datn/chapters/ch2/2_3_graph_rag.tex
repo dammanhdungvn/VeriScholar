@@ -19,36 +19,43 @@ Cấu trúc đồ thị mạng lưới 4 thực thể cùng các mối liên k�
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.88, transform shape,
-    papernode/.style={draw=blue!80!black, fill=blue!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
-    methodnode/.style={draw=teal!80!black, fill=teal!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
-    datanode/.style={draw=purple!80!black, fill=purple!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
-    metricnode/.style={draw=orange!80!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\small},
-    edgearrow/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!70}
+    scale=0.86, transform shape,
+    papernode/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    methodnode/.style={draw=teal!80!black, fill=teal!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    datanode/.style={draw=purple!80!black, fill=purple!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    metricnode/.style={draw=orange!80!black, fill=orange!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    edgearrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!70},
+    labelbox/.style={font=\scriptsize\bfseries, fill=white, inner sep=2pt, rounded corners=2pt}
 ]
-    % 4 Nodes chính
-    \node[papernode, minimum width=3.8cm] (paper) at (0, 2.5) {
-        \textbf{Bài báo (Paper)}\\[2pt]
-        \footnotesize \textit{Title, DOI, Year, Authors}
+    % 4 Thực thể cốt lõi (4 Core Entities)
+    \node[papernode, minimum width=4.4cm] (paper) at (0, 3.2) {
+        \textbf{Bài báo Khoa học (\textit{Paper})}\\[2pt]
+        \footnotesize \textit{Title, DOI, Year, Authors, Abstract}
     };
-    \node[methodnode, minimum width=3.8cm] (method) at (0, 0) {
-        \textbf{Phương pháp (Method)}\\[2pt]
-        \footnotesize \textit{Name, Category, Description}
+    
+    \node[methodnode, minimum width=4.4cm] (method) at (0, 0.4) {
+        \textbf{Phương pháp Đề xuất (\textit{Method})}\\[2pt]
+        \footnotesize \textit{Name, Category, Architecture, Task}
     };
-    \node[datanode, minimum width=3.8cm] (dataset) at (-3.2, -2.5) {
-        \textbf{Bộ dữ liệu (Dataset)}\\[2pt]
-        \footnotesize \textit{Name, Domain, Benchmark}
+    
+    \node[datanode, minimum width=4.2cm] (dataset) at (-4.5, -2.6) {
+        \textbf{Bộ dữ liệu Chuẩn (\textit{Dataset})}\\[2pt]
+        \footnotesize \textit{Name, Domain, Benchmark, Split}
     };
-    \node[metricnode, minimum width=3.8cm] (metric) at (3.2, -2.5) {
-        \textbf{Kết quả đo (MetricResult)}\\[2pt]
-        \footnotesize \textit{Metric, Value, Unit}
+    
+    \node[metricnode, minimum width=4.2cm] (metric) at (4.5, -2.6) {
+        \textbf{Kết quả Đo lường (\textit{MetricResult})}\\[2pt]
+        \footnotesize \textit{MetricName, Value, Unit, Baseline}
     };
 
-    % Các Cạnh liên kết ngữ nghĩa có nhãn
-    \draw[edgearrow] (paper) -- (method) node[midway, right, font=\footnotesize\bfseries] {ĐỀ XUẤT (\textit{PROPOSES})};
-    \draw[edgearrow] (method) -- (dataset) node[midway, above left, font=\footnotesize\bfseries] {ĐÁNH GIÁ (\textit{EVALUATES})};
-    \draw[edgearrow] (method) -- (metric) node[midway, above right, font=\footnotesize\bfseries] {ĐẠT CHỈ SỐ (\textit{YIELDS})};
-    \draw[edgearrow, dashed] (metric) -- (dataset) node[midway, below, font=\footnotesize\bfseries] {TRÊN TẬP DỮ LIỆU};
+    % Các Cạnh liên kết ngữ nghĩa có nhãn song ngữ
+    \draw[edgearrow] (paper) -- (method) node[midway, right=3pt, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {ĐỀ XUẤT (\textit{PROPOSES})};
+    
+    \draw[edgearrow] (method) -- (dataset) node[midway, above left=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐÁNH GIÁ TRÊN (\textit{EVALUATES})};
+    
+    \draw[edgearrow] (method) -- (metric) node[midway, above right=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐẠT KẾT QUẢ (\textit{YIELDS})};
+    
+    \draw[edgearrow, dashed] (metric.south west) to[bend left=16] node[midway, below=2pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐO LƯỜNG TRÊN (\textit{BENCHMARKED\_ON})} (dataset.south east);
 \end{tikzpicture}
 \caption{Mô hình đồ thị tri thức học thuật 4 thực thể cốt lõi (GraphRAG)}
 \label{fig:graphrag_model}

@@ -18,43 +18,44 @@ Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật đ�
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.78, transform shape,
+    scale=0.74, transform shape,
     clusterbox/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
-    ent/.style={draw=teal!80!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small, minimum width=3.8cm},
-    coreent/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\small, minimum width=3.8cm},
+    ent/.style={draw=teal!80!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, minimum width=3.8cm},
+    coreent/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, minimum width=3.8cm},
     flow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
-    % 4 Cụm thực thể
-    \node[clusterbox, minimum width=15.6cm, minimum height=2.4cm] (c_top) at (0, 3.2) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.5, 4.2) {PHÂN VÙNG 1: ĐỊNH DANH HỌC GIẢ VÀ ẤN PHẨM KHỬ TRÙNG LẶP (CAS)};
-    \node[ent] (u) at (-5.0, 3.0) {\textbf{users}\\Mã định danh ORCID};
-    \node[ent] (sec) at (-5.0, 1.8) {\textbf{user\_secrets}\\Két sắt BYOK (AES-GCM)};
-    \node[coreent] (doc) at (0.2, 2.4) {\textbf{documents}\\Hồ sơ bài báo \& DOI};
-    \node[ent] (blob) at (5.4, 2.4) {\textbf{storage\_blobs}\\Mã băm SHA-256 CAS};
-    \draw[flow] (u) -- (sec);
-    \draw[flow] (u.east) -- node[above, font=\scriptsize] {sở hữu} (doc.west);
-    \draw[flow] (doc.east) -- node[above, font=\scriptsize] {trỏ tệp} (blob.west);
+    % Phân vùng 1: CAS và Định danh
+    \node[clusterbox, minimum width=15.8cm, minimum height=4.6cm] (c_top) at (0, 2.8) {};
+    \node[anchor=north east, font=\bfseries\scriptsize, text=blue!90!black] at (7.4, 4.8) {PHÂN VÙNG 1: ĐỊNH DANH HỌC GIẢ VÀ ẤN PHẨM KHỬ TRÙNG LẶP (CAS)};
+    \node[ent, minimum width=4.2cm, text width=4.0cm] (u) at (-5.2, 3.4) {\textbf{users}\\Mã định danh ORCID};
+    \node[ent, minimum width=4.2cm, text width=4.0cm] (sec) at (-5.2, 1.4) {\textbf{user\_secrets}\\Két sắt khóa cá nhân BYOK};
+    \node[coreent, text width=3.6cm] (doc) at (0.0, 2.4) {\textbf{documents}\\Hồ sơ bài báo \& DOI};
+    \node[ent, text width=3.6cm] (blob) at (5.2, 2.4) {\textbf{storage\_blobs}\\Mã băm nội dung CAS};
+    \draw[flow] (u.south) -- (sec.north);
+    \draw[flow] (u.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {sở hữu} (doc.west);
+    \draw[flow] (doc.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {trỏ tệp} (blob.west);
 
-    \node[clusterbox, minimum width=15.6cm, minimum height=3.6cm] (c_bot) at (0, -1.0) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.5, 0.6) {PHÂN VÙNG 2: ĐOẠN TRÍCH TỌA ĐỘ VÀ ĐỒ THỊ TRI THỨC HỌC THUẬT (GRAPHRAG)};
-    \node[coreent, minimum width=4.6cm] (chk) at (-4.6, -1.0) {
+    % Phân vùng 2: Đoạn trích và GraphRAG
+    \node[clusterbox, minimum width=15.8cm, minimum height=4.0cm] (c_bot) at (0, -2.0) {};
+    \node[anchor=north east, font=\bfseries\scriptsize, text=blue!90!black] at (7.4, -0.3) {PHÂN VÙNG 2: ĐOẠN TRÍCH TỌA ĐỘ VÀ ĐỒ THỊ TRI THỨC (GRAPHRAG)};
+    \node[coreent, minimum width=4.0cm, text width=3.8cm] (chk) at (-5.0, -2.3) {
         \textbf{document\_chunks}\\
         \footnotesize Tọa độ BBox $[0..1000]$\\
         \footnotesize Vector HNSW 1536 chiều
     };
-    \node[ent, minimum width=4.0cm] (graph) at (0.4, -1.0) {
+    \node[ent, minimum width=3.8cm, text width=3.6cm] (graph) at (0.0, -2.3) {
         \textbf{GraphRAG 4 thực thể}\\
         \footnotesize Paper $\rightarrow$ Method\\
         \footnotesize $\rightarrow$ Dataset $\rightarrow$ Metric
     };
-    \node[ent, minimum width=4.0cm] (draft) at (5.4, -1.0) {
+    \node[ent, minimum width=3.8cm, text width=3.6cm] (draft) at (5.0, -2.3) {
         \textbf{draft\_projects}\\
         \footnotesize Cây tệp mã nguồn \LaTeX\\
-        \footnotesize E2B Sandbox MicroVM
+        \footnotesize Hộp cát E2B MicroVM
     };
-    \draw[flow] (doc.south) -- ++(0,-0.6) -| (chk.north);
-    \draw[flow] (chk.east) -- node[above, font=\scriptsize] {trích xuất} (graph.west);
-    \draw[flow] (graph.east) -- node[above, font=\scriptsize] {đối chiếu} (draft.west);
+    \draw[flow] (doc.south) -- (0, 0.25) -| (chk.north);
+    \draw[flow] (chk.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {trích xuất} (graph.west);
+    \draw[flow] (graph.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {đối chiếu} (draft.west);
 \end{tikzpicture}
 \caption{Lược đồ thực thể tri thức và Dòng chảy dữ liệu học thuật trong hệ thống}
 \label{fig:erd_model}
@@ -66,41 +67,41 @@ Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật đ�
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_chunks}}
 \label{tab:document_chunks}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\
-\texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\
-\texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\
-\texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\
-\texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\
-\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao cosine tương đồng \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\ \hline
+2 & \texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\ \hline
+3 & \texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\ \hline
+4 & \texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\ \hline
+5 & \texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\ \hline
+6 & \texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao cosine tương đồng \\ \hline
 \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_storage\_blobs}}
 \label{tab:document_storage_blobs}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.9cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của khối tệp nhị phân trên đĩa \\
-\texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân (Khử trùng CAS) \\
-\texttt{file\_size\_bytes} & BIGINT & Không & Kích thước tệp tin tính theo đơn vị bytes \\
-\texttt{mime\_type} & VARCHAR(64) & Không & Định dạng MIME chuẩn của tài liệu (\texttt{application/pdf}) \\
-\texttt{storage\_path} & TEXT & Không & Đường dẫn lưu trữ phân cấp 2 tầng trên hệ thống tệp \\
-\texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu đang tham chiếu tới khối tệp \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của khối tệp nhị phân trên đĩa \\ \hline
+2 & \texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân (Khử trùng CAS) \\ \hline
+3 & \texttt{file\_size\_bytes} & BIGINT & Không & Kích thước tệp tin tính theo đơn vị bytes \\ \hline
+4 & \texttt{mime\_type} & VARCHAR(64) & Không & Định dạng MIME chuẩn của tài liệu (\texttt{application/pdf}) \\ \hline
+5 & \texttt{storage\_path} & TEXT & Không & Đường dẫn lưu trữ phân cấp 2 tầng trên hệ thống tệp \\ \hline
+6 & \texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu đang tham chiếu tới khối tệp \\ \hline
 \end{tabular}
 \end{table}
 
@@ -108,20 +109,20 @@ Tiếp theo, Bảng~\ref{tab:user_secrets} trình bày cấu trúc bảo mật c
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{user\_secrets}}
 \label{tab:user_secrets}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\
-\texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\
-\texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\
-\texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\
-\texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\
-\texttt{created\_at} & TIMESTAMPTZ & Không & Dấu thời gian khởi tạo bản ghi trong két sắt \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.3cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\ \hline
+2 & \texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\ \hline
+3 & \texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\ \hline
+4 & \texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\ \hline
+5 & \texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\ \hline
+6 & \texttt{created\_at} & TIMESTAMPTZ & Không & Dấu thời gian khởi tạo bản ghi trong két sắt \\ \hline
 \end{tabular}
 \end{table}
