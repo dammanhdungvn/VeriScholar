@@ -68,6 +68,12 @@ def test_thesis_rules_academic_architecture_paradigm():
     assert (
         "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế" in rules_content
     ), "RULES.md must contain Section 3.7 on Academic Paper Architecture Paradigm"
+    assert "Quy Chuẩn Kỹ Nghệ Sơ Đồ TikZ Chống Chồng Đè & Ríu Rít" in rules_content, (
+        "RULES.md must contain Section 3.8 on TikZ Anti-Crowding Standard"
+    )
+    assert "Quy Chuẩn Kỹ Nghệ Bảng Biểu Nâng Cao" in rules_content, (
+        "RULES.md must contain Section 4.6 on Advanced Tabular Engineering"
+    )
 
 
 def test_thesis_reference_count_within_cap():
