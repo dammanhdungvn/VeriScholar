@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from "react";
+import { useState, useMemo, useRef, useEffect } from "react";
 import {
   Library,
   Search,
@@ -6,29 +6,37 @@ import {
   List as ListIcon,
   Plus,
   Star,
-  MoreVertical,
   FileText,
-  CheckCircle2,
-  Clock,
   Folder,
   Sparkles,
-  Trash2,
-  Sliders,
-  ExternalLink,
   ChevronLeft,
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Send,
+  Loader2,
+  X,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   useDocumentsList,
   useStarDocumentMutation,
-  useDeleteDocumentMutation
+  useDeleteDocumentMutation,
 } from "@/features/documents/hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
 import { FolderTreeView } from "./FolderTreeView";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
+import { KnowledgeSubgraphViewer } from "./KnowledgeSubgraphViewer";
+import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
+import { libraryApi } from "../api/libraryApi";
+import type {
+  GraphQueryMode,
+  GraphQueryResponseData,
+  BibliometricsResponseData,
+  GraphEdge,
+} from "../types";
 import { cn } from "@/lib/utils";
 
 interface LibraryWorkspaceViewProps {
@@ -45,17 +53,29 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
+  // GraphRAG States
+  const [graphQuery, setGraphQuery] = useState("");
+  const [graphMode, setGraphMode] = useState<GraphQueryMode>("hybrid");
+  const [isQueryingGraph, setIsQueryingGraph] = useState(false);
+  const [graphResult, setGraphResult] = useState<GraphQueryResponseData | null>(null);
+  const [graphError, setGraphError] = useState<string | null>(null);
+  const [showSubgraph, setShowSubgraph] = useState(true);
+
+  // Bibliometrics States
+  const [folderBibliometrics, setFolderBibliometrics] = useState<BibliometricsResponseData | null>(null);
+  const [isLoadingBibliometrics, setIsLoadingBibliometrics] = useState(false);
+  const [showBibliometrics, setShowBibliometrics] = useState(false);
+
   // Modals state
   const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
   const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
-  const [activeMenuDocId, setActiveMenuDocId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
 
   const {
     data: paginatedData,
-    refetch
+    refetch,
   } = useDocumentsList({
     page: currentPage,
     per_page: 24,
@@ -93,6 +113,58 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     return result;
   }, [rawDocuments, activeTab, selectedFolderId, searchQuery]);
 
+  // Fetch Bibliometrics when folder changes and tab is folders
+  useEffect(() => {
+    if (selectedFolderId && activeTab === "folders") {
+      let isSubscribed = true;
+      setIsLoadingBibliometrics(true);
+      libraryApi
+        .getFolderBibliometrics(selectedFolderId)
+        .then((res) => {
+          if (isSubscribed) {
+            setFolderBibliometrics(res);
+            setIsLoadingBibliometrics(false);
+          }
+        })
+        .catch(() => {
+          if (isSubscribed) {
+            setFolderBibliometrics(null);
+            setIsLoadingBibliometrics(false);
+          }
+        });
+
+      return () => {
+        isSubscribed = false;
+      };
+    } else {
+      setFolderBibliometrics(null);
+    }
+  }, [selectedFolderId, activeTab]);
+
+  const handleGraphSearch = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const query = graphQuery.trim();
+    if (!query) return;
+
+    setIsQueryingGraph(true);
+    setGraphError(null);
+    try {
+      const res = await libraryApi.queryGraph({
+        query,
+        mode: graphMode,
+        folder_id: selectedFolderId || null,
+      });
+      setGraphResult(res);
+      setShowSubgraph(true);
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Truy vấn GraphRAG thất bại. Vui lòng thử lại.";
+      setGraphError(message);
+    } finally {
+      setIsQueryingGraph(false);
+    }
+  };
+
   const handleToggleStar = async (doc: DocumentListItem, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -125,9 +197,17 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     if (window.confirm("Bạn có chắc chắn muốn xóa tài liệu này khỏi thư viện?")) {
       try {
         await deleteMutation.mutateAsync(docId);
-        setActiveMenuDocId(null);
       } catch (err) {
         console.warn("Failed to delete document:", err);
+      }
+    }
+  };
+
+  const handleEdgeSelect = (edge: GraphEdge) => {
+    if (edge.document_id && onSelectDocument) {
+      const matched = rawDocuments.find((d) => d.id === edge.document_id);
+      if (matched) {
+        onSelectDocument(matched);
       }
     }
   };
@@ -239,72 +319,212 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             </button>
           ))}
         </div>
+
+        {activeTab === "folders" && selectedFolderId && (
+          <button
+            type="button"
+            onClick={() => setShowBibliometrics(!showBibliometrics)}
+            className="px-2.5 py-1 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink-muted hover:text-ink dark:text-zinc-300 flex items-center gap-1.5 transition-colors"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#c15f3e]" />
+            <span>{showBibliometrics ? "Ẩn Thư mục học" : "Xem Thư mục học"}</span>
+          </button>
+        )}
       </div>
 
       {/* 3. Main Body */}
-      <div className="flex-1 overflow-y-auto p-6">
-        {activeTab === "folders" ? (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 max-w-7xl mx-auto">
-            <div className="md:col-span-1 bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
-              <FolderTreeView
-                selectedFolderId={selectedFolderId}
-                onSelectFolder={(folderId) => setSelectedFolderId(folderId)}
-              />
+      <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* A. GraphRAG Smart Dual-Level Search Box */}
+          <div className="rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] bg-white dark:bg-[#1c1b18] p-4 shadow-xs">
+            <form onSubmit={handleGraphSearch} className="space-y-3">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted font-mono">
+                    Chế độ Tra Cứu Tri Thức:
+                  </span>
+                  <div className="flex items-center bg-[#f4f0e8] dark:bg-[#262420] p-0.5 rounded-lg border border-[#e5dfd5] dark:border-[#302d28]">
+                    {(
+                      [
+                        { id: "hybrid" as const, label: "Hybrid" },
+                        { id: "local" as const, label: "Local" },
+                        { id: "global" as const, label: "Global" },
+                      ] as const
+                    ).map((m) => (
+                      <button
+                        key={m.id}
+                        type="button"
+                        onClick={() => setGraphMode(m.id)}
+                        className={cn(
+                          "px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer",
+                          graphMode === m.id
+                            ? "bg-white dark:bg-[#1c1b18] text-[#c15f3e] font-semibold shadow-xs"
+                            : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
+                        )}
+                      >
+                        {m.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {selectedFolderId && (
+                  <span className="text-[11px] font-mono text-muted dark:text-zinc-400">
+                    Lọc theo thư mục đang chọn
+                  </span>
+                )}
+              </div>
+
+              <div className="relative flex items-center gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={graphQuery}
+                    onChange={(e) => setGraphQuery(e.target.value)}
+                    placeholder="Hỏi đáp SOTA, đối chiếu mô hình hoặc tra cứu đồ thị..."
+                    className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[#faf8f4] dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#322f2a] text-xs text-ink dark:text-zinc-100 placeholder:text-muted dark:placeholder:text-zinc-500 outline-none focus:border-[#c15f3e] transition-colors"
+                  />
+                  {graphQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setGraphQuery("")}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  data-testid="graphrag-search-submit"
+                  disabled={isQueryingGraph || !graphQuery.trim()}
+                  className="h-10 px-4 rounded-xl bg-[#c15f3e] hover:bg-[#a84f32] disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                >
+                  {isQueryingGraph ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Send className="w-3.5 h-3.5" />
+                  )}
+                  <span>Tra cứu</span>
+                </button>
+              </div>
+            </form>
+
+            {graphError && (
+              <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs">
+                {graphError}
+              </div>
+            )}
+
+            {/* Synthesized Answer & Subgraph */}
+            {graphResult && (
+              <div className="mt-4 pt-4 border-t border-[#ece8df] dark:border-[#282622] space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <h3 className="text-xs font-semibold text-ink dark:text-zinc-100 uppercase tracking-wider font-mono">
+                      Câu Trả Lời Tổng Hợp ({graphResult.mode_used})
+                    </h3>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSubgraph(!showSubgraph)}
+                    className="text-xs text-muted hover:text-ink dark:text-zinc-400 flex items-center gap-1"
+                  >
+                    <span>{showSubgraph ? "Thu gọn đồ thị" : "Xem đồ thị tri thức"}</span>
+                    {showSubgraph ? (
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+
+                <div className="p-4 rounded-xl bg-[#faf8f4] dark:bg-[#1a1916] border border-[#ece8df] dark:border-[#2a2824] text-xs leading-relaxed text-ink dark:text-zinc-200 whitespace-pre-wrap">
+                  {graphResult.answer}
+                </div>
+
+                {showSubgraph && graphResult.subgraph && (
+                  <KnowledgeSubgraphViewer
+                    subgraph={graphResult.subgraph}
+                    onEdgeSelect={handleEdgeSelect}
+                    height={440}
+                  />
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* B. Bibliometrics Card (when toggled or available in folder) */}
+          {activeTab === "folders" && (showBibliometrics || folderBibliometrics) && (
+            <BibliometricsPriorWorksCard
+              data={folderBibliometrics}
+              loading={isLoadingBibliometrics}
+            />
+          )}
+
+          {/* C. Documents and Folders Hierarchy */}
+          {activeTab === "folders" ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="md:col-span-1 bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
+                <FolderTreeView
+                  selectedFolderId={selectedFolderId}
+                  onSelectFolder={(folderId) => setSelectedFolderId(folderId)}
+                />
+              </div>
+              <div className="md:col-span-3">
+                <DocumentGrid
+                  documents={documents}
+                  viewLayout={viewLayout}
+                  onToggleStar={handleToggleStar}
+                  onSelectDocument={onSelectDocument}
+                  onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
+                  onDelete={handleDelete}
+                />
+              </div>
             </div>
-            <div className="md:col-span-3">
+          ) : (
+            <div className="space-y-6">
               <DocumentGrid
                 documents={documents}
                 viewLayout={viewLayout}
-                activeMenuDocId={activeMenuDocId}
-                setActiveMenuDocId={setActiveMenuDocId}
                 onToggleStar={handleToggleStar}
                 onSelectDocument={onSelectDocument}
                 onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
                 onDelete={handleDelete}
               />
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-7xl mx-auto space-y-6">
-            <DocumentGrid
-              documents={documents}
-              viewLayout={viewLayout}
-              activeMenuDocId={activeMenuDocId}
-              setActiveMenuDocId={setActiveMenuDocId}
-              onToggleStar={handleToggleStar}
-              onSelectDocument={onSelectDocument}
-              onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
-              onDelete={handleDelete}
-            />
 
-            {/* Pagination Controls */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-between pt-4 border-t border-[#ece8df] dark:border-[#282622]">
-                <span className="text-xs text-muted dark:text-zinc-400 font-mono">
-                  Page {currentPage} / {totalPages}
-                </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={currentPage <= 1}
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#302d28] disabled:opacity-40 hover:bg-[#ece8df] dark:hover:bg-[#282622] transition-colors cursor-pointer"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                    className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#302d28] disabled:opacity-40 hover:bg-[#ece8df] dark:hover:bg-[#282622] transition-colors cursor-pointer"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-between pt-4 border-t border-[#ece8df] dark:border-[#282622]">
+                  <span className="text-xs text-muted dark:text-zinc-400 font-mono">
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={currentPage <= 1}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#302d28] disabled:opacity-40 hover:bg-[#ece8df] dark:hover:bg-[#282622] transition-colors cursor-pointer"
+                    >
+                      <ChevronLeft className="w-4 h-4" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={currentPage >= totalPages}
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#302d28] disabled:opacity-40 hover:bg-[#ece8df] dark:hover:bg-[#282622] transition-colors cursor-pointer"
+                    >
+                      <ChevronRight className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        )}
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Parse Config Modal */}
@@ -335,8 +555,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 interface DocumentGridProps {
   documents: DocumentListItem[];
   viewLayout: ViewLayout;
-  activeMenuDocId: string | null;
-  setActiveMenuDocId: (id: string | null) => void;
   onToggleStar: (doc: DocumentListItem, e: React.MouseEvent) => void;
   onSelectDocument?: (doc: DocumentListItem) => void;
   onOpenParseConfig: (doc: DocumentListItem) => void;
@@ -346,12 +564,10 @@ interface DocumentGridProps {
 function DocumentGrid({
   documents,
   viewLayout,
-  activeMenuDocId,
-  setActiveMenuDocId,
   onToggleStar,
   onSelectDocument,
   onOpenParseConfig,
-  onDelete
+  onDelete,
 }: DocumentGridProps) {
   if (documents.length === 0) {
     return (
@@ -404,27 +620,22 @@ function DocumentGrid({
                     />
                   </button>
                 </td>
-                <td className="py-3 px-4 font-semibold text-ink dark:text-zinc-100 group-hover:text-[#c15f3e] dark:group-hover:text-[#c15f3e]">
-                  <div className="line-clamp-1">{doc.title || doc.filename}</div>
-                </td>
-                <td className="py-3 px-4 text-muted dark:text-zinc-400">
-                  <div className="line-clamp-1">
-                    {doc.authors && doc.authors.length > 0 ? doc.authors.join(", ") : "—"}
+                <td className="py-3 px-4 font-medium text-ink dark:text-zinc-200">
+                  <div className="flex items-center gap-2">
+                    <FileText className="w-4 h-4 text-muted shrink-0" />
+                    <span className="truncate max-w-xs">{doc.title || doc.filename}</span>
                   </div>
                 </td>
+                <td className="py-3 px-4 text-muted dark:text-zinc-400">
+                  {doc.authors && doc.authors.length > 0 ? doc.authors.join(", ") : "—"}
+                </td>
                 <td className="py-3 px-4 text-muted dark:text-zinc-400 font-mono">
-                  {doc.year || "2024"}
+                  {doc.publication_year ?? "—"}
                 </td>
                 <td className="py-3 px-4">
-                  {doc.status === "completed" ? (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                      <CheckCircle2 className="w-3 h-3" /> Ready
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-amber-700 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full">
-                      <Clock className="w-3 h-3" /> {doc.status}
-                    </span>
-                  )}
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
+                    {doc.status}
+                  </span>
                 </td>
                 <td className="py-3 px-4 text-right">
                   <button
@@ -433,18 +644,16 @@ function DocumentGrid({
                       e.stopPropagation();
                       onOpenParseConfig(doc);
                     }}
-                    className="p-1 rounded hover:bg-[#ece8df] dark:hover:bg-[#2e2b26] text-muted hover:text-ink mr-1 cursor-pointer"
-                    title="Configure Parser"
+                    className="px-2 py-1 text-[11px] rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer mr-1"
                   >
-                    <Sliders className="w-3.5 h-3.5" />
+                    Config
                   </button>
                   <button
                     type="button"
                     onClick={(e) => onDelete(doc.id, e)}
-                    className="p-1 rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
-                    title="Delete Document"
+                    className="px-2 py-1 text-[11px] rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete
                   </button>
                 </td>
               </tr>
@@ -455,130 +664,71 @@ function DocumentGrid({
     );
   }
 
-  // Grid Layout
+  // Grid layout
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      {documents.map((doc) => {
-        const isMenuOpen = activeMenuDocId === doc.id;
-        return (
-          <div
-            key={doc.id}
-            onClick={() => onSelectDocument && onSelectDocument(doc)}
-            className="group relative bg-white dark:bg-[#1f1d1a] rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] hover:border-coral-500/40 dark:hover:border-coral-500/40 hover:shadow-sm transition-all duration-200 overflow-hidden flex flex-col justify-between cursor-pointer"
-          >
-            {/* Thumbnail Header Area */}
-            <div className="relative h-36 bg-[#f4eee5] dark:bg-[#252320] flex items-center justify-center p-4 border-b border-[#ece8df] dark:border-[#2a2824] overflow-hidden">
-              <FileText className="w-14 h-14 text-coral-500/30 group-hover:scale-110 transition-transform duration-300 stroke-[1.2]" />
-
-              {/* Star toggle top-left */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      {documents.map((doc) => (
+        <div
+          key={doc.id}
+          onClick={() => onSelectDocument && onSelectDocument(doc)}
+          className="group relative bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] hover:border-[#c15f3e]/40 transition-all cursor-pointer shadow-2xs hover:shadow-xs flex flex-col justify-between"
+        >
+          <div>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-black/5 dark:bg-white/5 text-muted">
+                {doc.publication_year || "Paper"}
+              </span>
               <button
                 type="button"
                 onClick={(e) => onToggleStar(doc, e)}
-                className="absolute top-2.5 left-2.5 w-8 h-8 rounded-lg bg-white/90 dark:bg-[#1a1916]/90 backdrop-blur-xs flex items-center justify-center shadow-xs cursor-pointer hover:scale-105 transition-transform"
-                title={doc.starred_at ? "Unfavorite" : "Favorite"}
+                className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer"
               >
                 <Star
                   className={cn(
-                    "w-4 h-4 transition-colors",
+                    "w-4 h-4",
                     doc.starred_at
                       ? "fill-amber-400 text-amber-500"
-                      : "text-zinc-400 hover:text-amber-500"
+                      : "text-muted hover:text-amber-500"
                   )}
                 />
               </button>
-
-              {/* Context menu toggle top-right */}
-              <div className="absolute top-2.5 right-2.5">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setActiveMenuDocId(isMenuOpen ? null : doc.id);
-                  }}
-                  className="w-8 h-8 rounded-lg bg-white/90 dark:bg-[#1a1916]/90 backdrop-blur-xs flex items-center justify-center shadow-xs text-muted hover:text-ink cursor-pointer"
-                >
-                  <MoreVertical className="w-4 h-4" />
-                </button>
-
-                {isMenuOpen && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="absolute right-0 top-9 w-44 bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#33302b] rounded-xl shadow-xl z-20 p-1 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
-                  >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuDocId(null);
-                        if (onSelectDocument) onSelectDocument(doc);
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Open Reader</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setActiveMenuDocId(null);
-                        onOpenParseConfig(doc);
-                      }}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
-                    >
-                      <Sliders className="w-3.5 h-3.5" />
-                      <span>Configure Parser</span>
-                    </button>
-                    <div className="border-t border-[#ece8df] dark:border-[#2e2b26] my-1" />
-                    <button
-                      type="button"
-                      onClick={(e) => onDelete(doc.id, e)}
-                      className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>Delete Document</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Status Badge bottom-left */}
-              <div className="absolute bottom-2 left-2">
-                {doc.status === "completed" ? (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-emerald-700 dark:text-emerald-300 bg-white/95 dark:bg-[#1a1916]/95 px-2 py-0.5 rounded-md shadow-xs">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Ready
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-mono font-medium text-amber-700 dark:text-amber-300 bg-white/95 dark:bg-[#1a1916]/95 px-2 py-0.5 rounded-md shadow-xs">
-                    <Clock className="w-3 h-3 text-amber-600" /> {doc.status}
-                  </span>
-                )}
-              </div>
             </div>
 
-            {/* Card Content Area */}
-            <div className="p-4 flex-1 flex flex-col justify-between">
-              <div>
-                <h3 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100 group-hover:text-[#c15f3e] dark:group-hover:text-[#c15f3e] transition-colors line-clamp-2 leading-snug">
-                  {doc.title || doc.filename}
-                </h3>
-                <p className="text-xs text-muted dark:text-zinc-400 mt-1 line-clamp-1">
-                  {doc.authors && doc.authors.length > 0 ? doc.authors.join(", ") : "Unknown Author"}
-                </p>
-              </div>
+            <h4 className="text-xs font-semibold text-ink dark:text-zinc-100 line-clamp-2 mb-1.5 font-anthropic-serif group-hover:text-[#c15f3e] transition-colors">
+              {doc.title || doc.filename}
+            </h4>
 
-              {/* Card Footer Metadata */}
-              <div className="mt-4 pt-3 border-t border-[#f0eae1] dark:border-[#282622] flex items-center justify-between text-[11px] font-mono text-muted dark:text-zinc-500">
-                <span>{doc.year || "2024"}</span>
-                {doc.page_count && <span>{doc.page_count} pages</span>}
-                {doc.file_size_bytes ? (
-                  <span>{(doc.file_size_bytes / (1024 * 1024)).toFixed(1)} MB</span>
-                ) : (
-                  <span>PDF</span>
-                )}
-              </div>
+            {doc.authors && doc.authors.length > 0 && (
+              <p className="text-[11px] text-muted dark:text-zinc-400 line-clamp-1 mb-2">
+                {doc.authors.join(", ")}
+              </p>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between pt-3 border-t border-[#f0eae1] dark:border-[#262420] text-[10px] text-muted dark:text-zinc-500">
+            <span className="font-mono">{doc.status}</span>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenParseConfig(doc);
+                }}
+                className="px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
+              >
+                Config
+              </button>
+              <button
+                type="button"
+                onClick={(e) => onDelete(doc.id, e)}
+                className="px-1.5 py-0.5 rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
+              >
+                Delete
+              </button>
             </div>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
