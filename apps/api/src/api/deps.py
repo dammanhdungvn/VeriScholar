@@ -25,6 +25,7 @@ from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
+from api.services.embedding_service import EmbeddingService
 from api.services.folder_service import FolderService
 from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
@@ -114,16 +115,32 @@ def get_document_summarizer() -> IDocumentSummarizerPort:
     )
 
 
+def get_embedding_service() -> EmbeddingService | None:
+    """Dependency providing EmbeddingService instance if configured."""
+    try:
+        return EmbeddingService()
+    except Exception:
+        return None
+
+
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
     summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
 ) -> DocumentService:
     """Dependency providing DocumentService instance."""
+    real_storage = get_storage() if hasattr(storage, "dependency") else storage
+    real_summarizer = get_document_summarizer() if hasattr(summarizer, "dependency") else summarizer
+    real_ai_tracing = get_ai_tracing_service() if hasattr(ai_tracing, "dependency") else ai_tracing
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
     return DocumentService(
-        storage=storage,
-        summarizer=summarizer,
-        ai_tracing=ai_tracing,
+        storage=real_storage,
+        summarizer=real_summarizer,
+        ai_tracing=real_ai_tracing,
+        embedding_service=real_embedding,
     )
 
 

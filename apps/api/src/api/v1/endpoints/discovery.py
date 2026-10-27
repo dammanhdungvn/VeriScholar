@@ -21,7 +21,7 @@ from api.schemas.discovery import (
 from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.services.document_service import DocumentService
 from core.ports.scholarly_search import IScholarlySearchPort, ScholarlyPaperSearchResult
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -81,11 +81,14 @@ async def search_scholarly_literature(
 )
 async def open_reading_session(
     payload: OpenReadingRequest,
+    background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: DocumentService = Depends(get_document_service),
 ) -> SingleResponseEnvelope[OpenReadingResponse]:
     """Create a research session and ingest paper metadata < 500ms for immediate reading."""
+    if not isinstance(service, DocumentService):
+        service = get_document_service()
     clean_title = payload.title.strip()
     has_pdf_url = bool(payload.pdf_url and payload.pdf_url.strip())
 
@@ -157,6 +160,9 @@ async def open_reading_session(
     db.add(junction)
 
     await db.commit()
+
+    if ingest_result is not None:
+        background_tasks.add_task(service.parse_document_background, doc_id, current_user.id)
 
     return SingleResponseEnvelope(
         data=OpenReadingResponse(
