@@ -18,7 +18,6 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-import fitz  # PyMuPDF
 import structlog
 
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
@@ -302,40 +301,30 @@ class SandboxedLatexCompiler:
         if compiler_bin:
             return await self._compile_with_cli(compiler_bin, code, timeout_seconds)
 
-        # In-memory rendering fallback using PyMuPDF (100% dependency-free & safe)
+        # No compiler available (neither remote nor native CLI pdflatex/tectonic)
         duration_ms = round((time.perf_counter() - start_time) * 1000, 2)
-        pdf_bytes = self._generate_in_memory_pdf_preview(code)
-        logger.info("latex_in_memory_fallback_compiled", duration_ms=duration_ms)
-
-        is_fallback_success = bool(pdf_bytes)
+        logger.warning("latex_compiler_unavailable", duration_ms=duration_ms)
 
         return LatexCompilationResult(
-            success=is_fallback_success,
-            pdf_bytes=pdf_bytes,
-            errors=(
-                []
-                if is_fallback_success
-                else [
-                    LatexSyntaxError(
-                        line=1,
-                        column=0,
-                        rule="PREVIEW_ONLY_FALLBACK",
-                        message=(
-                            "Không tìm thấy trình biên dịch CLI (Tectonic/pdflatex). "
-                            "Bản xem trước được dựng qua PyMuPDF fallback."
-                        ),
-                        suggested_fix="Cài đặt Tectonic hoặc TeX Live để biên dịch PDF hoàn chỉnh.",
-                    )
-                ]
-            ),
-            logs=(
-                f"Compiled via in-memory preview renderer fallback ({duration_ms}ms). "
-                "Preview generated via fallback renderer."
-                if is_fallback_success
-                else (
-                    f"Compiled via in-memory preview renderer fallback ({duration_ms}ms). "
-                    "Preview only; native CLI compiler unavailable."
+            success=False,
+            pdf_bytes=None,
+            errors=[
+                LatexSyntaxError(
+                    line=1,
+                    column=0,
+                    rule="COMPILER_NOT_FOUND",
+                    message=(
+                        "Không tìm thấy trình biên dịch LaTeX (Tectonic hoặc pdflatex) "
+                        "trên máy chủ và E2B Sandbox không khả dụng."
+                    ),
+                    suggested_fix=(
+                        "Cài đặt Tectonic, TeX Live hoặc cấu hình E2B_API_KEY để biên dịch PDF."
+                    ),
                 )
+            ],
+            logs=(
+                "Native CLI LaTeX compiler unavailable and remote compilation "
+                f"not configured ({duration_ms}ms)."
             ),
             retries_attempted=0,
             is_sandboxed=False,
@@ -425,11 +414,22 @@ class SandboxedLatexCompiler:
                     "using only cached resource files" in log_output
                     and "failed to open input file" in log_output
                 ):
-                    pdf_data = self._generate_in_memory_pdf_preview(code)
                     return LatexCompilationResult(
-                        success=bool(pdf_data),
-                        pdf_bytes=pdf_data,
-                        errors=[],
+                        success=False,
+                        pdf_bytes=None,
+                        errors=[
+                            LatexSyntaxError(
+                                line=1,
+                                column=0,
+                                rule="TECTONIC_BUNDLE_MISSING",
+                                message=(
+                                    "Tectonic requires additional packages not in the local cache."
+                                ),
+                                suggested_fix=(
+                                    "Run tectonic with network access or use E2B Sandbox."
+                                ),
+                            )
+                        ],
                         logs=log_output[-1000:],
                         is_sandboxed=is_sandboxed,
                     )
@@ -468,28 +468,3 @@ class SandboxedLatexCompiler:
                     logs=f"Hardened Sandbox Timeout cutoff triggered at {timeout_seconds}s.",
                     is_sandboxed=is_sandboxed,
                 )
-
-    def _generate_in_memory_pdf_preview(self, code: str) -> bytes:
-        """Render a formatted PDF preview from LaTeX text using PyMuPDF."""
-        doc = fitz.open()
-        page = doc.new_page(width=595, height=842)  # A4 size in points
-        rect = fitz.Rect(50, 50, 545, 792)
-
-        # Render header
-        page.insert_text(
-            fitz.Point(50, 40),
-            "VeriScholar Live Preview (Rendered)",
-            fontsize=9,
-            color=(0.5, 0.5, 0.5),
-        )
-
-        # Simple text clean up for preview display
-        display_text = code.replace("\\section{", "\n\n■ ").replace("}", "")
-        display_text = display_text.replace("\\subsection{", "\n\n▸ ")
-        display_text = display_text.replace("\\begin{document}", "")
-        display_text = display_text.replace("\\end{document}", "")
-
-        page.insert_textbox(rect, display_text, fontsize=11, fontname="helv", align=0)
-        pdf_bytes = doc.tobytes()
-        doc.close()
-        return pdf_bytes
