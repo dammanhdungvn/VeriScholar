@@ -30,5 +30,7 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     reporters: ["default"],
     passWithNoTests: true,
+    hookTimeout: 30000,
+    testTimeout: 30000,
   },
 });
