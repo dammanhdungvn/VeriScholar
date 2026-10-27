@@ -29,7 +29,7 @@ from api.services.ai_tracing_service import AITracingService
 from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_provider
 from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
-from sqlalchemy import delete, func, select
+from sqlalchemy import delete, func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.session_chat")
@@ -148,6 +148,162 @@ class SessionChatService:
         await self.db.execute(del_stmt)
         await self.db.commit()
         logger.info("session_chat_cleared", session_id=str(session_id))
+
+    async def retrieve_hybrid_chunks(
+        self,
+        session_id: UUID,
+        user_id: UUID,
+        query_text: str,
+        query_embedding: list[float] | None = None,
+        limit: int = 5,
+        target_doc_ids: list[UUID] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Retrieve document chunks using PostgreSQL Hybrid Search (Vector + FTS RRF k=60)."""
+        if target_doc_ids is None:
+            sess_docs_stmt = select(SessionDocumentModel.document_id).where(
+                SessionDocumentModel.session_id == session_id
+            )
+            res = await self.db.execute(sess_docs_stmt)
+            target_doc_ids = [row[0] for row in res.fetchall()]
+
+        if not target_doc_ids:
+            return []
+
+        # 1. If embedding provided, perform CTE with Vector Distance + FTS RRF k=60
+        if query_embedding:
+            rrf_sql = text("""
+                WITH vector_ranks AS (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               ORDER BY embedding <=> CAST(:query_vec AS vector)
+                           ) AS rank_vec
+                    FROM document_chunks
+                    WHERE document_id = ANY(:doc_ids)
+                      AND user_id = :user_id
+                      AND embedding IS NOT NULL
+                    ORDER BY embedding <=> CAST(:query_vec AS vector)
+                    LIMIT 25
+                ),
+                fts_ranks AS (
+                    SELECT id,
+                           ROW_NUMBER() OVER (
+                               ORDER BY ts_rank_cd(
+                                   content_tsv,
+                                   plainto_tsquery('simple', :query_text)
+                               ) DESC
+                           ) AS rank_fts
+                    FROM document_chunks
+                    WHERE document_id = ANY(:doc_ids)
+                      AND user_id = :user_id
+                      AND content_tsv @@ plainto_tsquery('simple', :query_text)
+                    ORDER BY ts_rank_cd(
+                        content_tsv,
+                        plainto_tsquery('simple', :query_text)
+                    ) DESC
+                    LIMIT 25
+                ),
+                combined AS (
+                    SELECT
+                        COALESCE(v.id, f.id) AS chunk_id,
+                        (
+                            COALESCE(1.0 / (60.0 + v.rank_vec), 0.0) +
+                            COALESCE(1.0 / (60.0 + f.rank_fts), 0.0)
+                        ) AS rrf_score
+                    FROM vector_ranks v
+                    FULL OUTER JOIN fts_ranks f ON v.id = f.id
+                )
+                SELECT
+                    c.id,
+                    c.document_id,
+                    c.chunk_index,
+                    c.page_number,
+                    c.content,
+                    c.bounding_boxes,
+                    c.token_count,
+                    d.title AS document_title,
+                    d.filename,
+                    cb.rrf_score
+                FROM combined cb
+                JOIN document_chunks c ON cb.chunk_id = c.id
+                JOIN documents d ON c.document_id = d.id
+                ORDER BY cb.rrf_score DESC
+                LIMIT :limit;
+            """)
+            vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+            params = {
+                "query_vec": vec_str,
+                "query_text": query_text,
+                "doc_ids": target_doc_ids,
+                "user_id": user_id,
+                "limit": limit,
+            }
+            res = await self.db.execute(rrf_sql, params)
+            rows = res.fetchall()
+            if rows:
+                return [
+                    {
+                        "chunk_id": str(r.id),
+                        "document_id": str(r.document_id),
+                        "chunk_index": r.chunk_index,
+                        "page_number": r.page_number,
+                        "content": r.content,
+                        "bounding_boxes": r.bounding_boxes,
+                        "token_count": r.token_count,
+                        "document_title": r.document_title or r.filename,
+                        "filename": r.filename,
+                        "rrf_score": float(r.rrf_score),
+                    }
+                    for r in rows
+                ]
+
+        # 2. Fallback to Full-Text Ranking with simple dictionary
+        fts_fallback_sql = text("""
+            SELECT
+                c.id,
+                c.document_id,
+                c.chunk_index,
+                c.page_number,
+                c.content,
+                c.bounding_boxes,
+                c.token_count,
+                d.title AS document_title,
+                d.filename,
+                ts_rank_cd(c.content_tsv, plainto_tsquery('simple', :query_text)) AS fts_score
+            FROM document_chunks c
+            JOIN documents d ON c.document_id = d.id
+            WHERE c.document_id = ANY(:doc_ids)
+              AND c.user_id = :user_id
+              AND (
+                  c.content_tsv @@ plainto_tsquery('simple', :query_text)
+                  OR c.content ILIKE :query_like
+              )
+            ORDER BY fts_score DESC, c.chunk_index ASC
+            LIMIT :limit;
+        """)
+        params = {
+            "query_text": query_text,
+            "query_like": f"%{query_text}%",
+            "doc_ids": target_doc_ids,
+            "user_id": user_id,
+            "limit": limit,
+        }
+        res = await self.db.execute(fts_fallback_sql, params)
+        rows = res.fetchall()
+        return [
+            {
+                "chunk_id": str(r.id),
+                "document_id": str(r.document_id),
+                "chunk_index": r.chunk_index,
+                "page_number": r.page_number,
+                "content": r.content,
+                "bounding_boxes": r.bounding_boxes,
+                "token_count": r.token_count,
+                "document_title": r.document_title or r.filename,
+                "filename": r.filename,
+                "rrf_score": float(r.fts_score or 0.0),
+            }
+            for r in rows
+        ]
 
     def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
         """Rank document chunks dynamically based on query lexical and concept overlap.
