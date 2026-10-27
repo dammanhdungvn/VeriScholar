@@ -27,11 +27,16 @@ from core.domain.entities.reference import (
     ParsedReferenceInfo,
     has_public_academic_identifier,
 )
-from core.domain.entities.session import MAX_SESSION_DOCUMENTS
 from core.ports.academic_resolver import IAcademicSearchResolverPort
+from core.services.citation_parser import (
+    MAX_SESSION_DOCUMENTS,
+    DocumentAlreadyInSessionError,
+    SessionTabLimitExceededError,
+    validate_session_tab_capacity,
+)
 from core.services.exa_resolver import InMemoryAcademicResolverAdapter
 from fastapi import HTTPException, UploadFile, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 if TYPE_CHECKING:
@@ -529,29 +534,11 @@ class SessionService:
                 },
             )
 
-        count_stmt = select(func.count(SessionDocumentModel.document_id)).where(
+        cur_docs_stmt = select(SessionDocumentModel.document_id).where(
             SessionDocumentModel.session_id == session_id
         )
-        count_res = await self.db.execute(count_stmt)
-        current_count = count_res.scalar_one() or 0
-
-        if current_count >= MAX_SESSION_DOCUMENTS:
-            logger.warning(
-                "session_capacity_exceeded",
-                session_id=str(session_id),
-                count=current_count,
-            )
-            raise HTTPException(
-                status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
-                detail={
-                    "code": "SESSION_CAPACITY_EXCEEDED",
-                    "message": (
-                        f"Phiên đọc tối đa chỉ chứa {MAX_SESSION_DOCUMENTS} bài báo. "
-                        "Vui lòng gỡ bớt bài báo trước khi nạp thêm."
-                    ),
-                    "action": "Remove a document from session before adding a new one.",
-                },
-            )
+        cur_docs_res = await self.db.execute(cur_docs_stmt)
+        current_doc_ids = [row[0] for row in cur_docs_res.fetchall()]
 
         target_doc_id: UUID
         if source_type == "document_id":
@@ -580,21 +567,6 @@ class SessionService:
                         "action": "Ensure document exists and belongs to current user.",
                     },
                 )
-
-            existing_link = select(SessionDocumentModel).where(
-                SessionDocumentModel.session_id == session_id,
-                SessionDocumentModel.document_id == document_id,
-            )
-            link_res = await self.db.execute(existing_link)
-            if link_res.scalar_one_or_none():
-                raise HTTPException(
-                    status_code=status.HTTP_409_CONFLICT,
-                    detail={
-                        "code": "DOCUMENT_ALREADY_IN_SESSION",
-                        "message": "Tài liệu này đã có trong phiên nghiên cứu.",
-                        "action": "Document is already active in session.",
-                    },
-                )
             target_doc_id = document_id
         elif source_type == "url":
             if not url:
@@ -613,10 +585,9 @@ class SessionService:
                 filename=url.split("/")[-1] or "paper_from_url.pdf",
                 title=title or "Tài liệu nạp qua liên kết URL",
                 file_size_bytes=1024,
-                content_hash=f"url_{uuid4().hex}",
-                status="processing",
-                stage="queued",
-                progress=0,
+                page_count=1,
+                content_hash=f"url_{uuid4().hex[:16]}",
+                status="parsing",
             )
             self.db.add(placeholder_doc)
             await self.db.flush()
@@ -625,15 +596,41 @@ class SessionService:
                 status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
                 detail={
                     "code": "INVALID_SOURCE_TYPE",
-                    "message": "source_type chỉ chấp nhận 'document_id' hoặc 'url'.",
-                    "action": "Use 'document_id' or 'url'.",
+                    "message": "source_type phải là 'document_id' hoặc 'url'.",
+                    "action": "Select valid source_type.",
                 },
             )
+
+        try:
+            validate_session_tab_capacity(current_doc_ids, target_doc_id)
+        except DocumentAlreadyInSessionError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": exc.code,
+                    "message": exc.message,
+                    "action": "Tài liệu đã tồn tại trong phiên.",
+                },
+            ) from exc
+        except SessionTabLimitExceededError as exc:
+            logger.warning(
+                "session_capacity_exceeded",
+                session_id=str(session_id),
+                count=len(current_doc_ids),
+            )
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": exc.code,
+                    "message": exc.message,
+                    "action": "Vui lòng gỡ bớt bài báo trước khi nạp thêm (tối đa 5 bài).",
+                },
+            ) from exc
 
         new_link = SessionDocumentModel(
             session_id=session_id,
             document_id=target_doc_id,
-            display_order=current_count,
+            display_order=len(current_doc_ids),
         )
         self.db.add(new_link)
 
@@ -657,6 +654,58 @@ class SessionService:
             "status": "queued" if source_type == "url" else "associated",
             "version": session.version,
         }
+
+    async def remove_document_from_session(
+        self,
+        session_id: UUID,
+        document_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """Remove a document from an active session and reassign active_document_id if needed."""
+        stmt = select(ResearchSessionModel).where(
+            ResearchSessionModel.id == session_id,
+            ResearchSessionModel.user_id == user_id,
+        )
+        res = await self.db.execute(stmt)
+        session = res.scalar_one_or_none()
+        if not session:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "SESSION_NOT_FOUND",
+                    "message": "Phiên nghiên cứu không tồn tại hoặc bạn không có quyền truy cập.",
+                    "action": "Verify session ID.",
+                },
+            )
+
+        del_stmt = delete(SessionDocumentModel).where(
+            SessionDocumentModel.session_id == session_id,
+            SessionDocumentModel.document_id == document_id,
+        )
+        del_res = await self.db.execute(del_stmt)
+        if del_res.rowcount == 0:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "code": "DOCUMENT_NOT_IN_SESSION",
+                    "message": "Bài báo không thuộc phiên nghiên cứu này.",
+                    "action": "Verify document ID in current session.",
+                },
+            )
+
+        if session.active_document_id == document_id:
+            rem_stmt = (
+                select(SessionDocumentModel.document_id)
+                .where(SessionDocumentModel.session_id == session_id)
+                .limit(1)
+            )
+            rem_res = await self.db.execute(rem_stmt)
+            next_active_id = rem_res.scalar_one_or_none()
+            session.active_document_id = next_active_id
+
+        session.version += 1
+        session.updated_at = datetime.now(UTC)
+        await self.db.commit()
 
     async def restore_archived_session(
         self,
