@@ -121,4 +121,3 @@ def test_deploy_script_offline_vps_exits_zero_fast(tmp_path):
     assert elapsed < 4.0, f"Expected fast failover in < 4s, took {elapsed:.2f}s"
     assert "offline" in res.stdout.lower() or "unreachable" in res.stdout.lower()
 
-

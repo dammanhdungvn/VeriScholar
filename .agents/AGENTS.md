@@ -26,6 +26,8 @@ Toàn bộ mã nguồn phải bám sát 100% tài liệu nghiệp vụ tại [`d
 8. **Quy Chuẩn Kiến Trúc Báo Cáo Chuẩn Paper Khoa Học (Human-Centric Academic Paper Architecture):**
    - **Kiến trúc cho người đọc, không phải cho máy đọc:** Mọi sơ đồ kiến trúc và mô tả hệ thống trong báo cáo đồ án (đặc biệt tại Chương 2 và Chương 3) phải được thiết kế theo tư duy của các bài báo khoa học quốc tế uy tín (như mô hình Transformer Attention, kiến trúc RAG, GraphRAG của cộng đồng nghiên cứu).
    - **Tập trung vào dòng chảy tri thức và khối thuật toán:** Thể hiện rõ nét luồng biến đổi dữ liệu toán học (*Dataflow & Knowledge Transformation*), các khối chức năng trừu tượng hóa mức độ cao (*Embedding, Retrieval, Rank Fusion, Reasoning Loop*), tuyệt đối cấm vẽ sơ đồ kiểu máy móc (class diagram với getter/setter, endpoint REST, đường dẫn code, thao tác CRUD vụn vặt). Sơ đồ phải đóng vai trò là một mô hình tư duy học thuật (*Academic Mental Model*) tự giải thích, giúp người đọc nắm bắt ngay đóng góp khoa học và tính mới của đề tài.
+9. **Quy Chuẩn Đồng Bộ VPS Tự Động Sau Mỗi Task (In-Plan VPS Sync Protocol):**
+   Khi thực thi các Task trong Implementation Plan (trên bất kỳ nhánh nào), sau mỗi bước `git commit` thành công, agent bắt buộc chạy `bash scripts/deploy_to_vps.sh --fast`. Nếu máy chủ VPS đang bật, thay đổi sẽ được cập nhật trực tiếp lên `https://verischolar.duckdns.org` để người dùng kiểm tra từ xa mà không cần đẩy vào nhánh `main`; nếu VPS đang tắt (để tiết kiệm chi phí), script tự động nhận diện trong 1 giây và bỏ qua an toàn với exit code 0.
 
 ---
 
