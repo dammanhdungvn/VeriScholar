@@ -98,7 +98,7 @@ if [[ "$SKIP_GATE" != "true" ]]; then
     npm --prefix apps/web run build
 else
     echo "-> [Gate Skipped] --skip-gate provided. Ensuring frontend dist exists..."
-    if [[ ! -d "apps/web/dist" ]]; then
+    if [[ ! -d "apps/web/dist" ]] && [[ "$DRY_RUN" != "true" ]]; then
         npm --prefix apps/web run build
     fi
 fi
