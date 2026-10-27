@@ -20,6 +20,7 @@ import type {
   CitationItemSchema,
   SessionIngestResponse,
 } from "@/types/session";
+import type { SessionReferenceIngestResponse } from "@/features/reader/types/reference";
 
 export interface ListSessionsParams {
   page?: number;
@@ -311,9 +312,38 @@ export const sessionsApi = {
         method: "POST",
         body: JSON.stringify({
           document_id: documentId,
+          ref_index: refIndices[0],
           selected_ref_indices: refIndices,
         }),
       }
     );
+  },
+
+  /**
+   * 56b. POST /api/v1/sessions/{id}/references:ingest (Nạp 2 tầng tức thì cho 1 tài liệu tham khảo)
+   */
+  async ingestReference(
+    sessionId: string,
+    documentId: string,
+    refIndex: number
+  ): Promise<SessionReferenceIngestResponse> {
+    return apiClient<SessionReferenceIngestResponse>(
+      `/sessions/${sessionId}/references:ingest`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          document_id: documentId,
+          ref_index: refIndex,
+        }),
+      }
+    );
+  },
+
+  async ingestSingleReference(
+    sessionId: string,
+    documentId: string,
+    refIndex: number
+  ): Promise<SessionReferenceIngestResponse> {
+    return this.ingestReference(sessionId, documentId, refIndex);
   },
 };

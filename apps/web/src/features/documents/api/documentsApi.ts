@@ -22,6 +22,7 @@ import type {
   DocumentSummaryData,
   DocumentStarResponseData,
   ResolvedReferenceCard,
+  DocumentReferencesResponseData,
 } from "@/types/document";
 
 export interface StreamSummaryCallbacks {
@@ -223,6 +224,20 @@ export const documentsApi = {
       {
         method: "POST",
       }
+    );
+  },
+
+  /**
+   * 9c. GET /api/v1/documents/{id}/references
+   * Lấy danh mục tài liệu tham khảo 3 cột của bài báo (kèm cờ is_in_session)
+   */
+  async getReferences(
+    documentId: string,
+    sessionId?: string | null
+  ): Promise<DocumentReferencesResponseData> {
+    const query = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+    return apiClient<DocumentReferencesResponseData>(
+      `/documents/${documentId}/references${query}`
     );
   },
 
