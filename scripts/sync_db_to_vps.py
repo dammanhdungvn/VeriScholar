@@ -111,7 +111,15 @@ async def generate_sync_sql() -> tuple[str, dict[str, int]]:
                 cols_str = ", ".join(f'"{c}"' for c in cols)
                 vals_str = ", ".join(vals)
 
-                if "id" in cols:
+                if table == "document_storage_blobs":
+                    update_set = ", ".join(
+                        f'"{c}" = EXCLUDED."{c}"' for c in cols if c not in ("id", "content_hash")
+                    )
+                    sql_lines.append(
+                        f'INSERT INTO "{table}" ({cols_str}) VALUES ({vals_str}) '
+                        f'ON CONFLICT ("content_hash") DO UPDATE SET {update_set};'
+                    )
+                elif "id" in cols:
                     update_set = ", ".join(f'"{c}" = EXCLUDED."{c}"' for c in cols if c != "id")
                     sql_lines.append(
                         f'INSERT INTO "{table}" ({cols_str}) VALUES ({vals_str}) '
@@ -127,6 +135,12 @@ async def generate_sync_sql() -> tuple[str, dict[str, int]]:
                         f'INSERT INTO "{table}" ({cols_str}) VALUES ({vals_str}) '
                         f"ON CONFLICT DO NOTHING;"
                     )
+
+    # Ensure document blob_id references match canonical CAS blob id by content_hash
+    sql_lines.append(
+        'UPDATE "documents" d SET blob_id = b.id FROM "document_storage_blobs" b '
+        "WHERE d.content_hash = b.content_hash AND (d.blob_id IS NULL OR d.blob_id != b.id);"
+    )
 
     sql_lines.append("SET session_replication_role = 'origin';")
     sql_lines.append("COMMIT;")
