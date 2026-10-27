@@ -3,10 +3,17 @@
 from uuid import UUID, uuid4
 
 import structlog
+from api.db.models.document import DocumentModel
+from api.db.models.reference import ReferenceItemModel
+from api.db.models.session import (
+    ResearchSessionModel,
+    SessionDocumentModel,
+)
 from api.db.models.user import UserModel
+from api.db.session import get_db
 from api.deps import (
-    get_academic_resolver,
     get_current_user,
+    get_document_service,
     get_idempotency_port,
     get_session_chat_service,
     get_session_service,
@@ -18,19 +25,21 @@ from api.schemas.session import (
     SessionChatMessageRequest,
     SessionCreateRequest,
     SessionHistoryEnvelope,
-    SessionIngestReferencesEnvelope,
     SessionIngestReferencesRequest,
+    SessionReferenceIngestEnvelope,
+    SessionReferenceIngestResponseData,
     SessionSingleEnvelope,
     SessionTurnListEnvelope,
     SessionUpdateMetadataRequest,
     SessionUpdateViewportRequest,
 )
+from api.services.document_service import DocumentService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
-from core.ports.academic_resolver import IAcademicSearchResolverPort
 from core.ports.idempotency import IIdempotencyPort
 from fastapi import (
     APIRouter,
+    BackgroundTasks,
     Depends,
     File,
     Header,
@@ -42,6 +51,8 @@ from fastapi import (
     status,
 )
 from fastapi.responses import JSONResponse, StreamingResponse
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.endpoints.sessions")
 
@@ -870,42 +881,259 @@ async def restore_archived_session(
     return SessionSingleEnvelope(data=data, meta=ResponseMeta())
 
 
+async def ingest_reference_tier2_background(
+    document_id: UUID,
+    user_id: UUID,
+    pdf_url: str | None,
+    doc_service: DocumentService,
+) -> None:
+    """Download PDF and parse chunks/embeddings asynchronously using independent session."""
+    from api.db.session import AsyncSessionLocal
+
+    async with AsyncSessionLocal() as session:
+        stmt = select(DocumentModel).where(
+            DocumentModel.id == document_id,
+            DocumentModel.user_id == user_id,
+        )
+        doc = (await session.execute(stmt)).scalar_one_or_none()
+        if not doc or doc.status == "ready":
+            return
+
+        if pdf_url:
+            res = await doc_service.ingest_pdf_from_url(pdf_url, db=session)
+            if res:
+                content_hash, file_size_bytes = res
+                doc.content_hash = content_hash
+                doc.file_size_bytes = file_size_bytes
+                doc.status = "processing"
+                await session.commit()
+                await doc_service.parse_document_background(document_id, user_id)
+                return
+
+        doc.status = "abstract_only"
+        doc.access_status = "paywalled"
+        await session.commit()
+
+
 # ==============================================================================
-# 57. POST /api/v1/sessions/{id}/references:ingest (Nạp bài tham khảo mở - PRD §3.3)
+# 57. POST /api/v1/sessions/{id}/references:ingest (Nạp 2 tầng tức thì - PRD §3.3)
 # ==============================================================================
 @router.post(
     "/{id}/references:ingest",
-    status_code=status.HTTP_200_OK,
-    response_model=SessionIngestReferencesEnvelope,
-    summary="Nạp tài liệu tham khảo mở vào phiên đọc sâu (PRD §3.3)",
+    status_code=status.HTTP_201_CREATED,
+    response_model=SessionReferenceIngestEnvelope,
+    summary="Nạp tài liệu tham khảo 2 tầng (< 500ms Tier 1 + Background Tier 2)",
     description=(
-        "Nạp các bài báo tham khảo mở (Open-Access) từ danh mục bóc tách của bài báo nguồn "
-        "vào phiên nghiên cứu. Ràng buộc: Tổng số bài báo trong phiên không vượt quá 5 bài. "
-        "Nếu vượt quá 5 bài sẽ trả về lỗi HTTP 422 Unprocessable Entity."
+        "Nạp tài liệu tham khảo từ danh mục bóc tách vào phiên nghiên cứu. "
+        "Tầng 1 (Đồng bộ < 500ms): Kiểm soát giới hạn tối đa 5 bài báo và tạo tab tài liệu. "
+        "Tầng 2 (Bất đồng bộ): Tải tệp PDF và tính toán vector embedding bằng DB session độc lập."
     ),
     responses={
-        200: {"model": SessionIngestReferencesEnvelope, "description": "Nạp bài báo thành công."},
-        422: {"model": ErrorResponse, "description": "Vượt quá ngưỡng trần 5 bài báo của phiên."},
-        404: {"model": ErrorResponse, "description": "Phiên hoặc tài liệu không tồn tại."},
+        201: {
+            "model": SessionReferenceIngestEnvelope,
+            "description": "Tạo tab tài liệu thành công.",
+        },
+        404: {
+            "model": ErrorResponse,
+            "description": "Phiên, tài liệu hoặc mục tham khảo không tồn tại.",
+        },
+        409: {
+            "model": ErrorResponse,
+            "description": "Vượt quá giới hạn 5 bài hoặc tài liệu đã tồn tại trong phiên.",
+        },
     },
 )
 async def ingest_session_references(
     id: UUID,
     payload: SessionIngestReferencesRequest,
+    background_tasks: BackgroundTasks,
     current_user: UserModel = Depends(get_current_user),
-    session_service: SessionService = Depends(get_session_service),
-    resolver: IAcademicSearchResolverPort = Depends(get_academic_resolver),
-) -> SessionIngestReferencesEnvelope:
-    """Ingest selected open-access references into the active research session (Cap <= 5)."""
-    data = await session_service.ingest_references(
-        session_id=id,
-        user_id=current_user.id,
-        document_id=payload.document_id,
-        selected_ref_indices=payload.selected_ref_indices,
-        resolver=resolver,
+    db: AsyncSession = Depends(get_db),
+    doc_service: DocumentService = Depends(get_document_service),
+) -> SessionReferenceIngestEnvelope:
+    """Fast 2-tier reference ingestion into active session (< 500ms Tier 1 sync, async Tier 2)."""
+    # 1. Extract target ref_index
+    ref_idx = payload.ref_index
+    if ref_idx is None and payload.selected_ref_indices:
+        ref_idx = payload.selected_ref_indices[0]
+    if ref_idx is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            detail={
+                "code": "VALIDATION_ERROR",
+                "message": "Trường 'ref_index' là bắt buộc để nạp tài liệu tham khảo.",
+            },
+        )
+
+    # 2. Check session ownership and active state
+    session_stmt = select(ResearchSessionModel).where(
+        ResearchSessionModel.id == id,
+        ResearchSessionModel.user_id == current_user.id,
     )
-    return SessionIngestReferencesEnvelope(
+    session = (await db.execute(session_stmt)).scalar_one_or_none()
+    if not session:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "SESSION_NOT_FOUND",
+                "message": "Phiên nghiên cứu không tồn tại hoặc bạn không có quyền truy cập.",
+            },
+        )
+    if session.is_archived:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail={
+                "code": "SESSION_ARCHIVED",
+                "message": "Phiên đã bị lưu trữ. Vui lòng khôi phục trước khi nạp thêm tài liệu.",
+            },
+        )
+
+    # 3. Check source document
+    src_stmt = select(DocumentModel).where(
+        DocumentModel.id == payload.document_id,
+        DocumentModel.user_id == current_user.id,
+    )
+    src_doc = (await db.execute(src_stmt)).scalar_one_or_none()
+    if not src_doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DOCUMENT_NOT_FOUND",
+                "message": f"Tài liệu nguồn '{payload.document_id}' không tồn tại.",
+            },
+        )
+
+    # 4. Check reference item in bibliography
+    ref_stmt = select(ReferenceItemModel).where(
+        ReferenceItemModel.document_id == payload.document_id,
+        ReferenceItemModel.ref_index == ref_idx,
+    )
+    ref_item = (await db.execute(ref_stmt)).scalar_one_or_none()
+    if not ref_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "REFERENCE_ITEM_NOT_FOUND",
+                "message": f"Không tìm thấy mục tài liệu tham khảo #{ref_idx}.",
+                "ref_index": ref_idx,
+            },
+        )
+
+    # 5. Fetch current session documents
+    sess_docs_stmt = (
+        select(SessionDocumentModel)
+        .where(SessionDocumentModel.session_id == id)
+        .order_by(SessionDocumentModel.display_order.asc())
+    )
+    sess_docs = list((await db.execute(sess_docs_stmt)).scalars().all())
+    current_doc_ids = [sd.document_id for sd in sess_docs]
+
+    # 6. Check duplicate invariant
+    if ref_item.resolved_document_id and ref_item.resolved_document_id in current_doc_ids:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "REFERENCE_ALREADY_IN_SESSION",
+                "message": "Bài báo tham khảo này đã được mở sẵn trong phiên đọc.",
+                "document_id": str(ref_item.resolved_document_id),
+            },
+        )
+
+    # 7. Check capacity limit invariant (Max 5 documents)
+    if len(current_doc_ids) >= 5:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "MAX_SESSION_DOCUMENTS_REACHED",
+                "message": (
+                    "Phiên đọc đã đạt giới hạn tối đa 5 bài báo. "
+                    "Vui lòng đóng bớt một bài báo trên thanh Tab trước khi nạp thêm."
+                ),
+                "current_count": len(current_doc_ids),
+                "max_limit": 5,
+            },
+        )
+
+    # 8. Tier 1 Fast Sync Attachment (< 500ms)
+    pdf_url: str | None = None
+    if ref_item.arxiv_id:
+        pdf_url = f"https://arxiv.org/pdf/{ref_item.arxiv_id}.pdf"
+
+    is_open = bool(pdf_url)
+    doc_status = "parsing" if is_open else "abstract_only"
+    access_status = "open_access_pdf" if is_open else "paywalled"
+    fallback_reason = None if is_open else "TIER2_PAYWALL_ABSTRACT_ONLY"
+
+    target_doc: DocumentModel | None = None
+    if ref_item.resolved_document_id:
+        target_doc = await db.get(DocumentModel, ref_item.resolved_document_id)
+
+    if not target_doc:
+        doc_id = uuid4()
+        title = ref_item.parsed_title or f"Reference [{ref_idx}]"
+        target_doc = DocumentModel(
+            id=doc_id,
+            user_id=current_user.id,
+            filename=f"reference_{ref_idx}.pdf" if is_open else f"reference_{ref_idx}",
+            title=title,
+            authors=ref_item.parsed_authors or [],
+            publication_year=ref_item.parsed_year,
+            doi=ref_item.doi,
+            content_hash=f"cas_ref_{uuid4().hex[:16]}",
+            file_size_bytes=0,
+            status=doc_status,
+            stage="ready" if doc_status == "abstract_only" else "downloading",
+            progress=100 if doc_status == "abstract_only" else 10,
+            access_status=access_status,
+            parsed_metadata=(
+                {"abstract": ref_item.raw_text} if doc_status == "abstract_only" else {}
+            ),
+            is_persistent=False,
+        )
+        db.add(target_doc)
+        await db.flush()
+        ref_item.resolved_document_id = target_doc.id
+
+    display_order = len(current_doc_ids)
+    session_doc = SessionDocumentModel(
+        session_id=id,
+        document_id=target_doc.id,
+        display_order=display_order,
+    )
+    db.add(session_doc)
+    await db.commit()
+
+    # 9. Tier 2 Async Ingestion via BackgroundTasks (Independent AsyncSessionLocal)
+    if is_open and pdf_url:
+        background_tasks.add_task(
+            ingest_reference_tier2_background,
+            target_doc.id,
+            current_user.id,
+            pdf_url,
+            doc_service,
+        )
+
+    session_doc_id = f"{id}_{target_doc.id}"
+    response_data = SessionReferenceIngestResponseData(
+        session_id=id,
+        document_id=target_doc.id,
+        session_document_id=session_doc_id,
+        title=target_doc.title or f"Reference [{ref_idx}]",
+        status=doc_status,
+        access_status=access_status,
+        ref_index=ref_idx,
+        fallback_reason=fallback_reason,
+        total_documents_in_session=len(current_doc_ids) + 1,
+        ingested_documents=[
+            {
+                "id": str(target_doc.id),
+                "title": target_doc.title or f"Reference [{ref_idx}]",
+                "filename": target_doc.filename,
+            }
+        ],
+    )
+    return SessionReferenceIngestEnvelope(
         success=True,
-        data=data,
+        data=response_data,
         meta=ResponseMeta(),
     )

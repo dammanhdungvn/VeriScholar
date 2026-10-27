@@ -4,6 +4,8 @@ from typing import Any
 from uuid import UUID, uuid4
 
 from api.db.models.document import DocumentModel
+from api.db.models.reference import ReferenceItemModel
+from api.db.models.session import SessionDocumentModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import (
@@ -21,6 +23,9 @@ from api.schemas.document import (
     DocumentListPaginatedEnvelope,
     DocumentParseEnvelope,
     DocumentParseRequest,
+    DocumentReferenceItemResponse,
+    DocumentReferencesEnvelope,
+    DocumentReferencesResponseData,
     DocumentResolveReferencesEnvelope,
     DocumentResolveReferencesRequest,
     DocumentStarEnvelope,
@@ -812,6 +817,131 @@ async def resolve_references(
     return DocumentResolveReferencesEnvelope(
         success=True,
         data=data,
+        meta=ResponseMeta(),
+    )
+
+
+GET_REFERENCES_DESCRIPTION = (
+    "🎯 **Mục đích:** Lấy danh mục tài liệu tham khảo (References) 3 cột của bài báo khoa học. "
+    "Nếu truyền `session_id`, hệ thống tự động kiểm tra cờ `is_in_session` "
+    "đối với từng bài tham khảo.\n\n"
+    "📥 **Đầu vào:**\n"
+    "- `document_id`: UUID bài báo khoa học (bắt buộc, Path parameter).\n"
+    "- `session_id`: UUID phiên nghiên cứu (tùy chọn, Query parameter).\n\n"
+    "📤 **Đầu ra (HTTP 200 OK):**\n"
+    "- `document_id`: UUID bài báo.\n"
+    "- `total_references`: Tổng số tài liệu tham khảo.\n"
+    "- `references`: Danh sách các mục tham khảo kèm trạng thái truy cập và liên kết phiên."
+)
+
+
+@router.get(
+    "/{document_id}/references",
+    status_code=status.HTTP_200_OK,
+    response_model=DocumentReferencesEnvelope,
+    summary="Lấy danh mục tài liệu tham khảo 3 cột của bài báo",
+    description=GET_REFERENCES_DESCRIPTION,
+    responses={
+        200: {
+            "description": "Lấy danh mục tài liệu tham khảo thành công.",
+            "model": DocumentReferencesEnvelope,
+        },
+        404: {
+            "description": "Không tìm thấy bài báo hoặc người dùng không có quyền truy cập.",
+        },
+        422: {
+            "description": "Định dạng UUID không hợp lệ.",
+        },
+    },
+)
+async def get_document_references(
+    document_id: UUID = Path(
+        ...,
+        description="UUID của bài báo khoa học cần lấy danh mục tham khảo",
+    ),
+    session_id: UUID | None = Query(
+        default=None,
+        description="UUID của phiên nghiên cứu hiện tại để kiểm tra is_in_session",
+    ),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> DocumentReferencesEnvelope:
+    """Retrieve structured reference list with optional session presence flag."""
+    # 1. Enforce document ownership
+    doc_stmt = select(DocumentModel).where(
+        DocumentModel.id == document_id,
+        DocumentModel.user_id == current_user.id,
+    )
+    doc_res = await db.execute(doc_stmt)
+    doc = doc_res.scalar_one_or_none()
+    if not doc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={
+                "code": "DOCUMENT_NOT_FOUND",
+                "message": f"Tài liệu '{document_id}' không tồn tại hoặc không thuộc quyền sở hữu.",
+            },
+        )
+
+    # 2. Fetch session documents if session_id provided
+    session_doc_ids: set[UUID] = set()
+    if session_id is not None:
+        sess_doc_stmt = select(SessionDocumentModel.document_id).where(
+            SessionDocumentModel.session_id == session_id
+        )
+        sess_doc_res = await db.execute(sess_doc_stmt)
+        session_doc_ids = set(sess_doc_res.scalars().all())
+
+    # 3. Query reference items
+    ref_stmt = (
+        select(ReferenceItemModel)
+        .where(ReferenceItemModel.document_id == document_id)
+        .order_by(ReferenceItemModel.ref_index.asc())
+    )
+    ref_res = await db.execute(ref_stmt)
+    ref_items = list(ref_res.scalars().all())
+
+    # 4. Resolve presence and pdf_urls
+    items_out: list[DocumentReferenceItemResponse] = []
+    for item in ref_items:
+        is_in_sess = bool(
+            item.resolved_document_id and item.resolved_document_id in session_doc_ids
+        )
+        pdf_url = None
+        access_status = "open_access_pdf"
+        if item.arxiv_id:
+            pdf_url = f"https://arxiv.org/pdf/{item.arxiv_id}.pdf"
+            access_status = "open_access_pdf"
+        elif item.doi and not item.arxiv_id:
+            # Paywalled fallback if closed DOI and no open link
+            access_status = "paywalled"
+            pdf_url = None
+        else:
+            access_status = "open_access_pdf"
+
+        items_out.append(
+            DocumentReferenceItemResponse(
+                ref_index=item.ref_index,
+                raw_text=item.raw_text,
+                parsed_title=item.parsed_title,
+                parsed_authors=item.parsed_authors or [],
+                parsed_year=item.parsed_year,
+                doi=item.doi,
+                arxiv_id=item.arxiv_id,
+                access_status=access_status,
+                pdf_url=pdf_url,
+                is_in_session=is_in_sess,
+                resolved_document_id=item.resolved_document_id,
+            )
+        )
+
+    return DocumentReferencesEnvelope(
+        success=True,
+        data=DocumentReferencesResponseData(
+            document_id=document_id,
+            total_references=len(items_out),
+            references=items_out,
+        ),
         meta=ResponseMeta(),
     )
 

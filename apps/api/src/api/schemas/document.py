@@ -362,6 +362,45 @@ class DocumentResolveReferencesEnvelope(
     """Top-level single resource envelope for document reference resolution."""
 
 
+class DocumentReferenceItemResponse(BaseModel):
+    """Structured reference item for 3-column context table."""
+
+    ref_index: int = Field(ge=1, description="1-indexed reference position")
+    raw_text: str = Field(description="Full raw reference citation string")
+    parsed_title: str | None = Field(default=None, description="Extracted scholarly paper title")
+    parsed_authors: list[str] = Field(default_factory=list, description="Extracted author list")
+    parsed_year: int | None = Field(default=None, description="Publication year")
+    doi: str | None = Field(default=None, description="DOI identifier")
+    arxiv_id: str | None = Field(default=None, description="arXiv identifier")
+    access_status: str = Field(
+        default="open_access_pdf",
+        description="Access status: open_access_pdf | paywalled | abstract_only",
+    )
+    pdf_url: str | None = Field(default=None, description="Direct URL to open-access PDF")
+    is_in_session: bool = Field(
+        default=False,
+        description="Whether reference is active in the current session",
+    )
+    resolved_document_id: UUID | None = Field(
+        default=None,
+        description="ID of resolved document if available",
+    )
+
+
+class DocumentReferencesResponseData(BaseModel):
+    """Payload data returned when document references are listed."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    total_references: int = Field(ge=0, description="Total count of reference items")
+    references: list[DocumentReferenceItemResponse] = Field(
+        default_factory=list, description="List of structured reference items"
+    )
+
+
+class DocumentReferencesEnvelope(SingleResponseEnvelope[DocumentReferencesResponseData]):
+    """Top-level single resource envelope for document references list."""
+
+
 class DocumentSectionResponse(BaseModel):
     """Section or heading item in the document's structure."""
 

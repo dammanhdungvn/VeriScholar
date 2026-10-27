@@ -15,6 +15,7 @@ import structlog
 from api.core.config import settings
 from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
+from api.db.models.reference import ReferenceItemModel
 from api.db.models.session import (
     ResearchSessionModel,
     SessionDocumentModel,
@@ -30,6 +31,7 @@ from api.services.embedding_service import EmbeddingService
 from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_provider
 from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
+from core.services.socratic_roadmap import extract_and_strip_bridge_hint
 from fastapi import HTTPException, status
 from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1459,7 +1461,10 @@ class SessionChatService:
                 "1. Bạn đã nắm phép nhân ma trận A x B và hàm Softmax chưa?\n"
                 "2. Bạn có từng nghe qua việc RNN/LSTM gặp khó khăn khi câu quá dài chưa?\n"
                 "3. Bạn muốn đọc hiểu sâu toán học hay muốn nắm kiến trúc để ứng dụng?\n\n"
-                "(Sau xác nhận, hệ thống sẽ mở Roadmap 5 chặng neo vào Figure 1, Table 1)."
+                "(Sau xác nhận, hệ thống sẽ mở Roadmap 5 chặng neo vào Figure 1, Table 1).\n\n"
+                '<bridge_hint ref_index="3" concept="Cơ chế Tự Chú Ý (Self-Attention)" '
+                'reason="Để nắm vững phần này, bạn cần hiểu nguyên lý từ '
+                'bài báo [3] (Vaswani et al., 2017)." />'
             )
 
         elif intent == IntentType.TAILORED_ROADMAP:
@@ -1479,7 +1484,10 @@ class SessionChatService:
                 "so với O(n · d^2) của Recurrent.\n"
                 "- Giai đoạn 5: Đọc Bảng 2 (Table 2) xem kết quả thực nghiệm dịch máy "
                 "và kiểm tra lại "
-                "bằng câu hỏi Active Recall trong sổ tay nghiên cứu."
+                "bằng câu hỏi Active Recall trong sổ tay nghiên cứu.\n\n"
+                '<bridge_hint ref_index="3" concept="Cơ chế Tự Chú Ý (Self-Attention)" '
+                'reason="Để nắm vững phần này, bạn cần hiểu nguyên lý từ '
+                'bài báo [3] (Vaswani et al., 2017)." />'
             )
 
         elif not target_doc_ids and not citations:
@@ -1871,6 +1879,7 @@ class SessionChatService:
 
         answer_parts: list[str] = []
         thought_parts: list[str] = []
+        bridge_hint_payload = None
         finish_reason = "stop"
 
         if should_use_llm:
@@ -1911,7 +1920,14 @@ class SessionChatService:
                     "học thuật. Tuyệt đối không giải đáp các chủ đề đời sống, thời tiết, "
                     "nấu ăn, tán gẫu, giải trí hoặc không liên quan đến bài báo hay phương pháp "
                     "nghiên cứu. Nếu câu hỏi ngoài luồng lọt qua bộ lọc, hãy lịch thiệp từ chối "
-                    "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu."
+                    "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu.\n"
+                    "8. Gợi ý Lộ trình Học Socratic (Bridge Hint): Nếu câu hỏi của người dùng "
+                    "yêu cầu giải thích sâu về một công thức, mô hình hoặc khái niệm nền tảng mà "
+                    "bài báo hiện tại kế thừa từ tài liệu tham khảo [ref_index] trong danh mục: "
+                    "hãy giải thích trực quan khái niệm, đồng thời xuất thẻ gợi ý ở cuối câu "
+                    "theo đúng cú pháp:\n"
+                    '<bridge_hint ref_index="k" concept="Tên khái niệm" '
+                    'reason="Lý do cần đọc bài tham khảo trước" />'
                     f"{abstract_warning}"
                 )
 
@@ -2022,6 +2038,7 @@ class SessionChatService:
                         json=payload,
                     ) as resp:
                         if resp.status_code == 200:
+                            bridge_buffer = ""
                             async for raw_line in resp.aiter_lines():
                                 if await is_disconnected():
                                     logger.warning(
@@ -2053,12 +2070,61 @@ class SessionChatService:
                                         # 2. Capture Final Answer Content Tokens
                                         delta = delta_obj.get("content", "")
                                         if delta:
-                                            answer_parts.append(delta)
-                                            evt_token = emit("token", {"token": delta})
-                                            if evt_token:
-                                                yield evt_token
+                                            if bridge_buffer or "<" in delta:
+                                                bridge_buffer += delta
+                                                if (
+                                                    "</bridge_hint>" in bridge_buffer
+                                                    or "/>" in bridge_buffer
+                                                ):
+                                                    (
+                                                        cleaned_buf,
+                                                        hint_streaming,
+                                                    ) = extract_and_strip_bridge_hint(bridge_buffer)
+                                                    if hint_streaming and not bridge_hint_payload:
+                                                        bridge_hint_payload = hint_streaming
+                                                    if cleaned_buf:
+                                                        answer_parts.append(cleaned_buf)
+                                                        tok_evt = emit(
+                                                            "token", {"token": cleaned_buf}
+                                                        )
+                                                        if tok_evt:
+                                                            yield tok_evt
+                                                    bridge_buffer = ""
+                                                elif len(bridge_buffer) > 1000 or (
+                                                    "<" in bridge_buffer
+                                                    and not any(
+                                                        "<bridge_hint"[:i] in bridge_buffer
+                                                        for i in range(2, 13)
+                                                    )
+                                                ):
+                                                    answer_parts.append(bridge_buffer)
+                                                    tok_evt = emit(
+                                                        "token", {"token": bridge_buffer}
+                                                    )
+                                                    if tok_evt:
+                                                        yield tok_evt
+                                                    bridge_buffer = ""
+                                            else:
+                                                answer_parts.append(delta)
+                                                evt_token = emit("token", {"token": delta})
+                                                if evt_token:
+                                                    yield evt_token
                                     except Exception:
                                         continue
+
+                            if bridge_buffer:
+                                (
+                                    cleaned_buf,
+                                    hint_streaming,
+                                ) = extract_and_strip_bridge_hint(bridge_buffer)
+                                if hint_streaming and not bridge_hint_payload:
+                                    bridge_hint_payload = hint_streaming
+                                if cleaned_buf:
+                                    answer_parts.append(cleaned_buf)
+                                    tok_evt = emit("token", {"token": cleaned_buf})
+                                    if tok_evt:
+                                        yield tok_evt
+                                bridge_buffer = ""
                         else:
                             err_body = await resp.aread()
                             err_text = err_body.decode(errors="ignore")
@@ -2087,7 +2153,10 @@ class SessionChatService:
                 target_doc_ids=target_doc_ids,
                 abstract_only_docs=abstract_only_docs,
             )
-            tokens = full_text.split(" ")
+            clean_full_text, hint_fallback = extract_and_strip_bridge_hint(full_text)
+            if hint_fallback and not bridge_hint_payload:
+                bridge_hint_payload = hint_fallback
+            tokens = clean_full_text.split(" ")
             for token in tokens:
                 if await is_disconnected():
                     logger.warning("sse_client_disconnected", session_id=str(session_id))
@@ -2102,6 +2171,10 @@ class SessionChatService:
                 await asyncio.sleep(0.01)
 
         final_answer = "".join(answer_parts).strip()
+        cleaned_final, hint_final = extract_and_strip_bridge_hint(final_answer)
+        if hint_final and not bridge_hint_payload:
+            bridge_hint_payload = hint_final
+        final_answer = cleaned_final
 
         # Output Guardrail: Verify factual grounding and detect citation hallucinations
         valid_cids = [c["citation_id"] for c in citations]
@@ -2179,6 +2252,47 @@ class SessionChatService:
         except Exception as db_err:
             logger.error("failed_to_persist_session_turn", error=str(db_err))
             await self.db.rollback()
+
+        if bridge_hint_payload is not None:
+            paper_title = f"Reference [{bridge_hint_payload.ref_index}]"
+            authors: list[str] = []
+            year: int | None = None
+            doi: str | None = None
+            arxiv_id: str | None = None
+
+            try:
+                ref_stmt = select(ReferenceItemModel).where(
+                    ReferenceItemModel.ref_index == bridge_hint_payload.ref_index,
+                )
+                if target_doc_ids:
+                    ref_stmt = ref_stmt.where(ReferenceItemModel.document_id.in_(target_doc_ids))
+                ref_res = await self.db.execute(ref_stmt)
+                ref_item = ref_res.scalars().first()
+                if ref_item:
+                    if ref_item.parsed_title:
+                        paper_title = ref_item.parsed_title
+                    if ref_item.parsed_authors:
+                        authors = ref_item.parsed_authors
+                    year = ref_item.parsed_year
+                    doi = ref_item.doi
+                    arxiv_id = ref_item.arxiv_id
+            except Exception as ref_err:
+                logger.warning("failed_to_lookup_bridge_hint_reference", error=str(ref_err))
+
+            hint_event_data = {
+                "ref_index": bridge_hint_payload.ref_index,
+                "concept_name": bridge_hint_payload.concept_name,
+                "paper_title": paper_title,
+                "authors": authors,
+                "year": year,
+                "doi": doi,
+                "arxiv_id": arxiv_id,
+                "reason": bridge_hint_payload.reason,
+                "can_ingest": True,
+            }
+            evt_hint = emit("bridge_hint", hint_event_data)
+            if evt_hint:
+                yield evt_hint
 
         evt_done = emit("done", done_payload)
         if evt_done:
