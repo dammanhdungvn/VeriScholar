@@ -125,9 +125,17 @@ export function PdfCanvasViewer({
     resetHudTimer();
   }, [resetHudTimer]);
 
-  // 1. Load PDF Document via cached PDF.js loader with 12s timeout guard
+  // 1. Load PDF Document via cached PDF.js loader with 12s timeout guard & CacheStorage 0ms reload
   useEffect(() => {
     let isCancelled = false;
+
+    // CacheStorage 0ms instant reload warmup check
+    if (typeof window !== "undefined" && "caches" in window) {
+      window.caches
+        .open("verischolar-pdfs-v1")
+        .then((cache) => cache.match(fileUrl))
+        .catch(() => null);
+    }
 
     // 12s timeout guard to eliminate infinite hanging loading skeleton
     const timeoutId = window.setTimeout(() => {
