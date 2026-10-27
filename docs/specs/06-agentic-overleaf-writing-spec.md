@@ -113,7 +113,7 @@ ALTER TABLE drafts ADD COLUMN IF NOT EXISTS previous_snapshot JSONB NULL;
 1. **Kiểm soát đồng thời lạc quan (OCC - Optimistic Concurrency Control):** Cột `version` (INT, mặc định `1`, tăng tuần tiến `+1` sau mỗi lần ghi). Khi người dùng lưu tay hoặc Agent cập nhật, câu lệnh SQL bắt buộc kiểm tra:
    $$\text{UPDATE drafts SET version = version + 1, ... WHERE id = :id AND version = :client_version}$$
    Nếu không có dòng nào được cập nhật, trả về ngay mã lỗi `412 PRECONDITION_FAILED` (xung đột phiên bản).
-2. **Snapshot Hoàn Tác Bất Biến (Undo Snapshot Guarantee):** Giá trị `previous_snapshot` phải có cấu trúc JSONB:
+2. **Snapshot Hoàn Tác Toàn Dự Án Bất Biến (Composite Project Undo Snapshot Guarantee):** Giá trị `previous_snapshot` phải có cấu trúc JSONB:
    ```json
    {
      "content": "\\documentclass{article}...",
@@ -122,7 +122,12 @@ ALTER TABLE drafts ADD COLUMN IF NOT EXISTS previous_snapshot JSONB NULL;
      "saved_at": "2026-10-25T10:30:00Z"
    }
    ```
-   Bản chụp này được ghi nhận **chính xác 1 lần duy nhất ngay trước khi Agent thực hiện lượt sửa đổi đầu tiên (Attempt 1)**. Người dùng có thể hoàn tác bất kỳ lúc nào để quay lại trạng thái trước khi AI can thiệp.
+   Bản chụp này được ghi nhận **chính xác 1 lần duy nhất ngay trước khi Agent thực hiện lượt sửa đổi đầu tiên (Attempt 1)**. Khi người dùng gọi endpoint `:undo`, hệ thống khôi phục đồng thời cả `main.tex` và `references.bib` về trạng thái trước can thiệp.
+
+3. **Chuẩn Hóa & Thoát Ký Tự Đặc Biệt BibTeX Tất Định (Deterministic BibTeX Escaping):**
+   Trong các bài báo khoa học, tiêu đề chứa rất nhiều ký tự nhạy cảm trong LaTeX (ví dụ: *"Attention Is All You Need & Transformers"*, *"A 50% Reduction in FLOPs"*). Nếu không thoát ký tự, trình biên dịch LaTeX sẽ sập ngay lập tức:
+   $$\text{escaped\_title} = \text{re.sub}(r'(?<!\\)([&%_$#])', r'\\\1', \text{raw\_title})$$
+   Hàm sinh skeleton và bổ sung BibTeX bắt buộc áp dụng regex này trước khi ghi vào `references.bib`.
 
 ### B. Bảng Mới `draft_assets` (Quản Lý Thư Mục Hình Ảnh `figures/`)
 Lưu trữ các tệp ảnh và sơ đồ minh họa đính kèm bản thảo:
@@ -358,14 +363,82 @@ flowchart TD
    - Gọi trực tiếp phân hệ GraphRAG (Spec 05) để tìm kiếm các phương pháp, bộ dữ liệu và kết quả thực nghiệm từ kho bài báo yêu thích của người dùng để viết phần Tổng quan hoặc So sánh phương pháp.
 4. **`compile_latex_e2b()`**:
    - Đóng gói toàn bộ `main.tex`, `references.bib` và toàn bộ hình ảnh trong thư mục `figures/` từ bảng `draft_assets`.
-   - Đẩy file lên thư mục `/tmp/verischolar-latex/` của E2B Sandbox MicroVM.
-   - Thực thi trình biên dịch `tectonic --untrusted --outdir /tmp/verischolar-latex main.tex` (hoặc chuỗi lệnh `pdflatex -> bibtex -> pdflatex -> pdflatex` với cờ bắt buộc `--no-shell-escape` và giới hạn cứng `timeout = 15 giây`).
-   - Trả về kết quả: `success: bool`, `logs: str`, `errors: list[LatexSyntaxError]`.
+   - Chạy qua Hạ tầng biên dịch 2 tầng (Mục 5.B).
+   - Trả về kết quả: `success: bool`, `logs: str`, `errors: list[LatexSyntaxError]`, `pdf_url: str | None`.
 
-### B. Triệt Tiêu Hoàn Toàn Trình Xem Trước Giả Lập (Deprecation Notice)
+---
+
+### B. Hạ Tầng Biên Dịch 2 Tầng (2-Tier Compilation Architecture)
+Để tối ưu hóa chi phí đám mây và giảm độ trễ phản hồi cho người dùng, hệ thống phân tách thành 2 tầng biên dịch:
+
+```mermaid
+flowchart LR
+    Source["Mã LaTeX & BibTeX"] --> Tier1["Tầng 1: Fast AST Syntax Linter (< 200ms)"]
+    Tier1 -->|"Lỗi ngoặc / Macro chưa đóng"| ImmediateError["Báo Ngay Cho Agent Tự Sửa Lỗi Cục Bộ"]
+    Tier1 -->|"Cú pháp hợp lệ"| Tier2["Tầng 2: E2B Sandbox MicroVM (15s Timeout)"]
+    Tier2 -->|"stderr có lỗi biên dịch"| AgentFeedback["Phản Hồi Cho Agent Đọc Log & Vá Mã"]
+    Tier2 -->|"Mã thoát 0"| SuccessPDF["Xuất File PDF Thành Công"]
+```
+
+1. **Tầng 1 — Bộ Kiểm Tra Cú Pháp AST Cục Bộ (Fast AST Linter < 200ms):**
+   - Chạy trên máy chủ API cục bộ sử dụng parser regex/AST thuần Python.
+   - Kiểm tra các lỗi phổ biến mà không cần gọi sandbox ngoài: thiếu dấu đóng mở môi trường (`\begin{...}` không có `\end{...}`), thiếu dấu ngoặc nhọn `{...}`, hoặc mất cân bằng công thức toán inline/display (`$`, `$$`).
+   - Nếu phát hiện lỗi: Trả về kết quả lỗi ngay lập tức trong $< 200$ms để Agent sửa lại, tiết kiệm 100% thời gian khởi tạo container và chi phí API E2B.
+2. **Tầng 2 — Động Cơ Biên Dịch Hộp Cát Vi Máy Ảo (E2B Cloud Sandbox MicroVM):**
+   - Khi vượt qua Tầng 1, gói tài liệu được đẩy lên thư mục `/tmp/verischolar-latex/` trong môi trường vi máy ảo cô lập E2B Firecracker MicroVM.
+   - Chạy lệnh biên dịch thực thụ: `tectonic --untrusted --outdir /tmp/verischolar-latex main.tex` (hoặc `pdflatex -> bibtex -> pdflatex -> pdflatex` với cờ bắt buộc `--no-shell-escape` và giới hạn cứng `timeout = 15 giây`).
+   - Môi trường hoàn toàn cách ly, ngăn chặn tuyệt đối mọi hành vi khai thác qua lỗ hổng TeX `\write18` hoặc đọc tệp hệ điều hành (`/etc/passwd`).
+
+---
+
+### C. Cơ Chế Chống Dao Động Mã Băm (Anti-Oscillation Guard với SHA-256)
+Trong quá trình tự sửa lỗi cú pháp LaTeX, mô hình AI đôi khi rơi vào bẫy "sửa qua sửa lại" giữa hai phương án sai (ví dụ: vòng 1 sửa `\cite{a}` thành `\cite{b}` gây lỗi, vòng 2 lại sửa ngược `\cite{b}` về `\cite{a}`).
+
+Hệ thống cài đặt thuật toán giám sát dao động mã băm trạng thái:
+1. Mỗi khi Agent sinh ra một bản vá nội dung `content` mới, hệ thống tính mã băm SHA-256:
+   $$h_i = \text{SHA256}(content_i)$$
+2. Nếu $h_i \in \{h_1, h_2, \dots, h_{i-1}\}$: Hệ thống phát hiện **Trạng Thái Dao Động Lặp Lại (Oscillation Cycle Detected)**.
+3. Vòng lặp ReAct lập tức dừng lại ngay lập tức (không đợi tiêu hết 3 lần thử), trả về mã trạng thái dừng an toàn, cảnh báo cụ thể vị trí dòng lỗi cho tác giả và gợi ý hoàn tác 1-Click.
+
+---
+
+### D. Định Nghĩa LangGraph StateGraph & Bộ Trạng Thái Tác Nhân
+Trợ lý AI được xây dựng trên `langgraph` với sơ đồ trạng thái kiểu mẫu:
+
+```python
+from typing import Annotated, TypedDict
+from langchain_core.messages import BaseMessage
+import operator
+
+class LatexWritingState(TypedDict):
+    draft_id: str
+    user_id: str
+    prompt: str
+    current_content: str
+    current_bib_content: str
+    version: int
+    compile_attempts: int
+    patch_hashes: Annotated[list[str], operator.add]
+    messages: Annotated[list[BaseMessage], operator.add]
+    pdf_preview_url: str | None
+    compile_error: str | None
+    is_completed: bool
+```
+
+**Các Nút Điều Phối (Nodes) & Cạnh Rẽ Nhánh (Conditional Edges):**
+- **`save_snapshot_node`:** Ghi nhận `previous_snapshot` vào PostgreSQL đúng một lần trước Attempt 1.
+- **`planner_node`:** Suy luận yêu cầu người dùng, quyết định công cụ cần gọi (tra cứu GraphRAG, liệt kê ảnh, hoặc cập nhật văn bản).
+- **`tools_node`:** Thực thi các công cụ qua LangChain ToolNode.
+- **`compile_node`:** Thực hiện biên dịch 2 tầng (Tier 1 AST Linter $\rightarrow$ Tier 2 E2B Sandbox).
+- **`router_edge`:** Nếu biên dịch thành công $\rightarrow$ Chuyển `end_node`; Nếu thất bại và `compile_attempts < 3` và không bị dao động SHA-256 $\rightarrow$ Chuyển `self_heal_node`; Ngược lại $\rightarrow$ Chuyển `end_node` kèm cảnh báo.
+
+---
+
+### E. Triệt Tiêu Hoàn Toàn Trình Xem Trước Giả Lập (Deprecation Notice & Hexagonal Purity)
 > [!CAUTION]
-> **Xóa Bỏ Vĩnh Viễn Hàm Preview PyMuPDF Giả Lập:**  
-> Toàn bộ logic tại hàm `_generate_in_memory_pdf_preview()` trong file `packages/core/src/core/services/latex_compiler.py` (vốn cắt bỏ `\section{...}` và vẽ text thô) bị **xóa bỏ hoàn toàn**. Mọi bản dựng xem trước PDF phải là sản phẩm biên dịch thực thụ từ E2B Sandbox để đảm bảo công thức toán, bảng biểu và hình ảnh hiển thị chuẩn xác 100%.
+> **Xóa Bỏ Vĩnh Viễn Hàm Preview PyMuPDF Giả Lập & Bảo Toàn Kiến Trúc Lục Giác:**  
+> Toàn bộ logic tại hàm `_generate_in_memory_pdf_preview()` trong file `packages/core/src/core/services/latex_compiler.py` (vốn import `fitz` cắt bỏ `\section{...}` và vẽ text thô) bị **xóa bỏ hoàn toàn**.  
+> Theo Quy tắc 2 của `AGENTS.md` (Hexagonal Isolation), `packages/core/` là lõi thuần khiết (chỉ dùng thư viện chuẩn Python và `pydantic`), tuyệt đối cấm import thư viện I/O hay PyMuPDF. Mọi bản dựng xem trước PDF phải là sản phẩm biên dịch thực thụ từ E2B Cloud Sandbox để đảm bảo công thức toán, bảng biểu và hình ảnh hiển thị chuẩn xác 100%.
 
 ---
 
@@ -429,6 +502,9 @@ sequenceDiagram
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |
 |---|---|---|---|
 | `test_academic_skeleton_generation` | `packages/core/tests/test_draft_skeleton.py` | Tạo draft từ danh sách 3 papers | `main.tex` chứa đúng 3 citekey, `references.bib` hợp lệ cú pháp. |
+| `test_deterministic_bibtex_character_escaping` | `packages/core/tests/test_draft_skeleton.py` | Tiêu đề bài báo chứa `&`, `%`, `_`, `$`, `#` | Tự động thoát thành `\&`, `\%`, `\_`, `\$`, `\#` trong BibTeX. |
+| `test_tier_1_ast_syntax_linter_unclosed_env` | `packages/core/tests/test_draft_linter.py` | Mã LaTeX thiếu `\end{equation}` hoặc dấu `$` | Báo lỗi cú pháp trong < 200ms mà không cần gọi sandbox ngoài. |
+| `test_anti_oscillation_guard_detects_cycle` | `packages/core/tests/test_latex_agent.py` | Agent sinh bản vá có mã băm SHA-256 trùng bản vá trước | Ngắt vòng lặp ReAct ngay lập tức, trả về cảnh báo an toàn. |
 | `test_asset_security_filename_sanitization` | `packages/core/tests/test_draft_asset_security.py` | Tải lên file ảnh có tên `../../etc/passwd` | Ném lỗi `ZipSlipSecurityError`, mã HTTP `400 BAD REQUEST`. |
 | `test_draft_occ_optimistic_locking` | `apps/api/tests/test_drafts_occ.py` | 2 requests cùng sửa version 1 đồng thời | Request 1 thành công (version 2), Request 2 nhận mã lỗi `412`. |
 | `test_reading_to_writing_bridge_endpoint` | `apps/api/tests/test_drafts_bridge.py` | Gọi `POST /api/v1/drafts` kèm `source_session_id` | Tạo draft thành công, liên kết `source_session_id`, `version=1`. |
@@ -443,7 +519,10 @@ sequenceDiagram
 - [ ] Phân hệ có tên định danh rõ ràng là **Phân Hệ Soạn Thảo & Agentic LaTeX (Writing Workspace & Agentic LaTeX)**, không dùng số thứ tự định danh trong nội dung tài liệu.
 - [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 3 kịch bản: Cầu nối Khung sườn học thuật, Quản lý ảnh `figures/`, và Vòng lặp ReAct tự sửa lỗi biên dịch tự trị.
 - [ ] Cầu nối từ Đọc sang Viết tự động khởi tạo sẵn `main.tex` và `references.bib` hợp lệ 100% cú pháp, hiển thị bản dựng PDF xem trước tức thì trên Cột 2 mà không gặp lỗi.
-- [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`.
-- [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click.
+- [ ] Tiêu đề và tác giả chứa ký tự đặc biệt (`&`, `%`, `_`, `$`, `#`) được thoát tự động trước khi ghi vào `references.bib`.
+- [ ] Hạ tầng biên dịch 2 tầng (Tier 1 AST Linter < 200ms, Tier 2 E2B MicroVM Sandbox với 15s timeout) hoạt động trơn tru.
+- [ ] Cơ chế Anti-Oscillation Guard với SHA-256 chặn đứng 100% nguy cơ lặp vòng lặp vá lỗi vô hạn.
+- [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`, bảo toàn tuyệt đối kiến trúc lục giác cho `packages/core/`.
+- [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click cả `main.tex` và `references.bib`.
 - [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.G được cài đặt đầy đủ theo chuẩn Error Envelope.
-- [ ] Toàn bộ 7 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Toàn bộ 10 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

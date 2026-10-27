@@ -41,19 +41,35 @@ Biến kho bài báo yêu thích của học giả từ một danh sách tệp t
 | **Trợ Lý Soạn Thảo Tích Hợp** | Tác nhân liên thông sang không gian viết bài | Truy xuất mạng tri thức trong kho yêu thích để lấy số liệu thực nghiệm và dẫn chứng khi hỗ trợ viết bản thảo (`PRD-06`). |
 
 ```mermaid
-flowchart LR
+flowchart TD
     Scholar(["Học Giả Nghiên Cứu"])
     GraphEngine(["Động Cơ Đồ Thị Tri Thức"])
-    subgraph LibraryBoundary ["Phân Hệ Kho Yêu Thích & Mạng Tri Thức Học Thuật 4 Thực Thể"]
-        UC1(["UC-LIB-01: Tổ Chức Cây Thư Mục Đề Tài Đa Cấp"])
-        UC2(["UC-LIB-02: Gắn Sao & Bóc Tách Đồ Thị 4 Thực Thể"])
-        UC3(["UC-LIB-03: Hỏi Đáp Đối Chiếu Đa Bài Báo (GraphRAG)"])
-        UC2 --> UC3
+
+    subgraph LibraryBoundary ["Phân Hệ Kho Yêu Thích & Mạng Tri Thức Kép (PostgreSQL & pgvector)"]
+        subgraph UseCases ["Nghiệp Vụ Học Thuật"]
+            UC1["UC-LIB-01: Cây Thư Mục Đề Tài"]
+            UC2["UC-LIB-02: Gắn Sao & Trích Xuất Nền"]
+            UC3["UC-LIB-03: Gộp Hub (Cosine >= 0.90)"]
+            UC4["UC-LIB-04: Đối Chiếu 2 Bước (GraphRAG)"]
+            UC1 --- UC2 --> UC3 --> UC4
+        end
+
+        subgraph DualGraph ["Kiến Trúc Đồ Thị Kép (Dual-Layer Knowledge Graph)"]
+            LexicalGraph[("Lexical Graph: document_chunks (Text, BBox, Page, Vector 1536d)")]
+            DomainGraph[("Domain Graph: graph_nodes & graph_edges (Paper, Method, Dataset, Metric)")]
+            LexicalGraph -. "evidence_chunk_id (Minh chứng gốc)" .- DomainGraph
+        end
+
+        UC2 --> DomainGraph
+        UC4 --> DomainGraph
+        UC4 --> LexicalGraph
     end
+
     Scholar --> UC1
     Scholar --> UC2
-    Scholar --> UC3
+    Scholar --> UC4
     GraphEngine --> UC2
+    GraphEngine --> UC3
 ```
 
 ---
@@ -81,10 +97,10 @@ flowchart LR
 - **Điều kiện tiên quyết:** Người dùng đang đọc một bài báo trong phiên nghiên cứu hoặc xem danh sách tài liệu.
 - **Sự kiện kích hoạt:** Người dùng nhấp biểu tượng ngôi sao `[⭐ Yêu thích]`.
 - **Luồng chuẩn (Happy Path):**
-  1. Biểu tượng ngôi sao sáng vàng; bài báo được thêm ngay vào Kho Yêu Thích (kèm tùy chọn gán vào một Thư mục đề tài).
-  2. Hệ thống tự động kích hoạt ngầm tiến trình quét bài báo để trích xuất các thực thể học thuật (`Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) và kết nối vào mạng lưới tri thức cá nhân của người dùng.
+  1. Biểu tượng ngôi sao sáng vàng; bài báo được thêm ngay vào Kho Yêu Thích (kèm tùy chọn gán vào một Thư mục đề tài) trong $< 200$ms.
+  2. Hệ thống lập tức kích hoạt tiến trình chạy nền bất đồng bộ (`FastAPI BackgroundTasks`) để quét toàn văn bài báo, trích xuất cấu trúc 4 thực thể học thuật (`Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) và sinh vector dense 1536 chiều cho từng đỉnh đồ thị thông qua `EmbeddingService`.
 - **Kết quả đầu ra (Post-conditions):**
-  - Bài báo xuất hiện trong Kho Yêu Thích và các thực thể trích xuất từ bài báo được hợp nhất vào đồ thị tri thức cá nhân của học giả.
+  - Bài báo xuất hiện trong Kho Yêu Thích và các thực thể trích xuất từ bài báo được gắn vector 1536 chiều, sẵn sàng cho chỉ mục HNSW phục vụ GraphRAG.
 - **Luồng ngoại lệ (Exception Flows):**
   - *2a. Bỏ đánh dấu yêu thích (`Unstar`):* Khi người dùng nhấp tắt ngôi sao, hệ thống lập tức loại bài báo và các cạnh quan hệ riêng của bài đó khỏi phạm vi truy vấn đồ thị, nhưng vẫn bảo toàn các điểm nút phương pháp/dữ liệu trung tâm nếu còn bài báo khác liên kết tới.
   - *2b. Tiến trình trích xuất thực thể gặp sự cố hoặc bài báo lý thuyết thuần túy không có bảng thực nghiệm:* Bài báo vẫn được lưu giữ an toàn trong Kho Yêu Thích; hệ thống chỉ tạo các thực thể có trong bài và cho phép kích hoạt trích xuất lại khi cần.
@@ -100,9 +116,11 @@ flowchart LR
      - `Bài Báo (Paper)`: Tiêu đề, tác giả, năm, nơi công bố.
      - `Phương Pháp (Method)`: Thuật toán, mô hình, kiến trúc (ví dụ: *Transformer*, *ResNet-50*).
      - `Tập Dữ Liệu (Dataset)`: Bộ dữ liệu chuẩn (ví dụ: *ImageNet-1K*, *WMT-2014*).
-     - `Kết Quả Đo Lường (MetricResult)`: Con số thực nghiệm kèm thước đo và số trang chứng cứ (ví dụ: *BLEU 28.4 • Trang 8*).
+     - `Kết Quả Đo Lường (MetricResult)`: Con số thực nghiệm gắn chặt với bộ ba ngữ cảnh `(Tập dữ liệu, Tác vụ, Phân chia dữ liệu)` kèm thước đo và số trang chứng cứ (ví dụ: *WMT-2014 En-De • Test • BLEU 28.4 • Trang 8*).
   2. Hệ thống thiết lập **4 Kiểu Quan Hệ Chuẩn**: `Đề Xuất (PROPOSES)`, `Đánh Giá Trên (EVALUATED_ON)`, `Đạt Được (ACHIEVES)` và `Trích Dẫn (CITES)`.
-  3. **Hợp nhất điểm nút trung tâm (Canonical Hub):** Khi nhiều bài báo của cùng một học giả cùng nhắc tới một tên phương pháp hoặc tập dữ liệu chuẩn hóa (không phân biệt chữ hoa/thường và khoảng trắng thừa), hệ thống tự động gộp về một điểm nút trung tâm duy nhất và nối cạnh từ tất cả các bài báo đó tới nút trung tâm.
+  3. **Khử nhập nhằng ngữ nghĩa & Gộp điểm nút trung tâm (Semantic Entity Disambiguation):**
+     - Thay vì chỉ chuẩn hóa chuỗi đơn giản, hệ thống tính độ tương đồng vector cosine giữa tên thực thể mới và các đỉnh đã có trong kho của học giả.
+     - Nếu $\text{Cosine Similarity} \ge 0.90$ (ví dụ: *"Transformer"* và *"The Transformer model"*), hệ thống tự động gộp về một điểm nút trung tâm duy nhất (Hub) và nối cạnh quan hệ từ bài báo mới tới nút trung tâm đó, ngăn chặn triệt để hiện tượng nổ đỉnh phân mảnh.
 - **Kết quả đầu ra (Post-conditions):**
   - Đồ thị tri thức tạo thành mạng lưới liên thông đa bài báo, không sinh các nút phương pháp/tập dữ liệu trùng lặp và mọi con số đo lường đều gắn chặt với số trang nguồn.
 - **Luồng ngoại lệ (Exception Flows):**
@@ -110,14 +128,16 @@ flowchart LR
 
 ---
 
-### UC-LIB-04: Hỏi Đáp Tổng Hợp & Đối Chiếu Đa Tài Liệu Trong Kho
+### UC-LIB-04: Hỏi Đáp Tổng Hợp & Đối Chiếu Đa Tài Liệu Trong Kho (2-Step GraphRAG Retrieval)
 - **Tác nhân:** Nhà Nghiên Cứu.
 - **Điều kiện tiên quyết:** Kho Yêu Thích có các bài báo đã được trích xuất đồ thị tri thức.
 - **Sự kiện kích hoạt:** Người dùng nhập câu hỏi so sánh tổng hợp tại ô tra cứu Kho Yêu Thích.
 - **Luồng chuẩn (Happy Path):**
   1. Người dùng nhập câu hỏi tự nhiên (ví dụ: *"Những bài báo nào trong kho của tôi đánh giá trên tập WMT-2014 và đạt điểm BLEU cao nhất?"*).
-  2. Hệ thống tìm các điểm nút thực thể khớp ngữ nghĩa nhất rồi mở rộng 1 bước nhảy quan hệ sang các bài báo, phương pháp và kết quả đo lường liên đới.
-  3. Hệ thống trả về bản tổng hợp đối chiếu kèm trích dẫn tên bài báo, số trang gốc và hiển thị sơ đồ mạng lưới trực quan (Subgraph) của các thực thể liên quan.
+  2. **Truy vấn 2 bước siêu tốc (< 50ms):**
+     - **Bước 1 (HNSW Vector Anchor):** Hệ thống tìm các điểm nút thực thể khớp ngữ nghĩa nhất trong bảng `graph_nodes` bằng khoảng cách cosine HNSW.
+     - **Bước 2 (1-Hop SQL Traversal):** Sử dụng câu lệnh SQL `JOIN` nguyên bản của PostgreSQL trên bảng `graph_edges` để quét toàn bộ các bài báo, phương pháp và kết quả đo lường liên đới trong 1 bước nhảy.
+  3. Hệ thống trả về bảng tổng hợp đối chiếu dạng ma trận SOTA kèm trích dẫn tên bài báo, số trang gốc và hiển thị sơ đồ mạng lưới trực quan (Subgraph) của các thực thể liên quan.
 - **Kết quả đầu ra (Post-conditions):**
   - Học giả nhận được câu trả lời đối chiếu đa bài báo có dẫn chứng số trang và sơ đồ đồ thị con tương ứng.
 - **Luồng ngoại lệ (Exception Flows):**
@@ -167,6 +187,7 @@ Feature: Dọn dẹp sạch phạm vi tri thức khi người dùng bỏ yêu th
 ## 5. Quy Tắc Nghiệp Vụ Bất Biến (Business Invariants)
 
 1. **Nguyên Tắc 4 Thực Thể & 4 Quan Hệ Cố Định (Strict 4-Entity Schema):** Đồ thị tri thức chỉ sử dụng đúng 4 loại thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) và 4 kiểu quan hệ (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`); tuyệt đối không sinh nhãn tùy tiện.
-2. **Nguyên Tắc Điểm Nút Trung Tâm Dùng Chung (Canonical Hub Merging):** Các thực thể `Method` hoặc `Dataset` trùng tên chuẩn hóa trong phạm vi một học giả bắt buộc được gộp về một nút trung tâm duy nhất và giữ tồn tại khi một bài báo đơn lẻ bị gỡ.
+2. **Nguyên Tắc Gộp Đỉnh Trung Tâm Ngữ Nghĩa (Semantic Entity Disambiguation Hubs):** Các thực thể `Method` hoặc `Dataset` có độ tương đồng vector Cosine $\ge 0.90$ trong phạm vi kho tài liệu của một học giả bắt buộc được gộp về một nút trung tâm duy nhất (Canonical Hub) để tránh hiện tượng nổ đỉnh phân mảnh, và được bảo toàn nguyên vẹn khi chỉ có một bài báo đơn lẻ bị gỡ bỏ (`Unstar`).
 3. **Nguyên Tắc Cô Lập Đồ Thị Cá Nhân Tuyệt Đối (Strict Scholar Isolation):** Cây thư mục và đồ thị tri thức của học giả nào chỉ thuộc quyền truy xuất của học giả đó.
-4. **Nguyên Tắc Minh Chứng Số Liệu Thực Nghiệm (Grounded Metric Evidence):** Mọi nút `MetricResult` bắt buộc gắn liền với bài báo nguồn và số trang nơi trích xuất con số đó.
+4. **Nguyên Tắc Liên Kết Đồ Thị Kép (Dual-Layer Lexical & Domain Grounding):** Mọi cạnh quan hệ thực nghiệm trong Domain Graph (`graph_edges`) bắt buộc lưu trữ trường `evidence_chunk_id` tham chiếu trực tiếp đến bản ghi tương ứng trong Lexical Graph (`document_chunks`), cho phép học giả đối chiếu văn bản gốc và vùng tọa độ (Bounding Box) trên trang tài liệu chỉ bằng 1 thao tác.
+5. **Nguyên Tắc Ngữ Cảnh Đo Lường Toàn Vẹn (Contextual Metric Tuple Invariant):** Mọi nút `MetricResult` bắt buộc gắn chặt với bộ ngữ cảnh thực nghiệm đầy đủ `(Tập dữ liệu, Tác vụ, Phân chia dữ liệu, Tên chỉ số, Giá trị, Số trang)` để loại trừ 100% rủi ro gán nhầm điểm số giữa các kịch bản thử nghiệm khác nhau.
