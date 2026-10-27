@@ -31,7 +31,7 @@ from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_p
 from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
-from sqlalchemy import delete, func, select, text
+from sqlalchemy import and_, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.session_chat")
@@ -486,38 +486,46 @@ class SessionChatService:
         if query_embedding:
             rrf_sql = text("""
                 WITH vector_ranks AS (
-                    SELECT id,
+                    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+                           (1.0 - (embedding <=> CAST(:hyde_vector AS vector))) AS cosine_sim,
                            ROW_NUMBER() OVER (
-                               ORDER BY embedding <=> CAST(:query_vec AS vector)
+                               ORDER BY embedding <=> CAST(:hyde_vector AS vector)
                            ) AS rank_vec
                     FROM document_chunks
-                    WHERE document_id = ANY(:doc_ids)
+                    WHERE document_id = ANY(:active_doc_ids)
                       AND user_id = :user_id
                       AND embedding IS NOT NULL
-                    ORDER BY embedding <=> CAST(:query_vec AS vector)
+                    ORDER BY embedding <=> CAST(:hyde_vector AS vector)
                     LIMIT 25
                 ),
                 fts_ranks AS (
-                    SELECT id,
+                    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+                           COALESCE(
+                               ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
+                               ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
+                               0.0
+                           ) AS fts_score,
                            ROW_NUMBER() OVER (
-                               ORDER BY ts_rank_cd(
-                                   content_tsv,
-                                   plainto_tsquery('simple', :query_text)
+                               ORDER BY COALESCE(
+                                   ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
+                                   ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
+                                   0.0
                                ) DESC
                            ) AS rank_fts
                     FROM document_chunks
-                    WHERE document_id = ANY(:doc_ids)
+                    WHERE document_id = ANY(:active_doc_ids)
                       AND user_id = :user_id
-                      AND content_tsv @@ plainto_tsquery('simple', :query_text)
-                    ORDER BY ts_rank_cd(
-                        content_tsv,
-                        plainto_tsquery('simple', :query_text)
-                    ) DESC
+                      AND (
+                          content_tsv @@ plainto_tsquery('english', :fts_query)
+                          OR content_tsv @@ plainto_tsquery('simple', :fts_query)
+                      )
+                    ORDER BY rank_fts ASC
                     LIMIT 25
                 ),
                 combined AS (
                     SELECT
                         COALESCE(v.id, f.id) AS chunk_id,
+                        COALESCE(v.cosine_sim, 0.0) AS max_cosine_sim,
                         (
                             COALESCE(1.0 / (60.0 + v.rank_vec), 0.0) +
                             COALESCE(1.0 / (60.0 + f.rank_fts), 0.0)
@@ -526,15 +534,16 @@ class SessionChatService:
                     FULL OUTER JOIN fts_ranks f ON v.id = f.id
                 )
                 SELECT
-                    c.id,
+                    c.id AS chunk_id,
                     c.document_id,
                     c.chunk_index,
                     c.page_number,
-                    c.content,
+                    c.content AS text_content,
                     c.bounding_boxes,
                     c.token_count,
                     d.title AS document_title,
                     d.filename,
+                    cb.max_cosine_sim,
                     cb.rrf_score
                 FROM combined cb
                 JOIN document_chunks c ON cb.chunk_id = c.id
@@ -544,8 +553,11 @@ class SessionChatService:
             """)
             vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
             params = {
+                "hyde_vector": vec_str,
                 "query_vec": vec_str,
+                "fts_query": query_text,
                 "query_text": query_text,
+                "active_doc_ids": target_doc_ids,
                 "doc_ids": target_doc_ids,
                 "user_id": user_id,
                 "limit": limit,
@@ -555,16 +567,22 @@ class SessionChatService:
             if rows:
                 return [
                     {
-                        "chunk_id": str(r.id),
+                        "chunk_id": str(getattr(r, "chunk_id", None) or getattr(r, "id", "")),
+                        "id": str(getattr(r, "chunk_id", None) or getattr(r, "id", "")),
                         "document_id": str(r.document_id),
                         "chunk_index": r.chunk_index,
                         "page_number": r.page_number,
-                        "content": r.content,
+                        "content": (getattr(r, "text_content", None) or getattr(r, "content", "")),
+                        "text_content": (
+                            getattr(r, "text_content", None) or getattr(r, "content", "")
+                        ),
                         "bounding_boxes": r.bounding_boxes,
-                        "token_count": r.token_count,
+                        "token_count": getattr(r, "token_count", 0),
                         "document_title": r.document_title or r.filename,
                         "filename": r.filename,
                         "rrf_score": float(r.rrf_score),
+                        "cosine_sim": float(getattr(r, "max_cosine_sim", 0.0)),
+                        "max_cosine_sim": float(getattr(r, "max_cosine_sim", 0.0)),
                     }
                     for r in rows
                 ]
@@ -605,18 +623,179 @@ class SessionChatService:
         return [
             {
                 "chunk_id": str(r.id),
+                "id": str(r.id),
                 "document_id": str(r.document_id),
                 "chunk_index": r.chunk_index,
                 "page_number": r.page_number,
                 "content": r.content,
+                "text_content": r.content,
                 "bounding_boxes": r.bounding_boxes,
                 "token_count": r.token_count,
                 "document_title": r.document_title or r.filename,
                 "filename": r.filename,
                 "rrf_score": float(r.fts_score or 0.0),
+                "cosine_sim": 0.0,
+                "max_cosine_sim": 0.0,
             }
             for r in rows
         ]
+
+    async def _fetch_adjacent_chunks(
+        self,
+        candidate_chunks: list[dict[str, Any]],
+    ) -> list[dict[str, Any]]:
+        """Fetch adjacent chunks [i-1, i+1] from database to reconstitute multiline formulas."""
+        if not candidate_chunks:
+            return []
+
+        candidate_ids = {
+            str(c.get("chunk_id") or c.get("id"))
+            for c in candidate_chunks
+            if c.get("chunk_id") or c.get("id")
+        }
+
+        # Map document_id -> set of required adjacent chunk indices
+        doc_indices_map: dict[Any, set[int]] = {}
+        for c in candidate_chunks:
+            doc_id = c.get("document_id")
+            idx = c.get("chunk_index")
+            if doc_id is None or idx is None:
+                continue
+            if doc_id not in doc_indices_map:
+                doc_indices_map[doc_id] = set()
+            if idx > 0:
+                doc_indices_map[doc_id].add(idx - 1)
+            doc_indices_map[doc_id].add(idx + 1)
+
+        if not doc_indices_map:
+            return []
+
+        conditions = []
+        for doc_id, indices in doc_indices_map.items():
+            if indices:
+                conditions.append(
+                    and_(
+                        DocumentChunkModel.document_id == doc_id,
+                        DocumentChunkModel.chunk_index.in_(indices),
+                    )
+                )
+
+        if not conditions:
+            return []
+
+        stmt = (
+            select(
+                DocumentChunkModel,
+                DocumentModel.title,
+                DocumentModel.filename,
+            )
+            .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+            .where(or_(*conditions))
+            .order_by(DocumentChunkModel.document_id, DocumentChunkModel.chunk_index)
+        )
+        res = await self.db.execute(stmt)
+        rows = res.all()
+
+        adjacent_chunks: list[dict[str, Any]] = []
+        for row in rows:
+            chunk = row[0]
+            title = row[1]
+            filename = row[2]
+            cid = str(chunk.id)
+            if cid in candidate_ids:
+                continue
+            adjacent_chunks.append(
+                {
+                    "chunk_id": chunk.id,
+                    "id": str(chunk.id),
+                    "document_id": chunk.document_id,
+                    "chunk_index": chunk.chunk_index,
+                    "page_number": chunk.page_number,
+                    "content": chunk.content,
+                    "text_content": chunk.content,
+                    "bounding_boxes": chunk.bounding_boxes,
+                    "token_count": chunk.token_count,
+                    "document_title": title or filename or "Tài liệu học thuật",
+                    "filename": filename,
+                    "cosine_sim": 0.0,
+                    "max_cosine_sim": 0.0,
+                    "rrf_score": 0.0,
+                }
+            )
+        return adjacent_chunks
+
+    async def evaluate_crag_and_expand(
+        self,
+        candidate_chunks: list[dict[str, Any]],
+    ) -> tuple[str, list[dict[str, Any]], bool]:
+        """Evaluate retrieval confidence tau and conditionally expand adjacent window chunks.
+
+        - If tau >= 0.35: 'CORRECT', keep candidates without expansion.
+        - If 0.20 <= tau < 0.35: 'AMBIGUOUS_EXPANDED', expand adjacent [i-1, i+1] chunks,
+          deduplicate by chunk_id, and cap at MAX_EVIDENCE_TOKENS = 3500.
+        - If tau < 0.20: 'ACTIVE_ABSTENTION', low confidence, abstain = True to
+          prevent hallucinations.
+        """
+        if not candidate_chunks:
+            return "ACTIVE_ABSTENTION", [], True
+
+        tau = max(
+            (
+                float(
+                    c.get("cosine_sim")
+                    if c.get("cosine_sim") is not None
+                    else (
+                        c.get("max_cosine_sim")
+                        if c.get("max_cosine_sim") is not None
+                        else (c.get("score") or 0.0)
+                    )
+                )
+                for c in candidate_chunks
+            ),
+            default=0.0,
+        )
+
+        if tau >= 0.35:
+            return "CORRECT", candidate_chunks, False
+
+        if 0.20 <= tau < 0.35:
+            adjacent_chunks = await self._fetch_adjacent_chunks(candidate_chunks)
+            # Combine and deduplicate by chunk_id
+            seen_ids: set[str] = set()
+            merged: list[dict[str, Any]] = []
+            for c in candidate_chunks:
+                cid = str(c.get("chunk_id") or c.get("id"))
+                if cid not in seen_ids:
+                    seen_ids.add(cid)
+                    merged.append(c)
+
+            for c in adjacent_chunks:
+                cid = str(c.get("chunk_id") or c.get("id"))
+                if cid not in seen_ids:
+                    seen_ids.add(cid)
+                    merged.append(c)
+
+            # Cap combined context at MAX_EVIDENCE_TOKENS = 3500
+            MAX_EVIDENCE_TOKENS = 3500
+            final_chunks: list[dict[str, Any]] = []
+            current_tokens = 0
+            for c in merged:
+                cnt = c.get("content") or c.get("text_content") or ""
+                tok_cnt = c.get("token_count")
+                if tok_cnt is None:
+                    tok_cnt = max(1, int(len(cnt.split()) * 1.3))
+                else:
+                    tok_cnt = int(tok_cnt)
+
+                if final_chunks and (current_tokens + tok_cnt > MAX_EVIDENCE_TOKENS):
+                    break
+                final_chunks.append(c)
+                current_tokens += tok_cnt
+
+            return "AMBIGUOUS_EXPANDED", final_chunks, False
+
+        # tau < 0.20 -> ACTIVE_ABSTENTION
+        return "ACTIVE_ABSTENTION", candidate_chunks, True
 
     def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
         """Rank document chunks dynamically based on query lexical and concept overlap.
@@ -1361,6 +1540,7 @@ class SessionChatService:
         selected_chunks: list[tuple[Any, float]] = []
         abstract_only_docs: list[DocumentModel] = []
         abstract_warning = ""
+        crag_abstain = False
 
         # Retrieve recent conversation turns for conversational memory and query improvement
         history_turns: list[SessionTurnModel] = []
@@ -1428,19 +1608,43 @@ class SessionChatService:
                 ret_span.set_output({"total_chunks": len(hybrid_candidates)})
 
             if hybrid_candidates:
-                for idx, item in enumerate(hybrid_candidates, start=1):
-                    selected_chunks.append((item, item.get("rrf_score", 0.5)))
-                    citations.append(
-                        {
-                            "citation_id": f"cit_{idx}",
-                            "document_id": str(item["document_id"]),
-                            "document_title": item.get("document_title") or "Tài liệu học thuật",
-                            "page_number": item.get("page_number") or 1,
-                            "bounding_boxes": item.get("bounding_boxes")
-                            or [[0.1, 0.1, 0.9, 0.2, 1]],
-                            "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
-                        }
+                crag_verdict, crag_chunks, crag_abstain = await self.evaluate_crag_and_expand(
+                    hybrid_candidates
+                )
+                ret_span.set_metadata(
+                    {
+                        "crag_verdict": crag_verdict,
+                        "crag_abstain": crag_abstain,
+                        "candidates_count": len(hybrid_candidates),
+                        "expanded_chunks_count": len(crag_chunks),
+                    }
+                )
+
+                if crag_abstain:
+                    thought_abstain = (
+                        "Độ tin cậy truy xuất dưới ngưỡng an toàn (tau < 0.20). "
+                        "Kích hoạt cơ chế từ chối học thuật chủ động "
+                        "(CRAG Active Abstention) để ngăn ngừa ảo giác."
                     )
+                    evt_crag = emit("reasoning", {"thought": thought_abstain})
+                    if evt_crag:
+                        yield evt_crag
+                else:
+                    for idx, item in enumerate(crag_chunks, start=1):
+                        selected_chunks.append((item, item.get("rrf_score", 0.5)))
+                        citations.append(
+                            {
+                                "citation_id": f"cit_{idx}",
+                                "document_id": str(item["document_id"]),
+                                "document_title": (
+                                    item.get("document_title") or "Tài liệu học thuật"
+                                ),
+                                "page_number": item.get("page_number") or 1,
+                                "bounding_boxes": item.get("bounding_boxes")
+                                or [[0.1, 0.1, 0.9, 0.2, 1]],
+                                "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
+                            }
+                        )
             else:
                 chunk_stmt = (
                     select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
@@ -1540,7 +1744,12 @@ class SessionChatService:
         has_llm_key = bool(
             settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.get_secret_value().strip()
         )
-        should_use_llm = not is_test_env and has_llm_key and intent != IntentType.AMBIGUOUS_ROADMAP
+        should_use_llm = (
+            not is_test_env
+            and has_llm_key
+            and intent != IntentType.AMBIGUOUS_ROADMAP
+            and not crag_abstain
+        )
 
         gen_span = self.ai_tracing.generation(
             name="llm_generation",
