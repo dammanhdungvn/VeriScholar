@@ -17,40 +17,40 @@ Lưu đồ quyết định tự phản biện của hệ thống được minh h
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
-    startbox/.style={draw=green!60!black, fill=green!10, rounded corners=12pt, line width=1pt, align=center, inner sep=6pt, font=\small},
-    procbox/.style={draw=blue!80!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\small},
-    decision/.style={draw=purple!80!black, fill=purple!8, diamond, aspect=2, line width=1pt, align=center, inner sep=3pt, font=\footnotesize},
-    retbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\small},
+    scale=0.74, transform shape,
+    startbox/.style={draw=green!60!black, fill=green!10, rounded corners=10pt, line width=1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    procbox/.style={draw=blue!80!black, fill=blue!6, rounded corners=4pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small},
+    decision/.style={draw=purple!80!black, fill=purple!8, diamond, aspect=1.8, line width=1pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\scriptsize},
+    retbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.9pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
     arrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
 ]
     % Cột trung tâm dọc
-    \node[startbox, minimum width=4.2cm] (q) at (0, 6.2) {\textbf{Câu hỏi Học giả}\\(User Question)};
-    \node[procbox, minimum width=4.8cm] (enh) at (0, 4.6) {\textbf{Tăng cường truy vấn}\\(Query Enhancement)};
-    \node[procbox, minimum width=4.8cm] (ret) at (0, 3.0) {\textbf{Truy xuất tài liệu lai}\\(Retrieve Documents)};
-    \node[decision] (d1) at (0, 1.2) {Đủ thông tin?\\(\textit{Sufficient Info?})};
-    \node[procbox, minimum width=4.8cm] (gen) at (0, -0.8) {\textbf{Tổng hợp câu trả lời}\\(Generate Answer)};
-    \node[decision] (d2) at (0, -2.6) {Chất lượng trích dẫn OK?\\(\textit{Grounded \& IoU $\ge$ 0.85?})};
-    \node[decision] (d3) at (0, -4.6) {Thử hướng tiếp cận khác?\\(\textit{Try Different Approach?})};
-    \node[procbox, minimum width=4.4cm] (best) at (5.2, -4.6) {\textbf{Xuất kết quả tốt nhất}\\(Return Best Answer)};
-    \node[startbox, minimum width=4.0cm] (ans) at (5.2, -6.0) {\textbf{Trả lời kèm Tọa độ}\\(Return to User)};
-    \node[retbox, minimum width=4.2cm] (refine) at (-4.8, -4.6) {\textbf{Tinh chỉnh câu truy vấn}\\(Refine Query)};
+    \node[startbox, minimum width=4.4cm] (q) at (0, 6.4) {\textbf{Câu hỏi Học giả}\\(User Question)};
+    \node[procbox, minimum width=4.8cm] (enh) at (0, 4.8) {\textbf{Tăng cường truy vấn}\\(Query Enhancement)};
+    \node[procbox, minimum width=4.8cm] (ret) at (0, 3.2) {\textbf{Truy xuất tài liệu lai}\\(Retrieve Documents)};
+    \node[decision] (d1) at (0, 1.4) {Đủ thông tin?\\(\textit{Sufficient Info?})};
+    \node[procbox, minimum width=4.8cm] (gen) at (0, -0.6) {\textbf{Tổng hợp câu trả lời}\\(Generate Answer)};
+    \node[decision] (d2) at (0, -2.4) {Trích dẫn hợp lệ?\\(\textit{IoU $\ge$ 0.85?})};
+    \node[decision] (d3) at (0, -5.0) {Đổi hướng\\tiếp cận?\\(\textit{Retry?})};
+    \node[procbox, minimum width=3.8cm] (best) at (5.8, -5.0) {\textbf{Xuất kết quả tốt nhất}\\(Return Best Answer)};
+    \node[startbox, minimum width=3.8cm] (ans) at (5.8, -6.5) {\textbf{Trả lời kèm Tọa độ}\\(Return to User)};
+    \node[retbox, minimum width=3.8cm] (refine) at (-5.8, -5.0) {\textbf{Tinh chỉnh truy vấn}\\(Refine Query)};
 
     % Đường nối chính
     \draw[arrow] (q) -- (enh);
     \draw[arrow] (enh) -- (ret);
     \draw[arrow] (ret) -- (d1);
-    \draw[arrow] (d1) -- node[right, font=\footnotesize\bfseries] {Có (\textit{Yes})} (gen);
+    \draw[arrow] (d1) -- node[right=3pt, font=\footnotesize\bfseries] {Có (\textit{Yes})} (gen);
     \draw[arrow] (gen) -- (d2);
-    \draw[arrow] (d2) -- node[right, font=\footnotesize\bfseries] {Không (\textit{No})} (d3);
-    \draw[arrow] (d2.east) -| node[near start, above, font=\footnotesize\bfseries] {Có (\textit{Yes})} (best.north);
-    \draw[arrow] (d3) -- node[above, font=\footnotesize\bfseries] {Không (\textit{No})} (best);
+    \draw[arrow] (d2) -- node[midway, right=3pt, font=\footnotesize\bfseries] {Không (\textit{No})} (d3);
+    \draw[arrow] (d2.east) -| node[near start, above=2pt, font=\footnotesize\bfseries] {Có (\textit{Yes})} (best.north);
+    \draw[arrow] (d3.east) -- node[midway, above=2pt, font=\footnotesize\bfseries] {Không (\textit{No})} (best.west);
     \draw[arrow] (best) -- (ans);
 
     % Đường phản hồi (Loop)
-    \draw[arrow] (d1.west) -| node[near start, above, font=\footnotesize\bfseries] {Không (\textit{No})} (refine.north);
-    \draw[arrow] (d3) -- node[above, font=\footnotesize\bfseries] {Có (\textit{Yes})} (refine);
-    \draw[arrow] (refine.west) -- ++(-1.0, 0) |- (ret.west);
+    \draw[arrow] (d1.west) -| node[near start, above=2pt, font=\footnotesize\bfseries] {Không (\textit{No})} (refine.north);
+    \draw[arrow] (d3.west) -- node[midway, above=2pt, font=\footnotesize\bfseries] {Có (\textit{Yes})} (refine.east);
+    \draw[arrow] (refine.west) -- ++(-0.8, 0) |- (ret.west);
 \end{tikzpicture}
 \caption{Lưu đồ Quyết định Tự phản biện và Vòng lặp Tự sửa lỗi (Self-Reflective Loop)}
 \label{fig:e2e_pipeline_arch}
@@ -63,27 +63,27 @@ Nhằm làm sáng tỏ quy trình suy luận và gọi công cụ ngoại vi the
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.80, transform shape,
-    tracebox/.style={draw=black!70, fill=white, rounded corners=5pt, line width=0.9pt, align=flush left, inner sep=8pt, text width=14.2cm, font=\small},
+    scale=0.78, transform shape,
+    tracebox/.style={draw=black!70, fill=white, rounded corners=5pt, line width=0.9pt, align=flush left, inner sep=8pt, text width=14.5cm, font=\linespread{1.0}\selectfont\small},
     tag/.style={draw=black!60, rounded corners=3pt, line width=0.6pt, font=\scriptsize\bfseries, inner sep=3pt},
     arrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=black!70}
 ]
     % Khối 1: Prompt & Question
-    \node[tracebox, fill=blue!4] (b1) at (0, 4.4) {
+    \node[tracebox, fill=blue!4] (b1) {
         \tikz \node[tag, fill=blue!15, text=blue!80!black] {HỌC GIẢ (USER QUERY)};\\[4pt]
         \textbf{Câu hỏi:} ``Hàm mất mát và độ chính xác phân loại của mô hình trên ImageNet trong bài báo là bao nhiêu?''\\
         \footnotesize \textit{Yêu cầu kèm minh chứng tọa độ khung viền vàng trên bản PDF gốc.}
     };
 
     % Khối 2: Agent Thought 1
-    \node[tracebox, fill=yellow!6] (b2) at (0, 2.3) {
+    \node[tracebox, fill=yellow!6, below=14pt of b1] (b2) {
         \tikz \node[tag, fill=yellow!25, text=yellow!70!black] {TÁC NHÂN AI (THOUGHT)};\\[4pt]
         \textbf{Suy luận 1:} Để trả lời câu hỏi này, tôi cần tìm các đoạn văn bản mô tả hàm mục tiêu (\textit{objective function / loss}) và bảng kết quả thực nghiệm trên bộ dữ liệu ImageNet.\\
         \textbf{Kế hoạch hành động:} Kích hoạt công cụ truy xuất lai kết hợp vector HNSW và từ khóa BM25.
     };
 
     % Khối 3: Tool Call (Action & Observation)
-    \node[tracebox, fill=purple!4] (b3) at (0, 0.1) {
+    \node[tracebox, fill=purple!4, below=14pt of b2] (b3) {
         \tikz \node[tag, fill=purple!15, text=purple!80!black] {CÔNG CỤ NGOẠI VI (TOOL CALL: HybridRetriever)};\\[4pt]
         \textbf{Truy vấn:} \texttt{HybridRetriever(query="loss function accuracy ImageNet", k=3)}\\[3pt]
         \textbf{Kết quả thu nhận (Observation):}\\[2pt]
@@ -92,23 +92,23 @@ Nhằm làm sáng tỏ quy trình suy luận và gọi công cụ ngoại vi the
     };
 
     % Khối 4: Agent Thought 2 & Coordinate Binding
-    \node[tracebox, fill=yellow!6] (b4) at (0, -2.1) {
+    \node[tracebox, fill=yellow!6, below=14pt of b2.south |- b3.south, below=14pt of b3] (b4) {
         \tikz \node[tag, fill=yellow!25, text=yellow!70!black] {TÁC NHÂN AI (THOUGHT \& VERIFICATION)};\\[4pt]
         \textbf{Suy luận 2:} Đoạn trích 1 và Đoạn trích 2 chứa đầy đủ bằng chứng xác thực. Tiến hành đối chiếu liên kết trích dẫn và sinh câu trả lời kèm siêu dữ liệu tọa độ chuẩn hóa $[0..1000]$ cho Canvas Viewer.
     };
 
     % Khối 5: Final Grounded Output
-    \node[tracebox, fill=green!4] (b5) at (0, -4.3) {
+    \node[tracebox, fill=green!4, below=14pt of b4] (b5) {
         \tikz \node[tag, fill=green!20, text=green!60!black] {KẾT QUẢ XUẤT BẢN CÓ MINH CHỨNG (GROUNDED ANSWER)};\\[4pt]
         \textbf{Phản hồi:} Mô hình sử dụng hàm mất mát \textbf{Cross-Entropy Loss} có làm mịn nhãn 0.1 [Trang 4] và đạt độ chính xác Top-1 là \textbf{88.5\%} trên ImageNet-1K [Trang 6].\\
         \footnotesize $\checkmark$ \textit{Khung viền vàng đã được vẽ định vị trực tiếp trên bản PDF gốc trong vòng 1 giây với IoU $\ge 0.85$.}
     };
 
     % Mũi tên liên kết vết thực thi
-    \draw[arrow] (b1) -- (b2);
-    \draw[arrow] (b2) -- (b3);
-    \draw[arrow] (b3) -- (b4);
-    \draw[arrow] (b4) -- (b5);
+    \draw[arrow] (b1.south) -- (b2.north);
+    \draw[arrow] (b2.south) -- (b3.north);
+    \draw[arrow] (b3.south) -- (b4.north);
+    \draw[arrow] (b4.south) -- (b5.north);
 \end{tikzpicture}
 \caption{Vết Thực thi Tác nhân Tương tác Đa bước (Multi-Step Agent Execution Trace)}
 \label{fig:sequence_rag_chat}

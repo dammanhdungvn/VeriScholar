@@ -17,43 +17,61 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.78, transform shape,
+    scale=0.72, transform shape,
     bigcard/.style={draw=black!70, fill=gray!3, rounded corners=8pt, line width=1.1pt, inner sep=10pt},
     subcard/.style={draw=blue!80!black, fill=white, rounded corners=6pt, line width=0.9pt, inner sep=8pt},
-    pill/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
-    secpill/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\small},
+    pill/.style={draw=teal!80!black, fill=teal!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    secpill/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
     conn/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=blue!70!black}
 ]
     % Khung bao lớn tổng thể
-    \node[bigcard, minimum width=15.8cm, minimum height=10.2cm] (maincard) at (0, 0) {};
-    \node[anchor=north west, font=\bfseries\small, text=black!80] at (-7.6, 4.8) {\textbf{CÁC KHỐI NĂNG LỰC TÍCH HỢP HỆ THỐNG} \footnotesize (System Integration Components)};
+    \node[bigcard, minimum width=16.0cm, minimum height=11.6cm] (maincard) at (0, 0) {};
+    \node[anchor=north west, font=\bfseries\small, text=black!85] (t_main) at ([xshift=14pt, yshift=-10pt]maincard.north west) {\textbf{CÁC KHỐI NĂNG LỰC TÍCH HỢP HỆ THỐNG} \footnotesize (System Integration Components)};
 
     % Khối 1: Typical Retrieval Flow (Bên trên)
-    \node[subcard, minimum width=15.0cm, minimum height=2.8cm] (c_ret) at (0, 3.0) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] at (-7.2, 4.1) {LUỒNG THU NHẬP VÀ TRUY XUẤT HỌC THUẬT (ACADEMIC RETRIEVAL FLOW)};
-    \node[pill, minimum width=2.4cm] (p1) at (-6.0, 2.7) {\textbf{Nạp ấn phẩm}\\Document loaders};
-    \node[pill, minimum width=2.4cm] (p2) at (-3.4, 2.7) {\textbf{Bóc tách 2 cột}\\Layout splitters};
-    \node[pill, minimum width=2.6cm] (p3) at (-0.6, 2.7) {\textbf{Mô hình nhúng}\\Embedding models};
-    \node[pill, minimum width=2.6cm] (p4) at (2.4, 2.7) {\textbf{Kho chỉ mục}\\Vector \& BM25};
-    \node[pill, minimum width=2.2cm] (p5) at (5.2, 2.7) {\textbf{Hợp nhất RRF}\\Retrievers};
+    \node[subcard, minimum width=15.2cm, minimum height=2.6cm, below=10pt of t_main.south west, anchor=north west] (c_ret) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=blue!90!black] (t_ret) at ([xshift=8pt, yshift=-6pt]c_ret.north west) {LUỒNG THU NHẬP VÀ TRUY XUẤT HỌC THUẬT (ACADEMIC RETRIEVAL FLOW)};
+    \node[pill, minimum width=2.4cm, text width=2.3cm] (p1) at ([xshift=-5.8cm, yshift=-5pt]c_ret.center) {\textbf{Nạp ấn phẩm}\\\footnotesize Loaders};
+    \node[pill, minimum width=2.4cm, text width=2.3cm] (p2) at ([xshift=-2.9cm, yshift=-5pt]c_ret.center) {\textbf{Bóc tách 2 cột}\\\footnotesize Splitters};
+    \node[pill, minimum width=2.4cm, text width=2.3cm] (p3) at ([xshift=0.0cm, yshift=-5pt]c_ret.center) {\textbf{Mô hình nhúng}\\\footnotesize Embeddings};
+    \node[pill, minimum width=2.4cm, text width=2.3cm] (p4) at ([xshift=2.9cm, yshift=-5pt]c_ret.center) {\textbf{Kho chỉ mục}\\\footnotesize Vector \& GIN};
+    \node[pill, minimum width=2.4cm, text width=2.3cm] (p5) at ([xshift=5.8cm, yshift=-5pt]c_ret.center) {\textbf{Hợp nhất RRF}\\\footnotesize Retrievers};
     \draw[conn] (p1) -- (p2);
     \draw[conn] (p2) -- (p3);
     \draw[conn] (p3) -- (p4);
     \draw[conn] (p4) -- (p5);
 
     % Khối 2: Agent Capabilities (Góc dưới trái)
-    \node[subcard, minimum width=7.2cm, minimum height=4.8cm] (c_agent) at (-3.9, -1.8) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=teal!90!black] at (-7.2, 0.3) {NĂNG LỰC TÁC NHÂN AI (AGENT CAPABILITIES)};
-    \node[pill, minimum width=6.4cm] (ag1) at (-3.9, -0.6) {\textbf{Tập công cụ ngoại vi (Tools)}\\Search, PDF Canvas Viewer, MicroVM};
-    \node[pill, minimum width=6.4cm] (ag2) at (-3.9, -1.8) {\textbf{Tự phản biện liêm chính (Reflection)}\\Kiểm định trích dẫn, phát hiện ảo giác};
-    \node[pill, minimum width=6.4cm] (ag3) at (-3.9, -3.0) {\textbf{Lập kế hoạch phân rã (Planning)}\\Chuỗi suy luận ReAct và chia nhỏ mục tiêu};
+    \node[subcard, minimum width=7.3cm, minimum height=6.2cm, below=14pt of c_ret.south west, anchor=north west] (c_agent) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=teal!90!black] (t_ag) at ([xshift=10pt, yshift=-8pt]c_agent.north west) {NĂNG LỰC TÁC NHÂN AI};
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=10pt of t_ag.south west, anchor=north west] (ag1) {
+        \textbf{Tập công cụ ngoại vi (Tools)}\\
+        \footnotesize Tìm kiếm học thuật, PDF Canvas Viewer, MicroVM
+    };
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=12pt of ag1.south west, anchor=north west] (ag2) {
+        \textbf{Tự phản biện liêm chính (Reflection)}\\
+        \footnotesize Kiểm định trích dẫn, phát hiện ảo giác
+    };
+    \node[pill, minimum width=6.6cm, text width=6.4cm, below=12pt of ag2.south west, anchor=north west] (ag3) {
+        \textbf{Lập kế hoạch phân rã (Planning)}\\
+        \footnotesize Chuỗi suy luận ReAct và chia nhỏ mục tiêu
+    };
 
     % Khối 3: Execution and State (Góc dưới phải)
-    \node[subcard, minimum width=7.2cm, minimum height=4.8cm] (c_exec) at (3.9, -1.8) {};
-    \node[anchor=north west, font=\bfseries\scriptsize, text=purple!90!black] at (0.6, 0.3) {HẠ TẦNG THỰC THI VÀ TRẠNG THÁI (EXECUTION \& STATE)};
-    \node[secpill, minimum width=6.4cm] (ex1) at (3.9, -0.6) {\textbf{Máy ảo hộp cát E2B MicroVM}\\Biên dịch \LaTeX\ cô lập, ngăn ngừa RCE};
-    \node[secpill, minimum width=6.4cm] (ex2) at (3.9, -1.8) {\textbf{Cơ sở dữ liệu PostgreSQL 16}\\Mở rộng pgvector và lưu trữ khử trùng CAS};
-    \node[secpill, minimum width=6.4cm] (ex3) at (3.9, -3.0) {\textbf{Két sắt khóa cá nhân (BYOK)}\\Mã hóa AES-256-GCM, giải mã tạm thời trên RAM};
+    \node[subcard, minimum width=7.3cm, minimum height=6.2cm, below=14pt of c_ret.south east, anchor=north east] (c_exec) {};
+    \node[anchor=north west, font=\bfseries\scriptsize, text=purple!90!black] (t_ex) at ([xshift=10pt, yshift=-8pt]c_exec.north west) {HẠ TẦNG THỰC THI VÀ TRẠNG THÁI};
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=10pt of t_ex.south west, anchor=north west] (ex1) {
+        \textbf{Máy ảo hộp cát E2B MicroVM}\\
+        \footnotesize Biên dịch \LaTeX\ cô lập, ngăn ngừa RCE
+    };
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=12pt of ex1.south west, anchor=north west] (ex2) {
+        \textbf{Cơ sở dữ liệu PostgreSQL 16}\\
+        \footnotesize Mở rộng pgvector và lưu trữ khử trùng CAS
+    };
+    \node[secpill, minimum width=6.6cm, text width=6.4cm, below=12pt of ex2.south west, anchor=north west] (ex3) {
+        \textbf{Két sắt khóa cá nhân (BYOK)}\\
+        \footnotesize Mã hóa an toàn cá nhân, giải mã tạm thời trên RAM
+    };
 \end{tikzpicture}
 \caption{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}
 \label{fig:use_case_diagram}
