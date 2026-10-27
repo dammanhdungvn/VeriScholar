@@ -41,8 +41,8 @@ flowchart TD
         CrossQuery["Truy Vấn So Sánh Đối Chiếu SOTA (Cross-Paper Query)"]
     end
 
-    subgraph ExtractionPipeline ["Đường Ống Bóc Tách & Hợp Nhất Thực Thể Chạy Nền"]
-        BackgroundIngest["FastAPI BackgroundTasks (Trích Xuất Không Nghẽn UI)"]
+    subgraph ExtractionPipeline ["Đường Ống Bóc Tách & Hợp Nhất Thực Thể Tăng Dần (Incremental Indexing)"]
+        BackgroundIngest["FastAPI BackgroundTasks (Trích Xuất Nền Độc Lập < 3s)"]
         StructuredExtractor["Bộ Bóc Tách 4 Thực Thể Theo OpenAI JSON Schema"]
         SemanticDisambiguator["Khử Nhập Nhằng Ngữ Nghĩa (Vector Cosine >= 0.90 Hubs)"]
         StarTrigger --> BackgroundIngest --> StructuredExtractor --> SemanticDisambiguator
@@ -59,22 +59,31 @@ flowchart TD
             GraphNodes --- GraphEdges
         end
 
+        subgraph Bibliometrics ["Mạng Ghép Cặp Thư Mục Học (Bibliometrics)"]
+            BibCoupling[("Bản đồ Ghép Cặp Thư Mục: Tác Phẩm Cội Nguồn vs Phái Sinh")]
+        end
+
         DocChunks -. "evidence_chunk_id (Minh chứng gốc)" .- GraphEdges
         SemanticDisambiguator --> GraphNodes
         SemanticDisambiguator --> GraphEdges
+        GraphEdges --> BibCoupling
     end
 
-    subgraph RetrievalRouter ["Động Cơ Điều Phối Truy Vấn 2 Bước (GraphRAG Router)"]
-        HNSWAnchor["Bước 1: HNSW Vector Anchor (Top 5 Đỉnh Khớp Ngữ Nghĩa)"]
-        SQLTraversal["Bước 2: 1-Hop CTE Traversal & Trích Xuất Minh Chứng Đoạn Văn"]
+    subgraph RetrievalRouter ["Bộ Điều Phối Truy Vấn Kép (Dual-Level GraphRAG Router)"]
+        QueryClassifier{"Phân Loại Ý Định: Vi Mô hay Vĩ Mô?"}
+        LocalEngine["1. Truy Vấn Vi Mô (Local Search): HNSW Anchor + 1-Hop CTE + Bounding Box"]
+        GlobalEngine["2. Truy Vấn Vĩ Mô (Global Search): Tổng Hợp Xu Hướng Đề Tài Theo Thư Mục"]
         SotaGenerator["Bộ Tổng Hợp Ma Trận SOTA & Subgraph Cytoscape"]
 
-        CrossQuery --> HNSWAnchor
-        HNSWAnchor --> GraphNodes
-        HNSWAnchor --> SQLTraversal
-        SQLTraversal --> GraphEdges
-        SQLTraversal --> DocChunks
-        SQLTraversal --> SotaGenerator
+        CrossQuery --> QueryClassifier
+        QueryClassifier -->|Hỏi số liệu / phương pháp cụ thể| LocalEngine
+        QueryClassifier -->|Hỏi bao quát đề tài / thư mục| GlobalEngine
+        LocalEngine --> GraphNodes
+        LocalEngine --> GraphEdges
+        LocalEngine --> DocChunks
+        LocalEngine --> SotaGenerator
+        GlobalEngine --> BibCoupling
+        GlobalEngine --> SotaGenerator
     end
 ```
 
@@ -148,7 +157,51 @@ CREATE INDEX IF NOT EXISTS idx_graph_edges_user_doc ON graph_edges(user_id, docu
 CREATE INDEX IF NOT EXISTS idx_graph_edges_source ON graph_edges(user_id, source_node_id);
 CREATE INDEX IF NOT EXISTS idx_graph_edges_target ON graph_edges(user_id, target_node_id);
 CREATE INDEX IF NOT EXISTS idx_graph_edges_evidence_chunk ON graph_edges(evidence_chunk_id);
+
+-- 3. Bảng Tóm Tắt Cộng Đồng Cụm Đề Tài Phục Vụ Global Search (folder_community_summaries)
+CREATE TABLE IF NOT EXISTS folder_community_summaries (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    folder_id UUID NOT NULL REFERENCES folders(id) ON DELETE CASCADE,
+    summary_text TEXT NOT NULL,
+    key_findings JSONB NOT NULL DEFAULT '[]'::jsonb,
+    embedding VECTOR(1536) NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_folder_summaries_user_folder UNIQUE (user_id, folder_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_folder_summaries_user ON folder_community_summaries(user_id);
+CREATE INDEX IF NOT EXISTS idx_folder_summaries_embedding ON folder_community_summaries 
+USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
+
+---
+
+### B. Mạng Ghép Cặp Thư Mục Học & Phân Loại Cội Nguồn (Connected Papers Bibliometrics)
+Học hỏi từ kiến trúc của **Connected Papers**, hệ thống tự động phát hiện mối quan hệ họ hàng học thuật giữa các bài báo trong kho thông qua hai độ đo thư mục học cổ điển:
+
+1. **Ghép cặp Thư mục (Bibliographic Coupling CTE):**
+   Hai bài báo $A$ và $B$ có liên kết ghép cặp thư mục nếu cùng dẫn chiếu $\ge 2$ tài liệu tham khảo chung:
+   ```sql
+   WITH paper_citations AS (
+       SELECT source_node_id AS paper_id, target_node_id AS cited_ref_id
+       FROM graph_edges
+       WHERE user_id = :user_id AND edge_type = 'CITES'
+   )
+   SELECT 
+       c1.paper_id AS paper_a_id,
+       c2.paper_id AS paper_b_id,
+       COUNT(DISTINCT c1.cited_ref_id) AS shared_reference_count
+   FROM paper_citations c1
+   JOIN paper_citations c2 ON c1.cited_ref_id = c2.cited_ref_id 
+                          AND c1.paper_id < c2.paper_id
+   GROUP BY c1.paper_id, c2.paper_id
+   HAVING COUNT(DISTINCT c1.cited_ref_id) >= :min_shared_references;
+   ```
+
+2. **Phân Loại Tác Phẩm Cội Nguồn vs Phái Sinh (Prior Works vs Derivative Works):**
+   - **Tác phẩm Cội nguồn (Prior Works):** Các bài báo được trích dẫn nhiều nhất bởi các bài báo khác trong kho cá nhân của học giả (bậc vào `In-Degree` trên cạnh `CITES` cao nhất). Đây là các công trình kinh điển bắt buộc phải trích dẫn tại Chương 2 của luận văn.
+   - **Tác phẩm Phái sinh (Derivative Works):** Các bài báo mới nhất có nhiều trích dẫn hướng tới các tác phẩm cội nguồn (bậc ra `Out-Degree` cao nhất).
 
 ---
 
@@ -205,38 +258,67 @@ flowchart TD
 
 ## 4. Hợp Đồng API REST & Bảng Mã Lỗi (REST Contracts & Error Codes)
 
-### A. Tra Cứu Tri Thức Đồ Thị Tổng Hợp (`POST /api/v1/folders/synthesis` hoặc `/api/v1/library/graph-query`)
+### A. Tra Cứu Tri Thức Đồ Thị Kép (`POST /api/v1/library/graph-query`)
 - **Headers:** `Authorization: Bearer <token>`, `Content-Type: application/json`
 - **Request Body:**
   ```json
   {
-    "query": "Các bài báo trong kho của tôi sử dụng kiến trúc Transformer đạt kết quả BLEU và Accuracy như thế nào?",
+    "query": "Các bài báo trong đề tài này sử dụng kiến trúc Transformer đạt kết quả BLEU và Accuracy như thế nào?",
+    "mode": "hybrid",
+    "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
     "top_k": 5
   }
   ```
+  *Ý nghĩa tham số `mode`:*
+  - `"local"`: Chỉ thực thi truy vấn vi mô (HNSW Vector Anchor $\rightarrow$ 1-Hop CTE Traversal $\rightarrow$ Bảng đối chiếu số liệu SOTA kèm Bounding Box PDF).
+  - `"global"`: Chỉ thực thi truy vấn vĩ mô (Quét báo cáo cộng đồng `folder_community_summaries` để trả lời câu hỏi xu hướng, bao quát đề tài).
+  - `"hybrid"` (mặc định): Tự động kết hợp cả hai để đưa ra bức tranh toàn cảnh vừa có phân tích chủ đề vĩ mô vừa có số liệu đối chứng chi tiết.
+
 - **Response (HTTP 200 OK):**
   ```json
   {
-    "answer": "Trong Kho Yêu thích của bạn, có 2 bài báo chính áp dụng kiến trúc Transformer:\n1. **Attention Is All You Need (Vaswani et al., 2017)**: Đạt điểm BLEU **28.4** trên tập dữ liệu WMT 2014 En-De.\n2. **Vision Transformer (Dosovitskiy et al., 2020)**: Mở rộng sang thị giác máy tính, đạt Top-1 Accuracy **88.55%** trên tập dữ liệu ImageNet-1K.",
+    "mode_used": "hybrid",
+    "answer": "Trong Kho Yêu thích của bạn, có 2 bài báo chính áp dụng kiến trúc Transformer:\n1. **Attention Is All You Need (Vaswani et al., 2017)** (Tác phẩm Cội nguồn): Đạt điểm BLEU **28.4** trên tập dữ liệu WMT 2014 En-De.\n2. **Vision Transformer (Dosovitskiy et al., 2020)** (Tác phẩm Phái sinh): Mở rộng Attention sang thị giác máy tính, đạt Top-1 Accuracy **88.55%** trên tập dữ liệu ImageNet-1K.",
     "subgraph": {
       "nodes": [
-        { "id": "uuid-1", "type": "Method", "name": "Transformer" },
-        { "id": "uuid-2", "type": "Paper", "name": "Attention Is All You Need (2017)" },
-        { "id": "uuid-3", "type": "Paper", "name": "An Image is Worth 16x16 Words (2020)" },
-        { "id": "uuid-4", "type": "MetricResult", "name": "BLEU: 28.4" },
-        { "id": "uuid-5", "type": "MetricResult", "name": "Top-1 Accuracy: 88.55%" }
+        { "id": "uuid-1", "type": "Method", "name": "Transformer", "degree_centrality": 8, "role": "method_hub" },
+        { "id": "uuid-2", "type": "Paper", "name": "Attention Is All You Need (2017)", "year": 2017, "degree_centrality": 14, "role": "prior_work" },
+        { "id": "uuid-3", "type": "Paper", "name": "An Image is Worth 16x16 Words (2020)", "year": 2020, "degree_centrality": 6, "role": "derivative_work" },
+        { "id": "uuid-4", "type": "MetricResult", "name": "BLEU: 28.4", "degree_centrality": 2, "role": "metric" },
+        { "id": "uuid-5", "type": "MetricResult", "name": "Top-1 Accuracy: 88.55%", "degree_centrality": 2, "role": "metric" }
       ],
       "edges": [
-        { "source": "uuid-2", "target": "uuid-1", "type": "PROPOSES" },
-        { "source": "uuid-3", "target": "uuid-1", "type": "PROPOSES" },
-        { "source": "uuid-1", "target": "uuid-4", "type": "ACHIEVES" },
-        { "source": "uuid-1", "target": "uuid-5", "type": "ACHIEVES" }
+        { "source": "uuid-2", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-101", "page_number": 3 },
+        { "source": "uuid-3", "target": "uuid-1", "type": "PROPOSES", "evidence_chunk_id": "chunk-202", "page_number": 2 },
+        { "source": "uuid-1", "target": "uuid-4", "type": "ACHIEVES", "evidence_chunk_id": "chunk-108", "page_number": 8 },
+        { "source": "uuid-1", "target": "uuid-5", "type": "ACHIEVES", "evidence_chunk_id": "chunk-205", "page_number": 5 }
       ]
     },
     "meta": {
       "trace_id": "trace-graph-78a1",
-      "matched_entities": 5
+      "matched_entities": 5,
+      "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
     }
+  }
+  ```
+
+---
+
+### B. Tra Cứu Mạng Ghép Cặp Thư Mục Học (`GET /api/v1/folders/{folder_id}/bibliometrics`)
+- **Headers:** `Authorization: Bearer <token>`
+- **Response (HTTP 200 OK):**
+  ```json
+  {
+    "folder_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+    "prior_works": [
+      { "id": "uuid-2", "title": "Attention Is All You Need", "year": 2017, "in_degree": 5, "citation_key": "vaswani2017" }
+    ],
+    "derivative_works": [
+      { "id": "uuid-3", "title": "An Image is Worth 16x16 Words", "year": 2020, "out_degree": 4, "citation_key": "dosovitskiy2020" }
+    ],
+    "coupling_edges": [
+      { "paper_a_id": "uuid-2", "paper_b_id": "uuid-3", "shared_reference_count": 4 }
+    ]
   }
   ```
 
@@ -431,17 +513,17 @@ SELECT
 
 ---
 
-### C. Động Cơ Điều Phối Truy Vấn (Dual-Graph Retrieval Router)
-Bám sát mô hình kiến trúc Lexical Graph + Domain Graph, bộ điều phối truy vấn phân loại câu hỏi người dùng thành 3 luồng:
+### C. Động Cơ Điều Phối Truy Vấn Kép (Dual-Level GraphRAG Router)
+Học hỏi kiến trúc của **LightRAG** và **Microsoft GraphRAG**, bộ điều phối truy vấn phân loại câu hỏi người dùng thành 3 chế độ:
 
-1. **Luồng 1 — Tra cứu Đoạn Văn Bản Cụ Thể (Lexical Search):**
-   - Áp dụng khi câu hỏi tìm kiếm định nghĩa hoặc chi tiết văn bản (ví dụ: *"Tác giả mô tả hàm mất mát ra sao?"*).
-   - Truy vấn trực tiếp `document_chunks` thông qua Hybrid HNSW Dense Vector + BM25 RRF ($k=60$).
-2. **Luồng 2 — Tra cứu Quan Hệ & So Sánh SOTA (Domain Graph Query):**
-   - Áp dụng khi câu hỏi yêu cầu thống kê hoặc tìm bài báo đề xuất/đánh giá (ví dụ: *"Có những bài báo nào trong kho đánh giá trên ImageNet?"*).
-   - Truy vấn 2 bước CTE phía trên, tổng hợp bảng ma trận đối chiếu kèm subgraph trực quan.
-3. **Luồng 3 — Tra cứu Phức Hợp Đối Chiếu Kèm Minh Chứng (Hybrid Pattern Match):**
-   - Kết hợp cả hai: Đồ thị Domain Graph xác định cấu trúc bộ ba `(Paper, Method, MetricResult)`, đồng thời `evidence_chunk_id` tải đúng đoạn văn và tọa độ Bounding Box để tô vàng trực tiếp trên PDF cho học giả.
+1. **Chế độ Vi Mô (Local Search):**
+   - Áp dụng khi câu hỏi yêu cầu thống kê, so sánh hoặc tìm bài báo đề xuất/đánh giá chỉ số cụ thể (ví dụ: *"Có những bài báo nào trong kho đánh giá trên ImageNet đạt độ chính xác cao nhất?"*).
+   - Truy vấn 2 bước CTE (HNSW Anchor $\rightarrow$ 1-Hop Traversal), tổng hợp bảng ma trận đối chiếu kèm tọa độ Bounding Box viền vàng trên PDF thông qua `evidence_chunk_id`.
+2. **Chế độ Vĩ Mô (Global Search):**
+   - Áp dụng khi câu hỏi tìm kiếm tổng quan, xu hướng hoặc phân tích hạn chế xuyên suốt cả đề tài (ví dụ: *"Các bài báo trong thư mục này có điểm chung gì về kiến trúc và còn tồn tại hạn chế nào?"*).
+   - Truy vấn vector trên bảng `folder_community_summaries` kết hợp đọc tổng hợp các đỉnh Hub của thư mục, sinh câu trả lời bao quát toàn diện mà không bị nghẽn ở các đỉnh chi tiết.
+3. **Chế độ Lai Phức Hợp (Hybrid Search):**
+   - Tự động kết hợp cả hai: Lấy bối cảnh chủ đề vĩ mô từ Báo cáo cộng đồng làm nền tảng, đồng thời chèn các minh chứng số liệu vi mô cụ thể kèm số trang gốc.
 
 ---
 
@@ -454,9 +536,13 @@ Bám sát mô hình kiến trúc Lexical Graph + Domain Graph, bộ điều ph�
 2. **Khu vực trung tâm (Lưới bài báo):**
    - Danh sách thẻ bài báo đã Star với đầy đủ thông tin Tác giả, Năm, Hội nghị.
    - Nút ngôi sao vàng sáng `[⭐]` cho phép bấm để hủy Star hoặc đổi thư mục.
-3. **Khu vực trên cùng (Hộp tra cứu tri thức GraphRAG):**
-   - Thanh tìm kiếm thông minh: *"Hỏi đáp tổng hợp trên toàn bộ kho yêu thích..."*.
-   - Khung trả lời hiển thị bảng so sánh đối chiếu và sơ đồ mini-graph (sử dụng thư viện `cytoscape` có sẵn).
+3. **Khu vực trên cùng (Hộp tra cứu tri thức GraphRAG Kép):**
+   - Thanh tìm kiếm thông minh hỗ trợ 3 chế độ: Tự động (Hybrid), Vi mô (SOTA), và Vĩ mô (Chủ đề).
+   - Khung trả lời hiển thị bảng so sánh đối chiếu và sơ đồ mạng lưới `cytoscape`.
+4. **Quy tắc Trực quan hóa Mạng Tri Thức (Cytoscape Visual Encodings):**
+   - **Kích thước Đỉnh (Node Size):** Tỷ lệ thuận với Bậc liên kết (Degree Centrality). Các đỉnh Hub như phương pháp trung tâm hoặc bài báo cội nguồn (*Prior Works*) có kích thước lớn nổi bật.
+   - **Màu sắc Đỉnh (Node Color):** Phân loại theo vai trò (`Paper` theo niên đại từ nhạt đến đậm, `Method`, `Dataset`, `MetricResult`).
+   - **Tương tác Neo Giữ Minh Chứng:** Nhấp đúp vào bất kỳ cạnh thực nghiệm nào sẽ kích hoạt mở đúng trang PDF và hiển thị viền vàng Bounding Box tương ứng.
 
 ---
 
@@ -467,10 +553,10 @@ Mọi thay đổi kỹ thuật của phân hệ Thư Viện Yêu Thích và Grap
 | Vai trò kiến trúc | Tệp neo chuẩn mực trong repo | Nguyên tắc bắt chước |
 | :--- | :--- | :--- |
 | **Folders Endpoints** | [`apps/api/src/api/v1/endpoints/folders.py`](../../apps/api/src/api/v1/endpoints/folders.py) | Tham chiếu CRUD thư mục đề tài, dựng cây thư mục phân cấp và gán/gỡ bài báo. |
-| **Toggle Star Endpoint** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | Tham chiếu cách toggle star và phát sinh tác vụ nền trích xuất GraphRAG. |
-| **Graph Models & Schemas** | `apps/api/src/api/db/models/graph.py` | Tham chiếu mô hình SQLAlchemy cho `GraphNodeModel` và `GraphEdgeModel` với cột `Vector(1536)`. |
-| **Graph Extraction Core** | `packages/core/src/core/services/graph_extractor.py` | Thuần Python, chuẩn hóa tên canonical và kiểm tra schema 4 thực thể cố định. |
-| **Library Workspace UI** | `apps/web/src/features/library/` | Giao diện cây thư mục, thẻ bài báo đã Star và hộp tra cứu tổng hợp GraphRAG. |
+| **Toggle Star Endpoint** | [`apps/api/src/api/v1/endpoints/documents.py`](../../apps/api/src/api/v1/endpoints/documents.py) | Tham chiếu cách toggle star và phát sinh tác vụ nền trích xuất GraphRAG tăng dần (< 3s). |
+| **Graph Models & Schemas** | `apps/api/src/api/db/models/graph.py` | Tham chiếu mô hình SQLAlchemy cho `GraphNodeModel`, `GraphEdgeModel` và `FolderCommunitySummaryModel`. |
+| **Graph Extraction Core** | `packages/core/src/core/services/graph_extractor.py` | Thuần Python, chuẩn hóa tên canonical, tính toán ghép cặp thư mục học và kiểm tra schema 4 thực thể cố định. |
+| **Library Workspace UI** | `apps/web/src/features/library/` | Giao diện cây thư mục, thẻ bài báo đã Star, hộp tra cứu kép GraphRAG và sơ đồ Cytoscape. |
 
 ---
 
@@ -504,7 +590,9 @@ sequenceDiagram
 | `test_canonical_entity_merging_same_name` | `apps/api/tests/test_graph_extraction.py` | Nạp 2 bài báo cùng đề cập phương pháp `"Transformer"` | Chỉ tạo 1 bản ghi `graph_nodes`, tạo 2 cạnh riêng biệt. |
 | `test_semantic_entity_disambiguation_threshold_090` | `apps/api/tests/test_graph_extraction.py` | Nạp 2 biến thể tên `"Transformer"` và `"The Transformer model"` (Cosine >= 0.90) | Tự động gộp vào 1 Hub duy nhất, bổ sung biến thể vào `aliases`. |
 | `test_dual_graph_cte_traversal_with_lexical_evidence` | `apps/api/tests/test_graph_rag_query.py` | Truy vấn 2 bước CTE kết hợp Domain Graph và Lexical Graph | Trả về bundle gồm `anchors`, `edges`, `neighbors` và `evidence` có Bounding Box. |
-| `test_graph_query_1_hop_traversal` | `apps/api/tests/test_graph_rag_query.py` | Truy vấn GraphRAG bằng vector embedding | Trả về đúng các bộ ba `(Paper, PROPOSES, Method)` liên quan. |
+| `test_dual_level_graph_query_local_vs_global_mode` | `apps/api/tests/test_graph_rag_query.py` | Kiểm tra phân tách chế độ `mode="local"` và `mode="global"` | `local` gọi CTE SOTA, `global` gọi tóm tắt cộng đồng thư mục. |
+| `test_bibliographic_coupling_prior_and_derivative_works` | `apps/api/tests/test_graph_bibliometrics.py` | Tính toán ghép cặp thư mục dựa trên trích dẫn chung | Xác định chính xác bài báo cội nguồn (Prior Works) có bậc vào cao nhất. |
+| `test_incremental_indexing_preserves_unrelated_nodes` | `apps/api/tests/test_graph_lifecycle.py` | Thêm bài báo mới vào kho có sẵn | Hoàn tất trong < 3s, không làm thay đổi các đỉnh Hub không liên quan. |
 | `test_unstar_removes_edges_and_prunes_orphans` | `apps/api/tests/test_graph_lifecycle.py` | Bỏ Star bài báo độc nhất | Cạnh bị xóa, đỉnh mồ côi bị dọn dẹp sạch; đỉnh dùng chung không bị mất. |
 | `test_folders_crud_and_tree_hierarchy` | `apps/api/tests/test_folders_endpoints.py` | Tạo thư mục cha và thư mục con | `GET /folders/tree` trả về đúng cấu trúc lồng nhau. |
 
@@ -512,11 +600,12 @@ sequenceDiagram
 
 ## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
-- [ ] Lược đồ `graph_nodes` và `graph_edges` được tạo chuẩn trên PostgreSQL kèm chỉ mục `HNSW` và khóa ngoại `evidence_chunk_id` liên kết sang `document_chunks`.
+- [ ] Lược đồ `graph_nodes`, `graph_edges` và `folder_community_summaries` được tạo chuẩn trên PostgreSQL kèm chỉ mục `HNSW` và khóa ngoại `evidence_chunk_id` liên kết sang `document_chunks`.
 - [ ] Cơ chế khử nhập nhằng ngữ nghĩa (Semantic Disambiguation Cosine $\ge 0.90$) hoạt động chính xác, tạo nên đồ thị liên kết chéo chống nổ đỉnh phân mảnh.
-- [ ] Bóc tách thực thể chạy ngầm qua `FastAPI BackgroundTasks` sinh đồng thời vector dense 1536d cho từng đỉnh.
+- [ ] Nạp tăng dần (Incremental Indexing) bóc tách chạy ngầm qua `FastAPI BackgroundTasks` sinh đồng thời vector dense 1536d cho từng đỉnh trong $< 3$ giây.
 - [ ] Truy vấn 2 bước CTE nguyên bản trả về kết quả dưới 50ms kèm đầy đủ minh chứng số trang và tọa độ Bounding Box.
-- [ ] API `POST /api/v1/library/graph-query` thực hiện truy vấn và trả về câu trả lời tổng hợp kèm cấu trúc subgraph tương thích Cytoscape.js.
+- [ ] API `POST /api/v1/library/graph-query` hỗ trợ 3 chế độ `local`, `global`, `hybrid` và trả về subgraph tương thích Cytoscape.js.
+- [ ] API `GET /api/v1/folders/{id}/bibliometrics` tính toán chính xác ghép cặp thư mục (Bibliographic Coupling) và phân loại Prior Works vs Derivative Works.
 - [ ] Thao tác Star/Unstar tự động đồng bộ vòng đời dữ liệu đồ thị, bảo toàn cô lập `user_id`.
 - [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.C được cài đặt đầy đủ theo chuẩn Error Envelope.
 - [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 8 đạt `100% PASS`.
