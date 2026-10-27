@@ -65,6 +65,7 @@ async def search_scholarly_literature(
         clean_query,
         limit=payload.limit,
         is_peer_reviewed_only=payload.is_peer_reviewed_only,
+        user_id=current_user.id,
     )
     return SingleResponseEnvelope(
         data=results,

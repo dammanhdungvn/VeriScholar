@@ -62,13 +62,25 @@ def get_academic_resolver(
     return _academic_resolver
 
 
-def get_scholarly_search_port() -> IScholarlySearchPort:
+def get_ai_tracing_service() -> AITracingService:
+    """Dependency providing AITracingService singleton instance."""
+    global _ai_tracing_service
+    if _ai_tracing_service is None:
+        _ai_tracing_service = AITracingService()
+    return _ai_tracing_service
+
+
+def get_scholarly_search_port(
+    ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+) -> IScholarlySearchPort:
     """Dependency providing IScholarlySearchPort instance."""
     global _scholarly_search_port
     if _scholarly_search_port is None:
         from api.adapters.scholarly_search_adapter import ScholarlySearchAdapter
 
-        _scholarly_search_port = ScholarlySearchAdapter()
+        _scholarly_search_port = ScholarlySearchAdapter(ai_tracing=ai_tracing)
+    elif hasattr(_scholarly_search_port, "ai_tracing"):
+        _scholarly_search_port.ai_tracing = ai_tracing
     return _scholarly_search_port
 
 
@@ -100,14 +112,6 @@ def get_document_summarizer() -> IDocumentSummarizerPort:
         model=settings.OPENAI_MODEL,
         fallback=HeuristicGroundedSummarizer(),
     )
-
-
-def get_ai_tracing_service() -> AITracingService:
-    """Dependency providing AITracingService singleton instance."""
-    global _ai_tracing_service
-    if _ai_tracing_service is None:
-        _ai_tracing_service = AITracingService()
-    return _ai_tracing_service
 
 
 def get_document_service(

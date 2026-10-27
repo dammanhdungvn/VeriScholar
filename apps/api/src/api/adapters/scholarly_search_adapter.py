@@ -10,6 +10,8 @@ from typing import Any
 
 import httpx
 import structlog
+from api.services.ai_tracing_service import AITracingService, pseudonymize_user_id
+from api.services.query_decomposer import QueryDecomposer
 from core.ports.scholarly_search import IScholarlySearchPort, ScholarlyPaperSearchResult
 
 logger = structlog.get_logger(__name__)
@@ -131,8 +133,10 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
         self,
         timeout_seconds: float = 10.0,
         exa_api_key: str | None | Any = _UNSET,
+        ai_tracing: AITracingService | None = None,
     ) -> None:
         self.timeout_seconds = timeout_seconds
+        self.ai_tracing = ai_tracing or AITracingService()
         if exa_api_key is not _UNSET:
             self.exa_api_key = exa_api_key
         else:
@@ -421,153 +425,284 @@ class ScholarlySearchAdapter(IScholarlySearchPort):
         query: str,
         limit: int = 10,
         is_peer_reviewed_only: bool = False,
+        user_id: object | None = None,
     ) -> list[ScholarlyPaperSearchResult]:
-        """Search academic papers using arXiv API with fallback to curated literature."""
+        """Search academic papers using multi-source pipeline with hierarchical Langfuse tracing."""
         clean_query = query.strip()
         if not clean_query:
             return []
 
-        # Identifier recognition for direct lookup
-        normalized_query = clean_query
-        if normalized_query.lower().startswith("arxiv:"):
-            normalized_query = normalized_query[6:].strip()
-        elif normalized_query.lower().startswith("doi:"):
-            normalized_query = normalized_query[4:].strip()
+        with self.ai_tracing.trace(
+            name="discovery_search",
+            user_id=pseudonymize_user_id(user_id),
+            metadata={
+                "limit": limit,
+                "is_peer_reviewed_only": is_peer_reviewed_only,
+            },
+        ) as root_trace:
+            # Node 1 Span: query_decomposition
+            with self.ai_tracing.span(
+                name="query_decomposition",
+                input={"raw_query": clean_query},
+            ) as decomp_span:
+                decomp_span.set_input({"raw_query": clean_query})
+                decomposed = QueryDecomposer.decompose(clean_query)
+                decomp_span.set_output(decomposed.model_dump())
 
-        is_arxiv_id = bool(ARXIV_ID_PATTERN.match(normalized_query))
-        is_doi = bool(DOI_PATTERN.match(normalized_query))
+            candidates: list[ScholarlyPaperSearchResult] = []
 
-        results: list[ScholarlyPaperSearchResult] = []
-        seen_identifiers: set[str] = set()
-
-        def add_result(p: ScholarlyPaperSearchResult) -> bool:
-            if is_peer_reviewed_only and not p.is_peer_reviewed:
-                return False
-            key = (p.doi or p.arxiv_id or p.title).lower()
-            keys = {key}
-            if p.doi:
-                keys.add(p.doi.strip().lower())
-            if p.arxiv_id:
-                cand_id = p.arxiv_id.strip().lower()
-                keys.add(cand_id)
-                keys.add(cand_id.split("v")[0])
-            if p.title:
-                keys.add(p.title.strip().lower())
-
-            if any(k in seen_identifiers for k in keys):
-                return False
-            seen_identifiers.update(keys)
-            results.append(p)
-            return True
-
-        # 1. Check curated literature first for instantaneous high-precision matches
-        for paper_data in CURATED_SAMPLE_PAPERS:
-            paper_dict = dict(paper_data)
-            if "is_peer_reviewed" not in paper_dict:
-                paper_dict["is_peer_reviewed"] = self._classify_peer_reviewed(
-                    paper_dict.get("venue"), paper_dict.get("doi")
-                )
-            candidate = ScholarlyPaperSearchResult(**paper_dict)
-
-            is_match = False
-            if is_arxiv_id and candidate.arxiv_id:
-                cand_id = candidate.arxiv_id.lower()
-                cand_clean = cand_id.split("v")[0]
-                norm_clean = normalized_query.lower().split("v")[0]
-                if cand_id == normalized_query.lower() or cand_clean == norm_clean:
-                    is_match = True
-            elif is_doi and candidate.doi:
-                cand_doi = candidate.doi.lower()
-                norm_doi = normalized_query.lower()
-                if cand_doi == norm_doi or norm_doi in cand_doi:
-                    is_match = True
-            elif not is_arxiv_id and not is_doi:
-                # Require query tokens to match candidate title or abstract meaningfully
-                q_tokens = self._tokenize_for_similarity(clean_query)
-                p_text = f"{candidate.title} {candidate.abstract or ''}".lower()
-                p_tokens = self._tokenize_for_similarity(p_text)
-                if q_tokens:
-                    overlap = q_tokens & p_tokens
-                    is_token_match = (
-                        len(overlap) == len(q_tokens)
-                        if len(q_tokens) <= 2
-                        else (len(overlap) / len(q_tokens) >= 0.6)
+            # Check if direct identifier lookup (DOI / arXiv ID)
+            if decomposed.intent in ("doi_lookup", "arxiv_lookup"):
+                with self.ai_tracing.span(
+                    name="direct_identifier_lookup",
+                    input={"intent": decomposed.intent, "identifier": decomposed.identifier},
+                ) as id_span:
+                    id_span.set_input(
+                        {
+                            "intent": decomposed.intent,
+                            "identifier": decomposed.identifier,
+                        }
                     )
-                else:
-                    is_token_match = False
+                    matched: list[ScholarlyPaperSearchResult] = []
 
-                if is_token_match and self._is_relevant_result(clean_query, candidate.title):
-                    is_match = True
+                    # Normalize query for identifier matching
+                    normalized_query = clean_query
+                    if normalized_query.lower().startswith("arxiv:"):
+                        normalized_query = normalized_query[6:].strip()
+                    elif normalized_query.lower().startswith("doi:"):
+                        normalized_query = normalized_query[4:].strip()
 
-            if is_match:
-                add_result(candidate)
+                    # 1. Check curated literature first
+                    for paper_data in CURATED_SAMPLE_PAPERS:
+                        paper_dict = dict(paper_data)
+                        if "is_peer_reviewed" not in paper_dict:
+                            paper_dict["is_peer_reviewed"] = self._classify_peer_reviewed(
+                                paper_dict.get("venue"), paper_dict.get("doi")
+                            )
+                        candidate = ScholarlyPaperSearchResult(**paper_dict)
+                        is_match = False
+                        if decomposed.intent == "arxiv_lookup" and candidate.arxiv_id:
+                            cand_id = candidate.arxiv_id.lower()
+                            cand_clean = cand_id.split("v")[0]
+                            norm_clean = normalized_query.lower().split("v")[0]
+                            if cand_id == normalized_query.lower() or cand_clean == norm_clean:
+                                is_match = True
+                        elif decomposed.intent == "doi_lookup" and candidate.doi:
+                            cand_doi = candidate.doi.lower()
+                            norm_doi = normalized_query.lower()
+                            if cand_doi == norm_doi or norm_doi in cand_doi:
+                                is_match = True
+                        if is_match:
+                            matched.append(candidate)
 
-        # Academic Priority Re-ranking:
-        # Prioritize peer-reviewed papers at the top of the list, then by year descending
-        results.sort(
-            key=lambda p: (
-                0 if p.is_peer_reviewed else 1,
-                -(p.publication_year or 0),
-            )
-        )
+                    # 2. If no curated match or not in test mode, query arXiv API
+                    if not matched or not os.environ.get("PYTEST_CURRENT_TEST"):
+                        try:
+                            if decomposed.intent == "arxiv_lookup":
+                                params = {
+                                    "id_list": normalized_query,
+                                    "start": 0,
+                                    "max_results": limit,
+                                }
+                            else:
+                                params = {
+                                    "search_query": f'doi:"{normalized_query}"',
+                                    "sortBy": "relevance",
+                                    "start": 0,
+                                    "max_results": limit,
+                                }
+                            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                                resp = await client.get(
+                                    "https://export.arxiv.org/api/query", params=params
+                                )
+                                if resp.status_code == 200:
+                                    parsed_results = self._parse_arxiv_atom(resp.text)
+                                    matched.extend(parsed_results)
+                        except Exception as exc:
+                            logger.warning("arxiv_direct_lookup_error", error=str(exc))
 
-        # If matches found and running under tests or limit satisfied, return immediately
-        if results and (os.environ.get("PYTEST_CURRENT_TEST") or len(results) >= limit):
-            return results[:limit]
+                    id_span.set_output(
+                        {
+                            "count": len(matched),
+                            "papers": [p.title for p in matched],
+                        }
+                    )
+                    candidates.extend(matched)
 
-        # 2. Exa AI Neural Search for keyword queries
-        if not is_arxiv_id and not is_doi:
-            exa_items = await self._search_exa(clean_query, limit=limit)
-            for item in exa_items:
-                add_result(item)
-
-        # 3. Query arXiv API with timeout
-        try:
-            if is_arxiv_id:
-                params = {
-                    "id_list": normalized_query,
-                    "start": 0,
-                    "max_results": limit,
-                }
-            elif is_doi:
-                params = {
-                    "search_query": f'doi:"{normalized_query}"',
-                    "sortBy": "relevance",
-                    "start": 0,
-                    "max_results": limit,
-                }
             else:
-                arxiv_query = self._build_arxiv_query(clean_query)
-                params = {
-                    "search_query": arxiv_query,
-                    "sortBy": "relevance",
-                    "start": 0,
-                    "max_results": limit,
-                }
+                # Keyword search pipeline
+                # Node 2 Span: exa_neural_search
+                with self.ai_tracing.span(
+                    name="exa_neural_search",
+                    input={"semantic_query": decomposed.semantic_query, "limit": limit},
+                ) as exa_span:
+                    exa_span.set_input(
+                        {
+                            "semantic_query": decomposed.semantic_query,
+                            "limit": limit,
+                        }
+                    )
+                    exa_res = await self._search_exa(decomposed.semantic_query, limit=limit)
+                    exa_span.set_output(
+                        {
+                            "count": len(exa_res),
+                            "papers": [
+                                {
+                                    "title": p.title,
+                                    "doi": p.doi,
+                                    "arxiv_id": p.arxiv_id,
+                                    "is_peer_reviewed": p.is_peer_reviewed,
+                                }
+                                for p in exa_res
+                            ],
+                        }
+                    )
+                    candidates.extend(exa_res)
 
-            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
-                resp = await client.get("https://export.arxiv.org/api/query", params=params)
-                if resp.status_code == 200:
-                    parsed_results = self._parse_arxiv_atom(resp.text)
-                    for item in parsed_results:
-                        # Relevance filter (applied only for keyword searches)
-                        if not is_arxiv_id and not is_doi:
-                            if not self._is_relevant_result(clean_query, item.title):
-                                continue
-                        add_result(item)
-        except Exception as exc:
-            logger.warning("arxiv_search_upstream_error_fallback", error=str(exc))
+                # Curated high-precision literature matching for keyword search
+                curated_matches: list[ScholarlyPaperSearchResult] = []
+                for paper_data in CURATED_SAMPLE_PAPERS:
+                    paper_dict = dict(paper_data)
+                    if "is_peer_reviewed" not in paper_dict:
+                        paper_dict["is_peer_reviewed"] = self._classify_peer_reviewed(
+                            paper_dict.get("venue"), paper_dict.get("doi")
+                        )
+                    candidate = ScholarlyPaperSearchResult(**paper_dict)
+                    q_tokens = self._tokenize_for_similarity(clean_query)
+                    p_text = f"{candidate.title} {candidate.abstract or ''}".lower()
+                    p_tokens = self._tokenize_for_similarity(p_text)
+                    if q_tokens:
+                        overlap = q_tokens & p_tokens
+                        is_token_match = (
+                            len(overlap) == len(q_tokens)
+                            if len(q_tokens) <= 2
+                            else (len(overlap) / len(q_tokens) >= 0.6)
+                        )
+                    else:
+                        is_token_match = False
 
-        # Academic Priority Re-ranking:
-        # Peer-reviewed papers at the top of results, then by publication year descending
-        results.sort(
-            key=lambda p: (
-                0 if p.is_peer_reviewed else 1,
-                -(p.publication_year or 0),
-            )
-        )
+                    if is_token_match and self._is_relevant_result(clean_query, candidate.title):
+                        curated_matches.append(candidate)
 
-        return results[:limit]
+                candidates.extend(curated_matches)
+
+                # Node 3 Span: arxiv_api_search
+                with self.ai_tracing.span(
+                    name="arxiv_api_search",
+                    input={"query": decomposed.boolean_arxiv_query, "limit": limit},
+                ) as arxiv_span:
+                    arxiv_span.set_input(
+                        {
+                            "query": decomposed.boolean_arxiv_query,
+                            "limit": limit,
+                        }
+                    )
+                    arxiv_res: list[ScholarlyPaperSearchResult] = []
+                    # Check whether upstream query needed
+                    should_query_arxiv = not (
+                        curated_matches and os.environ.get("PYTEST_CURRENT_TEST")
+                    )
+                    if should_query_arxiv:
+                        try:
+                            params = {
+                                "search_query": decomposed.boolean_arxiv_query,
+                                "sortBy": "relevance",
+                                "start": 0,
+                                "max_results": limit,
+                            }
+                            async with httpx.AsyncClient(timeout=self.timeout_seconds) as client:
+                                resp = await client.get(
+                                    "https://export.arxiv.org/api/query", params=params
+                                )
+                                if resp.status_code == 200:
+                                    parsed_results = self._parse_arxiv_atom(resp.text)
+                                    for item in parsed_results:
+                                        if not self._is_relevant_result(clean_query, item.title):
+                                            continue
+                                        arxiv_res.append(item)
+                        except Exception as exc:
+                            logger.warning("arxiv_search_upstream_error_fallback", error=str(exc))
+
+                    arxiv_span.set_output(
+                        {
+                            "count": len(arxiv_res),
+                            "papers": [
+                                {
+                                    "title": p.title,
+                                    "arxiv_id": p.arxiv_id,
+                                }
+                                for p in arxiv_res
+                            ],
+                        }
+                    )
+                    candidates.extend(arxiv_res)
+
+            # Node 4 Span: academic_rank_fusion
+            with self.ai_tracing.span(
+                name="academic_rank_fusion",
+                input={
+                    "candidate_count": len(candidates),
+                    "is_peer_reviewed_only": is_peer_reviewed_only,
+                },
+            ) as fusion_span:
+                fusion_span.set_input(
+                    {
+                        "candidate_count": len(candidates),
+                        "is_peer_reviewed_only": is_peer_reviewed_only,
+                    }
+                )
+
+                results: list[ScholarlyPaperSearchResult] = []
+                seen_identifiers: set[str] = set()
+
+                for p in candidates:
+                    if is_peer_reviewed_only and not p.is_peer_reviewed:
+                        continue
+                    key = (p.doi or p.arxiv_id or p.title).lower()
+                    keys = {key}
+                    if p.doi:
+                        keys.add(p.doi.strip().lower())
+                    if p.arxiv_id:
+                        cand_id = p.arxiv_id.strip().lower()
+                        keys.add(cand_id)
+                        keys.add(cand_id.split("v")[0])
+                    if p.title:
+                        keys.add(p.title.strip().lower())
+
+                    if any(k in seen_identifiers for k in keys):
+                        continue
+                    seen_identifiers.update(keys)
+                    results.append(p)
+
+                # Academic Priority Re-ranking:
+                # Prioritize peer-reviewed papers at the top of the list,
+                # then by query relevance (title Jaccard similarity), then by year descending
+                results.sort(
+                    key=lambda p: (
+                        0 if p.is_peer_reviewed else 1,
+                        -round(self.compute_title_jaccard_similarity(clean_query, p.title), 2),
+                        -(p.publication_year or 0),
+                    )
+                )
+                final_results = results[:limit]
+
+                fusion_span.set_output(
+                    {
+                        "final_count": len(final_results),
+                        "peer_reviewed_count": sum(1 for p in final_results if p.is_peer_reviewed),
+                        "papers": [
+                            {
+                                "title": p.title,
+                                "year": p.publication_year,
+                                "is_peer_reviewed": p.is_peer_reviewed,
+                            }
+                            for p in final_results
+                        ],
+                    }
+                )
+
+            root_trace.set_output({"total_results": len(final_results)})
+            return final_results
 
     @classmethod
     def _parse_arxiv_atom(cls, xml_text: str) -> list[ScholarlyPaperSearchResult]:

@@ -41,6 +41,7 @@ class IScholarlySearchPort(ABC):
         query: str,
         limit: int = 10,
         is_peer_reviewed_only: bool = False,
+        user_id: object | None = None,
     ) -> list[ScholarlyPaperSearchResult]:
         """Search academic literature across scholarly sources with unified deduplication."""
         pass
