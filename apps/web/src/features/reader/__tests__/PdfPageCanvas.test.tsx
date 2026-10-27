@@ -26,12 +26,15 @@ vi.mock("../lib/pdfjs-init", () => ({
 
 // Mock IntersectionObserver in jsdom
 class MockIntersectionObserver {
+  callback: any;
   observe = vi.fn((_el) => {
     this.callback([{ isIntersecting: true, intersectionRatio: 1.0 }], this);
   });
   unobserve = vi.fn();
   disconnect = vi.fn();
-  constructor(private callback: any) {}
+  constructor(callback: any) {
+    this.callback = callback;
+  }
 }
 window.IntersectionObserver = MockIntersectionObserver as any;
 

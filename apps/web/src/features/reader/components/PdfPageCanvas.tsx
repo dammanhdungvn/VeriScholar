@@ -43,7 +43,6 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
   const textLayerRef = useRef<HTMLDivElement>(null);
 
   const [isRendered, setIsRendered] = useState(false);
-  const [isRendering, setIsRendering] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null);
 
@@ -119,7 +118,6 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
 
     const executeRender = async (setCancelHandler: (cancel: () => void) => void) => {
       try {
-        setIsRendering(true);
         const page: PDFPageProxy = await pdfDoc.getPage(pageNumber);
         if (isCancelled) return;
 
@@ -198,10 +196,6 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
       } catch (err: unknown) {
         if ((err as { name?: string })?.name !== "RenderingCancelledException") {
           console.warn(`[PDF.js] Failed to render page ${pageNumber}:`, err);
-        }
-      } finally {
-        if (!isCancelled) {
-          setIsRendering(false);
         }
       }
     };
