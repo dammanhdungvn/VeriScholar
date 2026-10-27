@@ -55,7 +55,7 @@
   - `ExtractedGraphPayload` (Pydantic model kiểm tra nghiêm ngặt schema 4 thực thể & 4 quan hệ với bộ 6 tham số `context_tuple`)
   - `detect_folder_cycle(folder_id: UUID, new_parent_id: UUID | None, parent_map: dict[UUID, UUID | None]) -> bool`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_graph_domain_and_folders.py`:
 ```python
@@ -118,21 +118,21 @@ def test_detect_folder_cycle_catches_self_and_descendant_parent():
     assert detect_folder_cycle(c, a, parent_map) is False
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_graph_domain_and_folders.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'core.services.graph_extractor'`
 
-- [ ] **Step 3: Implement `packages/core/src/core/services/graph_extractor.py`**
+- [x] **Step 3: Implement `packages/core/src/core/services/graph_extractor.py`**
 
 Cài đặt `normalize_canonical_name`, `ExtractedGraphPayload`, và `detect_folder_cycle` thuần Python Standard Library + `pydantic`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_graph_domain_and_folders.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add packages/core/src/core/services/graph_extractor.py packages/core/tests/test_graph_domain_and_folders.py
@@ -156,25 +156,25 @@ bash scripts/deploy_to_vps.sh --fast
   - `GraphEdgeModel`: `id`, `user_id`, `document_id`, `source_node_id`, `target_node_id`, `edge_type`, `metadata_json`, `evidence_chunk_id`, `page_number`.
   - `FolderCommunitySummaryModel`: `id`, `user_id`, `folder_id`, `summary_text`, `key_findings`, `embedding: Vector(1536)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Cập nhật `apps/api/tests/test_graph_models.py` kiểm tra khởi tạo `GraphNodeModel`, `GraphEdgeModel` có `page_number` và `evidence_chunk_id`, cùng `FolderCommunitySummaryModel`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_graph_models.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement models in `apps/api/src/api/db/models/graph.py` & DDL in `session.py`**
+- [x] **Step 3: Implement models in `apps/api/src/api/db/models/graph.py` & DDL in `session.py`**
 
 Cập nhật model và DDL `ensure_database_schema()`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_graph_models.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/db/models/graph.py apps/api/src/api/db/session.py apps/api/tests/test_graph_models.py
@@ -197,26 +197,26 @@ bash scripts/deploy_to_vps.sh --fast
   - `GraphExtractionService.ingest_paper_graph(db: AsyncSession, user_id: UUID, document_id: UUID, payload: ExtractedGraphPayload)`: Nạp tăng dần LightRAG trong $< 3$s. Đối chiếu vector cosine với các đỉnh hiện có; nếu Cosine $\ge 0.90$, gộp vào Hub có sẵn; nếu không, tạo đỉnh mới và sinh vector 1536d.
   - `GraphExtractionService.prune_document_graph(db: AsyncSession, user_id: UUID, document_id: UUID)`: Xóa các cạnh của `document_id` và quét dọn đỉnh mồ côi (bảo toàn đỉnh Hub có bài khác tham chiếu).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_graph_extraction_service.py` kiểm thử:
 1. Gắn sao bài báo A có phương pháp "Transformer" $\rightarrow$ tạo Hub.
 2. Gắn sao bài báo B có phương pháp "The Transformer architecture" (Cosine $\ge 0.90$) $\rightarrow$ tái sử dụng Hub bài báo A và thêm alias.
 3. Bỏ sao bài báo A $\rightarrow$ Hub vẫn còn nguyên vì bài báo B đang dùng.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_graph_extraction_service.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `apps/api/src/api/services/graph_extraction_service.py`**
+- [x] **Step 3: Implement `apps/api/src/api/services/graph_extraction_service.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_graph_extraction_service.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/services/graph_extraction_service.py apps/api/tests/test_graph_extraction_service.py
@@ -244,23 +244,23 @@ bash scripts/deploy_to_vps.sh --fast
     - Tính toán Ghép cặp Thư mục (Bibliographic Coupling) giữa các bài báo có chung $\ge 2$ tài liệu tham khảo.
     - Xác định **Tác phẩm Cội nguồn (Prior Works)** (In-Degree cao nhất) và **Tác phẩm Phái sinh (Derivative Works)** (Out-Degree cao nhất).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Tạo `apps/api/tests/test_graph_rag_query.py` và `test_graph_bibliometrics.py`.
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `uv run pytest apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `apps/api/src/api/services/graph_rag_service.py`**
+- [x] **Step 3: Implement `apps/api/src/api/services/graph_rag_service.py`**
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `uv run pytest apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/services/graph_rag_service.py apps/api/tests/test_graph_rag_query.py apps/api/tests/test_graph_bibliometrics.py
@@ -286,23 +286,23 @@ bash scripts/deploy_to_vps.sh --fast
   - `POST /api/v1/documents/{id}:toggle-star` (kích hoạt `FastAPI BackgroundTasks` gọi `GraphExtractionService`)
   - `PATCH /api/v1/folders/{id}` (chặn vòng lặp với `400 CYCLIC_FOLDER_HIERARCHY`)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_library_endpoints.py`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_library_endpoints.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement endpoints and register in `apps/api/src/api/main.py`**
+- [x] **Step 3: Implement endpoints and register in `apps/api/src/api/main.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_library_endpoints.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/v1/endpoints/library.py apps/api/src/api/v1/endpoints/documents.py apps/api/src/api/v1/endpoints/folders.py apps/api/src/api/main.py apps/api/tests/test_library_endpoints.py
@@ -327,23 +327,23 @@ bash scripts/deploy_to_vps.sh --fast
   - `KnowledgeSubgraphViewer`: Sơ đồ Cytoscape có kích thước đỉnh theo Degree Centrality, nhấp đúp cạnh mở trang PDF có Bounding Box viền vàng.
   - `BibliometricsPriorWorksCard`: Thẻ hiển thị các Tác phẩm Cội nguồn kinh điển và Tác phẩm Phái sinh.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/library/__tests__/LibraryAndGraphRAG.test.tsx`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- LibraryAndGraphRAG`
 Expected: FAIL
 
-- [ ] **Step 3: Implement components in `apps/web/src/features/library/`**
+- [x] **Step 3: Implement components in `apps/web/src/features/library/`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm --prefix apps/web run test -- LibraryAndGraphRAG`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/web/src/features/library/
@@ -355,22 +355,22 @@ bash scripts/deploy_to_vps.sh --fast
 
 ### Task 7: End-to-End Verification, 4 Mandatory Verification Gates & Rollout
 
-- [ ] **Step 1: Run Gate 1 (Python Linter & Formatter)**
+- [x] **Step 1: Run Gate 1 (Python Linter & Formatter)**
   Run: `uv run ruff check . && uv run ruff format --check .`
   Expected: exit code 0
 
-- [ ] **Step 2: Run Gate 2 (Backend & Architecture Boundary Tests)**
+- [x] **Step 2: Run Gate 2 (Backend & Architecture Boundary Tests)**
   Run: `uv run pytest`
   Expected: exit code 0 (146+ tests passed)
 
-- [ ] **Step 3: Run Gate 3 (Frontend Unit Tests)**
+- [x] **Step 3: Run Gate 3 (Frontend Unit Tests)**
   Run: `npm --prefix apps/web run test`
   Expected: exit code 0 (84+ tests passed)
 
-- [ ] **Step 4: Run Gate 4 (Production Build)**
+- [x] **Step 4: Run Gate 4 (Production Build)**
   Run: `npm --prefix apps/web run build`
   Expected: exit code 0
 
-- [ ] **Step 5: Remote VPS Deployment Sync**
+- [x] **Step 5: Remote VPS Deployment Sync**
   Run: `bash scripts/deploy_to_vps.sh --fast`
   Expected: exit code 0 (cập nhật live hoặc nhận diện offline an toàn)
