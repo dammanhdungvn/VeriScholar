@@ -49,7 +49,7 @@
   - `validate_session_tab_capacity(current_doc_ids: list[UUID], new_doc_id: UUID) -> None` (raises `SessionTabLimitExceededError` hoặc `DocumentAlreadyInSessionError`)
   - `extract_citation_markers(markdown_text: str) -> list[int]` (bóc tách toàn bộ `[[cite:N]]` theo thứ tự xuất hiện duy nhất).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_session_citation_core.py`:
 ```python
@@ -83,21 +83,21 @@ def test_extract_citation_markers_preserves_order_and_uniqueness():
     assert extract_citation_markers(sample) == [2, 1]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_session_citation_core.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'core.services.citation_parser'`
 
-- [ ] **Step 3: Implement `packages/core/src/core/services/citation_parser.py`**
+- [x] **Step 3: Implement `packages/core/src/core/services/citation_parser.py`**
 
 Cài đặt hằng số `MAX_SESSION_DOCUMENTS = 5`, các lớp ngoại lệ miền nghiệp vụ `SessionTabLimitExceededError`, `DocumentAlreadyInSessionError`, hàm `validate_session_tab_capacity()` và hàm `extract_citation_markers()` sử dụng biểu thức chính quy `r"\[\[cite:(\d+)\]\]"`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_session_citation_core.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/core/services/citation_parser.py packages/core/tests/test_session_citation_core.py
@@ -120,7 +120,7 @@ git commit -m "feat(core): add session 5-tab capacity validator and citation mar
   - `DELETE /api/v1/sessions/{session_id}/documents/{document_id}` (xóa liên kết tab, tự động cập nhật `active_document_id` nếu tab đang mở bị đóng, trả về `204 No Content`).
   - `PATCH /api/v1/sessions/{session_id}/viewport` (lưu `active_document_id`, `page`, `zoom_ratio`, `scroll_top`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_session_tabs_and_viewport.py`:
 ```python
@@ -174,21 +174,21 @@ async def test_session_tab_limit_and_active_reassignment(async_client, auth_head
     assert res_close.status_code == 204
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_session_tabs_and_viewport.py -v`
 Expected: FAIL (thiếu route `DELETE /api/v1/sessions/{id}/documents/{doc_id}` hoặc `PATCH /api/v1/sessions/{id}/viewport`).
 
-- [ ] **Step 3: Implement tab close, 5-tab guard, and viewport endpoints in `apps/api/src/api/v1/endpoints/sessions.py`**
+- [x] **Step 3: Implement tab close, 5-tab guard, and viewport endpoints in `apps/api/src/api/v1/endpoints/sessions.py`**
 
 Cập nhật `sessions.py` và `schemas/session.py` (`ViewportStateUpdateSchema`), đảm bảo mọi truy vấn lọc `user_id == current_user.id` và trả đúng mã lỗi trong Ma trận Mã lỗi Chuẩn hóa của `SPEC-03`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_session_tabs_and_viewport.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/v1/endpoints/sessions.py apps/api/src/api/schemas/session.py apps/api/tests/test_session_tabs_and_viewport.py
@@ -211,28 +211,28 @@ git commit -m "feat(api): enforce 5-tab session limit, active tab reassignment, 
   - `POST /api/v1/sessions/{session_id}/messages` (SSE stream: `citation` $\rightarrow$ `token` $\rightarrow$ `bridge_hint` $\rightarrow$ `done`)
   - `DELETE /api/v1/sessions/{session_id}/messages` (`204 No Content`, chỉ xóa `session_turns`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_session_hybrid_rag_chat.py` kiểm tra:
 1. Kết hợp điểm RRF $k=60$ giữa `embedding <=> :query_vector` và `ts_rank_cd(content_tsv, plainto_tsquery('simple', :query))`.
 2. Hàng rào chống ảo giác khi tài liệu ở trạng thái `abstract_only` hoặc câu hỏi không có dẫn chứng.
 3. `DELETE /api/v1/sessions/{id}/messages` xóa sạch `session_turns` nhưng bảo toàn `research_sessions` và `research_notes`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_session_hybrid_rag_chat.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement PostgreSQL Hybrid RRF & SSE Event Sequencer in `session_chat_service.py`**
+- [x] **Step 3: Implement PostgreSQL Hybrid RRF & SSE Event Sequencer in `session_chat_service.py`**
 
 Triển khai câu lệnh CTE `vector_ranks` + `fts_ranks` `FULL OUTER JOIN` với công thức RRF `1.0 / (60 + rank_vec) + 1.0 / (60 + rank_fts)`, kèm guardrail cho `status == 'abstract_only'` và endpoint `DELETE /api/v1/sessions/{id}/messages`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_session_hybrid_rag_chat.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/services/session_chat_service.py apps/api/src/api/v1/endpoints/sessions.py apps/api/tests/test_session_hybrid_rag_chat.py
@@ -257,28 +257,28 @@ git commit -m "feat(api): implement PostgreSQL hybrid RRF search and grounded SS
   - `DocumentTabBar` hiển thị tối đa 5 tab kèm hộp thoại **Tab Eviction Dialog** khi nhận mã lỗi `MAX_SESSION_DOCUMENTS_REACHED`.
   - `PdfCanvasViewer` tự động chuyển tab, cuộn tới `pageNumber` và kích hoạt khung viền vàng nhấp nháy trên `BboxHighlightLayer`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/reader/__tests__/DeepReadingWorkspace.test.tsx` kiểm tra:
 1. Render `AbstractCardViewer` khi `status === 'abstract_only'`.
 2. Bấm vào huy hiệu dẫn chứng phát sự kiện `scholar:focus-bbox` làm chuyển tab và vẽ khung viền vàng.
 3. Hiển thị hộp thoại chọn đóng bớt tab khi mở bài thứ 6.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- DeepReadingWorkspace`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `AbstractCardViewer.tsx` and update `DocumentTabBar.tsx` & `PdfCanvasViewer.tsx`**
+- [x] **Step 3: Implement `AbstractCardViewer.tsx` and update `DocumentTabBar.tsx` & `PdfCanvasViewer.tsx`**
 
 Cài đặt giao diện thẻ tóm tắt học thuật, hộp thoại chọn đóng tab khi đầy 5/5 bài, và kết nối sự kiện `scholar:focus-bbox` để cuộn trang + vẽ khung viền vàng.
 
-- [ ] **Step 4: Run test and build to verify all 4 verification gates pass**
+- [x] **Step 4: Run test and build to verify all 4 verification gates pass**
 
 Run: `uv run ruff check . && uv run pytest && npm --prefix apps/web run test && npm --prefix apps/web run build`
 Expected: 100% PASS (exit code 0)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/features/reader/
