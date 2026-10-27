@@ -67,41 +67,41 @@ Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật đ�
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_chunks}}
 \label{tab:document_chunks}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\
-\texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\
-\texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\
-\texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\
-\texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\
-\texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao cosine tương đồng \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\ \hline
+2 & \texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\ \hline
+3 & \texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\ \hline
+4 & \texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\ \hline
+5 & \texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\ \hline
+6 & \texttt{embedding} & VECTOR(1536) & Chỉ mục HNSW & Vector nhúng ngữ nghĩa chiều cao cosine tương đồng \\ \hline
 \end{tabular}
 \end{table}
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_storage\_blobs}}
 \label{tab:document_storage_blobs}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.3cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{4.9cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của khối tệp nhị phân trên đĩa \\
-\texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân (Khử trùng CAS) \\
-\texttt{file\_size\_bytes} & BIGINT & Không & Kích thước tệp tin tính theo đơn vị bytes \\
-\texttt{mime\_type} & VARCHAR(64) & Không & Định dạng MIME chuẩn của tài liệu (\texttt{application/pdf}) \\
-\texttt{storage\_path} & TEXT & Không & Đường dẫn lưu trữ phân cấp 2 tầng trên hệ thống tệp \\
-\texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu đang tham chiếu tới khối tệp \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của khối tệp nhị phân trên đĩa \\ \hline
+2 & \texttt{sha256\_hash} & VARCHAR(64) & Unique Index & Mã băm SHA-256 nội dung nhị phân (Khử trùng CAS) \\ \hline
+3 & \texttt{file\_size\_bytes} & BIGINT & Không & Kích thước tệp tin tính theo đơn vị bytes \\ \hline
+4 & \texttt{mime\_type} & VARCHAR(64) & Không & Định dạng MIME chuẩn của tài liệu (\texttt{application/pdf}) \\ \hline
+5 & \texttt{storage\_path} & TEXT & Không & Đường dẫn lưu trữ phân cấp 2 tầng trên hệ thống tệp \\ \hline
+6 & \texttt{ref\_count} & INTEGER & Không & Biến đếm số lượng tài liệu đang tham chiếu tới khối tệp \\ \hline
 \end{tabular}
 \end{table}
 
@@ -109,20 +109,20 @@ Tiếp theo, Bảng~\ref{tab:user_secrets} trình bày cấu trúc bảo mật c
 
 \begin{table}[htbp]
 \centering
+\singlespacing
 \small
+\renewcommand{\arraystretch}{1.2}
 \caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{user\_secrets}}
 \label{tab:user_secrets}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{2.6cm}>{\raggedright\arraybackslash}p{5.0cm}}
-\toprule
-\textbf{Tên trường} & \textbf{Kiểu dữ liệu} & \textbf{Khóa / Chỉ mục} & \textbf{Mô tả nghiệp vụ học thuật} \\
-\midrule
-\texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\
-\texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\
-\texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\
-\texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\
-\texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\
-\texttt{created\_at} & TIMESTAMPTZ & Không & Dấu thời gian khởi tạo bản ghi trong két sắt \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.3cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
+1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\ \hline
+2 & \texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\ \hline
+3 & \texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\ \hline
+4 & \texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\ \hline
+5 & \texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\ \hline
+6 & \texttt{created\_at} & TIMESTAMPTZ & Không & Dấu thời gian khởi tạo bản ghi trong két sắt \\ \hline
 \end{tabular}
 \end{table}

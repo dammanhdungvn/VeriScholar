@@ -6,7 +6,7 @@
 Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
 \begin{itemize}
     \item \textbf{Cổng 1 (Linter \& Formatter Python):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{uv run ruff check .} và \texttt{uv run ruff format --check .}.
-    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 54 bài kiểm thử đơn vị và tích hợp \texttt{pytest} bao phủ toàn diện ranh giới kiến trúc lục giác, mô hình CSDL và tài liệu báo cáo.
+    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 101 bài kiểm thử đơn vị và tích hợp \texttt{pytest} bao phủ toàn diện ranh giới kiến trúc lục giác, mô hình CSDL và tài liệu báo cáo.
     \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử các thành phần giao diện người dùng qua \texttt{npm --prefix apps/web run test}.
     \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{npm --prefix apps/web run build}.
 \end{itemize}
@@ -17,17 +17,19 @@ Kết quả kiểm tra thực tế trên hệ thống được tổng hợp tron
 
 \begin{table}[htbp]
 \centering
+\singlespacing
+\small
+\renewcommand{\arraystretch}{1.2}
 \caption{Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh}
 \label{tab:gate_results}
-\begin{tabular}{p{2.5cm}p{5.5cm}p{3cm}p{3cm}}
-\toprule
-\textbf{Cổng kiểm thử} & \textbf{Công cụ \& Lệnh thực thi} & \textbf{Số lượng kiểm thử} & \textbf{Kết quả \& Thời gian} \\
-\midrule
-\textbf{Cổng 1} & \texttt{ruff check \& format} & 137 tệp nguồn Python & 100\% Pass (0.12s) \\
-\textbf{Cổng 2} & \texttt{pytest} (Backend + Core) & 54 bài kiểm thử & 54/54 Pass (1.31s) \\
-\textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 3 bài kiểm thử & 3/3 Pass (0.85s) \\
-\textbf{Cổng 4} & \texttt{vite build} (Production) & 49 mô-đun giao diện & Build Pass (1.76s) \\
-\bottomrule
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.6cm}|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.8cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Cổng kiểm thử} & \centering\textbf{Công cụ \& Lệnh thực thi} & \centering\textbf{Số lượng kiểm thử} & \centering\textbf{Kết quả \& Thời gian} \tabularnewline \hline
+1 & \textbf{Cổng 1} & \texttt{ruff check \& format} & 157 tệp nguồn Python & 100\% Pass (0.12s) \\ \hline
+2 & \textbf{Cổng 2} & \texttt{pytest} (Backend + Core) & 101 bài kiểm thử & 101/101 Pass (6.53s) \\ \hline
+3 & \textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 14 tệp (69 bài test) & 69/69 Pass (4.53s) \\ \hline
+4 & \textbf{Cổng 4} & \texttt{vite build} (Production) & 49 mô-đun giao diện & Build Pass (1.84s) \\ \hline
 \end{tabular}
 \end{table}
 

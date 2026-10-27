@@ -73,7 +73,7 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
         \footnotesize Mã hóa an toàn cá nhân, giải mã tạm thời trên RAM
     };
 \end{tikzpicture}
-\caption{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}
+\caption[Mô hình phân rã cấu trúc năng lực của hệ thống VeriScholar]{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}
 \label{fig:use_case_diagram}
 \end{figure}
 
@@ -85,31 +85,31 @@ Trước hết, Bảng~\ref{tab:uc_01_spec} trình bày đặc tả chi tiết c
 
 \begin{table}[htbp]
 \centering
-\small
+\singlespacing
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
 \caption{Bảng đặc tả chi tiết ca sử dụng UC-01 (Khám phá bài báo học thuật hai tầng tin cậy)}
 \label{tab:uc_01_spec}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{11.2cm}}
-\toprule
-\textbf{Thuộc tính} & \textbf{Nội dung đặc tả nghiệp vụ} \\
-\midrule
-\textbf{Mã ca sử dụng} & UC-01-SCHOLARLY-DISCOVERY \\
-\textbf{Tên ca sử dụng} & Khám phá bài báo học thuật theo chủ đề có kiểm soát độ tin cậy và phân tầng bình duyệt \\
-\textbf{Tác nhân chính} & Học giả (Scholar / Researcher) \\
-\textbf{Mục đích} & Cho phép học giả tra cứu nhanh các ấn phẩm học thuật liên quan đến chủ đề nghiên cứu từ các kho lưu trữ mở quốc tế (arXiv, Semantic Scholar), loại bỏ các kết quả lạc đề bằng giải thuật kiểm định độ tương đồng từ khóa và hỗ trợ phân tầng lọc nguồn bình duyệt. \\
-\textbf{Tiền điều kiện} & Học giả đang truy cập hệ thống tại Trang điều khiển trung tâm (\textit{Dashboard}) hoặc Không gian Khám phá (\textit{Discovery Workspace}) và có kết nối mạng tới các cổng học thuật. \\
-\textbf{Hậu điều kiện} & Danh sách bài báo đạt chuẩn độ tin cậy được hiển thị dạng thẻ tinh gọn chống tràn bố cục, phân tách rõ trạng thái truy cập mở (\textit{Open Access PDF}) và nguồn đã bình duyệt (\textit{Peer-Reviewed}), sẵn sàng mở phiên đọc tức thì. \\
-\textbf{Luồng sự kiện chính} & 
-1. Học giả nhập câu truy vấn hoặc từ khóa chủ đề nghiên cứu (tiếng Việt hoặc tiếng Anh) vào ô tìm kiếm trung tâm và gửi yêu cầu.\\
-& 2. Giao diện người dùng lập tức phản hồi tức thì (\textit{Instant Skeleton Feedback}) qua 3 thẻ giả lập hiệu ứng phát sáng mờ và biểu tượng quay trạng thái, triệt tiêu cảm giác chờ đợi.\\
-& 3. Tầng dịch vụ chuyển đổi câu truy vấn sang biểu thức truy vấn trường mục tiêu (\textit{Field-targeted Querying}) kết hợp tiêu đề và tóm tắt: \texttt{ti:"..." OR (ti:... AND abs:...)} kèm sắp xếp theo mức độ phù hợp.\\
-& 4. Tầng hạ tầng kích hoạt bộ lọc độ tương đồng tiêu đề (Tier 1 Backend): tính điểm trùng lặp từ tố Jaccard (\textit{Jaccard Token Overlap}) giữa truy vấn và tiêu đề bài báo; tự động loại bỏ các ấn phẩm có $\text{Jaccard} < 0{,}2$ đối với câu truy vấn từ 3 từ trở lên nhằm ngăn chặn triệt để bài báo lạc đề.\\
-& 5. Hệ thống phân loại nguồn bình duyệt (\textit{Peer-Reviewed Classification}) dựa trên danh mục nhà xuất bản, kỷ yếu hội nghị uy tín (NeurIPS, ICML, CVPR, Nature, Science, IEEE, ACM,...) hoặc mã định danh DOI chính thức.\\
-& 6. Giao diện hiển thị danh sách thẻ kết quả tinh gọn chống tràn bố cục (Tier 2 Frontend): giới hạn tối đa 2 tác giả kèm \textit{et al.}, tự động làm sạch mã \LaTeX\ thô, cố định tóm tắt trong 2 dòng, và cung cấp nút gạt mềm (\textit{Pill toggle}) lọc nhanh các bài đã qua bình duyệt.\\
-\textbf{Luồng ngoại lệ} & 
-1a. Từ khóa tìm kiếm để trống hoặc không trả về ấn phẩm phù hợp: Hệ thống đưa ra thông báo trung thực và gợi ý mở rộng thuật ngữ chuyên ngành tiếng Anh tương đương.\\
-& 1b. Cổng dịch vụ học thuật quốc tế phản hồi chậm quá thời hạn (quá 15 giây): Hệ thống ngắt chờ an toàn, thông báo trạng thái kết nối và hỗ trợ học giả tải trực tiếp tệp PDF sẵn có từ thiết bị cá nhân. \\
-\bottomrule
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Thuộc tính} & \centering\textbf{Nội dung đặc tả nghiệp vụ} \tabularnewline \hline
+1 & \textbf{Mã ca sử dụng} & UC-01-SCHOLARLY-DISCOVERY \\ \hline
+2 & \textbf{Tên ca sử dụng} & Khám phá bài báo học thuật theo chủ đề có kiểm soát độ tin cậy và phân tầng bình duyệt \\ \hline
+3 & \textbf{Tác nhân chính} & Học giả (Scholar / Researcher) \\ \hline
+4 & \textbf{Mục đích} & Cho phép học giả tra cứu nhanh các ấn phẩm học thuật liên quan đến chủ đề nghiên cứu từ các kho lưu trữ mở quốc tế (arXiv, Semantic Scholar), loại bỏ các kết quả lạc đề bằng giải thuật kiểm định độ tương đồng từ khóa và hỗ trợ phân tầng lọc nguồn bình duyệt. \\ \hline
+5 & \textbf{Tiền điều kiện} & Học giả đang truy cập hệ thống tại Trang điều khiển trung tâm (\textit{Dashboard}) hoặc Không gian Khám phá (\textit{Discovery Workspace}) và có kết nối mạng tới các cổng học thuật. \\ \hline
+6 & \textbf{Hậu điều kiện} & Danh sách bài báo đạt chuẩn độ tin cậy được hiển thị dạng thẻ tinh gọn chống tràn bố cục, phân tách rõ trạng thái truy cập mở (\textit{Open Access PDF}) và nguồn đã bình duyệt (\textit{Peer-Reviewed}), sẵn sàng mở phiên đọc tức thì. \\ \hline
+7 & \textbf{Luồng sự kiện chính} & 
+1. Học giả nhập câu truy vấn hoặc từ khóa chủ đề nghiên cứu (tiếng Việt hoặc tiếng Anh) vào ô tìm kiếm trung tâm và gửi yêu cầu.\newline
+2. Giao diện người dùng lập tức phản hồi tức thì (\textit{Instant Skeleton Feedback}) qua 3 thẻ giả lập hiệu ứng phát sáng mờ và biểu tượng quay trạng thái, triệt tiêu cảm giác chờ đợi.\newline
+3. Tầng dịch vụ chuyển đổi câu truy vấn sang biểu thức truy vấn trường mục tiêu (\textit{Field-targeted Querying}) kết hợp tiêu đề và tóm tắt: \texttt{ti:"..." OR (ti:... AND abs:...)} kèm sắp xếp theo mức độ phù hợp.\newline
+4. Tầng hạ tầng kích hoạt bộ lọc độ tương đồng tiêu đề (Tier 1 Backend): tính điểm trùng lặp từ tố Jaccard (\textit{Jaccard Token Overlap}) giữa truy vấn và tiêu đề bài báo; tự động loại bỏ các ấn phẩm có $\text{Jaccard} < 0{,}2$ đối với câu truy vấn từ 3 từ trở lên nhằm ngăn chặn triệt để bài báo lạc đề.\newline
+5. Hệ thống phân loại nguồn bình duyệt (\textit{Peer-Reviewed Classification}) dựa trên danh mục nhà xuất bản, kỷ yếu hội nghị uy tín (NeurIPS, ICML, CVPR, Nature, Science, IEEE, ACM,...) hoặc mã định danh DOI chính thức.\newline
+6. Giao diện hiển thị danh sách thẻ kết quả tinh gọn chống tràn bố cục (Tier 2 Frontend): giới hạn tối đa 2 tác giả kèm \textit{et al.}, tự động làm sạch mã \LaTeX\ thô, cố định tóm tắt trong 2 dòng, và cung cấp nút gạt mềm (\textit{Pill toggle}) lọc nhanh các bài đã qua bình duyệt. \\ \hline
+8 & \textbf{Luồng ngoại lệ} & 
+1a. Từ khóa tìm kiếm để trống hoặc không trả về ấn phẩm phù hợp: Hệ thống đưa ra thông báo trung thực và gợi ý mở rộng thuật ngữ chuyên ngành tiếng Anh tương đương.\newline
+1b. Cổng dịch vụ học thuật quốc tế phản hồi chậm quá thời hạn (quá 15 giây): Hệ thống ngắt chờ an toàn, thông báo trạng thái kết nối và hỗ trợ học giả tải trực tiếp tệp PDF sẵn có từ thiết bị cá nhân. \\ \hline
 \end{tabular}
 \end{table}
 
@@ -117,28 +117,29 @@ Tiếp theo, Bảng~\ref{tab:uc_03_spec} trình bày chi tiết đặc tả ca s
 
 \begin{table}[htbp]
 \centering
+\singlespacing
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
 \caption{Bảng đặc tả chi tiết ca sử dụng UC-03 (Hỏi đáp Hybrid RAG có tọa độ)}
 \label{tab:uc_03_spec}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{11.2cm}}
-\toprule
-\textbf{Thuộc tính} & \textbf{Nội dung đặc tả nghiệp vụ} \\
-\midrule
-\textbf{Mã ca sử dụng} & UC-03-DEEP-READ-CHAT \\
-\textbf{Tên ca sử dụng} & Hỏi đáp tài liệu có minh chứng tọa độ trực quan trên bản PDF gốc \\
-\textbf{Tác nhân chính} & Học giả (Scholar) \\
-\textbf{Mục đích} & Cho phép học giả đặt câu hỏi ngôn ngữ tự nhiên và nhận câu trả lời đối chiếu trực tiếp trên trang văn bản PDF gốc trong vòng 1 giây. \\
-\textbf{Tiền điều kiện} & Học giả đã xác thực thành công và đã mở một phiên đọc sâu (\textit{Deep Reading Session}) có tài liệu đã hoàn tất bóc tách cấu trúc CAS. \\
-\textbf{Hậu điều kiện} & Câu hỏi và câu trả lời được lưu trữ vào lịch sử phiên làm việc; khung viền vàng (\textit{Bounding Box}) được vẽ trực tiếp trên trang tài liệu. \\
-\textbf{Luồng sự kiện chính} & 
-1. Học giả nhập câu hỏi nghiên cứu tại khung giao diện đọc sâu và gửi yêu cầu.\\
-& 2. Giao diện mở kênh truyền phát luồng sự kiện (SSE) tới tầng giao vận hệ thống.\\
-& 3. Hệ thống giải mã an toàn khóa cá nhân BYOK trên bộ nhớ RAM và đồng thời kích hoạt 2 luồng truy xuất: vector ngữ nghĩa HNSW và từ khóa BM25.\\
-& 4. Tầng lõi nghiệp vụ hợp nhất thứ hạng qua giải thuật RRF ($k=60$) để trích xuất các đoạn trích có độ tin cậy cao nhất.\\
-& 5. Mô hình ngôn ngữ lớn tổng hợp câu trả lời dựa trên ngữ cảnh đã chọn, gắn kèm siêu dữ liệu tọa độ hộp chữ nhật $[x_0, y_0, x_1, y_1]$ và số thứ tự trang.\\
-& 6. Trình duyệt nhận luồng dữ liệu SSE, tự động cuộn đến trang tương ứng và vẽ khung viền vàng định vị câu văn gốc trong vòng 1 giây với $\text{IoU} \ge 0.85$.\\
-\textbf{Luồng ngoại lệ} & Nếu tài liệu không chứa thông tin phù hợp, hệ thống thông báo trung thực rằng bài báo không đề cập tới nội dung này, bảo đảm tính liêm chính dữ liệu và loại bỏ hoàn toàn hiện tượng ảo giác trích dẫn. \\
-\bottomrule
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Thuộc tính} & \centering\textbf{Nội dung đặc tả nghiệp vụ} \tabularnewline \hline
+1 & \textbf{Mã ca sử dụng} & UC-03-DEEP-READ-CHAT \\ \hline
+2 & \textbf{Tên ca sử dụng} & Hỏi đáp tài liệu có minh chứng tọa độ trực quan trên bản PDF gốc \\ \hline
+3 & \textbf{Tác nhân chính} & Học giả (Scholar) \\ \hline
+4 & \textbf{Mục đích} & Cho phép học giả đặt câu hỏi ngôn ngữ tự nhiên và nhận câu trả lời đối chiếu trực tiếp trên trang văn bản PDF gốc trong vòng 1 giây. \\ \hline
+5 & \textbf{Tiền điều kiện} & Học giả đã xác thực thành công và đã mở một phiên đọc sâu (\textit{Deep Reading Session}) có tài liệu đã hoàn tất bóc tách cấu trúc CAS. \\ \hline
+6 & \textbf{Hậu điều kiện} & Câu hỏi và câu trả lời được lưu trữ vào lịch sử phiên làm việc; khung viền vàng (\textit{Bounding Box}) được vẽ trực tiếp trên trang tài liệu. \\ \hline
+7 & \textbf{Luồng sự kiện chính} & 
+1. Học giả nhập câu hỏi nghiên cứu tại khung giao diện đọc sâu và gửi yêu cầu.\newline
+2. Giao diện mở kênh truyền phát luồng sự kiện (SSE) tới tầng giao vận hệ thống.\newline
+3. Hệ thống giải mã an toàn khóa cá nhân BYOK trên bộ nhớ RAM và đồng thời kích hoạt 2 luồng truy xuất: vector ngữ nghĩa HNSW và từ khóa BM25.\newline
+4. Tầng lõi nghiệp vụ hợp nhất thứ hạng qua giải thuật RRF ($k=60$) để trích xuất các đoạn trích có độ tin cậy cao nhất.\newline
+5. Mô hình ngôn ngữ lớn tổng hợp câu trả lời dựa trên ngữ cảnh đã chọn, gắn kèm siêu dữ liệu tọa độ hộp chữ nhật $[x_0, y_0, x_1, y_1]$ và số thứ tự trang.\newline
+6. Trình duyệt nhận luồng dữ liệu SSE, tự động cuộn đến trang tương ứng và vẽ khung viền vàng định vị câu văn gốc trong vòng 1 giây với $\text{IoU} \ge 0.85$. \\ \hline
+8 & \textbf{Luồng ngoại lệ} & Nếu tài liệu không chứa thông tin phù hợp, hệ thống thông báo trung thực rằng bài báo không đề cập tới nội dung này, bảo đảm tính liêm chính dữ liệu và loại bỏ hoàn toàn hiện tượng ảo giác trích dẫn. \\ \hline
 \end{tabular}
 \end{table}
 
@@ -146,27 +147,28 @@ Cuối cùng, Bảng~\ref{tab:uc_06_spec} trình bày đặc tả ca sử dụng
 
 \begin{table}[htbp]
 \centering
+\singlespacing
+\footnotesize
+\renewcommand{\arraystretch}{1.12}
 \caption{Bảng đặc tả chi tiết ca sử dụng UC-06 (Tác nhân tự sửa lỗi bản thảo \LaTeX)}
 \label{tab:uc_06_spec}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{>{\raggedright\arraybackslash}p{2.8cm}>{\raggedright\arraybackslash}p{11.2cm}}
-\toprule
-\textbf{Thuộc tính} & \textbf{Nội dung đặc tả nghiệp vụ} \\
-\midrule
-\textbf{Mã ca sử dụng} & UC-06-AUTONOMOUS-LATEX-HEALING \\
-\textbf{Tên ca sử dụng} & Tác nhân AI tự động phân tích và khắc phục lỗi biên dịch bản thảo \LaTeX \\
-\textbf{Tác nhân chính} & Học giả (Scholar) \\
-\textbf{Mục đích} & Tự động phân tích các thông báo lỗi cú pháp trong tệp nhật ký \texttt{.log} và thực hiện sửa đổi mã nguồn \LaTeX\ cho đến khi biên dịch thành công. \\
-\textbf{Tiền điều kiện} & Học giả đã tải lên dự án bản thảo bài báo khoa học và nhấn lệnh biên dịch xuất bản ấn phẩm PDF. \\
-\textbf{Hậu điều kiện} & Bản thảo được biên dịch thành công (mã thoát 0), tệp PDF ấn phẩm chất lượng cao được tạo ra và trả về an toàn cho học giả. \\
-\textbf{Luồng sự kiện chính} & 
-1. Hệ thống khởi tạo một máy ảo Linux MicroVM cô lập (E2B Cloud Sandbox) trong thời gian xấp xỉ 150 mili-giây.\\
-& 2. Bản thảo \LaTeX\ được chuyển vào máy ảo và trình biên dịch được kích hoạt.\\
-& 3. Nếu biên dịch thất bại, tệp nhật ký lỗi (\texttt{.log}) được chuyển giao cho tác nhân AI điều phối theo máy trạng thái ReAct.\\
-& 4. Tác nhân thực hiện pha Suy luận (\textit{Thought}) để định vị nguyên nhân gốc rễ (thiếu gói lệnh, sai cấu trúc môi trường bảng hoặc công thức).\\
-& 5. Tác nhân thực hiện pha Hành động (\textit{Action}) vá lỗi tệp mã nguồn và yêu cầu tái biên dịch trong máy ảo MicroVM.\\
-& 6. Tác nhân quan sát kết quả: nếu thành công, xuất tệp PDF trả về giao diện người dùng; nếu còn lỗi và số lần thử $N < 3$, tiếp tục chu kỳ suy luận.\\
-\textbf{Luồng ngoại lệ} & Nếu sau 3 chu kỳ lặp bản thảo vẫn chưa thể biên dịch thành công, hệ thống đánh dấu chính xác các dòng mã nguồn nghi vấn và đưa ra khuyến nghị sửa đổi trực quan cho học giả. \\
-\bottomrule
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Thuộc tính} & \centering\textbf{Nội dung đặc tả nghiệp vụ} \tabularnewline \hline
+1 & \textbf{Mã ca sử dụng} & UC-06-AUTONOMOUS-LATEX-HEALING \\ \hline
+2 & \textbf{Tên ca sử dụng} & Tác nhân AI tự động phân tích và khắc phục lỗi biên dịch bản thảo \LaTeX \\ \hline
+3 & \textbf{Tác nhân chính} & Học giả (Scholar) \\ \hline
+4 & \textbf{Mục đích} & Tự động phân tích các thông báo lỗi cú pháp trong tệp nhật ký \texttt{.log} và thực hiện sửa đổi mã nguồn \LaTeX\ cho đến khi biên dịch thành công. \\ \hline
+5 & \textbf{Tiền điều kiện} & Học giả đã tải lên dự án bản thảo bài báo khoa học và nhấn lệnh biên dịch xuất bản ấn phẩm PDF. \\ \hline
+6 & \textbf{Hậu điều kiện} & Bản thảo được biên dịch thành công (mã thoát 0), tệp PDF ấn phẩm chất lượng cao được tạo ra và trả về an toàn cho học giả. \\ \hline
+7 & \textbf{Luồng sự kiện chính} & 
+1. Hệ thống khởi tạo một máy ảo Linux MicroVM cô lập (E2B Cloud Sandbox) trong thời gian xấp xỉ 150 mili-giây.\newline
+2. Bản thảo \LaTeX\ được chuyển vào máy ảo và trình biên dịch được kích hoạt.\newline
+3. Nếu biên dịch thất bại, tệp nhật ký lỗi (\texttt{.log}) được chuyển giao cho tác nhân AI điều phối theo máy trạng thái ReAct.\newline
+4. Tác nhân thực hiện pha Suy luận (\textit{Thought}) để định vị nguyên nhân gốc rễ (thiếu gói lệnh, sai cấu trúc môi trường bảng hoặc công thức).\newline
+5. Tác nhân thực hiện pha Hành động (\textit{Action}) vá lỗi tệp mã nguồn và yêu cầu tái biên dịch trong máy ảo MicroVM.\newline
+6. Tác nhân quan sát kết quả: nếu thành công, xuất tệp PDF trả về giao diện người dùng; nếu còn lỗi và số lần thử $N < 3$, tiếp tục chu kỳ suy luận. \\ \hline
+8 & \textbf{Luồng ngoại lệ} & Nếu sau 3 chu kỳ lặp bản thảo vẫn chưa thể biên dịch thành công, hệ thống đánh dấu chính xác các dòng mã nguồn nghi vấn và đưa ra khuyến nghị sửa đổi trực quan cho học giả. \\ \hline
 \end{tabular}
 \end{table}

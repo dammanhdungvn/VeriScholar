@@ -45,19 +45,21 @@ Bảng~\ref{tab:search_comparison} tổng hợp phân tích đối chiếu đặ
 
 \begin{table}[htbp]
 \centering
+\singlespacing
+\small
+\renewcommand{\arraystretch}{1.2}
 \caption{So sánh đặc tính kỹ thuật giữa các giải pháp truy xuất tài liệu khoa học}
 \label{tab:search_comparison}
-\begin{tabular}{>{\raggedright\arraybackslash}p{3.2cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.0cm}>{\raggedright\arraybackslash}p{3.6cm}}
-\toprule
-\textbf{Tiêu chí đánh giá} & \textbf{Dense Vector} & \textbf{Sparse BM25} & \textbf{Hybrid RAG + RRF} \\
-\midrule
-\textbf{Cơ chế biểu diễn} & Vector nhúng dày & Từ điển tần suất thưa & Hợp nhất thứ hạng đa dải \\
-\textbf{Bắt nghĩa đồng nghĩa} & Rất xuất sắc & Hoàn toàn không & Rất xuất sắc \\
-\textbf{Khớp từ khóa hiếm} & Kém chính xác & Tuyệt đối chính xác & Tuyệt đối chính xác \\
-\textbf{Độ bền với lỗi chính tả} & Khá tốt & Kém & Rất tốt \\
-\textbf{Yêu cầu chuẩn hóa} & Cần chuẩn hóa scale & Không tương thích & Không phụ thuộc thang đo \\
-\textbf{Độ bao phủ học thuật} & $72\% - 78\%$ & $65\% - 70\%$ & $\ge 92\%$ (Độ nhạy tối ưu) \\
-\bottomrule
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.8cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tiêu chí đánh giá} & \centering\textbf{Dense Vector} & \centering\textbf{Sparse BM25} & \centering\textbf{Hybrid RAG + RRF} \tabularnewline \hline
+1 & \textbf{Cơ chế biểu diễn} & Vector nhúng dày & Từ điển tần suất thưa & Hợp nhất thứ hạng đa dải \\ \hline
+2 & \textbf{Bắt nghĩa đồng nghĩa} & Rất xuất sắc & Hoàn toàn không & Rất xuất sắc \\ \hline
+3 & \textbf{Khớp từ khóa hiếm} & Kém chính xác & Tuyệt đối chính xác & Tuyệt đối chính xác \\ \hline
+4 & \textbf{Độ bền với lỗi chính tả} & Khá tốt & Kém & Rất tốt \\ \hline
+5 & \textbf{Yêu cầu chuẩn hóa} & Cần chuẩn hóa scale & Không tương thích & Không phụ thuộc thang đo \\ \hline
+6 & \textbf{Độ bao phủ học thuật} & $72\% - 78\%$ & $65\% - 70\%$ & $\ge 92\%$ (Độ nhạy tối ưu) \\ \hline
 \end{tabular}
 \end{table}
 
