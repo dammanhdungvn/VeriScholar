@@ -39,7 +39,7 @@
 - Consumes: `settings.OPENAI_API_KEY` từ `api.core.config`
 - Produces: `EmbeddingService.get_embedding(text: str) -> list[float]`, `EmbeddingService.get_embeddings_batch(texts: list[str], batch_size: int = 128) -> list[list[float]]` (vector 1536 chiều).
 
-- [ ] **Step 1: Write the failing unit test for `EmbeddingService`**
+- [x] **Step 1: Write the failing unit test for `EmbeddingService`**
 
 ```python
 # apps/api/tests/unit/test_embedding_service.py
@@ -67,21 +67,21 @@ async def test_get_embeddings_batch_handles_chunking():
         assert len(results[0]) == 1536
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/unit/test_embedding_service.py -v`  
 Expected: FAIL with `ModuleNotFoundError: No module named 'api.services.embedding_service'`
 
-- [ ] **Step 3: Implement `EmbeddingService` in `apps/api/src/api/services/embedding_service.py`**
+- [x] **Step 3: Implement `EmbeddingService` in `apps/api/src/api/services/embedding_service.py`**
 
 Triển khai client gọi OpenAI Embedding API model `text-embedding-3-small` (1536 dimensions), có cơ chế batching phân đoạn ($\le 128$ texts/lần), kiểm tra rỗng và xử lý ngoại lệ mạng.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/unit/test_embedding_service.py -v`  
 Expected: PASS with 2 tests passed.
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/api/src/api/services/embedding_service.py apps/api/tests/unit/test_embedding_service.py
@@ -103,7 +103,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: `EmbeddingService` từ Task 1
 - Produces: `DocumentService.parse_document_background` tạo chunks với `embedding != None`; `open_reading_session` kích hoạt `background_tasks.add_task`.
 
-- [ ] **Step 1: Write failing test verifying `open_reading_session` schedules background ingestion**
+- [x] **Step 1: Write failing test verifying `open_reading_session` schedules background ingestion**
 
 ```python
 # apps/api/tests/test_open_reading_pdf_ingestion.py
@@ -133,24 +133,24 @@ async def test_open_reading_schedules_background_parsing(db_session, test_user):
         assert bg_tasks.add_task.called
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_open_reading_pdf_ingestion.py -v`  
 Expected: FAIL because `open_reading_session` does not accept `background_tasks` or does not call `add_task`.
 
-- [ ] **Step 3: Implement fixes in `discovery.py`, `document_service.py`, and create `backfill_chunk_embeddings.py`**
+- [x] **Step 3: Implement fixes in `discovery.py`, `document_service.py`, and create `backfill_chunk_embeddings.py`**
 
 1. Cập nhật `open_reading_session` nhận `background_tasks: BackgroundTasks` và gọi `background_tasks.add_task(service.parse_document_background, doc_id, current_user.id)`.
 2. Trong `document_service.py`, quét sạch toàn bộ 5 vị trí `embedding=None` (dòng 1034, 1857, 2014, 2315, 2492), tạo hàm helper `_generate_chunk_embeddings(...)` gọi `embedding_service.get_embeddings_batch([c.text for c in chunks])`.
 3. Bổ sung bóc tách **4 Trụ Cột Summary Index** (`original_problem`, `proposed_solution`, `key_insights`, `quantitative_results`) lưu vào `documents.parsed_metadata["summary_metadata"]`.
 4. Viết script `scripts/backfill_chunk_embeddings.py` quét toàn bộ chunks có `embedding IS NULL` trong database, gọi OpenAI tính vector 1536d và cập nhật lại.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_open_reading_pdf_ingestion.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/api/src/api/v1/endpoints/discovery.py apps/api/src/api/services/document_service.py scripts/backfill_chunk_embeddings.py apps/api/tests/test_open_reading_pdf_ingestion.py
@@ -170,7 +170,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: `EmbeddingService` từ Task 1, `session_turns` (chat history)
 - Produces: `SessionChatService.transform_query(raw_query: str, chat_history: list[dict]) -> tuple[str, list[float]]` trả về `(condensed_query, hyde_embedding)`.
 
-- [ ] **Step 1: Write failing unit test for `transform_query` with HyDE**
+- [x] **Step 1: Write failing unit test for `transform_query` with HyDE**
 
 ```python
 # apps/api/tests/unit/test_query_transformation_and_hyde.py
@@ -195,21 +195,21 @@ async def test_transform_query_generates_condensed_and_hyde_vector(db_session):
         assert len(hyde_vec) == 1536
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/unit/test_query_transformation_and_hyde.py -v`  
 Expected: FAIL with `AttributeError: 'SessionChatService' object has no attribute 'transform_query'`
 
-- [ ] **Step 3: Implement `transform_query` and HyDE in `session_chat_service.py`**
+- [x] **Step 3: Implement `transform_query` and HyDE in `session_chat_service.py`**
 
 Xây dựng hàm Condense kết hợp lịch sử chat 5 lượt gần nhất, sau đó sinh Virtual English Document học thuật (100-150 từ) và gọi `embedding_service` để tính vector 1536 chiều.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/unit/test_query_transformation_and_hyde.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/api/src/api/services/session_chat_service.py apps/api/tests/unit/test_query_transformation_and_hyde.py
@@ -229,7 +229,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: `query_embedding` từ Task 3, `document_chunks` table
 - Produces: `retrieve_hybrid_chunks` truyền vector vào CTE `embedding <=> :query_vec`; `evaluate_crag_and_expand` mở rộng lân cận $[i-1, i+1]$ khi $\tau \in [0.20, 0.35)$.
 
-- [ ] **Step 1: Write failing test for CRAG Window Expansion**
+- [x] **Step 1: Write failing test for CRAG Window Expansion**
 
 ```python
 # apps/api/tests/unit/test_crag_and_window_expansion.py
@@ -255,12 +255,12 @@ async def test_crag_expands_adjacent_chunks_when_ambiguous(db_session):
         assert not abstain
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/unit/test_crag_and_window_expansion.py -v`  
 Expected: FAIL with `AttributeError: 'SessionChatService' object has no attribute 'evaluate_crag_and_expand'`
 
-- [ ] **Step 3: Implement CTE Vector Search & CRAG Evaluation in `session_chat_service.py`**
+- [x] **Step 3: Implement CTE Vector Search & CRAG Evaluation in `session_chat_service.py`**
 
 1. Cập nhật `retrieve_hybrid_chunks` để truyền `query_embedding` bắt buộc vào câu lệnh CTE PostgreSQL RRF $k=60$. Ép kiểu `CAST(:hyde_vector AS vector)`, sắp xếp `ORDER BY` trước khi lấy `LIMIT 25` để kích hoạt chỉ mục HNSW/GIN, sử dụng `= ANY(:active_doc_ids)` và `JOIN documents d` để lấy tiêu đề bài báo:
    ```sql
@@ -306,12 +306,12 @@ Expected: FAIL with `AttributeError: 'SessionChatService' object has no attribut
    - Nếu $0.20 \le \tau < 0.35 \rightarrow$ Gọi `_fetch_adjacent_chunks` lấy $[i-1, i+1]$, khử trùng lặp và áp trần `MAX_EVIDENCE_TOKENS = 3500` (`AMBIGUOUS_EXPANDED`).
    - Nếu $\tau < 0.20 \rightarrow$ Bật `abstain = True` (`ACTIVE_ABSTENTION`).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/unit/test_crag_and_window_expansion.py -v`  
 Expected: PASS
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/api/src/api/services/session_chat_service.py apps/api/tests/unit/test_crag_and_window_expansion.py
@@ -333,7 +333,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: SSE events stream (phân biệt reasoning delta và answer delta)
 - Produces: `ReasoningThinkingAccordion` component gập gọn tư duy `✓ Thinking Finished`, `PdfCanvasViewer` với `window.caches` 0ms load, và viền BBox nét đứt vàng ánh kim.
 
-- [ ] **Step 1: Write failing frontend test for `ReasoningThinkingAccordion`**
+- [x] **Step 1: Write failing frontend test for `ReasoningThinkingAccordion`**
 
 ```tsx
 // apps/web/src/features/reader/__tests__/ReasoningThinkingAccordion.test.tsx
@@ -357,23 +357,23 @@ describe("ReasoningThinkingAccordion Component", () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- src/features/reader/__tests__/ReasoningThinkingAccordion.test.tsx`  
 Expected: FAIL with component not found.
 
-- [ ] **Step 3: Implement `ReasoningThinkingAccordion.tsx`, CacheStorage & BBox style**
+- [x] **Step 3: Implement `ReasoningThinkingAccordion.tsx`, CacheStorage & BBox style**
 
 1. Tạo `ReasoningThinkingAccordion.tsx` với CSS shimmer animation và Accordion thu gọn.
 2. Thêm logic `window.caches.open("verischolar-pdfs-v1")` trong `PdfCanvasViewer.tsx` để lưu nhị phân PDF và tải tức thì $0$ms.
 3. Cập nhật `BboxHighlightLayer.tsx` sang style viền nét đứt vàng ánh kim (`border: 2px dashed #f59e0b; background: rgba(245, 158, 11, 0.12); border-radius: 6px`).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm --prefix apps/web run test -- src/features/reader/__tests__/ReasoningThinkingAccordion.test.tsx`  
 Expected: PASS (2/2 tests).
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/web/src/features/reader/
@@ -393,7 +393,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: Toàn bộ pipeline từ Task 1 đến Task 5
 - Produces: Xác nhận end-to-end phiên đọc sâu trả về công thức $AR$ trên Trang 3 kèm Bounding Box vàng dạng mảng `[x0, y0, x1, y1, page]`.
 
-- [ ] **Step 1: Write integration test for Vietnamese query on Ragas paper with concrete fixtures**
+- [x] **Step 1: Write integration test for Vietnamese query on Ragas paper with concrete fixtures**
 
 ```python
 # Trong apps/api/tests/test_session_hybrid_rag_chat.py
@@ -433,21 +433,21 @@ async def test_ask_ragas_formula_ar_retrieves_page_3_with_bounding_box(db_sessio
     assert 0 <= bbox[0] <= 1000 and 0 <= bbox[1] <= 1000
 ```
 
-- [ ] **Step 2: Run test to verify it fails if pipeline is broken**
+- [x] **Step 2: Run test to verify it fails if pipeline is broken**
 
 Run: `uv run pytest apps/api/tests/test_session_hybrid_rag_chat.py -k test_ask_ragas_formula_ar -v`  
 Expected: PASS (nếu Task 1-4 hoàn tất chuẩn xác) hoặc FAIL chỉ rõ điểm nghẽn.
 
-- [ ] **Step 3: Refactor & tune prompt guardrail in `session_chat_service.py`**
+- [x] **Step 3: Refactor & tune prompt guardrail in `session_chat_service.py`**
 
 Đảm bảo System Prompt yêu cầu LLM trích xuất công thức dạng LaTeX KaTeX `$$AR = ...$$` và gắn thẻ neo ngữ nghĩa `[cite:chunk_id:page:concept_name]`.
 
-- [ ] **Step 4: Run full session tests**
+- [x] **Step 4: Run full session tests**
 
 Run: `uv run pytest apps/api/tests/test_session_hybrid_rag_chat.py -v`  
 Expected: PASS (100% test cases).
 
-- [ ] **Step 5: Commit and Sync VPS**
+- [x] **Step 5: Commit and Sync VPS**
 
 ```bash
 git add apps/api/tests/test_session_hybrid_rag_chat.py apps/api/src/api/services/session_chat_service.py
@@ -468,7 +468,7 @@ bash scripts/deploy_to_vps.sh --fast
 - Consumes: CSDL PostgreSQL local và remote VPS
 - Produces: 100% chunks trên hệ thống có vector embedding 1536 chiều, build production xanh hoàn toàn.
 
-- [ ] **Step 1: Run 4 Verification Gates locally**
+- [x] **Step 1: Run 4 Verification Gates locally**
 
 ```bash
 uv run ruff check . && uv run ruff format --check .  # Gate 1: Lint & Format
@@ -478,14 +478,14 @@ npm --prefix apps/web run build                      # Gate 4: Production Web Bu
 ```
 Expected: 100% exit code 0.
 
-- [ ] **Step 2: Run backfill script on local database**
+- [x] **Step 2: Run backfill script on local database**
 
 ```bash
 uv run python scripts/backfill_chunk_embeddings.py
 ```
 Expected: Cập nhật thành công 100% chunks có `embedding IS NULL` thành vector 1536-dim.
 
-- [ ] **Step 3: Deploy to VPS and execute remote backfill**
+- [x] **Step 3: Deploy to VPS and execute remote backfill**
 
 ```bash
 bash scripts/deploy_to_vps.sh --fast
@@ -494,7 +494,7 @@ ssh -i /home/dammanhdungvn/Downloads/VPS/VeriScholar_key.pem VeriScholar@48.193.
 ```
 Expected: Toàn bộ 90 chunks của bài báo Ragas trên VPS có vector đầy đủ; kiểm tra `SELECT count(*) FROM document_chunks WHERE embedding IS NULL;` trả về `0`.
 
-- [ ] **Step 4: Final commit of operational logs**
+- [x] **Step 4: Final commit of operational logs**
 
 ```bash
 git add docs/
