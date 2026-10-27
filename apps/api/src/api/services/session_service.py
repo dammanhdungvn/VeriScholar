@@ -697,6 +697,7 @@ class SessionService:
             rem_stmt = (
                 select(SessionDocumentModel.document_id)
                 .where(SessionDocumentModel.session_id == session_id)
+                .order_by(SessionDocumentModel.display_order.asc())
                 .limit(1)
             )
             rem_res = await self.db.execute(rem_stmt)

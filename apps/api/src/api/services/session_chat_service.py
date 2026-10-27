@@ -27,6 +27,7 @@ from api.schemas.session import (
 )
 from api.services.ai_tracing_service import AITracingService
 from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_provider
+from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
 from fastapi import HTTPException, status
 from sqlalchemy import delete, func, select, text
@@ -648,11 +649,26 @@ class SessionChatService:
         question: str,
         citations: list[dict[str, Any]],
         target_doc_ids: list[UUID],
+        abstract_only_docs: list[DocumentModel] | None = None,
     ) -> tuple[str, list[dict[str, Any]]]:
         """Generate high-precision grounded answer and calibrate citation bounding boxes."""
         refined_citations = list(citations)
 
-        if (
+        if abstract_only_docs and not citations:
+            doc_titles = ", ".join(f"'{d.title or d.filename}'" for d in abstract_only_docs)
+            full_text = (
+                f"Tài liệu {doc_titles} hiện chỉ có bản Tóm tắt (Abstract). "
+                f"Dưới đây là nội dung phân tích từ Tóm tắt của bài báo:\n\n"
+            )
+            for d in abstract_only_docs:
+                abs_txt = (d.parsed_metadata or {}).get("abstract", "")
+                if abs_txt:
+                    full_text += f"- **{d.title or d.filename}**: {abs_txt}\n\n"
+            full_text += (
+                "Lưu ý: Để giải đáp chi tiết phương pháp thực nghiệm, công thức toán học "
+                "hoặc kết quả chi tiết trong thân bài, vui lòng tải lên bản toàn văn PDF đầy đủ."
+            )
+        elif (
             target_doc_ids
             and not citations
             and intent
@@ -1030,13 +1046,60 @@ class SessionChatService:
 
         # 1. Dynamic Retrieval & Chunk Relevance Ranking
         citations: list[dict[str, Any]] = []
+        selected_chunks: list[tuple[Any, float]] = []
+        abstract_only_docs: list[DocumentModel] = []
+        abstract_warning = ""
+
         if target_doc_ids:
+            # Check for abstract-only or parsing documents
+            abs_stmt = select(DocumentModel).where(
+                DocumentModel.id.in_(target_doc_ids),
+                DocumentModel.status.in_(["abstract_only", "parsing"]),
+            )
+            abs_res = await self.db.execute(abs_stmt)
+            abstract_only_docs = list(abs_res.scalars().all())
+            if abstract_only_docs:
+                doc_titles = ", ".join(f"'{d.title or d.filename}'" for d in abstract_only_docs)
+                abstract_warning = (
+                    "\n\n[CẢNH BÁO BẢO VỆ PHẠM VI HỌC THUẬT]: "
+                    f"Tài liệu {doc_titles} hiện chỉ có bản Tóm tắt (Abstract) "
+                    "hoặc đang trong tiến trình phân tích. "
+                    "Tuyệt đối KHÔNG suy đoán, bịa đặt số liệu thực nghiệm, "
+                    "công thức chi tiết hoặc kết quả thân bài "
+                    "không xuất hiện trong phần Tóm tắt này."
+                )
+
             with self.ai_tracing.span(
                 name="retrieval",
                 input={"target_doc_ids": [str(d) for d in target_doc_ids]},
                 metadata={"target_docs_count": len(target_doc_ids)},
                 as_type="retriever",
             ) as ret_span:
+                # Primary: PostgreSQL CTE Hybrid RRF k=60 search
+                hybrid_candidates = await self.retrieve_hybrid_chunks(
+                    session_id=session_id,
+                    user_id=user_id,
+                    query_text=request.question,
+                    limit=8,
+                    target_doc_ids=target_doc_ids,
+                )
+                ret_span.set_output({"total_chunks": len(hybrid_candidates)})
+
+            if hybrid_candidates:
+                for idx, item in enumerate(hybrid_candidates, start=1):
+                    selected_chunks.append((item, item.get("rrf_score", 0.5)))
+                    citations.append(
+                        {
+                            "citation_id": f"cit_{idx}",
+                            "document_id": str(item["document_id"]),
+                            "document_title": item.get("document_title") or "Tài liệu học thuật",
+                            "page_number": item.get("page_number") or 1,
+                            "bounding_boxes": item.get("bounding_boxes")
+                            or [[0.1, 0.1, 0.9, 0.2, 1]],
+                            "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
+                        }
+                    )
+            else:
                 chunk_stmt = (
                     select(DocumentChunkModel, DocumentModel.title, DocumentModel.filename)
                     .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
@@ -1044,67 +1107,62 @@ class SessionChatService:
                 )
                 chunk_res = await self.db.execute(chunk_stmt)
                 all_chunks = chunk_res.all()
-                ret_span.set_output({"total_chunks": len(all_chunks)})
 
-            with self.ai_tracing.span(
-                name="reranking",
-                input={"query": request.question, "total_chunks": len(all_chunks)},
-                as_type="tool",
-            ) as rank_span:
-                ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
-                # Global Token Budgeting (3,500 tokens) with Rerank Relevance Cutoff (>= 0.35)
-                # Max 6-8 chunks selected across all session documents globally
-                selected_chunks: list[tuple[Any, float]] = []
-                current_tokens = 0
-                max_chunks = 8
-                global_token_budget = 3500
-                relevance_cutoff = 0.35
+                with self.ai_tracing.span(
+                    name="reranking",
+                    input={"query": request.question, "total_chunks": len(all_chunks)},
+                    as_type="tool",
+                ) as rank_span:
+                    ranked_chunks = self._score_and_rank_chunks(all_chunks, request.question)
+                    current_tokens = 0
+                    max_chunks = 8
+                    global_token_budget = 3500
+                    relevance_cutoff = 0.35
 
-                for item, score in ranked_chunks:
-                    if score < relevance_cutoff:
-                        continue
-                    chk = item[0] if hasattr(item, "__getitem__") else item
-                    cnt = getattr(chk, "content", "") or ""
-                    # Exclude empty or placeholder chunks without substantive text
-                    if not cnt.strip() or len(cnt.strip()) < 20:
-                        continue
-                    tok_cnt = getattr(chk, "token_count", None) or max(
-                        1, int(len(cnt.split()) * 1.3)
+                    for item, score in ranked_chunks:
+                        if score < relevance_cutoff:
+                            continue
+                        chk = item[0] if hasattr(item, "__getitem__") else item
+                        cnt = getattr(chk, "content", "") or ""
+                        if not cnt.strip() or len(cnt.strip()) < 20:
+                            continue
+                        tok_cnt = getattr(chk, "token_count", None) or max(
+                            1, int(len(cnt.split()) * 1.3)
+                        )
+                        if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
+                            break
+                        selected_chunks.append((item, score))
+                        current_tokens += tok_cnt
+                        if len(selected_chunks) >= max_chunks:
+                            break
+
+                    rank_span.set_output(
+                        {
+                            "selected_chunks_count": len(selected_chunks),
+                            "total_tokens_budgeted": current_tokens,
+                        }
                     )
-                    if selected_chunks and (current_tokens + tok_cnt > global_token_budget):
-                        break
-                    selected_chunks.append((item, score))
-                    current_tokens += tok_cnt
-                    if len(selected_chunks) >= max_chunks:
-                        break
 
-                rank_span.set_output(
-                    {
-                        "selected_chunks_count": len(selected_chunks),
-                        "total_tokens_budgeted": current_tokens,
-                    }
-                )
+                for idx, (item, score) in enumerate(selected_chunks, start=1):
+                    try:
+                        chunk = item[0]
+                        doc_title = item[1] if len(item) > 1 else None
+                        doc_fn = item[2] if len(item) > 2 else None
+                    except (TypeError, IndexError, KeyError):
+                        chunk = item
+                        doc_title = getattr(chunk, "title", None)
+                        doc_fn = getattr(chunk, "filename", None)
 
-            for idx, (item, score) in enumerate(selected_chunks, start=1):
-                try:
-                    chunk = item[0]
-                    doc_title = item[1] if len(item) > 1 else None
-                    doc_fn = item[2] if len(item) > 2 else None
-                except (TypeError, IndexError, KeyError):
-                    chunk = item
-                    doc_title = getattr(chunk, "title", None)
-                    doc_fn = getattr(chunk, "filename", None)
-
-                citations.append(
-                    {
-                        "citation_id": f"cit_{idx}",
-                        "document_id": str(chunk.document_id),
-                        "document_title": doc_title or doc_fn or "Tài liệu học thuật",
-                        "page_number": chunk.page_number or 1,
-                        "bounding_boxes": chunk.bounding_boxes or [[0.1, 0.1, 0.9, 0.2, 1]],
-                        "score": round(max(0.35, min(1.0, score)), 2),
-                    }
-                )
+                    citations.append(
+                        {
+                            "citation_id": f"cit_{idx}",
+                            "document_id": str(chunk.document_id),
+                            "document_title": doc_title or doc_fn or "Tài liệu học thuật",
+                            "page_number": chunk.page_number or 1,
+                            "bounding_boxes": chunk.bounding_boxes or [[0.1, 0.1, 0.9, 0.2, 1]],
+                            "score": round(max(0.35, min(1.0, score)), 2),
+                        }
+                    )
 
         # 2. Semantic Intent & Ambiguity Classification
         with self.ai_tracing.span(
@@ -1195,6 +1253,7 @@ class SessionChatService:
                     "nấu ăn, tán gẫu, giải trí hoặc không liên quan đến bài báo hay phương pháp "
                     "nghiên cứu. Nếu câu hỏi ngoài luồng lọt qua bộ lọc, hãy lịch thiệp từ chối "
                     "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu."
+                    f"{abstract_warning}"
                 )
 
                 evidence_blocks: list[dict[str, Any]] = []
@@ -1204,20 +1263,28 @@ class SessionChatService:
                     page = cit.get("page_number", 1)
                     matched_content = ""
                     for it, _score in selected_chunks:
-                        chk = it[0] if hasattr(it, "__getitem__") else it
-                        if (
-                            str(getattr(chk, "document_id", "")) == cit.get("document_id")
-                            and getattr(chk, "page_number", None) == page
-                        ):
-                            matched_content = getattr(chk, "content", "")
-                            break
+                        if isinstance(it, dict):
+                            if (
+                                str(it.get("document_id", "")) == cit.get("document_id")
+                                and it.get("page_number") == page
+                            ):
+                                matched_content = it.get("content", "")
+                                break
+                        else:
+                            chk = it[0] if hasattr(it, "__getitem__") else it
+                            if (
+                                str(getattr(chk, "document_id", "")) == cit.get("document_id")
+                                and getattr(chk, "page_number", None) == page
+                            ):
+                                matched_content = getattr(chk, "content", "")
+                                break
                     if not matched_content and selected_chunks:
-                        chk0 = (
-                            selected_chunks[0][0][0]
-                            if hasattr(selected_chunks[0][0], "__getitem__")
-                            else selected_chunks[0][0]
-                        )
-                        matched_content = getattr(chk0, "content", "")
+                        it0 = selected_chunks[0][0]
+                        if isinstance(it0, dict):
+                            matched_content = it0.get("content", "")
+                        else:
+                            chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
+                            matched_content = getattr(chk0, "content", "")
 
                     snippet_content = (
                         matched_content[:1000] if matched_content else "(Nội dung trang)"
@@ -1232,6 +1299,23 @@ class SessionChatService:
                             "content": snippet_content,
                         }
                     )
+
+                if abstract_only_docs:
+                    for idx, doc in enumerate(abstract_only_docs, start=len(citations) + 1):
+                        doc_abstract = (doc.parsed_metadata or {}).get("abstract", "")
+                        if doc_abstract:
+                            evidence_blocks.append(
+                                {
+                                    "citation_id": f"cit_{idx}",
+                                    "document_id": str(doc.id),
+                                    "document_title": (
+                                        doc.title or doc.filename or "Tài liệu tóm tắt"
+                                    ),
+                                    "page_number": 1,
+                                    "bounding_boxes": [[0.1, 0.1, 0.9, 0.3, 1]],
+                                    "content": f"[BẢN TÓM TẮT CHÍNH THỨC]: {doc_abstract}",
+                                }
+                            )
 
                 sandboxed_context = AIGuardrailsService.build_hierarchical_sandboxed_context(
                     evidence_blocks
@@ -1353,6 +1437,7 @@ class SessionChatService:
                 question=request.question,
                 citations=citations,
                 target_doc_ids=target_doc_ids,
+                abstract_only_docs=abstract_only_docs,
             )
             tokens = full_text.split(" ")
             for token in tokens:
@@ -1416,13 +1501,24 @@ class SessionChatService:
         )
         gen_span.__exit__(None, None, None)
 
+        # Filter citations to only those cited in final_answer if citation markers present
+        cited_indices = extract_citation_markers(final_answer)
+        if cited_indices:
+            active_cids = {f"cit_{idx}" for idx in cited_indices}
+            persisted_citations = [c for c in citations if c.get("citation_id") in active_cids]
+            if not persisted_citations:
+                persisted_citations = citations
+        else:
+            persisted_citations = citations
+
         # Persist turn into database for session history restore
         turn_model = SessionTurnModel(
             id=turn_id,
+            user_id=user_id,
             session_id=session_id,
             question=request.question,
             answer=final_answer,
-            citations=citations,
+            citations=persisted_citations,
             prompt_tokens=done_payload["prompt_tokens"],
             completion_tokens=done_payload["completion_tokens"],
             latency_ms=int(done_payload["latency_ms"]),

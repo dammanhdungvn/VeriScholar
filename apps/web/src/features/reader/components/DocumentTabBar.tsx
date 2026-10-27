@@ -197,7 +197,7 @@ export function DocumentTabBar({
               </DialogTitle>
             </div>
             <DialogDescription className="text-xs text-muted leading-relaxed">
-              Phiên đọc sâu giới hạn tối đa 5 bài báo để đảm bảo hiệu năng và độ chính xác của ngữ cảnh RAG. Chọn một bài báo để đóng và giải phóng chỗ cho tài liệu mới:
+              Phiên đọc sâu hỗ trợ tối đa 5 bài báo đồng thời để bảo đảm tốc độ và độ chuẩn xác phân tích cao nhất. Chọn bài báo bạn muốn đóng để nhường chỗ cho tài liệu mới:
             </DialogDescription>
           </DialogHeader>
 

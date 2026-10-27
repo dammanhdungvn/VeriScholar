@@ -90,7 +90,7 @@ export function DashboardChatInputBox({
         (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
       );
       if (droppedFiles.length > 0) {
-        setStagedFiles((prev) => [...prev, ...droppedFiles]);
+        setStagedFiles((prev) => [...prev, ...droppedFiles].slice(0, 5));
       }
     }
   };
@@ -101,7 +101,7 @@ export function DashboardChatInputBox({
         (f) => f.name.toLowerCase().endsWith(".pdf") || f.type === "application/pdf"
       );
       if (selectedFiles.length > 0) {
-        setStagedFiles((prev) => [...prev, ...selectedFiles]);
+        setStagedFiles((prev) => [...prev, ...selectedFiles].slice(0, 5));
       }
     }
     e.target.value = "";

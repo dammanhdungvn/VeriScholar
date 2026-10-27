@@ -6,6 +6,7 @@ import { PdfPageCanvas } from "./PdfPageCanvas";
 import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
 import { ScholarSelectionMenu } from "./ScholarSelectionMenu";
 import { useReaderStore } from "../stores/useReaderStore";
+import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore";
 import { useTheme } from "@/hooks/useTheme";
 import type { BoundingBox } from "@/types/api";
 import type { DocumentDetailResponseData } from "@/types/document";
@@ -416,12 +417,15 @@ export function PdfCanvasViewer({
         pageNumber?: number;
         boundingBoxes?: BoundingBox[];
       }>;
-      const { documentId: targetDocId, pageNumber } = customEvent.detail || {};
+      const { documentId: targetDocId, pageNumber, boundingBoxes } = customEvent.detail || {};
       if (targetDocId && targetDocId !== documentId) {
         useReaderStore.getState().setActiveDocumentId(targetDocId);
       }
       if (pageNumber && pageNumber !== currentPage) {
         setCurrentPage(pageNumber);
+      }
+      if (boundingBoxes && boundingBoxes.length > 0) {
+        useDashboardStore.getState().setActiveBbox(boundingBoxes[0]);
       }
     };
 

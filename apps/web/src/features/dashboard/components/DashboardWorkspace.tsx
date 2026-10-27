@@ -456,6 +456,16 @@ export function DashboardWorkspace({
 
   const handleCloseDoc = async (docId: string) => {
     removeOpenDocument(docId);
+    if (activeDocumentId === docId) {
+      const remaining = openDocumentIds.filter((id) => id !== docId);
+      if (remaining.length > 0) {
+        setActiveDocumentId(remaining[0]);
+        setDocument(remaining[0], null);
+      } else {
+        setActiveDocumentId("");
+        setDocument("", null);
+      }
+    }
     if (effectiveSessionId && docId !== "doc-default") {
       try {
         await sessionsApi.removeDocumentFromSession(effectiveSessionId, docId);
@@ -476,8 +486,10 @@ export function DashboardWorkspace({
       const remaining = openDocumentIds.filter((id) => id !== docId);
       if (remaining.length > 0) {
         setActiveDocumentId(remaining[0]);
+        setDocument(remaining[0], null);
       } else {
         setActiveDocumentId("");
+        setDocument("", null);
       }
     }
     queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.lists() });

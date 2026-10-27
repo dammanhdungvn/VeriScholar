@@ -123,3 +123,67 @@ async def test_delete_session_messages_preserves_session(
     )
     assert res_get.status_code == 200
     assert res_get.json()["data"]["id"] == session_id
+
+
+@pytest.mark.asyncio
+async def test_chat_stream_abstract_only_guardrail(
+    db_session: AsyncSession,
+    async_client: AsyncClient,
+    auth_headers: dict,
+):
+    from api.db.models.document import DocumentModel
+
+    # 1. Create a session
+    res_sess = await async_client.post(
+        "/api/v1/sessions",
+        headers=auth_headers,
+        json={"title": "Abstract-Only Session"},
+    )
+    assert res_sess.status_code == 201
+    session_id = res_sess.json()["data"]["id"]
+
+    # 2. Get user_id from session
+    sess_obj = await db_session.get(ResearchSessionModel, session_id)
+    assert sess_obj is not None
+    user_id = sess_obj.user_id
+
+    # 3. Create an abstract_only document
+    doc = DocumentModel(
+        user_id=user_id,
+        filename="abstract_only_paper.pdf",
+        title="Theoretical Bounds of Transformer Networks",
+        content_hash="hash_theoretical_bounds",
+        status="abstract_only",
+        access_status="abstract_only",
+        parsed_metadata={
+            "abstract": "We prove the asymptotic expressiveness of self-attention layers under finite precision."
+        },
+        page_count=0,
+        chunk_count=0,
+        file_size_bytes=0,
+    )
+    db_session.add(doc)
+    await db_session.commit()
+    await db_session.refresh(doc)
+
+    # Link to session
+    await async_client.post(
+        f"/api/v1/sessions/{session_id}/documents",
+        headers=auth_headers,
+        json={"source_type": "document_id", "document_id": str(doc.id)},
+    )
+
+    # 4. Request chat stream
+    res_chat = await async_client.post(
+        f"/api/v1/sessions/{session_id}/messages",
+        headers=auth_headers,
+        json={
+            "question": "Mô tả đóng góp của bài báo này",
+            "scope": "multi_paper",
+        },
+    )
+    assert res_chat.status_code == 200
+    content = res_chat.text
+    # Should include abstract reference and no crash
+    assert "event: done" in content
+    assert "Theoretical" in content and "Bounds" in content

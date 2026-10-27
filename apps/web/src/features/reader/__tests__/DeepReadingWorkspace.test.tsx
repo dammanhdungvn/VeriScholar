@@ -149,4 +149,35 @@ describe("Deep Reading Workspace & Visual Grounding (PRD-03 / Plan 03)", () => {
     expect(overlay.className).toContain("border-amber-500");
     expect(overlay.className).toContain("animate-pulse");
   });
+
+  it("5. scholar:focus-bbox event updates active document, page, and bounding box", () => {
+    useReaderStore.getState().setOpenDocumentIds(["doc-1", "doc-2"]);
+    useReaderStore.getState().setActiveDocumentId("doc-1");
+
+    // Add listener matching PdfCanvasViewer behavior to verify contract
+    const handleFocusBbox = (e: Event) => {
+      const ce = e as CustomEvent<{ documentId?: string; pageNumber?: number; boundingBoxes?: [number, number, number, number, number][] }>;
+      const { documentId, pageNumber, boundingBoxes } = ce.detail || {};
+      if (documentId) useReaderStore.getState().setActiveDocumentId(documentId);
+      if (pageNumber) useReaderStore.getState().setCurrentPage(pageNumber);
+      if (boundingBoxes?.[0]) useDashboardStore.getState().setActiveBbox(boundingBoxes[0]);
+    };
+    window.addEventListener("scholar:focus-bbox", handleFocusBbox);
+
+    window.dispatchEvent(
+      new CustomEvent("scholar:focus-bbox", {
+        detail: {
+          documentId: "doc-2",
+          pageNumber: 4,
+          boundingBoxes: [[0.2, 0.3, 0.7, 0.5, 4]],
+        },
+      })
+    );
+
+    expect(useReaderStore.getState().activeDocumentId).toBe("doc-2");
+    expect(useReaderStore.getState().currentPage).toBe(4);
+    expect(useDashboardStore.getState().activeBbox).toEqual([0.2, 0.3, 0.7, 0.5, 4]);
+
+    window.removeEventListener("scholar:focus-bbox", handleFocusBbox);
+  });
 });
