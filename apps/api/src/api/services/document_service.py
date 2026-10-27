@@ -1471,6 +1471,7 @@ class DocumentService:
         # 6. Persist extracted references
         for ref in extracted_refs:
             ref_model = ReferenceItemModel(
+                user_id=doc.user_id,
                 document_id=document_id,
                 ref_index=ref.ref_index,
                 raw_text=ref.raw_text,
