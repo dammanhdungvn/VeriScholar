@@ -119,4 +119,35 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     // Sources header should show (5)
     expect(screen.getByText(/Nguồn trích dẫn \(5\)/)).toBeDefined();
   });
+
+  it("renders ungrounded literature reference numbers as plain text and eliminates ghost citation badge buttons", () => {
+    const mockCitations = [
+      {
+        citation_id: "cit_1",
+        paper_id: "doc-1",
+        page: 2,
+        paper_title: "Attention Is All You Need",
+        bbox: [0.1, 0.2, 0.8, 0.4, 2] as [number, number, number, number, number],
+      },
+    ];
+
+    render(
+      <AcademicMarkdownRenderer
+        content="Các mô hình LSTM [13] và GRU [7] được trích dẫn trong văn bản [1]."
+        citations={mockCitations}
+        isStreaming={false}
+      />
+    );
+
+    // Only [1] should be rendered as an interactive citation badge button
+    const badges = screen.getAllByTestId("citation-badge");
+    expect(badges.length).toBe(1);
+    expect(badges[0].textContent).toBe("[1]");
+
+    // [13] and [7] should be present as text in the document, but NOT as buttons
+    expect(screen.getByText(/LSTM \[13\]/)).toBeDefined();
+    expect(screen.getByText(/GRU \[7\]/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "[13]" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "[7]" })).toBeNull();
+  });
 });

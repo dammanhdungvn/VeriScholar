@@ -76,8 +76,12 @@ function parseInlineCitationsAndMath(
         citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
         (numIndex >= 0 && citations && citations[numIndex] ? citations[numIndex] : null);
 
-      const pageNumber = matchedCitation?.page ?? (numIndex >= 0 ? numIndex + 1 : 1);
-      const docTitle = matchedCitation?.paper_title || "Tài liệu học thuật";
+      if (!matchedCitation) {
+        return part;
+      }
+
+      const pageNumber = matchedCitation.page ?? (numIndex >= 0 ? numIndex + 1 : 1);
+      const docTitle = matchedCitation.paper_title || "Tài liệu học thuật";
       const displayLabel = numericPart || rawCitId;
 
       return (
@@ -89,11 +93,7 @@ function parseInlineCitationsAndMath(
           aria-label={`[${rawCitId}]`}
           onClick={(e) => {
             e.stopPropagation();
-            if (matchedCitation) {
-              onCitationClick?.(matchedCitation, rawCitId);
-            } else {
-              onCitationClick?.(rawCitId);
-            }
+            onCitationClick?.(matchedCitation, rawCitId);
           }}
           title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pageNumber} • ${docTitle} (Bấm để mở Bounding Box trên PDF)`}
           className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
@@ -364,7 +364,12 @@ export function AcademicMarkdownRenderer({
                   const matched =
                     citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
                     (numIdx >= 0 && citations && citations[numIdx] ? citations[numIdx] : null);
-                  const pNum = matched?.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
+
+                  if (!matched) {
+                    return `[${children}]`;
+                  }
+
+                  const pNum = matched.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
                   const displayLabel = numPart || rawCitId;
 
                   return (
@@ -375,14 +380,10 @@ export function AcademicMarkdownRenderer({
                       aria-label={`[${rawCitId}]`}
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (matched) {
-                          onCitationClick?.(matched, rawCitId);
-                        } else {
-                          onCitationClick?.(rawCitId);
-                        }
+                        onCitationClick?.(matched, rawCitId);
                       }}
                       className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
-                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
+                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
                     >
                       [{displayLabel}]
                     </button>
