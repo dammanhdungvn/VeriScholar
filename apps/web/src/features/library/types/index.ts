@@ -49,7 +49,7 @@ export interface FolderDocumentAssignPayload {
 
 export type GraphNodeType = "Paper" | "Method" | "Dataset" | "MetricResult";
 export type GraphEdgeType = "PROPOSES" | "EVALUATED_ON" | "ACHIEVES" | "CITES";
-export type GraphQueryMode = "local" | "global" | "hybrid";
+export type GraphQueryMode = "auto" | "local" | "global" | "hybrid";
 
 export interface GraphNode {
   id: string;

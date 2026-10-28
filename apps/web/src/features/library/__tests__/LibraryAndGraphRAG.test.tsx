@@ -228,7 +228,7 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders 3 search modes and executes queryGraph API displaying synthesized answer and subgraph", async () => {
+  it("executes smart auto-routed queryGraph API displaying synthesized answer and subgraph", async () => {
     const querySpy = vi.spyOn(libraryApi, "queryGraph").mockResolvedValue({
       mode_used: "hybrid",
       answer: "Transformer models achieve SOTA on BLEU and Top-1 Accuracy across WMT and ImageNet.",
@@ -238,20 +238,13 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
 
     renderWithProviders(<LibraryWorkspaceView />);
 
-    // Verify 3 mode buttons exist
-    const hybridBtn = screen.getByRole("button", { name: /hybrid/i });
-    const localBtn = screen.getByRole("button", { name: /local/i });
-    const globalBtn = screen.getByRole("button", { name: /global/i });
+    // Verify manual mode buttons are eliminated in favor of auto-routing
+    expect(screen.queryByRole("button", { name: /^hybrid$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^local$/i })).toBeNull();
+    expect(screen.queryByRole("button", { name: /^global$/i })).toBeNull();
 
-    expect(hybridBtn).toBeInTheDocument();
-    expect(localBtn).toBeInTheDocument();
-    expect(globalBtn).toBeInTheDocument();
-
-    // Select Local mode
-    fireEvent.click(localBtn);
-
-    // Type query
-    const searchInput = screen.getByPlaceholderText(/Hỏi đáp SOTA, đối chiếu mô hình hoặc tra cứu đồ thị/i);
+    // Type query in smart search box
+    const searchInput = screen.getByPlaceholderText(/Tra cứu tri thức, đối chiếu mô hình hoặc hỏi đáp/i);
     fireEvent.change(searchInput, { target: { value: "Transformer BLEU accuracy" } });
 
     // Submit search
@@ -261,7 +254,7 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
     await waitFor(() => {
       expect(querySpy).toHaveBeenCalledWith({
         query: "Transformer BLEU accuracy",
-        mode: "local",
+        mode: "auto",
         folder_id: null,
       });
     });

@@ -17,6 +17,7 @@ from api.deps import get_current_user, get_graph_rag_service
 from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.services.graph_rag_service import GraphRAGService
+from api.services.graph_rag_router import GraphRAGRouter
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
@@ -35,12 +36,12 @@ class GraphQueryRequest(BaseModel):
         description="Scholarly synthesis or comparative question (3..1000 chars)",
         examples=["Các mô hình Transformer đạt kết quả BLEU và Accuracy như thế nào?"],
     )
-    mode: Literal["local", "global", "hybrid"] = Field(
-        default="hybrid",
+    mode: Literal["auto", "local", "global", "hybrid"] = Field(
+        default="auto",
         description=(
-            "Search depth: 'local' (micro CTE), 'global' (macro community), 'hybrid' (combined)"
+            "Search depth: 'auto' (smart router), 'local' (micro CTE), 'global' (macro), 'hybrid'"
         ),
-        examples=["hybrid"],
+        examples=["auto"],
     )
     folder_id: UUID | None = Field(
         default=None,
@@ -155,8 +156,9 @@ async def query_library_graph(
                 },
             )
 
-    # 4. Execute dual-level retrieval & synthesis
-    result = await graph_rag_service.query_graph(
+    # 4. Execute intelligent routing & retrieval via GraphRAGRouter
+    router = GraphRAGRouter(graph_service=graph_rag_service)
+    result = await router.route_and_query(
         db=db,
         user_id=current_user.id,
         query=sanitized_query,

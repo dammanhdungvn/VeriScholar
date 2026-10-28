@@ -57,7 +57,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 
   // GraphRAG States
   const [graphQuery, setGraphQuery] = useState("");
-  const [graphMode, setGraphMode] = useState<GraphQueryMode>("hybrid");
+  const [graphMode, setGraphMode] = useState<GraphQueryMode>("auto");
   const [isQueryingGraph, setIsQueryingGraph] = useState(false);
   const [graphResult, setGraphResult] = useState<GraphQueryResponseData | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
@@ -337,45 +337,15 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       {/* 3. Main Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* A. GraphRAG Smart Dual-Level Search Box */}
+          {/* A. GraphRAG Smart Intent-Routed Search Box */}
           <div className="rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] bg-white dark:bg-[#1c1b18] p-4 shadow-xs">
             <form onSubmit={handleGraphSearch} className="space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted font-mono">
-                    Chế độ Tra Cứu Tri Thức:
-                  </span>
-                  <div className="flex items-center bg-[#f4f0e8] dark:bg-[#262420] p-0.5 rounded-lg border border-[#e5dfd5] dark:border-[#302d28]">
-                    {(
-                      [
-                        { id: "hybrid" as const, label: "Hybrid" },
-                        { id: "local" as const, label: "Local" },
-                        { id: "global" as const, label: "Global" },
-                      ] as const
-                    ).map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setGraphMode(m.id)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer",
-                          graphMode === m.id
-                            ? "bg-white dark:bg-[#1c1b18] text-[#c15f3e] font-semibold shadow-xs"
-                            : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-                        )}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
+              {selectedFolderId && (
+                <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted dark:text-zinc-400">
+                  <Folder className="w-3.5 h-3.5 text-[#c15f3e]" />
+                  <span>Đang lọc theo thư mục đề tài đang chọn</span>
                 </div>
-
-                {selectedFolderId && (
-                  <span className="text-[11px] font-mono text-muted dark:text-zinc-400">
-                    Lọc theo thư mục đang chọn
-                  </span>
-                )}
-              </div>
+              )}
 
               <div className="relative flex items-center gap-2">
                 <div className="relative flex-1">
@@ -383,14 +353,14 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                     type="text"
                     value={graphQuery}
                     onChange={(e) => setGraphQuery(e.target.value)}
-                    placeholder="Hỏi đáp SOTA, đối chiếu mô hình hoặc tra cứu đồ thị..."
+                    placeholder="Tra cứu tri thức, đối chiếu mô hình hoặc hỏi đáp trên toàn bộ thư viện..."
                     className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[#faf8f4] dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#322f2a] text-xs text-ink dark:text-zinc-100 placeholder:text-muted dark:placeholder:text-zinc-500 outline-none focus:border-[#c15f3e] transition-colors"
                   />
                   {graphQuery && (
                     <button
                       type="button"
                       onClick={() => setGraphQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
                     >
                       <X className="w-3.5 h-3.5" />
                     </button>
