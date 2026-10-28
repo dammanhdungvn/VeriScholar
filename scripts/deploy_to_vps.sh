@@ -103,8 +103,12 @@ fi
 
 # 3. Verification & Build
 if [[ "$FAST_MODE" == "true" ]]; then
-    echo "-> [Fast Mode] Rebuilding frontend bundle (skipping gates 1-3)..."
-    npm --prefix apps/web run build
+    if [[ "$DRY_RUN" == "true" ]]; then
+        echo "-> [Fast Mode] [DRY-RUN] Simulating frontend bundle build..."
+    else
+        echo "-> [Fast Mode] Rebuilding frontend bundle (skipping gates 1-3)..."
+        npm --prefix apps/web run build
+    fi
 elif [[ "$SKIP_GATE" != "true" ]]; then
     echo "-> [Gate 1/4] Running Ruff linter & format check..."
     uv run ruff check .

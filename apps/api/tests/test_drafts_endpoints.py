@@ -417,6 +417,11 @@ async def test_export_bundle_produces_camera_ready_zip(
     db_session.add(draft)
     await db_session.commit()
 
+    # Pre-populate compiled PDF preview cache to decouple export bundle test from external compiler binaries
+    DraftService._draft_pdf_cache[draft.id] = (
+        b"%PDF-1.4 valid compiled pdf bytes for academic bundle test"
+    )
+
     res = await async_client.post(
         f"/api/v1/drafts/{draft.id}:export-bundle",
         headers=auth_headers,

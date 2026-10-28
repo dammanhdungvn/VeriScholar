@@ -24,9 +24,15 @@ logger = structlog.get_logger(__name__)
 class CLSILatexCompiler:
     """Overleaf-style CLSI compiler using latexmk, caching, and local SyncTeX."""
 
-    def __init__(self, work_dir: str = "/tmp/drafts", e2b_api_key: str | None = None) -> None:
+    def __init__(
+        self,
+        work_dir: str = "/tmp/drafts",
+        e2b_api_key: str | None = None,
+        latexmk_binary: str | None = None,
+    ) -> None:
         self.work_dir = os.path.abspath(work_dir)
         self.e2b_api_key = e2b_api_key
+        self.latexmk_binary = latexmk_binary
         os.makedirs(self.work_dir, exist_ok=True)
 
     @staticmethod
@@ -187,7 +193,7 @@ class CLSILatexCompiler:
                     continue
 
         engine_name, engine_flag = self.detect_engine(main_tex)
-        latexmk_bin = shutil.which("latexmk") or "/usr/bin/latexmk"
+        latexmk_bin = self.latexmk_binary or shutil.which("latexmk") or "/usr/bin/latexmk"
 
         cmd = [
             latexmk_bin,
@@ -216,6 +222,30 @@ class CLSILatexCompiler:
             )
             stdout = stdout_bytes.decode("utf-8", errors="replace")
             stderr = stderr_bytes.decode("utf-8", errors="replace")
+        except FileNotFoundError as e:
+            not_found_msg = f"LaTeX compiler executable not found: {e.filename or latexmk_bin}"
+            diagnostic: LatexDiagnostic = {
+                "file": "main.tex",
+                "line": 1,
+                "column": 1,
+                "severity": "error",
+                "message": not_found_msg,
+                "context": "",
+                "hint": "Ensure TeXLive and latexmk are installed on the host environment.",
+            }
+            return {
+                "draft_id": draft_id,
+                "success": False,
+                "pdf_path": None,
+                "synctex_path": None,
+                "log_path": None,
+                "logs": not_found_msg,
+                "diagnostics": [diagnostic],
+                "errors": [diagnostic],
+                "is_cached": is_cached,
+                "engine": engine_name,
+                "duration_seconds": round(time.time() - start_time, 3),
+            }
         except asyncio.TimeoutError:
             try:
                 if proc.pid:
@@ -346,16 +376,24 @@ class CLSILatexCompiler:
             pdf_path,
         ]
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=draft_dir,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
         try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                cwd=draft_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
+            )
             stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=3.0)
             stdout = stdout_bytes.decode("utf-8", errors="replace")
+        except FileNotFoundError:
+            return {
+                "page": 1,
+                "h": 0.0,
+                "v": 0.0,
+                "width": 0.0,
+                "height": 0.0,
+            }
         except asyncio.TimeoutError:
             try:
                 if proc.pid:
@@ -438,16 +476,22 @@ class CLSILatexCompiler:
             f"{page}:{x}:{y}:{pdf_path}",
         ]
 
-        proc = await asyncio.create_subprocess_exec(
-            *cmd,
-            cwd=draft_dir,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            start_new_session=True,
-        )
         try:
+            proc = await asyncio.create_subprocess_exec(
+                *cmd,
+                cwd=draft_dir,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                start_new_session=True,
+            )
             stdout_bytes, _ = await asyncio.wait_for(proc.communicate(), timeout=3.0)
             stdout = stdout_bytes.decode("utf-8", errors="replace")
+        except FileNotFoundError:
+            return {
+                "file": "main.tex",
+                "line": 1,
+                "column": 1,
+            }
         except asyncio.TimeoutError:
             try:
                 if proc.pid:

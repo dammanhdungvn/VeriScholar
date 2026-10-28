@@ -86,10 +86,16 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
 
+      - name: Install TeXLive & latexmk for CLSI LaTeX Compiler Tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base texlive-binaries
+
       - name: Run Gate 2 — Pytest Suite (Boundary, Unit & Integration Tests)
         env:
           PYTHONPATH: apps/api/src:packages/core/src
           ENVIRONMENT: test
+          OPENAI_API_KEY: sk-mock-ci-key-for-unit-tests
           DATABASE_URL: postgresql+asyncpg://verischolar:verischolar@127.0.0.1:5432/verischolar
           REDIS_URL: redis://127.0.0.1:6379/0
         run: |

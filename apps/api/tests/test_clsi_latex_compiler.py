@@ -8,6 +8,9 @@ from uuid import uuid4
 import pytest
 from api.services.clsi_latex_compiler import CLSILatexCompiler
 
+HAS_LATEXMK = shutil.which("latexmk") is not None
+requires_latexmk = pytest.mark.skipif(not HAS_LATEXMK, reason="latexmk not installed on system")
+
 
 def test_auto_engine_detection():
     """Test 1: Auto engine detection for pdflatex vs xelatex."""
@@ -33,6 +36,20 @@ def test_auto_engine_detection():
     assert engine_flag3 == "-pdf"
 
 
+@pytest.mark.asyncio
+async def test_compilation_missing_binary_returns_diagnostic(tmp_path):
+    """When latexmk executable is missing, compiler returns success=False without crashing."""
+    compiler = CLSILatexCompiler(work_dir=str(tmp_path), latexmk_binary="/nonexistent/bin/latexmk")
+    res = await compiler.compile(
+        draft_id=uuid4(),
+        main_tex=r"\documentclass{article}\begin{document}Hi\end{document}",
+    )
+    assert res["success"] is False
+    assert res["pdf_path"] is None
+    assert any("not found" in d.get("message", "").lower() for d in res["diagnostics"])
+
+
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_compilation_with_latexmk_and_auxdir(tmp_path):
     """Test 2: Compilation with latexmk, auxdir cache, and incremental speedup."""
@@ -63,6 +80,7 @@ Hello World
     assert res2["is_cached"] is True
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_clear_cache_flag(tmp_path):
     """Test 3: Clear cache flag wipes auxdir before compiling."""
@@ -88,6 +106,7 @@ Hello Cache Test
     assert any(os.listdir(cache_dir))
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_diagnostics_on_compilation_error(tmp_path):
     """Test 4: Compilation with syntax error returns success=False and structured diagnostics."""
@@ -114,6 +133,7 @@ Hello \invalidcommand World
     assert any(d.get("severity") == "error" for d in res["diagnostics"])
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_synctex_forward_and_inverse_search(tmp_path):
     """Test 5: SyncTeX forward (source -> pdf) and inverse (pdf -> source) search."""
@@ -146,6 +166,7 @@ Line 3 of document for SyncTeX.
     assert "column" in inv and inv["column"] >= 1
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_compile_with_bib_and_assets(tmp_path):
     """Test asset writing and BibTeX support."""
@@ -178,6 +199,7 @@ Citing something.
     assert os.path.exists(os.path.join(draft_dir, "figures", "test_chart.png"))
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_cache_restore_from_tar_archive(tmp_path):
     """Test cache archiving and restoration without nested cache/cache/ directories."""
@@ -219,6 +241,7 @@ Cache restore test
     assert not os.path.exists(os.path.join(cache_dir, "cache"))
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_assets_path_traversal_guard(tmp_path):
     """Dangerous asset filenames must not crash compilation or escape figures directory."""
@@ -253,6 +276,7 @@ Assets Path Traversal Guard Test
     assert not os.path.exists(os.path.join(tmp_path, "evil.png"))
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_compilation_timeout(tmp_path):
     """Compilation with tiny timeout must terminate cleanly and return success=False with diagnostic."""
@@ -274,6 +298,7 @@ Timeout Test
     assert any("timed out" in d.get("message", "").lower() for d in res["diagnostics"])
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_compile_with_xelatex(tmp_path):
     """Document with fontspec package compiles successfully via XeLaTeX."""
@@ -292,6 +317,7 @@ Testing XeLaTeX UTF-8 with fontspec: Tiếng Việt có dấu.
     assert os.path.exists(res["pdf_path"])
 
 
+@requires_latexmk
 @pytest.mark.asyncio
 async def test_stale_pdf_not_returned_on_failure(tmp_path):
     """Compiler must not return stale pdf_path or synctex_path if a subsequent compilation fails."""
