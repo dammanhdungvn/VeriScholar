@@ -10,6 +10,9 @@ export interface CitationBadgeData {
   page: number;
   bbox: BoundingBox;
   bounding_boxes?: BoundingBox[];
+  snippet?: string;
+  concept_name?: string;
+  content?: string;
 }
 
 export interface PresuppositionAlertData {

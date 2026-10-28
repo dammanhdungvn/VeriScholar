@@ -1893,6 +1893,17 @@ class SessionChatService:
                     else:
                         norm_bboxes = [[0.1, 0.1, 0.9, 0.2, page_num]]
 
+                    raw_content = item.get("content") or item.get("text_content") or ""
+                    snippet = raw_content[:300].strip() if raw_content else None
+                    concept_name = item.get("concept_name") or item.get("section_title")
+                    if not concept_name and raw_content:
+                        first_line = raw_content.strip().split("\n")[0].strip("#* ")
+                        if 3 <= len(first_line) <= 40:
+                            concept_name = first_line
+                    if not concept_name:
+                        doc_t = item.get("document_title") or item.get("filename") or "Khái niệm"
+                        concept_name = doc_t.split(".")[0][:30]
+
                     citations.append(
                         {
                             "citation_id": f"cit_{idx}",
@@ -1906,6 +1917,8 @@ class SessionChatService:
                             "chunk_index": item.get("chunk_index"),
                             "bounding_boxes": norm_bboxes,
                             "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
+                            "snippet": snippet,
+                            "concept_name": concept_name,
                         }
                     )
         else:
@@ -1981,6 +1994,19 @@ class SessionChatService:
                     break
 
             for idx, chk_dict in enumerate(selected_chunks, start=1):
+                chk_content = chk_dict.get("content") or chk_dict.get("text_content") or ""
+                snippet = chk_content[:300].strip() if chk_content else None
+                concept_name = chk_dict.get("concept_name") or chk_dict.get("section_title")
+                if not concept_name and chk_content:
+                    first_line = chk_content.strip().split("\n")[0].strip("#* ")
+                    if 3 <= len(first_line) <= 40:
+                        concept_name = first_line
+                if not concept_name:
+                    doc_t = (
+                        chk_dict.get("document_title") or chk_dict.get("filename") or "Khái niệm"
+                    )
+                    concept_name = doc_t.split(".")[0][:30]
+
                 citations.append(
                     {
                         "citation_id": f"cit_{idx}",
@@ -1990,6 +2016,8 @@ class SessionChatService:
                         "chunk_index": chk_dict.get("chunk_index"),
                         "bounding_boxes": chk_dict["bounding_boxes"],
                         "score": round(max(0.35, min(1.0, chk_dict["rrf_score"])), 2),
+                        "snippet": snippet,
+                        "concept_name": concept_name,
                     }
                 )
 
@@ -2084,16 +2112,17 @@ class SessionChatService:
             "QUY TẮC PHẢN HỒI:\n"
             "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
             "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
-            "2. Gắn trích dẫn inline chuẩn xác: Khi đưa ra số liệu, công thức "
-            "hay luận điểm then chốt lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn chính xác "
-            "dạng số trong ngoặc vuông (ví dụ: [1], [2]) hoặc thẻ neo ngữ nghĩa "
-            "[cite:chunk_id:page:concept_name] NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa "
-            "luận điểm đó. Số trích dẫn [1], [2] tương ứng với thứ tự các đoạn tài liệu "
-            "được cung cấp trong ngữ cảnh (1 cho tài liệu/chunk đầu tiên, "
-            "2 cho tài liệu/chunk tiếp theo, v.v.). Tuyệt đối KHÔNG viết [^cit], "
-            "[^cit_X], hay [^\\text{cit}]. CHỈ trích dẫn khi trong ngữ cảnh thực sự "
-            "có nội dung bằng chứng rõ ràng cho chi tiết. "
-            "Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa trích dẫn.\n"
+            "2. Gắn trích dẫn khái niệm ngữ nghĩa (Semantic Concept Pills): Khi đưa ra "
+            "số liệu, công thức, kiến trúc hay luận điểm then chốt lấy từ ngữ cảnh, hãy gắn "
+            "thẻ trích dẫn ngữ nghĩa dạng [cite:TênKháiNiệm] (ví dụ: [cite:Architecture], "
+            "[cite:Multi-Head Attention], [cite:Scalability]) hoặc "
+            "[cite:chunk_id:page:TênKháiNiệm] NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa luận điểm đó "
+            "thay vì chỉ dùng số thuần túy [1], [2]. Tên khái niệm phải ngắn gọn (1-4 từ), "
+            "phản ánh đúng nội dung học thuật đang nói tới để hệ thống tự động "
+            "hiển thị thẻ capsule tương tác [ ↪ TênKháiNiệm ]. Tuyệt đối KHÔNG viết "
+            "[^cit], [^cit_X], hay [^\\text{cit}]. CHỈ trích dẫn khi trong ngữ cảnh thực sự "
+            "rõ ràng cho chi tiết. Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa "
+            "trích dẫn.\n"
             "3. Hiển thị công thức toán học KaTeX: Bắt buộc xuất các công thức toán học "
             "nhiều dòng, định lý hoặc công thức trọng tâm dưới dạng KaTeX hiển thị riêng "
             "dòng bằng $$...$$ (hoặc \\[ ... \\]), và sử dụng \\( ... \\) hoặc $...$ "
@@ -2102,7 +2131,8 @@ class SessionChatService:
             "(như Attention, A(H), Softmax...):\n"
             "  • Trích dẫn nguyên văn công thức toán học ở dạng chuẩn KaTeX ($$...$$).\n"
             "  • Giải thích chi tiết ý nghĩa từng biến số, vector, ma trận theo đúng bài báo.\n"
-            "  • Gắn thẻ trích dẫn [1] vào dòng công thức để viền sáng khối công thức trên PDF.\n"
+            "  • Gắn thẻ trích dẫn [cite:TênCôngThức] vào dòng công thức để viền sáng khối "
+            "công thức trên PDF.\n"
             "4. Vẽ sơ đồ / mindmap / kiến trúc: Khi người dùng yêu cầu vẽ mindmap, "
             "kiến trúc, sơ đồ hoặc flowchart (hoặc khi cần trực quan hóa luồng dữ liệu), "
             "hãy sử dụng khối mã code ```mermaid ... ``` với cú pháp Mermaid chuẩn (ví dụ: "

@@ -37,6 +37,14 @@ export function normalizeCitation(raw: unknown): CitationBadgeData {
     page,
     bbox,
     bounding_boxes: rawBoxes.length > 0 ? rawBoxes : [bbox],
+    snippet:
+      typeof item.snippet === "string"
+        ? item.snippet
+        : typeof item.content === "string"
+        ? item.content
+        : undefined,
+    concept_name: typeof item.concept_name === "string" ? item.concept_name : undefined,
+    content: typeof item.content === "string" ? item.content : undefined,
   };
 }
 

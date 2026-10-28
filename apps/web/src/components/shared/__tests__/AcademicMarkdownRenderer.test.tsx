@@ -46,7 +46,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
   });
 
-  it("renders citation-sources-footer only after streaming finishes", () => {
+  it("does not render citation-sources-footer after streaming finishes (footers eliminated)", () => {
     const mockCitations = [
       {
         citation_id: "cit_1",
@@ -65,7 +65,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
       />
     );
 
-    expect(screen.getByTestId("citation-sources-footer")).toBeInTheDocument();
+    expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
   });
 
   it("does not dump citations when text has no inline citation tokens", () => {
@@ -97,7 +97,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
   });
 
-  it("caps displayed citation footer sources to at most 5 items", () => {
+  it("does not render legacy footer even when multiple references are present", () => {
     const mockCitations = Array.from({ length: 8 }, (_, idx) => ({
       citation_id: `cit_${idx + 1}`,
       paper_id: `doc-${idx + 1}`,
@@ -114,10 +114,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
       />
     );
 
-    const footer = screen.getByTestId("citation-sources-footer");
-    expect(footer).toBeDefined();
-    // Sources header should show (5)
-    expect(screen.getByText(/Nguồn trích dẫn \(5\)/)).toBeDefined();
+    expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
   });
 
   it("renders ungrounded literature reference numbers as plain text and eliminates ghost citation badge buttons", () => {
@@ -139,10 +136,10 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
       />
     );
 
-    // Only [1] should be rendered as an interactive citation badge button
-    const badges = screen.getAllByTestId("citation-badge");
-    expect(badges.length).toBe(1);
-    expect(badges[0].textContent).toBe("[1]");
+    // Only grounded citation should be rendered as an interactive concept pill button
+    const pills = screen.getAllByTestId("concept-pill");
+    expect(pills.length).toBe(1);
+    expect(pills[0].textContent).toBe("[ ↪ Attention Is All You Need ]");
 
     // [13] and [7] should be present as text in the document, but NOT as buttons
     expect(screen.getByText(/LSTM \[13\]/)).toBeDefined();
