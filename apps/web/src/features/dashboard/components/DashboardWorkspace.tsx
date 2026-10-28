@@ -36,6 +36,7 @@ import {
 } from "../stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
+import { TypingWaveIndicator } from "@/components/shared/TypingWaveIndicator";
 import { DocumentGroundedSummaryCard } from "./DocumentGroundedSummaryCard";
 import { PresuppositionBanner } from "./PresuppositionBanner";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
@@ -1337,12 +1338,6 @@ export function DashboardWorkspace({
                         <span className="font-semibold text-ink dark:text-zinc-300 font-anthropic-sans">
                           Socratic
                         </span>
-                        {message.is_streaming && (
-                          <span className="inline-flex items-center gap-1 text-[#cc785c] animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#cc785c]" />
-                            <span>Đang suy luận...</span>
-                          </span>
-                        )}
                       </div>
 
                       {/* Presupposition Alert */}
@@ -1375,9 +1370,17 @@ export function DashboardWorkspace({
                         </details>
                       )}
 
+                      {/* Pre-content Typing Wave Indicator */}
+                      {message.is_streaming && !message.content && !message.thought && (
+                        <div className="py-1">
+                          <TypingWaveIndicator />
+                        </div>
+                      )}
+
                       {/* Formatted Assistant Body with Inline Citations */}
                       <AcademicMarkdownRenderer
                         content={message.content}
+                        isStreaming={message.is_streaming}
                         citations={message.citations}
                         onCitationClick={(citationOrId, maybeCitId) => {
                           const citId = typeof citationOrId === "string" ? citationOrId : (maybeCitId || "");
@@ -1513,7 +1516,7 @@ export function DashboardWorkspace({
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#252320] border border-[#e5dfd4] dark:border-zinc-700/60 text-ink dark:text-zinc-200 text-xs font-sans shadow-xs hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
                   >
                     <Square className="w-3 h-3 fill-current text-[#cc785c]" />
-                    <span>Dừng suy luận</span>
+                    <span>Dừng</span>
                   </button>
                 </div>
               )}
