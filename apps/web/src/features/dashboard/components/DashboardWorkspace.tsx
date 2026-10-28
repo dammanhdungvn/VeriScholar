@@ -99,14 +99,14 @@ interface DashboardWorkspaceProps {
 
 
 export function DashboardWorkspace({
-  messages,
-  inputText,
-  onChangeText,
-  onSend,
-  isGenerating,
-  onStopGeneration,
+  messages = [],
+  inputText = "",
+  onChangeText = () => {},
+  onSend = () => {},
+  isGenerating = false,
+  onStopGeneration = () => {},
   onUploadFile,
-  onResetChat,
+  onResetChat = () => {},
   summary = null,
   sessionId,
   sessionTitle,
@@ -114,7 +114,7 @@ export function DashboardWorkspace({
   documentCount = 1,
   createdAt = new Date().toISOString(),
   onDeletedSession,
-}: DashboardWorkspaceProps) {
+}: Partial<DashboardWorkspaceProps> = {}) {
   // Store States
   const activeBboxStore = useDashboardStore((s) => s.activeBbox);
   const setActiveBboxStore = useDashboardStore((s) => s.setActiveBbox);
@@ -615,6 +615,13 @@ export function DashboardWorkspace({
   const updateViewportMutation = useUpdateSessionViewportMutation();
   const sessionVersion = sessionDetailQuery.data?.data.version ?? initialSessionVersion;
 
+  const isResolvingDocument = Boolean(
+    isLoadingDocs ||
+    isLoadingDocDetail ||
+    sessionDetailQuery.isLoading ||
+    (activeDocumentId && !documentDetail)
+  );
+
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
   const handleRegenerateSummary = async () => {
@@ -874,7 +881,7 @@ export function DashboardWorkspace({
               setMobileActiveView("workspace");
             }}
           />
-        ) : ((isRealDocument && (isLoadingDocs || isLoadingDocDetail)) || (bboxStyle && activeBbox)) ? (
+        ) : isResolvingDocument || (bboxStyle && activeBbox) ? (
           <div className="flex-1 overflow-auto p-4 sm:p-6 scrollbar-none flex justify-center bg-[#eae5db]/60 dark:bg-[#141311]">
             <div
               style={{
