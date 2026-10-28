@@ -5,6 +5,7 @@ import { getCachedPdfDocument, clearCachedPdfDocument } from "../lib/pdfRenderQu
 import { PdfPageCanvas } from "./PdfPageCanvas";
 import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
 import { ScholarSelectionMenu } from "./ScholarSelectionMenu";
+import { calculateSelectionBoundingBox } from "../lib/selection-bbox";
 import { useReaderStore } from "../stores/useReaderStore";
 import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore";
 import { useTheme } from "@/hooks/useTheme";
@@ -278,29 +279,10 @@ export function PdfCanvasViewer({
         const targetPageEl =
           matchedPageEl || document.getElementById(`pdf-page-${detectedPage}`);
 
-        // Calculate normalized BoundingBox: [x0, y0, x1, y1, page]
+        // Calculate normalized BoundingBox: [x0, y0, x1, y1, page] using multi-rect column clamping
         let calculatedBbox: BoundingBox | null = null;
-        if (targetPageEl) {
-          const innerPage =
-            targetPageEl.querySelector<HTMLElement>(".textLayer")?.parentElement ||
-            targetPageEl.querySelector<HTMLElement>("canvas")?.parentElement ||
-            targetPageEl;
-          const pageRect = innerPage.getBoundingClientRect();
-
-          if (pageRect.width > 0 && pageRect.height > 0) {
-            const rawX0 = (rect.left - pageRect.left) / pageRect.width;
-            const rawY0 = (rect.top - pageRect.top) / pageRect.height;
-            const rawX1 = (rect.right - pageRect.left) / pageRect.width;
-            const rawY1 = (rect.bottom - pageRect.top) / pageRect.height;
-
-            const x0 = Number(Math.max(0, Math.min(1, rawX0)).toFixed(4));
-            const y0 = Number(Math.max(0, Math.min(1, rawY0)).toFixed(4));
-            const x1 = Number(Math.max(x0, Math.min(1, rawX1)).toFixed(4));
-            const y1 = Number(Math.max(y0, Math.min(1, rawY1)).toFixed(4));
-            const normalizedPage = Math.max(1, detectedPage);
-
-            calculatedBbox = [x0, y0, x1, y1, normalizedPage];
-          }
+        if (targetPageEl && range) {
+          calculatedBbox = calculateSelectionBoundingBox(range, targetPageEl, detectedPage);
         }
 
         setSelectedText(text);

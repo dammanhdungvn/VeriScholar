@@ -179,6 +179,8 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
             textLayerRef.current.style.width = `${scaledWidth}px`;
             textLayerRef.current.style.height = `${scaledHeight}px`;
             textLayerRef.current.style.setProperty("--scale-factor", `${viewport.scale}`);
+            textLayerRef.current.style.setProperty("--total-scale-factor", `${viewport.scale}`);
+            textLayerRef.current.style.setProperty("--user-unit", "1");
 
             const textContent = await page.getTextContent();
             if (!isCancelled && textLayerRef.current) {
@@ -250,7 +252,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
       {/* Main Page Container */}
       <div
         className={cn(
-          "relative overflow-hidden bg-white dark:bg-[#1a1917] sm:shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:sm:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-y sm:border border-[#ded8cc] dark:border-[#2f2b26] sm:rounded-xs transition-colors duration-150 w-full sm:w-auto",
+          "page relative overflow-hidden bg-white dark:bg-[#1a1917] sm:shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:sm:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-y sm:border border-[#ded8cc] dark:border-[#2f2b26] sm:rounded-xs transition-colors duration-150 w-full sm:w-auto",
           themeFilterClass,
           positionInSpread === "left" && "rounded-r-none border-r-[#dfd8cc] dark:border-r-[#24211d]",
           positionInSpread === "right" && "rounded-l-none border-l-0"
