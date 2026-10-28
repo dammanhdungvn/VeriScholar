@@ -8,11 +8,11 @@ import type { ReaderColorTheme, ReadingMode } from "../stores/useReaderStore";
 import { cn } from "@/lib/utils";
 
 interface PdfPageCanvasProps {
-  pdfDoc: PDFDocumentProxy | null;
+  pdfDoc?: PDFDocumentProxy | null;
   pageNumber: number;
   zoomRatio: number;
   rotationDeg: 0 | 90 | 180 | 270;
-  activeBbox: BoundingBox | null;
+  activeBbox?: BoundingBox | null;
   activeBboxes?: BoundingBox[] | null;
   onClearHighlight?: () => void;
   colorTheme?: ReaderColorTheme;
@@ -25,11 +25,11 @@ interface PdfPageCanvasProps {
 }
 
 export const PdfPageCanvas = memo(function PdfPageCanvas({
-  pdfDoc,
+  pdfDoc = null,
   pageNumber,
   zoomRatio,
   rotationDeg,
-  activeBbox,
+  activeBbox = null,
   activeBboxes,
   onClearHighlight,
   colorTheme = "default",
@@ -240,28 +240,26 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
       id={`pdf-page-${pageNumber}`}
       data-page-number={pageNumber}
       className={cn(
-        "relative flex flex-col items-center select-text [contain:layout_paint] [will-change:transform] [transform:translateZ(0)] transition-all duration-150 w-full sm:w-auto",
+        "relative flex flex-col items-center select-text [contain:layout_paint] [will-change:transform] [transform:translateZ(0)] transition-all duration-150 shrink-0",
         readingMode === "two-page" ? "mx-0 my-0" : "mx-auto my-0",
         positionInSpread === "left" && "shadow-[2px_0_10px_rgba(0,0,0,0.08)]",
         positionInSpread === "right" && "shadow-[-2px_0_10px_rgba(0,0,0,0.08)]"
       )}
       style={{
         width: `${containerWidth}px`,
-        maxWidth: "100%",
         minHeight: `${containerHeight}px`,
       }}
     >
       {/* Main Page Container */}
       <div
         className={cn(
-          "page relative overflow-hidden bg-white dark:bg-[#1a1917] sm:shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:sm:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-y sm:border border-[#ded8cc] dark:border-[#2f2b26] sm:rounded-xs transition-colors duration-150 w-full sm:w-auto",
+          "page relative overflow-hidden bg-white dark:bg-[#1a1917] sm:shadow-[0_2px_14px_rgba(0,0,0,0.06),0_1px_3px_rgba(0,0,0,0.03)] dark:sm:shadow-[0_4px_24px_rgba(0,0,0,0.5)] border-y sm:border border-[#ded8cc] dark:border-[#2f2b26] sm:rounded-xs transition-colors duration-150 shrink-0",
           themeFilterClass,
           positionInSpread === "left" && "rounded-r-none border-r-[#dfd8cc] dark:border-r-[#24211d]",
           positionInSpread === "right" && "rounded-l-none border-l-0"
         )}
         style={{
           width: `${containerWidth}px`,
-          maxWidth: "100%",
           height: `${containerHeight}px`,
         }}
       >
