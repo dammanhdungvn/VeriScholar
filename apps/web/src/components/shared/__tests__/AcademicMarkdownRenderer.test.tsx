@@ -96,4 +96,27 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
 
     expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
   });
+
+  it("caps displayed citation footer sources to at most 5 items", () => {
+    const mockCitations = Array.from({ length: 8 }, (_, idx) => ({
+      citation_id: `cit_${idx + 1}`,
+      paper_id: `doc-${idx + 1}`,
+      page: idx + 1,
+      paper_title: `Paper ${idx + 1}`,
+      bbox: [0.1, 0.2, 0.8, 0.4, idx + 1] as [number, number, number, number, number],
+    }));
+
+    render(
+      <AcademicMarkdownRenderer
+        content="Testing all references [1], [2], [3], [4], [5], [6], [7]."
+        citations={mockCitations}
+        isStreaming={false}
+      />
+    );
+
+    const footer = screen.getByTestId("citation-sources-footer");
+    expect(footer).toBeDefined();
+    // Sources header should show (5)
+    expect(screen.getByText(/Nguồn trích dẫn \(5\)/)).toBeDefined();
+  });
 });

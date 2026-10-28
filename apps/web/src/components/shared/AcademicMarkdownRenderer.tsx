@@ -224,14 +224,14 @@ export function AcademicMarkdownRenderer({
       }
     }
 
-    return result.sort((a, b) => {
-      const numA = parseInt(a.label, 10);
-      const numB = parseInt(b.label, 10);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.label.localeCompare(b.label);
-    });
-
-    return result.slice(0, 5);
+    return result
+      .sort((a, b) => {
+        const numA = parseInt(a.label, 10);
+        const numB = parseInt(b.label, 10);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.label.localeCompare(b.label);
+      })
+      .slice(0, 5);
   }, [content, citations]);
 
   return (

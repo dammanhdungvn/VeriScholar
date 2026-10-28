@@ -43,6 +43,19 @@ def test_extract_formula_symbols():
     assert any("attention" in s.lower() for s in symbols)
     assert any("softmax" in s.lower() for s in symbols)
 
+    # Common words in Vietnamese queries like "ma" from "ma trận" should NOT be treated as symbols
+    vietnamese_query_symbols = _extract_formula_symbols("Công thức tính toán ma trận Attention")
+    assert "ma" not in [s.lower() for s in vietnamese_query_symbols]
+    assert "trận" not in [s.lower() for s in vietnamese_query_symbols]
+    assert any("attention" in s.lower() for s in vietnamese_query_symbols)
+
+    # Subscripted variables like W_Q, h_n, e_{ij} are correctly identified
+    subscript_symbols = _extract_formula_symbols("Giải thích các biến W_Q, W_K, h_n và e_{ij}")
+    assert "W_Q" in subscript_symbols
+    assert "W_K" in subscript_symbols
+    assert "h_n" in subscript_symbols
+    assert "e_{ij}" in subscript_symbols
+
 
 @pytest.mark.asyncio
 async def test_formula_aware_retrieval_prioritizes_exact_equation_chunk(db_session, monkeypatch):

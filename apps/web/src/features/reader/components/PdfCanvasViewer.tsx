@@ -341,16 +341,7 @@ export function PdfCanvasViewer({
       const pageEl = document.getElementById(`pdf-page-${pageNum}`);
 
       if (lastScrolledBboxKeyRef.current === bboxKey) {
-        // If the target page is still substantially visible in viewport, do not re-scroll
-        if (pageEl && scrollContainer) {
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const pageRect = pageEl.getBoundingClientRect();
-          const visibleTop = Math.max(pageRect.top, containerRect.top);
-          const visibleBottom = Math.min(pageRect.bottom, containerRect.bottom);
-          if (visibleBottom - visibleTop > 60) {
-            return;
-          }
-        }
+        return;
       }
 
       if (pageEl && scrollContainer) {

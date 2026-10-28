@@ -929,36 +929,37 @@ class SessionChatService:
             if cleaned not in symbols:
                 symbols.append(cleaned)
 
-        # 2. Mathematical variable patterns: e.g. e_{ij}, W_Q, W_K, W_V, h_n, v_n, alpha, softmax
-        var_matches = re.findall(r"\b([A-Za-z][a-zA-Z0-9]*(?:_[A-Za-z0-9{}]+)?)\b", query)
+        # 2. Subscripted mathematical variables: e.g. e_{ij}, W_Q, W_K, W_V, h_n, v_n, q_n
+        var_matches = re.findall(
+            r"\b([A-Za-z][a-zA-Z0-9]*_(?:\{[A-Za-z0-9,]+\}|[A-Za-z0-9]+))", query
+        )
         for v in var_matches:
-            if v.lower() not in {
-                "tôi",
-                "cho",
-                "trong",
-                "paper",
-                "bài",
-                "báo",
-                "tìm",
-                "lấy",
-                "hãy",
-                "giải",
-                "thích",
-                "ý",
-                "nghĩa",
-                "the",
-                "and",
-                "for",
-                "what",
-                "is",
-            }:
-                # Discard standalone single characters like 'a' or 'h'
-                if len(v) <= 1:
-                    continue
-                if v not in symbols:
-                    symbols.append(v)
+            if v not in symbols:
+                symbols.append(v)
 
-        # 3. Specific math operators or functions
+        # 3. Known Greek letters commonly used in academic papers
+        greek_letters = {
+            "alpha",
+            "beta",
+            "gamma",
+            "theta",
+            "sigma",
+            "lambda",
+            "epsilon",
+            "omega",
+            "mu",
+            "pi",
+            "tau",
+            "delta",
+            "psi",
+            "phi",
+        }
+        for word in re.findall(r"\b[A-Za-z]+\b", query):
+            if word.lower() in greek_letters:
+                if word.lower() not in [s.lower() for s in symbols]:
+                    symbols.append(word.lower())
+
+        # 4. Specific math operators or functions
         for kw in ["attention", "softmax", "sigmoid", "layernorm", "multihead", "relu", "gelu"]:
             if re.search(rf"\b{kw}\b", query, re.IGNORECASE):
                 if kw not in [s.lower() for s in symbols]:
@@ -1009,10 +1010,9 @@ class SessionChatService:
             n = eq_match.group("num") or eq_match.group("num2")
             if n:
                 has_math_intent = True
-                if f"({n})" not in eq_numbers:
-                    eq_numbers.append(f"({n})")
-                if n not in eq_numbers:
-                    eq_numbers.append(n)
+                clean_n = n.strip("()")
+                if clean_n not in eq_numbers:
+                    eq_numbers.append(clean_n)
 
         # Check for symbol calls like A(H)
         has_call = bool(re.search(r"\b[A-Za-z]\s*\([A-Za-z0-9,\s]+\)", query))
@@ -1449,14 +1449,24 @@ class SessionChatService:
                         score_cases.append((DocumentChunkModel.content.contains(clean_sym), 0))
                         score_cases.append((DocumentChunkModel.content.ilike(f"%{clean_sym}%"), 1))
                 for eq_num in formula_info.get("equation_numbers", []):
-                    clean_num = eq_num.strip()
+                    clean_num = eq_num.strip("()")
                     if clean_num:
-                        eq_cases.append(DocumentChunkModel.content.ilike(f"%({clean_num})%"))
-                        eq_cases.append(DocumentChunkModel.content.ilike(f"%{clean_num}%"))
-                        score_cases.append(
-                            (DocumentChunkModel.content.ilike(f"%({clean_num})%"), 0)
-                        )
-                        score_cases.append((DocumentChunkModel.content.ilike(f"%{clean_num}%"), 2))
+                        patterns = [
+                            f"%({clean_num})%",
+                            f"%Eq. {clean_num}%",
+                            f"%Eq. ({clean_num})%",
+                            f"%Eqs. {clean_num}%",
+                            f"%Eqs. ({clean_num})%",
+                            f"%Equation {clean_num}%",
+                            f"%Equation ({clean_num})%",
+                            f"%công thức {clean_num}%",
+                            f"%công thức ({clean_num})%",
+                            f"%phương trình {clean_num}%",
+                            f"%phương trình ({clean_num})%",
+                        ]
+                        for pat in patterns:
+                            eq_cases.append(DocumentChunkModel.content.ilike(pat))
+                            score_cases.append((DocumentChunkModel.content.ilike(pat), 0))
 
                 if eq_cases:
                     order_expr = (
