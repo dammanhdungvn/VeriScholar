@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   FileCode,
   Folder,
@@ -7,8 +7,12 @@ import {
   FilePlus,
   PanelLeftClose,
   Hash,
+  BookMarked,
+  Image as ImageIcon,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
+import { draftsApi } from "../api/draftsApi";
+import type { DraftAsset } from "../types";
 import { cn } from "@/lib/utils";
 
 interface OutlineItem {
@@ -29,15 +33,40 @@ export function WritingSidebar({
   onUploadAsset,
 }: WritingSidebarProps) {
   const {
+    activeDraftId,
     editorContent,
     activeSidebarTab,
     setActiveSidebarTab,
     openAssetModal,
     toggleFileTree,
+    activeFile,
+    setActiveFile,
   } = useWritingStore();
 
-  const [activeFile, setActiveFile] = useState<string>("main.tex");
   const [customFiles, setCustomFiles] = useState<string[]>([]);
+  const [assets, setAssets] = useState<DraftAsset[]>([]);
+
+  // Fetch draft assets when activeDraftId changes
+  useEffect(() => {
+    let isMounted = true;
+    if (!activeDraftId) return;
+
+    async function loadAssets() {
+      try {
+        const res = await draftsApi.listAssets(activeDraftId!);
+        if (isMounted && res?.items) {
+          setAssets(res.items);
+        }
+      } catch {
+        // Ignore assets fetch error
+      }
+    }
+
+    loadAssets();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeDraftId]);
 
   // Parse sections, subsections, subsubsections from editorContent
   const outlineItems = useMemo<OutlineItem[]>(() => {
@@ -184,13 +213,51 @@ export function WritingSidebar({
               </span>
             </button>
 
+            {/* references.bib */}
+            <button
+              type="button"
+              data-testid="file-references-bib"
+              onClick={() => setActiveFile("references.bib")}
+              className={cn(
+                "w-full px-2 py-1.5 rounded-lg flex items-center gap-2 text-left transition-colors cursor-pointer",
+                activeFile === "references.bib"
+                  ? "bg-stone-500/10 text-ink dark:text-zinc-100 font-semibold"
+                  : "text-ink dark:text-zinc-200 hover:bg-[#f0ebe0] dark:hover:bg-[#262420]"
+              )}
+            >
+              <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+              <span className="truncate flex-1">references.bib</span>
+              <span className="text-[10px] font-sans px-1 rounded bg-emerald-100/60 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                Bib
+              </span>
+            </button>
+
+            {/* Assets from figures/ */}
+            {assets.length > 0 && (
+              <div className="pt-2">
+                <div className="px-2 pb-1 text-[10px] font-sans font-semibold uppercase tracking-wider text-zinc-400">
+                  Tệp đính kèm ({assets.length})
+                </div>
+                {assets.map((asset) => (
+                  <div
+                    key={asset.id}
+                    data-testid={`asset-${asset.id}`}
+                    className="w-full px-2 py-1 rounded-md flex items-center gap-2 text-left text-muted dark:text-zinc-400 hover:bg-[#f0ebe0] dark:hover:bg-[#262420] transition-colors"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-sky-500 shrink-0" />
+                    <span className="truncate flex-1 text-[11px]">{asset.filename}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Custom added files */}
             {customFiles.map((file) => (
               <button
                 key={file}
                 type="button"
                 data-testid={`file-${file}`}
-                onClick={() => setActiveFile(file)}
+                onClick={() => setActiveFile(file as any)}
                 className={cn(
                   "w-full px-2 py-1.5 rounded-lg flex items-center gap-2 text-left transition-colors cursor-pointer",
                   activeFile === file

@@ -9,7 +9,17 @@ export interface Draft {
   user_id: string;
   title: string;
   content: string;
+  bib_content?: string | null;
   format: DraftFormat;
+  template?: string | null;
+  source_session_id?: string | null;
+  pdf_preview_url?: string | null;
+  previous_snapshot?: {
+    content?: string;
+    bib_content?: string;
+    version?: number;
+    saved_at?: string;
+  } | null;
   version: number;
   created_at: string;
   updated_at: string;
@@ -18,14 +28,16 @@ export interface Draft {
 export interface CreateDraftRequest {
   title?: string;
   content?: string;
+  bib_content?: string;
   format?: DraftFormat;
 }
 
 export interface UpdateDraftRequest {
   title?: string;
   content?: string;
+  bib_content?: string | null;
   format?: DraftFormat;
-  version: number;
+  version?: number;
 }
 
 export interface LatexSyntaxError {
@@ -43,6 +55,20 @@ export interface CompileDraftResponse {
   errors: LatexSyntaxError[];
   logs: string;
   retries_attempted: number;
+}
+
+export interface SyncTexForwardResult {
+  page: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+export interface SyncTexInverseResult {
+  file: string;
+  line: number;
+  col: number;
 }
 
 export type WorkspaceMode =

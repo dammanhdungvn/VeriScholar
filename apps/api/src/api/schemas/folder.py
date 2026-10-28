@@ -132,3 +132,41 @@ class HierarchicalRagQueryResponseData(BaseModel):
     chunks_retrieved_count: int
     sufficiency: SufficiencyGateSchema
     citations: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ==============================================================================
+# Connected Papers Bibliometrics Schemas (Module 5)
+# ==============================================================================
+
+
+class BibliometricsResponseData(BaseModel):
+    """Response payload for Connected Papers bibliometric coupling analysis."""
+
+    folder_id: UUID | str = Field(description="Target folder identifier")
+    prior_works: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Seminal works with highest In-Degree citations",
+    )
+    derivative_works: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Recent works with highest Out-Degree citations",
+    )
+    coupling_edges: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Bibliographic coupling links between papers sharing references",
+    )
+
+
+class BibliometricsEnvelope(SingleResponseEnvelope[BibliometricsResponseData]):
+    """Standard envelope for bibliometrics with mirror fields for direct Spec 05 contract."""
+
+    folder_id: UUID | str | None = Field(default=None, description="Direct mirror of folder_id")
+    prior_works: list[dict[str, Any]] | None = Field(
+        default=None, description="Direct mirror of prior_works"
+    )
+    derivative_works: list[dict[str, Any]] | None = Field(
+        default=None, description="Direct mirror of derivative_works"
+    )
+    coupling_edges: list[dict[str, Any]] | None = Field(
+        default=None, description="Direct mirror of coupling_edges"
+    )

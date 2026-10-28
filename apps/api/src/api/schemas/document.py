@@ -202,6 +202,38 @@ class DocumentStarEnvelope(SingleResponseEnvelope[DocumentStarResponseData]):
     """Top-level single resource envelope for document star promotion."""
 
 
+class DocumentToggleStarRequest(BaseModel):
+    """Payload for toggling document star state with optional folder assignment."""
+
+    folder_id: UUID | None = Field(
+        default=None,
+        description="Optional folder UUID to organize the starred document into",
+        examples=[None],
+    )
+
+
+class DocumentToggleStarResponseData(BaseModel):
+    """Payload data returned after toggling star status of a document."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    is_starred: bool = Field(description="Whether document is currently starred")
+    folder_id: UUID | None = Field(default=None, description="Associated folder identifier")
+    graph_extraction_status: str = Field(
+        description="Graph extraction lifecycle status: 'queued' or 'pruned'"
+    )
+
+
+class DocumentToggleStarEnvelope(SingleResponseEnvelope[DocumentToggleStarResponseData]):
+    """Standard envelope for document star toggle with mirror fields for direct Spec 05 contract."""
+
+    document_id: UUID | None = Field(default=None, description="Direct mirror of document_id")
+    is_starred: bool | None = Field(default=None, description="Direct mirror of is_starred")
+    folder_id: UUID | None = Field(default=None, description="Direct mirror of folder_id")
+    graph_extraction_status: str | None = Field(
+        default=None, description="Direct mirror of graph_extraction_status"
+    )
+
+
 class DocumentParseRequest(BaseModel):
     """Configuration options for triggering or re-triggering document parsing."""
 

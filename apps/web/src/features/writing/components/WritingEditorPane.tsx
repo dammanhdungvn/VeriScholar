@@ -12,8 +12,11 @@ import {
   ListOrdered,
   Heading,
   BookMarked,
+  ArrowRightCircle,
+  Loader2,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
+import { draftsApi } from "../api/draftsApi";
 import { buildSelectionContextBuffer } from "../lib/contextBuffer";
 import { cn } from "@/lib/utils";
 
@@ -27,26 +30,34 @@ export function WritingEditorPane({
   scrollToLine,
 }: WritingEditorPaneProps) {
   const {
+    activeDraftId,
     editorContent,
     setEditorContent,
+    editorBibContent,
+    setEditorBibContent,
+    activeFile,
+    setActiveFile,
+    setActiveHighlightBox,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
   } = useWritingStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState(false);
+  const [isSyncingForward, setIsSyncingForward] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<"main.tex" | "sample.bib">("main.tex");
+
+  const currentContent = activeFile === "main.tex" ? editorContent : editorBibContent;
 
   const lineCount = useMemo(() => {
-    return editorContent.split("\n").length;
-  }, [editorContent]);
+    return currentContent.split("\n").length;
+  }, [currentContent]);
 
-  // Jump to specific line when requested by Outline click
+  // Jump to specific line when requested by Outline or SyncTeX inverse
   useEffect(() => {
     if (scrollToLine && textareaRef.current) {
-      const lines = editorContent.split("\n");
+      const lines = currentContent.split("\n");
       let charIndex = 0;
       for (let i = 0; i < Math.min(scrollToLine - 1, lines.length); i++) {
         charIndex += lines[i].length + 1;
@@ -59,7 +70,7 @@ export function WritingEditorPane({
       const lineHeightPx = 20;
       textareaRef.current.scrollTop = Math.max(0, (scrollToLine - 4) * lineHeightPx);
     }
-  }, [scrollToLine, editorContent]);
+  }, [scrollToLine, currentContent]);
 
   // Handle Tab key in textarea
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -70,8 +81,12 @@ export function WritingEditorPane({
       const end = target.selectionEnd;
 
       const newContent =
-        editorContent.substring(0, start) + "  " + editorContent.substring(end);
-      setEditorContent(newContent);
+        currentContent.substring(0, start) + "  " + currentContent.substring(end);
+      if (activeFile === "main.tex") {
+        setEditorContent(newContent);
+      } else {
+        setEditorBibContent(newContent);
+      }
 
       setTimeout(() => {
         target.selectionStart = target.selectionEnd = start + 2;
@@ -86,7 +101,7 @@ export function WritingEditorPane({
     const end = textareaRef.current.selectionEnd;
     setStoreSelectionRange({ start, end });
     if (start !== end) {
-      setSelectedText(editorContent.substring(start, end).trim());
+      setSelectedText(currentContent.substring(start, end).trim());
       setSelectionRange({ start, end });
     } else {
       setSelectedText("");
@@ -95,9 +110,25 @@ export function WritingEditorPane({
   };
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(editorContent);
+    navigator.clipboard.writeText(currentContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  // SyncTeX forward search trigger
+  const handleSyncTexForward = async () => {
+    if (!activeDraftId || !textareaRef.current) return;
+    const cursor = textareaRef.current.selectionStart || 0;
+    const lineNum = currentContent.substring(0, cursor).split("\n").length;
+    try {
+      setIsSyncingForward(true);
+      const coords = await draftsApi.synctexForward(activeDraftId, activeFile, lineNum);
+      setActiveHighlightBox(coords);
+    } catch (err) {
+      console.error("SyncTeX forward failed:", err);
+    } finally {
+      setIsSyncingForward(false);
+    }
   };
 
   // Helper for inserting formatting snippets around cursor or selection
@@ -105,11 +136,15 @@ export function WritingEditorPane({
     if (!textareaRef.current) return;
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
-    const selected = editorContent.substring(start, end);
+    const selected = currentContent.substring(start, end);
     const replacement = `${prefix}${selected || placeholder}${suffix}`;
     const newContent =
-      editorContent.substring(0, start) + replacement + editorContent.substring(end);
-    setEditorContent(newContent);
+      currentContent.substring(0, start) + replacement + currentContent.substring(end);
+    if (activeFile === "main.tex") {
+      setEditorContent(newContent);
+    } else {
+      setEditorBibContent(newContent);
+    }
 
     setTimeout(() => {
       if (textareaRef.current) {
@@ -127,13 +162,13 @@ export function WritingEditorPane({
     let start = selectionRange?.start ?? -1;
     let end = selectionRange?.end ?? -1;
     if (start === -1 || start === end) {
-      start = editorContent.indexOf(selectedText);
+      start = currentContent.indexOf(selectedText);
       end = start !== -1 ? start + selectedText.length : 0;
     }
 
     const contextBuffer =
       start !== -1
-        ? buildSelectionContextBuffer(editorContent, start, end)
+        ? buildSelectionContextBuffer(currentContent, start, end)
         : `<target_selection>\n${selectedText}\n</target_selection>`;
 
     onSelectionAddToChat(contextBuffer);
@@ -145,15 +180,15 @@ export function WritingEditorPane({
     <div className="flex-1 flex flex-col h-full bg-[#ffffff] dark:bg-[#1a1917] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
       {/* 1. File Tabs Strip & Copy */}
       <div className="h-9 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
-        {/* Tabs: main.tex / sample.bib */}
+        {/* Tabs: main.tex / references.bib */}
         <div className="flex items-center gap-1">
           <button
             type="button"
             data-testid="editor-tab-main"
-            onClick={() => setActiveTab("main.tex")}
+            onClick={() => setActiveFile("main.tex")}
             className={cn(
               "px-3 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeTab === "main.tex"
+              activeFile === "main.tex"
                 ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
                 : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
             )}
@@ -166,21 +201,37 @@ export function WritingEditorPane({
           <button
             type="button"
             data-testid="editor-tab-bib"
-            onClick={() => setActiveTab("sample.bib")}
+            onClick={() => setActiveFile("references.bib")}
             className={cn(
               "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeTab === "sample.bib"
+              activeFile === "references.bib"
                 ? "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
                 : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
             )}
           >
             <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>sample.bib</span>
+            <span>references.bib</span>
           </button>
         </div>
 
-        {/* Right side: Copy */}
+        {/* Right side: SyncTeX & Copy */}
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="synctex-forward-btn"
+            onClick={handleSyncTexForward}
+            disabled={isSyncingForward}
+            className="p-1 px-2 rounded hover:bg-[#ece8df] dark:hover:bg-[#282623] text-coral-600 dark:text-coral-400 hover:text-coral-700 transition-colors cursor-pointer flex items-center gap-1 font-sans text-[11px]"
+            title="Đồng bộ vị trí sang PDF (Forward SyncTeX)"
+          >
+            {isSyncingForward ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <ArrowRightCircle className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">SyncTeX</span>
+          </button>
+
           <button
             type="button"
             onClick={handleCopy}
@@ -326,8 +377,14 @@ export function WritingEditorPane({
           ref={textareaRef}
           data-testid="writing-editor-textarea"
           aria-label="Soạn thảo mã nguồn LaTeX"
-          value={editorContent}
-          onChange={(e) => setEditorContent(e.target.value)}
+          value={currentContent}
+          onChange={(e) => {
+            if (activeFile === "main.tex") {
+              setEditorContent(e.target.value);
+            } else {
+              setEditorBibContent(e.target.value);
+            }
+          }}
           onKeyDown={handleKeyDown}
           onKeyUp={handleSelect}
           onClick={handleSelect}
