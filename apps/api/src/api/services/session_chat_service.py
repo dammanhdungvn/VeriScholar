@@ -1679,6 +1679,79 @@ class SessionChatService:
         return selected_chunks, citations, abstain
 
     @staticmethod
+    def _build_evidence_blocks(
+        citations: list[dict[str, Any]],
+        selected_chunks: list[tuple[Any, float]],
+        abstract_only_docs: list[Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Build structured evidence blocks for LLM prompt context without premature truncation."""
+        evidence_blocks: list[dict[str, Any]] = []
+        for cit in citations:
+            cid = cit.get("citation_id", "")
+            dtitle = cit.get("document_title", "")
+            page = cit.get("page_number", 1)
+            matched_content = ""
+            for it, _score in selected_chunks:
+                if isinstance(it, dict):
+                    if (
+                        str(it.get("document_id", "")) == cit.get("document_id")
+                        and it.get("page_number") == page
+                    ):
+                        matched_content = it.get("content", "")
+                        break
+                else:
+                    chk = it[0] if hasattr(it, "__getitem__") else it
+                    if (
+                        str(getattr(chk, "document_id", "")) == cit.get("document_id")
+                        and getattr(chk, "page_number", None) == page
+                    ):
+                        matched_content = getattr(chk, "content", "")
+                        break
+            if not matched_content and selected_chunks:
+                it0 = selected_chunks[0][0]
+                if isinstance(it0, dict):
+                    matched_content = it0.get("content", "")
+                else:
+                    chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
+                    matched_content = getattr(chk0, "content", "")
+
+            # Preserve full academic content up to a generous 12,000 char safety ceiling (never truncate legitimate paragraphs)
+            snippet_content = (
+                matched_content[:12000] if matched_content else "(Nội dung trang)"
+            )
+            evidence_blocks.append(
+                {
+                    "citation_id": cid,
+                    "document_id": cit.get("document_id"),
+                    "document_title": dtitle,
+                    "page_number": page,
+                    "bounding_boxes": cit.get("bounding_boxes"),
+                    "content": snippet_content,
+                }
+            )
+
+        if abstract_only_docs:
+            for idx, doc in enumerate(abstract_only_docs, start=len(citations) + 1):
+                doc_abstract = (getattr(doc, "parsed_metadata", None) or {}).get("abstract", "")
+                if doc_abstract:
+                    evidence_blocks.append(
+                        {
+                            "citation_id": f"cit_{idx}",
+                            "document_id": str(getattr(doc, "id", "")),
+                            "document_title": (
+                                getattr(doc, "title", None)
+                                or getattr(doc, "filename", None)
+                                or "Tài liệu tóm tắt"
+                            ),
+                            "page_number": 1,
+                            "bounding_boxes": [[0.1, 0.1, 0.9, 0.3, 1]],
+                            "content": f"[BẢN TÓM TẮT CHÍNH THỨC]: {doc_abstract[:12000]}",
+                        }
+                    )
+
+        return evidence_blocks
+
+    @staticmethod
     def _build_socratic_system_prompt(abstract_warning: str = "") -> str:
         """Build core Socratic system prompt with grounding and LaTeX formatting directives."""
         security_directive = AIGuardrailsService.get_security_directive()
@@ -2631,66 +2704,9 @@ class SessionChatService:
                 if doc_anchor:
                     system_prompt += f"\n\n{doc_anchor}"
 
-                evidence_blocks: list[dict[str, Any]] = []
-                for cit in citations:
-                    cid = cit.get("citation_id", "")
-                    dtitle = cit.get("document_title", "")
-                    page = cit.get("page_number", 1)
-                    matched_content = ""
-                    for it, _score in selected_chunks:
-                        if isinstance(it, dict):
-                            if (
-                                str(it.get("document_id", "")) == cit.get("document_id")
-                                and it.get("page_number") == page
-                            ):
-                                matched_content = it.get("content", "")
-                                break
-                        else:
-                            chk = it[0] if hasattr(it, "__getitem__") else it
-                            if (
-                                str(getattr(chk, "document_id", "")) == cit.get("document_id")
-                                and getattr(chk, "page_number", None) == page
-                            ):
-                                matched_content = getattr(chk, "content", "")
-                                break
-                    if not matched_content and selected_chunks:
-                        it0 = selected_chunks[0][0]
-                        if isinstance(it0, dict):
-                            matched_content = it0.get("content", "")
-                        else:
-                            chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
-                            matched_content = getattr(chk0, "content", "")
-
-                    snippet_content = (
-                        matched_content[:1000] if matched_content else "(Nội dung trang)"
-                    )
-                    evidence_blocks.append(
-                        {
-                            "citation_id": cid,
-                            "document_id": cit.get("document_id"),
-                            "document_title": dtitle,
-                            "page_number": page,
-                            "bounding_boxes": cit.get("bounding_boxes"),
-                            "content": snippet_content,
-                        }
-                    )
-
-                if abstract_only_docs:
-                    for idx, doc in enumerate(abstract_only_docs, start=len(citations) + 1):
-                        doc_abstract = (doc.parsed_metadata or {}).get("abstract", "")
-                        if doc_abstract:
-                            evidence_blocks.append(
-                                {
-                                    "citation_id": f"cit_{idx}",
-                                    "document_id": str(doc.id),
-                                    "document_title": (
-                                        doc.title or doc.filename or "Tài liệu tóm tắt"
-                                    ),
-                                    "page_number": 1,
-                                    "bounding_boxes": [[0.1, 0.1, 0.9, 0.3, 1]],
-                                    "content": f"[BẢN TÓM TẮT CHÍNH THỨC]: {doc_abstract}",
-                                }
-                            )
+                evidence_blocks = self._build_evidence_blocks(
+                    citations, selected_chunks, abstract_only_docs
+                )
 
                 sandboxed_context = AIGuardrailsService.build_hierarchical_sandboxed_context(
                     evidence_blocks
