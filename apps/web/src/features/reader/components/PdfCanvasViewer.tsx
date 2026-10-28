@@ -21,6 +21,7 @@ interface PdfCanvasViewerProps {
   zoomRatio: number;
   rotationDeg: 0 | 90 | 180 | 270;
   activeBbox: BoundingBox | null;
+  activeBboxes?: BoundingBox[] | null;
   isLoading?: boolean;
   onPageCountDetected?: (count: number) => void;
   onClearHighlight?: () => void;
@@ -39,6 +40,7 @@ export function PdfCanvasViewer({
   zoomRatio,
   rotationDeg,
   activeBbox,
+  activeBboxes,
   isLoading: isExternalLoading = false,
   onPageCountDetected,
   onClearHighlight,
@@ -67,6 +69,8 @@ export function PdfCanvasViewer({
   const isUserScrollingRef = useRef(false);
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRafRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Store & Theme States
   const { theme } = useTheme();
@@ -76,6 +80,8 @@ export function PdfCanvasViewer({
   const isThumbnailsOpen = useReaderStore((s) => s.isThumbnailsOpen);
   const setIsThumbnailsOpen = useReaderStore((s) => s.setIsThumbnailsOpen);
   const setCurrentPage = useReaderStore((s) => s.setCurrentPage);
+  const storeActiveBboxes = useReaderStore((s) => s.activeBboxes);
+  const effectiveBboxes = activeBboxes !== undefined ? activeBboxes : storeActiveBboxes;
 
   // Text selection state
   const [selectedText, setSelectedText] = useState("");
@@ -182,6 +188,9 @@ export function PdfCanvasViewer({
 
   // Active scroll tracking: identify the page occupying the reading viewport
   const updateCurrentPageFromScroll = useCallback(() => {
+    if (isProgrammaticScrollRef.current) {
+      return;
+    }
     if (!scrollContainer || readingMode !== "continuous" || totalPages <= 1) {
       return;
     }
@@ -247,6 +256,9 @@ export function PdfCanvasViewer({
       }
       if (userScrollTimeoutRef.current) {
         clearTimeout(userScrollTimeoutRef.current);
+      }
+      if (programmaticScrollTimeoutRef.current) {
+        clearTimeout(programmaticScrollTimeoutRef.current);
       }
     };
   }, []);
@@ -325,6 +337,14 @@ export function PdfCanvasViewer({
       const pageEl = document.getElementById(`pdf-page-${pageNum}`);
       if (pageEl && scrollContainer) {
         lastScrolledBboxKeyRef.current = bboxKey;
+        isProgrammaticScrollRef.current = true;
+        if (programmaticScrollTimeoutRef.current) {
+          clearTimeout(programmaticScrollTimeoutRef.current);
+        }
+        programmaticScrollTimeoutRef.current = setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 800);
+
         const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
         const target = bboxOverlay || pageEl;
         if (typeof target.scrollIntoView === "function") {
@@ -387,6 +407,14 @@ export function PdfCanvasViewer({
     const pageEl = document.getElementById(`pdf-page-${currentPage}`);
     if (pageEl && scrollContainer) {
       lastScrolledByObserverRef.current = currentPage;
+      isProgrammaticScrollRef.current = true;
+      if (programmaticScrollTimeoutRef.current) {
+        clearTimeout(programmaticScrollTimeoutRef.current);
+      }
+      programmaticScrollTimeoutRef.current = setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 800);
+
       const containerRect = scrollContainer.getBoundingClientRect();
       const pageRect = pageEl.getBoundingClientRect();
       const relativeTop = pageRect.top - containerRect.top + scrollContainer.scrollTop;
@@ -657,6 +685,7 @@ export function PdfCanvasViewer({
                   zoomRatio={twoPageZoom}
                   rotationDeg={rotationDeg}
                   activeBbox={activeBbox}
+                  activeBboxes={effectiveBboxes}
                   onClearHighlight={onClearHighlight}
                   colorTheme={colorTheme}
                   isCurrentPage={pageNum === currentPage}
@@ -677,6 +706,7 @@ export function PdfCanvasViewer({
                 zoomRatio={effectiveZoom}
                 rotationDeg={rotationDeg}
                 activeBbox={activeBbox}
+                activeBboxes={effectiveBboxes}
                 onClearHighlight={onClearHighlight}
                 colorTheme={colorTheme}
                 isCurrentPage={pageNum === currentPage}

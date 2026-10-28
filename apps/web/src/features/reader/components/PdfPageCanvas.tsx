@@ -13,6 +13,7 @@ interface PdfPageCanvasProps {
   zoomRatio: number;
   rotationDeg: 0 | 90 | 180 | 270;
   activeBbox: BoundingBox | null;
+  activeBboxes?: BoundingBox[] | null;
   onClearHighlight?: () => void;
   colorTheme?: ReaderColorTheme;
   isCurrentPage?: boolean;
@@ -29,6 +30,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
   zoomRatio,
   rotationDeg,
   activeBbox,
+  activeBboxes,
   onClearHighlight,
   colorTheme = "default",
   isCurrentPage = false,
@@ -287,6 +289,7 @@ export const PdfPageCanvas = memo(function PdfPageCanvas({
         {/* Spatial BoundingBox Highlight Layer for Visual Evidence Grounding */}
         <BboxHighlightLayer
           bbox={activeBbox}
+          bboxes={activeBboxes}
           currentPage={pageNumber}
           onClear={onClearHighlight}
         />

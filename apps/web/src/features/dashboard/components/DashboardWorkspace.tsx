@@ -1397,25 +1397,29 @@ export function DashboardWorkspace({
                               matched = message.citations[0];
                             }
                           }
-                          if (
-                            matched?.paper_id &&
-                            matched.paper_id !== activeDocumentId &&
-                            openDocumentIds.includes(matched.paper_id)
-                          ) {
-                            setActiveDocumentId(matched.paper_id);
-                          }
-                          if (matched?.bbox) {
-                            setActiveBboxStore(matched.bbox);
-                            setActiveCitation(matched.paper_id, matched.bbox, matched.page);
-                            const targetPage = matched.bbox[4] || matched.page || 1;
-                            setCurrentPage(targetPage);
-                            useReaderStore.getState().setCurrentPage(targetPage);
-                            setMobileActiveView("reader");
-                          } else if (matched?.page) {
-                            const targetPage = matched.page;
-                            setCurrentPage(targetPage);
-                            useReaderStore.getState().setCurrentPage(targetPage);
-                            setMobileActiveView("reader");
+                          if (matched) {
+                            const raw = matched as Record<string, unknown>;
+                            const docId = (raw.document_id || raw.paper_id) as string | undefined;
+                            const pageNum = (raw.page_number || raw.page) as number | undefined;
+                            const bboxes = (raw.bounding_boxes || (raw.bbox ? [raw.bbox] : [])) as BoundingBox[];
+                            const primaryBox = (bboxes[0] || raw.bbox || null) as BoundingBox | null;
+                            const resolvedPage = pageNum || primaryBox?.[4] || 1;
+
+                            if (docId && docId !== activeDocumentId && openDocumentIds.includes(docId)) {
+                              setActiveDocumentId(docId);
+                            }
+
+                            if (primaryBox || bboxes.length > 0) {
+                              setActiveBboxStore(primaryBox);
+                              setActiveCitation((raw.citation_id as string) || citId, primaryBox, resolvedPage, bboxes);
+                              setCurrentPage(resolvedPage);
+                              useReaderStore.getState().setCurrentPage(resolvedPage);
+                              setMobileActiveView("reader");
+                            } else if (resolvedPage) {
+                              setCurrentPage(resolvedPage);
+                              useReaderStore.getState().setCurrentPage(resolvedPage);
+                              setMobileActiveView("reader");
+                            }
                           }
                         }}
                       />
