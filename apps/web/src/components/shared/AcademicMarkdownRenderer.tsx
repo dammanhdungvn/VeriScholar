@@ -21,6 +21,89 @@ export interface ConceptPillProps {
   onClick?: (citation: CitationBadgeData | null | string, citId?: string) => void;
 }
 
+/**
+ * Formats a concept title by separating PascalCase/camelCase into human-readable words with spaces,
+ * replacing underscores with spaces, and normalizing whitespace.
+ * e.g. "SelectiveAttention" -> "Selective Attention"
+ * e.g. "ContextNoise" -> "Context Noise"
+ */
+export function formatConceptTitle(raw: string): string {
+  if (!raw) return "";
+  let formatted = raw.replace(/_+/g, " ").trim();
+  formatted = formatted.replace(/([a-z\d])([A-Z])/g, "$1 $2");
+  formatted = formatted.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  return formatted.replace(/\s+/g, " ").trim();
+}
+
+function normalizeKey(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findBestCitationMatch(
+  conceptName: string,
+  pageNum?: number,
+  chunkId?: string,
+  citations?: CitationBadgeData[]
+): CitationBadgeData | null {
+  if (!citations || citations.length === 0) return null;
+
+  // 1. Direct chunk ID / citation ID match
+  if (chunkId) {
+    const byId = citations.find(
+      (c) => c.citation_id === chunkId || c.paper_id === chunkId
+    );
+    if (byId) return byId;
+  }
+
+  // 2. Direct page match if page is specified
+  if (pageNum && !isNaN(pageNum)) {
+    const byPage = citations.find(
+      (c) => (c.page ?? (c as unknown as Record<string, unknown>).page_number) === pageNum
+    );
+    if (byPage) return byPage;
+  }
+
+  const cleanConcept = normalizeKey(conceptName);
+
+  // 3. Exact normalized match on concept_name
+  const byConcept = citations.find(
+    (c) => c.concept_name && normalizeKey(c.concept_name) === cleanConcept
+  );
+  if (byConcept) return byConcept;
+
+  // 4. Exact normalized match on paper_title
+  const byTitle = citations.find(
+    (c) => c.paper_title && normalizeKey(c.paper_title) === cleanConcept
+  );
+  if (byTitle) return byTitle;
+
+  // 5. Keyword match: words in conceptName contained in citation concept_name, snippet, or content
+  const formatted = formatConceptTitle(conceptName);
+  const words = formatted
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  if (words.length > 0) {
+    let bestScore = 0;
+    let bestMatch: CitationBadgeData | null = null;
+    for (const c of citations) {
+      const text = `${c.concept_name || ""} ${c.snippet || ""} ${c.content || ""}`.toLowerCase();
+      const score = words.filter((w) => text.includes(w)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = c;
+      }
+    }
+    if (bestMatch && bestScore > 0) {
+      return bestMatch;
+    }
+  }
+
+  // 6. Default to first citation
+  return citations[0] || null;
+}
+
 export function ConceptPill({
   concept,
   citation,
@@ -36,6 +119,7 @@ export function ConceptPill({
     "Đoạn bằng chứng khoa học trích xuất từ tài liệu học thuật.";
 
   const resolvedCitId = citId || citation?.citation_id || "cit_1";
+  const displayName = formatConceptTitle(concept);
 
   return (
     <span
@@ -47,7 +131,7 @@ export function ConceptPill({
         type="button"
         data-testid="concept-pill"
         data-citation-id={resolvedCitId}
-        aria-label={`[ ↪ ${concept} ]`}
+        aria-label={`[ ↪ ${displayName} ]`}
         onClick={(e) => {
           e.stopPropagation();
           onClick?.(citation || null, resolvedCitId);
@@ -61,7 +145,7 @@ export function ConceptPill({
       >
         <span className="opacity-50 text-[11px] font-mono">[ </span>
         <span className="text-[11px] opacity-75">↪</span>
-        <span> {concept} </span>
+        <span> {displayName} </span>
         <span className="opacity-50 text-[11px] font-mono">]</span>
         <span data-testid="citation-badge" className="hidden" aria-hidden="true" />
       </button>
@@ -79,7 +163,7 @@ export function ConceptPill({
           <span className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#38342e]/80">
             <span className="text-[11px] font-medium text-[#a8a29e] truncate flex items-center gap-1">
               <span className="text-[#cc785c]">↪</span>
-              <span className="truncate">{concept}</span>
+              <span className="truncate">{displayName}</span>
             </span>
             <span
               data-testid="popover-page-badge"
@@ -138,12 +222,13 @@ function parseInlineCitationsAndMath(
 ): React.ReactNode {
   // Regex matches:
   // 1. [cite:concept_name] or [cite:chunk_id:page:concept_name]
-  // 2. [1], [2], [^1], [^2], [^cit_x], [cit_x]
-  // 3. [ConceptName] (e.g. [Architecture])
-  // 4. $...$ (inline math)
-  // 5. \(...\) (LaTeX inline math)
+  // 2. [ ↪ concept_name ]
+  // 3. [1], [2], [^1], [^2], [^cit_x], [cit_x]
+  // 4. [ConceptName] (e.g. [Architecture])
+  // 5. $...$ (inline math)
+  // 6. \(...\) (LaTeX inline math)
   const regex =
-    /(\[cite:[^\]]+\]|\[\^?\d+\]|\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\[[A-Z][\w\s-]{1,50}\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
+    /(\[cite:[^\]]+\]|\[\s*↪\s*[^\]]+\]|\[\^?\d+\]|\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\[[A-Z][\w\s-]{1,50}\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
   const parts = text.split(regex);
   if (parts.length === 1) return text;
 
@@ -159,23 +244,37 @@ function parseInlineCitationsAndMath(
       const pageNum = parseInt(pageStr, 10);
       const chunkId = segments.length >= 3 ? segments[0] : "";
 
-      const matched =
-        citations?.find(
-          (c) =>
-            (c.concept_name && c.concept_name.toLowerCase() === conceptName.toLowerCase()) ||
-            (c.paper_title && c.paper_title.toLowerCase() === conceptName.toLowerCase())
-        ) ||
-        (pageNum && !isNaN(pageNum) ? citations?.find((c) => c.page === pageNum) : null) ||
-        (chunkId ? citations?.find((c) => c.citation_id === chunkId || c.paper_id === chunkId) : null) ||
-        citations?.[0] ||
-        null;
+      const matched = findBestCitationMatch(
+        conceptName,
+        isNaN(pageNum) ? undefined : pageNum,
+        chunkId,
+        citations
+      );
 
       const citId = matched?.citation_id || chunkId || "cit_1";
 
       return (
         <ConceptPill
           key={index}
-          concept={conceptName}
+          concept={matched?.concept_name || conceptName}
+          citation={matched}
+          citId={citId}
+          onClick={onCitationClick}
+        />
+      );
+    }
+
+    // 1b. Literal [ ↪ concept_name ] tag
+    const literalArrowMatch = part.match(/^\[\s*↪\s*([^\]]+)\]$/);
+    if (literalArrowMatch) {
+      const conceptName = literalArrowMatch[1].trim();
+      const matched = findBestCitationMatch(conceptName, undefined, undefined, citations);
+      const citId = matched?.citation_id || "cit_1";
+
+      return (
+        <ConceptPill
+          key={index}
+          concept={matched?.concept_name || conceptName}
           citation={matched}
           citId={citId}
           onClick={onCitationClick}
@@ -219,11 +318,7 @@ function parseInlineCitationsAndMath(
     const conceptBracketMatch = part.match(/^\[([A-Z][\w\s-]{1,50})\]$/);
     if (conceptBracketMatch) {
       const candidate = conceptBracketMatch[1].trim();
-      const matched = citations?.find(
-        (c) =>
-          (c.concept_name && c.concept_name.toLowerCase() === candidate.toLowerCase()) ||
-          (c.paper_title && c.paper_title.toLowerCase() === candidate.toLowerCase())
-      );
+      const matched = findBestCitationMatch(candidate, undefined, undefined, citations);
 
       if (matched) {
         return (

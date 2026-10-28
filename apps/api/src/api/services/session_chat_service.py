@@ -2105,7 +2105,7 @@ class SessionChatService:
         """Build core Socratic system prompt with grounding and LaTeX formatting directives."""
         security_directive = AIGuardrailsService.get_security_directive()
         return (
-            "Bạn là Socratic Copilot — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
+            "Bạn là Socratic Assistant — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
             "Nhiệm vụ của bạn là giải đáp sâu sắc, chính xác và có căn cứ khoa học "
             "dựa trên các bài báo được cung cấp.\n\n"
             f"{security_directive}\n\n"

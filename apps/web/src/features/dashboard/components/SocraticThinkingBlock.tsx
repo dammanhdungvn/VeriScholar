@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Brain, Check, Loader2, ChevronDown, ChevronRight } from "lucide-react";
+import { Brain, Loader2, ChevronDown, ChevronRight } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
 
 export interface SocraticThinkingBlockProps {
@@ -8,10 +8,12 @@ export interface SocraticThinkingBlockProps {
 
 /**
  * SocraticThinkingBlock:
- * Live agent activity stepper during streaming inference, displaying live stopwatch,
- * chunk retrieval, and grounding actions. Automatically collapses into a sleek single-line
- * header ("Thought for Xs >") when inference concludes, with expandable action history
- * and full chain-of-thought internal monologue.
+ * Minimalist AI reasoning presentation modeled after leading AI research platforms
+ * (Claude, DeepSeek, ChatGPT).
+ * - During streaming: displays a subtle live stopwatch ("Thought for Xs >") and optional
+ *   streaming thought monologue.
+ * - When finished: automatically collapses into a clean, single-line header ("Thought for Xs >").
+ * - When expanded: reveals the pure internal thought monologue without robotic debug logs.
  */
 export function SocraticThinkingBlock({ message }: SocraticThinkingBlockProps) {
   const isStreaming = Boolean(message.is_streaming);
@@ -63,46 +65,24 @@ export function SocraticThinkingBlock({ message }: SocraticThinkingBlockProps) {
     return (
       <div
         data-testid="socratic-thinking-block"
-        className="p-2.5 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono space-y-2"
+        className="p-2.5 rounded-xl bg-[#f4efe6]/60 dark:bg-[#211f1c]/60 border border-[#e5dfd4] dark:border-[#332f28] text-2xs space-y-2"
       >
-        {/* Working status indicator */}
+        {/* Working status indicator with live timer */}
         <div
           data-testid="socratic-working-status"
-          className="flex items-center gap-2 text-coral-600 dark:text-coral-400 font-medium"
+          className="flex items-center justify-between text-coral-600 dark:text-coral-400 font-medium"
         >
-          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          <span>Working...</span>
-        </div>
-
-        {/* Live activity stepper */}
-        <div
-          data-testid="socratic-activity-stepper"
-          className="space-y-1 text-3xs text-muted dark:text-zinc-400 pl-4 border-l border-coral-400/40 dark:border-coral-500/40"
-        >
-          <div className="flex items-center gap-1.5 text-ink dark:text-zinc-300">
-            <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-            <span>Reading paper chunks... ∨</span>
+          <div className="flex items-center gap-2">
+            <Loader2 className="w-3.5 h-3.5 animate-spin text-coral-500" />
+            <span className="font-mono">{`Thought for ${seconds}s >`}</span>
           </div>
-          <div className="flex items-center gap-1.5 text-coral-600 dark:text-coral-400">
-            <Brain className="w-3 h-3 text-coral-500 shrink-0 animate-pulse" />
-            <span>{`Thought for ${seconds}s >`}</span>
-          </div>
-          {message.citations?.map((c, idx) => (
-            <div
-              key={c.citation_id || idx}
-              className="flex items-center gap-1.5 text-ink dark:text-zinc-300"
-            >
-              <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-              <span>{`Analyzed Bounding Box #Page ${c.page}`}</span>
-            </div>
-          ))}
         </div>
 
         {/* Streaming Thought Text if available */}
         {message.thought && (
           <div
             data-testid="socratic-thought-content"
-            className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300"
+            className="pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-sans leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-400 italic pl-2 border-l-2 border-coral-500/40"
           >
             {message.thought}
           </div>
@@ -117,7 +97,7 @@ export function SocraticThinkingBlock({ message }: SocraticThinkingBlockProps) {
       data-testid="socratic-thinking-block"
       className={
         isExpanded
-          ? "space-y-2 p-2.5 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono"
+          ? "space-y-2 p-2.5 rounded-xl bg-[#f4efe6]/60 dark:bg-[#211f1c]/60 border border-[#e5dfd4] dark:border-[#332f28] text-2xs"
           : undefined
       }
     >
@@ -128,13 +108,13 @@ export function SocraticThinkingBlock({ message }: SocraticThinkingBlockProps) {
         aria-expanded={isExpanded}
         className={
           isExpanded
-            ? "cursor-pointer font-medium select-none flex items-center justify-between w-full text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors"
-            : "cursor-pointer font-medium select-none flex items-center gap-1.5 text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors text-2xs font-mono py-1 px-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+            ? "cursor-pointer font-medium select-none flex items-center justify-between w-full text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200 transition-colors"
+            : "cursor-pointer font-medium select-none inline-flex items-center gap-1.5 text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-200 transition-colors text-2xs py-1 px-2 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
         }
       >
         <div className="flex items-center gap-1.5">
-          <Brain className="w-3.5 h-3.5 text-coral-500" />
-          <span>{`Thought for ${duration}s ${isExpanded ? "∨" : ">"}`}</span>
+          <Brain className="w-3.5 h-3.5 text-coral-500/80" />
+          <span className="font-mono">{`Thought for ${duration}s >`}</span>
         </div>
         {isExpanded ? (
           <ChevronDown className="w-3.5 h-3.5 text-muted dark:text-zinc-400" />
@@ -143,37 +123,14 @@ export function SocraticThinkingBlock({ message }: SocraticThinkingBlockProps) {
         )}
       </button>
 
-      {/* Expanded Action History & Thought Monologue */}
-      {isExpanded && (
-        <>
-          <div
-            data-testid="socratic-action-history"
-            className="space-y-1 text-3xs text-muted dark:text-zinc-400 pl-4 border-l border-zinc-200 dark:border-zinc-800"
-          >
-            <div className="flex items-center gap-1.5">
-              <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-              <span>Reading paper chunks...</span>
-            </div>
-            {message.citations?.map((c, idx) => (
-              <div
-                key={c.citation_id || idx}
-                className="flex items-center gap-1.5"
-              >
-                <Check className="w-3 h-3 text-emerald-500 shrink-0" />
-                <span>{`Analyzed Bounding Box #Page ${c.page}`}</span>
-              </div>
-            ))}
-          </div>
-
-          {message.thought && (
-            <div
-              data-testid="socratic-thought-content"
-              className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300"
-            >
-              {message.thought}
-            </div>
-          )}
-        </>
+      {/* Expanded Thought Monologue */}
+      {isExpanded && message.thought && (
+        <div
+          data-testid="socratic-thought-content"
+          className="mt-2 pt-2 border-t border-[#e5dfd4]/60 dark:border-zinc-800 text-3xs font-sans leading-relaxed whitespace-pre-wrap text-zinc-600 dark:text-zinc-400 italic pl-2 border-l-2 border-coral-500/40"
+        >
+          {message.thought}
+        </div>
       )}
     </div>
   );

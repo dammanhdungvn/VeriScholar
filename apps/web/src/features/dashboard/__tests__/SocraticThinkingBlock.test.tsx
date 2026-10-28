@@ -12,7 +12,7 @@ describe("SocraticThinkingBlock Component", () => {
     vi.useRealTimers();
   });
 
-  it("renders live activity stepper during streaming (Working..., Thought for Xs >)", () => {
+  it("renders live thinking status during streaming (Thought for Xs >)", () => {
     const message: ChatMessage = {
       id: "asst-1",
       session_id: "s-1",
@@ -34,11 +34,11 @@ describe("SocraticThinkingBlock Component", () => {
 
     render(<SocraticThinkingBlock message={message} />);
 
-    // Live activity stepper renders during stream
-    expect(screen.getByText(/Working\.\.\./i)).toBeInTheDocument();
+    // Live thinking indicator renders during stream
+    expect(screen.getByTestId("socratic-working-status")).toBeInTheDocument();
     expect(screen.getByText(/Thought for \d+s >/i)).toBeInTheDocument();
-    expect(screen.getByText(/Reading paper chunks\.\.\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Analyzed Bounding Box #Page 3/i)).toBeInTheDocument();
+    // Does NOT render robotic debug bounding box lines
+    expect(screen.queryByText(/Analyzed Bounding Box/i)).toBeNull();
 
     // Timer increments live
     act(() => {
@@ -47,7 +47,7 @@ describe("SocraticThinkingBlock Component", () => {
     expect(screen.getByText(/Thought for \d+s >/i)).toBeInTheDocument();
   });
 
-  it("automatically collapses to single header (Worked for Xs > or Thought for Xs >) when is_streaming is false", () => {
+  it("automatically collapses to single header (Thought for Xs >) when is_streaming is false", () => {
     const message: ChatMessage = {
       id: "asst-2",
       session_id: "s-1",
@@ -70,20 +70,20 @@ describe("SocraticThinkingBlock Component", () => {
 
     render(<SocraticThinkingBlock message={message} />);
 
-    // Header displays Thought for 3s > (or Worked for 3s >)
+    // Header displays Thought for 3s >
     const header = screen.getByRole("button", {
-      name: /(Thought|Worked) for 3s >/i,
+      name: /Thought for 3s >/i,
     });
     expect(header).toBeInTheDocument();
 
-    // Detailed action history and full thought text are collapsed (hidden)
-    expect(screen.queryByText(/Working\.\.\./i)).not.toBeInTheDocument();
+    // Detailed full thought text is collapsed (hidden)
     expect(
       screen.queryByText("Detailed internal chain of thought reasoning.")
     ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Analyzed Bounding Box/i)).toBeNull();
   });
 
-  it("expands action history and full thought text on click, and collapses on second click", () => {
+  it("expands thought monologue on click, and collapses on second click", () => {
     const message: ChatMessage = {
       id: "asst-3",
       session_id: "s-1",
@@ -108,7 +108,7 @@ describe("SocraticThinkingBlock Component", () => {
 
     // Header exists in collapsed state
     const header = screen.getByRole("button", {
-      name: /(Thought|Worked) for 4s >/i,
+      name: /Thought for 4s >/i,
     });
     expect(header).toBeInTheDocument();
     expect(
@@ -120,8 +120,8 @@ describe("SocraticThinkingBlock Component", () => {
     expect(
       screen.getByText("Synthesizing theoretical framework from section 2.")
     ).toBeInTheDocument();
-    expect(screen.getByText(/Reading paper chunks\.\.\./i)).toBeInTheDocument();
-    expect(screen.getByText(/Analyzed Bounding Box #Page 2/i)).toBeInTheDocument();
+    // Must NOT render robotic bounding box lines
+    expect(screen.queryByText(/Analyzed Bounding Box/i)).toBeNull();
 
     // 2nd click: collapses back
     fireEvent.click(header);
