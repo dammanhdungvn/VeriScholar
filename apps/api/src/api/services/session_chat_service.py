@@ -553,12 +553,16 @@ class SessionChatService:
                 ORDER BY cb.rrf_score DESC
                 LIMIT :limit;
             """)
+            # For cross-lingual FTS search, extract Latin/English keywords with length >= 3
+            latin_words = re.findall(r"\b[A-Za-z]{3,}\b", query_text)
+            effective_fts = " ".join(latin_words) if latin_words else query_text
+
             vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
             params = {
                 "hyde_vector": vec_str,
                 "query_vec": vec_str,
-                "fts_query": query_text,
-                "query_text": query_text,
+                "fts_query": effective_fts,
+                "query_text": effective_fts,
                 "active_doc_ids": target_doc_ids,
                 "doc_ids": target_doc_ids,
                 "user_id": user_id,
@@ -799,6 +803,32 @@ class SessionChatService:
         # tau < 0.20 -> ACTIVE_ABSTENTION
         return "ACTIVE_ABSTENTION", candidate_chunks, True
 
+    @staticmethod
+    def _detect_target_section(query: str) -> str | None:
+        """Detect whether the scholarly query specifically targets a well-known paper section."""
+        q = query.lower()
+        # Abstract / Executive summary
+        if any(kw in q for kw in ["abstract", "tóm tắt", "tom tat", "sơ lược", "khái quát"]):
+            return "abstract"
+        # Introduction / Motivation
+        if any(kw in q for kw in ["introduction", "mở đầu", "mo dau", "đặt vấn đề", "giới thiệu"]):
+            return "introduction"
+        # Conclusion / Summary
+        if any(
+            kw in q for kw in ["conclusion", "kết luận", "ket luan", "tổng kết", "hướng phát triển"]
+        ):
+            return "conclusion"
+        # Methodology / Proposed Architecture
+        if any(
+            kw in q
+            for kw in ["methodology", "kiến trúc mô hình", "phương pháp đề xuất", "thuật toán"]
+        ):
+            return "methodology"
+        # Related Work
+        if any(kw in q for kw in ["related work", "nghiên cứu liên quan", "tổng quan tài liệu"]):
+            return "related_work"
+        return None
+
     async def _build_document_anchor_context(self, documents: list[DocumentModel]) -> str:
         """Build Tier-1 permanent Document Anchor Memory (Title, Authors, Abstract, TOC)."""
         if not documents:
@@ -927,6 +957,62 @@ class SessionChatService:
             limit=limit,
             target_doc_ids=target_doc_ids,
         )
+
+        # 3b. Section-Aware Query Routing: prioritize key section chunks (e.g. Abstract)
+        target_section = self._detect_target_section(
+            condensed_query
+        ) or self._detect_target_section(question)
+        if target_section == "abstract" and target_doc_ids:
+            try:
+                abs_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title.label("document_title"),
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.chunk_index <= 6,
+                        or_(
+                            DocumentChunkModel.content.ilike("%abstract%"),
+                            DocumentChunkModel.chunk_index == 0,
+                        ),
+                    )
+                    .order_by(DocumentChunkModel.chunk_index.asc())
+                    .limit(len(target_doc_ids))
+                )
+                abs_res = await self.db.execute(abs_stmt)
+                section_prioritized: list[dict[str, Any]] = []
+                for chk, dtitle, dfilename in abs_res.all():
+                    section_prioritized.append(
+                        {
+                            "chunk_id": str(chk.id),
+                            "id": str(chk.id),
+                            "document_id": str(chk.document_id),
+                            "chunk_index": chk.chunk_index,
+                            "page_number": chk.page_number,
+                            "content": chk.content,
+                            "text_content": chk.content,
+                            "bounding_boxes": chk.bounding_boxes,
+                            "token_count": chk.token_count,
+                            "document_title": dtitle or dfilename or "Tài liệu",
+                            "filename": dfilename,
+                            "max_cosine_sim": 1.0,
+                            "rrf_score": 2.0,
+                        }
+                    )
+                if section_prioritized:
+                    seen = {c["chunk_id"] for c in section_prioritized}
+                    combined = list(section_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("section_aware_routing_failed", error=str(ex))
 
         selected_chunks: list[dict[str, Any]] = []
         citations: list[dict[str, Any]] = []
