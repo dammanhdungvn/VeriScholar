@@ -289,14 +289,25 @@ class SandboxedLatexCompiler:
 
         user_local_tectonic = str(Path.home() / ".local/bin/tectonic")
         ci_tectonic = "/home/VeriScholar/.local/bin/tectonic"
-        compiler_bin = (
-            shutil.which("tectonic")
-            or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
-            or (ci_tectonic if os.path.exists(ci_tectonic) else None)
-            or shutil.which("pdflatex")
-            if self.prefer_system_compiler
-            else None
-        )
+        has_unicode = any(ord(char) > 127 for char in code)
+        compiler_bin = None
+        if self.prefer_system_compiler:
+            if has_unicode or "fontspec" in code or "xelatex" in code.lower():
+                compiler_bin = (
+                    shutil.which("xelatex")
+                    or shutil.which("tectonic")
+                    or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
+                    or (ci_tectonic if os.path.exists(ci_tectonic) else None)
+                    or shutil.which("pdflatex")
+                )
+            else:
+                compiler_bin = (
+                    shutil.which("tectonic")
+                    or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
+                    or (ci_tectonic if os.path.exists(ci_tectonic) else None)
+                    or shutil.which("pdflatex")
+                    or shutil.which("xelatex")
+                )
 
         if compiler_bin:
             return await self._compile_with_cli(compiler_bin, code, timeout_seconds)

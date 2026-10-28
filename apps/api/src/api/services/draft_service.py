@@ -563,6 +563,32 @@ class DraftService:
                 f"Role '{role.value}' is strictly forbidden from compiling LaTeX"
             )
 
+        # 1. Tier 1: Fast cached compilation via CLSILatexCompiler with XeLaTeX support
+        assets = _draft_assets_cache.get(draft_id, [])
+        clsi_res = await self.clsi_compiler.compile(
+            draft_id=draft_id,
+            main_tex=draft.content,
+            bib_content=draft.bib_content or "",
+            assets=assets,
+            clear_cache=False,
+            timeout_seconds=float(timeout_seconds),
+        )
+        pdf_path = clsi_res.get("pdf_path")
+        if clsi_res.get("success") and pdf_path and os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            _draft_pdf_cache[draft_id] = pdf_bytes
+            preview_url = f"/api/v1/drafts/{draft_id}/preview.pdf"
+            result = LatexCompilationResult(
+                success=True,
+                pdf_bytes=pdf_bytes,
+                errors=[],
+                logs=clsi_res.get("logs", ""),
+                is_sandboxed=False,
+            )
+            logger.info("draft_compiled_clsi_success", draft_id=str(draft_id))
+            return result, preview_url
+
         with self.ai_tracing.span(
             name="latex_agentic_healing_compile",
             input={"content_length": len(draft.content), "timeout_seconds": timeout_seconds},

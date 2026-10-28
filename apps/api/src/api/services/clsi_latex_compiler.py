@@ -40,15 +40,20 @@ class CLSILatexCompiler:
         """Detect whether pdflatex or xelatex is required.
 
         Returns (engine_name, engine_flag):
-        - ("xelatex", "-xelatex") if fontspec or XeTeX directives are present.
+        - ("xelatex", "-xelatex") if fontspec, XeTeX, or Unicode characters are present.
         - ("pdflatex", "-pdf") otherwise.
         """
         if not main_tex:
             return ("pdflatex", "-pdf")
 
-        # Check for fontspec package or xetex indications
+        # Check for fontspec package or xetex indications or non-ASCII unicode
         fontspec_pattern = re.compile(r"\\usepackage(?:\[.*?\])?\{fontspec\}")
-        if fontspec_pattern.search(main_tex) or "fontspec" in main_tex:
+        if (
+            fontspec_pattern.search(main_tex)
+            or "fontspec" in main_tex
+            or "xelatex" in main_tex.lower()
+            or any(ord(char) > 127 for char in main_tex)
+        ):
             return ("xelatex", "-xelatex")
 
         return ("pdflatex", "-pdf")
