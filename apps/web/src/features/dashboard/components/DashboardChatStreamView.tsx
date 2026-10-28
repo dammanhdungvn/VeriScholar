@@ -64,7 +64,7 @@ export function DashboardChatStreamView({
 
             <div className="space-y-1.5">
               <h3 className="font-serif font-semibold text-base text-ink dark:text-zinc-100">
-                Socratic Copilot sẵn sàng đối thoại
+                Socratic Assistant sẵn sàng đối thoại
               </h3>
               <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans max-w-md mx-auto">
                 Đặt câu hỏi nghiên cứu hoặc chọn gợi ý để đối thoại phản biện.

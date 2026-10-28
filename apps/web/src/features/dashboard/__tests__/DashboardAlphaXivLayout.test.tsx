@@ -133,19 +133,10 @@ describe("DashboardAlphaXivLayout", () => {
     // FAB is hidden when assistant is open
     expect(screen.queryByTestId("floating-assistant-fab")).not.toBeInTheDocument();
 
-    // 3. Assistant header displays "Assistant", (+) New Chat, and ✕ close button
-    expect(screen.getByText("Assistant")).toBeInTheDocument();
-
-    const newChatBtn = screen.getByTestId("new-chat-btn");
-    expect(newChatBtn).toBeInTheDocument();
-    expect(newChatBtn.textContent).toContain("New Chat");
-
-    // Clicking New Chat calls onResetChat
-    fireEvent.click(newChatBtn);
-    expect(handleResetChat).toHaveBeenCalledTimes(1);
-
+    // 3. Assistant header displays close button (✕) and clean minimalist header without redundant New Chat
     const closeBtn = screen.getByTestId("close-assistant-btn");
     expect(closeBtn).toBeInTheDocument();
+    expect(screen.queryByTestId("new-chat-btn")).not.toBeInTheDocument();
 
     // 4. Clicking close-assistant-btn closes the Assistant panel and returns paper to 100% width with floating FAB visible
     fireEvent.click(closeBtn);
@@ -155,7 +146,7 @@ describe("DashboardAlphaXivLayout", () => {
     expect(screen.getByTestId("floating-assistant-fab")).toBeInTheDocument();
   });
 
-  it("renders VerticalEdgeDock with info, notes, and assistant triggers", () => {
+  it("does not render top VerticalEdgeDock and preserves single corner FAB", () => {
     render(
       <QueryClientProvider client={queryClient}>
         <DashboardWorkspace
@@ -172,21 +163,8 @@ describe("DashboardAlphaXivLayout", () => {
       </QueryClientProvider>
     );
 
-    const dock = screen.getByTestId("vertical-edge-dock");
-    expect(dock).toBeInTheDocument();
-
-    const infoBtn = screen.getByTestId("edge-dock-info-btn");
-    expect(infoBtn).toBeInTheDocument();
-
-    const notesBtn = screen.getByTestId("edge-dock-notes-btn");
-    expect(notesBtn).toBeInTheDocument();
-
-    const assistantBtn = screen.getByTestId("edge-dock-assistant-btn");
-    expect(assistantBtn).toBeInTheDocument();
-
-    // Clicking edge-dock-assistant-btn opens the assistant
-    fireEvent.click(assistantBtn);
-    const assistantPane = screen.getByTestId("assistant-pane-container");
-    expect(assistantPane).not.toHaveStyle({ display: "none" });
+    // Top vertical edge dock must NOT be rendered per User Req 6
+    expect(screen.queryByTestId("vertical-edge-dock")).toBeNull();
+    expect(screen.getByTestId("floating-assistant-fab")).toBeInTheDocument();
   });
 });

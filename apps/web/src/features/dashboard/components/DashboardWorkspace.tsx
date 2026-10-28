@@ -22,7 +22,6 @@ import {
   Minimize2,
   X,
 } from "lucide-react";
-import { VerticalEdgeDock } from "./VerticalEdgeDock";
 import type { ChatMessage } from "@/types/dashboard";
 import type { BoundingBox } from "@/types/api";
 import { useTheme } from "@/hooks/useTheme";
@@ -1052,111 +1051,28 @@ export function DashboardWorkspace({
             </button>
           </div>
         )}
-        {/* Assistant Header (alphaXiv Minimalist Header) */}
+        {/* Assistant Header (Clean Minimalist Header) */}
         <header className="h-11 px-3 bg-white/80 dark:bg-[#1c1b18]/80 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2">
-          {/* Left: Assistant Title & (+) New Chat pill */}
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex items-center gap-1.5 shrink-0">
-              <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
-                <Sparkles className="w-3.5 h-3.5" />
-              </div>
-              <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
-                Assistant
-              </h2>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
+              <Sparkles className="w-3.5 h-3.5" />
             </div>
-
-            {/* Pill: (+) New Chat */}
-            <button
-              type="button"
-              data-testid="new-chat-btn"
-              onClick={() => {
-                setActiveRightTab("chat");
-                onResetChat();
-              }}
-              title="Bắt đầu đoạn chat mới"
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#f5f1ea] dark:bg-[#262420] text-ink dark:text-zinc-200 hover:bg-[#eee8dd] dark:hover:bg-[#302c26] border border-[#e5dfd4] dark:border-[#38332c] transition-colors cursor-pointer shadow-2xs"
-            >
-              <span className="text-[#cc785c] font-bold">(+)</span>
-              <span>New Chat</span>
-            </button>
           </div>
 
-          {/* Right Actions: Cài đặt phiên, Mode Dark/Light, Zen Mode, Đóng Assistant */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Desktop wide tools: Cài đặt, Theme */}
-            <div className="hidden md:flex items-center gap-1.5 shrink-0">
-              {/* Session Settings Button */}
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                aria-label="Cài đặt phiên nghiên cứu"
-                title="Cài đặt phiên nghiên cứu"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Theme Toggle Button (Dark / Light Mode) */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-                title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-              >
-                {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                ) : (
-                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
-                )}
-              </button>
-            </div>
-
-            {/* Mobile / Narrow Pane Dropdown */}
-            <div className="flex md:hidden items-center shrink-0">
-              <WorkspaceToolsMenu
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                isDark={isDark}
-                onToggleTheme={toggleTheme}
-              />
-            </div>
-
-            {/* Zen Workspace Toggle (Hide PDF) */}
-            <button
-              type="button"
-              data-testid="zen-chat-btn"
-              onClick={() => setZenMode(zenMode === "workspace" ? "none" : "workspace")}
-              aria-label={zenMode === "workspace" ? "Khôi phục chia đôi màn hình" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
-              title={zenMode === "workspace" ? "Khôi phục chia đôi màn hình (Esc)" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
-              className={cn(
-                "inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs",
-                zenMode === "workspace"
-                  ? "bg-primary text-white border-primary hover:bg-primary/90"
-                  : "bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26]"
-              )}
-            >
-              {zenMode === "workspace" ? (
-                <Minimize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-
-            {/* Close Assistant Button (✕) */}
-            <button
-              type="button"
-              data-testid="close-assistant-btn"
-              onClick={() => {
-                setIsAssistantOpen(false);
-                setMobileActiveView("reader");
-              }}
-              aria-label="Đóng Assistant"
-              title="Đóng Assistant (✕)"
-              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
+          {/* Close Assistant Button (✕) */}
+          <button
+            type="button"
+            data-testid="close-assistant-btn"
+            onClick={() => {
+              setIsAssistantOpen(false);
+              setMobileActiveView("reader");
+            }}
+            aria-label="Đóng Assistant"
+            title="Đóng Assistant (✕)"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </header>
 
         {/* TAB 1: SOCRATIC COPILOT CHAT STREAM */}
@@ -1175,7 +1091,7 @@ export function DashboardWorkspace({
                   </div>
                   <div>
                     <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
-                      Socratic Copilot
+                      Socratic Assistant
                     </h2>
                   </div>
                 </div>
@@ -1195,7 +1111,7 @@ export function DashboardWorkspace({
 
                   <div className="space-y-1.5">
                     <h3 className="font-serif font-semibold text-sm sm:text-base text-ink dark:text-zinc-100">
-                      Socratic Copilot sẵn sàng đối thoại
+                      Socratic Assistant sẵn sàng đối thoại
                     </h3>
                     <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
                       {isRealDocument
@@ -1777,7 +1693,7 @@ export function DashboardWorkspace({
                 className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-left text-xs hover:bg-[#f3eee5] dark:hover:bg-[#2d2924] hover:text-primary transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#cc785c]" />
-                <span>Hỏi Socratic Copilot</span>
+                <span>Hỏi Socratic Assistant</span>
               </button>
 
               <button
@@ -1846,19 +1762,6 @@ export function DashboardWorkspace({
           </button>
         </div>
       )}
-
-      {/* Vertical Edge Dock for Secondary Utilities */}
-      <div className="absolute top-14 right-3 z-30">
-        <VerticalEdgeDock
-          onToggleInfo={() => setIsStructureSheetOpen((prev) => !prev)}
-          onToggleNotes={() => {
-            if (!isAssistantOpen) setIsAssistantOpen(true);
-            setActiveRightTab(activeRightTab === "notes" ? "chat" : "notes");
-          }}
-          onToggleAssistant={() => setIsAssistantOpen((prev) => !prev)}
-          isAssistantOpen={isAssistantOpen}
-        />
-      </div>
 
       {/* Floating AI Assistant FAB (rendered when assistant is closed) */}
       {!isAssistantOpen && (

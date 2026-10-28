@@ -381,7 +381,7 @@ export function useStreamingChat({
                         ...msg,
                         content:
                           accumulatedContent ||
-                          "Không thể kết nối đến máy chủ Socratic Copilot để hoàn tất suy luận. Vui lòng kiểm tra kết nối mạng và thử lại.",
+                          "Không thể kết nối đến máy chủ Socratic Assistant để hoàn tất suy luận. Vui lòng kiểm tra kết nối mạng và thử lại.",
                         is_streaming: false,
                       }
                     : msg
