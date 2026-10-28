@@ -491,7 +491,7 @@ export function AcademicMarkdownRenderer({
                   if (!codeString || codeString.trim() === "undefined" || codeString.trim().length < 5) {
                     return null;
                   }
-                  return <MermaidRenderer chart={codeString} />;
+                  return <MermaidRenderer key={codeString} chart={codeString} />;
                 }
 
                 const isInline = !codeClassName && typeof children === "string" && !children.includes("\n");

@@ -150,4 +150,18 @@ describe("MermaidExportRenderer", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(sampleChart);
     expect(await screen.findByText("Đã chép")).toBeInTheDocument();
   });
+
+  it("instantly serves cached SVG on re-render without blanking", async () => {
+    const chartCode = "graph TD\n  A --> B";
+    const { unmount } = render(<MermaidRenderer chart={chartCode} />);
+    await waitFor(() => {
+      expect(screen.getByText("Test Mermaid Diagram")).toBeInTheDocument();
+    });
+    unmount();
+
+    // Mount again with identical chart code: cached SVG should be rendered synchronously on initial render
+    const { container } = render(<MermaidRenderer chart={chartCode} />);
+    expect(container.querySelector("svg")).not.toBeNull();
+    expect(screen.getByText("Test Mermaid Diagram")).toBeInTheDocument();
+  });
 });

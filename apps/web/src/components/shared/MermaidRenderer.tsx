@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
 import { Check, Copy, Download, Image as ImageIcon, Network } from "lucide-react";
 
@@ -7,9 +7,18 @@ interface MermaidRendererProps {
   className?: string;
 }
 
-export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
+// In-memory SVG cache across re-renders to prevent blank/flicker on scroll
+const mermaidSvgCache = new Map<string, string>();
+
+function getMermaidCacheKey(chart: string): string {
+  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  return `${isDark ? "dark" : "light"}:${(chart || "").trim()}`;
+}
+
+function MermaidRendererComponent({ chart, className }: MermaidRendererProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [svgContent, setSvgContent] = useState<string>("");
+  const cacheKey = getMermaidCacheKey(chart);
+  const [svgContent, setSvgContent] = useState<string>(() => mermaidSvgCache.get(cacheKey) || "");
   const [renderError, setRenderError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -19,6 +28,14 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
     const cleanChart = chart ? chart.trim() : "";
 
     if (!cleanChart || cleanChart === "undefined" || cleanChart.length < 5) {
+      return;
+    }
+
+    const currentKey = `${isDark ? "dark" : "light"}:${cleanChart}`;
+    const cachedSvg = mermaidSvgCache.get(currentKey);
+    if (cachedSvg) {
+      setSvgContent(cachedSvg);
+      setRenderError(null);
       return;
     }
 
@@ -56,6 +73,7 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
       mermaid
         .render(uniqueId, cleanChart)
         .then(({ svg }) => {
+          mermaidSvgCache.set(currentKey, svg);
           if (isMounted) {
             setSvgContent(svg);
             setRenderError(null);
@@ -264,3 +282,5 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
     </div>
   );
 }
+
+export const MermaidRenderer = React.memo(MermaidRendererComponent);
