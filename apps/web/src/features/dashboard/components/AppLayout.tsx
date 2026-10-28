@@ -4,7 +4,7 @@ import { useDashboardSessions } from "../hooks/useDashboardSessions";
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const { sessions, createSession, selectSession, deleteSession, renameSession } =
+  const { sessions, createSession, selectSession, deleteSession, updateTitle } =
     useDashboardSessions();
 
   return (
@@ -24,7 +24,7 @@ export function AppLayout() {
             navigate("/dashboard");
           }
         }}
-        onRenameSession={renameSession}
+        onRenameSession={(id, title) => updateTitle(id, title)}
         onDeleteSession={deleteSession}
       />
       <main className="flex-1 flex flex-col h-screen overflow-hidden relative min-w-0">

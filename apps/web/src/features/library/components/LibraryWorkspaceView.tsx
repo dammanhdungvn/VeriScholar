@@ -57,7 +57,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 
   // GraphRAG States
   const [graphQuery, setGraphQuery] = useState("");
-  const [graphMode, setGraphMode] = useState<GraphQueryMode>("auto");
+  const [graphMode] = useState<GraphQueryMode>("auto");
   const [isQueryingGraph, setIsQueryingGraph] = useState(false);
   const [graphResult, setGraphResult] = useState<GraphQueryResponseData | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);

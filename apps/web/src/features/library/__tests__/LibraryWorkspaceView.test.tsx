@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,6 +18,14 @@ function renderWithProviders(ui: React.ReactElement) {
     </QueryClientProvider>
   );
 }
+
+const mockLinks = {
+  first: "/api/v1/documents?page=1",
+  prev: null,
+  self: "/api/v1/documents?page=1",
+  next: null,
+  last: "/api/v1/documents?page=1",
+};
 
 describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
   beforeEach(() => {
@@ -53,7 +61,15 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
           created_at: "2026-10-25T10:00:00Z",
         },
       ],
-      meta: { total: 3, page: 1, limit: 24, total_pages: 1 },
+      meta: {
+        total: 3,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-1",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
     });
 
     renderWithProviders(<LibraryWorkspaceView />);
@@ -77,7 +93,15 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
           created_at: "2026-10-25T10:00:00Z",
         },
       ],
-      meta: { total: 1, page: 1, limit: 24, total_pages: 1 },
+      meta: {
+        total: 1,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-2",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
     });
 
     renderWithProviders(<LibraryWorkspaceView />);
@@ -115,7 +139,15 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
           created_at: "2026-10-25T10:00:00Z",
         },
       ],
-      meta: { total: 2, page: 1, limit: 24, total_pages: 1 },
+      meta: {
+        total: 2,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-3",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
     });
 
     renderWithProviders(<LibraryWorkspaceView />);

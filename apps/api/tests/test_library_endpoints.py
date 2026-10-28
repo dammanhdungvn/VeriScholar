@@ -326,7 +326,7 @@ async def test_update_folder_cyclic_hierarchy_rejected(
 
 
 @pytest.mark.asyncio
-async def test_upload_duplicate_document_reuses_existing_record(
+async def test_upload_duplicate_document_inherits_persistence(
     async_client: AsyncClient,
     auth_headers: dict[str, str],
 ) -> None:
@@ -336,11 +336,26 @@ async def test_upload_duplicate_document_reuses_existing_record(
     assert res1.status_code in (200, 201, 202)
     doc1_id = res1.json()["data"]["id"]
 
+    # Star / save to library
+    star_res = await async_client.post(
+        f"/api/v1/documents/{doc1_id}:star",
+        headers=auth_headers,
+        json={"toggle": True},
+    )
+    assert star_res.status_code == 200
+
     # 2. Upload same content second time
-    files2 = {"file": ("attention_duplicate.pdf", b"%PDF-1.4 minimal test duplicate body", "application/pdf")}
+    files2 = {
+        "file": (
+            "attention_duplicate.pdf",
+            b"%PDF-1.4 minimal test duplicate body",
+            "application/pdf",
+        )
+    }
     res2 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files2)
     assert res2.status_code in (200, 201, 202)
-    doc2_id = res2.json()["data"]["id"]
+    doc2_data = res2.json()["data"]
 
-    # Both uploads should return the exact same document ID (deduplicated)
-    assert doc1_id == doc2_id
+    # Unique document record sharing underlying CAS blob, inheriting is_persistent=True!
+    assert doc2_data["id"] != doc1_id
+    assert doc2_data["is_persistent"] is True

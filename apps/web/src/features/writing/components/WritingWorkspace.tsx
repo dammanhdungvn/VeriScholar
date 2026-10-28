@@ -275,9 +275,6 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
     workspaceMode === "dual-ai" ||
     workspaceMode === "zen-pdf";
 
-  const showAi =
-    workspaceMode === "tri-pane" || workspaceMode === "dual-ai";
-
   // Handler for forwarding surrounding context buffer to AI Assistant Chat
   const handleSelectionAddToChat = useCallback((contextBuffer: string) => {
     setIsAssistantOpen(true);

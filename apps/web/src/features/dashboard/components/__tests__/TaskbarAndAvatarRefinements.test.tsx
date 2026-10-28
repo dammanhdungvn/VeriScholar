@@ -53,11 +53,11 @@ describe("Taskbar and Avatar Refinements", () => {
       </MemoryRouter>
     );
 
-    const researchBtn = screen.getByTitle("Khám phá & Phiên đọc (Đọc & Nghiên cứu)");
-    expect(researchBtn).toBeDefined();
+    const writingBtn = screen.getByTitle("Viết paper (Agentic Overleaf)");
+    expect(writingBtn).toBeDefined();
     // Glowing border and background must be removed
-    expect(researchBtn.className).not.toContain("bg-coral-500/15");
-    expect(researchBtn.className).not.toContain("border-coral-500/25");
+    expect(writingBtn.className).not.toContain("bg-coral-500/15");
+    expect(writingBtn.className).not.toContain("border-coral-500/25");
   });
 
   it("toggles recents list when clicking Recents header", () => {

@@ -566,58 +566,20 @@ class DocumentService:
                 else:
                     raise
 
-        # 5. Check if user already owns this exact document (CAS deduplication)
-        stmt_existing_doc = (
-            select(DocumentModel)
+        # 5. Check if user already has this paper marked persistent in My Library
+        stmt_persistent_check = (
+            select(DocumentModel.is_persistent, DocumentModel.folder_id)
             .where(
                 DocumentModel.user_id == user_id,
                 DocumentModel.content_hash == content_hash,
+                DocumentModel.is_persistent.is_(True),
             )
-            .order_by(DocumentModel.created_at.desc())
+            .limit(1)
         )
-        res_existing = await db.execute(stmt_existing_doc)
-        existing_doc = res_existing.scalars().first()
-
-        if existing_doc is not None:
-            if blob is not None and blob.ref_count > 1:
-                blob.ref_count -= 1
-
-            if session_id is not None:
-                stmt_link = select(SessionDocumentModel).where(
-                    SessionDocumentModel.session_id == session_id,
-                    SessionDocumentModel.document_id == existing_doc.id,
-                )
-                res_link = await db.execute(stmt_link)
-                if res_link.scalar_one_or_none() is None:
-                    db.add(
-                        SessionDocumentModel(
-                            session_id=session_id,
-                            document_id=existing_doc.id,
-                            added_at=now,
-                        )
-                    )
-                    await db.flush()
-
-            doc_id_str = str(existing_doc.id)
-            links = DocumentLinks(
-                self_url=f"/api/v1/documents/{doc_id_str}",
-                status_url=f"/api/v1/documents/{doc_id_str}/status",
-                file_url=f"/api/v1/documents/{doc_id_str}/file",
-                parse_url=f"/api/v1/documents/{doc_id_str}:parse",
-            )
-            return DocumentUploadResponseData(
-                id=existing_doc.id,
-                filename=existing_doc.filename,
-                file_size_bytes=existing_doc.file_size_bytes,
-                content_hash=existing_doc.content_hash,
-                status=existing_doc.status,
-                stage=existing_doc.stage,
-                progress=existing_doc.progress,
-                is_persistent=existing_doc.is_persistent,
-                session_id=session_id,
-                created_at=existing_doc.created_at,
-                links=links,
-            )
+        res_persistent = await db.execute(stmt_persistent_check)
+        persistent_row = res_persistent.first()
+        is_already_persistent = persistent_row is not None
+        inherited_folder_id = persistent_row[1] if persistent_row else None
 
         # Create user Document record
         doc = DocumentModel(
@@ -632,7 +594,8 @@ class DocumentService:
             status=DocumentStatus.UPLOADED.value,
             stage=DocumentStage.QUEUED.value,
             progress=0,
-            is_persistent=False,
+            is_persistent=is_already_persistent,
+            folder_id=inherited_folder_id,
             created_at=now,
             updated_at=now,
         )

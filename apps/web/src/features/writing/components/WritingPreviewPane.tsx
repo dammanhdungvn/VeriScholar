@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
-  FileText,
   ZoomIn,
   ZoomOut,
   RefreshCw,

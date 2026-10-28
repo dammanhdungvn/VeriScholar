@@ -9,7 +9,6 @@ import {
   PanelLeft,
   Search,
   Archive,
-  BookOpen,
   CheckCircle2,
   ChevronDown,
   MoreHorizontal,
@@ -236,14 +235,6 @@ export function DashboardTaskbar({
   const pathname = location.pathname;
   const isLibrary = pathname.startsWith("/library");
   const isWriting = pathname.startsWith("/writing");
-  const isResearch =
-    !isLibrary &&
-    !isWriting &&
-    (pathname === "/dashboard" ||
-      pathname.startsWith("/dashboard/") ||
-      pathname.startsWith("/research") ||
-      pathname.startsWith("/discovery") ||
-      pathname === "/");
 
   const navItems = [
     {

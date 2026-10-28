@@ -1,6 +1,7 @@
 """Unit tests for GraphRAG Query Decomposer and Multi-Intent Router (Task 6)."""
 
 from unittest.mock import AsyncMock
+
 import pytest
 from api.services.graph_rag_router import AcademicQueryDecomposer, GraphRAGRouter
 

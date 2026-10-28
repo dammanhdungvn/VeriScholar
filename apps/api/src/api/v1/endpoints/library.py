@@ -16,8 +16,8 @@ from api.db.session import get_db
 from api.deps import get_current_user, get_graph_rag_service
 from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
-from api.services.graph_rag_service import GraphRAGService
 from api.services.graph_rag_router import GraphRAGRouter
+from api.services.graph_rag_service import GraphRAGService
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
