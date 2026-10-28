@@ -315,3 +315,120 @@ async def test_section_aware_retrieval_matches_abstract_by_prefix_and_bypasses_a
         [0.1, 0.22, 0.45, 0.35, 1],
         [0.1, 0.36, 0.45, 0.55, 1],
     ]
+
+
+@pytest.mark.asyncio
+async def test_full_section_window_expansion_in_retrieval(db_session, monkeypatch):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "api.services.embedding_service.EmbeddingService.get_embedding",
+        AsyncMock(return_value=[0.01] * 1536),
+    )
+
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Section Expansion Tester",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    doc_id = uuid4()
+    session_id = uuid4()
+
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user.id,
+        title="Attention Is All You Need",
+        filename="transformer.pdf",
+        status="completed",
+        content_hash="hash_transformer_001",
+        file_size_bytes=5000,
+    )
+    sess = ResearchSessionModel(
+        id=session_id,
+        user_id=user.id,
+        title="Session Transformer",
+    )
+    sess_doc = SessionDocumentModel(
+        session_id=session_id,
+        document_id=doc_id,
+        display_order=0,
+    )
+    db_session.add_all([doc, sess, sess_doc])
+    await db_session.flush()
+
+    # Chunks 6 to 9: Section 1 Introduction
+    # Chunk 10: Section 2 Background
+    chunks = [
+        DocumentChunkModel(
+            id=uuid4(),
+            document_id=doc_id,
+            user_id=user.id,
+            chunk_index=6,
+            page_number=2,
+            content="1 Introduction\nRecurrent neural networks, long short-term memory...",
+            token_count=120,
+        ),
+        DocumentChunkModel(
+            id=uuid4(),
+            document_id=doc_id,
+            user_id=user.id,
+            chunk_index=7,
+            page_number=2,
+            content="Recurrent models typically factor computation along the symbol positions...",
+            token_count=130,
+        ),
+        DocumentChunkModel(
+            id=uuid4(),
+            document_id=doc_id,
+            user_id=user.id,
+            chunk_index=8,
+            page_number=2,
+            content="Attention mechanisms have become an integral part of compelling sequence modeling...",
+            token_count=140,
+        ),
+        DocumentChunkModel(
+            id=uuid4(),
+            document_id=doc_id,
+            user_id=user.id,
+            chunk_index=9,
+            page_number=2,
+            content="In this work we propose the Transformer, a model architecture eschewing recurrence...",
+            token_count=150,
+        ),
+        DocumentChunkModel(
+            id=uuid4(),
+            document_id=doc_id,
+            user_id=user.id,
+            chunk_index=10,
+            page_number=2,
+            content="2 Background\nThe goal of reducing sequential computation also forms the foundation...",
+            token_count=160,
+        ),
+    ]
+    db_session.add_all(chunks)
+    await db_session.commit()
+
+    service = SessionChatService(db_session)
+    selected_chunks, citations, abstain = await service.retrieve_and_prepare_context(
+        session_id=session_id,
+        user_id=user.id,
+        question="Dịch toàn bộ phần 1 Introduction sang tiếng việt",
+        target_doc_ids=[doc_id],
+        limit=5,
+    )
+
+    assert not abstain
+    # All 4 contiguous chunks of Section 1 should be retrieved
+    retrieved_indices = [c["chunk_index"] for c in citations]
+    assert 6 in retrieved_indices
+    assert 7 in retrieved_indices
+    assert 8 in retrieved_indices
+    assert 9 in retrieved_indices
+    # Chunk 10 (Section 2) must NOT be included in the expansion
+    assert 10 not in retrieved_indices

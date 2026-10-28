@@ -1078,6 +1078,104 @@ class SessionChatService:
             return "related_work"
         return None
 
+    @staticmethod
+    def _is_full_section_query(query: str) -> bool:
+        """Detect whether the scholarly query specifically asks for a full/entire section."""
+        if not query:
+            return False
+        q = query.lower()
+        full_pattern = re.compile(
+            r"\b(toàn bộ|toan bo|tất cả|tat ca|toàn phần|toan phan|"
+            r"full|all|entire|trọn vẹn|tron ven)\b",
+            re.IGNORECASE,
+        )
+        return bool(full_pattern.search(q))
+
+    @staticmethod
+    def _filter_contiguous_section_chunks(
+        chunks: list[Any],
+        start_chunk_index: int,
+        max_chunks: int = 6,
+    ) -> list[Any]:
+        """Filter sequential chunks starting from start_chunk_index.
+
+        Checks each chunk after the first for major next-section heading regex.
+        If matched or a chunk index discontinuity is encountered, stops expansion
+        and returns prior chunks.
+        """
+        if not chunks:
+            return []
+
+        next_sec_pattern = re.compile(
+            r"^\s*(?:#+\s*)?(?:\d+\.?\s+[A-Z]|\b(?i:Background|Preliminaries|Related\s+Work|Methodology|Experiments|Results|Conclusion)\b)",
+            re.MULTILINE,
+        )
+
+        def get_idx(c: Any) -> int:
+            if isinstance(c, dict):
+                val = c.get("chunk_index")
+            else:
+                val = getattr(c, "chunk_index", None)
+            return val if val is not None else -1
+
+        def get_content(c: Any) -> str:
+            if isinstance(c, dict):
+                return c.get("content") or c.get("text_content") or ""
+            return getattr(c, "content", "") or ""
+
+        # Filter candidate chunks having chunk_index >= start_chunk_index and sort ascending
+        sorted_chunks = sorted(
+            [c for c in chunks if get_idx(c) >= start_chunk_index],
+            key=get_idx,
+        )
+
+        expanded: list[Any] = []
+        expected_idx = start_chunk_index
+
+        for chunk in sorted_chunks:
+            idx = get_idx(chunk)
+            if idx != expected_idx:
+                # Discontinuity detected (gap in sequential chunks)
+                break
+
+            # If not the first chunk in expansion, check if it hits the next section heading
+            if expanded:
+                content = get_content(chunk)
+                if next_sec_pattern.search(content):
+                    break
+
+            expanded.append(chunk)
+            expected_idx += 1
+
+            if len(expanded) >= max_chunks:
+                break
+
+        return expanded
+
+    async def _expand_contiguous_section_chunks(
+        self,
+        document_id: Any,
+        start_chunk_index: int,
+        max_chunks: int = 6,
+    ) -> list[DocumentChunkModel]:
+        """Fetch sequential chunks from DB starting at start_chunk_index
+        and filter contiguous section chunks.
+        """
+        stmt = (
+            select(DocumentChunkModel)
+            .where(
+                DocumentChunkModel.document_id == document_id,
+                DocumentChunkModel.chunk_index >= start_chunk_index,
+                DocumentChunkModel.chunk_index < start_chunk_index + max_chunks + 4,
+            )
+            .order_by(DocumentChunkModel.chunk_index.asc())
+        )
+        res = await self.db.execute(stmt)
+        chunks = list(res.scalars().all())
+        return self._filter_contiguous_section_chunks(
+            chunks, start_chunk_index=start_chunk_index, max_chunks=max_chunks
+        )
+
     async def _build_document_anchor_context(self, documents: list[DocumentModel]) -> str:
         """Build Tier-1 permanent Document Anchor Memory (Title, Authors, Abstract, TOC)."""
         if not documents:
@@ -1211,6 +1309,9 @@ class SessionChatService:
         target_section = self._detect_target_section(
             condensed_query
         ) or self._detect_target_section(question)
+        is_full_section = self._is_full_section_query(
+            condensed_query
+        ) or self._is_full_section_query(question)
         if target_section == "abstract" and target_doc_ids:
             try:
                 doc_meta_stmt = select(
@@ -1342,24 +1443,35 @@ class SessionChatService:
                 intro_rows = intro_res.all()
                 if intro_rows:
                     intro_prioritized: list[dict[str, Any]] = []
+                    seen_docs: set[Any] = set()
                     for chk, dtitle, dfilename in intro_rows:
-                        intro_prioritized.append(
-                            {
-                                "chunk_id": str(chk.id),
-                                "id": str(chk.id),
-                                "document_id": str(chk.document_id),
-                                "chunk_index": chk.chunk_index,
-                                "page_number": chk.page_number,
-                                "content": chk.content,
-                                "text_content": chk.content,
-                                "bounding_boxes": chk.bounding_boxes,
-                                "token_count": chk.token_count,
-                                "document_title": dtitle or dfilename or "Tài liệu",
-                                "filename": dfilename,
-                                "max_cosine_sim": 1.0,
-                                "rrf_score": 2.0,
-                            }
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
                         )
+                        for c in expanded or [chk]:
+                            intro_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
                     seen = {c["chunk_id"] for c in intro_prioritized}
                     combined = list(intro_prioritized)
                     for c in hybrid_candidates:
@@ -1367,9 +1479,88 @@ class SessionChatService:
                         if cid not in seen:
                             combined.append(c)
                             seen.add(cid)
-                    hybrid_candidates = combined[:limit]
+                    effective_limit = max(limit, len(intro_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
             except Exception as ex:
                 logger.debug("introduction_routing_failed", error=str(ex))
+
+        elif target_section == "methodology" and target_doc_ids:
+            try:
+                meth_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 10,
+                        or_(
+                            DocumentChunkModel.content.ilike("%Methodology%"),
+                            DocumentChunkModel.content.ilike("%Phương pháp%"),
+                            DocumentChunkModel.content.ilike("%Proposed Method%"),
+                            DocumentChunkModel.content.ilike("%Model Architecture%"),
+                            DocumentChunkModel.content.ilike("%Method%"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike("%Methodology%"), 0),
+                            (DocumentChunkModel.content.ilike("%Phương pháp%"), 1),
+                            (DocumentChunkModel.content.ilike("%Proposed Method%"), 2),
+                            (DocumentChunkModel.content.ilike("%Model Architecture%"), 3),
+                            (DocumentChunkModel.content.ilike("%Method%"), 4),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                meth_res = await self.db.execute(meth_stmt)
+                meth_rows = meth_res.all()
+                if meth_rows:
+                    meth_prioritized: list[dict[str, Any]] = []
+                    seen_docs = set()
+                    for chk, dtitle, dfilename in meth_rows:
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
+                        )
+                        for c in expanded or [chk]:
+                            meth_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
+                    seen = {c["chunk_id"] for c in meth_prioritized}
+                    combined = list(meth_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    effective_limit = max(limit, len(meth_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
+            except Exception as ex:
+                logger.debug("methodology_routing_failed", error=str(ex))
 
         elif target_section and target_section.startswith("section_") and target_doc_ids:
             try:
@@ -1403,24 +1594,35 @@ class SessionChatService:
                 sec_rows = sec_res.all()
                 if sec_rows:
                     sec_prioritized: list[dict[str, Any]] = []
+                    seen_docs = set()
                     for chk, dtitle, dfilename in sec_rows:
-                        sec_prioritized.append(
-                            {
-                                "chunk_id": str(chk.id),
-                                "id": str(chk.id),
-                                "document_id": str(chk.document_id),
-                                "chunk_index": chk.chunk_index,
-                                "page_number": chk.page_number,
-                                "content": chk.content,
-                                "text_content": chk.content,
-                                "bounding_boxes": chk.bounding_boxes,
-                                "token_count": chk.token_count,
-                                "document_title": dtitle or dfilename or "Tài liệu",
-                                "filename": dfilename,
-                                "max_cosine_sim": 1.0,
-                                "rrf_score": 2.0,
-                            }
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
                         )
+                        for c in expanded or [chk]:
+                            sec_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
                     seen = {c["chunk_id"] for c in sec_prioritized}
                     combined = list(sec_prioritized)
                     for c in hybrid_candidates:
@@ -1428,7 +1630,8 @@ class SessionChatService:
                         if cid not in seen:
                             combined.append(c)
                             seen.add(cid)
-                    hybrid_candidates = combined[:limit]
+                    effective_limit = max(limit, len(sec_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
             except Exception as ex:
                 logger.debug("section_num_routing_failed", error=str(ex))
 
@@ -3036,3 +3239,5 @@ class SessionChatService:
 _detect_formula_query = SessionChatService._detect_formula_query
 _extract_formula_symbols = SessionChatService._extract_formula_symbols
 _detect_target_section = SessionChatService._detect_target_section
+_is_full_section_query = SessionChatService._is_full_section_query
+_filter_contiguous_section_chunks = SessionChatService._filter_contiguous_section_chunks
