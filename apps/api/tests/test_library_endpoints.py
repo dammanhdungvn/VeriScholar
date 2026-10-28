@@ -323,3 +323,24 @@ async def test_update_folder_cyclic_hierarchy_rejected(
     body_desc = res_descendant.json()
     code_desc = body_desc.get("error", {}).get("code") or body_desc.get("detail", {}).get("code")
     assert code_desc == "CYCLIC_FOLDER_HIERARCHY"
+
+
+@pytest.mark.asyncio
+async def test_upload_duplicate_document_reuses_existing_record(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+) -> None:
+    # 1. Upload first time
+    files = {"file": ("attention.pdf", b"%PDF-1.4 minimal test duplicate body", "application/pdf")}
+    res1 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files)
+    assert res1.status_code in (200, 201, 202)
+    doc1_id = res1.json()["data"]["id"]
+
+    # 2. Upload same content second time
+    files2 = {"file": ("attention_duplicate.pdf", b"%PDF-1.4 minimal test duplicate body", "application/pdf")}
+    res2 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files2)
+    assert res2.status_code in (200, 201, 202)
+    doc2_id = res2.json()["data"]["id"]
+
+    # Both uploads should return the exact same document ID (deduplicated)
+    assert doc1_id == doc2_id

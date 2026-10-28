@@ -17,6 +17,8 @@ import {
   X,
   ChevronDown,
   ChevronUp,
+  SlidersHorizontal,
+  Trash2,
 } from "lucide-react";
 import {
   useDocumentsList,
@@ -88,9 +90,9 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const meta = paginatedData?.meta;
   const totalPages = meta?.total_pages ?? Math.max(1, Math.ceil((meta?.total ?? rawDocuments.length) / 24));
 
-  // Filter based on active tab and search query
+  // Filter based on active tab and search query - strict persistence for My Library
   const documents = useMemo(() => {
-    let result = rawDocuments;
+    let result = rawDocuments.filter((d) => Boolean(d.is_persistent || d.starred_at || d.folder_id));
 
     if (activeTab === "favorites") {
       result = result.filter((d) => Boolean(d.starred_at || d.folder_id));
@@ -633,28 +635,36 @@ function DocumentGrid({
                   {doc.publication_year ?? "—"}
                 </td>
                 <td className="py-3 px-4">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                    {doc.status}
-                  </span>
+                  {doc.status !== "completed" && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                      {doc.status}
+                    </span>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenParseConfig(doc);
-                    }}
-                    className="px-2 py-1 text-[11px] rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer mr-1"
-                  >
-                    Config
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => onDelete(doc.id, e)}
-                    className="px-2 py-1 text-[11px] rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      data-testid={`doc-config-btn-${doc.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenParseConfig(doc);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                      title="Tùy chọn phân tích"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`doc-delete-btn-${doc.id}`}
+                      onClick={(e) => onDelete(doc.id, e)}
+                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
+                      title="Xóa tài liệu"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -706,24 +716,30 @@ function DocumentGrid({
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-[#f0eae1] dark:border-[#262420] text-[10px] text-muted dark:text-zinc-500">
-            <span className="font-mono">{doc.status}</span>
+            <span className="font-mono">
+              {doc.status !== "completed" ? doc.status : ""}
+            </span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
+                data-testid={`doc-config-btn-${doc.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   onOpenParseConfig(doc);
                 }}
-                className="px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                title="Tùy chọn phân tích"
               >
-                Config
+                <SlidersHorizontal className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
+                data-testid={`doc-delete-btn-${doc.id}`}
                 onClick={(e) => onDelete(doc.id, e)}
-                className="px-1.5 py-0.5 rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
+                className="p-1 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
+                title="Xóa tài liệu"
               >
-                Delete
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
