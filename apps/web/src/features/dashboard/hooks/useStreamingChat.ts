@@ -158,6 +158,9 @@ export function useStreamingChat({
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      const streamStartTime = Date.now();
+      let thoughtDurationSeconds: number | undefined;
+
       let tokenQueue: string[] = [];
       let accumulatedContent = "";
       let isFlushing = false;
@@ -185,6 +188,12 @@ export function useStreamingChat({
       };
 
       const queueToken = (token: string) => {
+        if (thoughtDurationSeconds === undefined) {
+          thoughtDurationSeconds = Math.max(
+            1,
+            Math.round((Date.now() - streamStartTime) / 1000)
+          );
+        }
         tokenQueue.push(token);
         if (!isFlushing) {
           isFlushing = true;
@@ -208,6 +217,13 @@ export function useStreamingChat({
         }
         isFlushing = false;
 
+        if (thoughtDurationSeconds === undefined) {
+          thoughtDurationSeconds = Math.max(
+            1,
+            Math.round((Date.now() - streamStartTime) / 1000)
+          );
+        }
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMsgId
@@ -216,6 +232,8 @@ export function useStreamingChat({
                   content: accumulatedContent || msg.content,
                   is_streaming: false,
                   citations: citationsList.length > 0 ? citationsList : msg.citations,
+                  thought_duration_seconds:
+                    msg.thought_duration_seconds ?? thoughtDurationSeconds,
                 }
               : msg.is_streaming
               ? { ...msg, is_streaming: false }
@@ -274,12 +292,26 @@ export function useStreamingChat({
                 return;
               }
 
-              if (parsed.type === "thinking" || parsed.type === "thought") {
-                const thoughtToken = parsed.token || parsed.thought || parsed.content || "";
+              if (
+                ev.event === "reasoning" ||
+                parsed.type === "reasoning" ||
+                parsed.type === "thinking" ||
+                parsed.type === "thought"
+              ) {
+                const thoughtToken =
+                  parsed.thought || parsed.token || parsed.content || "";
+                if (typeof parsed.thought_duration_seconds === "number") {
+                  thoughtDurationSeconds = parsed.thought_duration_seconds;
+                }
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMsgId
-                      ? { ...msg, thought: (msg.thought || "") + thoughtToken }
+                      ? {
+                          ...msg,
+                          thought: (msg.thought || "") + thoughtToken,
+                          thought_duration_seconds:
+                            thoughtDurationSeconds ?? msg.thought_duration_seconds,
+                        }
                       : msg
                   )
                 );

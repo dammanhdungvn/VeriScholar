@@ -20,7 +20,6 @@ import {
   FileText,
   Maximize2,
   Minimize2,
-  Brain,
 } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
 import type { BoundingBox } from "@/types/api";
@@ -36,9 +35,9 @@ import {
 } from "../stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
-import { TypingWaveIndicator } from "@/components/shared/TypingWaveIndicator";
 import { DocumentGroundedSummaryCard } from "./DocumentGroundedSummaryCard";
 import { PresuppositionBanner } from "./PresuppositionBanner";
+import { SocraticThinkingBlock } from "./SocraticThinkingBlock";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { DocumentTabBar } from "@/features/reader/components/DocumentTabBar";
 import { ViewportControls } from "@/features/reader/components/ViewportControls";
@@ -1342,36 +1341,9 @@ export function DashboardWorkspace({
                         <PresuppositionBanner alert={message.presupposition_alert} />
                       )}
 
-                      {/* Collapsible Reasoning / Thinking Tokens if available */}
-                      {message.thought && (
-                        <details
-                          open={Boolean(message.is_streaming && !message.content)}
-                          data-testid="reasoning-accordion"
-                          className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-muted dark:text-zinc-400"
-                        >
-                          <summary className="cursor-pointer font-medium select-none flex items-center justify-between text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
-                            <div className="flex items-center gap-1.5">
-                              <Brain className="w-3.5 h-3.5 text-coral-500" />
-                              <span aria-hidden="true">Suy luận</span>
-                              <span className="sr-only">Suy luận học thuật</span>
-                            </div>
-                            {message.is_streaming && !message.content && (
-                              <span className="text-3xs text-coral-600 dark:text-coral-400 animate-pulse">
-                                Đang tư duy...
-                              </span>
-                            )}
-                          </summary>
-                          <div className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
-                            {message.thought}
-                          </div>
-                        </details>
-                      )}
-
-                      {/* Pre-content Typing Wave Indicator */}
-                      {message.is_streaming && !message.content && !message.thought && (
-                        <div className="py-1">
-                          <TypingWaveIndicator />
-                        </div>
+                      {/* Socratic Thinking Block with Agent Activity Stepper */}
+                      {(message.thought || (message.is_streaming && !message.content)) && (
+                        <SocraticThinkingBlock message={message} />
                       )}
 
                       {/* Formatted Assistant Body with Inline Citations */}

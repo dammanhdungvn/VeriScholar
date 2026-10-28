@@ -27,6 +27,7 @@ export interface ChatMessage {
   created_at: string;
   is_streaming?: boolean;
   thought?: string;
+  thought_duration_seconds?: number;
   citations?: CitationBadgeData[];
   presupposition_alert?: PresuppositionAlertData;
 }
