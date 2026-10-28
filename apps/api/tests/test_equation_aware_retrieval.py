@@ -212,3 +212,85 @@ async def test_section_aware_retrieval_handles_instruction_typo(db_session, monk
     # Priority rank 1 must be the 1. Introduction chunk
     assert citations[0]["chunk_index"] == 1
     assert "1. Introduction" in selected_chunks[0]["content"]
+
+
+@pytest.mark.asyncio
+async def test_evidence_and_citations_capped_at_five(db_session, monkeypatch):
+    monkeypatch.setattr(
+        "api.services.embedding_service.EmbeddingService.get_embedding",
+        AsyncMock(return_value=[0.01] * 1536),
+    )
+
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Cap Tester",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    doc_id = uuid4()
+    session_id = uuid4()
+
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user.id,
+        title="Cap Test Paper",
+        filename="cap_paper.pdf",
+        status="completed",
+        content_hash="hash_cap_001",
+        file_size_bytes=4096,
+        parsed_metadata={},
+    )
+    sess = ResearchSessionModel(
+        id=session_id,
+        user_id=user.id,
+        title="Session Cap Test",
+    )
+    sess_doc = SessionDocumentModel(
+        session_id=session_id,
+        document_id=doc_id,
+        display_order=0,
+    )
+    db_session.add_all([doc, sess, sess_doc])
+    await db_session.flush()
+
+    # Create 10 chunks with content matching Attention
+    chunks = []
+    for i in range(10):
+        chunks.append(
+            DocumentChunkModel(
+                id=uuid4(),
+                document_id=doc_id,
+                user_id=user.id,
+                chunk_index=i,
+                page_number=1 + i // 2,
+                content=f"Attention mechanisms allow models to focus on relevant tokens {i}...",
+                bounding_boxes=[[0.1, 0.08 * i, 0.9, 0.08 * i + 0.06, 1 + i // 2]],
+                token_count=50,
+            )
+        )
+    db_session.add_all(chunks)
+    await db_session.commit()
+
+    service = SessionChatService(db_session)
+    selected_chunks, citations, abstain = await service.retrieve_and_prepare_context(
+        session_id=session_id,
+        user_id=user.id,
+        question="Giải thích cơ chế Attention",
+        target_doc_ids=[doc_id],
+        limit=5,
+    )
+
+    assert not abstain
+    assert len(citations) <= 5
+    assert len(selected_chunks) <= 5
+
+
+def test_socratic_prompt_contains_equation_katex_rule():
+    prompt = SessionChatService._build_socratic_system_prompt()
+    assert "$$" in prompt
+    assert "công thức" in prompt.lower()
