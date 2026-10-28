@@ -490,11 +490,11 @@ export function AcademicMarkdownRenderer({
         );
       })}
 
-      {/* Streaming Caret */}
-      {isStreaming && (
+      {/* Subtle Inline Streaming Caret: Only renders immediately adjacent to streaming text, never on empty stream */}
+      {isStreaming && Boolean(content && content.trim()) && (
         <span
           data-testid="typing-caret"
-          className="inline-block w-1.5 h-4 ml-1 rounded-[1px] bg-[#cc785c] dark:bg-coral-400 align-middle animate-pulse"
+          className="inline-block w-1 h-3.5 ml-1 rounded-full bg-[#cc785c]/80 dark:bg-coral-400/80 align-middle animate-pulse"
           aria-hidden="true"
         />
       )}

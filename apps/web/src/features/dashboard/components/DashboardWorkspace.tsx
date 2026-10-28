@@ -407,10 +407,17 @@ export function DashboardWorkspace({
     }
   }, [activeBbox, setCurrentPage]);
 
-  // Scroll active Bbox into view
+  // Scroll active Bbox into view locally inside viewer container
   useEffect(() => {
-    if (activeBbox && activeBbox[4] && bboxRef.current && typeof bboxRef.current.scrollIntoView === "function") {
-      bboxRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (activeBbox && activeBbox[4] && bboxRef.current) {
+      const container = bboxRef.current.closest<HTMLElement>(".overflow-auto, .overflow-y-auto");
+      if (container && typeof container.scrollTo === "function") {
+        const containerRect = container.getBoundingClientRect();
+        const bboxRect = bboxRef.current.getBoundingClientRect();
+        const relativeTop = bboxRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - container.clientHeight / 2 + bboxRect.height / 2;
+        container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+      }
     }
   }, [activeBbox]);
 
@@ -724,9 +731,10 @@ export function DashboardWorkspace({
   return (
     <div
       ref={workspaceContainerRef}
+      data-testid="dashboard-workspace-root"
       onContextMenu={handleContextMenu}
       className={cn(
-        "flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
+        "flex-1 flex flex-col md:flex-row h-screen overflow-hidden overflow-x-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
         isDraggingSplit && "select-none cursor-col-resize"
       )}
     >
@@ -1207,7 +1215,8 @@ export function DashboardWorkspace({
           <>
             <div
               ref={chatScrollRef}
-              className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-6 scrollbar-none"
+              data-testid="chat-scroll-container"
+              className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5 space-y-6 scrollbar-none"
             >
               {/* Header Badge */}
               <div className="flex items-center justify-between pb-2 border-b border-hairline/60 dark:border-[#282622]">
@@ -1455,7 +1464,10 @@ export function DashboardWorkspace({
             </div>
 
             {/* Bottom-Docked Input Bar */}
-            <div className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10">
+            <div
+              data-testid="chat-composer-container"
+              className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10 overflow-x-hidden max-w-full"
+            >
               {/* Short Prompt Suggestions - Sleek Horizontal Pills at the Bottom */}
               {messages.length === 0 && !isGenerating && (
                 <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 mb-2.5 relative z-20 pointer-events-auto">
