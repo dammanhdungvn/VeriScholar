@@ -23,4 +23,73 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     render(<AcademicMarkdownRenderer content="AI finished drafting." isStreaming={false} />);
     expect(screen.queryByTestId("typing-caret")).toBeNull();
   });
+
+  it("does not render citation-sources-footer while streaming", () => {
+    const mockCitations = [
+      {
+        citation_id: "cit_1",
+        page: 1,
+        paper_title: "Paper One",
+        bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
+      },
+    ];
+
+    render(
+      <AcademicMarkdownRenderer
+        content="Đang suy luận và trích dẫn theo tài liệu [1]..."
+        citations={mockCitations}
+        isStreaming={true}
+      />
+    );
+
+    expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
+  });
+
+  it("renders citation-sources-footer only after streaming finishes", () => {
+    const mockCitations = [
+      {
+        citation_id: "cit_1",
+        page: 1,
+        paper_title: "Paper One",
+        bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
+      },
+    ];
+
+    render(
+      <AcademicMarkdownRenderer
+        content="Đã trả lời xong theo tài liệu [1]."
+        citations={mockCitations}
+        isStreaming={false}
+      />
+    );
+
+    expect(screen.getByTestId("citation-sources-footer")).toBeInTheDocument();
+  });
+
+  it("does not dump citations when text has no inline citation tokens", () => {
+    const mockCitations = [
+      {
+        citation_id: "cit_1",
+        page: 1,
+        paper_title: "Paper One",
+        bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
+      },
+      {
+        citation_id: "cit_2",
+        page: 2,
+        paper_title: "Paper Two",
+        bbox: [0.1, 0.2, 0.8, 0.4, 2] as [number, number, number, number, number],
+      },
+    ];
+
+    render(
+      <AcademicMarkdownRenderer
+        content="Không tìm thấy thông tin của mục này trong tài liệu."
+        citations={mockCitations}
+        isStreaming={false}
+      />
+    );
+
+    expect(screen.queryByTestId("citation-sources-footer")).toBeNull();
+  });
 });

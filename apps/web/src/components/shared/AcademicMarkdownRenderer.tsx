@@ -183,15 +183,9 @@ export function AcademicMarkdownRenderer({
 
     const hasInlineTokens = matches.length > 0;
 
-    // If no inline tokens in text, but citations are provided and not a refusal,
-    // include all citations so references are displayed with [1], [2] etc.
+    // If no inline tokens in text, do not dump backend candidate chunks
     if (!hasInlineTokens) {
-      return citations.map((cit, idx) => ({
-        citation: cit,
-        label: String(idx + 1),
-        citId: cit.citation_id || `cit_${idx + 1}`,
-        hasInlineToken: false,
-      }));
+      return [];
     }
 
     const seenKeys = new Set<string>();
@@ -236,6 +230,8 @@ export function AcademicMarkdownRenderer({
       if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
       return a.label.localeCompare(b.label);
     });
+
+    return result.slice(0, 5);
   }, [content, citations]);
 
   return (
@@ -503,7 +499,7 @@ export function AcademicMarkdownRenderer({
       )}
 
       {/* Structured "Nguồn trích dẫn" (References) Section with Numbered Chips */}
-      {referenceList.length > 0 && (
+      {!isStreaming && referenceList.length > 0 && (
         <div
           data-testid="citation-sources-footer"
           className="mt-4 pt-3 border-t border-[#e5dfd4] dark:border-[#38332c]/80"

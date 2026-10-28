@@ -656,7 +656,7 @@ export function PdfCanvasViewer({
         onMouseUp={handleMouseUp}
         onMouseMove={resetHudTimer}
         className={cn(
-          "flex-1 relative overflow-y-auto overflow-x-hidden px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "flex-1 relative overflow-y-auto overflow-x-auto px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           containerThemeBg
         )}
       >
