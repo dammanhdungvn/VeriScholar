@@ -28,6 +28,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     const mockCitations = [
       {
         citation_id: "cit_1",
+        paper_id: "doc-1",
         page: 1,
         paper_title: "Paper One",
         bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
@@ -49,6 +50,7 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     const mockCitations = [
       {
         citation_id: "cit_1",
+        paper_id: "doc-1",
         page: 1,
         paper_title: "Paper One",
         bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
@@ -70,12 +72,14 @@ describe("AcademicMarkdownRenderer isStreaming caret", () => {
     const mockCitations = [
       {
         citation_id: "cit_1",
+        paper_id: "doc-1",
         page: 1,
         paper_title: "Paper One",
         bbox: [0.1, 0.2, 0.8, 0.4, 1] as [number, number, number, number, number],
       },
       {
         citation_id: "cit_2",
+        paper_id: "doc-2",
         page: 2,
         paper_title: "Paper Two",
         bbox: [0.1, 0.2, 0.8, 0.4, 2] as [number, number, number, number, number],
