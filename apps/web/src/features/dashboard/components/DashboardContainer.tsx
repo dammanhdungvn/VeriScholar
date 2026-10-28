@@ -127,6 +127,10 @@ export function DashboardContainer() {
           syncedSessionIdRef.current = detail.id;
           useReaderStore.getState().setCurrentPage(detail.viewport_state.page);
         }
+      } else {
+        useReaderStore.getState().setOpenDocumentIds([]);
+        useReaderStore.getState().setActiveDocumentId(null);
+        useWorkspaceStore.getState().setDocument(null, "");
       }
     }
   }, [sessionDetailRes?.data, setDocument]);
@@ -137,6 +141,10 @@ export function DashboardContainer() {
       useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
       const activeDocId = activeSession.document_ids[0];
       setDocument(activeDocId, activeSession.title);
+    } else if (activeSession && activeSession.document_ids?.length === 0) {
+      useReaderStore.getState().setOpenDocumentIds([]);
+      useReaderStore.getState().setActiveDocumentId(null);
+      useWorkspaceStore.getState().setDocument(null, "");
     }
   }, [activeSession, setDocument]);
 
@@ -152,6 +160,8 @@ export function DashboardContainer() {
     setActiveBbox(null);
     resetChat();
     resetWorkspace(); // Reset pending upload and document status
+    useWorkspaceStore.getState().resetWorkspace();
+    useReaderStore.getState().resetReader();
     navigate("/dashboard");
   };
 
