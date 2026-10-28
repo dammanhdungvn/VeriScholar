@@ -241,6 +241,7 @@ export function DashboardWorkspace({
   const rotationDeg = useReaderStore((s) => s.rotationDeg);
   const rotateClockwise = useReaderStore((s) => s.rotateClockwise);
   const activeBboxReader = useReaderStore((s) => s.activeBbox);
+  const activeBboxesReader = useReaderStore((s) => s.activeBboxes);
   const setActiveCitation = useReaderStore((s) => s.setActiveCitation);
 
   // Active Bbox Synchronization
@@ -858,6 +859,7 @@ export function DashboardWorkspace({
             zoomRatio={zoomRatio}
             rotationDeg={rotationDeg}
             activeBbox={activeBbox}
+            activeBboxes={activeBboxesReader}
             onPageCountDetected={setTotalPages}
             onClearHighlight={() => {
               setActiveBboxStore(null);
