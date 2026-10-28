@@ -180,6 +180,22 @@ class SessionChatService:
 
         recent_turns = chat_history[-5:]
 
+        # 1. Resolve numeric list selections (e.g. "1", "câu 1", "mục 2", "2)")
+        num_match = re.match(
+            r"^(?:câu\s+|mục\s+|ý\s+|phần\s+|số\s+)?(\d+)[\.\)]?$", stripped_query, re.IGNORECASE
+        )
+        if num_match:
+            item_num = int(num_match.group(1))
+            for turn in reversed(recent_turns):
+                role = turn.get("role") or ("user" if "question" in turn else "assistant")
+                if role == "assistant":
+                    content = turn.get("content") or turn.get("answer") or ""
+                    for line in content.split("\n"):
+                        cleaned_line = line.strip().lstrip("-* ").strip()
+                        m = re.match(rf"^{item_num}[\.\)]\s*(.+)$", cleaned_line)
+                        if m:
+                            return f"Giải thích chi tiết về: {m.group(1).strip()}"
+
         is_test_env = settings.ENVIRONMENT == "test" or "InMemory" in type(self.db).__name__
         has_llm_key = bool(
             settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.get_secret_value().strip()
@@ -193,6 +209,11 @@ class SessionChatService:
             r"\bbài báo này\b",
             r"\bnghiên cứu này\b",
             r"\bthuật toán này\b",
+            r"\bmô hình đó\b",
+            r"\bphương pháp đó\b",
+            r"\bbài báo đó\b",
+            r"\bnghiên cứu đó\b",
+            r"\bthuật toán đó\b",
             r"\bở trên\b",
             r"\bvừa nói\b",
             r"\bđó\b",
@@ -203,6 +224,8 @@ class SessionChatService:
             r"\bthis method\b",
             r"\bthis paper\b",
             r"\bthis architecture\b",
+            r"\bthat model\b",
+            r"\bthat method\b",
         ]
         has_anaphora = any(
             re.search(pat, stripped_query, re.IGNORECASE) for pat in anaphora_patterns
@@ -295,6 +318,35 @@ class SessionChatService:
                     candidate_entities.extend(words[:2])
                     break
 
+        elliptical_triggers = [
+            "chi tiết hơn",
+            "nói rõ hơn",
+            "giải thích thêm",
+            "cụ thể hơn",
+            "tại sao",
+            "vì sao",
+            "tiếp tục",
+            "more detail",
+        ]
+        is_elliptical = any(trig in stripped_query.lower() for trig in elliptical_triggers) or (
+            len(stripped_query.split()) <= 3
+            and not any(
+                kw in stripped_query.lower()
+                for kw in ["là gì", "what is", "who", "where", "khi nào"]
+            )
+        )
+
+        if is_elliptical and not has_anaphora:
+            last_user_query = ""
+            for turn in reversed(recent_turns):
+                role = turn.get("role") or ("user" if "question" in turn else "assistant")
+                if role == "user":
+                    last_user_query = turn.get("content") or turn.get("question") or ""
+                    if last_user_query:
+                        break
+            if last_user_query:
+                return f"{stripped_query} liên quan đến: {last_user_query.strip('?')}"
+
         if candidate_entities and has_anaphora:
             top_entity = candidate_entities[0]
             condensed = stripped_query
@@ -304,6 +356,18 @@ class SessionChatService:
             )
             condensed = re.sub(
                 r"\bphương pháp này\b", f"phương pháp {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bmô hình đó\b", f"mô hình {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bphương pháp đó\b", f"phương pháp {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bthuật toán đó\b", f"thuật toán {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bnghiên cứu đó\b", f"nghiên cứu {top_entity}", condensed, flags=re.IGNORECASE
             )
             condensed = re.sub(
                 r"\bbài báo này\b", f"bài báo {top_entity}", condensed, flags=re.IGNORECASE
@@ -329,6 +393,7 @@ class SessionChatService:
             )
             condensed = re.sub(r"\bnó\b", top_entity, condensed, flags=re.IGNORECASE)
             condensed = re.sub(r"\bit\b", top_entity, condensed, flags=re.IGNORECASE)
+            condensed = re.sub(r"\bđó\b", top_entity, condensed, flags=re.IGNORECASE)
             return condensed
 
         return stripped_query
