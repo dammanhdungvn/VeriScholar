@@ -20,7 +20,9 @@ import {
   FileText,
   Maximize2,
   Minimize2,
+  X,
 } from "lucide-react";
+import { VerticalEdgeDock } from "./VerticalEdgeDock";
 import type { ChatMessage } from "@/types/dashboard";
 import type { BoundingBox } from "@/types/api";
 import { useTheme } from "@/hooks/useTheme";
@@ -93,6 +95,7 @@ interface DashboardWorkspaceProps {
   documentCount?: number;
   createdAt?: string;
   onDeletedSession?: () => void;
+  initialAssistantOpen?: boolean;
 }
 
 
@@ -113,7 +116,9 @@ export function DashboardWorkspace({
   documentCount = 1,
   createdAt = new Date().toISOString(),
   onDeletedSession,
+  initialAssistantOpen = true,
 }: Partial<DashboardWorkspaceProps> = {}) {
+  const [isAssistantOpen, setIsAssistantOpen] = useState(initialAssistantOpen);
   // Store States
   const activeBboxStore = useDashboardStore((s) => s.activeBbox);
   const setActiveBboxStore = useDashboardStore((s) => s.setActiveBbox);
@@ -792,8 +797,9 @@ export function DashboardWorkspace({
       {/* 1. LEFT PANE: MULTI-PAPER DEEP READER CANVAS (1 - 5 PAPERS)              */}
       {/* ========================================================================= */}
       <section
+        data-testid="paper-reader-container"
         style={
-          zenMode === "pdf"
+          !isAssistantOpen || zenMode === "pdf"
             ? { width: "100%" }
             : zenMode === "workspace"
             ? { display: "none" }
@@ -802,7 +808,9 @@ export function DashboardWorkspace({
               } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full w-full md:w-[var(--split-ratio)] md:min-w-[320px] border-b-0 md:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden transition-[width] duration-75",
+          "flex flex-col h-full overflow-hidden transition-[width] duration-75",
+          isAssistantOpen && zenMode === "none" && "w-full md:w-[var(--split-ratio)] md:min-w-[320px] border-b-0 md:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18]",
+          (!isAssistantOpen || zenMode === "pdf") && "w-full md:w-full border-r-0 bg-[#faf8f4] dark:bg-[#1c1b18]",
           zenMode === "workspace" && "hidden md:hidden",
           zenMode === "pdf" && "w-full",
           mobileActiveView === "reader" ? "flex" : "hidden md:flex"
@@ -980,8 +988,8 @@ export function DashboardWorkspace({
         />
       </section>
 
-      {/* Draggable Divider (Tablet & Desktop, Hidden in Zen Modes and Mobile) */}
-      {zenMode === "none" && (
+      {/* Draggable Divider (Tablet & Desktop, Hidden in Zen Modes, Mobile and when Assistant is closed) */}
+      {zenMode === "none" && isAssistantOpen && (
         <div
           role="separator"
           tabIndex={0}
@@ -1007,19 +1015,21 @@ export function DashboardWorkspace({
       {/* 2. RIGHT PANE: SOCRATIC COPILOT, SMART NOTES, SUMMARY & KNOWLEDGE DIGEST */}
       {/* ========================================================================= */}
       <section
+        data-testid="assistant-pane-container"
         onContextMenu={handleContextMenu}
         style={
-          zenMode === "workspace"
-            ? { width: "100%" }
-            : zenMode === "pdf"
+          !isAssistantOpen || zenMode === "pdf"
             ? { display: "none" }
+            : zenMode === "workspace"
+            ? { width: "100%" }
             : ({
                 "--split-ratio-right": `${100 - splitRatio}%`,
               } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full w-full md:w-[var(--split-ratio-right)] md:min-w-[320px] bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
-          zenMode === "pdf" && "hidden md:hidden",
+          "flex flex-col h-full bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
+          (!isAssistantOpen || zenMode === "pdf") && "hidden md:hidden",
+          isAssistantOpen && zenMode === "none" && "w-full md:w-[var(--split-ratio-right)] md:min-w-[320px]",
           zenMode === "workspace" && "w-full",
           mobileActiveView === "workspace" ? "flex" : "hidden md:flex"
         )}
@@ -1040,101 +1050,36 @@ export function DashboardWorkspace({
             </button>
           </div>
         )}
-        {/* Right Pane Navigation Tab Bar */}
-        <header className="h-11 px-2.5 sm:px-3 bg-white/70 dark:bg-[#1c1b18]/70 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-1.5 sm:gap-2">
-          {/* 5 Tab Switchers with horizontal scroll and no shrink */}
-          <nav
-            role="tablist"
-            aria-label="Các khung tính năng học thuật"
-            className="flex items-center gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1 touch-pan-x"
-          >
+        {/* Assistant Header (alphaXiv Minimalist Header) */}
+        <header className="h-11 px-3 bg-white/80 dark:bg-[#1c1b18]/80 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2">
+          {/* Left: Assistant Title & (+) New Chat pill */}
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+              <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
+                Assistant
+              </h2>
+            </div>
+
+            {/* Pill: (+) New Chat */}
             <button
               type="button"
-              role="tab"
-              aria-selected={activeRightTab === "chat"}
-              onClick={() => setActiveRightTab("chat")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "chat"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
+              data-testid="new-chat-btn"
+              onClick={() => {
+                setActiveRightTab("chat");
+                onResetChat();
+              }}
+              title="Bắt đầu đoạn chat mới"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium bg-[#f5f1ea] dark:bg-[#262420] text-ink dark:text-zinc-200 hover:bg-[#eee8dd] dark:hover:bg-[#302c26] border border-[#e5dfd4] dark:border-[#38332c] transition-colors cursor-pointer shadow-2xs"
             >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span className="sr-only">Đối thoại</span>
-              <span className="whitespace-nowrap">Chat</span>
+              <span className="text-[#cc785c] font-bold">(+)</span>
+              <span>New Chat</span>
             </button>
+          </div>
 
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "notes"}
-              onClick={() => setActiveRightTab("notes")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "notes"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <BookMarked className="w-3.5 h-3.5" />
-              <span className="sr-only">Sổ tay</span>
-              <span className="whitespace-nowrap">Notes</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "summary"}
-              onClick={() => setActiveRightTab("summary")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "summary"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span className="sr-only">Tóm tắt</span>
-              <span className="whitespace-nowrap">Summary</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "structure"}
-              onClick={() => setActiveRightTab("structure")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "structure"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <ListTree className="w-3.5 h-3.5" />
-              <span className="sr-only">Mục lục</span>
-              <span className="hidden sm:inline whitespace-nowrap">Outline</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "references"}
-              onClick={() => setActiveRightTab("references")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "references"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <Quote className="w-3.5 h-3.5" />
-              <span className="sr-only">Tham khảo</span>
-              <span className="hidden sm:inline whitespace-nowrap">References</span>
-            </button>
-          </nav>
-
-          {/* Right Actions: Cài đặt phiên, Mode Dark/Light, Làm mới hội thoại */}
+          {/* Right Actions: Cài đặt phiên, Mode Dark/Light, Zen Mode, Đóng Assistant */}
           <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
             {/* Desktop wide tools: Cài đặt, Theme */}
             <div className="hidden md:flex items-center gap-1.5 shrink-0">
@@ -1195,17 +1140,20 @@ export function DashboardWorkspace({
               )}
             </button>
 
-            {/* Right Action: Reset Chat when in chat tab */}
-            {activeRightTab === "chat" && (
-              <button
-                type="button"
-                onClick={onResetChat}
-                title="Làm mới hội thoại"
-                className="p-1.5 rounded-lg hover:bg-[#f0ece3] dark:hover:bg-[#282622] text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-100 transition-colors cursor-pointer shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
+            {/* Close Assistant Button (✕) */}
+            <button
+              type="button"
+              data-testid="close-assistant-btn"
+              onClick={() => {
+                setIsAssistantOpen(false);
+                setMobileActiveView("reader");
+              }}
+              aria-label="Đóng Assistant"
+              title="Đóng Assistant (✕)"
+              className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
           </div>
         </header>
 
@@ -1895,6 +1843,37 @@ export function DashboardWorkspace({
             )}
           </button>
         </div>
+      )}
+
+      {/* Vertical Edge Dock for Secondary Utilities */}
+      <div className="absolute top-14 right-3 z-30">
+        <VerticalEdgeDock
+          onToggleInfo={() => setIsStructureSheetOpen((prev) => !prev)}
+          onToggleNotes={() => {
+            if (!isAssistantOpen) setIsAssistantOpen(true);
+            setActiveRightTab(activeRightTab === "notes" ? "chat" : "notes");
+          }}
+          onToggleAssistant={() => setIsAssistantOpen((prev) => !prev)}
+          isAssistantOpen={isAssistantOpen}
+        />
+      </div>
+
+      {/* Floating AI Assistant FAB (rendered when assistant is closed) */}
+      {!isAssistantOpen && (
+        <button
+          type="button"
+          data-testid="floating-assistant-fab"
+          onClick={() => {
+            setIsAssistantOpen(true);
+            setMobileActiveView("workspace");
+          }}
+          aria-label="Mở Assistant"
+          title="Mở Assistant"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#cc785c] hover:bg-[#b8674d] text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+        >
+          <Sparkles className="w-5 h-5 transition-transform group-hover:rotate-12" />
+          <span className="text-xs font-semibold tracking-wide">Assistant</span>
+        </button>
       )}
     </div>
   );
