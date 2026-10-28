@@ -799,6 +799,86 @@ class SessionChatService:
         # tau < 0.20 -> ACTIVE_ABSTENTION
         return "ACTIVE_ABSTENTION", candidate_chunks, True
 
+    async def _build_document_anchor_context(self, documents: list[DocumentModel]) -> str:
+        """Build Tier-1 permanent Document Anchor Memory (Title, Authors, Abstract, TOC)."""
+        if not documents:
+            return ""
+
+        sections_out: list[str] = [
+            "### TÀI LIỆU NGHIÊN CỨU HIỆN TẠI (DOCUMENT ANCHOR MEMORY)\n"
+            "Dưới đây là thông tin định danh và tóm tắt chính thức của các tài liệu nghiên cứu "
+            "đang mở trong phiên làm việc. Đây là chân lý tham chiếu gốc của tài liệu, "
+            "hãy sử dụng thông tin này làm nền tảng ngữ cảnh bất biến:"
+        ]
+
+        for doc in documents:
+            title = doc.title or doc.filename or "Tài liệu không tên"
+            authors_str = (
+                ", ".join(doc.authors)
+                if isinstance(doc.authors, list)
+                else (str(doc.authors) if doc.authors else "Không rõ tác giả")
+            )
+            year_doi = f"Năm: {doc.publication_year or 'N/A'} | DOI: {doc.doi or 'N/A'}"
+            meta = doc.parsed_metadata or {}
+
+            # Extract official abstract
+            abstract = meta.get("abstract") or ""
+            if not abstract and isinstance(meta.get("structure"), dict):
+                abstract = meta.get("structure", {}).get("abstract", "")
+
+            # If still empty and document is completed, try finding abstract from earliest chunks
+            if not abstract and doc.id and hasattr(self, "db") and self.db is not None:
+                try:
+                    chk_stmt = (
+                        select(DocumentChunkModel.content)
+                        .where(
+                            DocumentChunkModel.document_id == doc.id,
+                            DocumentChunkModel.chunk_index <= 5,
+                            DocumentChunkModel.content.ilike("%abstract%"),
+                        )
+                        .order_by(DocumentChunkModel.chunk_index.asc())
+                        .limit(1)
+                    )
+                    chk_res = await self.db.execute(chk_stmt)
+                    chk_content = chk_res.scalar_one_or_none()
+                    if chk_content:
+                        abstract = chk_content.strip()
+                except Exception as ex:
+                    logger.debug("could_not_extract_chunk_abstract", error=str(ex))
+
+            doc_block = [
+                f"#### Tài liệu: {title}",
+                f"- **Tác giả:** {authors_str}",
+                f"- **Định danh:** {year_doi}",
+            ]
+
+            if abstract:
+                doc_block.append(
+                    f"- **[BẢN TÓM TẮT CHÍNH THỨC (OFFICIAL ABSTRACT)]:**\n> {abstract.strip()}"
+                )
+
+            # Extract Table of Contents / Section headings
+            raw_sections = (
+                meta.get("structure", {}).get("sections", [])
+                if isinstance(meta.get("structure"), dict)
+                else meta.get("sections", [])
+            )
+            if isinstance(raw_sections, list) and raw_sections:
+                toc_lines = []
+                for s in raw_sections[:25]:
+                    if isinstance(s, dict) and s.get("title"):
+                        p_num = s.get("page_number")
+                        page_str = f" (Trang {p_num})" if p_num else ""
+                        toc_lines.append(f"  - {s.get('title')}{page_str}")
+                if toc_lines:
+                    doc_block.append(
+                        "- **Khung cấu trúc bài báo (Table of Contents):**\n" + "\n".join(toc_lines)
+                    )
+
+            sections_out.append("\n".join(doc_block))
+
+        return "\n\n".join(sections_out)
+
     async def retrieve_and_prepare_context(
         self,
         session_id: UUID,
@@ -1768,14 +1848,16 @@ class SessionChatService:
         except Exception as ex:
             logger.debug("could_not_load_turn_history", error=str(ex))
 
+        active_documents: list[DocumentModel] = []
         if target_doc_ids:
+            doc_stmt = select(DocumentModel).where(DocumentModel.id.in_(target_doc_ids))
+            doc_res = await self.db.execute(doc_stmt)
+            active_documents = list(doc_res.scalars().all())
+
             # Check for abstract-only or parsing documents
-            abs_stmt = select(DocumentModel).where(
-                DocumentModel.id.in_(target_doc_ids),
-                DocumentModel.status.in_(["abstract_only", "parsing"]),
-            )
-            abs_res = await self.db.execute(abs_stmt)
-            abstract_only_docs = list(abs_res.scalars().all())
+            abstract_only_docs = [
+                d for d in active_documents if d.status in ("abstract_only", "parsing")
+            ]
             if abstract_only_docs:
                 doc_titles = ", ".join(f"'{d.title or d.filename}'" for d in abstract_only_docs)
                 abstract_warning = (
@@ -1930,6 +2012,11 @@ class SessionChatService:
                     'reason="Lý do cần đọc bài tham khảo trước" />'
                     f"{abstract_warning}"
                 )
+
+                # Inject Tier-1 Document Anchor Memory (Title, Authors, Official Abstract & Outline)
+                doc_anchor = await self._build_document_anchor_context(active_documents)
+                if doc_anchor:
+                    system_prompt += f"\n\n{doc_anchor}"
 
                 evidence_blocks: list[dict[str, Any]] = []
                 for cit in citations:
