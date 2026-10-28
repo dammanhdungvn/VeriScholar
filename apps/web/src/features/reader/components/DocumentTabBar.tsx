@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, FileText, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, X, FileText, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DocumentListItem } from "@/types/document";
 import {
@@ -68,7 +68,6 @@ export function DocumentTabBar({
           const doc = docMap.get(docId);
           const isActive = docId === activeDocumentId;
           const displayName = doc?.title || doc?.filename || `Bài báo ${docId.slice(0, 6)}`;
-          const isPersistent = doc?.is_persistent ?? false;
 
           return (
             <div
