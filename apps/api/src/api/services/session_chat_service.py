@@ -919,27 +919,161 @@ class SessionChatService:
         return "ACTIVE_ABSTENTION", candidate_chunks, True
 
     @staticmethod
+    def _extract_formula_symbols(query: str) -> list[str]:
+        """Extract mathematical entities, symbols, or function calls from a query."""
+        symbols: list[str] = []
+        # 1. Function calls like A(H), Attention(Q, K, V), softmax(x)
+        call_matches = re.findall(r"\b([A-Za-z]+(?:\s*\([^)]*\)))", query)
+        for m in call_matches:
+            cleaned = m.strip()
+            if cleaned not in symbols:
+                symbols.append(cleaned)
+
+        # 2. Mathematical variable patterns: e.g. e_{ij}, W_Q, W_K, W_V, h_n, v_n, alpha, softmax
+        var_matches = re.findall(r"\b([A-Za-z][a-zA-Z0-9]*(?:_[A-Za-z0-9{}]+)?)\b", query)
+        for v in var_matches:
+            if v.lower() not in {
+                "tôi",
+                "cho",
+                "trong",
+                "paper",
+                "bài",
+                "báo",
+                "tìm",
+                "lấy",
+                "hãy",
+                "giải",
+                "thích",
+                "ý",
+                "nghĩa",
+                "the",
+                "and",
+                "for",
+                "what",
+                "is",
+            }:
+                # Discard standalone single characters like 'a' or 'h'
+                if len(v) <= 1:
+                    continue
+                if v not in symbols:
+                    symbols.append(v)
+
+        # 3. Specific math operators or functions
+        for kw in ["attention", "softmax", "sigmoid", "layernorm", "multihead", "relu", "gelu"]:
+            if re.search(rf"\b{kw}\b", query, re.IGNORECASE):
+                if kw not in [s.lower() for s in symbols]:
+                    symbols.append(kw)
+
+        return symbols
+
+    @staticmethod
+    def _detect_formula_query(query: str) -> dict[str, Any] | None:
+        """Detect whether query asks for an equation or formula, with typo and symbol extraction."""
+        q = query.lower()
+        math_intent_keywords = [
+            "công thức",
+            "cong thuc",
+            "formula",
+            "equation",
+            "phương trình",
+            "phuong trinh",
+            "biểu thức",
+            "bieu thuc",
+            "tính toán",
+            "toán học",
+            "hàm số",
+        ]
+        has_math_intent = any(kw in q for kw in math_intent_keywords)
+
+        # Typo correction: attendsion -> Attention, soft max -> softmax
+        normalized_names: list[str] = []
+        if re.search(r"\b(?:attendsion|atention|attension)\b", q):
+            normalized_names.append("Attention")
+            has_math_intent = True
+        elif re.search(r"\battention\b", q):
+            normalized_names.append("Attention")
+
+        if re.search(r"\b(?:soft\s+max|soft-max)\b", q):
+            normalized_names.append("Softmax")
+            has_math_intent = True
+        elif re.search(r"\bsoftmax\b", q):
+            normalized_names.append("Softmax")
+
+        # Equation numbers like (1), (2), (3) or "công thức 1", "eq. 3"
+        eq_numbers: list[str] = []
+        eq_pattern = (
+            r"(?:\((?P<num>\d+[a-z]?)\)|"
+            r"(?:công thức|phương trình|equation|eq\.?)\s*(?P<num2>\d+[a-z]?))"
+        )
+        for eq_match in re.finditer(eq_pattern, q):
+            n = eq_match.group("num") or eq_match.group("num2")
+            if n:
+                has_math_intent = True
+                if f"({n})" not in eq_numbers:
+                    eq_numbers.append(f"({n})")
+                if n not in eq_numbers:
+                    eq_numbers.append(n)
+
+        # Check for symbol calls like A(H)
+        has_call = bool(re.search(r"\b[A-Za-z]\s*\([A-Za-z0-9,\s]+\)", query))
+        if has_call:
+            has_math_intent = True
+
+        if not has_math_intent:
+            return None
+
+        symbols = SessionChatService._extract_formula_symbols(query)
+        for name in normalized_names:
+            if name not in symbols and name.lower() not in [s.lower() for s in symbols]:
+                symbols.append(name)
+
+        return {
+            "is_formula": True,
+            "symbols": symbols,
+            "equation_numbers": eq_numbers,
+            "normalized_names": normalized_names,
+        }
+
+    @staticmethod
     def _detect_target_section(query: str) -> str | None:
         """Detect whether the scholarly query specifically targets a well-known paper section."""
         q = query.lower()
-        # Abstract / Executive summary
-        if any(kw in q for kw in ["abstract", "tóm tắt", "tom tat", "sơ lược", "khái quát"]):
-            return "abstract"
-        # Introduction / Motivation
+
+        # 1. Numbered sections first (e.g. "mục 1", "phần 1", "1. instruction")
+        if (
+            re.search(r"\b1[\.\s]+instruction\b", q)
+            or re.search(r"\b(?:mục|phần|section)\s*1\b", q)
+            or re.search(r"\bmục\s*instruction\b", q)
+        ):
+            return "introduction"
+
+        sec_num_match = re.search(r"\b(?:mục|phần|section)\s*(\d+)\b", q)
+        if sec_num_match:
+            num = int(sec_num_match.group(1))
+            if num == 1:
+                return "introduction"
+            return f"section_{num}"
+
+        # 2. Introduction / Motivation
         if any(kw in q for kw in ["introduction", "mở đầu", "mo dau", "đặt vấn đề", "giới thiệu"]):
             return "introduction"
-        # Conclusion / Summary
+
+        # 3. Abstract / Executive summary
+        if any(kw in q for kw in ["abstract", "tóm tắt", "tom tat", "sơ lược", "khái quát"]):
+            return "abstract"
+
+        # 4. Conclusion / Summary
         if any(
             kw in q for kw in ["conclusion", "kết luận", "ket luan", "tổng kết", "hướng phát triển"]
         ):
             return "conclusion"
-        # Methodology / Proposed Architecture
+        # 5. Methodology / Proposed Architecture
         if any(
             kw in q
             for kw in ["methodology", "kiến trúc mô hình", "phương pháp đề xuất", "thuật toán"]
         ):
             return "methodology"
-        # Related Work
+        # 6. Related Work
         if any(kw in q for kw in ["related work", "nghiên cứu liên quan", "tổng quan tài liệu"]):
             return "related_work"
         return None
@@ -1172,6 +1306,213 @@ class SessionChatService:
                     hybrid_candidates = combined[:limit]
             except Exception as ex:
                 logger.debug("section_aware_routing_failed", error=str(ex))
+
+        elif target_section == "introduction" and target_doc_ids:
+            try:
+                intro_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 3,
+                        or_(
+                            DocumentChunkModel.content.ilike("%1. Introduction%"),
+                            DocumentChunkModel.content.ilike("%1 Introduction%"),
+                            DocumentChunkModel.content.ilike("%1.Introduction%"),
+                            DocumentChunkModel.content.ilike("%Introduction%"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike("%1. Introduction%"), 0),
+                            (DocumentChunkModel.content.ilike("%1 Introduction%"), 1),
+                            (DocumentChunkModel.content.ilike("%1.Introduction%"), 2),
+                            (DocumentChunkModel.content.ilike("%Introduction%"), 3),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                intro_res = await self.db.execute(intro_stmt)
+                intro_rows = intro_res.all()
+                if intro_rows:
+                    intro_prioritized: list[dict[str, Any]] = []
+                    for chk, dtitle, dfilename in intro_rows:
+                        intro_prioritized.append(
+                            {
+                                "chunk_id": str(chk.id),
+                                "id": str(chk.id),
+                                "document_id": str(chk.document_id),
+                                "chunk_index": chk.chunk_index,
+                                "page_number": chk.page_number,
+                                "content": chk.content,
+                                "text_content": chk.content,
+                                "bounding_boxes": chk.bounding_boxes,
+                                "token_count": chk.token_count,
+                                "document_title": dtitle or dfilename or "Tài liệu",
+                                "filename": dfilename,
+                                "max_cosine_sim": 1.0,
+                                "rrf_score": 2.0,
+                            }
+                        )
+                    seen = {c["chunk_id"] for c in intro_prioritized}
+                    combined = list(intro_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("introduction_routing_failed", error=str(ex))
+
+        elif target_section and target_section.startswith("section_") and target_doc_ids:
+            try:
+                sec_num = target_section.replace("section_", "")
+                sec_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 8,
+                        or_(
+                            DocumentChunkModel.content.ilike(f"%{sec_num}. %"),
+                            DocumentChunkModel.content.ilike(f"%{sec_num} %"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike(f"%{sec_num}. %"), 0),
+                            (DocumentChunkModel.content.ilike(f"%{sec_num} %"), 1),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                sec_res = await self.db.execute(sec_stmt)
+                sec_rows = sec_res.all()
+                if sec_rows:
+                    sec_prioritized: list[dict[str, Any]] = []
+                    for chk, dtitle, dfilename in sec_rows:
+                        sec_prioritized.append(
+                            {
+                                "chunk_id": str(chk.id),
+                                "id": str(chk.id),
+                                "document_id": str(chk.document_id),
+                                "chunk_index": chk.chunk_index,
+                                "page_number": chk.page_number,
+                                "content": chk.content,
+                                "text_content": chk.content,
+                                "bounding_boxes": chk.bounding_boxes,
+                                "token_count": chk.token_count,
+                                "document_title": dtitle or dfilename or "Tài liệu",
+                                "filename": dfilename,
+                                "max_cosine_sim": 1.0,
+                                "rrf_score": 2.0,
+                            }
+                        )
+                    seen = {c["chunk_id"] for c in sec_prioritized}
+                    combined = list(sec_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("section_num_routing_failed", error=str(ex))
+
+        # 3c. Formula & Equation-Aware Symbolic Retrieval Boost
+        formula_info = self._detect_formula_query(question) or self._detect_formula_query(
+            condensed_query
+        )
+        if formula_info and target_doc_ids:
+            try:
+                eq_cases = []
+                score_cases = []
+                for sym in formula_info.get("symbols", []):
+                    clean_sym = sym.strip()
+                    if clean_sym and len(clean_sym) >= 2:
+                        # Match exact symbol in text content
+                        eq_cases.append(DocumentChunkModel.content.contains(clean_sym))
+                        eq_cases.append(DocumentChunkModel.content.ilike(f"%{clean_sym}%"))
+                        score_cases.append((DocumentChunkModel.content.contains(clean_sym), 0))
+                        score_cases.append((DocumentChunkModel.content.ilike(f"%{clean_sym}%"), 1))
+                for eq_num in formula_info.get("equation_numbers", []):
+                    clean_num = eq_num.strip()
+                    if clean_num:
+                        eq_cases.append(DocumentChunkModel.content.ilike(f"%({clean_num})%"))
+                        eq_cases.append(DocumentChunkModel.content.ilike(f"%{clean_num}%"))
+                        score_cases.append(
+                            (DocumentChunkModel.content.ilike(f"%({clean_num})%"), 0)
+                        )
+                        score_cases.append((DocumentChunkModel.content.ilike(f"%{clean_num}%"), 2))
+
+                if eq_cases:
+                    order_expr = (
+                        case(*score_cases, else_=9).asc()
+                        if score_cases
+                        else DocumentChunkModel.chunk_index.asc()
+                    )
+                    eq_stmt = (
+                        select(
+                            DocumentChunkModel,
+                            DocumentModel.title,
+                            DocumentModel.filename,
+                        )
+                        .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                        .where(
+                            DocumentChunkModel.document_id.in_(target_doc_ids),
+                            or_(*eq_cases),
+                        )
+                        .order_by(
+                            order_expr,
+                            DocumentChunkModel.chunk_index.asc(),
+                        )
+                        .limit(3)
+                    )
+                    eq_res = await self.db.execute(eq_stmt)
+                    eq_rows = eq_res.all()
+                    if eq_rows:
+                        eq_prioritized: list[dict[str, Any]] = []
+                        for chk, dtitle, dfilename in eq_rows:
+                            eq_prioritized.append(
+                                {
+                                    "chunk_id": str(chk.id),
+                                    "id": str(chk.id),
+                                    "document_id": str(chk.document_id),
+                                    "chunk_index": chk.chunk_index,
+                                    "page_number": chk.page_number,
+                                    "content": chk.content,
+                                    "text_content": chk.content,
+                                    "bounding_boxes": chk.bounding_boxes,
+                                    "token_count": chk.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 3.0,
+                                }
+                            )
+                        seen = {c["chunk_id"] for c in eq_prioritized}
+                        combined = list(eq_prioritized)
+                        for c in hybrid_candidates:
+                            cid = str(c.get("chunk_id") or c.get("id"))
+                            if cid not in seen:
+                                combined.append(c)
+                                seen.add(cid)
+                        hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("formula_symbolic_boost_failed", error=str(ex))
 
         selected_chunks: list[dict[str, Any]] = []
         citations: list[dict[str, Any]] = []
@@ -2647,3 +2988,9 @@ class SessionChatService:
         trace_span.score(name="groundedness", value=1.0 if out_guard.is_grounded else 0.0)
         trace_span.score(name="citations_count", value=float(len(citations)))
         trace_span.__exit__(None, None, None)
+
+
+# Module-level aliases for direct imports and backward compatibility
+_detect_formula_query = SessionChatService._detect_formula_query
+_extract_formula_symbols = SessionChatService._extract_formula_symbols
+_detect_target_section = SessionChatService._detect_target_section
