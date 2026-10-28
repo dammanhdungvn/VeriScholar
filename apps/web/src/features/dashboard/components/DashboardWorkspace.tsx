@@ -368,38 +368,20 @@ export function DashboardWorkspace({
   const addSessionDocMutation = useAddSessionDocumentMutation();
   const createNoteMutation = useCreateNoteMutation();
 
-  // Auto-select latest/first real document if none is actively selected and no session is active
-  useEffect(() => {
-    if (!activeSessionId && documentsData?.data && documentsData.data.length > 0) {
-      if (!activeDocumentId || activeDocumentId === "doc-default") {
-        const firstDoc = documentsData.data[0];
-        setActiveDocumentId(firstDoc.id);
-        setDocument(firstDoc.id, firstDoc.title || firstDoc.filename);
-      }
-    }
-  }, [activeSessionId, documentsData?.data, activeDocumentId, setActiveDocumentId, setDocument]);
-
   const currentDocTitle =
     documentDetail?.title ||
     workspaceDocTitle ||
-    documentsData?.data?.[0]?.title ||
-    documentsData?.data?.[0]?.filename ||
     "Tài liệu nghiên cứu";
 
   // Effective Documents List for Multi-Paper Tab Bar
   const effectiveOpenIds = useMemo(() => {
     if (openDocumentIds.length > 0) return openDocumentIds;
     if (activeDocumentId && activeDocumentId !== "doc-default") return [activeDocumentId];
-    if (documentsData?.data && documentsData.data.length > 0) {
-      return [documentsData.data[0].id];
-    }
-    if (workspaceDocId && workspaceDocId !== "doc-default") {
-      return [workspaceDocId];
-    }
     return [];
-  }, [openDocumentIds, activeDocumentId, documentsData, workspaceDocId]);
+  }, [openDocumentIds, activeDocumentId]);
 
   const effectiveDocuments: DocumentListItem[] = useMemo(() => {
+    if (effectiveOpenIds.length === 0) return [];
     if (documentsData?.data && documentsData.data.length > 0) {
       return documentsData.data;
     }
@@ -416,7 +398,7 @@ export function DashboardWorkspace({
       ];
     }
     return [];
-  }, [documentsData, workspaceDocId, currentDocTitle]);
+  }, [effectiveOpenIds.length, documentsData, workspaceDocId, currentDocTitle]);
 
   // Page Sync when activeBbox changes
   useEffect(() => {
