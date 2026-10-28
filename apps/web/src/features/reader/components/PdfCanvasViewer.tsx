@@ -620,7 +620,7 @@ export function PdfCanvasViewer({
   }[colorTheme];
 
   return (
-    <div className="flex-1 flex w-full h-full overflow-hidden relative select-text">
+    <div className="flex-1 flex w-full h-full overflow-hidden relative select-none">
       {/* 1. Left Thumbnail Sidebar Drawer */}
       <PdfThumbnailSidebar
         isOpen={isThumbnailsOpen}
