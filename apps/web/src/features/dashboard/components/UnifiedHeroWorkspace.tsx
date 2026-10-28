@@ -190,9 +190,9 @@ export function UnifiedHeroWorkspace({
           : "justify-center my-auto"
       }`}
     >
-      {/* 1. Academic Header & Workspace (Radical Minimalism, Rule Item 4) */}
-      <div className="flex flex-col items-center text-center mb-6">
-        <div className="w-11 h-11 rounded-2xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-2 shadow-xs flex items-center justify-center mb-3">
+      {/* 1. Academic Header & Workspace (Linear/Claude clean horizontal alignment) */}
+      <div className="workspace-header-title flex flex-row items-center justify-center gap-3 mb-6">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white dark:bg-[#24221f] border border-[#e5dfd4] dark:border-[#38332c] p-1.5 shadow-xs flex items-center justify-center shrink-0">
           <AcademicLogo size="sm" inverted={isDark} showWordmark={false} />
         </div>
         <h1 className="font-sans text-2xl sm:text-3xl md:text-4xl tracking-tight text-ink dark:text-[#f7f5ef] font-semibold">

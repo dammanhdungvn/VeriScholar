@@ -24,6 +24,21 @@ describe("UnifiedHeroWorkspace Component", () => {
     expect(screen.queryByTestId("toggle-reasoning-btn")).not.toBeInTheDocument();
   });
 
+  it("renders workspace logo horizontally aligned with the Workspace title", () => {
+    const { container } = render(
+      <UnifiedHeroWorkspace
+        inputText=""
+        onChangeText={vi.fn()}
+        onSendChat={vi.fn()}
+        onIngestFile={vi.fn()}
+        onOpenPaper={vi.fn()}
+      />
+    );
+    const titleContainer = container.querySelector(".workspace-header-title");
+    expect(titleContainer).not.toBeNull();
+    expect(titleContainer).toHaveClass("flex-row");
+  });
+
   it("switches to chat mode and renders reasoning control button", () => {
     render(
       <UnifiedHeroWorkspace
