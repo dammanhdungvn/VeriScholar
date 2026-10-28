@@ -1715,10 +1715,9 @@ class SessionChatService:
                     chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
                     matched_content = getattr(chk0, "content", "")
 
-            # Preserve full academic content up to a generous 12,000 char safety ceiling (never truncate legitimate paragraphs)
-            snippet_content = (
-                matched_content[:12000] if matched_content else "(Nội dung trang)"
-            )
+            # Preserve full academic content up to generous 12k safety ceiling
+            # (never truncate legitimate paragraphs)
+            snippet_content = matched_content[:12000] if matched_content else "(Nội dung trang)"
             evidence_blocks.append(
                 {
                     "citation_id": cid,
