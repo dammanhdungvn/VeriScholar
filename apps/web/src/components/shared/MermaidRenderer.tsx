@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import mermaid from "mermaid";
-import { Check, Copy, Network } from "lucide-react";
+import { Check, Copy, Download, Image as ImageIcon, Network } from "lucide-react";
 
 interface MermaidRendererProps {
   chart: string;
@@ -89,6 +89,96 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDownloadSvg = () => {
+    let svgSource = svgContent;
+    const svgEl = containerRef.current?.querySelector("svg");
+    if (svgEl) {
+      svgSource = new XMLSerializer().serializeToString(svgEl);
+    }
+    if (!svgSource) return;
+
+    if (!svgSource.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgSource = svgSource.replace(
+        /^<svg/,
+        '<svg xmlns="http://www.w3.org/2000/svg"'
+      );
+    }
+
+    const blob = new Blob([svgSource], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "diagram.svg";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPng = () => {
+    let svgSource = svgContent;
+    const svgEl = containerRef.current?.querySelector("svg");
+    if (svgEl) {
+      svgSource = new XMLSerializer().serializeToString(svgEl);
+    }
+    if (!svgSource) return;
+
+    if (!svgSource.match(/^<svg[^>]+xmlns="http:\/\/www\.w3\.org\/2000\/svg"/)) {
+      svgSource = svgSource.replace(
+        /^<svg/,
+        '<svg xmlns="http://www.w3.org/2000/svg"'
+      );
+    }
+
+    const svgBlob = new Blob([svgSource], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      try {
+        const bbox = svgEl?.getBoundingClientRect();
+        const svgWidth =
+          bbox && bbox.width > 0
+            ? bbox.width
+            : parseFloat(svgEl?.getAttribute("width") || "0") || img.naturalWidth || 800;
+        const svgHeight =
+          bbox && bbox.height > 0
+            ? bbox.height
+            : parseFloat(svgEl?.getAttribute("height") || "0") || img.naturalHeight || 600;
+
+        const scale = 2; // 2x vector scale
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(Math.round(svgWidth * scale), 200);
+        canvas.height = Math.max(Math.round(svgHeight * scale), 150);
+
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          const isDark = document.documentElement.classList.contains("dark");
+          ctx.fillStyle = isDark ? "#181816" : "#ffffff";
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          const pngUrl = canvas.toDataURL("image/png");
+          const a = document.createElement("a");
+          a.href = pngUrl;
+          a.download = "diagram.png";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
+      } catch (err) {
+        console.error("Failed to export Mermaid PNG:", err);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+    };
+    img.src = url;
+  };
+
   if (renderError) {
     return (
       <div className="my-3 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 p-3 text-xs font-mono text-rose-700 dark:text-rose-300">
@@ -96,11 +186,12 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
           <span>Lỗi kết xuất sơ đồ Mermaid</span>
           <button
             type="button"
+            data-testid="copy-mermaid-btn"
             onClick={handleCopy}
             className="inline-flex items-center gap-1 text-2xs hover:underline cursor-pointer"
           >
             {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3" />}
-            Sao chép mã
+            <span>{copied ? "Đã chép" : "Sao chép mã"}</span>
           </button>
         </div>
         <pre className="overflow-x-auto text-2xs whitespace-pre-wrap">{chart}</pre>
@@ -120,24 +211,49 @@ export function MermaidRenderer({ chart, className }: MermaidRendererProps) {
           <Network className="w-3.5 h-3.5 text-primary dark:text-coral-400" />
           <span>Sơ đồ kiến trúc & Mindmap</span>
         </div>
-        <button
-          type="button"
-          onClick={handleCopy}
-          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-soft dark:hover:bg-[#2b2722] transition-colors cursor-pointer"
-          title="Sao chép cú pháp Mermaid"
-        >
-          {copied ? (
-            <>
-              <Check className="w-3 h-3 text-emerald-500" />
-              <span>Đã chép</span>
-            </>
-          ) : (
-            <>
-              <Copy className="w-3 h-3" />
-              <span>Sao chép mã</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            data-testid="download-svg-btn"
+            onClick={handleDownloadSvg}
+            disabled={!svgContent}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-soft dark:hover:bg-[#2b2722] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Tải ảnh vector SVG"
+          >
+            <Download className="w-3 h-3" />
+            <span>Tải SVG</span>
+          </button>
+          <button
+            type="button"
+            data-testid="download-png-btn"
+            onClick={handleDownloadPng}
+            disabled={!svgContent}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-soft dark:hover:bg-[#2b2722] transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Tải ảnh PNG độ phân giải cao"
+          >
+            <ImageIcon className="w-3 h-3" />
+            <span>Tải PNG</span>
+          </button>
+          <button
+            type="button"
+            data-testid="copy-mermaid-btn"
+            onClick={handleCopy}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-2xs font-sans text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-surface-soft dark:hover:bg-[#2b2722] transition-colors cursor-pointer"
+            title="Sao chép cú pháp Mermaid"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3 text-emerald-500" />
+                <span>Đã chép</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-3 h-3" />
+                <span>Sao chép mã</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div
