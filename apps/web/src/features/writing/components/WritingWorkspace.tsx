@@ -51,8 +51,16 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
   const [editorRatio, setEditorRatio] = useState(50);
   const [isDraggingEditor, setIsDraggingEditor] = useState(false);
   const [targetScrollLine, setTargetScrollLine] = useState<number | null>(null);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
   const mainWorkspaceRef = useRef<HTMLDivElement>(null);
   const workspaceContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync assistant drawer state with mode & mobile tab
+  useEffect(() => {
+    if (workspaceMode === "tri-pane" || workspaceMode === "dual-ai" || mobileActiveTab === "assistant") {
+      setIsAssistantOpen(true);
+    }
+  }, [workspaceMode, mobileActiveTab]);
 
   // Drag handler for Sidebar Width relative to workspace container
   useEffect(() => {
@@ -272,11 +280,9 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
 
   // Handler for forwarding surrounding context buffer to AI Assistant Chat
   const handleSelectionAddToChat = useCallback((contextBuffer: string) => {
-    if (workspaceMode === "dual-code" || workspaceMode === "zen-code" || workspaceMode === "zen-pdf") {
-      setWorkspaceMode("tri-pane");
-    }
+    setIsAssistantOpen(true);
     setAssistantPrompt(contextBuffer);
-  }, [workspaceMode, setWorkspaceMode, setAssistantPrompt]);
+  }, [setAssistantPrompt]);
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
@@ -435,45 +441,54 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
               </div>
             )}
 
-            {/* Column 3: AI Writing Assistant */}
-            {showAi && (
-              <div
-                className={cn(
-                  "flex-col relative min-w-0 h-full",
-                  mobileActiveTab === "assistant" ? "flex w-full" : "hidden md:flex"
-                )}
-              >
-                <WritingAssistantPane
-                  onClose={() => {
-                    setWorkspaceMode("dual-code");
-                    if (mobileActiveTab === "assistant") {
-                      setMobileActiveTab("editor");
-                    }
-                  }}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Floating AI Chat Bubble when Assistant is closed */}
-      {!showAi && (
+      {/* Socratic Assistant Overlay Drawer (420px slide-out) */}
+      {isAssistantOpen && (
+        <>
+          <div
+            data-testid="writing-assistant-backdrop"
+            onClick={() => setIsAssistantOpen(false)}
+            className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-2xs transition-opacity animate-in fade-in"
+          />
+          <div
+            data-testid="writing-assistant-drawer"
+            className="fixed inset-y-0 right-0 w-full sm:w-[420px] max-w-[90vw] shadow-2xl z-40 bg-[#fbf9f5] dark:bg-[#181715] border-l border-[#ece8df] dark:border-[#2a2824] flex flex-col animate-in slide-in-from-right duration-200"
+          >
+            <WritingAssistantPane
+              onClose={() => {
+                setIsAssistantOpen(false);
+                if (mobileActiveTab === "assistant") {
+                  setMobileActiveTab("editor");
+                }
+                if (workspaceMode === "tri-pane") {
+                  setWorkspaceMode("dual-code");
+                }
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Socratic Assistant Floating Action Button (FAB) at bottom right */}
+      {!isAssistantOpen && (
         <div className="fixed bottom-5 right-5 z-30 pointer-events-auto">
           <button
             type="button"
-            data-testid="floating-ai-chat-bubble"
+            data-testid="writing-assistant-fab"
             onClick={() => {
-              setWorkspaceMode("tri-pane");
+              setIsAssistantOpen(true);
               if (typeof window !== "undefined" && window.innerWidth < 768) {
                 setMobileActiveTab("assistant");
               }
             }}
-            className="h-10 px-4 rounded-full bg-white dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#38332c] hover:border-coral-500/50 hover:bg-coral-500/10 text-ink dark:text-zinc-100 shadow-xl flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
-            title="Mở Trợ lý AI (Chat AI)"
+            className="h-10 px-4 rounded-full bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xl flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+            title="Mở Trợ lý Socratic Assistant"
           >
-            <Sparkles className="w-4 h-4 text-coral-500 group-hover:rotate-12 transition-transform" />
-            <span>Chat AI</span>
+            <Sparkles className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
+            <span>Socratic Assistant</span>
           </button>
         </div>
       )}

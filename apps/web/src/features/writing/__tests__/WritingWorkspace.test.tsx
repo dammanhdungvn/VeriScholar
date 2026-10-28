@@ -65,6 +65,9 @@ class MockIntersectionObserver {
 window.IntersectionObserver = MockIntersectionObserver as any;
 globalThis.IntersectionObserver = MockIntersectionObserver as any;
 
+// Helper to render with MemoryRouter
+const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
 describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
   const mockDraft: Draft = {
     id: "draft-456",
@@ -129,17 +132,29 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     });
   });
 
-  it("1. Renders 3 columns workspace (Editor, PDF Preview, AI Assistant) in tri-pane mode", () => {
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+  it("renders single smart Recompile button and removes bulky clear-cache action bar", async () => {
+    renderWithRouter(<WritingWorkspace />);
+    expect(screen.getByTestId("recompile-btn")).toBeInTheDocument();
+    expect(screen.queryByText(/Bản Dựng PDF Trực Tiếp/i)).toBeNull();
+    expect(screen.queryByText(/🧹 Xóa đệm & Dựng lại/i)).toBeNull();
+  });
 
-    // Verify 3 columns are in the document
+  it("renders Socratic Assistant floating action button at bottom right", async () => {
+    renderWithRouter(<WritingWorkspace />);
+    const fab = screen.getByTestId("writing-assistant-fab");
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
+    expect(screen.getByTestId("writing-assistant-drawer")).toBeInTheDocument();
+  });
+
+  it("1. Renders 2 columns workspace (Editor, PDF Preview) with Assistant in drawer", () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Verify Editor & Preview are in the document
     expect(screen.getByTestId("writing-editor-textarea")).toBeInTheDocument();
     expect(screen.getByTestId("writing-preview-pane")).toBeInTheDocument();
-    expect(screen.getByText("Trợ lý Học thuật AI")).toBeInTheDocument();
+    // Assistant FAB is present
+    expect(screen.getByTestId("writing-assistant-fab")).toBeInTheDocument();
   });
 
   it("2. Supports file tab switching between main.tex and references.bib", () => {
@@ -183,12 +198,12 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     });
   });
 
-  it("4. Action button [🧹 Xóa đệm & Dựng lại] calls draftsApi.recompileClearCache", async () => {
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+  it("4. Action [Clear cache & Recompile] calls draftsApi.recompileClearCache", async () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Click recompile dropdown trigger
+    const dropdownTrigger = await screen.findByTestId("recompile-dropdown-trigger");
+    fireEvent.click(dropdownTrigger);
 
     const clearCacheBtn = await screen.findByTestId("recompile-clear-cache-btn");
     expect(clearCacheBtn).toBeInTheDocument();
@@ -247,11 +262,10 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       });
     });
 
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+    renderWithRouter(<WritingWorkspace />);
+
+    // Open assistant drawer via FAB
+    fireEvent.click(screen.getByTestId("writing-assistant-fab"));
 
     const promptInput = screen.getByPlaceholderText(/Yêu cầu AI/i);
     fireEvent.change(promptInput, { target: { value: "Viết lại phần tóm tắt" } });
@@ -283,11 +297,10 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       version: 4,
     });
 
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+    renderWithRouter(<WritingWorkspace />);
+
+    // Open assistant drawer via FAB
+    fireEvent.click(screen.getByTestId("writing-assistant-fab"));
 
     const undoBtn = screen.getByTestId("undo-draft-btn");
     expect(undoBtn).toBeInTheDocument();
