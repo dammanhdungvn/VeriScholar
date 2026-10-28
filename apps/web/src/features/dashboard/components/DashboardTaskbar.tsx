@@ -11,6 +11,12 @@ import {
   Archive,
   BookOpen,
   CheckCircle2,
+  ChevronDown,
+  MoreHorizontal,
+  Pin,
+  Mail,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -54,6 +60,8 @@ export function DashboardTaskbar({
   const [filterArchived, setFilterArchived] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
+  const [isRecentsCollapsed, setIsRecentsCollapsed] = useState(false);
+  const [activeMenuSessionId, setActiveMenuSessionId] = useState<string | null>(null);
 
   const displayedSessions = useMemo(() => {
     return sessions.filter((session) => {
@@ -199,9 +207,14 @@ export function DashboardTaskbar({
             type="button"
             onClick={() => handleItemClick(onNewSession)}
             title="Đoạn chat mới"
-            className="w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1"
+            className={cn(
+              "flex items-center text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1",
+              isExpanded
+                ? "w-full min-h-[44px] md:min-h-0 md:h-9 rounded-xl"
+                : "w-10 h-10 aspect-square rounded-full mx-auto justify-center p-0"
+            )}
           >
-            <div className="w-10 min-h-[44px] md:min-h-0 md:h-9 shrink-0 flex items-center justify-center">
+            <div className={cn("shrink-0 flex items-center justify-center", isExpanded ? "w-10 min-h-[44px] md:min-h-0 md:h-9" : "w-10 h-10")}>
               <Plus className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div
@@ -227,9 +240,9 @@ export function DashboardTaskbar({
                 onClick={() => handleItemClick(item.onClick)}
                 title={item.title}
                 className={cn(
-                  "w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none",
+                  "w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none",
                   item.isActive
-                    ? "bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-500/25 font-bold"
+                    ? "text-coral-700 dark:text-coral-300 font-bold"
                     : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420]"
                 )}
               >
@@ -278,14 +291,21 @@ export function DashboardTaskbar({
                 className="w-full pl-6 pr-2 py-1 rounded-lg bg-canvas dark:bg-[#141311] border border-hairline focus:border-coral-500 outline-none text-[11px] font-sans text-ink dark:text-zinc-200"
               />
             </div>
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="font-semibold text-muted uppercase tracking-wider font-mono">
-                {filterArchived ? "Đã lưu trữ" : "Gần đây"} ({displayedSessions.length})
-              </span>
+            <div className="flex items-center justify-between text-[11px] pt-1">
+              <button
+                type="button"
+                data-testid="recents-collapse-toggle"
+                onClick={() => setIsRecentsCollapsed(!isRecentsCollapsed)}
+                className="flex items-center gap-1.5 font-semibold text-muted hover:text-ink dark:hover:text-zinc-200 cursor-pointer focus:outline-none"
+              >
+                <span>Recents</span>
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isRecentsCollapsed && "-rotate-90")} />
+                <span className="text-[10px] text-muted font-normal">({displayedSessions.length})</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setFilterArchived(!filterArchived)}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer text-[10px] ${
                   filterArchived
                     ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold"
                     : "text-muted hover:text-ink"
@@ -298,47 +318,113 @@ export function DashboardTaskbar({
             </div>
           </div>
 
-          <div className="px-2 pt-1 pb-1 space-y-1 overflow-y-auto max-h-[calc(100vh-340px)] scrollbar-none">
-            {displayedSessions.length === 0 ? (
-              <div className="py-6 text-center text-muted text-[11px]">
-                {searchQuery.trim() ? "Không tìm thấy phiên" : filterArchived ? "Không có phiên lưu trữ" : "Chưa có phiên nào"}
-              </div>
-            ) : (
-              displayedSessions.map((session) => {
-                const isActive = session.id === activeSessionId;
-                return (
-                  <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => handleItemClick(() => onSelectSession(session.id))}
-                    title={session.title}
-                    className={`w-full text-left flex items-center gap-2.5 px-3 py-2 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
-                      isActive
-                        ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
-                        : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
-                    }`}
-                  >
-                    {isActive && (
-                      <span className="absolute left-1 top-2 bottom-2 w-1 rounded-full bg-coral-500" />
-                    )}
-                    <MessageSquare
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
-                      }`}
-                    />
-                    <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">
-                      {session.title}
-                    </span>
-                    {session.is_archived && (
-                      <span title="Phiên đã hết hạn lưu trữ (Archived)">
-                        <Archive className="w-3 h-3 text-amber-500 shrink-0" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
+          {!isRecentsCollapsed && (
+            <div className="px-2 pt-1 pb-1 space-y-1 overflow-y-auto max-h-[calc(100vh-340px)] scrollbar-none">
+              {displayedSessions.length === 0 ? (
+                <div className="py-6 text-center text-muted text-[11px]">
+                  {searchQuery.trim() ? "Không tìm thấy phiên" : filterArchived ? "Không có phiên lưu trữ" : "Chưa có phiên nào"}
+                </div>
+              ) : (
+                displayedSessions.map((session) => {
+                  const isActive = session.id === activeSessionId;
+                  const isMenuOpen = activeMenuSessionId === session.id;
+                  return (
+                    <div key={session.id} className="relative group">
+                      <button
+                        type="button"
+                        onClick={() => handleItemClick(() => onSelectSession(session.id))}
+                        title={session.title}
+                        className={cn(
+                          "w-full text-left flex items-center gap-2.5 px-3 py-2 pr-7 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer relative overflow-hidden focus:outline-none",
+                          isActive
+                            ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
+                            : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
+                        )}
+                      >
+                        {isActive && (
+                          <span className="absolute left-1 top-2 bottom-2 w-1 rounded-full bg-coral-500" />
+                        )}
+                        <MessageSquare
+                          className={cn(
+                            "w-3.5 h-3.5 shrink-0",
+                            isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
+                          )}
+                        />
+                        <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">
+                          {session.title}
+                        </span>
+                        {session.is_archived && (
+                          <span title="Phiên đã hết hạn lưu trữ (Archived)">
+                            <Archive className="w-3 h-3 text-amber-500 shrink-0" />
+                          </span>
+                        )}
+                      </button>
+
+                      {/* More (...) Button */}
+                      <button
+                        type="button"
+                        data-testid={`session-more-btn-${session.id}`}
+                        aria-label={`Tùy chọn ${session.title}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuSessionId(isMenuOpen ? null : session.id);
+                        }}
+                        className={cn(
+                          "absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-[#e8e3d8] dark:hover:bg-[#33302a] transition-all cursor-pointer z-10",
+                          isMenuOpen ? "opacity-100 bg-[#e8e3d8] dark:bg-[#33302a]" : "opacity-0 group-hover:opacity-100"
+                        )}
+                      >
+                        <MoreHorizontal className="w-3.5 h-3.5" />
+                      </button>
+
+                      {/* Context Menu Popup (Image 2 style: Pin, Mark as unread, Rename, Delete) */}
+                      {isMenuOpen && (
+                        <div
+                          data-testid={`session-context-menu-${session.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-0 top-full mt-1 z-50 w-44 p-1 rounded-xl bg-white dark:bg-[#201e1b] border border-[#e5dfd4] dark:border-[#38332c] shadow-xl text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuSessionId(null)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                          >
+                            <Pin className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>Ghim</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuSessionId(null)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                          >
+                            <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>Đánh dấu chưa đọc</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuSessionId(null)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                          >
+                            <Pencil className="w-3.5 h-3.5 text-zinc-500" />
+                            <span>Đổi tên</span>
+                          </button>
+                          <div className="my-1 border-t border-hairline dark:border-[#2f2b26]" />
+                          <button
+                            type="button"
+                            onClick={() => setActiveMenuSessionId(null)}
+                            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer font-medium"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                            <span>Xóa</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       </div>
 
