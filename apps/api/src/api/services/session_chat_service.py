@@ -1092,24 +1092,94 @@ class SessionChatService:
         return bool(full_pattern.search(q))
 
     @staticmethod
+    def _is_next_section_header(line: str, start_section_num: int | None = None) -> bool:
+        """Check if a line is a genuine subsequent section heading, ignoring body enumerations."""
+        if not line:
+            return False
+        clean = line.strip()
+        if len(clean) > 70 or len(clean) < 3:
+            return False
+
+        # Body sentences or numbered list items ending with punctuation are not section titles
+        if clean.endswith((".", ";", ",", ":")) and not clean.startswith("#"):
+            return False
+
+        effective_start = start_section_num if start_section_num is not None else 1
+
+        # 1. Standard section keywords at line start (with optional hashes/number)
+        kw_pattern = re.compile(
+            r"^\s*(?:#{1,3}\s+)?(?:\d+\.?\s+)?(?:Background|Preliminaries|Related\s+Work|"
+            r"Methodology|Proposed\s+Method|Experiments|Results|Discussion|Conclusion)\b",
+            re.IGNORECASE,
+        )
+        if kw_pattern.match(clean):
+            num_match = re.match(r"^\s*(?:#{1,3}\s+)?(\d+)\.?", clean)
+            if num_match:
+                n = int(num_match.group(1))
+                if n <= effective_start:
+                    return False
+            return True
+
+        # 2. Numbered section heading with number > effective_start (e.g. '2 Background')
+        numbered_match = re.match(
+            r"^\s*(?:#{1,3}\s+)?(\d+)\.?\s+([A-Z][a-zA-Z\s]{2,50})$",
+            clean,
+        )
+        if numbered_match:
+            n = int(numbered_match.group(1))
+            title = numbered_match.group(2).strip()
+            if n > effective_start:
+                first_word = title.split()[0].lower()
+                if first_word not in {
+                    "we",
+                    "our",
+                    "in",
+                    "there",
+                    "this",
+                    "these",
+                    "it",
+                    "they",
+                    "as",
+                }:
+                    return True
+
+        # 3. Explicit markdown header (## or ###) with title words
+        md_match = re.match(r"^\s*#{1,3}\s+([A-Z][a-zA-Z\s]{2,50})$", clean)
+        if md_match:
+            title = md_match.group(1).strip()
+            first_word = title.split()[0].lower()
+            if first_word not in {
+                "we",
+                "our",
+                "in",
+                "there",
+                "this",
+                "these",
+                "it",
+                "they",
+                "as",
+            }:
+                return True
+
+        return False
+
+    @staticmethod
     def _filter_contiguous_section_chunks(
         chunks: list[Any],
         start_chunk_index: int,
         max_chunks: int = 6,
+        max_tokens: int = 4000,
+        start_section_num: int | None = None,
     ) -> list[Any]:
         """Filter sequential chunks starting from start_chunk_index.
 
-        Checks each chunk after the first for major next-section heading regex.
-        If matched or a chunk index discontinuity is encountered, stops expansion
-        and returns prior chunks.
+        Inspects each chunk after the first line-by-line for major next-section headings.
+        If matched, or if a chunk index discontinuity is encountered, or if the
+        accumulated token count exceeds max_tokens, halts expansion and returns
+        prior chunks.
         """
         if not chunks:
             return []
-
-        next_sec_pattern = re.compile(
-            r"^\s*(?:#+\s*)?(?:\d+\.?\s+[A-Z]|\b(?i:Background|Preliminaries|Related\s+Work|Methodology|Experiments|Results|Conclusion)\b)",
-            re.MULTILINE,
-        )
 
         def get_idx(c: Any) -> int:
             if isinstance(c, dict):
@@ -1123,6 +1193,35 @@ class SessionChatService:
                 return c.get("content") or c.get("text_content") or ""
             return getattr(c, "content", "") or ""
 
+        def get_tokens(c: Any) -> int:
+            if isinstance(c, dict):
+                tok = c.get("token_count")
+            else:
+                tok = getattr(c, "token_count", None)
+            if tok is not None and isinstance(tok, (int, float)):
+                return int(tok)
+            cnt = get_content(c)
+            return max(1, int(len(cnt.split()) * 1.3))
+
+        # Detect start_section_num if not provided
+        start_sec_num = start_section_num
+        if start_sec_num is None:
+            for c in chunks:
+                if get_idx(c) == start_chunk_index:
+                    c_content = get_content(c)
+                    for raw_line in c_content.splitlines()[:5]:
+                        clean_line = raw_line.strip()
+                        m = re.match(r"^\s*(?:#{1,3}\s+)?(\d+)\.?", clean_line)
+                        if m:
+                            try:
+                                start_sec_num = int(m.group(1))
+                                break
+                            except ValueError:
+                                pass
+                    break
+        if start_sec_num is None:
+            start_sec_num = 1
+
         # Filter candidate chunks having chunk_index >= start_chunk_index and sort ascending
         sorted_chunks = sorted(
             [c for c in chunks if get_idx(c) >= start_chunk_index],
@@ -1131,6 +1230,7 @@ class SessionChatService:
 
         expanded: list[Any] = []
         expected_idx = start_chunk_index
+        total_tokens = 0
 
         for chunk in sorted_chunks:
             idx = get_idx(chunk)
@@ -1141,10 +1241,23 @@ class SessionChatService:
             # If not the first chunk in expansion, check if it hits the next section heading
             if expanded:
                 content = get_content(chunk)
-                if next_sec_pattern.search(content):
+                hit_next = False
+                for line in content.splitlines():
+                    if SessionChatService._is_next_section_header(
+                        line, start_section_num=start_sec_num
+                    ):
+                        hit_next = True
+                        break
+                if hit_next:
                     break
 
+            chunk_tokens = get_tokens(chunk)
+            if expanded and (total_tokens + chunk_tokens > max_tokens):
+                # Token safety ceiling reached (default 4000 tokens)
+                break
+
             expanded.append(chunk)
+            total_tokens += chunk_tokens
             expected_idx += 1
 
             if len(expanded) >= max_chunks:
@@ -1157,6 +1270,8 @@ class SessionChatService:
         document_id: Any,
         start_chunk_index: int,
         max_chunks: int = 6,
+        max_tokens: int = 4000,
+        start_section_num: int | None = None,
     ) -> list[DocumentChunkModel]:
         """Fetch sequential chunks from DB starting at start_chunk_index
         and filter contiguous section chunks.
@@ -1173,7 +1288,11 @@ class SessionChatService:
         res = await self.db.execute(stmt)
         chunks = list(res.scalars().all())
         return self._filter_contiguous_section_chunks(
-            chunks, start_chunk_index=start_chunk_index, max_chunks=max_chunks
+            chunks,
+            start_chunk_index=start_chunk_index,
+            max_chunks=max_chunks,
+            max_tokens=max_tokens,
+            start_section_num=start_section_num,
         )
 
     async def _build_document_anchor_context(self, documents: list[DocumentModel]) -> str:
@@ -1874,8 +1993,8 @@ class SessionChatService:
                     }
                 )
 
-        # Cap to Top 5 evidence chunks to prevent citation overflow
-        max_cap = min(limit, 5) if limit else 5
+        # Cap evidence chunks (up to 6 for full section expansion) to prevent overflow
+        max_cap = 6 if is_full_section else (min(limit, 5) if limit else 5)
         selected_chunks = selected_chunks[:max_cap]
         citations = citations[:max_cap]
 

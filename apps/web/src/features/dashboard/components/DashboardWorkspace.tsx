@@ -618,8 +618,7 @@ export function DashboardWorkspace({
   const isResolvingDocument = Boolean(
     isLoadingDocs ||
     isLoadingDocDetail ||
-    sessionDetailQuery.isLoading ||
-    (activeDocumentId && !documentDetail)
+    sessionDetailQuery.isLoading
   );
 
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);

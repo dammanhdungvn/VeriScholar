@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BookmarkPlus, Copy, Check, MessageSquarePlus } from "lucide-react";
 import type { BoundingBox } from "@/types/api";
 
@@ -27,26 +27,68 @@ export function ScholarSelectionMenu({
 }: ScholarSelectionMenuProps) {
   const [copied, setCopied] = useState(false);
   const [copiedRaw, setCopiedRaw] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!selectedText || !coord) return null;
 
+  const copyToClipboard = async (text: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+      throw new Error("Clipboard API unavailable");
+    } catch {
+      try {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        textArea.style.position = "fixed";
+        textArea.style.left = "-9999px";
+        textArea.style.top = "-9999px";
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        const success = document.execCommand("copy");
+        document.body.removeChild(textArea);
+        return success;
+      } catch (fallbackErr) {
+        console.warn("Clipboard copy failed:", fallbackErr);
+        return false;
+      }
+    }
+  };
+
   const handleCopyRaw = async () => {
-    await navigator.clipboard.writeText(selectedText);
-    setCopiedRaw(true);
-    setTimeout(() => {
-      setCopiedRaw(false);
-      onClearSelection();
-    }, 1500);
+    const success = await copyToClipboard(selectedText);
+    if (success) {
+      setCopiedRaw(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        setCopiedRaw(false);
+        onClearSelection();
+      }, 1500);
+    }
   };
 
   const handleCopyCitation = async () => {
     const citation = `"${selectedText}"\n— [${documentTitle || "Tài liệu khoa học"}, Trang ${pageNumber}]`;
-    await navigator.clipboard.writeText(citation);
-    setCopied(true);
-    setTimeout(() => {
-      setCopied(false);
-      onClearSelection();
-    }, 1500);
+    const success = await copyToClipboard(citation);
+    if (success) {
+      setCopied(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        onClearSelection();
+      }, 1500);
+    }
   };
 
   const handleAddToChatAction = () => {
