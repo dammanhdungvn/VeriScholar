@@ -1050,11 +1050,17 @@ export function DashboardWorkspace({
           </div>
         )}
         {/* Assistant Header (Clean Minimalist Header) */}
-        <header className="h-11 px-3 bg-white/80 dark:bg-[#1c1b18]/80 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2">
-          <div className="flex items-center gap-1.5 shrink-0">
+        <header
+          data-testid="assistant-header"
+          className="h-11 px-3 bg-white/80 dark:bg-[#1c1b18]/80 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2"
+        >
+          <div className="flex items-center gap-2 shrink-0">
             <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5" />
             </div>
+            <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
+              Socratic Assistant
+            </h2>
           </div>
 
           {/* Close Assistant Button (✕) */}
@@ -1081,22 +1087,6 @@ export function DashboardWorkspace({
               data-testid="chat-scroll-container"
               className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5 space-y-6 scrollbar-none"
             >
-              {/* Header Badge */}
-              <div className="flex items-center justify-between pb-2 border-b border-hairline/60 dark:border-[#282622]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
-                      Socratic Assistant
-                    </h2>
-                  </div>
-                </div>
-              </div>
-
-
-
               {/* Socratic Welcome & Empty State when no messages */}
               {messages.length === 0 && (
                 <div

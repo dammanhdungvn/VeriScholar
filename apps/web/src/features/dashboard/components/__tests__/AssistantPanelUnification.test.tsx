@@ -54,4 +54,11 @@ describe("Assistant Panel Header and Floating Bubble Unification", () => {
     expect(cornerFab.className).toContain("bottom-6");
     expect(cornerFab.className).toContain("right-6");
   });
+
+  it("renders Socratic Assistant in sticky header and removes duplicate scroll badge", () => {
+    renderWithClient(<DashboardWorkspace initialAssistantOpen={true} />);
+    const header = screen.getByTestId("assistant-header");
+    expect(header).toHaveTextContent("Socratic Assistant");
+    expect(screen.queryByTestId("chat-scroll-header-badge")).toBeNull();
+  });
 });
