@@ -9,6 +9,7 @@ export interface CitationBadgeData {
   paper_title: string;
   page: number;
   bbox: BoundingBox;
+  bounding_boxes?: BoundingBox[];
 }
 
 export interface PresuppositionAlertData {

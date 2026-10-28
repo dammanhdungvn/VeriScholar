@@ -14,20 +14,21 @@ interface UseStreamingChatOptions {
   onSessionCreated?: (sessionId: string) => void;
 }
 
-function normalizeCitation(raw: unknown): CitationBadgeData {
+export function normalizeCitation(raw: unknown): CitationBadgeData {
   const item = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const page = Number(item.page ?? item.page_number ?? 1);
   let bbox: [number, number, number, number, number] = [0, 0, 1, 1, page];
 
+  const rawBoxes = Array.isArray(item.bounding_boxes)
+    ? (item.bounding_boxes.filter(
+        (b) => Array.isArray(b) && b.length === 5
+      ) as [number, number, number, number, number][])
+    : [];
+
   if (Array.isArray(item.bbox) && item.bbox.length === 5) {
     bbox = item.bbox as [number, number, number, number, number];
-  } else if (
-    Array.isArray(item.bounding_boxes) &&
-    item.bounding_boxes.length > 0 &&
-    Array.isArray(item.bounding_boxes[0]) &&
-    item.bounding_boxes[0].length === 5
-  ) {
-    bbox = item.bounding_boxes[0] as [number, number, number, number, number];
+  } else if (rawBoxes.length > 0) {
+    bbox = rawBoxes[0];
   }
 
   return {
@@ -36,6 +37,7 @@ function normalizeCitation(raw: unknown): CitationBadgeData {
     paper_title: String(item.paper_title ?? item.document_title ?? "Tài liệu trích dẫn"),
     page,
     bbox,
+    bounding_boxes: rawBoxes.length > 0 ? rawBoxes : [bbox],
   };
 }
 
@@ -297,7 +299,12 @@ export function useStreamingChat({
               } else if (parsed.type === "token" || parsed.type === "content") {
                 const tokenText = parsed.token || parsed.text || parsed.content || "";
                 queueToken(tokenText);
-              } else if (parsed.type === "citation" || parsed.type === "citations") {
+              } else if (
+                ev.event === "citations" ||
+                parsed.type === "citation" ||
+                parsed.type === "citations" ||
+                Array.isArray(parsed.citations)
+              ) {
                 const rawCites = Array.isArray(parsed.citations)
                   ? parsed.citations
                   : parsed.citation
