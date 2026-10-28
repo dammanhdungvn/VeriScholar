@@ -203,3 +203,115 @@ async def test_section_aware_retrieval_prefers_chunk_with_abstract_over_chunk_0_
     assert len(citations) >= 1
     # Must prioritize Chunk 2 which contains the real Abstract
     assert citations[0]["bounding_boxes"] == [[0.1, 0.25, 0.9, 0.45, 1]]
+
+
+@pytest.mark.asyncio
+async def test_section_aware_retrieval_matches_abstract_by_prefix_and_bypasses_affiliation_header(
+    db_session, monkeypatch
+):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "api.services.embedding_service.EmbeddingService.get_embedding",
+        AsyncMock(return_value=[0.01] * 1536),
+    )
+
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Prefix Tester",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    doc_id = uuid4()
+    session_id = uuid4()
+
+    abstract_text = (
+        "Natural languages are believed to be mildly context-sensitive. "
+        "Despite underpinning remarkably capable large language models, "
+        "transformers are unable to model many context-free language tasks. "
+        "In an attempt to address this limitation, we propose augmenting them "
+        "with a differentiable stack-based attention mechanism."
+    )
+
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user.id,
+        title="A Transformer with Stack Attention",
+        filename="stack_attention.pdf",
+        status="completed",
+        content_hash="hash_stack_001",
+        file_size_bytes=3072,
+        parsed_metadata={
+            "abstract": abstract_text,
+        },
+    )
+    sess = ResearchSessionModel(
+        id=session_id,
+        user_id=user.id,
+        title="Session Stack Attention",
+    )
+    sess_doc = SessionDocumentModel(
+        session_id=session_id,
+        document_id=doc_id,
+        display_order=0,
+    )
+    db_session.add_all([doc, sess, sess_doc])
+    await db_session.flush()
+
+    # Chunk 0: Title, Authors, and Emails - strictly no "abstract" keyword
+    chunk_0_authors = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=user.id,
+        chunk_index=0,
+        page_number=1,
+        content=(
+            "A Transformer with Stack Attention\n"
+            "Jiaoda Li, Jennifer C. White, Mrinmaya Sachan, Ryan Cotterell\n"
+            "ETH Zurich, University of Cambridge\n"
+            "{jiaoda.li, mrinmaya.sachan}@inf.ethz.ch jw2088@cam.ac.uk"
+        ),
+        bounding_boxes=[[0.1, 0.05, 0.9, 0.2, 1]],
+        token_count=65,
+    )
+
+    # Chunk 1: Body Abstract text - strictly no "abstract" keyword (header was stripped)
+    chunk_1_abstract = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=user.id,
+        chunk_index=1,
+        page_number=1,
+        content=abstract_text,
+        bounding_boxes=[
+            [0.1, 0.22, 0.45, 0.35, 1],
+            [0.1, 0.36, 0.45, 0.55, 1],
+        ],
+        token_count=130,
+    )
+
+    db_session.add_all([chunk_0_authors, chunk_1_abstract])
+    await db_session.commit()
+
+    service = SessionChatService(db_session)
+    selected_chunks, citations, abstain = await service.retrieve_and_prepare_context(
+        session_id=session_id,
+        user_id=user.id,
+        question="Hãy tóm tắt ngắn gọn nội dung abstract bài báo này",
+        target_doc_ids=[doc_id],
+        limit=5,
+    )
+
+    assert not abstain
+    assert len(citations) >= 1
+    # Citations[0] MUST be Chunk 1 (the actual abstract body), NOT Chunk 0 (authors/affiliations)
+    assert citations[0]["chunk_index"] == 1
+    assert citations[0]["bounding_boxes"] == [
+        [0.1, 0.22, 0.45, 0.35, 1],
+        [0.1, 0.36, 0.45, 0.55, 1],
+    ]

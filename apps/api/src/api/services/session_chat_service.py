@@ -1079,47 +1079,88 @@ class SessionChatService:
         ) or self._detect_target_section(question)
         if target_section == "abstract" and target_doc_ids:
             try:
-                abs_stmt = (
-                    select(
-                        DocumentChunkModel,
-                        DocumentModel.title.label("document_title"),
-                        DocumentModel.filename,
-                    )
-                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
-                    .where(
-                        DocumentChunkModel.document_id.in_(target_doc_ids),
-                        DocumentChunkModel.chunk_index <= 6,
-                        or_(
-                            DocumentChunkModel.content.ilike("%abstract%"),
-                            DocumentChunkModel.chunk_index == 0,
-                        ),
-                    )
-                    .order_by(
-                        case((DocumentChunkModel.content.ilike("%abstract%"), 0), else_=1),
-                        DocumentChunkModel.chunk_index.asc(),
-                    )
-                    .limit(len(target_doc_ids))
-                )
-                abs_res = await self.db.execute(abs_stmt)
+                doc_meta_stmt = select(
+                    DocumentModel.id,
+                    DocumentModel.title,
+                    DocumentModel.filename,
+                    DocumentModel.parsed_metadata,
+                ).where(DocumentModel.id.in_(target_doc_ids))
+                doc_meta_res = await self.db.execute(doc_meta_stmt)
+                doc_map = {row.id: row for row in doc_meta_res.all()}
+
                 section_prioritized: list[dict[str, Any]] = []
-                for chk, dtitle, dfilename in abs_res.all():
-                    section_prioritized.append(
-                        {
-                            "chunk_id": str(chk.id),
-                            "id": str(chk.id),
-                            "document_id": str(chk.document_id),
-                            "chunk_index": chk.chunk_index,
-                            "page_number": chk.page_number,
-                            "content": chk.content,
-                            "text_content": chk.content,
-                            "bounding_boxes": chk.bounding_boxes,
-                            "token_count": chk.token_count,
-                            "document_title": dtitle or dfilename or "Tài liệu",
-                            "filename": dfilename,
-                            "max_cosine_sim": 1.0,
-                            "rrf_score": 2.0,
-                        }
+                for doc_id, doc_row in doc_map.items():
+                    parsed_meta = doc_row.parsed_metadata or {}
+                    abstract_meta = (parsed_meta.get("abstract") or "").strip()
+                    clean_abstract = re.sub(
+                        r"^(abstract[:\s\-*]*)+", "", abstract_meta, flags=re.IGNORECASE
+                    ).strip()
+                    prefix = clean_abstract[:50].strip() if len(clean_abstract) >= 20 else ""
+
+                    score_cases = []
+                    if prefix:
+                        safe_prefix = re.sub(r"[%_]", "", prefix[:35]).strip()
+                        if len(safe_prefix) >= 15:
+                            score_cases.append(
+                                (DocumentChunkModel.content.ilike(f"%{safe_prefix}%"), 0)
+                            )
+
+                    score_cases.append((DocumentChunkModel.content.ilike("%abstract%"), 1))
+                    score_cases.append(
+                        (
+                            and_(
+                                DocumentChunkModel.chunk_index > 0,
+                                func.length(DocumentChunkModel.content) >= 150,
+                            ),
+                            2,
+                        )
                     )
+                    score_cases.append(
+                        (
+                            and_(
+                                DocumentChunkModel.chunk_index == 0,
+                                func.length(DocumentChunkModel.content) >= 300,
+                            ),
+                            3,
+                        )
+                    )
+
+                    stmt = (
+                        select(DocumentChunkModel)
+                        .where(
+                            DocumentChunkModel.document_id == doc_id,
+                            DocumentChunkModel.page_number <= 2,
+                            DocumentChunkModel.chunk_index <= 6,
+                        )
+                        .order_by(
+                            case(*score_cases, else_=9).asc(),
+                            DocumentChunkModel.chunk_index.asc(),
+                        )
+                        .limit(1)
+                    )
+                    res = await self.db.execute(stmt)
+                    chk = res.scalar_one_or_none()
+                    if chk:
+                        dtitle = doc_row.title or doc_row.filename or "Tài liệu"
+                        dfilename = doc_row.filename
+                        section_prioritized.append(
+                            {
+                                "chunk_id": str(chk.id),
+                                "id": str(chk.id),
+                                "document_id": str(chk.document_id),
+                                "chunk_index": chk.chunk_index,
+                                "page_number": chk.page_number,
+                                "content": chk.content,
+                                "text_content": chk.content,
+                                "bounding_boxes": chk.bounding_boxes,
+                                "token_count": chk.token_count,
+                                "document_title": dtitle,
+                                "filename": dfilename,
+                                "max_cosine_sim": 1.0,
+                                "rrf_score": 2.0,
+                            }
+                        )
+
                 if section_prioritized:
                     seen = {c["chunk_id"] for c in section_prioritized}
                     combined = list(section_prioritized)
