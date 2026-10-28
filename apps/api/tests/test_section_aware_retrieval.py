@@ -116,3 +116,90 @@ async def test_section_aware_retrieval_prioritizes_abstract_chunk(db_session, mo
     # First citation must be the Abstract on Page 1
     assert citations[0]["page_number"] == 1
     assert citations[0]["bounding_boxes"] == [[0.081, 0.4196, 0.4881, 0.9258, 1]]
+
+
+@pytest.mark.asyncio
+async def test_section_aware_retrieval_prefers_chunk_with_abstract_over_chunk_0_header(
+    db_session, monkeypatch
+):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "api.services.embedding_service.EmbeddingService.get_embedding",
+        AsyncMock(return_value=[0.01] * 1536),
+    )
+
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Header Tester",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    doc_id = uuid4()
+    session_id = uuid4()
+
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user.id,
+        title="Header Paper",
+        filename="header_paper.pdf",
+        status="completed",
+        content_hash="hash_header_001",
+        file_size_bytes=2048,
+    )
+    sess = ResearchSessionModel(
+        id=session_id,
+        user_id=user.id,
+        title="Session Header Aware",
+    )
+    sess_doc = SessionDocumentModel(
+        session_id=session_id,
+        document_id=doc_id,
+        display_order=0,
+    )
+    db_session.add_all([doc, sess, sess_doc])
+    await db_session.flush()
+
+    # Chunk 0: Header with affiliations only, no "abstract" word
+    header_chunk = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=user.id,
+        chunk_index=0,
+        page_number=1,
+        content="Department of Computer Science, University. Email: author@univ.edu. Received 2024.",
+        bounding_boxes=[[0.1, 0.1, 0.9, 0.2, 1]],
+        token_count=80,
+    )
+    # Chunk 2: Real Abstract with "Abstract" keyword
+    real_abstract_chunk = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=user.id,
+        chunk_index=2,
+        page_number=1,
+        content="Abstract: In this paper we propose a novel deep learning framework for anomaly detection.",
+        bounding_boxes=[[0.1, 0.25, 0.9, 0.45, 1]],
+        token_count=100,
+    )
+    db_session.add_all([header_chunk, real_abstract_chunk])
+    await db_session.commit()
+
+    service = SessionChatService(db_session)
+    selected_chunks, citations, abstain = await service.retrieve_and_prepare_context(
+        session_id=session_id,
+        user_id=user.id,
+        question="Tóm tắt nội dung abstract của bài báo",
+        target_doc_ids=[doc_id],
+        limit=5,
+    )
+
+    assert not abstain
+    assert len(citations) >= 1
+    # Must prioritize Chunk 2 which contains the real Abstract
+    assert citations[0]["bounding_boxes"] == [[0.1, 0.25, 0.9, 0.45, 1]]

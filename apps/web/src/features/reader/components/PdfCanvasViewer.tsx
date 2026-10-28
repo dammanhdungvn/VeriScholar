@@ -227,6 +227,9 @@ export function PdfCanvasViewer({
 
     if (bestPage > 0 && bestPage !== lastScrolledByObserverRef.current) {
       lastScrolledByObserverRef.current = bestPage;
+      if (activeBbox && activeBbox[4] !== bestPage) {
+        lastScrolledBboxKeyRef.current = null;
+      }
       setCurrentPage(bestPage);
     }
   }, [scrollContainer, readingMode, totalPages, setCurrentPage]);
@@ -329,12 +332,22 @@ export function PdfCanvasViewer({
     // A. Citation Highlight Clicked: Scroll into view and center on bounding box ONCE
     if (activeBbox && activeBbox[4]) {
       const bboxKey = `${activeBbox[0]}-${activeBbox[1]}-${activeBbox[2]}-${activeBbox[3]}-${activeBbox[4]}`;
-      if (lastScrolledBboxKeyRef.current === bboxKey) {
-        return;
-      }
-
       const pageNum = activeBbox[4];
       const pageEl = document.getElementById(`pdf-page-${pageNum}`);
+
+      if (lastScrolledBboxKeyRef.current === bboxKey) {
+        // If the target page is still substantially visible in viewport, do not re-scroll
+        if (pageEl && scrollContainer) {
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const pageRect = pageEl.getBoundingClientRect();
+          const visibleTop = Math.max(pageRect.top, containerRect.top);
+          const visibleBottom = Math.min(pageRect.bottom, containerRect.bottom);
+          if (visibleBottom - visibleTop > 60) {
+            return;
+          }
+        }
+      }
+
       if (pageEl && scrollContainer) {
         lastScrolledBboxKeyRef.current = bboxKey;
         isProgrammaticScrollRef.current = true;
@@ -347,13 +360,6 @@ export function PdfCanvasViewer({
 
         const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
         const target = bboxOverlay || pageEl;
-        if (typeof target.scrollIntoView === "function") {
-          try {
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-          } catch {
-            // Safe fallback
-          }
-        }
 
         const containerRect = scrollContainer.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();

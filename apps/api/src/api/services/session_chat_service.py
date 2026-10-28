@@ -33,7 +33,7 @@ from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
 from core.services.socratic_roadmap import extract_and_strip_bridge_hint
 from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, func, or_, select, text
+from sqlalchemy import and_, case, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.session_chat")
@@ -328,11 +328,32 @@ class SessionChatService:
             "tiếp tục",
             "more detail",
         ]
-        is_elliptical = any(trig in stripped_query.lower() for trig in elliptical_triggers) or (
-            len(stripped_query.split()) <= 3
-            and not any(
-                kw in stripped_query.lower()
-                for kw in ["là gì", "what is", "who", "where", "khi nào"]
+        conversational_tokens = {
+            "cảm ơn",
+            "cam on",
+            "cảm ơn bạn",
+            "ok",
+            "okay",
+            "chào",
+            "chào bạn",
+            "hello",
+            "hi",
+            "tuyệt",
+            "tuyệt vời",
+            "được rồi",
+            "thanks",
+            "thank you",
+        }
+        is_conversational = stripped_query.lower().strip("!.,?") in conversational_tokens
+
+        is_elliptical = not is_conversational and (
+            any(trig in stripped_query.lower() for trig in elliptical_triggers)
+            or (
+                len(stripped_query.split()) <= 3
+                and not any(
+                    kw in stripped_query.lower()
+                    for kw in ["là gì", "what is", "who", "where", "khi nào"]
+                )
             )
         )
 
@@ -568,12 +589,18 @@ class SessionChatService:
                 fts_ranks AS (
                     SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
                            COALESCE(
+                               ts_rank_cd(
+                                   content_tsv, websearch_to_tsquery('english', :fts_or_query)
+                               ),
                                ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
                                ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
                                0.0
                            ) AS fts_score,
                            ROW_NUMBER() OVER (
                                ORDER BY COALESCE(
+                                   ts_rank_cd(
+                                       content_tsv, websearch_to_tsquery('english', :fts_or_query)
+                                   ),
                                    ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
                                    ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
                                    0.0
@@ -583,7 +610,8 @@ class SessionChatService:
                     WHERE document_id = ANY(:active_doc_ids)
                       AND user_id = :user_id
                       AND (
-                          content_tsv @@ plainto_tsquery('english', :fts_query)
+                          content_tsv @@ websearch_to_tsquery('english', :fts_or_query)
+                          OR content_tsv @@ plainto_tsquery('english', :fts_query)
                           OR content_tsv @@ plainto_tsquery('simple', :fts_query)
                       )
                     ORDER BY rank_fts ASC
@@ -620,12 +648,34 @@ class SessionChatService:
             """)
             # For cross-lingual FTS search, extract Latin/English keywords with length >= 3
             latin_words = re.findall(r"\b[A-Za-z]{3,}\b", query_text)
-            effective_fts = " ".join(latin_words) if latin_words else query_text
+            vn_ascii_stops = {
+                "dung",
+                "sang",
+                "cho",
+                "cac",
+                "nay",
+                "cua",
+                "trong",
+                "tren",
+                "duoc",
+                "khong",
+                "biet",
+                "xem",
+                "doc",
+                "tim",
+                "hoi",
+                "dich",
+            }
+            meaningful_latin = [w for w in latin_words if w.lower() not in vn_ascii_stops]
+            effective_words = meaningful_latin if meaningful_latin else latin_words
+            fts_or_query = " or ".join(effective_words) if effective_words else query_text
+            effective_fts = " ".join(effective_words) if effective_words else query_text
 
             vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
             params = {
                 "hyde_vector": vec_str,
                 "query_vec": vec_str,
+                "fts_or_query": fts_or_query,
                 "fts_query": effective_fts,
                 "query_text": effective_fts,
                 "active_doc_ids": target_doc_ids,
@@ -1044,7 +1094,10 @@ class SessionChatService:
                             DocumentChunkModel.chunk_index == 0,
                         ),
                     )
-                    .order_by(DocumentChunkModel.chunk_index.asc())
+                    .order_by(
+                        case((DocumentChunkModel.content.ilike("%abstract%"), 0), else_=1),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
                     .limit(len(target_doc_ids))
                 )
                 abs_res = await self.db.execute(abs_stmt)
