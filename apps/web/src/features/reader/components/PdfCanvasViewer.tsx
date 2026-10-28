@@ -647,7 +647,10 @@ export function PdfCanvasViewer({
         onMouseUp={handleMouseUp}
         onMouseMove={resetHudTimer}
         className={cn(
-          "flex-1 relative overflow-y-auto overflow-x-auto px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "flex-1 relative overflow-y-auto overflow-x-auto px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style]",
+          effectiveZoom > 1.0
+            ? "paper-scrollbar"
+            : "scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           containerThemeBg
         )}
       >
@@ -671,7 +674,7 @@ export function PdfCanvasViewer({
         {/* Pages Container: Stack for Continuous, Side-by-Side Book for Two-Page, Centered for Single */}
         <div
           className={cn(
-            "w-full mx-auto pb-16 flex flex-col items-center",
+            "min-w-fit w-fit mx-auto pb-16 flex flex-col items-center",
             readingMode === "continuous" && "gap-2 sm:gap-3",
             readingMode === "single" && "justify-center min-h-[calc(100vh-140px)]",
             readingMode === "two-page" && "gap-2"
