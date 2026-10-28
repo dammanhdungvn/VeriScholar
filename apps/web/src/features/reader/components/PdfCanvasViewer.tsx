@@ -227,9 +227,6 @@ export function PdfCanvasViewer({
 
     if (bestPage > 0 && bestPage !== lastScrolledByObserverRef.current) {
       lastScrolledByObserverRef.current = bestPage;
-      if (activeBbox && activeBbox[4] !== bestPage) {
-        lastScrolledBboxKeyRef.current = null;
-      }
       setCurrentPage(bestPage);
     }
   }, [scrollContainer, readingMode, totalPages, setCurrentPage]);
@@ -253,7 +250,15 @@ export function PdfCanvasViewer({
   }, [updateCurrentPageFromScroll]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClearHighlight?.();
+        useDashboardStore.getState().setActiveBbox(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.removeEventListener("keydown", handleKeyDown);
       if (scrollRafRef.current !== null) {
         cancelAnimationFrame(scrollRafRef.current);
       }
@@ -264,7 +269,7 @@ export function PdfCanvasViewer({
         clearTimeout(programmaticScrollTimeoutRef.current);
       }
     };
-  }, []);
+  }, [onClearHighlight]);
 
   // 2. Handle Text Selection in PDF Text Layer with Normalized BoundingBox Calculation
   const handleMouseUp = () => {

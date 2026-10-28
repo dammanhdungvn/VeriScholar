@@ -17,7 +17,7 @@ export function BboxHighlightLayer({
   currentPage,
   isActive = true,
   label,
-  onClear: _onClear,
+  onClear,
 }: BboxHighlightLayerProps) {
   // Collect all boxes that apply to the current page
   const resolvedBoxes: BoundingBox[] = [];
@@ -56,7 +56,22 @@ export function BboxHighlightLayer({
               isActive &&
                 "border-2 border-dashed border-amber-500 bg-amber-500/20 ring-2 ring-amber-400/50 shadow-md animate-pulse"
             )}
-          />
+          >
+            {index === 0 && onClear && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onClear();
+                }}
+                className="pointer-events-auto absolute -top-3 -right-3 w-6 h-6 rounded-full bg-background text-foreground/80 hover:text-foreground hover:bg-muted border border-border shadow-sm flex items-center justify-center text-xs z-30 transition-colors cursor-pointer"
+                title="Đóng khung trích dẫn (Esc)"
+                aria-label="Đóng khung trích dẫn"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         );
       })}
     </>
