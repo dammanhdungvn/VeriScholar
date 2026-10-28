@@ -12,6 +12,7 @@ export interface AcademicMarkdownRendererProps {
   className?: string;
   citations?: CitationBadgeData[];
   onCitationClick?: (citation: CitationBadgeData | null | string, citId?: string) => void;
+  isStreaming?: boolean;
 }
 
 /**
@@ -149,6 +150,7 @@ export function AcademicMarkdownRenderer({
   className,
   citations,
   onCitationClick,
+  isStreaming = false,
 }: AcademicMarkdownRendererProps) {
   // 1. Split block math ($$...$$) so KaTeX renders blocks cleanly without markdown interference
   const segments = useMemo(() => {
@@ -490,6 +492,15 @@ export function AcademicMarkdownRenderer({
           </ReactMarkdown>
         );
       })}
+
+      {/* Streaming Caret */}
+      {isStreaming && (
+        <span
+          data-testid="typing-caret"
+          className="inline-block w-1.5 h-4 ml-1 rounded-[1px] bg-[#cc785c] dark:bg-coral-400 align-middle animate-pulse"
+          aria-hidden="true"
+        />
+      )}
 
       {/* Structured "Nguồn trích dẫn" (References) Section with Numbered Chips */}
       {referenceList.length > 0 && (
