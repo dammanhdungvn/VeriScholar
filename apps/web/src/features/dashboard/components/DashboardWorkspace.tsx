@@ -837,6 +837,11 @@ export function DashboardWorkspace({
           onZoomOut={zoomOut}
           onResetZoom={resetZoom}
           onRotate={rotateClockwise}
+          isBookmarked={Boolean(effectiveDocuments.find((d) => d.id === (activeDocumentId || effectiveOpenIds[0]))?.is_persistent)}
+          onToggleBookmark={() => {
+            const docId = activeDocumentId || effectiveOpenIds[0];
+            if (docId) handleToggleStar(docId);
+          }}
           onOpenReferences={isRealDocument ? () => setIsRefModalOpen(true) : undefined}
           onOpenNotes={() => {
             if (!isAssistantOpen) setIsAssistantOpen(true);

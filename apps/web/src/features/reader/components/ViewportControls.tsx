@@ -32,6 +32,8 @@ interface ViewportControlsProps {
   onToggleZenPdf?: () => void;
   onOpenReferences?: () => void;
   onOpenNotes?: () => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
 }
 
 export function ViewportControls({
@@ -51,6 +53,8 @@ export function ViewportControls({
   onToggleZenPdf: _onToggleZenPdf,
   onOpenReferences,
   onOpenNotes,
+  isBookmarked,
+  onToggleBookmark,
 }: ViewportControlsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState<number>(() => {
@@ -237,6 +241,8 @@ export function ViewportControls({
           onReadingModeChange={setReadingMode}
           onOpenReferences={onOpenReferences}
           onOpenNotes={onOpenNotes}
+          isBookmarked={isBookmarked}
+          onToggleBookmark={onToggleBookmark}
           isZenPdf={false}
           zoomRatio={zoomRatio}
           onZoomIn={onZoomIn}

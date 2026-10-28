@@ -59,4 +59,26 @@ describe("Viewport Controls and Overflow Menu Cleanup", () => {
     expect(handleOpenNotes).toHaveBeenCalledTimes(1);
     expect(handleClose).toHaveBeenCalledTimes(1);
   });
+
+  it("renders save bookmark option inside Tùy chọn overflow menu", () => {
+    const handleToggleBookmark = vi.fn();
+    const handleClose = vi.fn();
+
+    render(
+      <ViewportOverflowMenu
+        isOpen={true}
+        onClose={handleClose}
+        isBookmarked={false}
+        onToggleBookmark={handleToggleBookmark}
+      />
+    );
+
+    const bookmarkBtn = screen.getByTestId("overflow-toggle-bookmark-btn");
+    expect(bookmarkBtn).toBeInTheDocument();
+    expect(bookmarkBtn).toHaveTextContent("Lưu vào kho yêu thích");
+
+    fireEvent.click(bookmarkBtn);
+    expect(handleToggleBookmark).toHaveBeenCalledTimes(1);
+    expect(handleClose).toHaveBeenCalledTimes(1);
+  });
 });

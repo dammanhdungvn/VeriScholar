@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import {
+  Bookmark,
   BookMarked,
   SlidersHorizontal,
   ZoomIn,
@@ -16,6 +17,8 @@ export interface ViewportOverflowMenuProps {
   onReadingModeChange?: (mode: ReadingMode) => void;
   onOpenReferences?: () => void;
   onOpenNotes?: () => void;
+  isBookmarked?: boolean;
+  onToggleBookmark?: () => void;
   isZenPdf?: boolean;
   onToggleZenPdf?: () => void;
   zoomRatio?: number;
@@ -36,6 +39,8 @@ export function ViewportOverflowMenu({
   onReadingModeChange: _onReadingModeChange,
   onOpenReferences,
   onOpenNotes,
+  isBookmarked = false,
+  onToggleBookmark,
   isZenPdf: _isZenPdf,
   onToggleZenPdf: _onToggleZenPdf,
   zoomRatio,
@@ -169,6 +174,29 @@ export function ViewportOverflowMenu({
         <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted dark:text-zinc-400 font-semibold">
           Công cụ
         </div>
+
+        {onToggleBookmark && (
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="overflow-toggle-bookmark-btn"
+            onClick={() => {
+              onClose();
+              onToggleBookmark();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521] hover:text-primary transition-colors cursor-pointer text-left"
+          >
+            <Bookmark
+              className={cn(
+                "w-3.5 h-3.5 shrink-0",
+                isBookmarked ? "text-amber-500 fill-amber-500" : "text-primary"
+              )}
+            />
+            <span className="flex-1 font-medium">
+              {isBookmarked ? "Bỏ lưu bài báo (Kho yêu thích)" : "Lưu vào kho yêu thích"}
+            </span>
+          </button>
+        )}
 
         {onOpenNotes && (
           <button

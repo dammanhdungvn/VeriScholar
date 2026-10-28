@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X, Star, FileText, Trash2, AlertTriangle } from "lucide-react";
+import { Plus, X, FileText, Trash2, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { DocumentListItem } from "@/types/document";
 import {
@@ -32,7 +32,7 @@ export function DocumentTabBar({
   onSelectDocument,
   onCloseDocument,
   onAddDocument,
-  onToggleStar,
+  onToggleStar: _onToggleStar,
   onDeleteDocument,
   showEvictionDialog,
   onCloseEvictionDialog,
@@ -100,43 +100,7 @@ export function DocumentTabBar({
 
               <span className="max-w-[100px] sm:max-w-[160px] truncate text-left">{displayName}</span>
 
-              {/* Star toggle button */}
-              {onToggleStar && (
-                <button
-                  type="button"
-                  aria-label={isPersistent ? "Đã lưu vào thư viện" : "Lưu bài báo vào thư viện"}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleStar(docId);
-                  }}
-                  className={cn(
-                    "p-0.5 rounded hover:bg-black/5 dark:hover:bg-white/10 transition-colors cursor-pointer",
-                    isPersistent ? "text-amber-500" : "text-muted/40 hover:text-amber-500"
-                  )}
-                >
-                  <Star
-                    className={cn("w-3 h-3", isPersistent && "fill-amber-500")}
-                  />
-                </button>
-              )}
-
-              {/* Delete document button (Cascade Purge) */}
-              {onDeleteDocument && (
-                <button
-                  type="button"
-                  aria-label={`Xóa bài báo ${displayName}`}
-                  title="Xóa vĩnh viễn tài liệu khỏi hệ thống"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setDocToDelete(doc || { id: docId, filename: displayName, is_persistent: false, status: "completed", created_at: "" });
-                  }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-red-500/10 dark:hover:bg-red-500/20 text-muted hover:text-red-600 transition-opacity cursor-pointer"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              )}
-
-              {/* Close tab button */}
+              {/* Close tab button (Hover red per user UX specs) */}
               {openDocumentIds.length > 1 && (
                 <button
                   type="button"
@@ -145,9 +109,9 @@ export function DocumentTabBar({
                     e.stopPropagation();
                     onCloseDocument(docId);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-opacity text-muted hover:text-ink cursor-pointer"
+                  className="p-1 rounded text-zinc-400 hover:text-rose-600 hover:bg-rose-500/10 dark:hover:text-rose-400 dark:hover:bg-rose-500/20 transition-colors cursor-pointer"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5 stroke-[2.2]" />
                 </button>
               )}
             </div>
