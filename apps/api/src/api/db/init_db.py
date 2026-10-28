@@ -10,13 +10,13 @@ logger = structlog.get_logger("api.db.init")
 
 
 async def ensure_database_schema(conn: AsyncConnection) -> None:
-    """Ensure all 18 tables, columns, constraints, triggers, and vector/GIN indexes exist."""
+    """Ensure all 19 tables, columns, constraints, triggers, and vector/GIN indexes exist."""
     dialect_name = conn.dialect.name
     if dialect_name == "postgresql":
         # 1. Enable pgvector extension (fail-fast if extension is missing)
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
 
-        # 2. Create all 18 tables registered on Base.metadata idempotently
+        # 2. Create all 19 tables registered on Base.metadata idempotently
         await conn.run_sync(Base.metadata.create_all)
 
         # 3. Trigger functions for OCC and source detachment
@@ -219,6 +219,16 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
                         ON session_turns (session_id, created_at ASC);
                     END IF;
 
+                    -- graph_edges upgrades
+                    IF EXISTS (
+                        SELECT 1 FROM information_schema.tables 
+                        WHERE table_name = 'graph_edges'
+                    ) THEN
+                        ALTER TABLE graph_edges 
+                        ADD COLUMN IF NOT EXISTS page_number INTEGER NULL,
+                        ADD COLUMN IF NOT EXISTS metadata_json JSONB NULL;
+                    END IF;
+
                     -- Triggers for research_notes
                     IF NOT EXISTS (
                         SELECT 1 FROM pg_trigger WHERE tgname = 'trg_research_notes_occ'
@@ -250,6 +260,12 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
             text(
                 "CREATE INDEX IF NOT EXISTS idx_graph_nodes_embedding_hnsw "
                 "ON graph_nodes USING hnsw (embedding vector_cosine_ops);"
+            )
+        )
+        await conn.execute(
+            text(
+                "CREATE INDEX IF NOT EXISTS idx_folder_summaries_embedding_hnsw "
+                "ON folder_community_summaries USING hnsw (embedding vector_cosine_ops);"
             )
         )
         await conn.execute(

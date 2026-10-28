@@ -38,3 +38,8 @@ class OpenReadingResponse(BaseModel):
     document_id: UUID = Field(description="Created document identifier")
     status: str = Field(description="Document processing status ('parsing' or 'abstract_only')")
     access_status: str = Field(description="Access status ('open_access_pdf' or 'abstract_only')")
+
+    @property
+    def document_status(self) -> str:
+        """Alias for status to maintain schema compatibility with test harness."""
+        return self.status

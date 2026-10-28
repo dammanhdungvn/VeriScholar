@@ -46,6 +46,12 @@ def test_thesis_files_exist():
 def test_thesis_compilation():
     if not shutil.which("xelatex"):
         pytest.skip("XeLaTeX not available in test environment")
+    has_pzdr = (
+        shutil.which("kpsewhich") is not None
+        and subprocess.run(["kpsewhich", "pzdr.tfm"], capture_output=True).returncode == 0
+    )
+    if not has_pzdr:
+        pytest.skip("XeLaTeX recommended fonts (pzdr.tfm) not available in test environment")
     res = None
     for _ in range(2):
         res = subprocess.run(

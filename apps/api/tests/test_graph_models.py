@@ -1,10 +1,14 @@
-"""Unit tests for 4-Entity PostgreSQL GraphRAG models (Task 5)."""
+"""Unit tests for 4-Entity PostgreSQL GraphRAG models."""
 
 from uuid import uuid4
 
-from api.db.models.graph import GraphEdgeModel, GraphNodeModel
+from api.db.models.graph import (
+    FolderCommunitySummaryModel,
+    GraphEdgeModel,
+    GraphNodeModel,
+)
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlalchemy import CheckConstraint, Integer, Text, UniqueConstraint
 
 
 def test_graph_node_canonical_representation():
@@ -73,6 +77,8 @@ def test_graph_edge_representation():
         edge_type="PROPOSES",
         weight=1.0,
         evidence_chunk_id=chunk_id,
+        page_number=5,
+        metadata_json={"context": "empirical evaluation"},
     )
     assert edge.user_id == user_id
     assert edge.document_id == doc_id
@@ -81,11 +87,13 @@ def test_graph_edge_representation():
     assert edge.edge_type == "PROPOSES"
     assert edge.weight == 1.0
     assert edge.evidence_chunk_id == chunk_id
+    assert edge.page_number == 5
+    assert edge.metadata_json == {"context": "empirical evaluation"}
     assert GraphEdgeModel.__tablename__ == "graph_edges"
 
 
 def test_graph_edge_table_constraints():
-    """Verify check constraints and indexes on GraphEdgeModel."""
+    """Verify check constraints, columns, and indexes on GraphEdgeModel."""
     table = GraphEdgeModel.__table__
 
     # Check check constraint ck_graph_edges_type
@@ -94,3 +102,98 @@ def test_graph_edge_table_constraints():
     assert "edge_type IN ('PROPOSES', 'EVALUATED_ON', 'ACHIEVES', 'CITES')" in str(
         check_constraints["ck_graph_edges_type"].sqltext
     )
+
+    # Check page_number and metadata_json columns
+    assert "page_number" in table.c
+    col_page = table.c["page_number"]
+    assert isinstance(col_page.type, Integer)
+    assert col_page.nullable is True
+
+    assert "metadata_json" in table.c
+    col_meta = table.c["metadata_json"]
+    assert col_meta.nullable is True
+
+
+def test_folder_community_summary_model_representation():
+    """Verify FolderCommunitySummaryModel attributes and table name."""
+    user_id = uuid4()
+    folder_id = uuid4()
+
+    summary = FolderCommunitySummaryModel(
+        user_id=user_id,
+        folder_id=folder_id,
+        summary_text="This community focuses on Transformer-based neural machine translation.",
+        key_findings=[{"finding": "Attention improves BLEU scores"}],
+        embedding=[0.05] * 1536,
+    )
+    assert summary.user_id == user_id
+    assert summary.folder_id == folder_id
+    assert (
+        summary.summary_text
+        == "This community focuses on Transformer-based neural machine translation."
+    )
+    assert summary.key_findings == [{"finding": "Attention improves BLEU scores"}]
+    assert len(summary.embedding) == 1536
+    assert FolderCommunitySummaryModel.__tablename__ == "folder_community_summaries"
+
+    # Also test global root summary where folder_id is None
+    global_summary = FolderCommunitySummaryModel(
+        user_id=user_id,
+        folder_id=None,
+        summary_text="Global library summary across all topics.",
+    )
+    assert global_summary.folder_id is None
+
+
+def test_folder_community_summary_table_constraints():
+    """Verify columns, constraints, foreign keys, and indexes on FolderCommunitySummaryModel."""
+    table = FolderCommunitySummaryModel.__table__
+
+    assert table.name == "folder_community_summaries"
+
+    # user_id
+    assert "user_id" in table.c
+    col_user = table.c["user_id"]
+    assert col_user.nullable is False
+    assert any(
+        fk.target_fullname == "users.id" and fk.ondelete == "CASCADE"
+        for fk in col_user.foreign_keys
+    )
+
+    # folder_id
+    assert "folder_id" in table.c
+    col_folder = table.c["folder_id"]
+    assert col_folder.nullable is True
+    assert any(
+        fk.target_fullname == "folders.id" and fk.ondelete == "CASCADE"
+        for fk in col_folder.foreign_keys
+    )
+
+    # summary_text
+    assert "summary_text" in table.c
+    col_text = table.c["summary_text"]
+    assert isinstance(col_text.type, Text)
+    assert col_text.nullable is False
+
+    # key_findings
+    assert "key_findings" in table.c
+    col_findings = table.c["key_findings"]
+    assert col_findings.nullable is True
+
+    # embedding Vector(1536)
+    assert "embedding" in table.c
+    col_emb = table.c["embedding"]
+    assert isinstance(col_emb.type, Vector)
+    assert col_emb.type.dim == 1536
+    assert col_emb.nullable is True
+
+    # Unique constraint or index on (user_id, folder_id)
+    unique_constraints = {c.name: c for c in table.constraints if isinstance(c, UniqueConstraint)}
+    has_uq = any(
+        {col.name for col in uq.columns} == {"user_id", "folder_id"}
+        for uq in unique_constraints.values()
+    )
+    has_idx = any(
+        {col.name for col in idx.columns} == {"user_id", "folder_id"} for idx in table.indexes
+    )
+    assert has_uq or has_idx

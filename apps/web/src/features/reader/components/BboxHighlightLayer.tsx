@@ -29,11 +29,16 @@ export function BboxHighlightLayer({
       role="region"
       data-testid="grounded-bbox-overlay"
       aria-label={label || `Đoạn trích dẫn bằng chứng tại trang ${page}`}
-      style={style}
+      style={{
+        ...style,
+        border: "2px dashed #f59e0b",
+        backgroundColor: "rgba(245, 158, 11, 0.12)",
+        borderRadius: "6px",
+      }}
       className={cn(
-        "absolute rounded-xs pointer-events-none transition-all duration-300 z-20",
-        "border-2 border-amber-500/90 bg-amber-400/20 shadow-sm",
-        isActive && "border-2 border-amber-500 bg-amber-400/25 ring-2 ring-amber-400/50 shadow-md animate-pulse"
+        "absolute pointer-events-none transition-all duration-300 z-20",
+        "border-2 border-dashed border-amber-500 bg-amber-500/15 rounded-md",
+        isActive && "border-2 border-dashed border-amber-500 bg-amber-500/20 ring-2 ring-amber-400/50 shadow-md animate-pulse"
       )}
     />
   );

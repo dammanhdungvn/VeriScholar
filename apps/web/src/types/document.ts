@@ -142,6 +142,27 @@ export interface DocumentExtractReferencesResponseData {
   references: ReferenceItemResponse[];
 }
 
+export interface DocumentReferenceItem {
+  ref_index: number;
+  raw_text: string;
+  parsed_title?: string | null;
+  parsed_authors: string[];
+  parsed_year?: number | null;
+  doi?: string | null;
+  arxiv_id?: string | null;
+  access_status: "open_access_pdf" | "paywalled" | "abstract_only" | string;
+  pdf_url?: string | null;
+  landing_url?: string | null;
+  is_in_session: boolean;
+  resolved_document_id?: string | null;
+}
+
+export interface DocumentReferencesResponseData {
+  document_id: string;
+  total_references: number;
+  references: DocumentReferenceItem[];
+}
+
 export interface DocumentSectionResponse {
   title: string;
   page_number: number;

@@ -235,15 +235,18 @@ class SessionChatMessageRequest(BaseModel):
 class SessionIngestReferencesRequest(BaseModel):
     """Payload for ingesting open-access references into session documents (PRD §3.3)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     document_id: UUID = Field(
         ...,
         description="Source document containing extracted references",
     )
-    selected_ref_indices: list[int] = Field(
-        ...,
-        min_length=1,
+    ref_index: int | None = Field(
+        default=None,
+        description="Single 1-indexed reference index to ingest (< 500ms Tier 1)",
+    )
+    selected_ref_indices: list[int] | None = Field(
+        default=None,
         description="List of 1-indexed reference indices to ingest into the active session",
     )
 
@@ -270,3 +273,32 @@ class SessionIngestReferencesResponseData(BaseModel):
 
 class SessionIngestReferencesEnvelope(SingleResponseEnvelope[SessionIngestReferencesResponseData]):
     """Top-level single resource envelope for session reference ingestion."""
+
+
+class SessionReferenceIngestResponseData(BaseModel):
+    """Response payload for 2-tier reference ingestion into session."""
+
+    session_id: UUID = Field(description="Session identifier")
+    document_id: UUID = Field(description="Ingested document identifier")
+    session_document_id: str | None = Field(
+        default=None, description="Session document junction identifier"
+    )
+    title: str = Field(description="Document title")
+    status: str = Field(description="Ingestion status: parsing | abstract_only | ready")
+    access_status: str = Field(
+        description="Access status: open_access_pdf | paywalled | abstract_only"
+    )
+    ref_index: int = Field(description="Reference index in source bibliography")
+    fallback_reason: str | None = Field(
+        default=None, description="Fallback reason if paywalled or degraded"
+    )
+    total_documents_in_session: int | None = Field(
+        default=None, description="Total documents currently in session"
+    )
+    ingested_documents: list[dict[str, Any]] = Field(
+        default_factory=list, description="List of ingested items for backwards compatibility"
+    )
+
+
+class SessionReferenceIngestEnvelope(SingleResponseEnvelope[SessionReferenceIngestResponseData]):
+    """Top-level envelope for 2-tier reference ingestion."""

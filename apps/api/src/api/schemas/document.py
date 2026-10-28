@@ -202,6 +202,38 @@ class DocumentStarEnvelope(SingleResponseEnvelope[DocumentStarResponseData]):
     """Top-level single resource envelope for document star promotion."""
 
 
+class DocumentToggleStarRequest(BaseModel):
+    """Payload for toggling document star state with optional folder assignment."""
+
+    folder_id: UUID | None = Field(
+        default=None,
+        description="Optional folder UUID to organize the starred document into",
+        examples=[None],
+    )
+
+
+class DocumentToggleStarResponseData(BaseModel):
+    """Payload data returned after toggling star status of a document."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    is_starred: bool = Field(description="Whether document is currently starred")
+    folder_id: UUID | None = Field(default=None, description="Associated folder identifier")
+    graph_extraction_status: str = Field(
+        description="Graph extraction lifecycle status: 'queued' or 'pruned'"
+    )
+
+
+class DocumentToggleStarEnvelope(SingleResponseEnvelope[DocumentToggleStarResponseData]):
+    """Standard envelope for document star toggle with mirror fields for direct Spec 05 contract."""
+
+    document_id: UUID | None = Field(default=None, description="Direct mirror of document_id")
+    is_starred: bool | None = Field(default=None, description="Direct mirror of is_starred")
+    folder_id: UUID | None = Field(default=None, description="Direct mirror of folder_id")
+    graph_extraction_status: str | None = Field(
+        default=None, description="Direct mirror of graph_extraction_status"
+    )
+
+
 class DocumentParseRequest(BaseModel):
     """Configuration options for triggering or re-triggering document parsing."""
 
@@ -360,6 +392,45 @@ class DocumentResolveReferencesEnvelope(
     SingleResponseEnvelope[DocumentResolveReferencesResponseData]
 ):
     """Top-level single resource envelope for document reference resolution."""
+
+
+class DocumentReferenceItemResponse(BaseModel):
+    """Structured reference item for 3-column context table."""
+
+    ref_index: int = Field(ge=1, description="1-indexed reference position")
+    raw_text: str = Field(description="Full raw reference citation string")
+    parsed_title: str | None = Field(default=None, description="Extracted scholarly paper title")
+    parsed_authors: list[str] = Field(default_factory=list, description="Extracted author list")
+    parsed_year: int | None = Field(default=None, description="Publication year")
+    doi: str | None = Field(default=None, description="DOI identifier")
+    arxiv_id: str | None = Field(default=None, description="arXiv identifier")
+    access_status: str = Field(
+        default="open_access_pdf",
+        description="Access status: open_access_pdf | paywalled | abstract_only",
+    )
+    pdf_url: str | None = Field(default=None, description="Direct URL to open-access PDF")
+    is_in_session: bool = Field(
+        default=False,
+        description="Whether reference is active in the current session",
+    )
+    resolved_document_id: UUID | None = Field(
+        default=None,
+        description="ID of resolved document if available",
+    )
+
+
+class DocumentReferencesResponseData(BaseModel):
+    """Payload data returned when document references are listed."""
+
+    document_id: UUID = Field(description="Unique document identifier")
+    total_references: int = Field(ge=0, description="Total count of reference items")
+    references: list[DocumentReferenceItemResponse] = Field(
+        default_factory=list, description="List of structured reference items"
+    )
+
+
+class DocumentReferencesEnvelope(SingleResponseEnvelope[DocumentReferencesResponseData]):
+    """Top-level single resource envelope for document references list."""
 
 
 class DocumentSectionResponse(BaseModel):

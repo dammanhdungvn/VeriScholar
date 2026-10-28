@@ -2,6 +2,56 @@ import type { PDFDocumentProxy } from "pdfjs-dist";
 import { pdfjsLib } from "./pdfjs-init";
 import { useAuthStore, AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 
+export const PDF_CACHE_NAME = "verischolar-pdfs-v1";
+
+/**
+ * Retrieve or download and cache PDF binary using the browser CacheStorage API.
+ * Provides 0ms instant reload across browser sessions, tabs, and page reloads.
+ */
+export async function loadPdfBinaryWithCache(
+  url: string,
+  token?: string | null
+): Promise<Uint8Array | null> {
+  if (typeof window === "undefined" || !("caches" in window)) {
+    return null;
+  }
+
+  // CacheStorage only supports http and https requests (skip blob:, data:, etc.)
+  if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("/")) {
+    return null;
+  }
+
+  try {
+    const cache = await window.caches.open(PDF_CACHE_NAME);
+    const cachedResponse = await cache.match(url);
+    if (cachedResponse) {
+      const buffer = await cachedResponse.arrayBuffer();
+      return new Uint8Array(buffer);
+    }
+
+    // First download: fetch binary from network and store in cache
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(url, { headers });
+    if (response.ok) {
+      try {
+        await cache.put(url, response.clone());
+      } catch (cachePutErr) {
+        console.warn("[CacheStorage] Failed storing PDF in cache:", cachePutErr);
+      }
+      const buffer = await response.arrayBuffer();
+      return new Uint8Array(buffer);
+    }
+  } catch (err) {
+    console.warn("[CacheStorage] Error in loadPdfBinaryWithCache:", err);
+  }
+
+  return null;
+}
+
 /**
  * In-memory document proxy cache to eliminate duplicate network transfers
  * and re-parsing across component mounts, re-renders, and document tab switches.
@@ -17,21 +67,34 @@ export function getCachedPdfDocument(url: string): Promise<PDFDocumentProxy> {
   const storedToken =
     typeof window !== "undefined" ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null;
   const token = storedToken || useAuthStore.getState().token;
-  const loadingTask = pdfjsLib.getDocument({
-    url,
-    httpHeaders: token ? { Authorization: `Bearer ${token}` } : {},
-    withCredentials: false,
-  });
 
-  const promise = loadingTask.promise;
-  docCache.set(url, promise);
+  const docPromise = (async () => {
+    // 1. Try browser CacheStorage for 0ms instant reload
+    const cachedBinary = await loadPdfBinaryWithCache(url, token);
+    if (cachedBinary) {
+      const loadingTask = pdfjsLib.getDocument({
+        data: cachedBinary,
+      });
+      return await loadingTask.promise;
+    }
+
+    // 2. Direct network / streaming PDF.js loader fallback
+    const loadingTask = pdfjsLib.getDocument({
+      url,
+      httpHeaders: token ? { Authorization: `Bearer ${token}` } : {},
+      withCredentials: false,
+    });
+    return await loadingTask.promise;
+  })();
+
+  docCache.set(url, docPromise);
 
   // If loading fails, evict from cache so retry can succeed
-  promise.catch(() => {
+  docPromise.catch(() => {
     docCache.delete(url);
   });
 
-  return promise;
+  return docPromise;
 }
 
 export function clearCachedPdfDocument(url: string): void {
@@ -47,6 +110,14 @@ export function clearCachedPdfDocument(url: string): void {
       }
     }).catch(() => {});
     docCache.delete(url);
+  }
+
+  // Also purge from CacheStorage
+  if (typeof window !== "undefined" && "caches" in window) {
+    window.caches
+      .open(PDF_CACHE_NAME)
+      .then((cache) => cache.delete(url))
+      .catch(() => {});
   }
 }
 

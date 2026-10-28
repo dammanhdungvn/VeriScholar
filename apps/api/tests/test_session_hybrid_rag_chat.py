@@ -1,10 +1,106 @@
+from uuid import uuid4
+
 import pytest
+import pytest_asyncio
 from api.db.models.chunk import DocumentChunkModel
-from api.db.models.session import ResearchSessionModel
+from api.db.models.document import DocumentModel
+from api.db.models.session import ResearchSessionModel, SessionDocumentModel
+from api.db.models.user import UserModel
 from api.services.session_chat_service import SessionChatService
 from httpx import AsyncClient
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession) -> UserModel:
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Test Scholar",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+    return user
+
+
+@pytest_asyncio.fixture
+async def setup_ragas_document(
+    db_session: AsyncSession, test_user: UserModel, monkeypatch: pytest.MonkeyPatch
+):
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(
+        "api.services.embedding_service.EmbeddingService.get_embedding",
+        AsyncMock(return_value=[0.05] * 1536),
+    )
+
+    doc_id = uuid4()
+    session_id = uuid4()
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=test_user.id,
+        title="Ragas Paper",
+        filename="ragas.pdf",
+        status="ready",
+        content_hash="hash_ragas_paper_001",
+        file_size_bytes=1024,
+    )
+    sess = ResearchSessionModel(
+        id=session_id,
+        user_id=test_user.id,
+        title="Ragas Study Session",
+    )
+    sess_doc = SessionDocumentModel(
+        session_id=session_id,
+        document_id=doc_id,
+        display_order=0,
+    )
+    c19 = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=test_user.id,
+        chunk_index=19,
+        page_number=3,
+        content="Answer Relevance (AR) is formulated as: AR = (1/n) * sum(sim(q, q_i))",
+        embedding=[0.05] * 1536,
+        bounding_boxes=[[120.0, 450.0, 530.0, 535.0, 3]],
+        content_tsv=func.to_tsvector(
+            "simple", "Answer Relevance AR is formulated as sum sim q q_i"
+        ),
+    )
+    db_session.add(doc)
+    await db_session.flush()
+    db_session.add(sess)
+    await db_session.flush()
+    db_session.add_all([sess_doc, c19])
+    await db_session.commit()
+    return session_id, doc_id
+
+
+@pytest.mark.asyncio
+async def test_ask_ragas_formula_ar_retrieves_page_3_with_bounding_box(
+    db_session: AsyncSession, test_user: UserModel, setup_ragas_document
+):
+    session_id, doc_id = setup_ragas_document
+    chat_service = SessionChatService(db=db_session)
+
+    chunks, citations, abstain = await chat_service.retrieve_and_prepare_context(
+        session_id=session_id,
+        user_id=test_user.id,
+        question="Công thức Answer Relevance (AR) trong paper là gì?",
+        target_doc_ids=[doc_id],
+    )
+    assert not abstain
+    assert any(c["page_number"] == 3 for c in citations)
+    assert any(c["chunk_index"] == 19 for c in chunks)
+    # Kiểm tra Bounding Box dạng mảng [x0, y0, x1, y1, page]
+    bbox = citations[0]["bounding_boxes"][0]
+    assert len(bbox) == 5
+    assert 0 <= bbox[0] <= 1000 and 0 <= bbox[1] <= 1000
 
 
 @pytest.mark.asyncio

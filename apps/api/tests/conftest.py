@@ -6,6 +6,8 @@ from collections.abc import AsyncGenerator
 # Enforce test environment flags before any application modules are imported
 os.environ["ENVIRONMENT"] = "test"
 os.environ["LANGFUSE_ENABLED"] = "false"
+if not os.environ.get("OPENAI_API_KEY"):
+    os.environ["OPENAI_API_KEY"] = "sk-mock-key-for-unit-tests"
 
 import pytest
 import pytest_asyncio
@@ -14,11 +16,14 @@ from api.core.config import settings
 from api.db.init_db import ensure_database_schema
 from api.db.session import engine, get_db
 from httpx import ASGITransport, AsyncClient
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
 # Enforce test settings on existing singleton
 settings.ENVIRONMENT = "test"
 settings.LANGFUSE_ENABLED = False
+if settings.OPENAI_API_KEY is None:
+    settings.OPENAI_API_KEY = SecretStr("sk-mock-key-for-unit-tests")
 
 
 @pytest.fixture(autouse=True)

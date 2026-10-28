@@ -11,6 +11,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Index,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -74,9 +75,11 @@ class GraphEdgeModel(IdentifiableTimestampedModel):
     )
     edge_type: Mapped[str] = mapped_column(String(30), nullable=False)
     weight: Mapped[float] = mapped_column(Float, default=1.0, nullable=False)
+    metadata_json: Mapped[dict | None] = mapped_column(JSONType, nullable=True)
     evidence_chunk_id: Mapped[UUID | None] = mapped_column(
         ForeignKey("document_chunks.id", ondelete="SET NULL"), nullable=True
     )
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
     __table_args__ = (
         CheckConstraint(
@@ -90,5 +93,34 @@ class GraphEdgeModel(IdentifiableTimestampedModel):
     def __init__(self, **kwargs: Any) -> None:
         if "weight" not in kwargs:
             self.weight = 1.0
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+
+class FolderCommunitySummaryModel(IdentifiableTimestampedModel):
+    """Hierarchical topic community summary for global GraphRAG search."""
+
+    __tablename__ = "folder_community_summaries"
+
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    folder_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("folders.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    summary_text: Mapped[str] = mapped_column(Text, nullable=False)
+    key_findings: Mapped[list | dict | None] = mapped_column(JSONType, nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(Vector(1536), nullable=True)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "folder_id",
+            name="uq_folder_summaries_user_folder",
+        ),
+        Index("idx_folder_community_user_folder", "user_id", "folder_id"),
+    )
+
+    def __init__(self, **kwargs: Any) -> None:
         for k, v in kwargs.items():
             setattr(self, k, v)

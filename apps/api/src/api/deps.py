@@ -25,7 +25,10 @@ from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
+from api.services.embedding_service import EmbeddingService
 from api.services.folder_service import FolderService
+from api.services.graph_extraction_service import GraphExtractionService
+from api.services.graph_rag_service import GraphRAGService
 from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
 from api.services.session_chat_service import SessionChatService
@@ -114,16 +117,32 @@ def get_document_summarizer() -> IDocumentSummarizerPort:
     )
 
 
+def get_embedding_service() -> EmbeddingService | None:
+    """Dependency providing EmbeddingService instance if configured."""
+    try:
+        return EmbeddingService()
+    except Exception:
+        return None
+
+
 def get_document_service(
     storage: IBlobStoragePort = Depends(get_storage),
     summarizer: IDocumentSummarizerPort = Depends(get_document_summarizer),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
 ) -> DocumentService:
     """Dependency providing DocumentService instance."""
+    real_storage = get_storage() if hasattr(storage, "dependency") else storage
+    real_summarizer = get_document_summarizer() if hasattr(summarizer, "dependency") else summarizer
+    real_ai_tracing = get_ai_tracing_service() if hasattr(ai_tracing, "dependency") else ai_tracing
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
     return DocumentService(
-        storage=storage,
-        summarizer=summarizer,
-        ai_tracing=ai_tracing,
+        storage=real_storage,
+        summarizer=real_summarizer,
+        ai_tracing=real_ai_tracing,
+        embedding_service=real_embedding,
     )
 
 
@@ -138,9 +157,14 @@ def get_session_service(
 def get_session_chat_service(
     db: AsyncSession = Depends(get_db),
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
 ) -> SessionChatService:
     """Dependency providing SessionChatService instance bound to request database session."""
-    return SessionChatService(db=db, ai_tracing=ai_tracing)
+    real_ai_tracing = get_ai_tracing_service() if hasattr(ai_tracing, "dependency") else ai_tracing
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return SessionChatService(db=db, ai_tracing=real_ai_tracing, embedding_service=real_embedding)
 
 
 def get_note_service(
@@ -179,6 +203,26 @@ def get_library_synthesis_service(
 ) -> LibrarySynthesisService:
     """Dependency providing LibrarySynthesisService bound to request database session."""
     return LibrarySynthesisService(db=db, ai_tracing=ai_tracing, cache=idempotency_port)
+
+
+def get_graph_rag_service(
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
+) -> GraphRAGService:
+    """Dependency providing GraphRAGService for dual-level knowledge graph queries."""
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return GraphRAGService(embedding_service=real_embedding)
+
+
+def get_graph_extraction_service(
+    embedding_service: EmbeddingService | None = Depends(get_embedding_service),
+) -> GraphExtractionService:
+    """Dependency providing GraphExtractionService for academic graph parsing & ingestion."""
+    real_embedding = (
+        get_embedding_service() if hasattr(embedding_service, "dependency") else embedding_service
+    )
+    return GraphExtractionService(embedding_service=real_embedding)
 
 
 async def get_current_user(

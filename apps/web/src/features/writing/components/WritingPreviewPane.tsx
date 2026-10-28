@@ -20,8 +20,10 @@ import { cn } from "@/lib/utils";
 interface WritingPreviewPaneProps {
   onSelectionAddToChat?: (selectedText: string) => void;
   onRecompile?: () => void;
+  onRecompileClearCache?: () => void;
   onDownloadPdf?: () => void;
   onDoAnything?: () => void;
+  onNavigateToLine?: (line: number) => void;
   showDoAnything?: boolean;
 }
 
@@ -31,6 +33,7 @@ interface PaperPageCanvasProps {
   zoomLevel: number;
   containerWidth?: number;
   onInView?: (pageNum: number) => void;
+  onDoublePageClick?: (pageNumber: number, x: number, y: number) => void;
 }
 
 function PaperPageCanvas({
@@ -39,15 +42,32 @@ function PaperPageCanvas({
   zoomLevel,
   containerWidth,
   onInView,
+  onDoublePageClick,
 }: PaperPageCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+  const { activeHighlightBox } = useWritingStore();
+
+  const scaleRatio = dimensions ? dimensions.width / 595.32 : 1;
+
+  const handleDoubleClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!onDoublePageClick) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const clickY = e.clientY - rect.top;
+    const r = rect.width > 0 ? rect.width / 595.32 : 1;
+    const ptX = clickX / r;
+    const ptY = clickY / r;
+    onDoublePageClick(pageNumber, ptX, ptY);
+  };
 
   // Intersection observer to track current visible page
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !onInView) return;
+
+    if (typeof IntersectionObserver === "undefined") return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -143,7 +163,8 @@ function PaperPageCanvas({
     <div
       ref={containerRef}
       data-testid={`preview-page-${pageNumber}`}
-      className="relative bg-white shadow-[0_2px_8px_rgba(0,0,0,0.16)] border border-[#ded8cc] dark:border-[#38332c] rounded-xs select-text overflow-hidden transition-all duration-150"
+      onDoubleClick={handleDoubleClick}
+      className="relative bg-white shadow-[0_2px_8px_rgba(0,0,0,0.16)] border border-[#ded8cc] dark:border-[#38332c] rounded-xs select-text overflow-hidden transition-all duration-150 cursor-pointer"
       style={{
         width: dimensions ? `${dimensions.width}px` : "auto",
         height: dimensions ? `${dimensions.height}px` : "auto",
@@ -153,6 +174,18 @@ function PaperPageCanvas({
       }}
     >
       <canvas ref={canvasRef} className="block max-w-full h-auto" />
+      {activeHighlightBox && activeHighlightBox.page === pageNumber && (
+        <div
+          data-testid="synctex-highlight-box"
+          className="absolute bg-yellow-400/40 border-2 border-yellow-500 rounded pointer-events-none transition-all z-10"
+          style={{
+            left: `${(activeHighlightBox.x || 0) * scaleRatio}px`,
+            top: `${(activeHighlightBox.y || 0) * scaleRatio}px`,
+            width: `${Math.max(20, (activeHighlightBox.width || 100) * scaleRatio)}px`,
+            height: `${Math.max(12, (activeHighlightBox.height || 16) * scaleRatio)}px`,
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -160,8 +193,10 @@ function PaperPageCanvas({
 export function WritingPreviewPane({
   onSelectionAddToChat: _onSelectionAddToChat,
   onRecompile,
+  onRecompileClearCache,
   onDownloadPdf,
   onDoAnything,
+  onNavigateToLine,
   showDoAnything = true,
 }: WritingPreviewPaneProps) {
   const {
@@ -169,8 +204,12 @@ export function WritingPreviewPane({
     previewPdfBlobUrl,
     setPreviewPdfBlobUrl,
     isCompiling,
+    setCompiling,
+    setCompileResult,
     setWorkspaceMode,
     setAssistantPrompt,
+    activeHighlightBox,
+    setActiveFile,
   } = useWritingStore();
 
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -188,6 +227,50 @@ export function WritingPreviewPane({
     }
     return 595.32;
   });
+
+  // Automatically scroll to highlight box page if SyncTeX forward triggered
+  useEffect(() => {
+    if (activeHighlightBox?.page) {
+      handlePageChange(activeHighlightBox.page);
+    }
+  }, [activeHighlightBox]);
+
+  const handleClearCacheRecompile = async () => {
+    if (!activeDraftId) return;
+    if (onRecompileClearCache) {
+      onRecompileClearCache();
+      return;
+    }
+    try {
+      setCompiling(true);
+      const res = await draftsApi.recompileClearCache(activeDraftId);
+      setCompileResult(res);
+      if (res.success) {
+        const blob = await draftsApi.getPreviewPdfBlob(activeDraftId);
+        const url = URL.createObjectURL(blob);
+        setPreviewPdfBlobUrl(url);
+      }
+    } catch (err) {
+      console.error("Recompile clear cache error:", err);
+    } finally {
+      setCompiling(false);
+    }
+  };
+
+  const handleInverseSearch = async (pageNum: number, x: number, y: number) => {
+    if (!activeDraftId) return;
+    try {
+      const loc = await draftsApi.synctexInverse(activeDraftId, pageNum, x, y);
+      if (loc?.file && (loc.file === "main.tex" || loc.file === "references.bib")) {
+        setActiveFile(loc.file as "main.tex" | "references.bib");
+      }
+      if (loc?.line && onNavigateToLine) {
+        onNavigateToLine(loc.line);
+      }
+    } catch (err) {
+      console.error("Inverse SyncTeX failed:", err);
+    }
+  };
 
   // Track preview container width to dynamically autofit PDF full screen
   useEffect(() => {
@@ -354,6 +437,23 @@ export function WritingPreviewPane({
             <span>Recompile</span>
           </button>
 
+          {/* Action button: [🧹 Xóa đệm & Dựng lại] */}
+          <button
+            type="button"
+            data-testid="recompile-clear-cache-btn"
+            onClick={handleClearCacheRecompile}
+            disabled={isCompiling}
+            className="h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
+            title="Xóa bộ nhớ đệm và biên dịch lại từ đầu (Clear Cache & Recompile)"
+          >
+            {isCompiling ? (
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5" />
+            )}
+            <span>🧹 Xóa đệm & Dựng lại</span>
+          </button>
+
           {/* Download PDF button */}
           <button
             type="button"
@@ -469,6 +569,7 @@ export function WritingPreviewPane({
                   zoomLevel={zoomLevel}
                   containerWidth={containerWidth}
                   onInView={(p) => setCurrentPage(p)}
+                  onDoublePageClick={handleInverseSearch}
                 />
               </div>
             ))}

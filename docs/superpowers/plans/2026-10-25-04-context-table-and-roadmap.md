@@ -48,7 +48,7 @@
   - `extract_and_strip_bridge_hint(text: str) -> tuple[str, BridgeHintPayload | None]`
   - `extract_scholarly_identifiers(raw_citation: str) -> dict[str, str | None]` (trả về `{"doi": ..., "arxiv_id": ...}`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_socratic_roadmap.py`:
 ```python
@@ -78,21 +78,21 @@ def test_extract_scholarly_identifiers_handles_doi_and_arxiv():
     assert ids["doi"] == "10.48550/arXiv.1706.03762"
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_socratic_roadmap.py -v`
 Expected: FAIL with `ModuleNotFoundError: No module named 'core.services.socratic_roadmap'`
 
-- [ ] **Step 3: Implement `packages/core/src/core/services/socratic_roadmap.py`**
+- [x] **Step 3: Implement `packages/core/src/core/services/socratic_roadmap.py`**
 
 Cài đặt dataclass `BridgeHintPayload`, hàm `extract_and_strip_bridge_hint()` và hàm `extract_scholarly_identifiers()` thuần Python Standard Library.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_socratic_roadmap.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/core/src/core/services/socratic_roadmap.py packages/core/tests/test_socratic_roadmap.py
@@ -116,28 +116,28 @@ git commit -m "feat(core): add Socratic bridge_hint tag parser and scholarly DOI
   - `POST /api/v1/sessions/{session_id}/references:ingest` (Tầng 1 tạo/liên kết `DocumentModel` vào `session_documents` trong `< 500ms`; Tầng 2 kích hoạt `BackgroundTasks` tải PDF với session DB độc lập).
   - Phát sự kiện SSE `event: bridge_hint` trong `SessionChatService` khi phát hiện thẻ gợi ý lộ trình học.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_references_and_2tier_ingest.py` kiểm tra:
 1. `GET /api/v1/documents/{id}/references` trả về đúng trạng thái `is_in_session`.
 2. `POST /api/v1/sessions/{id}/references:ingest` trả về `201 Created` trong `< 500ms` và trả về `409 MAX_SESSION_DOCUMENTS_REACHED` nếu phiên đã mở đủ 5 bài.
 3. Khi bài tham khảo thuộc diện thu phí (`paywalled`), tài liệu được khởi tạo với `status = 'abstract_only'`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_references_and_2tier_ingest.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement references list, 2-tier `:ingest` endpoint, and SSE `bridge_hint` emission**
+- [x] **Step 3: Implement references list, 2-tier `:ingest` endpoint, and SSE `bridge_hint` emission**
 
 Cài đặt `GET /api/v1/documents/{document_id}/references` trong `documents.py`, `POST /api/v1/sessions/{session_id}/references:ingest` trong `sessions.py`, và tích hợp `extract_and_strip_bridge_hint` vào `session_chat_service.py`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_references_and_2tier_ingest.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/v1/endpoints/documents.py apps/api/src/api/v1/endpoints/sessions.py apps/api/src/api/services/session_chat_service.py apps/api/tests/test_references_and_2tier_ingest.py
@@ -159,27 +159,27 @@ git commit -m "feat(api): add 3-column references endpoint, 2-tier fast ingestio
   - `SmartReferenceDrawer` hiển thị đúng 3 cột chuẩn: Cột 1 (Số thứ tự, Tiêu đề, Tác giả, Năm, DOI/arXiv, Huy hiệu PDF mở/Tóm tắt), Cột 2 (Link xuất bản gốc), Cột 3 (Nút `[➕ Thêm vào phiên]` / `[🗑️ Gỡ khỏi phiên]`).
   - `BridgeHintCard` hiển thị lộ trình học tuần tự $A \rightarrow B \rightarrow C \rightarrow D$ với nút nạp nhanh 1-Click.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/reader/__tests__/ContextTableAndRoadmap.test.tsx` kiểm tra:
 1. Render đủ 3 cột trong `SmartReferenceDrawer` và lọc nhanh theo từ khóa tác giả/tiêu đề.
 2. Bấm `[➕ Thêm vào phiên]` trên `SmartReferenceDrawer` hoặc `BridgeHintCard` gọi API `:ingest` và thêm Tab mới trên thanh đọc.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- ContextTableAndRoadmap`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `BridgeHintCard.tsx` and upgrade `SmartReferenceDrawer.tsx`**
+- [x] **Step 3: Implement `BridgeHintCard.tsx` and upgrade `SmartReferenceDrawer.tsx`**
 
 Xây dựng `BridgeHintCard.tsx` và nâng cấp `SmartReferenceDrawer.tsx` bám sát thiết kế 3 cột trong `SPEC-04`.
 
-- [ ] **Step 4: Run all 4 verification gates to confirm 100% pass**
+- [x] **Step 4: Run all 4 verification gates to confirm 100% pass**
 
 Run: `uv run ruff check . && uv run pytest && npm --prefix apps/web run test && npm --prefix apps/web run build`
 Expected: 100% PASS (exit code 0)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/web/src/features/reader/

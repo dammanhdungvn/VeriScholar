@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import math
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
@@ -53,6 +54,7 @@ from api.schemas.document import (
 )
 from api.schemas.envelope import PaginationLinks, PaginationMeta
 from api.services.ai_tracing_service import AITracingService
+from api.services.embedding_service import EmbeddingService
 from core.domain.entities.blob import MAX_FILE_SIZE_BYTES
 from core.domain.entities.chunk import DocumentChunk
 from core.domain.entities.reference import (
@@ -103,12 +105,313 @@ class DocumentService:
         chunk_extractor: IChunkExtractorPort | None = None,
         summarizer: IDocumentSummarizerPort | None = None,
         ai_tracing: AITracingService | None = None,
+        embedding_service: EmbeddingService | None = None,
     ) -> None:
         self.storage = storage
         self.structure_extractor = structure_extractor or PyMuPDFStructureExtractor()
         self.chunk_extractor = chunk_extractor or PyMuPDFChunkExtractor()
-        self.summarizer = summarizer or HeuristicGroundedSummarizer()
-        self.ai_tracing = ai_tracing or AITracingService()
+        self.summarizer = (
+            summarizer
+            if (summarizer is not None and not hasattr(summarizer, "dependency"))
+            else HeuristicGroundedSummarizer()
+        )
+        self.ai_tracing = (
+            ai_tracing
+            if (ai_tracing is not None and not hasattr(ai_tracing, "dependency"))
+            else AITracingService()
+        )
+        self.embedding_service = (
+            embedding_service
+            if (embedding_service is not None and not hasattr(embedding_service, "dependency"))
+            else None
+        )
+
+    def _get_or_init_embedding_service(self) -> EmbeddingService | None:
+        """Get or lazily initialize the EmbeddingService."""
+        if self.embedding_service is not None and not hasattr(self.embedding_service, "dependency"):
+            return self.embedding_service
+        try:
+            self.embedding_service = EmbeddingService()
+            return self.embedding_service
+        except Exception:
+            return None
+
+    async def _generate_chunk_embeddings(self, chunks: list[Any]) -> list[list[float] | None]:
+        """Generate 1536-dimensional embeddings for chunks using EmbeddingService.
+
+        Handles missing keys, offline environment, or API errors gracefully by returning None.
+        """
+        if not chunks:
+            return []
+        texts = [getattr(c, "content", getattr(c, "text", str(c))) for c in chunks]
+        emb_svc = self._get_or_init_embedding_service()
+        if emb_svc is not None:
+            try:
+                embeddings = await emb_svc.get_embeddings_batch(texts)
+                if len(embeddings) == len(chunks):
+                    return embeddings
+            except Exception as e:
+                logger.warning(
+                    "Failed to generate chunk embeddings batch: %s",
+                    str(e),
+                )
+        return [None] * len(chunks)
+
+    async def _build_chunk_models(
+        self,
+        extracted_chunks: list[Any],
+        user_id: UUID,
+        document_id: UUID,
+        now: datetime,
+    ) -> list[DocumentChunkModel]:
+        """Build DocumentChunkModel instances with computed embeddings."""
+        embeddings = await self._generate_chunk_embeddings(extracted_chunks)
+        return [
+            DocumentChunkModel(
+                id=ec.id,
+                user_id=user_id,
+                document_id=document_id,
+                chunk_index=ec.chunk_index,
+                page_number=ec.page_number,
+                content=ec.content,
+                bounding_boxes=ec.bounding_boxes_raw,
+                token_count=ec.token_count,
+                embedding=embeddings[i] if embeddings and i < len(embeddings) else None,
+                created_at=now,
+                updated_at=now,
+            )
+            for i, ec in enumerate(extracted_chunks)
+        ]
+
+    @staticmethod
+    def _extract_summary_metadata(
+        problem_statement: str,
+        contributions: str,
+        limitations: str,
+        chunks: list[Any] | None = None,
+        abstract: str | None = None,
+    ) -> dict[str, list[str]]:
+        """Extract the 4-pillar Summary Index for Macro RAG retrieval.
+
+        1. original_problem: Core bottlenecks of prior methods.
+        2. proposed_solution: Breakthrough architecture & technical solutions.
+        3. key_insights: Foundational theoretical contributions.
+        4. quantitative_results: Empirical quantitative metrics (BLEU, F1, Loss, etc.).
+        """
+
+        def split_points(text: str) -> list[str]:
+            if not text or not text.strip():
+                return []
+            lines = [
+                line.strip().lstrip("-•*0123456789.) ").strip()
+                for line in text.split("\n")
+                if line.strip()
+            ]
+            if not lines:
+                lines = [s.strip() for s in re.split(r"(?<=[.!?])\s+", text) if s.strip()]
+            return [line for line in lines if len(line) > 10]
+
+        original_problem = split_points(problem_statement)
+        if not original_problem and abstract:
+            original_problem = [abstract[:300]]
+        if not original_problem:
+            original_problem = ["No explicit problem statement identified."]
+
+        proposed_solution = split_points(contributions)
+        if not proposed_solution and abstract:
+            proposed_solution = [abstract[:300]]
+        if not proposed_solution:
+            proposed_solution = ["No explicit proposed solution identified."]
+
+        key_insights = split_points(limitations)
+        if not key_insights:
+            key_insights = proposed_solution[:2]
+
+        quantitative_results: list[str] = []
+        metric_pattern = re.compile(
+            r"(\b\d+(\.\d+)?%|\bF1\b|\bBLEU\b|\baccuracy\b|\bPearson\b|\bSpearman\b|\bp\s*[<=]\s*0\.\d+|\bAUC\b|\bprecision\b|\brecall\b|\bSOTA\b)",
+            re.IGNORECASE,
+        )
+        all_texts: list[str] = []
+        if abstract:
+            all_texts.append(abstract)
+        if chunks:
+            for c in chunks:
+                content = getattr(c, "content", "")
+                if content:
+                    all_texts.append(content)
+
+        for text_block in all_texts:
+            sentences = re.split(r"(?<=[.!?])\s+", text_block)
+            for s in sentences:
+                s_clean = s.strip()
+                if len(s_clean) > 20 and metric_pattern.search(s_clean):
+                    if s_clean not in quantitative_results:
+                        quantitative_results.append(s_clean)
+                    if len(quantitative_results) >= 5:
+                        break
+            if len(quantitative_results) >= 5:
+                break
+
+        if not quantitative_results:
+            quantitative_results = ["Empirical evaluation results detailed in publication tables."]
+
+        return {
+            "original_problem": original_problem,
+            "proposed_solution": proposed_solution,
+            "key_insights": key_insights,
+            "quantitative_results": quantitative_results,
+        }
+
+    async def parse_document_background(
+        self,
+        document_id: UUID,
+        user_id: UUID,
+    ) -> None:
+        """Background worker to extract chunks, compute vector embeddings, and build summary index.
+
+        Runs asynchronously via FastAPI BackgroundTasks outside the HTTP request lifecycle.
+        Creates its own isolated AsyncSessionLocal database transaction.
+        """
+        from api.db.session import AsyncSessionLocal
+
+        async with AsyncSessionLocal() as session:
+            stmt = select(DocumentModel).where(
+                DocumentModel.id == document_id,
+                DocumentModel.user_id == user_id,
+            )
+            try:
+                # 1. Fetch document record
+                res = await session.execute(stmt)
+                doc = res.scalar_one_or_none()
+                if not doc:
+                    logger.warning(
+                        "Document not found for background parsing: %s",
+                        str(document_id),
+                    )
+                    return
+
+                # 2. Check physical PDF blob
+                if not doc.content_hash or not (await self.storage.blob_exists(doc.content_hash)):
+                    logger.warning(
+                        "Physical blob not found for background parsing: %s",
+                        str(document_id),
+                    )
+                    return
+
+                # 3. Transition stage to processing / chunking
+                now = datetime.now(UTC)
+                doc.status = DocumentStatus.PROCESSING.value
+                doc.stage = DocumentStage.CHUNKING.value
+                doc.progress = 30
+                doc.updated_at = now
+                await session.commit()
+
+                # Re-fetch document in active session
+                res = await session.execute(stmt)
+                doc = res.scalar_one_or_none()
+                if not doc:
+                    return
+
+                pdf_bytes = await self.storage.read_blob(doc.content_hash)
+
+                # 4. Check existing chunks
+                count_stmt = (
+                    select(func.count())
+                    .select_from(DocumentChunkModel)
+                    .where(DocumentChunkModel.document_id == document_id)
+                )
+                count_res = await session.execute(count_stmt)
+                existing_count = count_res.scalar() or 0
+
+                chunk_models: list[DocumentChunkModel] = []
+                if existing_count == 0:
+                    parse_opts = (doc.parsed_metadata or {}).get("parse_options", {})
+                    c_size = parse_opts.get("chunk_size", 512)
+                    c_overlap = parse_opts.get("chunk_overlap", 50)
+                    extracted_chunks = await asyncio.to_thread(
+                        self.chunk_extractor.extract_chunks,
+                        pdf_bytes,
+                        doc.id,
+                        c_size,
+                        c_overlap,
+                    )
+                    if extracted_chunks:
+                        now = datetime.now(UTC)
+                        chunk_models = await self._build_chunk_models(
+                            extracted_chunks, doc.user_id, doc.id, now
+                        )
+                        async with _safe_nested_transaction(session):
+                            session.add_all(chunk_models)
+                            doc.chunk_count = len(chunk_models)
+                            await session.flush()
+                else:
+                    stmt_chunks = (
+                        select(DocumentChunkModel)
+                        .where(DocumentChunkModel.document_id == document_id)
+                        .order_by(DocumentChunkModel.chunk_index.asc())
+                    )
+                    chunk_models = list((await session.execute(stmt_chunks)).scalars().all())
+
+                # 5. Backfill embeddings if any chunks lack them
+                missing_chunks = [c for c in chunk_models if c.embedding is None]
+                if missing_chunks:
+                    emb_svc = self._get_or_init_embedding_service()
+                    if emb_svc is not None:
+                        try:
+                            texts = [c.content for c in missing_chunks]
+                            embs = await emb_svc.get_embeddings_batch(texts)
+                            for c, emb in zip(missing_chunks, embs):
+                                if emb is not None:
+                                    c.embedding = emb
+                            await session.flush()
+                        except Exception as e:
+                            logger.warning(
+                                "Failed generating embeddings in background parsing: %s",
+                                str(e),
+                            )
+
+                # 6. Extract summary & 4-pillar Summary Index
+                try:
+                    await self._precompute_summary_if_missing(
+                        doc=doc,
+                        chunk_models=chunk_models,
+                        pdf_bytes=pdf_bytes,
+                        db=session,
+                    )
+                except Exception as e:
+                    logger.warning(
+                        "Failed precomputing summary in background parse: %s",
+                        str(e),
+                    )
+
+                # 7. Finalize document state
+                doc.status = DocumentStatus.COMPLETED.value
+                doc.stage = DocumentStage.COMPLETED.value
+                doc.progress = 100
+                doc.updated_at = datetime.now(UTC)
+                await session.commit()
+                logger.info(
+                    "Background parsing completed successfully: %s",
+                    str(document_id),
+                )
+
+            except Exception as exc:
+                logger.exception(
+                    "Error during background parsing of document: %s",
+                    str(document_id),
+                )
+                try:
+                    await session.rollback()
+                    res = await session.execute(stmt)
+                    failed_doc = res.scalar_one_or_none()
+                    if failed_doc:
+                        failed_doc.status = DocumentStatus.FAILED.value
+                        failed_doc.error_message = str(exc)
+                        failed_doc.updated_at = datetime.now(UTC)
+                        await session.commit()
+                except Exception:
+                    pass
 
     async def upload_document(
         self,
@@ -1021,22 +1324,9 @@ class DocumentService:
                     )
                     if extracted_chunks:
                         now = datetime.now(UTC)
-                        chunk_models = [
-                            DocumentChunkModel(
-                                id=ec.id,
-                                user_id=doc.user_id,
-                                document_id=ec.document_id,
-                                chunk_index=ec.chunk_index,
-                                page_number=ec.page_number,
-                                content=ec.content,
-                                bounding_boxes=ec.bounding_boxes_raw,
-                                token_count=ec.token_count,
-                                embedding=None,
-                                created_at=now,
-                                updated_at=now,
-                            )
-                            for ec in extracted_chunks
-                        ]
+                        chunk_models = await self._build_chunk_models(
+                            extracted_chunks, doc.user_id, doc.id, now
+                        )
                         try:
                             async with _safe_nested_transaction(db):
                                 db.add_all(chunk_models)
@@ -1844,22 +2134,9 @@ class DocumentService:
                 )
                 if extracted_chunks:
                     now = datetime.now(UTC)
-                    chunk_models = [
-                        DocumentChunkModel(
-                            id=ec.id,
-                            user_id=doc.user_id,
-                            document_id=ec.document_id,
-                            chunk_index=ec.chunk_index,
-                            page_number=ec.page_number,
-                            content=ec.content,
-                            bounding_boxes=ec.bounding_boxes_raw,
-                            token_count=ec.token_count,
-                            embedding=None,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                        for ec in extracted_chunks
-                    ]
+                    chunk_models = await self._build_chunk_models(
+                        extracted_chunks, doc.user_id, doc.id, now
+                    )
                     try:
                         async with _safe_nested_transaction(db):
                             db.add_all(chunk_models)
@@ -2001,22 +2278,9 @@ class DocumentService:
                 )
                 if extracted_chunks:
                     now = datetime.now(UTC)
-                    chunk_models = [
-                        DocumentChunkModel(
-                            id=ec.id,
-                            user_id=doc.user_id,
-                            document_id=ec.document_id,
-                            chunk_index=ec.chunk_index,
-                            page_number=ec.page_number,
-                            content=ec.content,
-                            bounding_boxes=ec.bounding_boxes_raw,
-                            token_count=ec.token_count,
-                            embedding=None,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                        for ec in extracted_chunks
-                    ]
+                    chunk_models = await self._build_chunk_models(
+                        extracted_chunks, doc.user_id, doc.id, now
+                    )
                     try:
                         async with _safe_nested_transaction(db):
                             db.add_all(chunk_models)
@@ -2115,6 +2379,19 @@ class DocumentService:
         sum_res = await db.execute(sum_stmt)
         existing = sum_res.scalar_one_or_none()
         if existing is not None:
+            if not doc.parsed_metadata or "summary_metadata" not in doc.parsed_metadata:
+                summary_meta = self._extract_summary_metadata(
+                    problem_statement=existing.problem_statement,
+                    contributions=existing.contributions,
+                    limitations=existing.limitations,
+                    chunks=chunk_models,
+                    abstract=None,
+                )
+                current_meta = dict(doc.parsed_metadata or {})
+                current_meta["summary_metadata"] = summary_meta
+                doc.parsed_metadata = current_meta
+                db.add(doc)
+                await db.flush()
             return existing
 
         domain_chunks = []
@@ -2173,6 +2450,7 @@ class DocumentService:
         now = datetime.now(UTC)
         summary_record = DocumentSummaryModel(
             id=uuid4(),
+            user_id=doc.user_id,
             document_id=doc.id,
             problem_statement=generated.problem_statement.text,
             problem_citations=_serialize_boxes(generated.problem_statement.bounding_boxes),
@@ -2188,6 +2466,17 @@ class DocumentService:
         try:
             async with _safe_nested_transaction(db):
                 db.add(summary_record)
+                summary_meta = self._extract_summary_metadata(
+                    problem_statement=summary_record.problem_statement,
+                    contributions=summary_record.contributions,
+                    limitations=summary_record.limitations,
+                    chunks=chunk_models,
+                    abstract=abstract_text,
+                )
+                current_meta = dict(doc.parsed_metadata or {})
+                current_meta["summary_metadata"] = summary_meta
+                doc.parsed_metadata = current_meta
+                db.add(doc)
                 await db.flush()
             return summary_record
         except IntegrityError:
@@ -2302,22 +2591,9 @@ class DocumentService:
                 )
                 if extracted_chunks:
                     now = datetime.now(UTC)
-                    new_chunks = [
-                        DocumentChunkModel(
-                            id=ec.id,
-                            user_id=doc.user_id,
-                            document_id=ec.document_id,
-                            chunk_index=ec.chunk_index,
-                            page_number=ec.page_number,
-                            content=ec.content,
-                            bounding_boxes=ec.bounding_boxes_raw,
-                            token_count=ec.token_count,
-                            embedding=None,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                        for ec in extracted_chunks
-                    ]
+                    new_chunks = await self._build_chunk_models(
+                        extracted_chunks, doc.user_id, doc.id, now
+                    )
                     db.add_all(new_chunks)
                     doc.chunk_count = len(new_chunks)
                     doc.updated_at = datetime.now(UTC)
@@ -2479,22 +2755,9 @@ class DocumentService:
                 )
                 if extracted_chunks:
                     now = datetime.now(UTC)
-                    new_chunks = [
-                        DocumentChunkModel(
-                            id=ec.id,
-                            user_id=doc.user_id,
-                            document_id=ec.document_id,
-                            chunk_index=ec.chunk_index,
-                            page_number=ec.page_number,
-                            content=ec.content,
-                            bounding_boxes=ec.bounding_boxes_raw,
-                            token_count=ec.token_count,
-                            embedding=None,
-                            created_at=now,
-                            updated_at=now,
-                        )
-                        for ec in extracted_chunks
-                    ]
+                    new_chunks = await self._build_chunk_models(
+                        extracted_chunks, doc.user_id, doc.id, now
+                    )
                     db.add_all(new_chunks)
                     doc.chunk_count = len(new_chunks)
                     doc.updated_at = datetime.now(UTC)
@@ -2557,6 +2820,7 @@ class DocumentService:
             else:
                 summary_record = DocumentSummaryModel(
                     id=uuid4(),
+                    user_id=doc.user_id,
                     document_id=doc.id,
                     problem_statement=domain_summary.problem_statement.text,
                     problem_citations=prob_boxes,
@@ -2570,6 +2834,17 @@ class DocumentService:
                     updated_at=now,
                 )
                 db.add(summary_record)
+            summary_meta = self._extract_summary_metadata(
+                problem_statement=summary_record.problem_statement,
+                contributions=summary_record.contributions,
+                limitations=summary_record.limitations,
+                chunks=chunk_models,
+                abstract=abstract_text,
+            )
+            current_meta = dict(doc.parsed_metadata or {})
+            current_meta["summary_metadata"] = summary_meta
+            doc.parsed_metadata = current_meta
+            db.add(doc)
             try:
                 await db.commit()
             except IntegrityError:

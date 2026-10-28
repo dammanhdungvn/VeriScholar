@@ -1,4 +1,4 @@
-"""Database models re-export (18 PostgreSQL 16 + pgvector models)."""
+"""Database models re-export (19 PostgreSQL 16 + pgvector models)."""
 
 from api.db.models.base import Base, IdentifiableTimestampedModel
 from api.db.models.blob import DocumentStorageBlobModel
@@ -8,7 +8,11 @@ from api.db.models.draft import DraftModel
 from api.db.models.draft_asset import DraftAssetModel
 from api.db.models.draft_message import DraftMessageModel
 from api.db.models.folder import FolderModel
-from api.db.models.graph import GraphEdgeModel, GraphNodeModel
+from api.db.models.graph import (
+    FolderCommunitySummaryModel,
+    GraphEdgeModel,
+    GraphNodeModel,
+)
 from api.db.models.note import ResearchNoteModel
 from api.db.models.reference import ReferenceItemModel
 from api.db.models.scholar_profile import ScholarProfileModel
@@ -39,6 +43,7 @@ __all__ = [
     "FolderModel",
     "GraphNodeModel",
     "GraphEdgeModel",
+    "FolderCommunitySummaryModel",
     "DraftModel",
     "DraftAssetModel",
     "DraftMessageModel",

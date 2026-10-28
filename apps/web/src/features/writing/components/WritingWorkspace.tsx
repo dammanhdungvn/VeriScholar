@@ -23,7 +23,7 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
     draft,
     editorTitle,
     editorContent,
-    setEditorContent,
+    editorBibContent,
     workspaceMode,
     mobileActiveTab,
     setMobileActiveTab,
@@ -37,7 +37,6 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
     setPreviewPdfBlobUrl,
     setWorkspaceMode,
     setAssistantPrompt,
-    setAssisting,
     isFileTreeOpen,
     toggleFileTree,
     openAssetModal,
@@ -104,6 +103,7 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
       const updated = await draftsApi.updateDraft(activeDraftId, {
         title: editorTitle,
         content: editorContent,
+        bib_content: editorBibContent,
         format: draft.format,
         version: draft.version,
       });
@@ -113,7 +113,56 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
     } finally {
       setSaving(false);
     }
-  }, [activeDraftId, draft, editorTitle, editorContent, markSaved, setSaving]);
+  }, [
+    activeDraftId,
+    draft,
+    editorTitle,
+    editorContent,
+    editorBibContent,
+    markSaved,
+    setSaving,
+  ]);
+
+  // Clear cache and compile clean
+  const handleClearCacheRecompile = useCallback(async () => {
+    if (!activeDraftId) return;
+    try {
+      if (isDirty) {
+        await handleSave();
+      }
+      setCompiling(true);
+      const result = await draftsApi.recompileClearCache(activeDraftId);
+      setCompileResult(result);
+
+      if (result.success) {
+        const blob = await draftsApi.getPreviewPdfBlob(activeDraftId);
+        const url = URL.createObjectURL(blob);
+        setPreviewPdfBlobUrl(url);
+        if (typeof window !== "undefined" && window.innerWidth < 768) {
+          setMobileActiveTab("preview");
+        }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Compile request failed.";
+      setCompileResult({
+        draft_id: activeDraftId,
+        success: false,
+        errors: [{ line: 0, column: 0, rule: "request", message }],
+        logs: message,
+        retries_attempted: 0,
+      });
+    } finally {
+      setCompiling(false);
+    }
+  }, [
+    activeDraftId,
+    isDirty,
+    handleSave,
+    setCompiling,
+    setCompileResult,
+    setPreviewPdfBlobUrl,
+    setMobileActiveTab,
+  ]);
 
   // Compile draft with sandbox self-healing
   const handleCompile = useCallback(async () => {
@@ -227,52 +276,6 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
     }
     setAssistantPrompt(contextBuffer);
   }, [workspaceMode, setWorkspaceMode, setAssistantPrompt]);
-
-  // AI Writing Assist trigger - connects to POST /api/v1/drafts/{id}/assist
-  const handleSendAssistantPrompt = useCallback(
-    async (prompt: string) => {
-      if (!activeDraftId || !draft) return;
-      try {
-        setAssisting(true);
-
-        const currentContent = useWritingStore.getState().editorContent;
-        const currentRange = useWritingStore.getState().selectionRange;
-        const start = currentRange ? currentRange.start : currentContent.length;
-        const end = currentRange ? currentRange.end : currentContent.length;
-        const selectedText =
-          currentRange && start !== end ? currentContent.substring(start, end) : "";
-
-        const preContext = currentContent.substring(Math.max(0, start - 500), start);
-        const postContext = currentContent.substring(
-          end,
-          Math.min(currentContent.length, end + 500)
-        );
-
-        const res = await draftsApi.assistDraft(activeDraftId, {
-          prompt,
-          pre_context: preContext,
-          target_selection: selectedText,
-          post_context: postContext,
-          cursor_position: start,
-        });
-
-        if (res?.suggested_text) {
-          const safeStart = Math.min(Math.max(0, start), currentContent.length);
-          const safeEnd = Math.min(Math.max(safeStart, end), currentContent.length);
-          const nextContent =
-            currentContent.slice(0, safeStart) +
-            res.suggested_text +
-            currentContent.slice(safeEnd);
-          setEditorContent(nextContent);
-        }
-      } catch (err) {
-        console.error("AI writing assist failed:", err);
-      } finally {
-        setAssisting(false);
-      }
-    },
-    [activeDraftId, draft, setAssisting, setEditorContent]
-  );
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
@@ -422,6 +425,8 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
               >
                 <WritingPreviewPane
                   onRecompile={handleCompile}
+                  onRecompileClearCache={handleClearCacheRecompile}
+                  onNavigateToLine={(line) => setTargetScrollLine(line)}
                   showDoAnything={false}
                 />
               </div>
@@ -436,7 +441,6 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
                 )}
               >
                 <WritingAssistantPane
-                  onSendAssistantPrompt={handleSendAssistantPrompt}
                   onClose={() => {
                     setWorkspaceMode("dual-code");
                     if (mobileActiveTab === "assistant") {

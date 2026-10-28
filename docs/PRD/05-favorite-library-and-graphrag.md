@@ -13,47 +13,69 @@
 ## 1. Tầm Nhìn Nghiệp Vụ & Nỗi Đau Người Dùng (Business Context & Pain Points)
 
 ### 1.1. Tầm nhìn phân hệ
-Biến kho bài báo yêu thích của học giả từ một danh sách tệp tĩnh rời rạc thành một **Mạng Tri Thức Học Thuật 4 Thực Thể** sống động (`Bài báo`, `Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`), giúp người nghiên cứu phân loại đề tài theo cây thư mục và hỏi đáp đối chiếu thực nghiệm xuyên suốt hàng chục công trình chỉ bằng một câu truy vấn.
+Biến kho bài báo yêu thích của học giả từ danh sách tệp tĩnh thành **Mạng Tri Thức Học Thuật 4 Thực Thể** (`Bài báo`, `Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) kết hợp cơ chế **Truy vấn Kép Vi mô & Vĩ mô (Dual-Level GraphRAG)** và **Bản đồ Thư mục học (Bibliometric Prior/Derivative Works)**, giúp tổ chức thư mục đề tài và tổng hợp số liệu thực nghiệm SOTA xuyên suốt nhiều công trình trong tích tắc.
 
-### 1.2. Nỗi đau thực tế của học giả (Có Định Lượng Nghiệp Vụ)
-1. **Thư viện cá nhân biến thành "kho lưu trữ chết" (Knowledge Silos):** Sau vài tháng tải hàng chục bài báo về máy tính, hơn **70% học giả** không còn nhớ bài báo nào chứng minh định lý nào hoặc bài nào đạt độ chính xác cao nhất trên tập dữ liệu chuẩn, buộc phải mở đọc lại từ đầu.
-2. **Đứt gãy liên kết phương pháp và tập dữ liệu giữa các công trình:** Các phần mềm quản lý trích dẫn truyền thống chỉ lưu bài báo như các tệp đơn lẻ, không thể hiện được mối quan hệ kế thừa (Bài báo A đề xuất mô hình gốc $\rightarrow$ Bài báo B cải tiến trên tập dữ liệu C).
-3. **Mất 30 – 50 giờ tổng hợp bảng so sánh thực nghiệm khi viết bài và phản biện (SOTA Synthesis Burden):** Khi viết mục *Related Work / Experiments* hoặc trả lời chất vấn phản biện (Rebuttal) trong hạn 7 – 10 ngày, tác giả phải lật lại 20 – 30 bài báo để chép tay từng chỉ số đo lường (`BLEU`, `Top-1 Accuracy`, `F1`), vừa kiệt sức vừa dễ chép nhầm số liệu.
-4. **Khó phát hiện sự chênh lệch số liệu thực nghiệm giữa các bài báo độc lập:** Khi nhiều bài báo cùng đánh giá một mô hình trên cùng một tập dữ liệu nhưng báo cáo kết quả khác nhau do thiết lập thử nghiệm khác nhau, học giả thiếu công cụ tự động gom nhóm và đặt cạnh nhau kèm số trang chứng cứ để đối chiếu khách quan.
+### 1.2. Nỗi đau thực tế của học giả
+1. **Kho lưu trữ chết và đứt gãy liên kết:** Hơn **70% học giả** không nhớ bài báo nào đề xuất thuật toán nào hoặc đạt kết quả cao nhất trên dữ liệu chuẩn, buộc phải mở đọc lại từng tệp PDF rời rạc.
+2. **Mất 30 – 50 giờ tổng hợp bảng so sánh thực nghiệm (SOTA Burden):** Khi viết phần Related Work hoặc phản hồi phản biện (Rebuttal), tác giả phải lật lại 20 – 30 bài báo để chép tay từng con số đo lường (`BLEU`, `Accuracy`, `F1`), dễ nhầm lẫn ngữ cảnh thử nghiệm.
+3. **Mất phương hướng khi tiếp cận đề tài mới:** Người nghiên cứu khó xác định đâu là các bài báo kinh điển cội nguồn (*Prior Works*) cần đọc trước, và đâu là các công trình phái sinh cải tiến mới nhất (*Derivative Works*).
+4. **Hạn chế của GraphRAG thông thường:** Hệ thống hỏi đáp cục bộ chỉ trả lời được câu hỏi về một đỉnh đơn lẻ, thất bại khi học giả hỏi các câu bao quát vĩ mô (*"Các hướng tiếp cận chính và hạn chế của các bài báo trong đề tài này là gì?"*).
 
-### 1.3. Bảng Đối Chiếu Giá Trị Trước & Sau Khi Áp Dụng Kho Yêu Thích & Đồ Thị Tri Thức (Before vs. After Value Matrix)
+### 1.3. Bảng Đối Chiếu Giá Trị Trước & Sau Khi Áp Dụng (Before vs. After Value Matrix)
 
-| Tiêu chí Nghiệp vụ Học thuật | Lưu trữ Thư mục / Zotero Truyền thống | Kho Yêu Thích & Đồ Thị 4 Thực Thể VeriScholar |
+| Tiêu chí Nghiệp vụ | Lưu trữ Zotero / Thư mục rời | Mạng Tri Thức Học Thuật VeriScholar |
 | :--- | :--- | :--- |
-| **Tổ chức tài liệu theo đề tài** | Lưu tệp rời rạc trên ổ cứng; xóa thư mục dễ làm mất tệp gốc. | **Cây thư mục đa tầng gắn màu**; xóa thư mục vẫn bảo toàn 100% bài báo gốc. |
-| **Kết nối tri thức khi gắn sao** | Chỉ đánh dấu dấu trang tĩnh, không trích xuất nội dung bên trong. | Tự động bóc tách **4 Thực thể chuẩn** và gộp điểm nút phương pháp/dữ liệu trùng tên. |
-| **Tổng hợp bảng so sánh SOTA** | Mở lại 20 – 30 tệp PDF để dò tìm từng bảng số liệu (mất 30 – 50 giờ). | Đặt 1 câu hỏi tự nhiên $\rightarrow$ Nhận ngay **Bảng đối chiếu số liệu kèm số trang** và sơ đồ nhánh. |
-| **Kiểm soát phạm vi trích dẫn** | Không phân biệt được bài đã loại bỏ với bài đang dùng. | **Bỏ dấu sao (`Unstar`)** lập tức thu hồi bài báo khỏi phạm vi trả lời tổng hợp. |
+| **Tổ chức đề tài** | Tệp PDF tĩnh, dễ phân mảnh hoặc mất khi xóa thư mục. | **Cây thư mục gắn màu**, xóa thư mục bảo toàn 100% bài báo gốc. |
+| **Nạp tri thức khi gắn sao** | Đánh dấu thủ công, không phân tích cấu trúc bên trong. | **Nạp tăng dần (< 3s)** bóc tách 4 thực thể và gộp điểm nút Hub ngữ nghĩa. |
+| **Hỏi đáp thực nghiệm SOTA** | Mở 20 – 30 tệp PDF dò số liệu thủ công (30 – 50 giờ). | **Truy vấn Vi mô (Local Search)** trả về bảng đối chiếu kèm số trang và viền vàng. |
+| **Hỏi đáp vĩ mô toàn đề tài** | Không hỗ trợ, AI thông thường bị loãng ngữ cảnh. | **Truy vấn Vĩ mô (Global Search)** tổng hợp toàn diện theo cụm đề tài thư mục. |
+| **Bản đồ phát triển đề tài** | Tự tra cứu thủ công cây trích dẫn trên mạng. | **Bản đồ Thư mục học** tự phân loại Tác phẩm Cội nguồn và Tác phẩm Phái sinh. |
 
 ---
 
-## 2. Các Tác Nhân Tham Gia (Actors)
+## 2. Các Tác Nhân & Luồng Nghiệp Vụ (Actors & Workflow)
 
-| Tác nhân | Vai trò trong phân hệ | Trách nhiệm & Kỳ vọng |
+| Tác nhân | Vai trò | Trách nhiệm & Kỳ vọng |
 | :--- | :--- | :--- |
-| **Nhà Nghiên Cứu / Học Giả** | Chủ sở hữu kho tri thức cá nhân | Đánh dấu yêu thích bài báo, tổ chức cây thư mục đề tài, tra cứu tổng hợp và so sánh thực nghiệm đa tài liệu. |
-| **Động Cơ Tri Thức Đồ Thị** | Hệ thống tự động bóc tách và hợp nhất thực thể | Tự động trích xuất 4 loại thực thể học thuật khi bài báo được gắn sao, gộp các điểm nút chuẩn hóa trùng tên và liên kết cạnh quan hệ. |
-| **Trợ Lý Soạn Thảo Tích Hợp** | Tác nhân liên thông sang không gian viết bài | Truy xuất mạng tri thức trong kho yêu thích để lấy số liệu thực nghiệm và dẫn chứng khi hỗ trợ viết bản thảo (`PRD-06`). |
+| **Nhà Nghiên Cứu** | Chủ sở hữu kho tri thức | Đánh dấu yêu thích, quản lý cây thư mục, tra cứu vi mô/vĩ mô và trực quan hóa bản đồ tri thức. |
+| **Động Cơ Tri Thức Đồ Thị** | Động cơ phân tích ngầm | Bóc tách 4 thực thể tăng dần, hợp nhất Hub (Cosine $\ge 0.90$), tính toán ghép cặp thư mục học. |
+| **Trợ Lý Soạn Thảo AI** | Cầu nối sang không gian viết | Khai thác đồ thị để trích dẫn số liệu SOTA và mã BibTeX tự động vào bản thảo (`PRD-06`). |
 
 ```mermaid
-flowchart LR
+flowchart TD
     Scholar(["Học Giả Nghiên Cứu"])
     GraphEngine(["Động Cơ Đồ Thị Tri Thức"])
-    subgraph LibraryBoundary ["Phân Hệ Kho Yêu Thích & Mạng Tri Thức Học Thuật 4 Thực Thể"]
-        UC1(["UC-LIB-01: Tổ Chức Cây Thư Mục Đề Tài Đa Cấp"])
-        UC2(["UC-LIB-02: Gắn Sao & Bóc Tách Đồ Thị 4 Thực Thể"])
-        UC3(["UC-LIB-03: Hỏi Đáp Đối Chiếu Đa Bài Báo (GraphRAG)"])
-        UC2 --> UC3
+
+    subgraph LibraryBoundary ["Phân Hệ Kho Yêu Thích & Đồ Thị Kép (PostgreSQL & pgvector)"]
+        subgraph UseCases ["Nghiệp Vụ Học Thuật"]
+            UC1["UC-LIB-01: Cây Thư Mục Đề Tài"]
+            UC2["UC-LIB-02: Gắn Sao & Nạp Tăng Dần (Incremental)"]
+            UC3["UC-LIB-03: Hợp Nhất Đỉnh Hub (Cosine >= 0.90)"]
+            UC4["UC-LIB-04: Truy Vấn Kép Vi Mô & Vĩ Mô (Dual-Level)"]
+            UC5["UC-LIB-05: Mạng Ghép Cặp Thư Mục (Prior & Derivative)"]
+            UC1 --- UC2 --> UC3 --> UC4
+            UC2 --> UC5
+        end
+
+        subgraph DualGraph ["Kiến Trúc Đồ Thị Kép (Dual-Layer Knowledge Graph)"]
+            LexicalGraph[("Lexical Graph: document_chunks (Text, BBox, Page, Vector 1536d)")]
+            DomainGraph[("Domain Graph: graph_nodes & graph_edges (Paper, Method, Dataset, Metric)")]
+            LexicalGraph -. "evidence_chunk_id (Minh chứng gốc)" .- DomainGraph
+        end
+
+        UC3 --> DomainGraph
+        UC4 --> DomainGraph
+        UC4 --> LexicalGraph
+        UC5 --> DomainGraph
     end
+
     Scholar --> UC1
     Scholar --> UC2
-    Scholar --> UC3
+    Scholar --> UC4
+    Scholar --> UC5
     GraphEngine --> UC2
+    GraphEngine --> UC3
+    GraphEngine --> UC5
 ```
 
 ---
@@ -62,111 +84,67 @@ flowchart LR
 
 ### UC-LIB-01: Quản Lý Cây Thư Mục Đề Tài & Phân Loại Bài Báo
 - **Tác nhân:** Nhà Nghiên Cứu.
-- **Điều kiện tiên quyết:** Người dùng đã đăng nhập và truy cập màn hình Kho Yêu Thích (`/library`).
-- **Sự kiện kích hoạt:** Người dùng tạo mới, cập nhật hoặc xóa thư mục đề tài nghiên cứu.
-- **Luồng chuẩn (Happy Path):**
-  1. Người dùng nhấp nút `[➕ Thư mục mới]`, nhập Tên thư mục (1 – 100 ký tự), chọn Mã màu nhận diện và Thư mục cha (nếu phân cấp nhiều tầng).
-  2. Hệ thống lưu thư mục và hiển thị ngay trên cây điều hướng bên trái.
-  3. Người dùng gán các bài báo vào thư mục hoặc đổi tên, đổi màu, xóa thư mục khi kết thúc đề tài.
-- **Kết quả đầu ra (Post-conditions):**
-  - Cây thư mục cá nhân được cập nhật tức thì; các bài báo bên trong giữ nguyên toàn vẹn nội dung và lịch sử ghi chú.
-- **Luồng ngoại lệ (Exception Flows):**
-  - *1a. Xóa thư mục đang chứa bài báo:* Hệ thống chỉ xóa nhãn thư mục phân loại; toàn bộ bài báo bên trong được chuyển về danh mục gốc của người dùng mà không bị mất dữ liệu.
-  - *1b. Trùng tên thư mục trong cùng cấp cha hoặc gán thư mục cha tạo vòng lặp:* Hệ thống chặn thao tác và hiển thị thông báo yêu cầu chọn tên hoặc thư mục cha hợp lệ.
+- **Luồng chuẩn:** Tạo mới, sửa, gán màu, phân cấp cây thư mục đề tài (`/library`). Khi xóa thư mục, chỉ xóa nhãn phân loại, toàn bộ bài báo bên trong được bảo toàn nguyên vẹn trong danh mục gốc.
+- **Quy tắc chặn vòng lặp:** Phát hiện và từ chối hành vi gán thư mục cha tạo vòng lặp lồng nhau ($A \rightarrow B \rightarrow A$).
 
----
+### UC-LIB-02: Đánh Dấu Bài Báo Yêu Thích & Nạp Đồ Thị Tăng Dần (Incremental Indexing)
+- **Tác nhân:** Nhà Nghiên Cứu, Động Cơ Tri Thức.
+- **Luồng chuẩn:** Bấm `[⭐ Yêu thích]` $\rightarrow$ Ngôi sao sáng vàng trong $< 200$ms. Hệ thống kích hoạt xử lý nền bóc tách 4 thực thể độc lập cho riêng bài báo đó ($< 3$s), không phải tái lập chỉ mục toàn bộ thư viện.
+- **Hành vi Unstar:** Khi bỏ sao, hệ thống thu hồi các cạnh của bài báo đó khỏi phạm vi truy vấn nhưng bảo toàn các đỉnh Hub dùng chung với bài báo khác.
 
-### UC-LIB-02: Đánh Dấu Bài Báo Yêu Thích & Kích Hoạt Mạng Tri Thức
+### UC-LIB-03: Hợp Nhất Thực Thể Chuẩn Hóa & Khử Nhập Nhằng Ngữ Nghĩa (Canonical Hubs)
+- **Tác nhân:** Động Cơ Tri Thức.
+- **Luồng chuẩn:** Bóc tách dữ liệu vào đúng 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) và 4 quan hệ (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`).
+- **Khử nhập nhằng:** Nếu $\text{Cosine Similarity} \ge 0.90$ trên `pgvector`, tự động gộp về một điểm nút trung tâm duy nhất (Hub), chống nổ đỉnh phân mảnh ("ViT" vs "Vision Transformer").
+
+### UC-LIB-04: Truy Vấn Kép Vi Mô & Vĩ Mô (Dual-Level GraphRAG Retrieval)
 - **Tác nhân:** Nhà Nghiên Cứu.
-- **Điều kiện tiên quyết:** Người dùng đang đọc một bài báo trong phiên nghiên cứu hoặc xem danh sách tài liệu.
-- **Sự kiện kích hoạt:** Người dùng nhấp biểu tượng ngôi sao `[⭐ Yêu thích]`.
-- **Luồng chuẩn (Happy Path):**
-  1. Biểu tượng ngôi sao sáng vàng; bài báo được thêm ngay vào Kho Yêu Thích (kèm tùy chọn gán vào một Thư mục đề tài).
-  2. Hệ thống tự động kích hoạt ngầm tiến trình quét bài báo để trích xuất các thực thể học thuật (`Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) và kết nối vào mạng lưới tri thức cá nhân của người dùng.
-- **Kết quả đầu ra (Post-conditions):**
-  - Bài báo xuất hiện trong Kho Yêu Thích và các thực thể trích xuất từ bài báo được hợp nhất vào đồ thị tri thức cá nhân của học giả.
-- **Luồng ngoại lệ (Exception Flows):**
-  - *2a. Bỏ đánh dấu yêu thích (`Unstar`):* Khi người dùng nhấp tắt ngôi sao, hệ thống lập tức loại bài báo và các cạnh quan hệ riêng của bài đó khỏi phạm vi truy vấn đồ thị, nhưng vẫn bảo toàn các điểm nút phương pháp/dữ liệu trung tâm nếu còn bài báo khác liên kết tới.
-  - *2b. Tiến trình trích xuất thực thể gặp sự cố hoặc bài báo lý thuyết thuần túy không có bảng thực nghiệm:* Bài báo vẫn được lưu giữ an toàn trong Kho Yêu Thích; hệ thống chỉ tạo các thực thể có trong bài và cho phép kích hoạt trích xuất lại khi cần.
+- **Luồng chuẩn:** Ô tra cứu tự động định tuyến theo ý định câu hỏi:
+  1. **Truy vấn Vi mô (Local Search):** HNSW Vector Anchor $\rightarrow$ 1-Hop CTE Traversal $\rightarrow$ Trả về ma trận SOTA đối chiếu số liệu thực nghiệm gắn với tọa độ viền vàng Bounding Box trên PDF gốc.
+  2. **Truy vấn Vĩ mô (Global Search):** Tổng hợp chủ đề, phương pháp và hạn chế xuyên suốt toàn bộ một thư mục đề tài dựa trên bản tóm tắt cụm tri thức.
 
----
-
-### UC-LIB-03: Hợp Nhất Thực Thể Chuẩn Hóa Trên Đồ Thị 4 Thực Thể (Canonical Hub Merging)
-- **Tác nhân:** Động Cơ Tri Thức Đồ Thị.
-- **Điều kiện tiên quyết:** Bài báo đã được đánh dấu yêu thích.
-- **Sự kiện kích hoạt:** Hệ thống hoàn tất bóc tách thực thể từ bài báo.
-- **Luồng chuẩn (Happy Path):**
-  1. Hệ thống chuẩn hóa dữ liệu vào đúng **4 Loại Thực Thể Cố Định**:
-     - `Bài Báo (Paper)`: Tiêu đề, tác giả, năm, nơi công bố.
-     - `Phương Pháp (Method)`: Thuật toán, mô hình, kiến trúc (ví dụ: *Transformer*, *ResNet-50*).
-     - `Tập Dữ Liệu (Dataset)`: Bộ dữ liệu chuẩn (ví dụ: *ImageNet-1K*, *WMT-2014*).
-     - `Kết Quả Đo Lường (MetricResult)`: Con số thực nghiệm kèm thước đo và số trang chứng cứ (ví dụ: *BLEU 28.4 • Trang 8*).
-  2. Hệ thống thiết lập **4 Kiểu Quan Hệ Chuẩn**: `Đề Xuất (PROPOSES)`, `Đánh Giá Trên (EVALUATED_ON)`, `Đạt Được (ACHIEVES)` và `Trích Dẫn (CITES)`.
-  3. **Hợp nhất điểm nút trung tâm (Canonical Hub):** Khi nhiều bài báo của cùng một học giả cùng nhắc tới một tên phương pháp hoặc tập dữ liệu chuẩn hóa (không phân biệt chữ hoa/thường và khoảng trắng thừa), hệ thống tự động gộp về một điểm nút trung tâm duy nhất và nối cạnh từ tất cả các bài báo đó tới nút trung tâm.
-- **Kết quả đầu ra (Post-conditions):**
-  - Đồ thị tri thức tạo thành mạng lưới liên thông đa bài báo, không sinh các nút phương pháp/tập dữ liệu trùng lặp và mọi con số đo lường đều gắn chặt với số trang nguồn.
-- **Luồng ngoại lệ (Exception Flows):**
-  - *3a. Nhiều bài báo công bố kết quả đo lường khác nhau trên cùng một tập dữ liệu:* Hệ thống giữ nguyên từng nút `Kết Quả Đo Lường` riêng biệt gắn với từng bài báo và số trang nguồn tương ứng (không ghi đè lên nhau) để học giả đối chiếu minh bạch.
-
----
-
-### UC-LIB-04: Hỏi Đáp Tổng Hợp & Đối Chiếu Đa Tài Liệu Trong Kho
+### UC-LIB-05: Mạng Ghép Cặp Thư Mục & Bản Đồ Cội Nguồn (Connected Papers Prior & Derivative)
 - **Tác nhân:** Nhà Nghiên Cứu.
-- **Điều kiện tiên quyết:** Kho Yêu Thích có các bài báo đã được trích xuất đồ thị tri thức.
-- **Sự kiện kích hoạt:** Người dùng nhập câu hỏi so sánh tổng hợp tại ô tra cứu Kho Yêu Thích.
-- **Luồng chuẩn (Happy Path):**
-  1. Người dùng nhập câu hỏi tự nhiên (ví dụ: *"Những bài báo nào trong kho của tôi đánh giá trên tập WMT-2014 và đạt điểm BLEU cao nhất?"*).
-  2. Hệ thống tìm các điểm nút thực thể khớp ngữ nghĩa nhất rồi mở rộng 1 bước nhảy quan hệ sang các bài báo, phương pháp và kết quả đo lường liên đới.
-  3. Hệ thống trả về bản tổng hợp đối chiếu kèm trích dẫn tên bài báo, số trang gốc và hiển thị sơ đồ mạng lưới trực quan (Subgraph) của các thực thể liên quan.
-- **Kết quả đầu ra (Post-conditions):**
-  - Học giả nhận được câu trả lời đối chiếu đa bài báo có dẫn chứng số trang và sơ đồ đồ thị con tương ứng.
-- **Luồng ngoại lệ (Exception Flows):**
-  - *4a. Không tìm thấy thực thể khớp trong kho yêu thích:* Hệ thống thông báo rõ trong kho hiện chưa có bài báo nào đề cập đến thực thể/tập dữ liệu được hỏi, tuyệt đối không tự bịa số liệu ngoài kho.
+- **Luồng chuẩn:** Tự động tính toán Ghép cặp Thư mục (Bibliographic Coupling) giữa các bài báo có chung $\ge 3$ tài liệu tham khảo. Phân loại trực quan:
+  - **Tác phẩm Cội nguồn (Prior Works):** Các bài báo kinh điển có số lượng liên kết tham chiếu cao nhất trong kho.
+  - **Tác phẩm Phái sinh (Derivative Works):** Các công trình mới nhất mở rộng từ nền tảng trên.
+- **Trực quan hóa:** Hiển thị sơ đồ Cytoscape với kích thước đỉnh theo độ ảnh hưởng (Degree Centrality), nhấp vào cạnh sẽ nhảy tới Bounding Box trang PDF tương ứng.
 
 ---
 
 ## 4. Tiêu Chí Nghiệm Thu Nghiệp Vụ (Acceptance Criteria - Gherkin)
 
 ```gherkin
-@library @folders
-Feature: Quản lý thư mục đề tài không làm mất tài liệu gốc
-  Scenario: Xóa thư mục bảo toàn bài báo
-    Given người dùng đang có một thư mục đề tài chứa 3 bài báo khoa học
-    When người dùng thực hiện thao tác xóa thư mục này
-    Then cấu trúc thư mục phân loại phải bị gỡ bỏ khỏi cây thư mục
-    And cả 3 bài báo bên trong vẫn tồn tại nguyên vẹn trong kho tài liệu chung của người dùng
+@library @incremental
+Feature: Nạp tăng dần và hợp nhất đỉnh Hub dùng chung
+  Scenario: Hai bài báo cùng áp dụng Transformer gộp chung 1 nút Hub
+    Given kho yêu thích đã có bài báo A đề xuất phương pháp "Transformer"
+    When người dùng đánh dấu yêu thích thêm bài báo B cũng áp dụng "Transformer"
+    Then hệ thống hoàn tất nạp tăng dần trong < 3 giây mà không chạy lại toàn bộ kho
+    And cả bài báo A và B đều kết nối tới cùng một nút Hub trung tâm trên đồ thị
 
-@library @graph_canonical
-Feature: Bóc tách tự động và hợp nhất thực thể dùng chung
-  Scenario: Hai bài báo cùng dùng phương pháp Transformer gộp chung 1 nút Hub
-    Given trong kho đã có bài báo A đề xuất phương pháp "Transformer"
-    When người dùng đánh dấu yêu thích thêm bài báo B cũng áp dụng phương pháp "Transformer"
-    Then hệ thống nhận diện "Transformer" là điểm nút dùng chung duy nhất của người dùng
-    And trên mạng tri thức, cả bài báo A và bài báo B đều liên kết đến cùng một điểm nút "Transformer"
+@library @dual_retrieval
+Feature: Truy vấn kép vi mô và vĩ mô
+  Scenario: Truy vấn vi mô trả về số liệu thực nghiệm kèm số trang
+    Given kho yêu thích có 2 bài báo thử nghiệm trên tập dữ liệu "WMT-2014"
+    When người dùng hỏi: "Bài báo nào đạt BLEU cao hơn trên tập WMT-2014?"
+    Then hệ thống trả về bảng so sánh đối chiếu có số trang và đường dẫn Bounding Box chính xác
 
-@library @synthesis
-Feature: Hỏi đáp tổng hợp thực nghiệm đa bài báo chính xác
-  Scenario: So sánh điểm số thực nghiệm trên cùng tập dữ liệu
-    Given kho yêu thích có 2 bài báo cùng thử nghiệm trên tập dữ liệu "WMT-2014"
-    And bài báo A đạt điểm "BLEU: 28.4", bài báo B đạt điểm "BLEU: 27.5"
-    When người dùng đặt câu hỏi: "Bài báo nào đạt điểm BLEU cao hơn trên tập WMT-2014?"
-    Then câu trả lời khẳng định bài báo A đạt điểm cao hơn với điểm số 28.4 kèm số trang dẫn chứng
-    And giao diện hiển thị sơ đồ kết nối trực quan giữa 2 bài báo và điểm số thực nghiệm
-
-@library @unstar
-Feature: Dọn dẹp sạch phạm vi tri thức khi người dùng bỏ yêu thích
-  Scenario: Bỏ dấu sao thu hồi bài báo khỏi truy vấn tổng hợp
-    Given một bài báo đang được đánh dấu yêu thích và có các nút thực thể trong mạng tri thức
-    When người dùng nhấp bỏ dấu sao yêu thích (Unstar) bài báo đó
-    Then bài báo đó lập tức bị loại khỏi phạm vi trả lời của các câu hỏi tra cứu tổng hợp
-    And các thực thể phương pháp nền tảng dùng chung với bài báo khác vẫn được bảo toàn nguyên vẹn
+@library @bibliometrics
+Feature: Bản đồ thư mục học phát hiện tác phẩm cội nguồn
+  Scenario: Tự động gắn nhãn tác phẩm cội nguồn dựa trên ghép cặp tham khảo
+    Given 3 bài báo trong thư mục cùng trích dẫn công trình nền tảng của Vaswani (2017)
+    When người dùng mở chế độ xem Mạng Tri Thức của thư mục
+    Then bài báo Vaswani (2017) được hiển thị với kích thước lớn nhất và gắn nhãn "Tác phẩm Cội nguồn"
 ```
 
 ---
 
 ## 5. Quy Tắc Nghiệp Vụ Bất Biến (Business Invariants)
 
-1. **Nguyên Tắc 4 Thực Thể & 4 Quan Hệ Cố Định (Strict 4-Entity Schema):** Đồ thị tri thức chỉ sử dụng đúng 4 loại thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) và 4 kiểu quan hệ (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`); tuyệt đối không sinh nhãn tùy tiện.
-2. **Nguyên Tắc Điểm Nút Trung Tâm Dùng Chung (Canonical Hub Merging):** Các thực thể `Method` hoặc `Dataset` trùng tên chuẩn hóa trong phạm vi một học giả bắt buộc được gộp về một nút trung tâm duy nhất và giữ tồn tại khi một bài báo đơn lẻ bị gỡ.
-3. **Nguyên Tắc Cô Lập Đồ Thị Cá Nhân Tuyệt Đối (Strict Scholar Isolation):** Cây thư mục và đồ thị tri thức của học giả nào chỉ thuộc quyền truy xuất của học giả đó.
-4. **Nguyên Tắc Minh Chứng Số Liệu Thực Nghiệm (Grounded Metric Evidence):** Mọi nút `MetricResult` bắt buộc gắn liền với bài báo nguồn và số trang nơi trích xuất con số đó.
+1. **Nguyên Tắc 4 Thực Thể & 4 Quan Hệ Cố Định:** Đồ thị chỉ chấp nhận 4 nhãn thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`) và 4 kiểu cạnh (`PROPOSES`, `EVALUATED_ON`, `ACHIEVES`, `CITES`).
+2. **Nguyên Tắc Hợp Nhất Đỉnh Hub Ngữ Nghĩa (Cosine $\ge 0.90$):** Gom cụm các biến thể tên gọi về một nút trung tâm duy nhất, bảo toàn nguyên vẹn khi có một bài báo bị bỏ sao (`Unstar`).
+3. **Nguyên Tắc Cô Lập Đồ Thị Cá Nhân Tuyệt Đối:** Toàn bộ bảng `graph_nodes` và `graph_edges` bắt buộc lọc chặt chẽ theo `user_id`, không bao giờ trộn lẫn tri thức giữa hai học giả.
+4. **Nguyên Tắc Neo Giữ Bounding Box Đồ Thị Kép (Lexical & Domain Grounding):** Mọi cạnh thực nghiệm trong Domain Graph bắt buộc liên kết với `evidence_chunk_id` trong Lexical Graph để định vị viền vàng trên PDF.
+5. **Nguyên Tắc Bộ Sáu Ngữ Cảnh Đo Lường (Contextual Metric Tuple Invariant):** Mọi nút `MetricResult` bắt buộc gắn với tuple `(Tập dữ liệu, Tác vụ, Phân chia dữ liệu, Tên chỉ số, Giá trị, Số trang)`.
+6. **Nguyên Tắc Cập Nhật Tăng Dần & Không Nghẽn UI (Incremental Indexing Invariant):** Việc gắn sao hoặc tra cứu vi mô/vĩ mô tuyệt đối không làm nghẽn giao diện và không yêu cầu tính toán lại toàn bộ kho tài liệu.

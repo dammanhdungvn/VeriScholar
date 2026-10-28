@@ -305,11 +305,16 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
 
 #### Chi tiết Hợp đồng Dữ liệu từng Khối:
 
-1. **Khối 1: INDEXING & DUAL STORE PIPELINE**
+1. **Khối 1: INDEXING & DUAL STORE PIPELINE (Kèm 4 Trụ Cột Summary Index)**
    * **Input:** File PDF nhị phân (`bytes`), `document_id` (UUID), `user_id` (UUID).
    * **Process:** 
      - PyMuPDF chia cột đọc (Gutter Detection). Cắt lát: 512 tokens, bước trượt 50 tokens.
      - Chuẩn hóa tọa độ Bounding Box về $[0..1000]$: `{"x": float, "y": float, "width": float, "height": float}`.
+     - Trích xuất cấu trúc tri thức vĩ mô của bài báo thành **4 Trụ Cột Summary Index** (lấy cảm hứng từ chuẩn AlphaXiv):
+       1. `original_problem`: Nút thắt và hạn chế của các phương pháp tiền nhiệm.
+       2. `proposed_solution`: Kiến trúc và kỹ thuật đột phá bài báo đề xuất.
+       3. `key_insights`: Đóng góp lý thuyết mang tính bản lề.
+       4. `quantitative_results`: Kết quả thực nghiệm định lượng chính (BLEU, F1, Loss, Cost reduction).
      - Gọi `OpenAI text-embedding-3-small` theo batch $\le 128$ chunks để tính vector dense 1536 chiều.
      - Phân tích từ khóa toàn văn tạo cột `content_tsv` bằng `to_tsvector('english', content)`.
    * **Expected Output:**
@@ -320,7 +325,13 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
        "page_number": 3,
        "content": "Answer Relevance (AR) is defined as...",
        "embedding": [0.0124, -0.0451, ..., 0.0892],
-       "bounding_boxes": [{"x": 120.5, "y": 450.2, "width": 410.0, "height": 85.4}]
+       "bounding_boxes": [{"x": 120.5, "y": 450.2, "width": 410.0, "height": 85.4}],
+       "summary_metadata": {
+         "original_problem": ["Evaluating RAG systems requires human ground truth which is expensive..."],
+         "proposed_solution": ["Ragas introduces reference-free evaluation metrics including AR, QA, and Context Relevance..."],
+         "key_insights": ["Synthetic question generation allows quantifying semantic overlap without human labels..."],
+         "quantitative_results": ["High correlation with human annotators (Pearson r > 0.82)..."]
+       }
      }
      ```
 
@@ -354,6 +365,7 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
    * **Process:**
      - **$\tau \ge 0.35$ (Correct):** Giữ nguyên Top chunks.
      - **$0.20 \le \tau < 0.35$ (Ambiguous / Multiline Formula Split):** Tự động truy vấn bổ sung các chunk lân cận $[i-1, i+1]$ trên cùng trang để gom trọn vẹn công thức hoặc định lý.
+     - **Khử trùng lặp & Giới hạn Token (Deduplication & Budget Cap):** Khi mở rộng, bắt buộc khử trùng lặp theo `chunk_id` và áp trần `MAX_EVIDENCE_TOKENS = 3500` để chống tràn Context Window của LLM.
      - **$\tau < 0.20$ (Incorrect):** Bật cờ `abstain = True`, không gửi context rác cho LLM.
    * **Expected Output:**
      ```json
@@ -373,25 +385,29 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
    * **Process:** Ghép các chunk vào khối `[CONTEXT]` với chỉ thị: Mỗi câu khẳng định hoặc công thức toán học bắt buộc phải gắn thẻ neo `[cite:chunk_id:page]`.
    * **Expected Output:** Chuỗi Prompt được kiểm duyệt sạch sẽ.
 
-7. **Khối 7: GENERATION & VISUAL PROOF (Streaming & Golden Bounding Box)**
+7. **Khối 7: GENERATION & VISUAL PROOF (Streaming Reasoner & Golden BBox Canvas)**
    * **Input:** Augmented Prompt.
-   * **Process:** LLM sinh streaming token; Backend regex tách thẻ `[cite:chunk_id:page]` và đẩy event SSE `citation` chứa mảng `bounding_boxes`. Frontend React Canvas nhận sự kiện, tự động cuộn trang và vẽ **Khung viền vàng nhấp nháy** bao quanh công thức.
-   * **Expected Output:** Phản hồi hiển thị chuẩn KaTeX kèm Bounding Box vàng chính xác $\text{IoU} \ge 0.85$.
+   * **Process:** 
+     - LLM sinh streaming token; Backend bóc tách thẻ `[cite:chunk_id:page:concept_name]` và đẩy event SSE `citation` chứa mảng `bounding_boxes` và tên khái niệm.
+     - Frontend React Canvas nhận sự kiện, tự động cuộn trang và vẽ **Khung viền vàng nhấp nháy nét đứt** (`border: 2px dashed #f59e0b; background: rgba(245, 158, 11, 0.12); border-radius: 6px`) bao quanh công thức.
+     - Thẻ trích dẫn hiển thị dạng ngữ nghĩa: `[📄 Scaled Dot-Product Attention • Trang 4]` thay vì chỉ có số trang cộc lốc.
+   * **Expected Output:** Phản hồi hiển thị chuẩn KaTeX kèm Bounding Box vàng chính xác $\text{IoU} \ge 0.85$ và huy hiệu trích dẫn ngữ nghĩa tương tác tức thì.
 
 ---
 
 ### C. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60)
 
-`SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** qua vector HyDE và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion ($k=60$):
+`SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** qua vector HyDE và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion ($k=60$). Câu lệnh bắt buộc ép kiểu `CAST(:hyde_vector AS vector)`, sắp xếp `ORDER BY` trước khi lấy `LIMIT 25` để kích hoạt chỉ mục HNSW/GIN, sử dụng `= ANY(:active_doc_ids)` cho mảng UUID và `JOIN documents` để lấy tiêu đề bài báo:
 
 ```sql
 WITH vector_ranks AS (
     SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
-           (1.0 - (embedding <=> :hyde_vector)) AS cosine_sim,
-           ROW_NUMBER() OVER (ORDER BY embedding <=> :hyde_vector) AS rank_vec
+           (1.0 - (embedding <=> CAST(:hyde_vector AS vector))) AS cosine_sim,
+           ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:hyde_vector AS vector)) AS rank_vec
     FROM document_chunks
-    WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
+    WHERE document_id = ANY(:active_doc_ids) AND user_id = :user_id
       AND embedding IS NOT NULL
+    ORDER BY embedding <=> CAST(:hyde_vector AS vector)
     LIMIT 25
 ),
 fts_ranks AS (
@@ -399,22 +415,27 @@ fts_ranks AS (
            ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) AS fts_score,
            ROW_NUMBER() OVER (ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) DESC) AS rank_fts
     FROM document_chunks
-    WHERE document_id IN (:active_doc_ids) AND user_id = :user_id
+    WHERE document_id = ANY(:active_doc_ids) AND user_id = :user_id
       AND content_tsv @@ plainto_tsquery('english', :fts_query)
+    ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) DESC
     LIMIT 25
+),
+combined AS (
+    SELECT COALESCE(v.id, f.id) AS chunk_id,
+           COALESCE(v.cosine_sim, 0.0) AS max_cosine_sim,
+           (COALESCE(1.0 / (60.0 + v.rank_vec), 0.0) + COALESCE(1.0 / (60.0 + f.rank_fts), 0.0)) AS rrf_score
+    FROM vector_ranks v
+    FULL OUTER JOIN fts_ranks f ON v.id = f.id
 )
-SELECT COALESCE(v.id, f.id) AS chunk_id,
-       COALESCE(v.document_id, f.document_id) AS document_id,
-       COALESCE(v.chunk_index, f.chunk_index) AS chunk_index,
-       COALESCE(v.page_number, f.page_number) AS page_number,
-       COALESCE(v.content, f.content) AS text_content,
-       COALESCE(v.bounding_boxes, f.bounding_boxes) AS bounding_boxes,
-       COALESCE(v.cosine_sim, 0.0) AS max_cosine_sim,
-       (COALESCE(1.0 / (60 + v.rank_vec), 0.0) + COALESCE(1.0 / (60 + f.rank_fts), 0.0)) AS rrf_score
-FROM vector_ranks v
-FULL OUTER JOIN fts_ranks f ON v.id = f.id
-ORDER BY rrf_score DESC
-LIMIT 5;
+SELECT c.id AS chunk_id, c.document_id, c.chunk_index, c.page_number,
+       c.content AS text_content, c.bounding_boxes,
+       d.title AS document_title, d.filename,
+       cb.max_cosine_sim, cb.rrf_score
+FROM combined cb
+JOIN document_chunks c ON cb.chunk_id = c.id
+JOIN documents d ON c.document_id = d.id
+ORDER BY cb.rrf_score DESC
+LIMIT :limit;
 ```
 
 ---
@@ -506,6 +527,40 @@ Theo định hướng giao diện tối giản 80/20 và loại bỏ hoàn toàn
 | **Google Gemini (Thinking)** | `thinking_budget=0` | `thinking_budget=1024` | `thinking_budget=4096` | `thinking_budget=16384` |
 | **Anthropic Claude (Thinking)** | `type="disabled"` | `budget_tokens=2048` | `budget_tokens=8192` | `budget_tokens=32768` |
 | **Local / DMR (DeepSeek R1)** | Thêm chỉ thị trả lời nhanh | Kích hoạt nấc CoT ngắn | Kích hoạt CoT tiêu chuẩn | Kích hoạt CoT chuyên sâu |
+
+### D. Bộ Nhớ Đệm Trình Duyệt Tức Thì Cho PDF (Zero-Latency Browser CacheStorage)
+Kế thừa giải pháp kỹ thuật từ nền tảng AlphaXiv (`pdf-cache`):
+- Sử dụng CacheStorage API bản địa: `window.caches.open("verischolar-pdfs-v1")`.
+- Lưu trữ cục bộ tối đa 500 bài báo gần nhất dạng binary `ArrayBuffer`.
+- Khi người dùng chuyển đổi Tab hoặc mở lại phiên đọc:
+  1. Kiểm tra cache hit: `const cached = await cache.match(pdfUrl);`
+  2. Nếu có, nạp trực tiếp vào `pdfjs-dist` trong $0$ms, hoàn toàn không gọi lại mạng về kho CAS.
+  3. Nếu không có (Cache Miss), tải ngầm từ API backend, ghi vào `cache` và hiển thị đồng thời.
+
+### E. Giao Diện Suy Luận Chuỗi Tư Duy Thu Gọn (Reasoning Thinking Accordion UI)
+Phục vụ các mô hình có dòng suy luận sâu (DeepSeek-R1, OpenAI o1/o3-mini, Gemini 2.0 Flash Thinking):
+1. **Component `ReasoningThinkingAccordion.tsx`:**
+   - **Giai đoạn Đang suy luận:** Hiển thị thẻ card nhỏ với hiệu ứng sóng ánh sáng (CSS Shimmer Pulse Animation), spinner xoay nhẹ và bộ đếm giây: `Thinking... (2.4s)`.
+   - **Giai đoạn Hoàn tất suy luận:** Tự động chuyển đổi mượt sang icon tích tròn `✓ Thinking Finished` kèm chevron mở rộng `v`.
+   - Mặc định thẻ này **tự động gập gọn** thành một dải mỏng để giữ khung chat luôn tinh gọn, nhường chỗ cho câu trả lời chính thức hiển thị bên dưới.
+   - Khi học giả bấm vào dải `Thinking Finished`, toàn bộ các bước suy luận trung gian (Chain-of-Thought) sẽ mở trượt xuống để đối chứng logic.
+
+### F. Tính Năng Rê Chuột Chọn Vùng Bounding Box (Interactive Drag-to-Crop)
+Kế thừa giải pháp `ReactCrop` từ AlphaXiv:
+1. **Tương tác trực tiếp trên PDF Canvas:** Học giả có thể nhấn giữ chuột trái và kéo một khung chữ nhật bao quanh bất kỳ sơ đồ, công thức toán hoặc bảng số liệu nào trên trang PDF.
+2. **Kích hoạt tức thì:** Một menu tác vụ nổi tinh gọn hiện ra ngay phía trên vùng vừa crop:
+   - `[💬 Hỏi AI về vùng này]`: Tự động cắt ảnh snapshot của vùng đó và đính kèm vào khung chat kèm số trang và tọa độ BBox.
+   - `[📝 Lưu vào sổ tay]`: Lưu nhanh ảnh snapshot công thức vào Sổ tay trích dẫn.
+
+### G. Chế Độ Đọc Ban Đêm Cho Canvas PDF (Canvas Dark Mode Invert Filter)
+1. Thêm nút chuyển đổi Chế độ đọc ban đêm trên thanh công cụ PDF.
+2. Áp dụng bộ lọc CSS chuẩn quốc tế trên thẻ `<canvas>` của `pdfjs-dist`:
+   ```css
+   .canvas-dark-mode canvas {
+     filter: invert(90%) hue-rotate(180deg) contrast(90%);
+   }
+   ```
+3. Lớp văn bản trong suốt `TextLayer` (`opacity: 0`) được giữ nguyên độc lập phía trên canvas, giúp học giả bôi đen, sao chép văn bản trơn tru và bảo vệ thị lực tối đa khi đọc đêm.
 
 ---
 
