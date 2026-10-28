@@ -89,7 +89,7 @@ jobs:
       - name: Install TeXLive & latexmk for CLSI LaTeX Compiler Tests
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base texlive-binaries
+          sudo apt-get install -y --no-install-recommends latexmk texlive-latex-base texlive-binaries texlive-xetex
 
       - name: Run Gate 2 — Pytest Suite (Boundary, Unit & Integration Tests)
         env:

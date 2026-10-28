@@ -9,7 +9,11 @@ import pytest
 from api.services.clsi_latex_compiler import CLSILatexCompiler
 
 HAS_LATEXMK = shutil.which("latexmk") is not None
+HAS_XELATEX = shutil.which("xelatex") is not None
 requires_latexmk = pytest.mark.skipif(not HAS_LATEXMK, reason="latexmk not installed on system")
+requires_xelatex = pytest.mark.skipif(
+    not (HAS_LATEXMK and HAS_XELATEX), reason="xelatex not installed on system"
+)
 
 
 def test_auto_engine_detection():
@@ -298,7 +302,7 @@ Timeout Test
     assert any("timed out" in d.get("message", "").lower() for d in res["diagnostics"])
 
 
-@requires_latexmk
+@requires_xelatex
 @pytest.mark.asyncio
 async def test_compile_with_xelatex(tmp_path):
     """Document with fontspec package compiles successfully via XeLaTeX."""
