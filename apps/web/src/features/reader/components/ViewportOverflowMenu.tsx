@@ -18,9 +18,10 @@ import type { ReadingMode } from "../stores/useReaderStore";
 export interface ViewportOverflowMenuProps {
   isOpen: boolean;
   onClose: () => void;
-  activeReadingMode: ReadingMode;
-  onReadingModeChange: (mode: ReadingMode) => void;
+  activeReadingMode?: ReadingMode;
+  onReadingModeChange?: (mode: ReadingMode) => void;
   onOpenReferences?: () => void;
+  onOpenNotes?: () => void;
   isZenPdf?: boolean;
   onToggleZenPdf?: () => void;
   zoomRatio?: number;
@@ -37,18 +38,19 @@ export interface ViewportOverflowMenuProps {
 export function ViewportOverflowMenu({
   isOpen,
   onClose,
-  activeReadingMode,
-  onReadingModeChange,
+  activeReadingMode: _activeReadingMode,
+  onReadingModeChange: _onReadingModeChange,
   onOpenReferences,
-  isZenPdf,
-  onToggleZenPdf,
+  onOpenNotes,
+  isZenPdf: _isZenPdf,
+  onToggleZenPdf: _onToggleZenPdf,
   zoomRatio,
   onZoomIn,
   onZoomOut,
   onResetZoom,
   onRotate,
   showZoomControls = false,
-  showReadingModes = true,
+  showReadingModes: _showReadingModes = false,
   isMobile: _isMobile,
   className,
 }: ViewportOverflowMenuProps) {
@@ -168,94 +170,27 @@ export function ViewportOverflowMenu({
         </div>
       )}
 
-      {/* 1. Chế độ đọc (Reading Modes) */}
-      {showReadingModes && (
-        <div className="mb-2">
-          <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted dark:text-zinc-400 font-semibold">
-            Chế độ đọc
-          </div>
-          <div className="space-y-0.5" role="group" aria-label="Lựa chọn chế độ đọc">
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={activeReadingMode === "continuous"}
-              data-testid="overflow-reading-mode-continuous"
-              onClick={() => {
-                onReadingModeChange("continuous");
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-                activeReadingMode === "continuous"
-                  ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light font-semibold"
-                  : "text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521]"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Scroll className="w-3.5 h-3.5 text-primary" />
-                <span>Cuộn liên tục (Continuous)</span>
-              </div>
-              {activeReadingMode === "continuous" && (
-                <Check className="w-3.5 h-3.5 text-primary" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={activeReadingMode === "single"}
-              data-testid="overflow-reading-mode-single"
-              onClick={() => {
-                onReadingModeChange("single");
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-                activeReadingMode === "single"
-                  ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light font-semibold"
-                  : "text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521]"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <File className="w-3.5 h-3.5 text-primary" />
-                <span>Từng trang đơn (Single)</span>
-              </div>
-              {activeReadingMode === "single" && (
-                <Check className="w-3.5 h-3.5 text-primary" />
-              )}
-            </button>
-
-            <button
-              type="button"
-              role="menuitemradio"
-              aria-checked={activeReadingMode === "two-page"}
-              data-testid="overflow-reading-mode-two-page"
-              onClick={() => {
-                onReadingModeChange("two-page");
-              }}
-              className={cn(
-                "w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-                activeReadingMode === "two-page"
-                  ? "bg-primary/10 text-primary dark:bg-primary/20 dark:text-primary-light font-semibold"
-                  : "text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521]"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <Columns2 className="w-3.5 h-3.5 text-primary" />
-                <span>Hai trang song song (Spread)</span>
-              </div>
-              {activeReadingMode === "two-page" && (
-                <Check className="w-3.5 h-3.5 text-primary" />
-              )}
-            </button>
-          </div>
-          <div className="h-[1px] bg-hairline dark:bg-[#2b2722] my-1.5" />
-        </div>
-      )}
-
       {/* 2. Công cụ học thuật & Không gian (Academic Tools & Focus) */}
       <div className="space-y-0.5">
         <div className="px-2 py-1 text-[10px] font-mono uppercase tracking-wider text-muted dark:text-zinc-400 font-semibold">
           Công cụ
         </div>
+
+        {onOpenNotes && (
+          <button
+            type="button"
+            role="menuitem"
+            data-testid="overflow-open-notes-btn"
+            onClick={() => {
+              onClose();
+              onOpenNotes();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521] hover:text-primary transition-colors cursor-pointer text-left"
+          >
+            <BookMarked className="w-3.5 h-3.5 text-primary shrink-0" />
+            <span className="flex-1 font-medium">Sổ ghi chú</span>
+          </button>
+        )}
 
         {onOpenReferences && (
           <button
@@ -270,33 +205,6 @@ export function ViewportOverflowMenu({
           >
             <BookMarked className="w-3.5 h-3.5 text-primary shrink-0" />
             <span className="flex-1 font-medium">Trích xuất Tài liệu Tham khảo</span>
-          </button>
-        )}
-
-        {onToggleZenPdf && (
-          <button
-            type="button"
-            role="menuitem"
-            data-testid="overflow-zen-pdf-btn"
-            onClick={() => {
-              onClose();
-              onToggleZenPdf();
-            }}
-            className={cn(
-              "hidden md:flex w-full items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer text-left",
-              isZenPdf
-                ? "bg-primary text-white font-semibold hover:bg-primary/90"
-                : "text-ink dark:text-zinc-200 hover:bg-surface-soft dark:hover:bg-[#282521] hover:text-primary"
-            )}
-          >
-            {isZenPdf ? (
-              <Minimize2 className="w-3.5 h-3.5 shrink-0" />
-            ) : (
-              <Maximize2 className="w-3.5 h-3.5 text-primary shrink-0" />
-            )}
-            <span className="flex-1 font-medium">
-              {isZenPdf ? "Khôi phục chia đôi (Thoát Zen)" : "Đọc tập trung (Zen PDF)"}
-            </span>
           </button>
         )}
       </div>

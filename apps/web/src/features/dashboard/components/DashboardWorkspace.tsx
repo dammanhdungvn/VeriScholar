@@ -840,9 +840,11 @@ export function DashboardWorkspace({
           onZoomOut={zoomOut}
           onResetZoom={resetZoom}
           onRotate={rotateClockwise}
-          isZenPdf={zenMode === "pdf"}
-          onToggleZenPdf={() => setZenMode(zenMode === "pdf" ? "none" : "pdf")}
           onOpenReferences={isRealDocument ? () => setIsRefModalOpen(true) : undefined}
+          onOpenNotes={() => {
+            if (!isAssistantOpen) setIsAssistantOpen(true);
+            setActiveRightTab("notes");
+          }}
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
