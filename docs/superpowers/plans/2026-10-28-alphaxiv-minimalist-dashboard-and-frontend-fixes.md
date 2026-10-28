@@ -1,10 +1,10 @@
-# alphaXiv Minimalist Dashboard, Frontend Glitch Fixes & Mermaid Visualization Implementation Plan
+# alphaXiv Minimalist Dashboard, Agent Stepper, Concept Pills & Mermaid Visualization Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Overhaul the VeriScholar `/dashboard/:id` experience to match the radical minimalism of `alphaXiv.org`: fix scroll & caret bugs, enforce single Bounding Box with instant dismissal, introduce a real-time `Thinking Finished` reasoning block, support Mermaid diagram generation with SVG/PNG export, and provide a 100% paper view with a floating AI assistant bubble and slide-over panel.
+**Goal:** Overhaul the VeriScholar `/dashboard/:id` experience to match the radical minimalism of `alphaXiv.org` and modern AI Agent steppers: fix scroll & caret bugs, enforce single Bounding Box with instant dismissal, introduce a real-time `Working` / `Thought for Xs` / `Worked for Xs >` collapsible reasoning block, replace legacy `[1][2]` citations with interactive `[ ↪ Concept ]` pills and hover source preview cards, support Mermaid diagram generation with SVG/PNG export, and provide a 100% paper view with a floating AI assistant bubble and slide-over panel.
 
-**Architecture:** Frontend state orchestrates paper visibility via Zustand (`useWorkspaceStore` & `useReaderStore`). Layout container enforces strict viewport boundaries (`h-screen overflow-hidden`) preventing scroll leakage. `MermaidRenderer` compiles syntax to SVG with canvas-based PNG download. `SocraticThinkingBlock` encapsulates reasoning telemetry from backend SSE events.
+**Architecture:** Frontend state orchestrates paper visibility via Zustand (`useWorkspaceStore` & `useReaderStore`). Layout container enforces strict viewport boundaries (`h-screen overflow-hidden`) preventing scroll leakage. `AcademicMarkdownRenderer` parses concept tags into interactive pills with hover popover snippets. `MermaidRenderer` compiles syntax to SVG with canvas-based PNG download. `SocraticThinkingBlock` encapsulates reasoning telemetry and step-by-step action logs.
 
 **Tech Stack:** React 19, Tailwind CSS, Lucide React, Zustand, TanStack React Query, Mermaid.js, Vitest, FastAPI, Python 3.12.
 
@@ -20,8 +20,10 @@
 1. Bounding Box must never render more than 1 box at a time under any circumstance.
 2. Clicking outside the PDF Bounding Box or pressing `Esc` must immediately dismiss the highlight without page reload.
 3. Chat stream auto-scroll must never push the browser viewport or header off-screen.
-4. Mermaid diagrams must download cleanly as both `.svg` and `.png` across browsers.
-5. Closing the Assistant panel with `✕` must smoothly expand the paper to 100% and show the floating AI bubble.
+4. Thinking Stepper must collapse automatically to `Worked for Xs >` after stream completion and expand cleanly on click.
+5. Concept Pills must show a hover preview card with snippet and `Page X`, and click to jump and highlight without `[1][2]` or footer citations.
+6. Mermaid diagrams must download cleanly as both `.svg` and `.png` across browsers.
+7. Closing the Assistant panel with `✕` must smoothly expand the paper to 100% and show the floating AI bubble.
 
 ---
 
@@ -33,7 +35,7 @@
 - Create: `apps/web/src/features/dashboard/__tests__/LayoutScrollAndCaretFix.test.tsx`
 
 - [ ] **Step 1: Write RED unit test for container scroll isolation and streaming caret**
-Create `apps/web/src/features/dashboard/__tests__/LayoutScrollAndCaretFix.test.tsx` to verify:
+Create `apps/web/src/features/dashboard/__tests__/LayoutScrollAndCaretFix.test.tsx`:
 1. `DashboardWorkspace` layout container has `overflow-hidden` and `overflow-x-hidden`.
 2. `AcademicMarkdownRenderer` does NOT render a standalone chunky orange block `w-1.5 h-4` on empty stream, but renders an inline subtle pulse caret.
 
@@ -103,30 +105,28 @@ bash scripts/deploy_to_vps.sh --fast
 
 ---
 
-### Task 3: Build Socratic Thinking Block Component with Seconds Counter
+### Task 3: Build Socratic Thinking Block Component with Agent Activity Stepper
 
 **Files:**
 - Create: `apps/web/src/features/dashboard/components/SocraticThinkingBlock.tsx`
-- Modify: `apps/web/src/features/dashboard/hooks/useStreamingChat.ts:275-290`
+- Modify: `apps/web/src/features/dashboard/hooks/useStreamingChat.ts:275-295`
 - Modify: `apps/web/src/features/dashboard/components/DashboardWorkspace.tsx:1340-1365`
 - Create: `apps/web/src/features/dashboard/__tests__/SocraticThinkingBlock.test.tsx`
 
 - [ ] **Step 1: Write RED unit test for SocraticThinkingBlock**
 Create `apps/web/src/features/dashboard/__tests__/SocraticThinkingBlock.test.tsx`:
-1. Displays real-time timer when streaming thought (`Đang suy nghĩ... 4s`).
-2. Switches to `✓ Đã suy nghĩ trong Xs` and collapses when streaming finishes.
-3. Allows user to click and expand to view the full thought text.
+1. Displays `Working` / `Reading...` / `Thought for Xs >` live stepper during streaming.
+2. Automatically collapses to single header `Worked for Xs >` when streaming finishes.
+3. Clicking `>` expands the action history and full thought text; clicking `^` or header collapses it back.
 
 - [ ] **Step 2: Run test to verify it fails**
 Run: `npm --prefix apps/web run test -- SocraticThinkingBlock.test.tsx`
 Expected: FAIL
 
 - [ ] **Step 3: Implement SocraticThinkingBlock and hook integration**
-1. Create `SocraticThinkingBlock.tsx` with:
-   - Capsule trigger button with icon `Brain` / `CheckCircle2` and seconds count.
-   - Smooth accordion collapse/expand.
+1. Create `SocraticThinkingBlock.tsx` following the exact design in User Images 1-4.
 2. In `useStreamingChat.ts`:
-   - Catch event `parsed.type === "reasoning"` in addition to `"thinking"`.
+   - Catch event `parsed.type === "reasoning"` and extract thought steps.
    - Track `thought_duration_seconds`.
 3. In `DashboardWorkspace.tsx`:
    - Replace `<details className="group mb-3 ...">` with `<SocraticThinkingBlock />`.
@@ -139,13 +139,53 @@ Expected: PASS
 ```bash
 npm --prefix apps/web run test && npm --prefix apps/web run build
 git add apps/web/src/features/dashboard/components/SocraticThinkingBlock.tsx apps/web/src/features/dashboard/hooks/useStreamingChat.ts apps/web/src/features/dashboard/components/DashboardWorkspace.tsx apps/web/src/features/dashboard/__tests__/SocraticThinkingBlock.test.tsx
-git commit -m "feat(chat): add SocraticThinkingBlock with real-time seconds counter"
+git commit -m "feat(chat): add SocraticThinkingBlock with agent activity stepper and collapsible header"
 bash scripts/deploy_to_vps.sh --fast
 ```
 
 ---
 
-### Task 4: Mermaid Visualization & SVG/PNG Vector Export
+### Task 4: Semantic Concept Pills & Hover Source Preview Popover
+
+**Files:**
+- Modify: `apps/web/src/components/shared/AcademicMarkdownRenderer.tsx:50-130,500-525`
+- Modify: `apps/api/src/api/services/session_chat_service.py:2080-2115`
+- Create: `apps/web/src/components/shared/__tests__/ConceptPillsAndPreview.test.tsx`
+
+- [ ] **Step 1: Write RED unit test for concept pills and hover preview**
+Create `apps/web/src/components/shared/__tests__/ConceptPillsAndPreview.test.tsx`:
+1. Renders concept pills `[ ↪ Architecture ]` instead of `[1] [2]`.
+2. Does NOT render the footer `Nguồn trích dẫn (X)`.
+3. Hovering over a concept pill renders a floating popover with source snippet and `Page X`.
+4. Clicking the concept pill invokes `onCitationClick` to jump and highlight.
+
+- [ ] **Step 2: Run test to verify it fails**
+Run: `npm --prefix apps/web run test -- ConceptPillsAndPreview.test.tsx`
+Expected: FAIL
+
+- [ ] **Step 3: Implement concept pills, hover preview card, and backend prompt update**
+1. In `AcademicMarkdownRenderer.tsx`:
+   - Parse `[cite:ConceptName]`, `[ConceptName]`, and map to citations.
+   - Render concept pill component with hover popover tooltip card (showing snippet + `Page X`).
+   - Remove `citation-sources-footer` section.
+2. In `session_chat_service.py`:
+   - Update prompt rules: attach concept tags `[cite:ConceptName]` instead of numbered `[1] [2]`.
+
+- [ ] **Step 4: Run test to verify it passes**
+Run: `npm --prefix apps/web run test -- ConceptPillsAndPreview.test.tsx`
+Expected: PASS
+
+- [ ] **Step 5: Run web tests and commit**
+```bash
+npm --prefix apps/web run test && npm --prefix apps/web run build
+git add apps/web/src/components/shared/AcademicMarkdownRenderer.tsx apps/api/src/api/services/session_chat_service.py apps/web/src/components/shared/__tests__/ConceptPillsAndPreview.test.tsx
+git commit -m "feat(citations): implement semantic concept pills with hover source preview popover"
+bash scripts/deploy_to_vps.sh --fast
+```
+
+---
+
+### Task 5: Mermaid Visualization & SVG/PNG Vector Export
 
 **Files:**
 - Modify: `apps/web/src/components/shared/MermaidRenderer.tsx:1-150`
@@ -185,7 +225,7 @@ bash scripts/deploy_to_vps.sh --fast
 
 ---
 
-### Task 5: alphaXiv-style Minimalist Layout: 100% Paper, Floating FAB & Assistant Slide-Over
+### Task 6: alphaXiv-style Minimalist Layout: 100% Paper, Floating FAB & Assistant Slide-Over
 
 **Files:**
 - Create: `apps/web/src/features/dashboard/components/VerticalEdgeDock.tsx`
@@ -226,7 +266,7 @@ bash scripts/deploy_to_vps.sh --fast
 
 ---
 
-### Task 6: Comprehensive 4 Gates Verification & Live VPS Rollout
+### Task 7: Comprehensive 4 Gates Verification & Live VPS Rollout
 
 **Files:**
 - None (system-wide verification)

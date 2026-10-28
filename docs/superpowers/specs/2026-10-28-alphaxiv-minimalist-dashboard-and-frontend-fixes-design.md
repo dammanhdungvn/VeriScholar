@@ -1,135 +1,77 @@
-# Thiết Kế Chi Tiết: Bố Cục alphaXiv Tối Giản, Khắc Phục Bugs Frontend & Nâng Cấp Trải Nghiệm AI Thinking, Sơ Đồ Mermaid
+# Thiết Kế Chi Tiết: Bố Cục alphaXiv Tối Giản, Khắc Phục Bugs Frontend & Nâng Cấp Trải Nghiệm AI Thinking Stepper, Concept Pills & Sơ Đồ Mermaid
 
-> **Trạng thái:** DRAFT — Trình duyệt Phương án 1  
+> **Trạng thái:** DRAFT — Cập nhật đầy đủ theo hình ảnh thực tế của người dùng  
 > **Tác giả:** VeriScholar Engineering Pair  
 > **Ngày:** 2026-10-28  
-> **Mục tiêu:** Tái cấu trúc giao diện `/dashboard/:id` tiệm cận 100% chuẩn tối giản quốc tế của `alphaXiv.org`, khắc phục 4 lỗi frontend nghiêm trọng (scroll, Bounding Box, con trỏ cam), tích hợp khối tư duy `Thinking Finished` đếm giây và bộ xuất ảnh SVG/PNG cho sơ đồ Mermaid.
+> **Mục tiêu:** Tái cấu trúc giao diện `/dashboard/:id` theo chuẩn tối giản quốc tế của `alphaXiv.org` và mô hình Agent Stepper hiện đại (Antigravity / Claude / ChatGPT):
+> 1. Khắc phục 4 lỗi frontend (scroll lan truyền, quá tải Bounding Box, con trỏ cam thô).
+> 2. Khối tư duy Agent Activity Stepper: Hiển thị các bước `Working`, `Reading...`, `Thought for Xs`, tự động thu gọn thành `Worked for Xs >` (click `v` mở rộng xem chi tiết, click `^` thu gọn).
+> 3. Trích dẫn Concept Pills & Popover Preview: Bỏ hoàn toàn `[1] [2]` và chân trang trích dẫn, thay bằng thẻ khái niệm `[ ↪ Architecture ]`; hover hiện thẻ xem trước snippet + `Page X`, click cuộn sang PDF viền 1 Bounding Box duy nhất.
+> 4. Xuất ảnh sơ đồ Mermaid sang SVG / PNG.
+> 5. Bố cục alphaXiv: Bài báo 100%, Bong bóng AI nổi (FAB) góc phải dưới, khung Assistant trượt mở có nút `✕` và Vertical Edge Dock.
 
 ---
 
-## 1. Bối Cảnh & Động Lực (Context & Motivation)
-Người dùng nghiên cứu khoa học cần một không gian đọc bài báo tập trung, thoáng đãng, không bị phân tán bởi các thanh công cụ cồng kềnh. Đồng thời, quá trình đối thoại với AI cần đạt chuẩn mực thẩm mỹ cao như các sản phẩm hàng đầu (ChatGPT, Claude, alphaXiv):
-1. **Lỗi cuộn trang:** Trong khi AI stream, toàn bộ trang bị kéo tụt xuống dưới và xuất hiện thanh scroll ngang nhấp nháy, làm mất thanh tiêu đề và che khuất nội dung.
-2. **Quá tải Bounding Box:** Click trích dẫn sinh ra nhiều khung viền rải rác che lấp bài báo, không có nút tắt tức thì khiến người dùng phải F5.
-3. **Con trỏ cam thô:** Vạch cam `|` to bản nằm độc lập trên dòng trống gây giật mắt.
-4. **Thiếu khối tư duy trực quan:** Người dùng cần theo dõi thời gian và chuỗi lập luận của AI dạng viên thuốc `✓ Thinking Finished ∨` co giãn linh hoạt.
-5. **Nhu cầu trực quan hóa sơ đồ:** Người dùng muốn AI có thể vẽ sơ đồ kiến trúc, thuật toán và xuất ra file ảnh SVG/PNG để tái sử dụng.
-6. **Bố cục alphaXiv:** Người dùng yêu cầu bài báo có thể xem toàn màn hình 100%, có Bong bóng nổi AI Assistant ở góc phải dưới, click vào để mở bảng chat 50/50 và có nút `✕` đóng lại.
+## 1. Chi Tiết Khối Tư Duy Agent Activity Stepper (`SocraticThinkingBlock`)
+Theo đúng nguyên mẫu trong Ảnh 1, 2, 3, 4:
+1. **Khi AI đang làm việc (Active / Streaming):**
+   - Ban đầu: hiển thị chữ `Working` mờ nhẹ hoặc xoay nhẹ.
+   - Khi thực hiện tác vụ:
+     - `Reading chunk... ∨`
+     - `Thought for {s}s >` (đồng hồ đếm giây tăng theo thời gian thực)
+     - `Analyzed Bounding Box #Page {num}`
+2. **Khi AI hoàn tất (Finished / Standby):**
+   - Tự động co lại thành một dòng tiêu đề duy nhất: `Worked for {total_s}s >` (Ảnh số 4).
+   - **Click `>` / `v` (Mở rộng - Ảnh số 3):**
+     - Bung ra toàn bộ danh sách các bước đã thực hiện (`Explored file`, `Analyzed...`).
+     - Hiển thị khối nội dung suy nghĩ / lập luận Chain-of-Thought (`Thought for Xs`) dạng văn bản chi tiết.
+   - **Click `^` / `v` (Thu gọn - Ảnh số 4):**
+     - Đóng gọn lại ngay lập tức để người dùng tập trung đọc câu trả lời chính của AI.
 
 ---
 
-## 2. Kiến Trúc & Thiết Kế Giải Pháp (Technical Architecture)
-
-### 2.1 Khắc phục Triệt để 4 Bugs Frontend
-1. **Khắc phục lỗi cuộn trang lan truyền (Bug 1 & Bug 2):**
-   - Trong `DashboardWorkspace.tsx`, loại bỏ lệnh `bboxRef.current.scrollIntoView({ behavior: "smooth", block: "center" })` toàn cục.
-   - Thay thế bằng việc cuộn cục bộ trong `PdfCanvasViewer`: tìm phần tử cha có thuộc tính `overflow-y-auto` và điều chỉnh `container.scrollTop` nội bộ, tuyệt đối không tác động lên `window` hay `document.body`.
-   - Bổ sung `overflow-x-hidden` và `h-screen overflow-hidden` trên toàn bộ container gốc của Dashboard.
-   - Điều chỉnh khung `DashboardChatInputBox` và `TypingWaveIndicator` đảm bảo width luôn $\le 100\%$, ngăn chặn tình trạng tràn viền tạo scrollbar ngang.
-
-2. **Chuẩn hóa 1 Bounding Box duy nhất & Cơ chế Tắt tức thì (Bug 3):**
-   - Trong `useReaderStore.ts` và `DashboardWorkspace.tsx`, khi click vào trích dẫn `citation`:
-     - Chỉ trích xuất đúng 1 Bounding Box tiêu điểm (`primaryBox = bboxes[0] || citation.bbox`).
-     - Đặt `activeBbox = primaryBox` và không nạp mảng `activeBboxes` thừa thãi.
-   - **Cơ chế tắt tức thì:**
-     - **Toggle:** Click lại vào chính trích dẫn đang mở sẽ hủy Bounding Box (`setActiveBboxStore(null)`).
-     - **Click ngoài:** Click vào bất kỳ vị trí trống nào trên trang PDF sẽ đóng khung.
-     - **Phím tắt Esc:** Lắng nghe sự kiện phím `Escape` để hủy Bounding Box.
-     - **Pill điều khiển:** Hiển thị một huy hiệu nhỏ gọn trên thanh điều hướng: `"Đang làm nổi bật [1] — ✕ Tắt"`.
-
-3. **Loại bỏ con trỏ cam thô `|` (Bug 4):**
-   - Trong `AcademicMarkdownRenderer.tsx`, loại bỏ khối `<span className="w-1.5 h-4 ml-1 bg-[#cc785c] ... />` nằm trên dòng trống độc lập.
-   - Thay thế bằng hiệu ứng con trỏ mảnh tinh tế `inline-block w-[2px] h-[1em] ml-0.5 bg-coral-500/80 animate-pulse align-middle` gắn liền sau từ ngữ cuối cùng khi đang stream, tự động biến mất khi hoàn thành.
+## 2. Chi Tiết Trích Dẫn Khái Niệm & Thẻ Xem Trước (`Grounded Concept Pills`)
+Theo đúng nguyên mẫu trong Ảnh 2 & Ảnh 3:
+1. **Loại bỏ cơ chế cũ:**
+   - Tuyệt đối không hiển thị `[1]`, `[2]`, `[3]`.
+   - Xóa bỏ hoàn toàn phần chân trang `"Nguồn trích dẫn (2)"` ở cuối tin nhắn.
+2. **Thẻ Khái Niệm Nội Dòng (Semantic Concept Pills):**
+   - Thay thế bằng các thẻ capsule bo tròn tinh tế: `[ ↪ Architecture ]`, `[ ↪ Multi-Head Attention ]`, `[ ↪ Main Idea ]`.
+   - Bảng màu: Nền xám đen nhẹ `#22211e`, viền `#38342e`, chữ `#dcd7cc`, icon `↪` thanh mảnh.
+3. **Tương tác Hover (Thẻ Xem Trước Nổi - Popover Card):**
+   - Khi di chuột (hover) vào thẻ khái niệm:
+     - Bật lên một Popover Tooltip Card nổi ngay tại vị trí trỏ chuột.
+     - Bên trong hiển thị đoạn trích dẫn nguyên văn từ bài báo (hỗ trợ công thức KaTeX).
+     - Ở góc trên bên phải của thẻ hiển thị huy hiệu `Page X` (ví dụ: `Page 5`).
+4. **Tương tác Click (Nhảy Bounding Box):**
+   - Khi click vào thẻ khái niệm:
+     - PDF bên trái tự động cuộn đến trang `Page X`.
+     - Vẽ **đúng 1 Bounding Box duy nhất** viền nét đứt màu xanh/cam quanh đoạn văn bản/công thức tương ứng.
 
 ---
 
-### 2.2 Bố Cục Đọc alphaXiv & Bong Bóng AI Nổi (Floating Assistant FAB)
-
-```
-+----------------------------------------------------------------------------+
-| [Abstract] [Paper]   | 1 / 15 |  (-) (+) (⬇) (🖨)      | ⓘ  📝  [ 🤖 ]   |
-+---------------------------------------------------------+------------------+
-|                                                         | Assistant  (+) ✕ |
-|                                                         |------------------|
-|                   PDF READER 100%                       | ✓ Thinking Finish|
-|                                                         |------------------|
-|               (Toàn màn hình tập trung)                 | Nội dung AI trả  |
-|                                                         | lời với Mermaid &|
-|                                                         | Trích dẫn [1]    |
-|                                                         |------------------|
-|                                         [ 🤖 Bong bóng ]| Prompt Input     |
-+---------------------------------------------------------+------------------+
-```
-
-1. **Trạng thái Mặc định (Full Paper 100%):**
-   - Màn hình bài báo chiếm 100% không gian hiển thị chính.
-   - Ở góc dưới cùng bên phải màn hình hiển thị **Bong bóng nổi AI Assistant (FAB)**: nút tròn bo mềm, màu cam san hô (#cc785c / primary), icon Socratic / Sparkles, có hiệu ứng hover và tooltip *"Mở Socratic Copilot"*.
-2. **Trạng thái Mở Khung Chat (Slide-Over Split 50/50):**
-   - Khi bấm vào bong bóng nổi, bảng điều khiển bên phải trượt mở mượt mà (chiếm 50% hoặc tỉ lệ người dùng tùy chỉnh).
-   - Thanh tiêu đề bên phải hiển thị:
-     - Tên: **"Assistant"** (font serif thanh lịch).
-     - Nút **`(+) Đoạn chat mới`**.
-     - Nút **`✕` Đóng bảng chat**: khi bấm vào, bảng chat đóng lại, bài báo nở rộng về 100% và bong bóng nổi xuất hiện trở lại ở góc dưới bên phải.
-3. **Thanh Dock Tiện Ích Dọc (Vertical Edge Dock):**
-   - Tọa lạc ở cạnh phải màn hình gồm các icon nhỏ gọn:
-     - `ⓘ` Thông tin bài báo & Tóm tắt nhanh.
-     - `📝` Sổ tay ghi chú (Notes).
-     - `🤖` Toggle Assistant (đồng bộ với bong bóng nổi).
-   - Loại bỏ thanh 5 tab cồng kềnh phía trên, mang lại sự tối giản triệt để chuẩn alphaXiv.
+## 3. Khắc Phục 4 Lỗi Frontend
+1. **Lỗi cuộn lan truyền (Bug 1 & 2):** Cô lập layout bằng `h-screen overflow-hidden` và `overflow-x-hidden`. Thay thế `scrollIntoView` toàn cục trên Bounding Box bằng cuộn cục bộ trong container PDF.
+2. **Giới hạn 1 Bounding Box & Tắt tức thì (Bug 3):** Chỉ cho phép tối đa 1 Bounding Box hoạt động. Hỗ trợ tắt khung ngay khi bấm `Esc`, click lại thẻ trích dẫn, hoặc click ra ngoài canvas.
+3. **Con trỏ cam thô `|` (Bug 4):** Xóa khối cam to bản trên dòng trống; thay bằng con trỏ mảnh tinh tế gắn liền sau ký tự cuối cùng.
 
 ---
 
-### 2.3 Khối Tư Duy AI (`SocraticThinkingBlock`)
-1. **Giao diện Capsule chuẩn alphaXiv / ChatGPT:**
-   - Khi AI đang xử lý (nhận event SSE `reasoning` hoặc `thought`):
-     - Hiển thị viên thuốc bo tròn: `<span className="animate-pulse">✦ Đang phân tích... {seconds}s</span>`.
-     - Đồng hồ đếm giây tăng theo thời gian thực.
-   - Khi AI hoàn tất (bắt đầu stream nội dung hoặc xong):
-     - Chuyển thành trạng thái hoàn thành: `✓ Đã suy nghĩ trong {seconds}s ∨` (mặc định đóng gọn).
-     - Người dùng bấm vào nút mũi tên để bung toàn bộ nội dung Chain-of-Thought và chuỗi hành động kiểm tra Bounding Box, tra cứu tài liệu.
+## 4. Bố Cục alphaXiv & Xuất Ảnh Mermaid
+1. **Bài báo 100% & Bong bóng nổi (FAB):**
+   - Khi Assistant đóng: Bài báo bung 100% toàn màn hình; ở góc dưới cùng bên phải có nút tròn AI Assistant (FAB).
+   - Khi click FAB: Bảng Assistant mở ra (50/50 split), góc trên có tiêu đề "Assistant", `(+) New Chat`, và nút `✕` đóng.
+   - Mép phải có `VerticalEdgeDock.tsx` với icon `ⓘ`, `📝`, `🤖` thay thế thanh 5 tab cồng kềnh.
+2. **Sơ đồ Mermaid:**
+   - Tự động biên dịch sang SVG.
+   - Thêm nút "Tải SVG" và "Tải PNG" (2x retina) cùng nút sao chép mã trên góc sơ đồ.
 
 ---
 
-### 2.4 Trực Quan Hóa Sơ Đồ Mermaid & Xuất Ảnh SVG / PNG
-1. **Biên dịch Mermaid sang SVG:**
-   - `AcademicMarkdownRenderer.tsx` nhận diện các khối ````mermaid ... ````.
-   - `MermaidRenderer.tsx` dùng thư viện `mermaid.js` kết xuất thành thẻ `<svg>` an toàn với bảng màu chuẩn (Dark/Light Mode).
-2. **Thanh công cụ Xuất Ảnh (Export Toolbar):**
-   - Trên góc phải của thẻ sơ đồ, cung cấp các nút thao tác nhanh:
-     - **Sao chép mã** (`Copy Code`).
-     - **Tải SVG** (`Download SVG`): Tạo blob vector `.svg` cho chất lượng in ấn vô hạn.
-     - **Tải PNG** (`Download PNG`): Sử dụng canvas chuyển đổi SVG sang raster `.png` sắc nét (scale 2x retina).
-     - **Xem toàn màn hình** (`Expand Modal`): Bấm để phóng to sơ đồ khi cấu trúc quá rộng.
-3. **System Prompt Kích Hoạt Sơ Đồ:**
-   - Bổ sung chỉ dẫn vào `session_chat_service.py` để Socratic Copilot chủ động dựng sơ đồ Mermaid khi phân tích kiến trúc mô hình, quy trình dữ liệu hoặc khi người dùng yêu cầu trực quan hóa.
-
----
-
-## 3. Danh Mục Tệp Thay Đổi (File Breakdown)
-
-| Tệp tin | Vai trò & Trách nhiệm |
-| :--- | :--- |
-| `apps/web/src/features/dashboard/components/DashboardWorkspace.tsx` | Layout alphaXiv, 100% Paper view, Floating AI FAB, nút `✕` đóng Assistant, xử lý scroll container |
-| `apps/web/src/features/dashboard/components/SocraticThinkingBlock.tsx` | Component hiển thị khối tư duy đếm giây `✓ Thinking Finished ∨` |
-| `apps/web/src/features/dashboard/components/VerticalEdgeDock.tsx` | Thanh dock biểu tượng dọc mép phải (`ⓘ`, `📝`, `🤖`) thay thế 5 tab cũ |
-| `apps/web/src/features/reader/components/BboxHighlightLayer.tsx` | Giới hạn 1 Bounding Box duy nhất, xử lý nút đóng và phím `Esc` |
-| `apps/web/src/features/reader/stores/useReaderStore.ts` | Action dọn sạch và toggle Bounding Box |
-| `apps/web/src/components/shared/AcademicMarkdownRenderer.tsx` | Xóa con trỏ cam thô `|`, kết xuất Mermaid chuẩn và con trỏ mảnh |
-| `apps/web/src/components/shared/MermaidRenderer.tsx` | Tích hợp nút xuất ảnh SVG / PNG và phóng to sơ đồ |
-| `apps/web/src/features/dashboard/hooks/useStreamingChat.ts` | Bắt chuẩn sự kiện SSE `reasoning` và đo thời gian suy nghĩ |
-| `apps/api/src/api/services/session_chat_service.py` | Hướng dẫn System Prompt sinh cú pháp Mermaid hợp lệ khi cần trực quan hóa |
-
----
-
-## 4. Kế Hoạch Kiểm Thử TDD & 4 Cổng Xác Minh
-- **Kiểm thử Đơn vị Frontend (Vitest):**
-  - `DashboardAlphaXivLayout.test.tsx`: Kiểm tra chế độ xem 100% paper, click Floating FAB mở Assistant, click `✕` đóng Assistant.
-  - `BboxSingleHighlightAndDismiss.test.tsx`: Kiểm tra chỉ vẽ 1 Bounding Box, nhấn `Esc` hoặc click ngoài để xóa highlight.
-  - `SocraticThinkingBlock.test.tsx`: Kiểm tra đồng hồ đếm giây, trạng thái hoàn tất co gọn và mở rộng xem thought log.
-  - `MermaidExport.test.tsx`: Kiểm tra render SVG và chức năng xuất ảnh SVG/PNG.
-- **4 Cổng Xác Minh Bắt Buộc:**
-  - Cổng 1: `uv run ruff check . && uv run ruff format --check .`
-  - Cổng 2: `uv run pytest`
-  - Cổng 3: `npm --prefix apps/web run test`
-  - Cổng 4: `npm --prefix apps/web run build`
-- **VPS Rollout:** `bash scripts/deploy_to_vps.sh --fast` và kiểm tra trực tiếp trên `https://verischolar.duckdns.org`.
+## 5. Danh Mục Tệp Thay Đổi
+- `apps/web/src/features/dashboard/components/SocraticThinkingBlock.tsx`: Component Agent Activity Stepper với các bước `Working`, `Thought for Xs`, thu gọn `Worked for Xs >`.
+- `apps/web/src/components/shared/AcademicMarkdownRenderer.tsx`: Concept Pills `[ ↪ Concept ]`, xóa `[1] [2]` và footer trích dẫn, popover preview card on hover.
+- `apps/web/src/features/dashboard/components/DashboardWorkspace.tsx`: Layout alphaXiv, 100% paper, Floating AI FAB, nút `✕`, chặn scroll lan truyền.
+- `apps/web/src/features/reader/components/BboxHighlightLayer.tsx`: Giới hạn 1 Bounding Box, lắng nghe phím `Esc` và click ngoài.
+- `apps/web/src/components/shared/MermaidRenderer.tsx`: Tích hợp xuất ảnh SVG & PNG.
+- `apps/api/src/api/services/session_chat_service.py`: Cập nhật System Prompt sinh concept tags thay vì số `[1] [2]` và xuất Mermaid khi cần.
