@@ -164,12 +164,15 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
     }),
 
   setActiveCitation: (citationId, bbox, page, bboxes) =>
-    set((state) => ({
-      activeCitationId: citationId,
-      activeBbox: bbox,
-      activeBboxes: bboxes ?? (bbox ? [bbox] : null),
-      currentPage: page !== undefined ? page : bbox ? bbox[4] : (bboxes?.[0]?.[4] ?? state.currentPage),
-    })),
+    set((state) => {
+      const primaryBox = bbox ?? (bboxes && bboxes.length > 0 ? bboxes[0] : null);
+      return {
+        activeCitationId: citationId,
+        activeBbox: primaryBox,
+        activeBboxes: primaryBox ? [primaryBox] : null,
+        currentPage: page !== undefined ? page : primaryBox ? primaryBox[4] : state.currentPage,
+      };
+    }),
 
   setReadingMode: (mode) => set({ readingMode: mode }),
   setColorTheme: (theme) => set({ colorTheme: theme }),

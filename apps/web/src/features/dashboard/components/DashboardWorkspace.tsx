@@ -1399,6 +1399,22 @@ export function DashboardWorkspace({
                               matched = message.citations[0];
                             }
                           }
+                          const targetCitId = (matched as unknown as Record<string, unknown> | null)?.citation_id as string || citId;
+                          const currentActiveCitId = useReaderStore.getState().activeCitationId;
+
+                          // Toggle off if clicking the currently active citation
+                          if (
+                            currentActiveCitId &&
+                            (currentActiveCitId === targetCitId ||
+                              currentActiveCitId === citId ||
+                              currentActiveCitId === `cit_${citId}` ||
+                              `cit_${currentActiveCitId}` === targetCitId)
+                          ) {
+                            setActiveBboxStore(null);
+                            setActiveCitation(null, null);
+                            return;
+                          }
+
                           if (matched) {
                             const raw = matched as unknown as Record<string, unknown>;
                             const docId = (raw.document_id || raw.paper_id) as string | undefined;
@@ -1413,11 +1429,12 @@ export function DashboardWorkspace({
 
                             if (primaryBox || bboxes.length > 0) {
                               setActiveBboxStore(primaryBox);
-                              setActiveCitation((raw.citation_id as string) || citId, primaryBox, resolvedPage, bboxes);
+                              setActiveCitation(targetCitId, primaryBox, resolvedPage, primaryBox ? [primaryBox] : null);
                               setCurrentPage(resolvedPage);
                               useReaderStore.getState().setCurrentPage(resolvedPage);
                               setMobileActiveView("reader");
                             } else if (resolvedPage) {
+                              setActiveCitation(targetCitId, null, resolvedPage, null);
                               setCurrentPage(resolvedPage);
                               useReaderStore.getState().setCurrentPage(resolvedPage);
                               setMobileActiveView("reader");

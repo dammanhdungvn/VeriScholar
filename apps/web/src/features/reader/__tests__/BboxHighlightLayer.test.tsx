@@ -33,7 +33,7 @@ describe("BboxHighlightLayer Component", () => {
     expect(container2.firstChild).toBeNull();
   });
 
-  it("renders multiple bounding boxes when bboxes array is provided on current page", () => {
+  it("enforces at most ONE bounding box when bboxes array is provided on current page", () => {
     const multiBboxes: BoundingBox[] = [
       [0.1, 0.2, 0.4, 0.3, 1],
       [0.1, 0.32, 0.45, 0.42, 1],
@@ -42,8 +42,7 @@ describe("BboxHighlightLayer Component", () => {
 
     render(<BboxHighlightLayer bboxes={multiBboxes} currentPage={1} isActive={true} />);
     const overlays = screen.getAllByTestId("grounded-bbox-overlay");
-    expect(overlays).toHaveLength(2);
+    expect(overlays).toHaveLength(1);
     expect(overlays[0]).toHaveClass("border-amber-500");
-    expect(overlays[1]).toHaveClass("border-amber-500");
   });
 });
