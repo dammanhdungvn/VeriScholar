@@ -57,7 +57,7 @@
   - `generate_academic_skeleton(title: str, papers: list[dict], notes: list[dict]) -> tuple[str, str]`: Trả về `(main_tex, references_bib)` với ký tự đặc biệt đã được escape tất định.
   - `sanitize_and_validate_asset_filename(filename: str, byte_size: int) -> str`: Chặn Path Traversal / Zip Slip (`^[a-zA-Z0-9_\-\.]+$`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `packages/core/tests/test_draft_skeleton_and_log_parser.py`:
 ```python
@@ -96,19 +96,19 @@ def test_sanitize_asset_filename_rejects_path_traversal():
         sanitize_and_validate_asset_filename("../../evil.png", 1024)
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest packages/core/tests/test_draft_skeleton_and_log_parser.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `latex_log_parser.py` & `draft_skeleton.py`**
+- [x] **Step 3: Implement `latex_log_parser.py` & `draft_skeleton.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest packages/core/tests/test_draft_skeleton_and_log_parser.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add packages/core/src/core/services/latex_log_parser.py packages/core/src/core/services/draft_skeleton.py packages/core/src/core/services/latex_compiler.py packages/core/tests/test_draft_skeleton_and_log_parser.py
@@ -134,23 +134,23 @@ bash scripts/deploy_to_vps.sh --fast
   - `DraftAssetModel`: Quản lý hình ảnh trong thư mục `figures/` trỏ tới CAS storage.
   - `DraftMessageModel`: Lưu lịch sử chat, tool calls và nhật ký biên dịch của LangGraph Agent.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Cập nhật `apps/api/tests/test_draft_models.py` kiểm tra khởi tạo `DraftModel` có `previous_snapshot` JSONB, `DraftAssetModel`, và `DraftMessageModel`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_draft_models.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement models & DDL in `session.py`**
+- [x] **Step 3: Implement models & DDL in `session.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_draft_models.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/db/models/draft.py apps/api/src/api/db/models/draft_asset.py apps/api/src/api/db/models/draft_message.py apps/api/src/api/db/session.py apps/api/tests/test_draft_models.py
@@ -177,23 +177,23 @@ bash scripts/deploy_to_vps.sh --fast
   - `CLSILatexCompiler.synctex_forward(draft_id: UUID, file: str, line: int, column: int)`: Gọi `/usr/bin/synctex` cục bộ trả về `(page, h, v, width, height)` trong $< 20$ms.
   - `CLSILatexCompiler.synctex_inverse(draft_id: UUID, page: int, x: float, y: float)`: Gọi `/usr/bin/synctex` cục bộ trả về `(file, line, column)` trong $< 20$ms.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_clsi_latex_compiler.py` kiểm thử nhận diện động cơ (`fontspec` $\rightarrow$ `-xelatex`), bóc tách log lỗi và giả lập gọi SyncTeX cục bộ.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_clsi_latex_compiler.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `apps/api/src/api/services/clsi_latex_compiler.py`**
+- [x] **Step 3: Implement `apps/api/src/api/services/clsi_latex_compiler.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_clsi_latex_compiler.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/services/clsi_latex_compiler.py apps/api/tests/test_clsi_latex_compiler.py
@@ -220,23 +220,23 @@ bash scripts/deploy_to_vps.sh --fast
   - Vòng lặp tự vá lỗi tối đa 3 lần (`MAX_COMPILE_ATTEMPTS = 3`).
   - `Anti-Oscillation Guard`: Tính SHA-256 mã nguồn qua từng lượt thử; nếu phát hiện mã băm trùng lặp thì lập tức dừng vòng lặp an toàn và phát cảnh báo.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/api/tests/test_latex_agent_react.py`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_latex_agent_react.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement `apps/api/src/api/agents/latex_agent.py`**
+- [x] **Step 3: Implement `apps/api/src/api/agents/latex_agent.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_latex_agent_react.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/agents/latex_agent.py apps/api/tests/test_latex_agent_react.py
@@ -263,23 +263,23 @@ bash scripts/deploy_to_vps.sh --fast
   - `POST /api/v1/drafts/{id}/synctex:forward` & `POST /api/v1/drafts/{id}/synctex:inverse`
   - `POST /api/v1/drafts/{id}:export-bundle`: Xuất file `.zip` Camera-Ready chuẩn nộp bài.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Cập nhật `apps/api/tests/test_drafts_endpoints.py`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_drafts_endpoints.py -v`
 Expected: FAIL
 
-- [ ] **Step 3: Implement endpoints in `drafts.py` and service methods in `draft_service.py`**
+- [x] **Step 3: Implement endpoints in `drafts.py` and service methods in `draft_service.py`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_drafts_endpoints.py -v`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/api/src/api/v1/endpoints/drafts.py apps/api/src/api/services/draft_service.py apps/api/tests/test_drafts_endpoints.py
@@ -305,23 +305,23 @@ bash scripts/deploy_to_vps.sh --fast
   - Cột 2 (Giữa): Trình xem PDF Canvas hỗ trợ highlight vàng khi nhận kết quả Forward Search và gửi tọa độ `(x, y)` khi nhấp đúp để Inverse Search. Nút `[🧹 Xóa đệm & Dựng lại]`.
   - Cột 3 (Phải): Khung trò chuyện trợ lý AI hiển thị execution badges theo thời gian thực (*🔍 Tra cứu GraphRAG* $\rightarrow$ *✍️ Cập nhật mã nguồn* $\rightarrow$ *⚙️ Biên dịch E2B*), kèm nút `[↩️ Hoàn tác]` trên thanh công cụ.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo `apps/web/src/features/writing/__tests__/WritingWorkspace.test.tsx`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npm --prefix apps/web run test -- WritingWorkspace`
 Expected: FAIL
 
-- [ ] **Step 3: Implement components in `apps/web/src/features/writing/components/`**
+- [x] **Step 3: Implement components in `apps/web/src/features/writing/components/`**
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npm --prefix apps/web run test -- WritingWorkspace`
 Expected: PASS
 
-- [ ] **Step 5: Commit & Gate verification**
+- [x] **Step 5: Commit & Gate verification**
 
 ```bash
 git add apps/web/src/features/writing/
@@ -333,22 +333,22 @@ bash scripts/deploy_to_vps.sh --fast
 
 ### Task 7: End-to-End Verification, 4 Mandatory Verification Gates & Rollout
 
-- [ ] **Step 1: Run Gate 1 (Python Linter & Formatter)**
+- [x] **Step 1: Run Gate 1 (Python Linter & Formatter)**
   Run: `uv run ruff check . && uv run ruff format --check .`
   Expected: exit code 0
 
-- [ ] **Step 2: Run Gate 2 (Backend & Architecture Boundary Tests)**
+- [x] **Step 2: Run Gate 2 (Backend & Architecture Boundary Tests)**
   Run: `uv run pytest`
   Expected: exit code 0 (146+ tests passed)
 
-- [ ] **Step 3: Run Gate 3 (Frontend Unit Tests)**
+- [x] **Step 3: Run Gate 3 (Frontend Unit Tests)**
   Run: `npm --prefix apps/web run test`
   Expected: exit code 0 (84+ tests passed)
 
-- [ ] **Step 4: Run Gate 4 (Production Build)**
+- [x] **Step 4: Run Gate 4 (Production Build)**
   Run: `npm --prefix apps/web run build`
   Expected: exit code 0
 
-- [ ] **Step 5: Remote VPS Deployment Sync**
+- [x] **Step 5: Remote VPS Deployment Sync**
   Run: `bash scripts/deploy_to_vps.sh --fast`
   Expected: exit code 0
