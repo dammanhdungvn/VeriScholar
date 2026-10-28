@@ -238,7 +238,7 @@ export function DemoChatPanel() {
             <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
           </div>
           <span className="font-sans text-xs font-semibold text-zinc-900 dark:text-zinc-100 tracking-tight">
-            Socratic Copilot
+            Socratic Assistant
           </span>
         </div>
 
@@ -347,7 +347,7 @@ export function DemoChatPanel() {
                   : isThinking
                   ? "Đang đối soát nội dung với bài báo Attention Is All You Need..."
                   : isStreaming
-                  ? "Socratic Copilot đang phân tích đối soát..."
+                  ? "Socratic Assistant đang phân tích đối soát..."
                   : "Mô phỏng tự động • Nhấp ↺ trên góc phải để phát lại"
               }
               className="flex-1 min-w-0 bg-transparent border-none outline-none text-zinc-900 dark:text-zinc-200 text-xs sm:text-[13px] placeholder:text-zinc-400 dark:placeholder:text-zinc-500 font-sans cursor-default pointer-events-none select-none"

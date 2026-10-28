@@ -1,12 +1,6 @@
 import { useRef, useEffect } from "react";
 import {
-  Scroll,
-  File,
-  Columns2,
   BookMarked,
-  Maximize2,
-  Minimize2,
-  Check,
   SlidersHorizontal,
   ZoomIn,
   ZoomOut,

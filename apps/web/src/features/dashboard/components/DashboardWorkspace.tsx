@@ -18,7 +18,6 @@ import {
   Moon,
   PanelLeft,
   FileText,
-  Maximize2,
   Minimize2,
   X,
 } from "lucide-react";
@@ -52,7 +51,6 @@ import { CreateNoteDialog } from "@/features/notes/components/CreateNoteDialog";
 import { AddDocumentModal } from "@/features/sessions/components/AddDocumentModal";
 import { SessionSettingsModal } from "@/features/sessions/components/SessionSettingsModal";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
-import { WorkspaceToolsMenu } from "./WorkspaceToolsMenu";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useQueryClient } from "@tanstack/react-query";
@@ -759,7 +757,7 @@ export function DashboardWorkspace({
           </span>
         </div>
 
-        {/* Center/Right: Segmented Switcher Pill [ 📄 Xem Bài Báo ] [ 💬 Socratic Copilot ] */}
+        {/* Center/Right: Segmented Switcher Pill [ 📄 Xem Bài Báo ] [ 💬 Socratic Assistant ] */}
         <div className="inline-flex p-0.5 rounded-lg bg-[#eee9df] dark:bg-[#24221f] text-xs font-medium border border-hairline/60">
           <button
             type="button"

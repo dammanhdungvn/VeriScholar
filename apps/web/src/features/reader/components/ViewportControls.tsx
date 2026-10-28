@@ -6,14 +6,7 @@ import {
   ChevronLeft,
   ChevronRight,
   LayoutGrid,
-  Maximize2,
-  Minimize2,
   SlidersHorizontal,
-  Scroll,
-  File,
-  Columns2,
-  ChevronDown,
-  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {

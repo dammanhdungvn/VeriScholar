@@ -28,6 +28,7 @@ describe("Socratic Thinking Block and Citation Formatting", () => {
         session_id: "s-1",
         role: "assistant",
         content: "Here is the explanation.",
+        created_at: new Date().toISOString(),
         thought: "Phân tích cú pháp và trích xuất ngữ cảnh liên quan cho câu hỏi.",
         thought_duration_seconds: 7,
         is_streaming: false,
@@ -76,6 +77,7 @@ describe("Socratic Thinking Block and Citation Formatting", () => {
         session_id: "s-1",
         role: "assistant",
         content: "",
+        created_at: new Date().toISOString(),
         thought: "Thinking through the attention weights...",
         is_streaming: true,
         citations: [
@@ -103,6 +105,7 @@ describe("Socratic Thinking Block and Citation Formatting", () => {
       {
         citation_id: "cit_1",
         paper_id: "doc-1",
+        paper_title: "Paper 1",
         page: 2,
         concept_name: "Selective Attention",
         snippet: "We propose Selective Attention to filter out noise.",
@@ -111,6 +114,7 @@ describe("Socratic Thinking Block and Citation Formatting", () => {
       {
         citation_id: "cit_2",
         paper_id: "doc-1",
+        paper_title: "Paper 1",
         page: 5,
         concept_name: "Context Noise",
         snippet: "Context noise significantly degrades transformer reasoning.",
@@ -119,6 +123,7 @@ describe("Socratic Thinking Block and Citation Formatting", () => {
       {
         citation_id: "cit_3",
         paper_id: "doc-1",
+        paper_title: "Paper 1",
         page: 8,
         concept_name: "Performance Gain",
         snippet: "Consistent performance gain across model scales.",
