@@ -15,9 +15,10 @@ import type { SessionItem } from "@/types/dashboard";
 
 interface WritingWorkspaceProps {
   sessions?: SessionItem[];
+  hideTaskbar?: boolean;
 }
 
-export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
+export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorkspaceProps = {}) {
   const {
     activeDraftId,
     draft,
@@ -278,13 +279,15 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
   }, [workspaceMode, setWorkspaceMode, setAssistantPrompt]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
-      {/* 1. Left Navigation Taskbar (Inherited from Dashboard) */}
-      <DashboardTaskbar
-        sessions={sessions}
-        onSelectSession={(id) => navigate(`/dashboard/${id}`)}
-        onNewSession={() => navigate("/dashboard")}
-      />
+    <div className="flex h-screen w-full overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
+      {/* 1. Left Navigation Taskbar (Optional if not wrapped in AppLayout) */}
+      {!hideTaskbar && (
+        <DashboardTaskbar
+          sessions={sessions}
+          onSelectSession={(id) => navigate(`/dashboard/${id}`)}
+          onNewSession={() => navigate("/dashboard")}
+        />
+      )}
 
       {/* 2. Main Writing Area */}
       <div

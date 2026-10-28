@@ -24,7 +24,7 @@ import { documentsApi } from "@/features/documents/api/documentsApi";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import type { DocumentListItem } from "@/types/document";
 
-export function DashboardContainer() {
+export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: boolean } = {}) {
   const queryClient = useQueryClient();
   const { sessionId: routeSessionId } = useParams<{ sessionId?: string }>();
   const navigate = useNavigate();
@@ -363,18 +363,20 @@ export function DashboardContainer() {
 
 
   return (
-    <div className="h-screen w-screen flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
-      {/* 1. Collapsible Left Taskbar / Sidebar */}
-      <DashboardTaskbar
-        sessions={sessions}
-        activeSessionId={effectiveSessionId}
-        onSelectSession={handleSelectSession}
-        onNewSession={handleNewSession}
-        onOpenLibrary={() => navigate("/library")}
-      />
+    <div className="h-full w-full flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
+      {/* 1. Collapsible Left Taskbar / Sidebar (Rendered if not nested in AppLayout) */}
+      {!hideTaskbar && (
+        <DashboardTaskbar
+          sessions={sessions}
+          activeSessionId={effectiveSessionId}
+          onSelectSession={handleSelectSession}
+          onNewSession={handleNewSession}
+          onOpenLibrary={() => navigate("/library")}
+        />
+      )}
 
       {/* 2. Center Canvas Area */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative min-w-0">
         {/* Sticky Mobile Dashboard Header (< 768px) */}
         <MobileDashboardHeader
           onToggleSidebar={toggleSidebar}
@@ -458,7 +460,7 @@ export function DashboardContainer() {
           onSelectDocument={handleSelectDocumentFromLibrary}
           activeDocumentId={activeDocumentId}
         />
-      </main>
+      </div>
     </div>
   );
 }

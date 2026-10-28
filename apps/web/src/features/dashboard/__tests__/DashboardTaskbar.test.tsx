@@ -159,4 +159,15 @@ describe("DashboardTaskbar Component", () => {
 
     expect(onDeleteSession).toHaveBeenCalledWith("s-del");
   });
+
+  it("renders 'Viết paper' and eliminates 'Khám phá & Phiên đọc' from taskbar", () => {
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText("Viết paper")).toBeInTheDocument();
+    expect(screen.queryByText(/Khám phá & Phiên đọc/i)).toBeNull();
+  });
 });

@@ -1,5 +1,5 @@
 import { DashboardContainer } from "./DashboardContainer";
 
 export function DashboardPage() {
-  return <DashboardContainer />;
+  return <DashboardContainer hideTaskbar={true} />;
 }

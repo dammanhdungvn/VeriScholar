@@ -247,14 +247,6 @@ export function DashboardTaskbar({
 
   const navItems = [
     {
-      id: "research",
-      label: "Khám phá & Phiên đọc",
-      title: "Khám phá & Phiên đọc (Đọc & Nghiên cứu)",
-      icon: BookOpen,
-      isActive: isResearch,
-      onClick: () => navigate("/dashboard"),
-    },
-    {
       id: "library",
       label: "Kho Yêu thích",
       title: "Thư viện tài liệu nghiên cứu",
@@ -267,8 +259,8 @@ export function DashboardTaskbar({
     },
     {
       id: "writing",
-      label: "Soạn thảo LaTeX",
-      title: "Soạn thảo LaTeX (Agentic Overleaf)",
+      label: "Viết paper",
+      title: "Viết paper (Agentic Overleaf)",
       icon: PenTool,
       isActive: isWriting,
       onClick: () => navigate("/writing"),
