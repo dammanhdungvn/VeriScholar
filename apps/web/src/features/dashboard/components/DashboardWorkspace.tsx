@@ -1398,7 +1398,7 @@ export function DashboardWorkspace({
                             }
                           }
                           if (matched) {
-                            const raw = matched as Record<string, unknown>;
+                            const raw = matched as unknown as Record<string, unknown>;
                             const docId = (raw.document_id || raw.paper_id) as string | undefined;
                             const pageNum = (raw.page_number || raw.page) as number | undefined;
                             const bboxes = (raw.bounding_boxes || (raw.bbox ? [raw.bbox] : [])) as BoundingBox[];
