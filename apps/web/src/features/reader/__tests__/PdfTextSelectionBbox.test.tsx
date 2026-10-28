@@ -84,4 +84,57 @@ describe("calculateSelectionBoundingBox", () => {
     const bbox = calculateSelectionBoundingBox(mockRange, mockPageEl, 2);
     expect(bbox).toEqual([0.1, 0.2, 0.4, 0.5, 2]);
   });
+
+  it("returns null when targetPageEl has zero width or height", () => {
+    const mockZeroPageEl = {
+      getBoundingClientRect: () => ({
+        left: 0,
+        top: 0,
+        right: 0,
+        bottom: 0,
+        width: 0,
+        height: 0,
+      }),
+      querySelector: () => null,
+    } as unknown as HTMLElement;
+
+    const mockRange = {
+      getClientRects: () => [],
+      getBoundingClientRect: () => ({ left: 10, top: 10, right: 20, bottom: 20, width: 10, height: 10 }),
+    } as unknown as Range;
+
+    const bbox = calculateSelectionBoundingBox(mockRange, mockZeroPageEl, 1);
+    expect(bbox).toBeNull();
+  });
+
+  it("clamps normalized coordinates strictly within [0, 1] even if rect extends outside page", () => {
+    const mockPageEl = {
+      getBoundingClientRect: () => ({
+        left: 100,
+        top: 100,
+        right: 500,
+        bottom: 500,
+        width: 400,
+        height: 400,
+      }),
+      querySelector: () => null,
+    } as unknown as HTMLElement;
+
+    const mockExtendingRange = {
+      getClientRects: () => [
+        { left: 50, top: 50, right: 600, bottom: 600, width: 550, height: 550 },
+      ] as unknown as DOMRectList,
+      getBoundingClientRect: () => ({ left: 50, top: 50, right: 600, bottom: 600, width: 550, height: 550 }),
+    } as unknown as Range;
+
+    const bbox = calculateSelectionBoundingBox(mockExtendingRange, mockPageEl, 3);
+    expect(bbox).not.toBeNull();
+    if (bbox) {
+      expect(bbox[0]).toBe(0);
+      expect(bbox[1]).toBe(0);
+      expect(bbox[2]).toBe(1);
+      expect(bbox[3]).toBe(1);
+      expect(bbox[4]).toBe(3);
+    }
+  });
 });

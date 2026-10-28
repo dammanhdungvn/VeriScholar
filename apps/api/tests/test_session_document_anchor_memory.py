@@ -51,3 +51,59 @@ async def test_build_document_anchor_context_empty_documents(db_session):
     service = SessionChatService(db_session)
     anchor_context = await service._build_document_anchor_context([])
     assert anchor_context == ""
+
+
+@pytest.mark.asyncio
+async def test_build_document_anchor_context_falls_back_to_chunk_when_metadata_abstract_missing(
+    db_session,
+):
+    from api.db.models.chunk import DocumentChunkModel
+    from api.db.models.user import UserModel
+
+    user = UserModel(
+        id=uuid4(),
+        email=f"scholar.{uuid4().hex[:8]}@vnu.edu.vn",
+        hashed_password="fake_hashed_pw",
+        full_name="TS. Anchor Fallback Tester",
+        role="scholar",
+        is_active=True,
+    )
+    db_session.add(user)
+    await db_session.flush()
+
+    doc_id = uuid4()
+    doc = DocumentModel(
+        id=doc_id,
+        user_id=user.id,
+        title="Paper Without Abstract in Metadata",
+        filename="no_meta_abstract.pdf",
+        authors=["Alice", "Bob"],
+        publication_year=2025,
+        status="completed",
+        content_hash="hash_no_meta_001",
+        file_size_bytes=1024,
+        parsed_metadata={},  # No abstract in parsed_metadata
+    )
+    db_session.add(doc)
+    await db_session.flush()
+
+    # Create chunk 1 with Abstract keyword
+    chunk = DocumentChunkModel(
+        id=uuid4(),
+        document_id=doc_id,
+        user_id=user.id,
+        chunk_index=1,
+        page_number=1,
+        content="Abstract: This paper explores novel graph representations for molecular biology.",
+        bounding_boxes=[[0.1, 0.2, 0.9, 0.4, 1]],
+        token_count=60,
+    )
+    db_session.add(chunk)
+    await db_session.commit()
+
+    service = SessionChatService(db_session)
+    anchor_context = await service._build_document_anchor_context([doc])
+
+    assert "Paper Without Abstract in Metadata" in anchor_context
+    assert "BẢN TÓM TẮT CHÍNH THỨC (OFFICIAL ABSTRACT)" in anchor_context
+    assert "Abstract: This paper explores novel graph representations" in anchor_context

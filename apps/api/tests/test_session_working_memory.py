@@ -66,3 +66,24 @@ async def test_condense_query_resolves_elliptical_chi_tiet_hon():
         or "gnn" in condensed.lower()
         or "hạn chế" in condensed.lower()
     )
+
+
+@pytest.mark.asyncio
+async def test_condense_query_preserves_conversational_tokens():
+    chat_history = [
+        {
+            "role": "user",
+            "content": "GraphSAGE là gì trong bài báo này?",
+        },
+        {
+            "role": "assistant",
+            "content": "GraphSAGE là thuật toán lấy mẫu láng giềng.",
+        },
+    ]
+
+    service = SessionChatService(db=None)
+
+    # Conversational tokens should NOT be rewritten into elliptical queries
+    for token in ["cảm ơn", "ok", "chào bạn", "thanks", "tuyệt vời"]:
+        condensed = await service._condense_query(token, chat_history)
+        assert condensed == token
