@@ -3,7 +3,6 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import type { ChatMessage, CitationBadgeData } from "@/types/dashboard";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
-import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { generateRequestId } from "@/lib/api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -131,18 +130,6 @@ export function useStreamingChat({
           if (createRes?.data?.id) {
             effectiveSessionId = createRes.data.id;
             onSessionCreated?.(effectiveSessionId);
-
-            const openDocs = useReaderStore.getState().openDocumentIds;
-            for (const docId of openDocs) {
-              try {
-                await sessionsApi.addDocumentToSession(effectiveSessionId, {
-                  source_type: "document_id",
-                  document_id: docId,
-                });
-              } catch {
-                // Ignore if already added
-              }
-            }
           }
         } catch (err) {
           console.warn("Could not auto-create session for chat:", err);
