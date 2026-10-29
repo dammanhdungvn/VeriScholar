@@ -325,6 +325,10 @@ export function KnowledgeGraphCanvas({
         const isDimmed =
           (!sMatches && !tMatches) || (activeHoverId && !isLinkActive);
 
+        const isDark =
+          typeof document !== "undefined" &&
+          document.documentElement.classList.contains("dark");
+
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(s.x, s.y);
@@ -332,7 +336,11 @@ export function KnowledgeGraphCanvas({
         ctx.strokeStyle = isLinkActive
           ? "#4f46e5"
           : isDimmed
-          ? "#e5e7eb25"
+          ? isDark
+            ? "#37415125"
+            : "#e5e7eb25"
+          : isDark
+          ? "#4b556360"
           : "#d1d5db70";
         ctx.lineWidth = isLinkActive ? 2.0 : 1.2;
         ctx.stroke();
@@ -342,7 +350,7 @@ export function KnowledgeGraphCanvas({
           const midX = (s.x + t.x) / 2;
           const midY = (s.y + t.y) / 2;
           ctx.font = "9px 'Anthropic Mono', ui-monospace, monospace";
-          ctx.fillStyle = "#6b7280";
+          ctx.fillStyle = isDark ? "#9ca3af" : "#6b7280";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(link.label || link.relation, midX, midY - 6);
@@ -351,6 +359,10 @@ export function KnowledgeGraphCanvas({
       });
 
       // 3. Render Nodes
+      const isDark =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark");
+
       nodes.forEach((n) => {
         if (n.x === undefined || n.y === undefined) return;
 
@@ -406,8 +418,10 @@ export function KnowledgeGraphCanvas({
         const textMetrics = ctx.measureText(displayLabel);
         const textWidth = textMetrics.width;
 
-        // Subtle background pill for crystal clear text readability over edges
-        ctx.fillStyle = "rgba(253, 252, 249, 0.92)";
+        // Adaptive background pill for crystal clear text readability over edges
+        ctx.fillStyle = isDark
+          ? "rgba(24, 23, 21, 0.88)"
+          : "rgba(253, 252, 249, 0.92)";
         ctx.fillRect(
           n.x - textWidth / 2 - 4,
           n.y + n.radius + 3,
@@ -418,7 +432,11 @@ export function KnowledgeGraphCanvas({
         ctx.fillStyle = matchesSearch
           ? "#c15f3e"
           : isHovered || isFocus
-          ? "#111827"
+          ? isDark
+            ? "#ffffff"
+            : "#111827"
+          : isDark
+          ? "#d1d5db"
           : "#374151";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
@@ -643,7 +661,7 @@ export function KnowledgeGraphCanvas({
         className
       )}
     >
-      {/* Top Bar: Search, Entity Filter Tabs, and Controls */}
+      {/* Top Bar: Search, Entity Filter Tabs, Community Dropdown, and Node/Edge Counter */}
       <div className="px-3 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex flex-wrap items-center justify-between gap-2 shrink-0 z-10">
         <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
           <div className="relative flex-1 max-w-xs min-w-[140px]">
@@ -667,9 +685,9 @@ export function KnowledgeGraphCanvas({
                   type="button"
                   onClick={() => setSelectedEntityType(f.id)}
                   className={cn(
-                    "px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1",
+                    "px-2.5 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1",
                     selectedEntityType === f.id
-                      ? "bg-[#c15f3e] text-white shadow-2xs"
+                      ? "bg-[#c15f3e] text-white shadow-2xs font-semibold"
                       : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
                   )}
                 >
@@ -689,86 +707,46 @@ export function KnowledgeGraphCanvas({
             })}
           </div>
 
-          <span className="text-[11px] text-muted font-mono whitespace-nowrap">
-            {rawNodes.length} đỉnh • {rawEdges.length} liên kết
-          </span>
-        </div>
-
-        {/* Zoom & Reset Controls */}
-        <div className="flex items-center gap-1 bg-surface dark:bg-[#201e1b] rounded-md border border-border/80 p-0.5">
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Phóng to"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Thu nhỏ"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Đặt lại khung nhìn"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Community Ribbon Filter */}
-      {communities.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-[#e8e4dc]/70 dark:border-[#2e2b26]/70 bg-[#fbf9f5] dark:bg-[#181715] flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-none shrink-0 z-10">
-          <Filter className="w-3 h-3 text-muted shrink-0" />
-          <button
-            type="button"
-            onClick={() => setSelectedCommunityId(null)}
-            className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer shrink-0",
-              selectedCommunityId === null
-                ? "bg-primary text-white"
-                : "bg-surface dark:bg-[#252320] text-muted hover:text-ink"
-            )}
-          >
-            Tất cả cộng đồng
-          </button>
-          {communities.map((c) => {
-            const isSelected = selectedCommunityId === c.id;
-            const dotColor =
-              COMMUNITY_PALETTE[Math.abs(c.id) % COMMUNITY_PALETTE.length];
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCommunityId(isSelected ? null : c.id);
-                  onSelectCommunity?.(c);
+          {/* Compact Community Selector Dropdown */}
+          {communities.length > 0 && (
+            <div className="flex items-center gap-1 bg-[#ede8df]/60 dark:bg-[#252320] px-2 py-0.5 rounded-lg border border-[#e2dcd2]/70 dark:border-[#322f2a] text-[11px]">
+              <Filter className="w-3 h-3 text-muted shrink-0" />
+              <select
+                aria-label="Lọc theo cụm cộng đồng"
+                value={selectedCommunityId === null ? "all" : String(selectedCommunityId)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const commId = val === "all" ? null : Number(val);
+                  setSelectedCommunityId(commId);
+                  if (commId !== null) {
+                    const match = communities.find((c) => c.id === commId);
+                    if (match) onSelectCommunity?.(match);
+                  }
                 }}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer shrink-0 border",
-                  isSelected
-                    ? "bg-primary/10 border-primary text-primary dark:text-zinc-100"
-                    : "border-border/60 bg-white/60 dark:bg-[#201e1b] text-muted hover:text-ink"
-                )}
+                className="bg-transparent text-ink dark:text-zinc-200 outline-none cursor-pointer text-[11px] font-medium"
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: dotColor }}
-                />
-                <span className="truncate max-w-[120px]">{c.label}</span>
-                <span className="text-[9px] opacity-70 font-mono">({c.paper_count})</span>
-              </button>
-            );
-          })}
+                <option value="all" className="bg-white dark:bg-[#201e1b] text-ink dark:text-zinc-200">
+                  Tất cả cộng đồng ({communities.length})
+                </option>
+                {communities.map((c) => (
+                  <option
+                    key={c.id}
+                    value={c.id}
+                    className="bg-white dark:bg-[#201e1b] text-ink dark:text-zinc-200"
+                  >
+                    {c.label} ({c.paper_count} bài)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Counter */}
+        <span className="text-[11px] text-muted font-mono whitespace-nowrap">
+          {rawNodes.length} đỉnh • {rawEdges.length} liên kết
+        </span>
+      </div>
 
       {/* Simulation HTML5 Canvas */}
       <div className="relative flex-1 w-full h-full min-h-[300px]">
@@ -808,7 +786,7 @@ export function KnowledgeGraphCanvas({
           className="w-full h-full cursor-grab active:cursor-grabbing block"
         />
 
-        {/* Floating Entity Color Legend */}
+        {/* Floating Entity Color Legend (Bottom-Left) */}
         <div className="absolute bottom-3 left-3 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface/90 dark:bg-[#1f1d1a]/90 backdrop-blur-xs border border-border/70 text-[11px] shadow-xs pointer-events-none z-10">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-[#4f46e5] inline-block shrink-0" />
@@ -826,6 +804,35 @@ export function KnowledgeGraphCanvas({
             <span className="w-2 h-2 rounded-full bg-[#c15f3e] inline-block shrink-0" />
             <span className="text-muted">🎯 Chỉ số</span>
           </div>
+        </div>
+
+        {/* Floating Viewport Navigation Dock (Bottom-Right) */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-0.5 bg-surface/90 dark:bg-[#1f1d1a]/90 backdrop-blur-md rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] shadow-xs p-1 z-10">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Phóng to"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Thu nhỏ"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-px h-3.5 bg-border mx-0.5" />
+          <button
+            type="button"
+            onClick={handleReset}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Đặt lại khung nhìn (về giữa)"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </div>

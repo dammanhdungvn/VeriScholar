@@ -71,19 +71,91 @@ async def get_library_graph(
     res_docs = await db.execute(stmt_docs)
     docs = res_docs.scalars().all()
 
+    docs_by_id = {doc.id: doc for doc in docs}
+    docs_by_title = {
+        (doc.title or doc.filename or "").strip().lower(): doc
+        for doc in docs
+        if (doc.title or doc.filename)
+    }
+    doc_ids = set(docs_by_id.keys())
+
+    # 2. Fetch GraphNodeModel entries (4-entity ontology)
+    stmt_gnodes = select(GraphNodeModel).where(
+        GraphNodeModel.user_id == current_user.id,
+    )
+    if folder_id is not None and doc_ids:
+        stmt_gnodes = stmt_gnodes.where(
+            (GraphNodeModel.document_id.in_(doc_ids)) | (GraphNodeModel.document_id.is_(None))
+        )
+    res_gnodes = await db.execute(stmt_gnodes)
+    gnodes = res_gnodes.scalars().all()
+
     nodes_map: dict[str, LibraryGraphNode] = {}
-    doc_ids: set[UUID] = set()
-    doc_title_to_id: dict[str, str] = {}
+    doc_id_to_node_id: dict[UUID, str] = {}
+    title_to_node_id: dict[str, str] = {}
 
+    # Step A: Canonical GraphNodeModel entities
+    for gn in gnodes:
+        gn_id_str = str(gn.id)
+        gn_title_lower = (gn.display_name or gn.canonical_name or "").strip().lower()
+
+        matching_doc = None
+        if gn.document_id and gn.document_id in docs_by_id:
+            matching_doc = docs_by_id[gn.document_id]
+        elif gn.node_type == "Paper" and gn_title_lower in docs_by_title:
+            matching_doc = docs_by_title[gn_title_lower]
+
+        if matching_doc:
+            doc_id_to_node_id[matching_doc.id] = gn_id_str
+
+        gn_meta = dict(gn.metadata_json or {})
+        if matching_doc:
+            gn_meta.setdefault("filename", matching_doc.filename)
+            gn_meta.setdefault("title", matching_doc.title)
+            gn_meta.setdefault("status", matching_doc.status)
+            gn_meta.setdefault("page_count", matching_doc.page_count)
+            gn_meta.setdefault(
+                "folder_id", str(matching_doc.folder_id) if matching_doc.folder_id else None
+            )
+            gn_meta.setdefault("paper_id", str(matching_doc.id))
+            abstract_val = (
+                matching_doc.parsed_metadata.get("abstract")
+                if isinstance(matching_doc.parsed_metadata, dict)
+                else None
+            )
+            gn_meta.setdefault("abstract", abstract_val or gn.description)
+            gn_meta.setdefault("publication_year", matching_doc.publication_year)
+        else:
+            gn_meta.setdefault("abstract", gn.description)
+            gn_meta.setdefault("publication_year", None)
+            gn_meta.setdefault("filename", None)
+
+        nodes_map[gn_id_str] = LibraryGraphNode(
+            id=gn_id_str,
+            label=gn.display_name or gn.canonical_name,
+            type=gn.node_type,
+            degree=0,
+            citation_count=0,
+            group=gn.node_type.lower(),
+            metadata=gn_meta,
+        )
+        if gn_title_lower:
+            title_to_node_id[gn_title_lower] = gn_id_str
+
+    # Step B: Register documents that do NOT have a GraphNodeModel entry (prevent duplicate nodes)
     for doc in docs:
-        doc_id_str = str(doc.id)
-        doc_ids.add(doc.id)
-        title = (doc.title or doc.filename or "Untitled Paper").strip()
-        doc_title_to_id[title.lower()] = doc_id_str
-        abstract_val = None
-        if isinstance(doc.parsed_metadata, dict):
-            abstract_val = doc.parsed_metadata.get("abstract")
+        if doc.id in doc_id_to_node_id:
+            continue
 
+        doc_id_str = str(doc.id)
+        doc_id_to_node_id[doc.id] = doc_id_str
+        title = (doc.title or doc.filename or "Untitled Paper").strip()
+        title_lower = title.lower()
+        title_to_node_id[title_lower] = doc_id_str
+
+        abstract_val = (
+            doc.parsed_metadata.get("abstract") if isinstance(doc.parsed_metadata, dict) else None
+        )
         nodes_map[doc_id_str] = LibraryGraphNode(
             id=doc_id_str,
             label=title,
@@ -97,35 +169,11 @@ async def get_library_graph(
                 "status": doc.status,
                 "page_count": doc.page_count,
                 "folder_id": str(doc.folder_id) if doc.folder_id else None,
+                "paper_id": doc_id_str,
                 "abstract": abstract_val,
                 "publication_year": doc.publication_year,
             },
         )
-
-    # 2. Fetch GraphNodeModel entries if any
-    if doc_ids:
-        stmt_gnodes = select(GraphNodeModel).where(
-            GraphNodeModel.user_id == current_user.id,
-        )
-        if folder_id is not None:
-            stmt_gnodes = stmt_gnodes.where(GraphNodeModel.document_id.in_(doc_ids))
-        res_gnodes = await db.execute(stmt_gnodes)
-        for gn in res_gnodes.scalars().all():
-            gn_id_str = str(gn.id)
-            if gn_id_str not in nodes_map:
-                gn_meta = dict(gn.metadata_json or {})
-                gn_meta.setdefault("abstract", None)
-                gn_meta.setdefault("publication_year", None)
-                gn_meta.setdefault("filename", None)
-                nodes_map[gn_id_str] = LibraryGraphNode(
-                    id=gn_id_str,
-                    label=gn.display_name or gn.canonical_name,
-                    type=gn.node_type,
-                    degree=0,
-                    citation_count=0,
-                    group=gn.node_type.lower(),
-                    metadata=gn_meta,
-                )
 
     # 3. Fetch GraphEdgeModel relations
     edges_list: list[LibraryGraphEdge] = []
@@ -162,28 +210,34 @@ async def get_library_graph(
         refs = res_refs.scalars().all()
 
         for ref in refs:
-            src_id = str(ref.document_id)
-            target_doc_id = None
-            if ref.resolved_document_id and str(ref.resolved_document_id) in nodes_map:
-                target_doc_id = str(ref.resolved_document_id)
-            elif ref.parsed_title and ref.parsed_title.lower() in doc_title_to_id:
-                target_doc_id = doc_title_to_id[ref.parsed_title.lower()]
+            src_id = doc_id_to_node_id.get(ref.document_id)
+            target_id = None
+            if ref.resolved_document_id and ref.resolved_document_id in doc_id_to_node_id:
+                target_id = doc_id_to_node_id[ref.resolved_document_id]
+            elif ref.parsed_title and ref.parsed_title.lower() in title_to_node_id:
+                target_id = title_to_node_id[ref.parsed_title.lower()]
 
-            if target_doc_id and src_id != target_doc_id:
-                edge_key = (src_id, target_doc_id, "CITES")
+            if (
+                src_id
+                and target_id
+                and src_id in nodes_map
+                and target_id in nodes_map
+                and src_id != target_id
+            ):
+                edge_key = (src_id, target_id, "CITES")
                 if edge_key not in seen_edges:
                     seen_edges.add(edge_key)
                     edges_list.append(
                         LibraryGraphEdge(
                             source=src_id,
-                            target=target_doc_id,
+                            target=target_id,
                             relation="CITES",
                             label="cites",
                             weight=1.0,
                         )
                     )
                     nodes_map[src_id].degree += 1
-                    nodes_map[target_doc_id].degree += 1
+                    nodes_map[target_id].degree += 1
 
     # 5. Connect related documents in user's library if no citation edges yet
     doc_id_list = list(nodes_map.keys())

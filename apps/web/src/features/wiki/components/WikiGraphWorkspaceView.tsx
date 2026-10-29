@@ -129,15 +129,8 @@ export function WikiGraphWorkspaceView({
       className="flex-1 flex flex-col h-screen w-full bg-[#fbf9f5] dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden"
     >
       {/* 1. Header Toolbar */}
-      <header className="h-13 px-4 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex items-center justify-between gap-3 shrink-0 z-20">
+      <header className="h-12 px-4 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex items-center justify-between gap-3 shrink-0 z-20">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <Network className="w-5 h-5 text-[#c15f3e] stroke-[2.2]" />
-            <h1 className="font-serif font-bold text-sm tracking-tight text-[#1a1918] dark:text-[#f4f1ea]">
-              Graph
-            </h1>
-          </div>
-
           {/* Mode Switcher Tabs (2 Modes) */}
           <nav
             aria-label="Chế độ xem Graph"
@@ -147,7 +140,7 @@ export function WikiGraphWorkspaceView({
               type="button"
               onClick={() => setMode("graph")}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5",
                 mode === "graph"
                   ? "bg-white dark:bg-[#1e1c19] text-[#c15f3e] font-semibold shadow-2xs"
                   : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -160,7 +153,7 @@ export function WikiGraphWorkspaceView({
               type="button"
               onClick={() => setMode("wiki")}
               className={cn(
-                "px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5",
+                "px-3 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5",
                 mode === "wiki"
                   ? "bg-white dark:bg-[#1e1c19] text-[#c15f3e] font-semibold shadow-2xs"
                   : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"

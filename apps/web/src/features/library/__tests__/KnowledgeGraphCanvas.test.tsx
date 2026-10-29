@@ -123,7 +123,7 @@ describe("KnowledgeGraphCanvas HTML5 Force Simulation", () => {
     expect(screen.getByText(/Attention Mechanisms/i)).toBeInTheDocument();
   });
 
-  it("allows selecting a community filter badge", () => {
+  it("allows selecting a community filter option", () => {
     const handleSelectCommunity = vi.fn();
     render(
       <KnowledgeGraphCanvas
@@ -133,8 +133,8 @@ describe("KnowledgeGraphCanvas HTML5 Force Simulation", () => {
       />
     );
 
-    const communityBadge = screen.getByText(/Transformer Architectures/i);
-    fireEvent.click(communityBadge);
+    const select = screen.getByRole("combobox", { name: /Lọc theo cụm cộng đồng/i });
+    fireEvent.change(select, { target: { value: "0" } });
     expect(handleSelectCommunity).toHaveBeenCalledWith(
       expect.objectContaining({ label: "Transformer Architectures" })
     );

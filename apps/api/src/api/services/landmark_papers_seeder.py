@@ -1004,13 +1004,17 @@ async def seed_landmark_papers_for_user(
                 continue
 
             ref_idx += 1
-            # Check if reference item exists
+            # Check if reference item exists by resolved_document_id or ref_index
             ref_stmt = select(ReferenceItemModel).where(
                 ReferenceItemModel.document_id == src_doc.id,
-                ReferenceItemModel.resolved_document_id == target_doc.id,
+                (ReferenceItemModel.resolved_document_id == target_doc.id)
+                | (ReferenceItemModel.ref_index == ref_idx),
             )
             ref_res = await db.execute(ref_stmt)
-            if not ref_res.scalars().first():
+            existing_ref = ref_res.scalars().first()
+            if existing_ref:
+                existing_ref.resolved_document_id = target_doc.id
+            else:
                 ref_item = ReferenceItemModel(
                     id=uuid4(),
                     user_id=user_id,
