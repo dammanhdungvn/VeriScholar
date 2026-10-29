@@ -94,34 +94,51 @@ VeriScholar aims to provide a world-class, frictionless academic research and wr
 - Handle batch file uploads in `handleDrop` and `handleFileChange` via `Promise.all`.
 - Remove the redundant `Chưa có asset nào trong bản thảo` lower container when assets array is empty, letting the dropzone remain the clean primary visual focus.
 
-### 4.4. AI Assistant LangGraph Tool-Calling Engine
-- **LangGraph Tools (`apps/api/src/api/agents/latex_agent.py`):**
-  - Provide structured tools with Pydantic schemas:
-    1. `create_file(filename: str, content: str)`
-    2. `edit_file(filename: str, content: str)`
-    3. `delete_file(filename: str)`
-    4. `read_file(filename: str)`
-    5. `list_files()`
-    6. `query_library_graph_rag(query: str, top_k: int = 5)`
-    7. `recompile_latex(clear_cache: bool = False)`
+### 4.4. AI Assistant LangGraph Tool-Calling Engine & Project Files
+- **Project Files Scope:**
+  - The core editable LaTeX project documents are `main.tex` and `references.bib` (which map to `content` and `bib_content` in `DraftModel`).
+  - Auxiliary project files (styles `.sty`, classes `.cls`, or sub-tex files) and figures are stored in `draft_assets`.
+  - LangGraph Tools:
+    1. `create_file(filename: str, content: str)`: Creates/initializes a project file. If `references.bib` or `main.tex`, updates the primary draft content; if auxiliary, registers in `draft_assets`.
+    2. `edit_file(filename: str, content: str)`: Updates `main.tex`, `references.bib`, or asset file.
+    3. `delete_file(filename: str)`: Deletes auxiliary file from assets (protecting `main.tex`).
+    4. `read_file(filename: str)`: Reads content of `main.tex`, `references.bib`, or asset.
+    5. `list_files()`: Returns all project files (`main.tex`, `references.bib`, and all assets in `draft_assets`).
+    6. `query_library_graph_rag(query: str, top_k: int = 5)`: Tra cứu tri thức từ thư viện.
+    7. `recompile_latex(clear_cache: bool = False)`: Tự động chạy biên dịch và kiểm tra lỗi.
   - Agent uses Gemini / OpenAI from environment variables (`.env`) via LangChain / LangGraph standard `bind_tools`.
   - Stream tool execution status (`✍️ Đang sửa main.tex`, `⚙️ Đang biên dịch...`) and conversational responses.
-- **Undo / Redo 2-Way Snapshot (`draft_service.py`):**
-  - When applying an edit: Store previous state in `draft.previous_snapshot`.
-  - When calling `undo`: Swap current state and snapshot into `draft.redo_snapshot`.
-  - When calling `redo`: Restore from `draft.redo_snapshot`.
+
+- **Undo / Redo 2-Way Snapshot Architecture (Zero DB Migration):**
+  - `DraftModel.previous_snapshot` is a `JSONType` column.
+  - Structure:
+    ```json
+    {
+      "undo": { "content": "...", "bib_content": "...", "saved_at": "..." },
+      "redo": { "content": "...", "bib_content": "...", "saved_at": "..." }
+    }
+    ```
+  - When AI applies an edit: current state is pushed to `snapshot["undo"]`, and `snapshot["redo"]` is cleared.
+  - `POST /api/v1/drafts/{id}:undo` toggles or accepts `{"action": "undo" | "redo"}`:
+    - On undo: current state is saved to `redo`, and `undo` state is restored.
+    - On redo: current state is saved to `undo`, and `redo` state is restored.
+  - In frontend, button toggles label between `Hoàn tác` and `Khôi phục (Redo)`.
+
 - **Chat Drawer Resizing & Styling (`WritingAssistantPane.tsx`):**
   - Remove fixed `w-80` from inner container, use `w-full h-full`.
   - Add draggable left border handle (`assistantWidth`, `onMouseDown` handler) allowing width adjustment from 360px to 720px.
   - Remove duplicate emoji icon in header: keep `<RotateCcw className="w-3.5 h-3.5" /> <span>Hoàn tác</span>` (or `Khôi phục`).
 
 ### 4.5. Dashboard Add Document Modal (`AddDocumentModal.tsx`)
-- Add Tab 3: `[ Tải lên PDF ]` with dropzone allowing users to pick and upload a local PDF directly into the session.
-- Library Tab Filter: Query `GET /api/v1/documents?is_persistent=true&per_page=100`, deduplicate entries by content hash / title, hiding temporary non-persistent files.
+- **Tab 3: `[ Tải lên PDF ]`:** Allows users to pick and upload a local PDF directly into the active session.
+- **Session-Bound Invariant:** Uploading via this session modal creates a document linked to the session with `is_persistent = false`. It only enters permanent "My Library" when the user clicks the "Save / Bookmark" button, preventing library clutter.
+- **Library Tab Filter & Deduplication:** When browsing the Library tab, query documents with `is_persistent=true`, deduplicate by content hash / title, hiding temporary non-persistent files.
 
 ### 4.6. Library Overhaul & LLM Wiki Knowledge Graph (`/library`)
 - **Direct Library Upload:** Upload handler in `LibraryWorkspaceView.tsx` automatically calls `POST /api/v1/documents/{id}:star` with `toggle=true` and folder assignment so documents appear immediately in the library.
 - **Folder Modal on Save:** When clicking Save on any document, open `StarDocumentModal` offering folder selection or inline folder creation (`+ Tạo thư mục mới`).
+- **Knowledge Graph Endpoint (`GET /api/v1/library/graph`):**
+  - Returns top-50 high-centrality entities and their relationships for the user's persistent documents (or active folder), preventing client canvas lag.
 - **Interactive Knowledge Graph View (`KnowledgeGraphCanvas.tsx`):**
   - Toggle between `[ 📄 Danh sách ]` and `[ 🕸️ Đồ thị Tri thức ]`.
   - Interactive force-directed graph canvas (using SVG / Canvas):
