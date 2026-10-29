@@ -27,6 +27,10 @@ class WikiPageSummary(BaseModel):
         default=None,
         description="Abstractive summary or lead paragraph of the concept",
     )
+    markdown_content: str | None = Field(
+        default=None,
+        description="Full compiled Markdown content or lead preview",
+    )
     wikilinks: list[str] = Field(
         default_factory=list,
         description="Outbound [[wikilinks]] referencing other concepts",
@@ -152,6 +156,14 @@ class ResearchGapsResponse(BaseModel):
     suggested_topics: list[SuggestedTopicItem] = Field(
         default_factory=list,
         description="Actionable suggested research directions / thesis topics",
+    )
+    recommended_directions: list[str] = Field(
+        default_factory=list,
+        description="Recommended actionable research directions",
+    )
+    synthesized_matrix_markdown: str = Field(
+        default="",
+        description="Synthesized Markdown table/matrix of cross-paper research gaps",
     )
     total_papers_analyzed: int = Field(
         default=0,

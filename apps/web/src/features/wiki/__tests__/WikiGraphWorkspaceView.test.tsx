@@ -79,7 +79,13 @@ describe("WikiGraphWorkspaceView Component", () => {
     vi.spyOn(libraryApi, "getResearchGaps").mockResolvedValue({
       total_papers_analyzed: 5,
       identified_limitations: [{ limitation: "Quadratic memory bottleneck" }],
-      unsolved_frontiers: [{ open_question: "Linear attention without accuracy degradation" }],
+      unsolved_frontiers: [
+        {
+          domain: "Efficiency",
+          bottleneck_description: "Linear attention without accuracy degradation",
+          acknowledged_by: ["Attention Paper"],
+        },
+      ],
       recommended_directions: ["FlashAttention hardware alignment"],
       synthesized_matrix_markdown: "### Research Gaps Summary\n\n- Frontier 1",
     });
@@ -151,6 +157,76 @@ describe("WikiGraphWorkspaceView Component", () => {
 
     await waitFor(() => {
       expect(screen.getAllByText("Envelope Normalized Concept").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("renders empty state and allows compiling wiki pages", async () => {
+    vi.spyOn(libraryApi, "getLibraryGraph").mockResolvedValue({
+      nodes: [],
+      edges: [],
+      communities: [],
+      total_nodes: 0,
+      total_edges: 0,
+    });
+    vi.spyOn(libraryApi, "listWikiPages").mockResolvedValue([]);
+    const compileSpy = vi.spyOn(libraryApi, "compileWikiPages").mockResolvedValue([]);
+
+    renderWithProviders(<WikiGraphWorkspaceView />);
+
+    const wikiTabBtn = screen.getByRole("button", { name: /Wiki Graph/i });
+    fireEvent.click(wikiTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText("Chưa có trang Wiki tri thức nào")).toBeInTheDocument();
+    });
+
+    const compileBtn = screen.getByRole("button", { name: /Biên soạn Wiki từ Thư viện/i });
+    expect(compileBtn).toBeInTheDocument();
+    fireEvent.click(compileBtn);
+
+    expect(compileSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches full wiki page detail when page is active", async () => {
+    vi.spyOn(libraryApi, "getLibraryGraph").mockResolvedValue({
+      nodes: [],
+      edges: [],
+      communities: [],
+      total_nodes: 0,
+      total_edges: 0,
+    });
+    vi.spyOn(libraryApi, "listWikiPages").mockResolvedValue([
+      {
+        id: "w-item-1",
+        slug: "lora-adaptation",
+        title: "LoRA Low-Rank Adaptation",
+        page_type: "method",
+        markdown_content: "Preview lead",
+        yaml_metadata: {},
+        wikilinks: ["transformer"],
+        created_at: "2026-10-25T10:00:00Z",
+        updated_at: "2026-10-25T10:00:00Z",
+      },
+    ]);
+    const getWikiPageSpy = vi.spyOn(libraryApi, "getWikiPage").mockResolvedValue({
+      id: "w-item-1",
+      slug: "lora-adaptation",
+      title: "LoRA Low-Rank Adaptation",
+      page_type: "method",
+      markdown_content: "Full mathematical formula: $W = W_0 + \\Delta W$",
+      yaml_metadata: {},
+      wikilinks: ["transformer"],
+      created_at: "2026-10-25T10:00:00Z",
+      updated_at: "2026-10-25T10:00:00Z",
+    });
+
+    renderWithProviders(<WikiGraphWorkspaceView />);
+
+    const wikiTabBtn = screen.getByRole("button", { name: /Wiki Graph/i });
+    fireEvent.click(wikiTabBtn);
+
+    await waitFor(() => {
+      expect(getWikiPageSpy).toHaveBeenCalledWith("lora-adaptation");
     });
   });
 });

@@ -242,3 +242,23 @@ async def test_wiki_endpoints_unauthorized(async_client: AsyncClient):
 
     resp_gaps = await async_client.post("/api/v1/library/research-gaps", json={})
     assert resp_gaps.status_code == 401
+
+    resp_compile = await async_client.post("/api/v1/library/wiki:compile")
+    assert resp_compile.status_code == 401
+
+
+@pytest.mark.asyncio
+async def test_wiki_compile_endpoint(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+):
+    """Verify POST /api/v1/library/wiki:compile populates wiki pages and returns envelope."""
+    resp = await async_client.post("/api/v1/library/wiki:compile", headers=auth_headers)
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["success"] is True
+    assert data["data"]["total"] >= 15
+    slugs = [p["slug"] for p in data["data"]["pages"]]
+    assert "attention-is-all-you-need" in slugs
+    assert "transformer" in slugs
+    assert "quadratic-memory-bottleneck" in slugs

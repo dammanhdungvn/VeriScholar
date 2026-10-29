@@ -95,6 +95,49 @@ export function WikiGraphWorkspaceView({
     return wikiPages[0];
   }, [wikiPages, selectedWikiSlug]);
 
+  // Fetch full page markdown content on demand
+  const activeSlug = activeWikiPage?.slug;
+  const { data: fullActiveWikiPage, isLoading: isLoadingPage } = useQuery({
+    queryKey: ["wiki-page", activeSlug],
+    queryFn: () => libraryApi.getWikiPage(activeSlug!),
+    enabled: !!activeSlug,
+  });
+
+  const activeMarkdownContent =
+    fullActiveWikiPage?.markdown_content ||
+    activeWikiPage?.markdown_content ||
+    activeWikiPage?.summary ||
+    "";
+
+  const [isCompiling, setIsCompiling] = useState(false);
+  const handleCompileWiki = async () => {
+    setIsCompiling(true);
+    try {
+      await libraryApi.compileWikiPages();
+      await refetchWiki();
+      await refetchGaps();
+    } catch (err) {
+      console.error("Failed to compile wiki pages:", err);
+    } finally {
+      setIsCompiling(false);
+    }
+  };
+
+  const handleSelectWikilink = (linkName: string) => {
+    const clean = linkName.trim().toLowerCase();
+    const slugCand = clean.replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const match = wikiPages.find(
+      (p) =>
+        p.slug.toLowerCase() === slugCand ||
+        p.slug.toLowerCase() === clean ||
+        p.title.toLowerCase() === clean ||
+        p.title.toLowerCase().includes(clean)
+    );
+    if (match) {
+      setSelectedWikiSlug(match.slug);
+    }
+  };
+
   // Filtered wiki pages
   const filteredWikiPages = useMemo(() => {
     if (!wikiSearch.trim()) return wikiPages;
@@ -410,7 +453,7 @@ export function WikiGraphWorkspaceView({
                             <button
                               key={link}
                               type="button"
-                              onClick={() => setSelectedWikiSlug(link)}
+                              onClick={() => handleSelectWikilink(link)}
                               className="px-2 py-0.5 rounded bg-surface dark:bg-[#22201d] border border-[#e2dcd2] dark:border-[#322f2a] text-[#c15f3e] hover:underline cursor-pointer font-mono text-[11px]"
                             >
                               [[{link}]]
@@ -421,11 +464,38 @@ export function WikiGraphWorkspaceView({
 
                       {/* Markdown Content */}
                       <div className="pt-2 text-ink dark:text-zinc-100 text-sm leading-relaxed">
-                        <AcademicMarkdownRenderer
-                          content={activeWikiPage.markdown_content}
-                        />
+                        {isLoadingPage && !activeMarkdownContent ? (
+                          <div className="py-8 text-center text-xs text-muted">
+                            Đang tải toàn văn trang wiki...
+                          </div>
+                        ) : (
+                          <AcademicMarkdownRenderer content={activeMarkdownContent} />
+                        )}
                       </div>
                     </article>
+                  ) : filteredWikiPages.length === 0 ? (
+                    <div className="h-full flex flex-col items-center justify-center p-8 text-center max-w-md mx-auto space-y-4">
+                      <div className="w-12 h-12 rounded-2xl bg-[#c15f3e]/10 flex items-center justify-center text-[#c15f3e]">
+                        <BookOpen className="w-6 h-6" />
+                      </div>
+                      <div className="space-y-1">
+                        <h3 className="font-serif font-bold text-base text-ink dark:text-zinc-100">
+                          Chưa có trang Wiki tri thức nào
+                        </h3>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Biên soạn các khái niệm học thuật, công thức toán học và liên kết [[wikilinks]] từ các bài báo trong thư viện.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleCompileWiki}
+                        disabled={isCompiling}
+                        className="px-4 py-2 rounded-lg bg-[#c15f3e] text-white text-xs font-medium hover:bg-[#a54f33] transition-colors cursor-pointer flex items-center gap-2 shadow-xs disabled:opacity-50"
+                      >
+                        <RefreshCw className={cn("w-3.5 h-3.5", isCompiling && "animate-spin")} />
+                        <span>{isCompiling ? "Đang biên soạn..." : "Biên soạn Wiki từ Thư viện"}</span>
+                      </button>
+                    </div>
                   ) : (
                     <div className="h-full flex items-center justify-center text-xs text-muted">
                       Chọn một trang wiki để xem nội dung chi tiết.
@@ -463,23 +533,62 @@ export function WikiGraphWorkspaceView({
                     </div>
                   ) : gapsData ? (
                     <div className="space-y-6">
+                      {/* Unsolved Frontiers Cards */}
+                      {Array.isArray(gapsData.unsolved_frontiers) &&
+                        gapsData.unsolved_frontiers.length > 0 && (
+                          <div className="space-y-3">
+                            <h3 className="font-serif font-semibold text-xs text-muted uppercase tracking-wider">
+                              Điểm nghẽn học thuật chưa giải quyết ({gapsData.unsolved_frontiers.length})
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                              {gapsData.unsolved_frontiers.map((f, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-3.5 rounded-xl bg-[#fdfcf9] dark:bg-[#1f1e1a] border border-[#ece8df] dark:border-[#2a2824] space-y-2 flex flex-col justify-between shadow-2xs"
+                                >
+                                  <div className="space-y-1.5">
+                                    <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-[#c15f3e]/10 text-[#c15f3e]">
+                                      {f.domain}
+                                    </span>
+                                    <p className="text-xs text-ink dark:text-zinc-100 font-medium leading-snug">
+                                      {f.bottleneck_description}
+                                    </p>
+                                    {f.acknowledged_by && f.acknowledged_by.length > 0 && (
+                                      <p className="text-[10px] text-muted font-mono">
+                                        Ghi nhận bởi: {f.acknowledged_by.join(", ")}
+                                      </p>
+                                    )}
+                                  </div>
+                                  {f.potential_solution && (
+                                    <div className="pt-2 border-t border-[#f0ede6] dark:border-[#282622] text-[11px] text-muted">
+                                      <span className="font-semibold text-ink dark:text-zinc-200">Gợi ý: </span>
+                                      {f.potential_solution}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                       {/* Recommended Directions */}
-                      {gapsData.recommended_directions.length > 0 && (
-                        <div className="p-4 rounded-xl bg-[#c15f3e]/5 border border-[#c15f3e]/20 space-y-2">
-                          <h3 className="font-serif font-semibold text-xs text-[#c15f3e] uppercase tracking-wider flex items-center gap-1.5">
-                            <ArrowRight className="w-3.5 h-3.5" />
-                            Hướng phát triển khuyến nghị
-                          </h3>
-                          <ul className="space-y-1.5 text-xs text-ink dark:text-zinc-200">
-                            {gapsData.recommended_directions.map((dir, idx) => (
-                              <li key={idx} className="flex items-start gap-2">
-                                <span className="text-[#c15f3e] font-bold">•</span>
-                                <span>{dir}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
+                      {Array.isArray(gapsData.recommended_directions) &&
+                        gapsData.recommended_directions.length > 0 && (
+                          <div className="p-4 rounded-xl bg-[#c15f3e]/5 border border-[#c15f3e]/20 space-y-2">
+                            <h3 className="font-serif font-semibold text-xs text-[#c15f3e] uppercase tracking-wider flex items-center gap-1.5">
+                              <ArrowRight className="w-3.5 h-3.5" />
+                              Hướng phát triển khuyến nghị
+                            </h3>
+                            <ul className="space-y-1.5 text-xs text-ink dark:text-zinc-200">
+                              {gapsData.recommended_directions.map((dir, idx) => (
+                                <li key={idx} className="flex items-start gap-2">
+                                  <span className="text-[#c15f3e] font-bold">•</span>
+                                  <span>{typeof dir === "string" ? dir : (dir as any).title || ""}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
 
                       {/* Synthesized Matrix Markdown */}
                       {gapsData.synthesized_matrix_markdown && (

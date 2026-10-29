@@ -13,6 +13,8 @@ from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
 from api.db.models.graph import GraphEdgeModel, GraphNodeModel
 from api.db.models.reference import ReferenceItemModel
+from api.db.models.wiki import WikiPageModel
+from api.services.landmark_wiki_data import LANDMARK_WIKI_PAGES
 from core.services.graph_extractor import normalize_canonical_name
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -1048,4 +1050,49 @@ async def seed_landmark_papers_for_user(
         user_id=str(user_id),
         count=len(LANDMARK_PAPERS),
     )
+
+    # 3. Seed compiled academic wiki pages
+    await seed_landmark_wiki_pages_for_user(db, user_id)
+
     return len(LANDMARK_PAPERS)
+
+
+async def seed_landmark_wiki_pages_for_user(
+    db: AsyncSession,
+    user_id: UUID,
+) -> int:
+    """Seed compiled academic wiki pages and research gaps for a user."""
+    seeded = 0
+    for page_data in LANDMARK_WIKI_PAGES:
+        slug = page_data["slug"]
+        stmt = select(WikiPageModel).where(
+            WikiPageModel.user_id == user_id,
+            WikiPageModel.slug == slug,
+        )
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing:
+            existing.title = page_data["title"]
+            existing.page_type = page_data["page_type"]
+            existing.markdown_content = page_data["markdown_content"]
+            existing.yaml_metadata = page_data["yaml_metadata"]
+            existing.wikilinks = page_data["wikilinks"]
+        else:
+            new_page = WikiPageModel(
+                user_id=user_id,
+                slug=slug,
+                title=page_data["title"],
+                page_type=page_data["page_type"],
+                markdown_content=page_data["markdown_content"],
+                yaml_metadata=page_data["yaml_metadata"],
+                wikilinks=page_data["wikilinks"],
+            )
+            db.add(new_page)
+            seeded += 1
+    await db.commit()
+    logger.info(
+        "Successfully seeded landmark wiki pages",
+        user_id=str(user_id),
+        total=len(LANDMARK_WIKI_PAGES),
+        new=seeded,
+    )
+    return len(LANDMARK_WIKI_PAGES)

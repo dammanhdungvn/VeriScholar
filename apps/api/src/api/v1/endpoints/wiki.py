@@ -118,6 +118,7 @@ async def list_wiki_pages(
                 title=p.title,
                 page_type=p.page_type,
                 summary=summary_val,
+                markdown_content=p.markdown_content,
                 wikilinks=p.wikilinks or [],
                 backlinks_count=meta.get("backlinks_count", 0),
                 folder_id=p.folder_id,
@@ -386,14 +387,68 @@ async def synthesize_research_gaps(
             )
         )
 
+    # Build markdown table matrix if frontiers exist
+    matrix_rows: list[str] = []
+    for uf in deduped_frontiers:
+        cites_str = (
+            ", ".join(uf.acknowledged_by[:2]) if uf.acknowledged_by else "Scholarly Literature"
+        )
+        sol = uf.potential_solution or "Cần khảo sát hướng tiếp cận mới"
+        matrix_rows.append(
+            f"| **{uf.domain}** | {uf.bottleneck_description} | {cites_str} | {sol} |"
+        )
+
+    matrix_markdown = ""
+    if matrix_rows:
+        matrix_markdown = (
+            "### Ma trận Tổng hợp Khoảng trống Nghiên cứu (Literature Frontiers)\n\n"
+            "| Lĩnh vực | Rào cản lý thuyết | Tài liệu ghi nhận | Hướng giải quyết đề xuất |\n"
+            "| :--- | :--- | :--- | :--- |\n" + "\n".join(matrix_rows)
+        )
+
+    recommended_dirs = [st.title for st in suggested_topics]
+    if not recommended_dirs and deduped_frontiers:
+        recommended_dirs = [
+            f"Giải quyết {f.domain.lower()}: {f.bottleneck_description[:80]}"
+            for f in deduped_frontiers[:3]
+        ]
+
     response_data = ResearchGapsResponse(
         folder_id=payload.folder_id,
         unsolved_frontiers=deduped_frontiers,
         suggested_topics=suggested_topics,
+        recommended_directions=recommended_dirs,
+        synthesized_matrix_markdown=matrix_markdown,
         total_papers_analyzed=len(docs),
     )
 
     return ResearchGapsResponseEnvelope(
         success=True,
         data=response_data,
+    )
+
+
+@router.post(
+    "/wiki:compile",
+    response_model=WikiListResponseEnvelope,
+    summary="Biên soạn lại toàn bộ các trang Wiki từ kho tài liệu cá nhân",
+    description="Quét toàn bộ tài liệu trong thư viện để biên soạn tự động các trang Wiki.",
+)
+async def compile_all_wiki_pages(
+    current_user: UserModel = Depends(get_current_user),
+    wiki_service: WikiService = Depends(get_wiki_service),
+    db: AsyncSession = Depends(get_db),
+) -> WikiListResponseEnvelope:
+    """Compile or re-seed academic wiki pages for current user."""
+    from api.services.landmark_papers_seeder import seed_landmark_wiki_pages_for_user
+
+    await seed_landmark_wiki_pages_for_user(db, current_user.id)
+    return await list_wiki_pages(
+        folder_id=None,
+        page_type=None,
+        limit=50,
+        offset=0,
+        current_user=current_user,
+        wiki_service=wiki_service,
+        db=db,
     )

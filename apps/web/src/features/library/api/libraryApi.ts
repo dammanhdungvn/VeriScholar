@@ -66,6 +66,19 @@ export const libraryApi = {
   },
 
   /**
+   * Compile or seed academic wiki pages from user library
+   */
+  async compileWikiPages(): Promise<WikiPageItem[]> {
+    const res = await apiClient<{ total: number; pages: WikiPageItem[] } | WikiPageItem[]>("/library/wiki:compile", {
+      method: "POST",
+    });
+    if (Array.isArray(res)) {
+      return res;
+    }
+    return (res as { total: number; pages: WikiPageItem[] })?.pages ?? [];
+  },
+
+  /**
    * Synthesize research gaps across library papers
    */
   async getResearchGaps(folderId?: string | null, topK: number = 5): Promise<ResearchGapsResponseData> {

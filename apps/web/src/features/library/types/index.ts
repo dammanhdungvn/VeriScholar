@@ -202,24 +202,36 @@ export interface WikiPageItem {
   title: string;
   page_type: "concept" | "sota_matrix" | "gap_synthesis" | string;
   markdown_content: string;
+  summary?: string | null;
   yaml_metadata: Record<string, unknown>;
   wikilinks: string[];
   created_at: string;
   updated_at: string;
 }
 
+export interface UnsolvedFrontierItem {
+  domain: string;
+  acknowledged_by?: string[];
+  bottleneck_description: string;
+  potential_solution?: string | null;
+  [key: string]: unknown;
+}
+
+export interface SuggestedTopicItem {
+  title: string;
+  rationale: string;
+}
+
 export interface ResearchGapsResponseData {
+  folder_id?: string | null;
   total_papers_analyzed: number;
-  identified_limitations: Array<{
+  identified_limitations?: Array<{
     paper_title?: string;
     limitation?: string;
     [key: string]: unknown;
   }>;
-  unsolved_frontiers: Array<{
-    topic?: string;
-    open_question?: string;
-    [key: string]: unknown;
-  }>;
+  unsolved_frontiers: UnsolvedFrontierItem[];
+  suggested_topics?: SuggestedTopicItem[];
   recommended_directions: string[];
   synthesized_matrix_markdown: string;
 }
