@@ -110,7 +110,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
 \subsection{Phân hệ Khám phá tài liệu khoa học}
 \label{subsec:ui_discovery}
 
-Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, loại bỏ hoàn toàn các thành phần trang trí dư thừa để người nghiên cứu tập trung cao độ vào bản chất tri thức. Khi người dùng truy cập, phân hệ hiển thị thanh tìm kiếm trung tâm (\textit{Search Hero}) kết hợp các thẻ chủ đề nghiên cứu gợi ý (\textit{Topic Chips}) như cơ chế chú ý (\textit{Attention Mechanism}), mạng nơ-ron đồ thị (\textit{Graph Neural Networks}), hay mô hình khuếch tán (\textit{Diffusion Models}). Phân hệ tích hợp các cơ chế giao diện chuyên sâu nhằm nâng cao trải nghiệm học thuật:
+Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, loại bỏ hoàn toàn các thành phần trang trí dư thừa để người nghiên cứu tập trung cao độ vào bản chất tri thức. Khi người dùng truy cập, phân hệ hiển thị thanh tìm kiếm trung tâm (\textit{Search Hero}) kết hợp các thẻ chủ đề nghiên cứu gợi ý (\textit{Topic Chips}) như cơ chế chú ý (\textit{Attention Mechanism}), mạng nơ-ron đồ thị (\textit{Graph Neural Networks}), hay mô hình khuếch tán (\textit{Diffusion Models}). Phân hệ tích hợp các cơ chế giao diện chuyên sâu nhằm nâng cao trải nghiệm học thuật (Hình~\ref{fig:ui_discovery}):
 
 \begin{enumerate}[label=\textbf{\alph*.}]
     \item \textbf{Hiệu ứng chờ tải mượt mà với khung xương giả lập (\texttt{animate-pulse}):} Trong các hệ thống học thuật truyền thống, việc truy vấn đồng thời qua các giao diện lập trình ứng dụng (API) phân tán bên ngoài thường mất từ 1,5 đến 3,0 giây, dễ gây cảm giác giao diện bị đóng băng nếu chỉ sử dụng biểu tượng xoay tròn (\textit{spinner}). VeriScholar áp dụng kỹ thuật hiển thị 3 thẻ khung xương giả lập (\textit{Skeleton Cards}) kích hoạt lớp hiệu ứng \texttt{animate-pulse} của Tailwind CSS. Khung xương mô phỏng chính xác cấu trúc hình học của thẻ kết quả thực tế (vị trí dải huy hiệu trạng thái, 2 thanh tiêu đề, 1 thanh thông tin tác giả và 2 thanh nội dung tóm tắt). Giải pháp này duy trì tính ổn định của bố cục trang, triệt tiêu hiện tượng giật chuyển layout (Cumulative Layout Shift -- CLS) và giảm thiểu đáng kể nhận thức về độ trễ mạng (\textit{perceived latency}) của học giả.
@@ -127,10 +127,26 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
     \item \textbf{Chỉ báo trạng thái truy cập và Nạp tài liệu tức thì:} Mỗi thẻ bài báo được gắn nhãn trực quan phân biệt giữa tài liệu có tệp toàn văn mở (\textit{Open Access PDF} -- chỉ báo chấm xanh lục) và bài báo thu phí chỉ có bản tóm tắt (\textit{Tóm tắt} -- chỉ báo xám). Đối với các bài có tệp mở, giao diện cung cấp nút hành động trực tiếp cho phép người dùng chuyển thẳng tệp vào Phân hệ Đọc sâu chỉ bằng một thao tác nhấp chuột.
 \end{enumerate}
 
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_ui_discovery.png}
+    \caption[Giao diện Phân hệ Khám phá tài liệu khoa học]{Giao diện Phân hệ Khám phá tài liệu khoa học}
+    \label{fig:ui_discovery}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_ui_deep_reading.png}
+    \caption[Giao diện Phân hệ Đọc sâu và Bounding Box]{Giao diện Phân hệ Đọc sâu và Bounding Box}
+    \label{fig:ui_deep_reading}
+\end{minipage}
+\end{figure}
+
 \subsection{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box}
 \label{subsec:ui_deep_reading}
 
-Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học giả phân tích, đối thoại và kiểm chứng trực tiếp từng luận điểm của bài báo khoa học. Giao diện được cấu trúc theo mô hình hai khung hiển thị song song (\textit{Dual-pane layout}):
+Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học giả phân tích, đối thoại và kiểm chứng trực tiếp từng luận điểm của bài báo khoa học. Giao diện được cấu trúc theo mô hình hai khung hiển thị song song (\textit{Dual-pane layout}) được minh họa trong Hình~\ref{fig:ui_deep_reading}:
 
 \begin{itemize}
     \item \textbf{Khung hiển thị tài liệu PDF Canvas (bên trái):} Sử dụng bộ kết xuất đồ họa Canvas tối ưu hóa cho tài liệu học thuật hai cột tiêu chuẩn quốc tế. Khung hiển thị hỗ trợ các chức năng thu phóng tỷ lệ mượt mà, điều hướng trang linh hoạt, giữ trọn vẹn bố cục ấn bản gốc bao gồm văn bản, công thức toán học và biểu đồ minh họa.
@@ -149,7 +165,7 @@ Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học
 \subsection{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả}
 \label{subsec:ui_profile}
 
-Phân hệ Quản lý tài liệu và Hồ sơ học giả đảm nhiệm chức năng lưu trữ an toàn, tổ chức thư viện nghiên cứu cá nhân và bảo mật dữ liệu riêng tư của từng nhà khoa học:
+Phân hệ Quản lý tài liệu và Hồ sơ học giả đảm nhiệm chức năng lưu trữ an toàn, tổ chức thư viện nghiên cứu cá nhân và bảo mật dữ liệu riêng tư của từng nhà khoa học (Hình~\ref{fig:ui_profile}):
 
 \begin{enumerate}[label=\textbf{\alph*.}]
     \item \textbf{Hộp thoại nạp tài liệu kéo--thả và Khử trùng lặp CAS:} Giao diện hỗ trợ học giả tải lên các tệp tài liệu PDF cá nhân bằng thao tác kéo--thả tiện lợi (\textit{Drag-and-Drop Modal}). Quá trình tải lên được liên kết trực tiếp với cơ chế băm nội dung SHA-256 của tầng lưu trữ hướng nội dung (Content-Addressed Storage -- CAS). Khi tệp được đưa vào giao diện, hệ thống tính toán giá trị băm $H(F)$ ngay tại máy khách và máy chủ; nếu tệp đã tồn tại trong kho lưu trữ chung, hệ thống lập tức tái sử dụng bản ghi vật lý mà không tốn dung lượng lưu trữ mới. Cơ chế này giúp tiết kiệm tới 98\% tài nguyên lưu trữ đĩa và rút ngắn thời gian nạp tệp xuống mức gần như tức thời.
@@ -159,10 +175,26 @@ Phân hệ Quản lý tài liệu và Hồ sơ học giả đảm nhiệm chức
     \item \textbf{Két sắt khóa bảo mật cá nhân (BYOK) trên bộ nhớ RAM:} Nhằm tôn trọng quyền tự chủ dữ liệu và bảo mật tuyệt đối các công trình nghiên cứu chưa công bố, VeriScholar trang bị cơ chế ``Tự mang khóa bí mật'' (Bring Your Own Key -- BYOK). Học giả có thể tự cấu hình khóa API OpenAI của riêng mình. Khóa được mã hóa bằng thuật toán đối xứng AES-256-GCM với khóa dẫn xuất bảo vệ trong phiên làm việc. Dưới quy chuẩn \textit{Zero-Retention trên RAM}, khóa giải mã chỉ tồn tại tạm thời trong bộ nhớ đệm phục vụ yêu cầu suy luận tức thời, tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng hay xuất hiện trong tệp nhật ký hệ thống.
 \end{enumerate}
 
+\begin{figure}[htbp]
+\centering
+\begin{minipage}[t]{0.485\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_ui_profile.png}
+    \caption[Giao diện Hồ sơ học giả và Két sắt BYOK]{Giao diện Hồ sơ học giả và Két sắt BYOK}
+    \label{fig:ui_profile}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.485\textwidth}
+    \centering
+    \includegraphics[width=\textwidth]{figures/fig_ui_writing.png}
+    \caption[Giao diện Phân hệ Soạn thảo \LaTeX]{Giao diện Phân hệ Soạn thảo \LaTeX}
+    \label{fig:ui_writing}
+\end{minipage}
+\end{figure}
+
 \subsection{Phân hệ Soạn thảo và Tự phục hồi bản thảo \LaTeX}
 \label{subsec:ui_writing}
 
-Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu, hỗ trợ học giả chuyển hóa các tri thức đã đọc và tổng hợp thành bản thảo bài báo khoa học chất lượng cao theo đúng quy chuẩn ấn bản quốc tế:
+Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu, hỗ trợ học giả chuyển hóa các tri thức đã đọc và tổng hợp thành bản thảo bài báo khoa học chất lượng cao theo đúng quy chuẩn ấn bản quốc tế (Hình~\ref{fig:ui_writing}):
 
 \begin{enumerate}[label=\textbf{\alph*.}]
     \item \textbf{Môi trường soạn thảo chuyên dụng với Monaco Editor:} Giao diện tích hợp trình biên tập mã nguồn Monaco Editor (nền tảng của Visual Studio Code), cung cấp đầy đủ các tiện ích soạn thảo cao cấp: tô màu cú pháp \LaTeX\ thời gian thực, gợi ý lệnh tự động, tự động đóng cặp môi trường toán học, và hỗ trợ cây thư mục dự án đa tệp trực quan (quản lý tệp chính \texttt{main.tex}, các chương nội dung, tệp thư viện trích dẫn \texttt{references.bib} và thư mục hình ảnh).

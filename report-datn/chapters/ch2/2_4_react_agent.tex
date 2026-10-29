@@ -18,116 +18,118 @@ Mô hình tư duy tác nhân nghiên cứu học thuật chuẩn mực được 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.80, transform shape,
-    centerbox/.style={draw=red!80!black, fill=red!8, rounded corners=6pt, line width=1.3pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
-    pillar/.style={draw=black!75, fill=gray!12, rounded corners=5pt, line width=1.0pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
-    leaf/.style={draw=black!70, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\fontsize{9pt}{11pt}\selectfont},
+    scale=0.76, transform shape,
+    centerbox/.style={draw=black!85, fill=red!10, rounded corners=4pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    pillar/.style={draw=black!80, fill=gray!15, rounded corners=4pt, line width=0.95pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    leaf/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    leaf_code/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\ttfamily\small},
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
-    dasharrow/.style={-{Stealth[length=2.5mm]}, dashed, line width=0.85pt, draw=black!55},
-    tree_line/.style={draw=black!80, line width=1.0pt}
+    dasharrow/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.8pt, draw=black!50},
+    tree_line/.style={draw=black!80, line width=0.95pt}
 ]
-    % Khối Tác nhân AI ở Trung tâm (Central LLM Brain)
+    % Khối Tác nhân AI ở Trung tâm (Central LLM Agent - chuẩn phong cách Lilian Weng)
     \node[centerbox, minimum width=2.8cm, minimum height=1.3cm] (agent) at (0, 0) {
         TÁC NHÂN AI\\
         \footnotesize (\textit{LLM Agent Brain})
     };
 
     % 1. Trụ cột BỘ NHỚ (Memory - Phía trên)
-    \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (memory) at (0, 2.1) {
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (memory) at (0, 2.2) {
         BỘ NHỚ\\
         \scriptsize (\textit{Memory})
     };
     \draw[arrowstyle] (agent.north) -- (memory.south);
 
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (m_short) at (-2.5, 4.0) {
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (m_short) at (-2.6, 3.8) {
         \textbf{Bộ nhớ ngắn hạn}\\
-        \scriptsize (Working Memory)
+        \scriptsize (\textit{Working Context / Luồng SSE})
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (m_long) at (2.5, 4.0) {
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (m_long) at (2.6, 3.8) {
         \textbf{Bộ nhớ dài hạn}\\
-        \scriptsize (Knowledge Memory)
+        \scriptsize (\textit{GraphRAG \& Vector HNSW})
     };
     % Nhánh phân tách trực giao đến 2 khối bộ nhớ
-    \draw[tree_line] (memory.north) -- (0, 3.1);
-    \draw[arrowstyle] (0, 3.1) -| (m_short.south);
-    \draw[arrowstyle] (0, 3.1) -| (m_long.south);
+    \draw[tree_line] (memory.north) -- (0, 3.0);
+    \draw[arrowstyle] (0, 3.0) -| (m_short.south);
+    \draw[arrowstyle] (0, 3.0) -| (m_long.south);
 
     % 2. Trụ cột LẬP KẾ HOẠCH (Planning - Bên phải)
-    \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (plan) at (3.2, 0) {
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (plan) at (3.4, 0) {
         KẾ HOẠCH\\
         \scriptsize (\textit{Planning})
     };
     \draw[arrowstyle] (agent.east) -- (plan.west);
 
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_refl) at (7.3, 2.4) {
-        \textbf{Tự phản tư (Reflection)}
+    \node[leaf, minimum width=4.3cm, minimum height=0.72cm, text width=4.1cm, align=left] (p_refl) at (7.4, 2.1) {
+        \textbf{Tự phản tư} \scriptsize (\textit{Self-Reflection})
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_crit) at (7.3, 0.8) {
-        \textbf{Kiểm định trích dẫn}
+    \node[leaf, minimum width=4.3cm, minimum height=0.72cm, text width=4.1cm, align=left] (p_crit) at (7.4, 0.7) {
+        \textbf{Kiểm định trích dẫn} \scriptsize (\textit{Critics})
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_cot) at (7.3, -0.8) {
-        \textbf{Chuỗi suy luận (CoT)}
+    \node[leaf, minimum width=4.3cm, minimum height=0.72cm, text width=4.1cm, align=left] (p_cot) at (7.4, -0.7) {
+        \textbf{Chuỗi suy luận} \scriptsize (\textit{Chain of Thought})
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (p_sub) at (7.3, -2.4) {
-        \textbf{Phân rã mục tiêu}
+    \node[leaf, minimum width=4.3cm, minimum height=0.72cm, text width=4.1cm, align=left] (p_sub) at (7.4, -2.1) {
+        \textbf{Phân rã mục tiêu} \scriptsize (\textit{Subgoal Decomp.})
     };
     % Nhánh phân tách trực giao đến 4 khối lập kế hoạch
-    \draw[tree_line] (plan.east) -- (4.85, 0);
-    \draw[tree_line] (4.85, -2.4) -- (4.85, 2.4);
-    \draw[arrowstyle] (4.85, 2.4) -- (p_refl.west);
-    \draw[arrowstyle] (4.85, 0.8) -- (p_crit.west);
-    \draw[arrowstyle] (4.85, -0.8) -- (p_cot.west);
-    \draw[arrowstyle] (4.85, -2.4) -- (p_sub.west);
+    \draw[tree_line] (plan.east) -- (4.8, 0);
+    \draw[tree_line] (4.8, -2.1) -- (4.8, 2.1);
+    \draw[arrowstyle] (4.8, 2.1) -- (p_refl.west);
+    \draw[arrowstyle] (4.8, 0.7) -- (p_crit.west);
+    \draw[arrowstyle] (4.8, -0.7) -- (p_cot.west);
+    \draw[arrowstyle] (4.8, -2.1) -- (p_sub.west);
 
     % 3. Trụ cột CÔNG CỤ NGOẠI VI (Tools - Bên trái)
-    \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (tools) at (-3.2, 0) {
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (tools) at (-3.4, 0) {
         CÔNG CỤ\\
         \scriptsize (\textit{Tools})
     };
     \draw[arrowstyle] (agent.west) -- (tools.east);
 
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_ret) at (-7.3, 2.4) {
-        \textbf{Truy xuất tri thức lai}
+    \node[leaf_code, minimum width=4.2cm, minimum height=0.72cm] (t_ret) at (-7.3, 2.1) {
+        \texttt{HybridRetriever()}
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_pdf) at (-7.3, 0.8) {
-        \textbf{Định vị PDF Canvas}
+    \node[leaf_code, minimum width=4.2cm, minimum height=0.72cm] (t_pdf) at (-7.3, 0.7) {
+        \texttt{PDFCanvasViewer()}
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_e2b) at (-7.3, -0.8) {
-        \textbf{Hộp cát Firecracker}
+    \node[leaf_code, minimum width=4.2cm, minimum height=0.72cm] (t_e2b) at (-7.3, -0.7) {
+        \texttt{MicroVMCompiler()}
     };
-    \node[leaf, minimum width=3.8cm, text width=3.6cm] (t_srch) at (-7.3, -2.4) {
-        \textbf{Tìm kiếm học thuật DOI}
+    \node[leaf_code, minimum width=4.2cm, minimum height=0.72cm] (t_srch) at (-7.3, -2.1) {
+        \texttt{AcademicSearch()}
     };
     % Nhánh phân tách trực giao đến 4 khối công cụ
-    \draw[tree_line] (tools.west) -- (-4.85, 0);
-    \draw[tree_line] (-4.85, -2.4) -- (-4.85, 2.4);
-    \draw[arrowstyle] (-4.85, 2.4) -- (t_ret.east);
-    \draw[arrowstyle] (-4.85, 0.8) -- (t_pdf.east);
-    \draw[arrowstyle] (-4.85, -0.8) -- (t_e2b.east);
-    \draw[arrowstyle] (-4.85, -2.4) -- (t_srch.east);
+    \draw[tree_line] (tools.west) -- (-4.8, 0);
+    \draw[tree_line] (-4.8, -2.1) -- (-4.8, 2.1);
+    \draw[arrowstyle] (-4.8, 2.1) -- (t_ret.east);
+    \draw[arrowstyle] (-4.8, 0.7) -- (t_pdf.east);
+    \draw[arrowstyle] (-4.8, -0.7) -- (t_e2b.east);
+    \draw[arrowstyle] (-4.8, -2.1) -- (t_srch.east);
 
     % 4. Trụ cột HÀNH ĐỘNG (Action - Phía dưới)
-    \node[pillar, minimum width=2.4cm, minimum height=1.0cm] (action) at (0, -2.1) {
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (action) at (0, -2.2) {
         HÀNH ĐỘNG\\
         \scriptsize (\textit{Action})
     };
     \draw[arrowstyle] (agent.south) -- (action.north);
 
-    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_resp) at (-2.5, -3.9) {
-        \textbf{Truyền phát câu trả lời}
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (a_resp) at (-2.6, -3.8) {
+        \textbf{Truyền phát câu trả lời}\\
+        \scriptsize (\textit{SSE Response Streaming})
     };
-    \node[leaf, minimum width=4.1cm, text width=3.9cm] (a_bbox) at (2.5, -3.9) {
-        \textbf{Định vị khung viền vàng}
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (a_bbox) at (2.6, -3.8) {
+        \textbf{Định vị khung viền vàng}\\
+        \scriptsize (\textit{Golden BBox Rendering})
     };
     % Nhánh phân tách trực giao đến 2 khối hành động
-    \draw[tree_line] (action.south) -- (0, -3.1);
-    \draw[arrowstyle] (0, -3.1) -| (a_resp.north);
-    \draw[arrowstyle] (0, -3.1) -| (a_bbox.north);
+    \draw[tree_line] (action.south) -- (0, -3.0);
+    \draw[arrowstyle] (0, -3.0) -| (a_resp.north);
+    \draw[arrowstyle] (0, -3.0) -| (a_bbox.north);
 
-    % Đường nối phụ nét đứt giữa các trụ cột
+    % Đường nối phụ nét đứt giữa các trụ cột chuẩn Lilian Weng
     \draw[dasharrow] (memory.east) -| (plan.north);
     \draw[dasharrow] (tools.south) |- (action.west);
-    \draw[dasharrow] (action.east) -| (plan.south);
 \end{tikzpicture}
 \caption{Mô hình Kiến trúc Tư duy Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
 \label{fig:react_agent_loop}
