@@ -289,6 +289,11 @@ async def seed_database() -> None:
                 session.add(draft)
                 await session.flush()
 
+            # Seed 12 Landmark LLM Papers & Citation Graph for dev user
+            from api.services.landmark_papers_seeder import seed_landmark_papers_for_user
+
+            await seed_landmark_papers_for_user(session, dev_user.id, blobs_dir)
+
             await session.commit()
             print("Deterministic seeding completed successfully in database.")
     except Exception as exc:
