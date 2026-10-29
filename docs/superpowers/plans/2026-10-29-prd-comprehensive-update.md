@@ -111,12 +111,12 @@
 **Files:**
 - Verify: All files in `docs/PRD/` and `docs/specs/`
 
-- [ ] **Step 5.1: Run 4 Verification Gates**
+- [x] **Step 5.1: Run 4 Verification Gates**
   - `uv run ruff check . && uv run ruff format --check .`
   - `uv run pytest`
   - `npm --prefix apps/web run test`
   - `npm --prefix apps/web run build`
 
-- [ ] **Step 5.2: Final Commit and VPS Sync**
+- [x] **Step 5.2: Final Commit and VPS Sync**
   - Commit: `docs: complete PRD modernization and architectural alignment`
   - Run: `bash scripts/deploy_to_vps.sh --fast || true`
