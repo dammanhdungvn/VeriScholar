@@ -36,7 +36,7 @@ import {
 } from "../hooks/useFolderQueries";
 import type { FolderItem } from "../types";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
-import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
+import { LibraryGraphSidebar } from "./LibraryGraphSidebar";
 import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
 import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
 import { libraryApi } from "../api/libraryApi";
@@ -68,6 +68,10 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [renameFolderTarget, setRenameFolderTarget] = useState<FolderItem | null>(null);
   const [moveDocTarget, setMoveDocTarget] = useState<DocumentListItem | null>(null);
+
+  // Wiki Graph Sidebar state
+  const [isGraphSidebarOpen, setIsGraphSidebarOpen] = useState(false);
+  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
@@ -216,9 +220,11 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none">
-      {/* 1. Header Bar */}
-      <header className="h-14 px-6 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex items-center justify-between shrink-0 gap-4">
+    <div className="flex-1 flex h-full bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none">
+      {/* Main Workspace Area */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        {/* 1. Header Bar */}
+        <header className="h-14 px-6 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex items-center justify-between shrink-0 gap-4">
         {/* Title & Stats */}
         <div className="flex items-center gap-3 shrink-0">
           <div className="w-8 h-8 rounded-lg bg-stone-500/10 dark:bg-stone-500/20 flex items-center justify-center text-stone-700 dark:text-stone-300">
@@ -278,6 +284,22 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             </button>
           </div>
 
+          {/* Wiki Graph Sidebar Toggle */}
+          <button
+            type="button"
+            onClick={() => setIsGraphSidebarOpen(!isGraphSidebarOpen)}
+            className={cn(
+              "h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition-colors cursor-pointer",
+              isGraphSidebarOpen
+                ? "bg-[#c15f3e]/10 border-[#c15f3e]/30 text-[#c15f3e]"
+                : "bg-white dark:bg-[#201e1a] border-[#e2dcd2] dark:border-[#322f2a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622]"
+            )}
+            title="Toggle Wiki Graph Sidebar"
+          >
+            <Share2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Wiki Graph</span>
+          </button>
+
           {/* + Upload PDF Button */}
           <button
             type="button"
@@ -308,7 +330,12 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             <button
               key={id}
               type="button"
-              onClick={() => setActiveTab(id)}
+              onClick={() => {
+                setActiveTab(id);
+                if (id === "graph") {
+                  setIsGraphSidebarOpen(true);
+                }
+              }}
               className={cn(
                 "px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap",
                 activeTab === id
@@ -345,13 +372,39 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             />
           )}
 
-          {/* C. Knowledge Graph (LLM Wiki) OR Documents and Folders Hierarchy */}
+          {/* C. Knowledge Graph (LLM Wiki) in Sidebar + Documents Hierarchy */}
           {activeTab === "graph" ? (
-            <div className="h-[640px] w-full rounded-2xl overflow-hidden border border-[#e8e4dc] dark:border-[#2a2824] shadow-xs">
-              <KnowledgeGraphCanvas
-                graphData={libraryGraphData || null}
-                isLoading={isLoadingLibraryGraph}
-                onSelectDocument={(doc) => onSelectDocument?.(doc as any)}
+            <div className="space-y-4">
+              <div className="p-3 bg-[#c15f3e]/5 border border-[#c15f3e]/20 rounded-xl flex items-center justify-between text-xs text-[#c15f3e]">
+                <div className="flex items-center gap-2">
+                  <Share2 className="w-4 h-4 shrink-0" />
+                  <span>
+                    Interactive Wiki Knowledge Graph is active in the right sidebar. Click any paper to center its local subgraph.
+                  </span>
+                </div>
+                {!isGraphSidebarOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setIsGraphSidebarOpen(true)}
+                    className="font-medium hover:underline cursor-pointer text-xs"
+                  >
+                    Open Sidebar →
+                  </button>
+                )}
+              </div>
+
+              <DocumentGrid
+                documents={documents}
+                viewLayout={viewLayout}
+                onToggleStar={handleToggleStar}
+                onSelectDocument={onSelectDocument}
+                onMoveFolder={(doc) => setMoveDocTarget(doc)}
+                onDelete={handleDelete}
+                onFocusGraph={(doc) => {
+                  setFocusedNodeId(doc.id);
+                  setIsGraphSidebarOpen(true);
+                }}
+                focusedDocId={focusedNodeId}
               />
             </div>
           ) : activeTab === "folders" ? (
@@ -466,6 +519,11 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                   onSelectDocument={onSelectDocument}
                   onMoveFolder={(doc) => setMoveDocTarget(doc)}
                   onDelete={handleDelete}
+                  onFocusGraph={(doc) => {
+                    setFocusedNodeId(doc.id);
+                    setIsGraphSidebarOpen(true);
+                  }}
+                  focusedDocId={focusedNodeId}
                 />
               </div>
             )
@@ -478,6 +536,11 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 onSelectDocument={onSelectDocument}
                 onMoveFolder={(doc) => setMoveDocTarget(doc)}
                 onDelete={handleDelete}
+                onFocusGraph={(doc) => {
+                  setFocusedNodeId(doc.id);
+                  setIsGraphSidebarOpen(true);
+                }}
+                focusedDocId={focusedNodeId}
               />
 
               {/* Pagination Controls */}
@@ -510,8 +573,20 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           )}
         </div>
       </div>
+    </div>
 
-      {/* Floating GraphRAG Assistant Bubble */}
+    {/* Right Sidebar: Wiki Knowledge Graph & Local Focus */}
+    <LibraryGraphSidebar
+      isOpen={isGraphSidebarOpen}
+      onClose={() => setIsGraphSidebarOpen(false)}
+      graphData={libraryGraphData || null}
+      isLoading={isLoadingLibraryGraph}
+      focusedNodeId={focusedNodeId}
+      onClearFocus={() => setFocusedNodeId(null)}
+      onSelectDocument={onSelectDocument}
+    />
+
+    {/* Floating GraphRAG Assistant Bubble */}
       <GraphRagAssistantFab folderId={selectedFolderId} />
 
       {/* Create Folder Modal */}
@@ -559,6 +634,8 @@ interface DocumentGridProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
   onMoveFolder: (doc: DocumentListItem) => void;
   onDelete: (docId: string, e: React.MouseEvent) => void;
+  onFocusGraph?: (doc: DocumentListItem) => void;
+  focusedDocId?: string | null;
 }
 
 function DocumentGrid({
@@ -568,6 +645,8 @@ function DocumentGrid({
   onSelectDocument,
   onMoveFolder,
   onDelete,
+  onFocusGraph,
+  focusedDocId,
 }: DocumentGridProps) {
   if (documents.length === 0) {
     return (
@@ -643,6 +722,21 @@ function DocumentGrid({
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
+                      data-testid={`doc-graph-btn-${doc.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onFocusGraph?.(doc);
+                      }}
+                      className={cn(
+                        "p-1.5 rounded-lg text-muted hover:text-[#c15f3e] hover:bg-[#c15f3e]/10 cursor-pointer transition-colors",
+                        focusedDocId === doc.id && "text-[#c15f3e] bg-[#c15f3e]/10"
+                      )}
+                      title="Focus in Wiki Graph"
+                    >
+                      <Share2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       data-testid={`doc-move-btn-${doc.id}`}
                       onClick={(e) => {
                         e.stopPropagation();
@@ -679,7 +773,10 @@ function DocumentGrid({
         <div
           key={doc.id}
           onClick={() => onSelectDocument && onSelectDocument(doc)}
-          className="group relative bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] hover:border-[#c15f3e]/40 transition-all cursor-pointer shadow-2xs hover:shadow-xs flex flex-col justify-between"
+          className={cn(
+            "group relative bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] hover:border-[#c15f3e]/40 transition-all cursor-pointer shadow-2xs hover:shadow-xs flex flex-col justify-between",
+            focusedDocId === doc.id && "ring-2 ring-[#c15f3e] border-[#c15f3e]"
+          )}
         >
           <div>
             <div className="flex items-start justify-between gap-2 mb-2">
@@ -718,6 +815,21 @@ function DocumentGrid({
               {doc.status !== "completed" ? doc.status : ""}
             </span>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                data-testid={`doc-graph-btn-${doc.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onFocusGraph?.(doc);
+                }}
+                className={cn(
+                  "p-1 rounded-lg text-muted hover:text-[#c15f3e] hover:bg-[#c15f3e]/10 cursor-pointer transition-colors",
+                  focusedDocId === doc.id && "text-[#c15f3e] bg-[#c15f3e]/10"
+                )}
+                title="Focus in Wiki Graph"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+              </button>
               <button
                 type="button"
                 data-testid={`doc-move-btn-${doc.id}`}
