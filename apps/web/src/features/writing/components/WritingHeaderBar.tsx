@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Save,
-  Play,
   Download,
   Columns3,
   SplitSquareVertical,
@@ -30,7 +29,7 @@ interface WritingHeaderBarProps {
 
 export function WritingHeaderBar({
   onSave,
-  onCompile,
+  onCompile: _onCompile,
   onExportBundle,
   onOpenAssets,
 }: WritingHeaderBarProps) {
@@ -41,7 +40,6 @@ export function WritingHeaderBar({
     setWorkspaceMode,
     isDirty,
     isSaving,
-    isCompiling,
     openAssetModal,
     mobileActiveTab,
     setMobileActiveTab,
