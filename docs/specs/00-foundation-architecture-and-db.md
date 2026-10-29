@@ -206,6 +206,30 @@ CREATE TABLE draft_messages (
 CREATE INDEX idx_draft_messages_user_draft_time ON draft_messages(user_id, draft_id, created_at);
 ```
 
+#### 17. Bảng `wiki_pages` (Trang Wiki Tri Thức Học Thuật Biên Soạn)
+* **File model:** `apps/api/src/api/db/models/wiki.py`
+* **Mục đích:** Lưu trữ các trang Wiki Markdown đã được biên soạn bởi `5.6 Luna` (`OPENAI_MODEL`) kèm thẻ `[[wikilink]]` và vector embedding 1536d phục vụ truy vấn tri thức và AI viết bài.
+```sql
+CREATE TABLE wiki_pages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    folder_id UUID NULL REFERENCES folders(id) ON DELETE SET NULL,
+    slug VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    page_type VARCHAR(50) NOT NULL CHECK (page_type IN ('method', 'dataset', 'topic', 'research_gap', 'comparison')),
+    content_markdown TEXT NOT NULL,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    embedding VECTOR(1536) NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_wiki_pages_user_slug UNIQUE (user_id, slug)
+);
+
+CREATE INDEX idx_wiki_pages_user_folder ON wiki_pages(user_id, folder_id);
+CREATE INDEX idx_wiki_pages_embedding ON wiki_pages 
+USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+```
+
 ---
 
 ## 4. Quản Lý Lưu Trữ File Vật Lý (Content-Addressable Storage — CAS)
