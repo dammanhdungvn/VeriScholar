@@ -54,21 +54,26 @@ export function WritingEditorPane({
     return currentContent.split("\n").length;
   }, [currentContent]);
 
+  const jumpToLine = (targetLine: number) => {
+    if (!textareaRef.current) return;
+    const lines = currentContent.split("\n");
+    let charIndex = 0;
+    for (let i = 0; i < Math.min(targetLine - 1, lines.length); i++) {
+      charIndex += lines[i].length + 1;
+    }
+    textareaRef.current.focus();
+    textareaRef.current.setSelectionRange(
+      charIndex,
+      charIndex + (lines[targetLine - 1]?.length || 0)
+    );
+    const lineHeightPx = 20;
+    textareaRef.current.scrollTop = Math.max(0, (targetLine - 4) * lineHeightPx);
+  };
+
   // Jump to specific line when requested by Outline or SyncTeX inverse
   useEffect(() => {
-    if (scrollToLine && textareaRef.current) {
-      const lines = currentContent.split("\n");
-      let charIndex = 0;
-      for (let i = 0; i < Math.min(scrollToLine - 1, lines.length); i++) {
-        charIndex += lines[i].length + 1;
-      }
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(
-        charIndex,
-        charIndex + (lines[scrollToLine - 1]?.length || 0)
-      );
-      const lineHeightPx = 20;
-      textareaRef.current.scrollTop = Math.max(0, (scrollToLine - 4) * lineHeightPx);
+    if (scrollToLine) {
+      jumpToLine(scrollToLine);
     }
   }, [scrollToLine, currentContent]);
 
@@ -361,12 +366,16 @@ export function WritingEditorPane({
             return (
               <div
                 key={lineNum}
+                onClick={() => hasError && jumpToLine(lineNum)}
                 className={cn(
-                  "h-5",
-                  hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
+                  "h-5 flex items-center justify-end gap-1 cursor-default",
+                  hasError && "text-rose-500 font-bold bg-rose-500/15 cursor-pointer hover:bg-rose-500/25 px-0.5 rounded-xs"
                 )}
+                title={hasError ? `Lỗi biên dịch tại dòng ${lineNum}. Nhấn để nhảy tới dòng này.` : undefined}
+                data-testid={hasError ? `gutter-error-line-${lineNum}` : undefined}
               >
-                {lineNum}
+                {hasError && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse shrink-0" />}
+                <span>{lineNum}</span>
               </div>
             );
           })}
@@ -405,7 +414,15 @@ export function WritingEditorPane({
             {errors.map((err, idx) => (
               <div
                 key={idx}
-                className="p-1.5 bg-white/80 dark:bg-[#201e1a] rounded border border-rose-500/20 text-rose-800 dark:text-rose-300"
+                onClick={() => jumpToLine(err.line)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") jumpToLine(err.line);
+                }}
+                className="p-1.5 bg-white/80 dark:bg-[#201e1a] rounded border border-rose-500/20 text-rose-800 dark:text-rose-300 cursor-pointer hover:bg-rose-500/10 transition-colors"
+                title="Nhấn để cuộn đến dòng này trong trình soạn thảo"
+                data-testid={`error-item-${err.line}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold">

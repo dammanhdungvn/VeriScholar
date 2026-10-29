@@ -316,6 +316,23 @@ class CLSILatexCompiler:
 
         success = (proc.returncode == 0) and (not has_error) and has_pdf
 
+        if not success and not has_error:
+            line_m = re.search(
+                r"(?:main\.tex:(\d+):|l\.(\d+)|on input line (\d+))",
+                log_text,
+            )
+            found_line = int(line_m.group(1) or line_m.group(2) or line_m.group(3)) if line_m else 1
+            fallback_diag: LatexDiagnostic = {
+                "file": "main.tex",
+                "line": found_line,
+                "column": 1,
+                "severity": "error",
+                "message": "CLI LaTeX compiler exited with non-zero status.",
+                "context": "",
+                "hint": f"Kiểm tra các gói khai báo hoặc lỗi cú pháp quanh dòng {found_line}.",
+            }
+            diagnostics.append(fallback_diag)
+
         # Locate synctex file only if compilation succeeded
         synctex_path: str | None = None
         if success:

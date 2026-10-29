@@ -38,6 +38,7 @@ class LatexLogParser:
 
         # Regex patterns
         line_context_re = re.compile(r"^l\.(\d+)\s*(.*)$")
+        file_line_error_re = re.compile(r"^(?:\./)?([a-zA-Z0-9_\-.]+\.tex):(\d+):\s*(.*)$")
         warning_re = re.compile(
             r"^(?:LaTeX|Package\s+[\w\-]+)\s+Warning:\s*(.*?)(?:\s+on input line\s+(\d+)\.|\.|$)",
             re.IGNORECASE,
@@ -56,6 +57,26 @@ class LatexLogParser:
                 if file_cand:
                     current_file = file_cand
 
+            # 0. GCC-style file:line:error format
+            file_line_m = file_line_error_re.match(line)
+            if file_line_m:
+                matched_file = file_line_m.group(1).lstrip("./")
+                line_num = int(file_line_m.group(2))
+                error_msg = file_line_m.group(3).strip()
+                diagnostics.append(
+                    LatexDiagnostic(
+                        file=matched_file or current_file,
+                        line=line_num,
+                        column=1,
+                        severity="error",
+                        message=error_msg,
+                        context=line,
+                        hint=cls._generate_hint("error", error_msg),
+                    )
+                )
+                i += 1
+                continue
+
             # 1. Error block starting with "! "
             if line.startswith("!"):
                 error_msg = line[1:].strip()
@@ -70,6 +91,11 @@ class LatexLogParser:
                 line_num = 1
                 col_num = 1
                 context_str = ""
+
+                # Check if error message itself contains "on input line (\d+)"
+                m_inline = warning_with_line_re.search(error_msg)
+                if m_inline:
+                    line_num = int(m_inline.group(1))
 
                 # Scan ahead for line indicator (e.g. "l.42 \invalidcommand")
                 j = i + 1
@@ -87,6 +113,9 @@ class LatexLogParser:
                             if continuation:
                                 context_str = f"{context_str} {continuation}".strip()
                         break
+                    m_cand_inline = warning_with_line_re.search(candidate)
+                    if m_cand_inline and line_num == 1:
+                        line_num = int(m_cand_inline.group(1))
                     j += 1
 
                 diagnostics.append(

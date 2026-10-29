@@ -23,6 +23,7 @@ import structlog
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
 from core.ports.latex import ILatexCompilerPort
 from core.services.latex_linter import FastLatexAstLinter
+from core.services.latex_log_parser import LatexLogParser
 from core.services.sandbox_probe import SandboxRuntimeCapabilityProbe
 
 logger = structlog.get_logger("core.services.latex_compiler")
@@ -445,17 +446,40 @@ class SandboxedLatexCompiler:
                         is_sandboxed=is_sandboxed,
                     )
 
-                return LatexCompilationResult(
-                    success=False,
-                    pdf_bytes=None,
-                    errors=[
+                parsed_diags = LatexLogParser.parse_log(log_output)
+                syntax_errors = [
+                    LatexSyntaxError(
+                        line=d["line"],
+                        column=d["column"],
+                        rule="SYNTAX_ERROR",
+                        message=d["message"],
+                        suggested_fix=d.get("hint") or "Kiểm tra cú pháp tại dòng này.",
+                    )
+                    for d in parsed_diags
+                    if d.get("severity") == "error"
+                ]
+                if not syntax_errors:
+                    line_m = re.search(
+                        r"(?:main\.tex:(\d+):|l\.(\d+)|on input line (\d+))",
+                        log_output,
+                    )
+                    found_line = (
+                        int(line_m.group(1) or line_m.group(2) or line_m.group(3)) if line_m else 1
+                    )
+                    syntax_errors = [
                         LatexSyntaxError(
-                            line=1,
+                            line=found_line,
+                            column=0,
                             rule="COMPILATION_FAILED",
                             message="CLI LaTeX compiler exited with non-zero status.",
                             suggested_fix="Check logs for missing packages or syntax faults.",
                         )
-                    ],
+                    ]
+
+                return LatexCompilationResult(
+                    success=False,
+                    pdf_bytes=None,
+                    errors=syntax_errors,
                     logs=log_output[-2000:],
                     is_sandboxed=is_sandboxed,
                 )
