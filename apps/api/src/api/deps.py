@@ -33,6 +33,7 @@ from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
+from api.services.wiki_service import WikiService
 
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
@@ -194,6 +195,13 @@ def get_folder_service(
 ) -> FolderService:
     """Dependency providing FolderService bound to request database session."""
     return FolderService(db=db)
+
+
+def get_wiki_service(
+    db: AsyncSession = Depends(get_db),
+) -> WikiService:
+    """Dependency providing WikiService bound to request database session."""
+    return WikiService(db=db)
 
 
 def get_library_synthesis_service(
