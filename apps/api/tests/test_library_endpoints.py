@@ -393,6 +393,9 @@ async def test_get_library_graph_empty_and_with_documents(
     empty_data = res_empty.json()["data"]
     assert "nodes" in empty_data
     assert "edges" in empty_data
+    assert "communities" in empty_data
+    assert isinstance(empty_data["communities"], list)
+    assert empty_data["communities"] == []
 
     # 2. Upload two persistent documents
     files1 = {
@@ -425,3 +428,98 @@ async def test_get_library_graph_empty_and_with_documents(
     assert doc1_id in node_ids
     assert doc2_id in node_ids
     assert graph_data["total_nodes"] >= 2
+
+    assert "communities" in graph_data
+    assert isinstance(graph_data["communities"], list)
+    assert len(graph_data["communities"]) >= 1
+    for comm in graph_data["communities"]:
+        assert "id" in comm
+        assert "label" in comm
+        assert "paper_count" in comm
+        assert "node_ids" in comm
+
+    for node in graph_data["nodes"]:
+        assert "community_id" in node
+        assert "community_label" in node
+        assert "citation_count" in node
+        assert "metadata" in node
+        assert "publication_year" in node["metadata"]
+        assert "abstract" in node["metadata"]
+        assert "filename" in node["metadata"]
+
+
+@pytest.mark.asyncio
+async def test_get_library_graph_citation_counts_and_communities(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    current_user: UserModel,
+    db_session: AsyncSession,
+) -> None:
+    from api.db.models.reference import ReferenceItemModel
+
+    # Create two persistent documents in DB
+    doc_a = DocumentModel(
+        user_id=current_user.id,
+        filename="bert_paper.pdf",
+        title="BERT: Pre-training of Deep Bidirectional Transformers",
+        publication_year=2018,
+        parsed_metadata={"abstract": "We introduce BERT, a language representation model."},
+        content_hash="hash_bert_" + uuid4().hex,
+        file_size_bytes=1024,
+        is_persistent=True,
+        status="completed",
+        stage="completed",
+        progress=100,
+    )
+    doc_b = DocumentModel(
+        user_id=current_user.id,
+        filename="attention_paper.pdf",
+        title="Attention Is All You Need",
+        publication_year=2017,
+        parsed_metadata={
+            "abstract": "The dominant sequence transduction models are based on RNNs."
+        },
+        content_hash="hash_attn_" + uuid4().hex,
+        file_size_bytes=1024,
+        is_persistent=True,
+        status="completed",
+        stage="completed",
+        progress=100,
+    )
+    db_session.add_all([doc_a, doc_b])
+    await db_session.flush()
+
+    # doc_a CITES doc_b via ReferenceItemModel
+    ref = ReferenceItemModel(
+        user_id=current_user.id,
+        document_id=doc_a.id,
+        ref_index=1,
+        raw_text="Vaswani et al. Attention is all you need.",
+        parsed_title="Attention Is All You Need",
+        resolved_document_id=doc_b.id,
+    )
+    db_session.add(ref)
+    await db_session.commit()
+
+    res = await async_client.get("/api/v1/library/graph", headers=auth_headers)
+    assert res.status_code == 200
+    data = res.json()["data"]
+
+    assert "communities" in data
+    assert len(data["communities"]) >= 1
+
+    nodes_by_id = {n["id"]: n for n in data["nodes"]}
+    assert str(doc_a.id) in nodes_by_id
+    assert str(doc_b.id) in nodes_by_id
+
+    # doc_b is cited by doc_a, so citation_count >= 1
+    node_b = nodes_by_id[str(doc_b.id)]
+    assert node_b["citation_count"] >= 1
+    assert node_b["metadata"]["publication_year"] == 2017
+    assert "sequence transduction" in node_b["metadata"]["abstract"]
+
+    node_a = nodes_by_id[str(doc_a.id)]
+    assert node_a["metadata"]["publication_year"] == 2018
+    assert "language representation" in node_a["metadata"]["abstract"]
+    assert node_a["community_id"] is not None
+    assert node_b["community_id"] is not None
