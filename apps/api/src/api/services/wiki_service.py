@@ -173,23 +173,31 @@ class WikiService:
         resolved_db = db
         resolved_user_id = user_id
 
-        # Handle positional args if passed as (db, user_id, ...) or (user_id, ...)
-        if len(args) >= 2 and isinstance(args[0], AsyncSession):
+        # Normalize positional arguments whether starting with db or user_id
+        if len(args) >= 1 and isinstance(args[0], AsyncSession):
             resolved_db = args[0]
-            resolved_user_id = args[1]
-            if len(args) >= 3 and isinstance(args[2], str):
-                title = args[2]
-            if len(args) >= 4 and isinstance(args[3], str):
-                markdown = args[3]
-        elif len(args) >= 1:
-            if isinstance(args[0], AsyncSession):
-                resolved_db = args[0]
-            else:
-                resolved_user_id = args[0]
-                if len(args) >= 2 and isinstance(args[1], str):
-                    title = args[1]
-                if len(args) >= 3 and isinstance(args[2], str):
-                    markdown = args[2]
+            pos_args = args[1:]
+        else:
+            pos_args = args
+
+        if len(pos_args) >= 1 and pos_args[0] is not None:
+            resolved_user_id = pos_args[0]
+        if len(pos_args) >= 2 and pos_args[1] is not None:
+            title = pos_args[1]
+        if len(pos_args) >= 3 and pos_args[2] is not None:
+            markdown = pos_args[2]
+        if len(pos_args) >= 4 and pos_args[3] is not None:
+            yaml_metadata = pos_args[3]
+        if len(pos_args) >= 5 and pos_args[4] is not None:
+            wikilinks = pos_args[4]
+        if len(pos_args) >= 6 and pos_args[5] is not None:
+            slug = pos_args[5]
+        if len(pos_args) >= 7 and pos_args[6] is not None:
+            embedding = pos_args[6]
+        if len(pos_args) >= 8 and pos_args[7] is not None:
+            page_type = pos_args[7]
+        if len(pos_args) >= 9 and pos_args[8] is not None:
+            folder_id = pos_args[8]
 
         session = self._resolve_session(resolved_db)
         if resolved_user_id is None:

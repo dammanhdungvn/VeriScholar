@@ -6,7 +6,7 @@ from uuid import UUID
 from api.db.models.base import IdentifiableTimestampedModel
 from api.db.models.document import JSONType
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, synonym
 
 
@@ -51,5 +51,9 @@ class WikiPageModel(IdentifiableTimestampedModel):
 
     __table_args__ = (
         UniqueConstraint("user_id", "slug", name="uq_wiki_pages_user_slug"),
+        CheckConstraint(
+            "page_type IN ('method', 'dataset', 'topic', 'research_gap', 'comparison')",
+            name="ck_wiki_pages_page_type",
+        ),
         Index("idx_wiki_pages_user_folder", "user_id", "folder_id"),
     )

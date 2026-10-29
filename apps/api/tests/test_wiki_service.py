@@ -237,3 +237,44 @@ async def test_wiki_service_delete_page(
 
     # Deleting non-existent returns False
     assert await service.delete_page(user_id=wiki_user.id, slug="to-be-deleted") is False
+
+
+@pytest.mark.asyncio
+async def test_wiki_service_upsert_positional_arguments_preserve_metadata_and_wikilinks(
+    db_session: AsyncSession,
+    wiki_user: UserModel,
+):
+    """Verify upsert_page preserves yaml_metadata and wikilinks when invoked with positional args."""
+    service = WikiService(db=db_session)
+
+    # 1. Positional call without db: (user_id, title, markdown, yaml_meta, wikilinks)
+    yaml_meta = {"tags": ["positional", "test"], "category": "math"}
+    links = ["Linear Algebra", "Vector Calculus"]
+    page1 = await service.upsert_page(
+        wiki_user.id,
+        "Positional Page 1",
+        "# Positional Page 1\nBody text.",
+        yaml_meta,
+        links,
+    )
+    assert page1.id is not None
+    assert page1.title == "Positional Page 1"
+    assert page1.yaml_metadata == {"tags": ["positional", "test"], "category": "math"}
+    assert page1.wikilinks == ["Linear Algebra", "Vector Calculus"]
+
+    # 2. Positional call with db: (db, user_id, title, markdown, yaml_meta, wikilinks)
+    stateless = WikiService()
+    yaml_meta_2 = {"level": "advanced", "author": "Vaswani"}
+    links_2 = ["Attention", "FeedForward"]
+    page2 = await stateless.upsert_page(
+        db_session,
+        wiki_user.id,
+        "Positional Page 2",
+        "# Positional Page 2\nBody text with [[Attention]].",
+        yaml_meta_2,
+        links_2,
+    )
+    assert page2.id is not None
+    assert page2.title == "Positional Page 2"
+    assert page2.yaml_metadata == {"level": "advanced", "author": "Vaswani"}
+    assert page2.wikilinks == ["Attention", "FeedForward"]

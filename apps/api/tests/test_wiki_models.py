@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from api.db.models.wiki import WikiPageModel
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import UniqueConstraint
+from sqlalchemy import CheckConstraint, UniqueConstraint
 
 
 def test_wiki_page_model_attributes_and_tablename():
@@ -40,6 +40,13 @@ def test_wiki_page_table_constraints():
     uq = unique_constraints["uq_wiki_pages_user_slug"]
     uq_cols = {col.name for col in uq.columns}
     assert uq_cols == {"user_id", "slug"}
+
+    # Check check constraint ck_wiki_pages_page_type
+    check_constraints = {c.name: c for c in table.constraints if isinstance(c, CheckConstraint)}
+    assert "ck_wiki_pages_page_type" in check_constraints
+    assert "page_type IN ('method', 'dataset', 'topic', 'research_gap', 'comparison')" in str(
+        check_constraints["ck_wiki_pages_page_type"].sqltext
+    )
 
     # Check Vector(1536) embedding column
     assert "embedding" in table.c
