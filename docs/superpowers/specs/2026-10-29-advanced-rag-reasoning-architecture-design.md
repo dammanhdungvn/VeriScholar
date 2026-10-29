@@ -83,41 +83,57 @@ Tài liệu này đặc tả **Kiến trúc Advanced RAG và Suy luận Đồ th
              [ PostgreSQL 16 + pgvector Hợp Nhất (Vectors + Tables + Graph) ]
 ```
 
-### 5.2 Cơ Chế Truy Xuất 2 Tầng & Tái Xếp Hạng (Two-Stage Retrieval & Reranker)
+### 5.2 Cơ Chế Bóc Tách Bảo Toàn Tọa Độ & Cấu Trúc Bảng Biểu (Hybrid Layout Parsing)
+
+1. **Bóc tách Bảng biểu & Công thức Toán học:**
+   - Sử dụng `pymupdf.open()` kết hợp tính năng `page.find_tables()` để định vị chính xác tọa độ hình học `table.bbox` của toàn bộ các bảng trong trang.
+   - Trích xuất dữ liệu bảng thành cấu trúc Markdown Table nguyên vẹn (có tiêu đề cột và phân tách hàng rõ ràng).
+   - Các công thức toán học nội dòng và khối độc lập được bảo toàn dưới dạng cú pháp LaTeX (`$...$` và `$$...$$`).
+2. **Bảo toàn Tọa độ Bounding Box Không gian (Spatial Grounding):**
+   - Mỗi Child Chunk lưu trữ cả nội dung Markdown sạch lẫn mảng tọa độ `bounding_boxes: list[[x0, y0, x1, y1, page]]` chuẩn hóa từ 0.0 đến 1.0.
+   - Khi người dùng click vào thẻ trích dẫn `[cit_x]` trên giao diện, trình xem PDF (`apps/web`) sẽ phóng to và vẽ khung vàng làm sáng chính xác đoạn văn hoặc bảng số liệu tương ứng.
+
+### 5.3 Cơ Chế Truy Xuất 2 Tầng & Tái Xếp Hạng (Two-Stage Retrieval & Reranker)
 
 1. **Giai đoạn 1 — Vector Coarse Retrieval (Thu hồi sơ bộ):**
    - Sử dụng HNSW Index trên `pgvector` với độ đo Cosine Distance:
      $$\mathcal{D}_{\text{cosine}}(q, c) = 1 - \frac{\mathbf{e}_q \cdot \mathbf{e}_c}{\|\mathbf{e}_q\| \|\mathbf{e}_c\|}$$
    - Lấy ra $K_{\text{coarse}} = 20$ Child Chunks có độ tương đồng cao nhất.
 2. **Giai đoạn 2 — Cross-Encoder Fine Reranking (Tái xếp hạng chuyên sâu):**
-   - Đưa cặp câu hỏi và đoạn văn $(q, c_i)$ qua mô hình Cross-Encoder (như BGE-Reranker-Large hoặc Cohere Rerank qua API):
+   - Sử dụng mô hình Cross-Encoder (BGE-Reranker / Cohere Rerank qua Adapter client) để chấm điểm tương tác sâu giữa câu hỏi và đoạn văn:
      $$\mathcal{S}_{\text{rerank}}(q, c_i) = \sigma\left(\mathbf{W} \cdot \text{Transformer}([CLS] \circ q \circ [SEP] \circ c_i)\right)$$
-   - Khác với Bi-Encoder (chỉ so sánh 2 vector độc lập), Cross-Encoder cho phép các từ trong câu hỏi tương tác chú ý đa tầng (*Full Cross-Attention*) với từng từ trong đoạn văn.
-   - Chọn ra $K_{\text{fine}} = 5$ Child Chunks có điểm số cao nhất.
-3. **Giai đoạn 3 — Parent Context Expansion (Mở rộng ngữ cảnh Parent):**
-   - Thay vì chỉ gửi 5 đoạn vụn 256 token vào prompt, hệ thống truy vấn ngược ID của Parent Section tương ứng trong PostgreSQL để lấy ngữ cảnh trọn vẹn của cả mục lớn (Section), ngăn chặn hoàn toàn hiện tượng cụt ý.
+   - Lọc chọn ra $K_{\text{fine}} = 5$ Child Chunks có điểm số cao nhất ($\mathcal{S}_{\text{rerank}} \ge 0.65$).
+3. **Giai đoạn 3 — Parent Context Expansion & Độ mịn Trích dẫn (Citation Granularity):**
+   - Để LLM hiểu toàn vẹn ngữ cảnh mà không bị đứt ý, hệ thống lấy nội dung của Parent Section ($800 \sim 1.200$ tokens) tương ứng với Child Chunk.
+   - Trong prompt gửi cho LLM, đoạn Child Chunk đích được gắn thẻ neo `[target_chunk_id]`. Khi LLM sinh câu trả lời và gắn thẻ `[cit_x]`, thẻ này ánh xạ ngược về đúng Bounding Box của Child Chunk, đảm bảo độ mịn trích dẫn chi tiết tới từng đoạn/bảng chứ không bị bôi vàng cả trang giấy.
 
-### 5.3 Cỗ Máy Trạng Thái Suy Luận Phản Biện (LangGraph Corrective Reasoning Loop)
+### 5.4 Cỗ Máy Trạng Thái Suy Luận Phản Biện (LangGraph Corrective Reasoning Subgraph)
+
+LangGraph đóng vai trò là **Bộ Não Suy Luận Truy Xuất (Retrieval & Reasoning Engine)**, thay thế cho hàm `retrieve_and_prepare_context`, trong khi `SessionChatService` tiếp tục đảm nhiệm việc stream SSE mượt mà ra giao diện:
 
 ```mermaid
 stateDiagram-v2
     [*] --> RetrieveEvidence: Scholar Query
-    RetrieveEvidence --> GradeRelevance: Top-5 Expanded Sections
+    RetrieveEvidence --> GradeRelevance: Top-5 Expanded Chunks
     
     state GradeRelevance <<choice>>
-    GradeRelevance --> GenerateAnswer: Quality Score >= 0.7 (Đủ chứng cứ)
-    GradeRelevance --> ExpandGraphKnowledge: Quality Score < 0.7 (Thiếu chứng cứ / Câu hỏi so sánh)
+    GradeRelevance --> PackContext: Rerank Score >= 0.65 (Đủ chứng cứ)
+    GradeRelevance --> ExpandGraphKnowledge: Rerank Score < 0.65 (Thiếu chứng cứ / Câu hỏi so sánh)
     
-    ExpandGraphKnowledge --> SynthesizeMultiHop: Lấy thêm đỉnh/cạnh lân cận
-    SynthesizeMultiHop --> GenerateAnswer: Bổ sung tri thức đồ thị
+    ExpandGraphKnowledge --> EvaluateSufficiency: Lấy thêm đỉnh/cạnh theo quan hệ CITES
+    state EvaluateSufficiency <<choice>>
+    EvaluateSufficiency --> PackContext: Đã tìm thấy tri thức bổ sung
+    EvaluateSufficiency --> ActiveAbstention: Sau mở rộng vẫn không đủ dữ liệu (Score < 0.25)
     
-    GenerateAnswer --> StrictCitationCheck: Kiểm tra trích dẫn từng luận điểm
-    StrictCitationCheck --> [*]: Stream câu trả lời hoàn chỉnh kèm Bounding Box
+    PackContext --> GenerateStream: Gửi vào luồng sinh SSE kèm Citations
+    ActiveAbstention --> GenerateStream: Kích hoạt từ chối chủ động kèm gợi ý Socratic
+    GenerateStream --> [*]
 ```
 
-- **Bước Đánh giá (Document Relevance Grader):** Đánh giá nhị phân trên từng đoạn trích: Liệu đoạn trích này có chứa thông tin trả lời cho câu hỏi của người dùng không?
-- **Bước Phản biện (Corrective Action):** Nếu tỷ lệ liên quan $< 60\%$, LangGraph tự động kích hoạt truy vấn `GraphRAGService` để đi theo các cạnh `CITES` hoặc `USES_METHOD` tìm các bài báo liên quan trong thư viện, biến câu trả lời từ đơn lẻ thành phân tích tổng hợp đa bài báo.
-- **Bước Sinh câu trả lời (Grounded Synthesis):** Bắt buộc gắn mã trích dẫn `[cit_x]` kèm tọa độ Bounding Box để người dùng click là nhảy đúng đến vị trí trên trang PDF gốc.
+- **Phạm vi Mở rộng Đồ thị (Scope Guard):**
+  - Khi `scope="single_paper"`, việc mở rộng đồ thị chỉ giới hạn trong danh mục trích dẫn nội bộ của bài báo đó (`reference_items`).
+  - Khi `scope="multi_paper"` hoặc ở màn hình Thư viện, hệ thống được phép nhảy qua các liên kết `CITES` để kết nối các bài báo khác trong cùng thư mục đề tài.
+- **Từ Chối Chủ Động (Active Abstention):** Nếu sau khi mở rộng đồ thị mà điểm số tin cậy vẫn dưới $0.25$, hệ thống chủ động thông báo không đủ căn cứ khoa học thay vì để LLM đoán mò.
 
 ---
 
