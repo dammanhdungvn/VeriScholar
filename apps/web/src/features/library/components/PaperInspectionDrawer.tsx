@@ -34,12 +34,11 @@ export function PaperInspectionDrawer({
   onAskAI,
   onSelectNode,
 }: PaperInspectionDrawerProps) {
-  if (!isOpen || !node) {
-    return null;
-  }
-
   // Derive connected nodes from edges
   const { priorWorks, derivativeWorks, connectedConcepts } = useMemo(() => {
+    if (!node) {
+      return { priorWorks: [], derivativeWorks: [], connectedConcepts: [] };
+    }
     const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
     const prior: LibraryGraphNode[] = [];
     const derivative: LibraryGraphNode[] = [];
@@ -73,6 +72,10 @@ export function PaperInspectionDrawer({
       connectedConcepts: concepts,
     };
   }, [node, allNodes, allEdges]);
+
+  if (!isOpen || !node) {
+    return null;
+  }
 
   const year = node.metadata?.publication_year;
   const abstract = node.metadata?.abstract || "No abstract available for this entity.";
