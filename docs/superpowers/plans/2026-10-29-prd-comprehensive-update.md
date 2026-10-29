@@ -89,7 +89,7 @@
 **Files:**
 - Modify: `docs/PRD/06-agentic-overleaf-writing.md`
 
-- [ ] **Step 4.1: Expand 4 LaTeX Error Classes & Add Simulated Peer Reviewer**
+- [x] **Step 4.1: Expand 4 LaTeX Error Classes & Add Simulated Peer Reviewer**
   - Update Section 1 and UC-WRITE-04 in `docs/PRD/06-agentic-overleaf-writing.md` to document the 4 real-world LaTeX error classes:
     1. `ERR_SPECIAL_CHAR` (unescaped `&`, `%`, `_`, `#`).
     2. `ERR_MISSING_PACKAGE` (missing packages like `amsmath`, `amssymb`).
@@ -97,10 +97,10 @@
     4. `ERR_SYNTAX_BRACKET` (bracket/environment delimiters).
   - Add **UC-WRITE-06: Giả Lập Phản Biện Hội Đồng (Simulated Peer Reviewer - "Reviewer #2")**: Auditing manuscripts for unsupported claims, missing baseline comparisons, and missing statistical p-values.
 
-- [ ] **Step 4.2: Verify Gherkin acceptance criteria**
+- [x] **Step 4.2: Verify Gherkin acceptance criteria**
   - Update Section 4 with Gherkin scenarios for the 4 error classes and peer reviewer simulation.
 
-- [ ] **Step 4.3: Commit and VPS Sync**
+- [x] **Step 4.3: Commit and VPS Sync**
   - Commit: `docs(prd): update PRD-06 with 4 latex error classes and simulated peer reviewer`
   - Run: `bash scripts/deploy_to_vps.sh --fast || true`
 
