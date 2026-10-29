@@ -27,7 +27,7 @@ export interface KnowledgeGraphCanvasProps {
   isLoading?: boolean;
   focusNodeId?: string | null;
   onSelectDocument?: (doc: { id: string; title?: string; filename: string }) => void;
-  onSelectNode?: (node: LibraryGraphNode) => void;
+  onSelectNode?: (node: LibraryGraphNode | null) => void;
   onSelectCommunity?: (community: LibraryCommunity) => void;
   className?: string;
 }
@@ -64,11 +64,18 @@ const COMMUNITY_PALETTE = [
   "#2563eb", // Blue
 ];
 
-const NODE_TYPE_COLORS: Record<string, string> = {
+export const NODE_TYPE_COLORS: Record<string, string> = {
   Paper: "#4f46e5",
   Method: "#059669",
   Dataset: "#d97706",
   MetricResult: "#c15f3e",
+};
+
+export const ENTITY_ICONS: Record<string, string> = {
+  Paper: "📄",
+  Method: "⚡",
+  Dataset: "📊",
+  MetricResult: "🎯",
 };
 
 const ENTITY_TYPE_FILTERS = [
@@ -114,6 +121,27 @@ export function KnowledgeGraphCanvas({
   const rawNodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const rawEdges = useMemo(() => graphData?.edges || [], [graphData]);
   const communities = useMemo(() => graphData?.communities || [], [graphData]);
+
+  const entityCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: rawNodes.length,
+      Paper: 0,
+      Method: 0,
+      Dataset: 0,
+      MetricResult: 0,
+    };
+    rawNodes.forEach((n) => {
+      if (counts[n.type] !== undefined) {
+        counts[n.type]++;
+      }
+    });
+    return counts;
+  }, [rawNodes]);
+
+  const focusNode = useMemo(() => {
+    if (!focusNodeId) return null;
+    return rawNodes.find((n) => n.id === focusNodeId) || null;
+  }, [focusNodeId, rawNodes]);
 
   // Compute 1-hop adjacency for spotlight highlighting
   const adjacencyMap = useMemo(() => {
@@ -262,14 +290,22 @@ export function KnowledgeGraphCanvas({
       const nodes = simNodesRef.current;
       nodes.forEach((n) => {
         if (n.x === undefined || n.y === undefined) return;
+        const nodeColor =
+          selectedCommunityId !== null && n.community_id !== undefined && n.community_id !== null
+            ? COMMUNITY_PALETTE[Math.abs(n.community_id) % COMMUNITY_PALETTE.length]
+            : NODE_TYPE_COLORS[n.type] || "#4f46e5";
+
+        const matchesEntity =
+          selectedEntityType === "all" || n.type === selectedEntityType;
         const isDimmed =
+          !matchesEntity ||
           (selectedCommunityId !== null && n.community_id !== selectedCommunityId) ||
           (activeHoverId && activeHoverId !== n.id && !spotlightNeighbors?.has(n.id));
 
         if (!isDimmed) {
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.radius * 1.8, 0, 2 * Math.PI);
-          ctx.fillStyle = `${n.color}15`; // Translucent halo
+          ctx.fillStyle = `${nodeColor}15`; // Translucent halo
           ctx.fill();
         }
       });
@@ -282,10 +318,12 @@ export function KnowledgeGraphCanvas({
         if (s.x === undefined || s.y === undefined || t.x === undefined || t.y === undefined)
           return;
 
+        const sMatches = selectedEntityType === "all" || s.type === selectedEntityType;
+        const tMatches = selectedEntityType === "all" || t.type === selectedEntityType;
         const isLinkActive =
           activeHoverId && (s.id === activeHoverId || t.id === activeHoverId);
         const isDimmed =
-          activeHoverId && !isLinkActive;
+          (!sMatches && !tMatches) || (activeHoverId && !isLinkActive);
 
         ctx.save();
         ctx.beginPath();
@@ -294,8 +332,8 @@ export function KnowledgeGraphCanvas({
         ctx.strokeStyle = isLinkActive
           ? "#4f46e5"
           : isDimmed
-          ? "#e5e7eb40"
-          : "#d1d5db80";
+          ? "#e5e7eb25"
+          : "#d1d5db70";
         ctx.lineWidth = isLinkActive ? 2.0 : 1.2;
         ctx.stroke();
 
@@ -316,30 +354,44 @@ export function KnowledgeGraphCanvas({
       nodes.forEach((n) => {
         if (n.x === undefined || n.y === undefined) return;
 
+        const nodeColor =
+          selectedCommunityId !== null && n.community_id !== undefined && n.community_id !== null
+            ? COMMUNITY_PALETTE[Math.abs(n.community_id) % COMMUNITY_PALETTE.length]
+            : NODE_TYPE_COLORS[n.type] || "#4f46e5";
+
         const isFocus = n.id === focusNodeId;
         const isHovered = n.id === hoveredNodeId;
         const isNeighbor = activeHoverId ? spotlightNeighbors?.has(n.id) : false;
         const matchesEntity =
           selectedEntityType === "all" || n.type === selectedEntityType;
-        const isDimmed =
-          !matchesEntity ||
-          (selectedCommunityId !== null && n.community_id !== selectedCommunityId) ||
-          (activeHoverId && !isHovered && !isFocus && !isNeighbor);
+        const matchesCommunity =
+          selectedCommunityId === null || n.community_id === selectedCommunityId;
+        const matchesSpotlight =
+          !activeHoverId || isHovered || isFocus || isNeighbor;
 
-        const alpha = isDimmed ? 0.2 : 1.0;
+        // Visual prominence logic:
+        let alpha = 1.0;
+        if (!matchesEntity) {
+          alpha = 0.08;
+        } else if (!matchesCommunity) {
+          alpha = 0.15;
+        } else if (!matchesSpotlight) {
+          alpha = 0.2;
+        }
+
         ctx.save();
         ctx.globalAlpha = alpha;
 
         // Outer stroke ring
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isHovered || isFocus ? n.color : `${n.color}22`;
+        ctx.fillStyle = isHovered || isFocus ? nodeColor : `${nodeColor}22`;
         ctx.fill();
         ctx.lineWidth = isHovered || isFocus ? 2.5 : 1.5;
-        ctx.strokeStyle = n.color;
+        ctx.strokeStyle = nodeColor;
         ctx.stroke();
 
-        // Node Label
+        // Node Label with Entity Icon Prefix
         const query = searchQuery.trim().toLowerCase();
         const matchesSearch = query && n.label.toLowerCase().includes(query);
 
@@ -347,18 +399,20 @@ export function KnowledgeGraphCanvas({
           isHovered || isFocus ? "bold 11px" : "10px"
         } 'Anthropic Sans', system-ui, sans-serif`;
 
-        const truncatedLabel =
-          n.label.length > 24 ? `${n.label.slice(0, 22)}…` : n.label;
-        const textMetrics = ctx.measureText(truncatedLabel);
+        const icon = ENTITY_ICONS[n.type] || "•";
+        const truncatedText =
+          n.label.length > 22 ? `${n.label.slice(0, 20)}…` : n.label;
+        const displayLabel = `${icon} ${truncatedText}`;
+        const textMetrics = ctx.measureText(displayLabel);
         const textWidth = textMetrics.width;
 
         // Subtle background pill for crystal clear text readability over edges
-        ctx.fillStyle = "rgba(253, 252, 249, 0.88)";
+        ctx.fillStyle = "rgba(253, 252, 249, 0.92)";
         ctx.fillRect(
-          n.x - textWidth / 2 - 3,
+          n.x - textWidth / 2 - 4,
           n.y + n.radius + 3,
-          textWidth + 6,
-          13
+          textWidth + 8,
+          14
         );
 
         ctx.fillStyle = matchesSearch
@@ -368,7 +422,7 @@ export function KnowledgeGraphCanvas({
           : "#374151";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillText(truncatedLabel, n.x, n.y + n.radius + 4);
+        ctx.fillText(displayLabel, n.x, n.y + n.radius + 4);
 
         ctx.restore();
       });
@@ -383,7 +437,7 @@ export function KnowledgeGraphCanvas({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [hoveredNodeId, focusNodeId, selectedCommunityId, searchQuery, adjacencyMap]);
+  }, [hoveredNodeId, focusNodeId, selectedCommunityId, selectedEntityType, searchQuery, adjacencyMap]);
 
   // Coordinate conversion helper: client pos -> simulation graph pos
   const clientToGraphPos = useCallback(
@@ -497,6 +551,9 @@ export function KnowledgeGraphCanvas({
           }
         }
       }
+    } else if (isPanningRef.current && !hasMovedSignificantlyRef.current) {
+      // Empty background click without drag: clear focus selection
+      onSelectNode?.(null);
     }
 
     isPanningRef.current = false;
@@ -507,11 +564,65 @@ export function KnowledgeGraphCanvas({
     }
   };
 
-  // Zoom via wheel
+  // Smooth touchpad pan and zoom
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom((prev) => Math.max(0.3, Math.min(3.5, prev * zoomFactor)));
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // 1. Pinch-to-zoom on touchpad OR Ctrl + Mouse Wheel
+    if (e.ctrlKey) {
+      const zoomDelta = -e.deltaY * 0.006;
+      const zoomFactor = Math.min(Math.max(Math.exp(zoomDelta), 0.94), 1.06);
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.max(0.3, Math.min(3.5, prevZoom * zoomFactor));
+        setPan((prevPan) => {
+          const graphX = (mouseX - prevPan.x) / prevZoom;
+          const graphY = (mouseY - prevPan.y) / prevZoom;
+          return {
+            x: mouseX - graphX * nextZoom,
+            y: mouseY - graphY * nextZoom,
+          };
+        });
+        return nextZoom;
+      });
+      return;
+    }
+
+    // 2. Touchpad two-finger scroll vs physical mouse wheel
+    const isTrackpadScroll =
+      Math.abs(e.deltaX) > 0 ||
+      !Number.isInteger(e.deltaY) ||
+      Math.abs(e.deltaY) < 35;
+
+    if (isTrackpadScroll) {
+      // Gentle, dampened touchpad panning (0.65x factor)
+      setPan((prev) => ({
+        x: prev.x - e.deltaX * 0.65,
+        y: prev.y - e.deltaY * 0.65,
+      }));
+    } else {
+      // Physical mouse wheel notch: smooth zoom centered at pointer
+      const zoomDelta = -e.deltaY * 0.0012;
+      const zoomFactor = Math.min(Math.max(Math.exp(zoomDelta), 0.88), 1.14);
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.max(0.3, Math.min(3.5, prevZoom * zoomFactor));
+        setPan((prevPan) => {
+          const graphX = (mouseX - prevPan.x) / prevZoom;
+          const graphY = (mouseY - prevPan.y) / prevZoom;
+          return {
+            x: mouseX - graphX * nextZoom,
+            y: mouseY - graphY * nextZoom,
+          };
+        });
+        return nextZoom;
+      });
+    }
   };
 
   // Toolbar Actions
@@ -548,21 +659,34 @@ export function KnowledgeGraphCanvas({
 
           {/* Entity Type Filter Tabs */}
           <div className="flex items-center gap-0.5 bg-[#ede8df]/60 dark:bg-[#252320] p-0.5 rounded-lg border border-[#e2dcd2]/70 dark:border-[#322f2a]">
-            {ENTITY_TYPE_FILTERS.map((f) => (
-              <button
-                key={f.id}
-                type="button"
-                onClick={() => setSelectedEntityType(f.id)}
-                className={cn(
-                  "px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer",
-                  selectedEntityType === f.id
-                    ? "bg-[#c15f3e] text-white shadow-2xs"
-                    : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-                )}
-              >
-                {f.label}
-              </button>
-            ))}
+            {ENTITY_TYPE_FILTERS.map((f) => {
+              const count = entityCounts[f.id] ?? 0;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setSelectedEntityType(f.id)}
+                  className={cn(
+                    "px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1",
+                    selectedEntityType === f.id
+                      ? "bg-[#c15f3e] text-white shadow-2xs"
+                      : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
+                  )}
+                >
+                  <span>{f.label}</span>
+                  <span
+                    className={cn(
+                      "text-[9px] px-1 py-0.2 rounded-full font-mono",
+                      selectedEntityType === f.id
+                        ? "bg-white/20 text-white"
+                        : "bg-black/5 dark:bg-white/10 text-muted"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           <span className="text-[11px] text-muted font-mono whitespace-nowrap">
@@ -655,6 +779,25 @@ export function KnowledgeGraphCanvas({
             </span>
           </div>
         )}
+
+        {/* Focus Spotlight Active Banner */}
+        {focusNode && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#c15f3e]/40 shadow-sm text-xs z-20 text-ink dark:text-zinc-200 animate-in fade-in">
+            <span className="w-2 h-2 rounded-full bg-[#c15f3e] animate-ping shrink-0" />
+            <span className="truncate max-w-[280px]">
+              Tiêu điểm: <strong>{focusNode.label}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => onSelectNode?.(null)}
+              className="text-[11px] text-[#c15f3e] hover:underline cursor-pointer font-medium ml-1 shrink-0"
+              title="Bỏ tiêu điểm (bấm vào vùng trống canvas)"
+            >
+              Xem tất cả
+            </button>
+          </div>
+        )}
+
         <canvas
           ref={canvasRef}
           data-testid="knowledge-graph-canvas"
@@ -664,6 +807,26 @@ export function KnowledgeGraphCanvas({
           onWheel={handleWheel}
           className="w-full h-full cursor-grab active:cursor-grabbing block"
         />
+
+        {/* Floating Entity Color Legend */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface/90 dark:bg-[#1f1d1a]/90 backdrop-blur-xs border border-border/70 text-[11px] shadow-xs pointer-events-none z-10">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#4f46e5] inline-block shrink-0" />
+            <span className="text-muted">📄 Bài báo</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#059669] inline-block shrink-0" />
+            <span className="text-muted">⚡ Phương pháp</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#d97706] inline-block shrink-0" />
+            <span className="text-muted">📊 Tập dữ liệu</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#c15f3e] inline-block shrink-0" />
+            <span className="text-muted">🎯 Chỉ số</span>
+          </div>
+        </div>
       </div>
     </div>
   );

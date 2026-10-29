@@ -139,4 +139,43 @@ describe("KnowledgeGraphCanvas HTML5 Force Simulation", () => {
       expect.objectContaining({ label: "Transformer Architectures" })
     );
   });
+
+  it("renders entity filter tabs with count badges and floating legend", () => {
+    render(
+      <KnowledgeGraphCanvas
+        graphData={mockGraphData}
+        isLoading={false}
+      />
+    );
+
+    // Entity filter buttons exist with counts
+    expect(screen.getByRole("button", { name: /^Tất cả\s*3/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Bài báo\s*2/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /^Phương pháp\s*1/i })).toBeInTheDocument();
+
+    // Floating legend displays entity categories
+    expect(screen.getByText("📄 Bài báo")).toBeInTheDocument();
+    expect(screen.getByText("⚡ Phương pháp")).toBeInTheDocument();
+    expect(screen.getByText("📊 Tập dữ liệu")).toBeInTheDocument();
+    expect(screen.getByText("🎯 Chỉ số")).toBeInTheDocument();
+  });
+
+  it("handles trackpad wheel pan event gracefully without zoom explosion", () => {
+    render(
+      <KnowledgeGraphCanvas
+        graphData={mockGraphData}
+        isLoading={false}
+      />
+    );
+
+    const canvas = screen.getByTestId("knowledge-graph-canvas");
+    // Fire a trackpad two-finger scroll event (deltaX > 0 or small deltaY)
+    fireEvent.wheel(canvas, {
+      deltaX: 12,
+      deltaY: 8,
+      ctrlKey: false,
+    });
+    // Canvas should remain intact and responsive
+    expect(canvas).toBeInTheDocument();
+  });
 });

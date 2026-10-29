@@ -115,4 +115,42 @@ describe("WikiGraphWorkspaceView Component", () => {
       expect(screen.getByText(/FlashAttention hardware alignment/i)).toBeInTheDocument();
     });
   });
+
+  it("handles unwrapped wiki envelope { total, pages } without map error", async () => {
+    vi.spyOn(libraryApi, "getLibraryGraph").mockResolvedValue({
+      nodes: [],
+      edges: [],
+      communities: [],
+      total_nodes: 0,
+      total_edges: 0,
+    });
+
+    // Mock API returning raw envelope object { total, pages }
+    vi.spyOn(libraryApi, "listWikiPages").mockResolvedValue({
+      total: 1,
+      pages: [
+        {
+          id: "w-envelope-1",
+          slug: "envelope-concept",
+          title: "Envelope Normalized Concept",
+          page_type: "method",
+          markdown_content: "Content tested successfully",
+          yaml_metadata: {},
+          wikilinks: [],
+          created_at: "2026-10-25T10:00:00Z",
+          updated_at: "2026-10-25T10:00:00Z",
+        },
+      ],
+    } as any);
+
+    renderWithProviders(<WikiGraphWorkspaceView />);
+
+    // Switch to Wiki Graph mode
+    const wikiTabBtn = screen.getByRole("button", { name: /Wiki Graph/i });
+    fireEvent.click(wikiTabBtn);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("Envelope Normalized Concept").length).toBeGreaterThanOrEqual(1);
+    });
+  });
 });

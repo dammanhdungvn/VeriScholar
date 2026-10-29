@@ -60,13 +60,21 @@ export function WikiGraphWorkspaceView({
 
   // Compiled Wiki Pages
   const {
-    data: wikiPages = [],
+    data: rawWikiPagesData,
     isLoading: isLoadingWiki,
     refetch: refetchWiki,
-  } = useQuery<WikiPageItem[]>({
+  } = useQuery({
     queryKey: ["wiki-graph", "pages"],
     queryFn: () => libraryApi.listWikiPages(),
   });
+
+  const wikiPages = useMemo<WikiPageItem[]>(() => {
+    if (Array.isArray(rawWikiPagesData)) return rawWikiPagesData;
+    if (rawWikiPagesData && Array.isArray((rawWikiPagesData as { pages?: WikiPageItem[] }).pages)) {
+      return (rawWikiPagesData as { pages: WikiPageItem[] }).pages;
+    }
+    return [];
+  }, [rawWikiPagesData]);
 
   // Research Gaps Matrix
   const {

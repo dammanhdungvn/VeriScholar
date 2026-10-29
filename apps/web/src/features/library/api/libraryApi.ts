@@ -47,9 +47,13 @@ export const libraryApi = {
    * List compiled academic wiki pages
    */
   async listWikiPages(): Promise<WikiPageItem[]> {
-    return apiClient<WikiPageItem[]>("/library/wiki", {
+    const res = await apiClient<{ total: number; pages: WikiPageItem[] } | WikiPageItem[]>("/library/wiki", {
       method: "GET",
     });
+    if (Array.isArray(res)) {
+      return res;
+    }
+    return (res as { total: number; pages: WikiPageItem[] })?.pages ?? [];
   },
 
   /**
