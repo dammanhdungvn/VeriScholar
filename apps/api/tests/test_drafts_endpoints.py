@@ -175,8 +175,9 @@ async def test_draft_chat_stream_snapshots_emits_sse_and_records_messages(
     refreshed_draft = await db_session.get(DraftModel, draft.id)
     assert refreshed_draft is not None
     assert refreshed_draft.previous_snapshot is not None
-    assert "saved_at" in refreshed_draft.previous_snapshot
-    assert "Hello World" in refreshed_draft.previous_snapshot["content"]
+    undo_data = refreshed_draft.previous_snapshot.get("undo") or refreshed_draft.previous_snapshot
+    assert "saved_at" in undo_data
+    assert "Hello World" in undo_data["content"]
     assert refreshed_draft.version == 2
     assert "Updated Content" in refreshed_draft.content
 
@@ -270,7 +271,19 @@ async def test_undo_restores_snapshot_and_clears_it(
     assert refreshed is not None
     assert refreshed.content == snap_data["content"]
     assert refreshed.bib_content == snap_data["bib_content"]
-    assert refreshed.previous_snapshot is None
+    assert refreshed.previous_snapshot is not None
+    assert refreshed.previous_snapshot.get("redo") is not None
+    assert "Accidentally ruined text" in refreshed.previous_snapshot["redo"]["content"]
+
+    # Subtest C: Symmetrical 2-way Undo -> Calling undo again executes Redo!
+    res_redo = await async_client.post(
+        f"/api/v1/drafts/{draft_with_snap.id}:undo",
+        headers=auth_headers,
+    )
+    assert res_redo.status_code == 200, res_redo.text
+    payload_redo = res_redo.json()["data"]
+    assert "Accidentally ruined text" in payload_redo["content"]
+    assert payload_redo["previous_snapshot"]["undo"] is not None
 
     # Verify cache was cleared
     assert DraftService._draft_pdf_cache.get(draft_with_snap.id) is None

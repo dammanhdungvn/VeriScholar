@@ -6,6 +6,7 @@ import {
   ArrowUp,
   X,
   RotateCcw,
+  RotateCw,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
@@ -163,8 +164,16 @@ export function WritingAssistantPane({
     "Rà soát tính nhất quán luận điểm",
   ];
 
+  const previousSnapshot = draft?.previous_snapshot;
+  const isRedoAvailable = Boolean(previousSnapshot?.redo && !previousSnapshot?.undo);
+  const isUndoAvailable = Boolean(
+    previousSnapshot?.undo ||
+      (!previousSnapshot?.undo && !previousSnapshot?.redo && previousSnapshot?.content)
+  );
+  const hasSnapshot = isRedoAvailable || isUndoAvailable;
+
   return (
-    <div className="w-full md:w-80 xl:w-96 flex flex-col h-full bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none shrink-0 border-l border-[#ece8df] dark:border-[#2a2824]">
+    <div className="w-full h-full flex flex-col bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none shrink-0">
       {/* 1. Header with Undo & Close Button */}
       <div className="h-10 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f5f1e8] dark:bg-[#1e1c19] flex items-center justify-between text-xs font-semibold text-ink dark:text-zinc-200">
         <div className="flex items-center gap-1.5 font-anthropic-serif">
@@ -174,17 +183,33 @@ export function WritingAssistantPane({
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Undo Button */}
+          {/* Symmetrical Undo / Redo Button */}
           <button
             type="button"
             data-testid="undo-draft-btn"
             onClick={handleUndo}
-            disabled={isUndoing || isAssisting}
-            className="px-2 py-1 rounded-md bg-white dark:bg-[#282622] hover:bg-[#eae4d9] dark:hover:bg-[#302d28] border border-[#e2dcd2] dark:border-[#38332c] text-ink dark:text-zinc-200 text-[11px] font-sans flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors shadow-2xs"
-            title="Hoàn tác thay đổi của AI về bản trước"
+            disabled={isUndoing || isAssisting || !hasSnapshot}
+            className={cn(
+              "px-2 py-1 rounded-md bg-white dark:bg-[#282622] hover:bg-[#eae4d9] dark:hover:bg-[#302d28] border border-[#e2dcd2] dark:border-[#38332c] text-ink dark:text-zinc-200 text-[11px] font-sans flex items-center gap-1 cursor-pointer disabled:opacity-40 transition-colors shadow-2xs",
+              isRedoAvailable && "text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+            )}
+            title={
+              isRedoAvailable
+                ? "Khôi phục lại thay đổi AI vừa sinh (Redo)"
+                : "Hoàn tác thay đổi của AI về bản trước"
+            }
           >
-            <RotateCcw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-            <span>↩️ Hoàn tác</span>
+            {isRedoAvailable ? (
+              <>
+                <RotateCw className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span>Khôi phục (Redo)</span>
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
+                <span>Hoàn tác</span>
+              </>
+            )}
           </button>
 
           {onClose && (

@@ -74,6 +74,8 @@ def edit_latex_files(
     return {
         "target_file": target_file,
         "content": content,
+        "bytes_written": len(content.encode("utf-8")),
+        "status": "success",
     }
 
 
@@ -382,8 +384,8 @@ async def tool_execution(state: LatexAgentState) -> dict[str, Any]:
         }
     )
 
-    if tool_name == "edit_latex_files":
-        target_file = tool_input.get("target_file", "main.tex")
+    if tool_name in ("edit_latex_files", "edit_file", "create_file"):
+        target_file = tool_input.get("target_file") or tool_input.get("filename") or "main.tex"
         content = tool_input.get("content", "")
         res = edit_latex_files(target_file, content, state=state)
 
@@ -398,14 +400,47 @@ async def tool_execution(state: LatexAgentState) -> dict[str, Any]:
             {
                 "event": "tool_end",
                 "type": "tool_end",
-                "data": {"name": "edit_latex_files", "output": res},
+                "data": {"name": tool_name, "output": res},
             }
         )
         return {
-            "last_tool": "edit_latex_files",
+            "last_tool": tool_name,
             "main_tex": state["main_tex"],
             "bib_content": state["bib_content"],
             "tool_output": res,
+            "new_events": new_events,
+        }
+
+    elif tool_name == "read_file":
+        target_file = tool_input.get("target_file") or tool_input.get("filename") or "main.tex"
+        content = state["main_tex"] if target_file == "main.tex" else state.get("bib_content", "")
+        output = {"file": target_file, "content": content}
+        new_events.append(
+            {
+                "event": "tool_end",
+                "type": "tool_end",
+                "data": {"name": "read_file", "output": output},
+            }
+        )
+        return {
+            "last_tool": "read_file",
+            "tool_output": output,
+            "new_events": new_events,
+        }
+
+    elif tool_name == "delete_file":
+        target_file = tool_input.get("target_file") or tool_input.get("filename") or ""
+        output = {"deleted": target_file}
+        new_events.append(
+            {
+                "event": "tool_end",
+                "type": "tool_end",
+                "data": {"name": "delete_file", "output": output},
+            }
+        )
+        return {
+            "last_tool": "delete_file",
+            "tool_output": output,
             "new_events": new_events,
         }
 
@@ -446,7 +481,7 @@ async def tool_execution(state: LatexAgentState) -> dict[str, Any]:
             "new_events": new_events,
         }
 
-    elif tool_name == "compile_latex_e2b":
+    elif tool_name in ("compile_latex_e2b", "recompile_latex"):
         current_count = state.get("compile_count", 0) + 1
         compile_res = await compile_latex_e2b(
             draft_id=state.get("draft_id", uuid4()),
@@ -698,6 +733,47 @@ class LatexCoauthorAgent:
         """Tool 1: Edit project LaTeX or BibTeX file."""
         return edit_latex_files(target_file, content, state=state)
 
+    def create_file(
+        self,
+        target_file: str,
+        content: str = "",
+        state: LatexAgentState | None = None,
+    ) -> dict[str, Any]:
+        """Tool: Create a new project file."""
+        return edit_latex_files(target_file, content, state=state)
+
+    def edit_file(
+        self,
+        target_file: str,
+        content: str,
+        state: LatexAgentState | None = None,
+    ) -> dict[str, Any]:
+        """Tool: Edit an existing project file."""
+        return edit_latex_files(target_file, content, state=state)
+
+    def read_file(
+        self,
+        target_file: str,
+        state: LatexAgentState | None = None,
+    ) -> dict[str, Any]:
+        """Tool: Read content of a project file."""
+        content = ""
+        if state:
+            content = (
+                state.get("main_tex", "")
+                if target_file == "main.tex"
+                else state.get("bib_content", "")
+            )
+        return {"file": target_file, "content": content}
+
+    def delete_file(
+        self,
+        target_file: str,
+        state: LatexAgentState | None = None,
+    ) -> dict[str, Any]:
+        """Tool: Delete a file from draft project."""
+        return {"deleted": target_file}
+
     def list_project_files(
         self,
         assets: list[dict[str, Any]] | None = None,
@@ -738,6 +814,23 @@ class LatexCoauthorAgent:
             assets=assets,
             clear_cache=clear_cache,
             compiler=self.compiler,
+        )
+
+    async def recompile_latex(
+        self,
+        draft_id: UUID,
+        main_tex: str,
+        bib_content: str = "",
+        assets: list[dict[str, Any]] | None = None,
+        clear_cache: bool = False,
+    ) -> dict[str, Any]:
+        """Tool: Recompile LaTeX draft."""
+        return await self.compile_latex_e2b(
+            draft_id=draft_id,
+            main_tex=main_tex,
+            bib_content=bib_content,
+            assets=assets,
+            clear_cache=clear_cache,
         )
 
     async def run(

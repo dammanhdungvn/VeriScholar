@@ -818,13 +818,57 @@ class DraftService:
             raise ValueError("NO_UNDO_SNAPSHOT_AVAILABLE")
 
         snapshot = draft.previous_snapshot
-        restored_content = snapshot.get("content", draft.content)
-        restored_bib = snapshot.get("bib_content", draft.bib_content)
+
+        # Two-way symmetrical snapshot support: {"undo": ..., "redo": ...}
+        if "undo" in snapshot or "redo" in snapshot:
+            undo_data = snapshot.get("undo")
+            redo_data = snapshot.get("redo")
+            if undo_data:
+                # User executes Undo -> Reverts to undo_data, current goes into redo
+                restored_content = undo_data.get("content", draft.content)
+                restored_bib = undo_data.get("bib_content", draft.bib_content)
+                new_snapshot = {
+                    "undo": None,
+                    "redo": {
+                        "content": draft.content,
+                        "bib_content": draft.bib_content,
+                        "version": draft.version,
+                        "saved_at": datetime.now(UTC).isoformat(),
+                    },
+                }
+            elif redo_data:
+                # User executes Redo -> Reverts to redo_data, current goes into undo
+                restored_content = redo_data.get("content", draft.content)
+                restored_bib = redo_data.get("bib_content", draft.bib_content)
+                new_snapshot = {
+                    "undo": {
+                        "content": draft.content,
+                        "bib_content": draft.bib_content,
+                        "version": draft.version,
+                        "saved_at": datetime.now(UTC).isoformat(),
+                    },
+                    "redo": None,
+                }
+            else:
+                raise ValueError("NO_UNDO_SNAPSHOT_AVAILABLE")
+        else:
+            # Legacy format {"content": ..., "bib_content": ...}
+            restored_content = snapshot.get("content", draft.content)
+            restored_bib = snapshot.get("bib_content", draft.bib_content)
+            new_snapshot = {
+                "undo": None,
+                "redo": {
+                    "content": draft.content,
+                    "bib_content": draft.bib_content,
+                    "version": draft.version,
+                    "saved_at": datetime.now(UTC).isoformat(),
+                },
+            }
 
         async with self._transaction():
             draft.content = restored_content
             draft.bib_content = restored_bib
-            draft.previous_snapshot = None
+            draft.previous_snapshot = new_snapshot
             draft.version += 1
             draft.updated_at = datetime.now(UTC)
 
@@ -877,10 +921,13 @@ class DraftService:
         snapshot_to_save = None
         if draft.previous_snapshot is None:
             snapshot_to_save = {
-                "content": draft.content,
-                "bib_content": draft.bib_content,
-                "version": draft.version,
-                "saved_at": datetime.now(UTC).isoformat(),
+                "undo": {
+                    "content": draft.content,
+                    "bib_content": draft.bib_content,
+                    "version": draft.version,
+                    "saved_at": datetime.now(UTC).isoformat(),
+                },
+                "redo": None,
             }
 
         assets = _draft_assets_cache.get(draft_id, [])

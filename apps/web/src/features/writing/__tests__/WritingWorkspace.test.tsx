@@ -76,6 +76,9 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     content: "\\documentclass{article}\n\\begin{document}\nHello World\n\\end{document}",
     bib_content: "@article{sample,\n  title={Sample},\n  year={2026}\n}",
     format: "latex",
+    previous_snapshot: {
+      undo: { content: "old" },
+    },
     version: 3,
     created_at: "2026-10-25T10:00:00Z",
     updated_at: "2026-10-25T10:00:00Z",

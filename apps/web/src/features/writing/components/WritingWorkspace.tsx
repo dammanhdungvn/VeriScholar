@@ -52,6 +52,8 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
   const [isDraggingEditor, setIsDraggingEditor] = useState(false);
   const [targetScrollLine, setTargetScrollLine] = useState<number | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [assistantWidth, setAssistantWidth] = useState(420);
+  const [isDraggingAssistant, setIsDraggingAssistant] = useState(false);
   const mainWorkspaceRef = useRef<HTMLDivElement>(null);
   const workspaceContainerRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +105,24 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
       window.removeEventListener("pointerup", handlePointerUp);
     };
   }, [isDraggingEditor]);
+
+  // Drag handler for Assistant Drawer Width (from right edge)
+  useEffect(() => {
+    if (!isDraggingAssistant) return;
+    const handlePointerMove = (e: PointerEvent) => {
+      const currentX = window.innerWidth - e.clientX;
+      const newWidth = Math.max(360, Math.min(760, currentX));
+      setAssistantWidth(newWidth);
+    };
+    const handlePointerUp = () => setIsDraggingAssistant(false);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDraggingAssistant]);
 
   // Save handler with OCC version tracking
   const handleSave = useCallback(async () => {
@@ -452,8 +472,22 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
           />
           <div
             data-testid="writing-assistant-drawer"
-            className="fixed inset-y-0 right-0 w-full sm:w-[420px] max-w-[90vw] shadow-2xl z-40 bg-[#fbf9f5] dark:bg-[#181715] border-l border-[#ece8df] dark:border-[#2a2824] flex flex-col animate-in slide-in-from-right duration-200"
+            style={{ width: `${assistantWidth}px` }}
+            className="fixed inset-y-0 right-0 max-w-[95vw] shadow-2xl z-40 bg-[#fbf9f5] dark:bg-[#181715] border-l border-[#ece8df] dark:border-[#2a2824] flex flex-col animate-in slide-in-from-right duration-200"
           >
+            {/* Draggable left border resize handle */}
+            <div
+              data-testid="assistant-resize-handle"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                setIsDraggingAssistant(true);
+              }}
+              className="absolute inset-y-0 -left-1.5 w-3 cursor-col-resize hover:bg-coral-500/30 active:bg-coral-500/50 transition-colors z-50 flex items-center justify-center group"
+              title="Kéo để điều chỉnh độ rộng trợ lý AI (360px - 760px)"
+            >
+              <div className="w-0.5 h-8 rounded-full bg-stone-300 dark:bg-stone-600 group-hover:bg-coral-500 transition-colors" />
+            </div>
+
             <WritingAssistantPane
               onClose={() => {
                 setIsAssistantOpen(false);
