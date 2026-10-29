@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
+import { getCachedPdfDocument } from "@/features/reader/lib/pdfRenderQueue";
 import { pdfjsLib } from "@/features/reader/lib/pdfjs-init";
 import { cn } from "@/lib/utils";
 
@@ -363,11 +364,7 @@ export function WritingPreviewPane({
     async function loadPdfDoc() {
       try {
         setPdfJsError(false);
-        const loadingTask = pdfjsLib.getDocument({
-          url: effectivePdfUrl!,
-          withCredentials: false,
-        });
-        const doc = await loadingTask.promise;
+        const doc = await getCachedPdfDocument(effectivePdfUrl!);
         if (!isCancelled) {
           setPdfDoc(doc);
           setTotalPages(doc.numPages);

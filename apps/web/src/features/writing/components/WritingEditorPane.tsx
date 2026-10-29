@@ -12,8 +12,8 @@ import {
   ListOrdered,
   Heading,
   BookMarked,
-  ArrowRightCircle,
-  Loader2,
+  X,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
@@ -37,6 +37,10 @@ export function WritingEditorPane({
     setEditorBibContent,
     activeFile,
     setActiveFile,
+    openFiles,
+    closeFile,
+    isFileTreeOpen,
+    toggleFileTree,
     setActiveHighlightBox,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
@@ -44,7 +48,6 @@ export function WritingEditorPane({
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [copied, setCopied] = useState(false);
-  const [isSyncingForward, setIsSyncingForward] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
 
@@ -120,22 +123,6 @@ export function WritingEditorPane({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // SyncTeX forward search trigger
-  const handleSyncTexForward = async () => {
-    if (!activeDraftId || !textareaRef.current) return;
-    const cursor = textareaRef.current.selectionStart || 0;
-    const lineNum = currentContent.substring(0, cursor).split("\n").length;
-    try {
-      setIsSyncingForward(true);
-      const coords = await draftsApi.synctexForward(activeDraftId, activeFile, lineNum);
-      setActiveHighlightBox(coords);
-    } catch (err) {
-      console.error("SyncTeX forward failed:", err);
-    } finally {
-      setIsSyncingForward(false);
-    }
-  };
-
   // Helper for inserting formatting snippets around cursor or selection
   const handleInsertFormat = (prefix: string, suffix: string = "", placeholder: string = "văn bản") => {
     if (!textareaRef.current) return;
@@ -184,59 +171,63 @@ export function WritingEditorPane({
   return (
     <div className="flex-1 flex flex-col h-full bg-[#ffffff] dark:bg-[#1a1917] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
       {/* 1. File Tabs Strip & Copy */}
-      <div className="h-9 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
-        {/* Tabs: main.tex / references.bib */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            data-testid="editor-tab-main"
-            onClick={() => setActiveFile("main.tex")}
-            className={cn(
-              "px-3 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeFile === "main.tex"
-                ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
-                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
-            )}
-          >
-            <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-            <span>main.tex</span>
-            <span className="text-[10px] text-zinc-400 font-sans">({lineCount} dòng)</span>
-          </button>
+      <div className="h-9 px-2 sm:px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
+        {/* Tabs: main.tex / references.bib with unhide button when sidebar is collapsed */}
+        <div className="flex items-center gap-1 min-w-0">
+          {!isFileTreeOpen && (
+            <button
+              type="button"
+              data-testid="unhide-sidebar-btn"
+              onClick={toggleFileTree}
+              className="p-1 mr-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#282622] text-[#c15f3e] transition-colors cursor-pointer shrink-0"
+              title="Hiện danh sách tệp"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          )}
 
-          <button
-            type="button"
-            data-testid="editor-tab-bib"
-            onClick={() => setActiveFile("references.bib")}
-            className={cn(
-              "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeFile === "references.bib"
-                ? "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
-                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
-            )}
-          >
-            <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>references.bib</span>
-          </button>
+          {openFiles.map((file) => {
+            const isActive = activeFile === file;
+            const isMain = file === "main.tex";
+            return (
+              <div
+                key={file}
+                data-testid={isMain ? "editor-tab-main" : "editor-tab-bib"}
+                onClick={() => setActiveFile(file)}
+                className={cn(
+                  "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2 shrink-0 group",
+                  isActive
+                    ? isMain
+                      ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
+                      : "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
+                    : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
+                )}
+              >
+                {isMain ? (
+                  <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400 shrink-0" />
+                ) : (
+                  <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                )}
+                <span>{file}</span>
+                <button
+                  type="button"
+                  data-testid={`close-tab-${file}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeFile(file);
+                  }}
+                  className="p-0.5 rounded hover:bg-rose-500/15 hover:text-rose-500 text-zinc-400 dark:text-zinc-500 transition-colors cursor-pointer ml-0.5"
+                  title={`Đóng ${file}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Right side: SyncTeX & Copy */}
+        {/* Right side: Copy */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            data-testid="synctex-forward-btn"
-            onClick={handleSyncTexForward}
-            disabled={isSyncingForward}
-            className="p-1 px-2 rounded hover:bg-[#ece8df] dark:hover:bg-[#282623] text-coral-600 dark:text-coral-400 hover:text-coral-700 transition-colors cursor-pointer flex items-center gap-1 font-sans text-[11px]"
-            title="Đồng bộ vị trí sang PDF (Forward SyncTeX)"
-          >
-            {isSyncingForward ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ArrowRightCircle className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">SyncTeX</span>
-          </button>
-
           <button
             type="button"
             onClick={handleCopy}

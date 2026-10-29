@@ -316,4 +316,49 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       expect(useWritingStore.getState().editorBibContent).toContain("@article{restored");
     });
   });
+
+  it("8. Minimalist header and tabs: removes <-, Files, v1 badge, and line counts from tabs", () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Arrow back link and files button should not exist in header
+    expect(screen.queryByTitle("Dashboard")).toBeNull();
+    expect(screen.queryByTestId("toggle-file-tree-btn")).toBeNull();
+    expect(screen.queryByText(/^v\d+$/)).toBeNull();
+
+    // Line counts should not be in tabs
+    expect(screen.queryByText(/\(\d+\s*dòng\)/)).toBeNull();
+  });
+
+  it("9. Supports closing tabs with X and unhiding sidebar when collapsed", async () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // references.bib tab has close button X
+    const closeBibBtn = screen.getByTestId("close-tab-references.bib");
+    expect(closeBibBtn).toBeInTheDocument();
+
+    fireEvent.click(closeBibBtn);
+
+    // Tab references.bib is now closed
+    expect(screen.queryByTestId("editor-tab-bib")).toBeNull();
+
+    // Collapse sidebar
+    const collapseBtn = screen.getByTestId("sidebar-collapse-btn");
+    fireEvent.click(collapseBtn);
+
+    // Sidebar should be hidden
+    expect(useWritingStore.getState().isFileTreeOpen).toBe(false);
+
+    // Unhide button should appear on tab strip
+    const unhideBtn = screen.getByTestId("unhide-sidebar-btn");
+    expect(unhideBtn).toBeInTheDocument();
+
+    // Click unhide button
+    fireEvent.click(unhideBtn);
+    expect(useWritingStore.getState().isFileTreeOpen).toBe(true);
+
+    // Now clicking references.bib in sidebar re-opens it
+    const sidebarBib = await screen.findByTestId("file-references-bib");
+    fireEvent.click(sidebarBib);
+    expect(screen.getByTestId("editor-tab-bib")).toBeInTheDocument();
+  });
 });
