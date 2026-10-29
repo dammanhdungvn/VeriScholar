@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -81,7 +81,7 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
     });
   });
 
-  it("renders icon buttons for config and delete instead of raw text", async () => {
+  it("renders delete icon button and eliminates internal parse config button", async () => {
     vi.spyOn(documentsApi, "listDocuments").mockResolvedValue({
       data: [
         {
@@ -110,12 +110,11 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
       expect(screen.getByText("Paper 1")).toBeInTheDocument();
     });
 
-    // Config and Delete should NOT be rendered as raw text in actions
-    expect(screen.queryByText("Config")).toBeNull();
-    expect(screen.queryByText("Delete")).toBeNull();
+    // Config button should NOT exist anywhere (eliminating cognitive noise)
+    expect(screen.queryByTestId("doc-config-btn-doc-1")).toBeNull();
+    expect(screen.queryByTitle("Tùy chọn phân tích")).toBeNull();
 
-    // Icon buttons with appropriate testids/titles should exist
-    expect(screen.getByTestId("doc-config-btn-doc-1")).toBeInTheDocument();
+    // Delete button exists as icon
     expect(screen.getByTestId("doc-delete-btn-doc-1")).toBeInTheDocument();
   });
 
@@ -162,7 +161,7 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
     expect(screen.getByText("indexing")).toBeInTheDocument();
   });
 
-  it("renders GraphRAG Assistant FAB and switches to Knowledge Graph view when clicking graph toggle", async () => {
+  it("renders 3 ribbon tabs (All Papers, Folders, Knowledge Graph) and switches to Knowledge Graph tab", async () => {
     vi.spyOn(documentsApi, "listDocuments").mockResolvedValue({
       data: [
         {
@@ -187,11 +186,17 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
 
     renderWithProviders(<LibraryWorkspaceView />);
 
+    // Primary 3 ribbon tabs exist in English
+    expect(screen.getByRole("button", { name: /All Papers/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Folders/i })).toBeInTheDocument();
+    const graphTabBtn = screen.getByRole("button", { name: /Knowledge Graph/i });
+    expect(graphTabBtn).toBeInTheDocument();
+
     // FAB exists
     expect(screen.getByRole("button", { name: /Trợ lý GraphRAG/i })).toBeInTheDocument();
 
-    // View graph toggle exists
-    const graphToggleBtn = screen.getByTestId("view-graph-btn");
-    expect(graphToggleBtn).toBeInTheDocument();
+    // Clicking Knowledge Graph tab switches active view
+    fireEvent.click(graphTabBtn);
+    expect(graphTabBtn).toHaveClass("font-semibold");
   });
 });

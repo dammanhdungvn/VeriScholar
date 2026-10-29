@@ -6,7 +6,6 @@ import {
   FileText,
   Star,
   Trash2,
-  Sliders,
   ExternalLink,
   ChevronLeft,
   ChevronRight,
@@ -17,7 +16,6 @@ import {
 } from "lucide-react";
 import { useDocumentsList, useDeleteDocumentMutation } from "../hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
-import { ParseConfigModal } from "./ParseConfigModal";
 import { StarDocumentModal } from "./StarDocumentModal";
 import { FolderTreeView } from "@/features/library/components/FolderTreeView";
 
@@ -42,7 +40,6 @@ export function DocumentLibraryModal({
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
   // Sub-modal states
-  const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
   const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
   const [deleteConfirmDoc, setDeleteConfirmDoc] = useState<DocumentListItem | null>(null);
 
@@ -297,16 +294,6 @@ export function DocumentLibraryModal({
 
                       {/* Right: Actions */}
                       <div className="flex items-center gap-1.5 shrink-0">
-                        {/* Parse Config Button */}
-                        <button
-                          type="button"
-                          onClick={() => setSelectedParseDoc(doc)}
-                          title="Cấu hình bóc tách tài liệu (Parse Settings)"
-                          className="p-1.5 rounded-lg border border-hairline dark:border-zinc-700 hover:bg-surface-soft dark:hover:bg-[#282622] text-muted hover:text-ink cursor-pointer transition-colors"
-                        >
-                          <Sliders className="w-3.5 h-3.5" />
-                        </button>
-
                         {/* Star Button */}
                         <button
                           type="button"
@@ -378,17 +365,6 @@ export function DocumentLibraryModal({
       </div>
     </div>
   </div>
-
-      {/* Submodal 1: Parse Config Modal */}
-      {selectedParseDoc && (
-        <ParseConfigModal
-          isOpen={Boolean(selectedParseDoc)}
-          onClose={() => setSelectedParseDoc(null)}
-          documentId={selectedParseDoc.id}
-          documentTitle={selectedParseDoc.title || selectedParseDoc.filename}
-          onParseSuccess={() => refetch()}
-        />
-      )}
 
       {/* Submodal 2: Star Document Modal */}
       {selectedStarDoc && (

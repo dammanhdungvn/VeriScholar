@@ -13,7 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  SlidersHorizontal,
   Trash2,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,7 +24,6 @@ import {
 } from "@/features/documents/hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
 import { FolderTreeView } from "./FolderTreeView";
-import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
 import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
@@ -41,8 +39,8 @@ interface LibraryWorkspaceViewProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
 }
 
-type LibraryFilterTab = "all" | "folders";
-type ViewLayout = "grid" | "list" | "graph";
+export type LibraryFilterTab = "all" | "folders" | "graph";
+type ViewLayout = "grid" | "list";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
   const [activeTab, setActiveTab] = useState<LibraryFilterTab>("all");
@@ -57,7 +55,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [showBibliometrics, setShowBibliometrics] = useState(false);
 
   // Modals state
-  const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
   const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -182,7 +179,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 
   const handleDelete = async (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Bạn có chắc chắn muốn xóa tài liệu này khỏi thư viện?")) {
+    if (window.confirm("Are you sure you want to delete this document from your library?")) {
       try {
         await deleteMutation.mutateAsync(docId);
       } catch (err) {
@@ -252,20 +249,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             >
               <ListIcon className="w-3.5 h-3.5" />
             </button>
-            <button
-              type="button"
-              data-testid="view-graph-btn"
-              onClick={() => setViewLayout("graph")}
-              className={cn(
-                "p-1 rounded-md transition-colors cursor-pointer",
-                viewLayout === "graph"
-                  ? "bg-white dark:bg-[#1a1916] text-[#c15f3e] shadow-xs"
-                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-              )}
-              title="Đồ thị Tri thức (LLM Wiki)"
-            >
-              <Share2 className="w-3.5 h-3.5" />
-            </button>
           </div>
 
           {/* + Upload PDF Button */}
@@ -291,8 +274,9 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       <div className="px-6 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#f8f6f0] dark:bg-[#1a1916] flex items-center justify-between shrink-0 overflow-x-auto">
         <div className="flex items-center gap-1 text-xs font-medium">
           {[
-            { id: "all" as const, label: "Tất cả bài báo", icon: Library },
-            { id: "folders" as const, label: "Thư mục đề tài", icon: Folder },
+            { id: "all" as const, label: "All Papers", icon: Library },
+            { id: "folders" as const, label: "Folders", icon: Folder },
+            { id: "graph" as const, label: "Knowledge Graph", icon: Share2 },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -315,10 +299,10 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           <button
             type="button"
             onClick={() => setShowBibliometrics(!showBibliometrics)}
-            className="px-2.5 py-1 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink-muted hover:text-ink dark:text-zinc-300 flex items-center gap-1.5 transition-colors"
+            className="px-2.5 py-1 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink-muted hover:text-ink dark:text-zinc-300 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#c15f3e]" />
-            <span>{showBibliometrics ? "Ẩn Thư mục học" : "Xem Thư mục học"}</span>
+            <span>{showBibliometrics ? "Hide Bibliometrics" : "View Bibliometrics"}</span>
           </button>
         )}
       </div>
@@ -335,7 +319,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           )}
 
           {/* C. Knowledge Graph (LLM Wiki) OR Documents and Folders Hierarchy */}
-          {viewLayout === "graph" ? (
+          {activeTab === "graph" ? (
             <div className="h-[640px] w-full rounded-2xl overflow-hidden border border-[#e8e4dc] dark:border-[#2a2824] shadow-xs">
               <KnowledgeGraphCanvas
                 graphData={libraryGraphData || null}
@@ -357,7 +341,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                   viewLayout={viewLayout}
                   onToggleStar={handleToggleStar}
                   onSelectDocument={onSelectDocument}
-                  onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
                   onDelete={handleDelete}
                 />
               </div>
@@ -369,7 +352,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 viewLayout={viewLayout}
                 onToggleStar={handleToggleStar}
                 onSelectDocument={onSelectDocument}
-                onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
                 onDelete={handleDelete}
               />
 
@@ -407,16 +389,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       {/* Floating GraphRAG Assistant Bubble */}
       <GraphRagAssistantFab folderId={selectedFolderId} />
 
-      {/* Parse Config Modal */}
-      {selectedParseDoc && (
-        <ParseConfigModal
-          documentId={selectedParseDoc.id}
-          documentTitle={selectedParseDoc.title || selectedParseDoc.filename}
-          isOpen={Boolean(selectedParseDoc)}
-          onClose={() => setSelectedParseDoc(null)}
-        />
-      )}
-
       {/* Star Document Modal */}
       {selectedStarDoc && (
         <StarDocumentModal
@@ -437,7 +409,6 @@ interface DocumentGridProps {
   viewLayout: ViewLayout;
   onToggleStar: (doc: DocumentListItem, e: React.MouseEvent) => void;
   onSelectDocument?: (doc: DocumentListItem) => void;
-  onOpenParseConfig: (doc: DocumentListItem) => void;
   onDelete: (docId: string, e: React.MouseEvent) => void;
 }
 
@@ -446,7 +417,6 @@ function DocumentGrid({
   viewLayout,
   onToggleStar,
   onSelectDocument,
-  onOpenParseConfig,
   onDelete,
 }: DocumentGridProps) {
   if (documents.length === 0) {
@@ -523,22 +493,10 @@ function DocumentGrid({
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
-                      data-testid={`doc-config-btn-${doc.id}`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenParseConfig(doc);
-                      }}
-                      className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
-                      title="Tùy chọn phân tích"
-                    >
-                      <SlidersHorizontal className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      type="button"
                       data-testid={`doc-delete-btn-${doc.id}`}
                       onClick={(e) => onDelete(doc.id, e)}
                       className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
-                      title="Xóa tài liệu"
+                      title="Delete document"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -600,22 +558,10 @@ function DocumentGrid({
             <div className="flex items-center gap-1">
               <button
                 type="button"
-                data-testid={`doc-config-btn-${doc.id}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenParseConfig(doc);
-                }}
-                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
-                title="Tùy chọn phân tích"
-              >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
                 data-testid={`doc-delete-btn-${doc.id}`}
                 onClick={(e) => onDelete(doc.id, e)}
                 className="p-1 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
-                title="Xóa tài liệu"
+                title="Delete document"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
