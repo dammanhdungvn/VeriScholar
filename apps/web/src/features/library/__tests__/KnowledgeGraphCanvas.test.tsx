@@ -1,9 +1,28 @@
 import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeAll } from "vitest";
 import { KnowledgeGraphCanvas } from "../components/KnowledgeGraphCanvas";
 import type { LibraryGraphResponseData } from "../types";
 
-describe("KnowledgeGraphCanvas", () => {
+beforeAll(() => {
+  // Mock HTMLCanvasElement.prototype.getContext for jsdom
+  HTMLCanvasElement.prototype.getContext = vi.fn().mockReturnValue({
+    clearRect: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    beginPath: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    scale: vi.fn(),
+    translate: vi.fn(),
+    fillText: vi.fn(),
+    getBoundingClientRect: vi.fn().mockReturnValue({ width: 800, height: 600 }),
+  });
+});
+
+describe("KnowledgeGraphCanvas HTML5 Force Simulation", () => {
   const mockGraphData: LibraryGraphResponseData = {
     total_nodes: 3,
     total_edges: 2,
@@ -13,22 +32,35 @@ describe("KnowledgeGraphCanvas", () => {
         label: "Attention Is All You Need",
         type: "Paper",
         degree: 2,
+        citation_count: 12,
+        community_id: 0,
+        community_label: "Transformer Architectures",
         group: "paper",
-        metadata: { filename: "attention.pdf" },
+        metadata: {
+          filename: "attention.pdf",
+          abstract: "The dominant sequence transduction models are based on complex recurrent networks.",
+          publication_year: 2017,
+        },
       },
       {
         id: "doc-2",
         label: "BERT: Pre-training of Deep Bidirectional Transformers",
         type: "Paper",
         degree: 1,
+        citation_count: 8,
+        community_id: 0,
+        community_label: "Transformer Architectures",
         group: "paper",
-        metadata: { filename: "bert.pdf" },
+        metadata: { filename: "bert.pdf", publication_year: 2018 },
       },
       {
         id: "method-1",
         label: "Self-Attention Mechanism",
         type: "Method",
         degree: 1,
+        citation_count: 0,
+        community_id: 1,
+        community_label: "Attention Mechanisms",
         group: "method",
       },
     ],
@@ -48,52 +80,63 @@ describe("KnowledgeGraphCanvas", () => {
         weight: 1.0,
       },
     ],
+    communities: [
+      {
+        id: 0,
+        label: "Transformer Architectures",
+        paper_count: 2,
+        node_ids: ["doc-1", "doc-2"],
+      },
+      {
+        id: 1,
+        label: "Attention Mechanisms",
+        paper_count: 1,
+        node_ids: ["method-1"],
+      },
+    ],
   };
 
-  it("renders graph nodes and stats banner correctly", () => {
+  it("renders HTML5 canvas element with data-testid='knowledge-graph-canvas'", () => {
+    const handleSelect = vi.fn();
     render(
       <KnowledgeGraphCanvas
         graphData={mockGraphData}
         isLoading={false}
-        onSelectDocument={vi.fn()}
+        onSelectDocument={handleSelect}
       />
     );
 
-    expect(screen.getByText(/Attention Is All You Need/i)).toBeInTheDocument();
-    expect(screen.getByText(/BERT: Pre-training/i)).toBeInTheDocument();
-    expect(screen.getByText(/Self-Attention Mechanism/i)).toBeInTheDocument();
+    const canvas = screen.getByTestId("knowledge-graph-canvas");
+    expect(canvas).toBeInTheDocument();
   });
 
-  it("opens node detail inspector when clicking a node", () => {
-    const handleSelectDoc = vi.fn();
+  it("renders community clusters and search filter", () => {
     render(
       <KnowledgeGraphCanvas
         graphData={mockGraphData}
         isLoading={false}
-        onSelectDocument={handleSelectDoc}
       />
     );
 
-    const paperNode = screen.getByText(/Attention Is All You Need/i);
-    fireEvent.click(paperNode);
-
-    // Inspector drawer should appear showing details
-    expect(screen.getByText(/Chi tiết thực thể/i)).toBeInTheDocument();
-    expect(screen.getByText(/Bậc liên kết:/i)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(/Lọc thực thể/i)).toBeInTheDocument();
+    expect(screen.getByText(/Transformer Architectures/i)).toBeInTheDocument();
+    expect(screen.getByText(/Attention Mechanisms/i)).toBeInTheDocument();
   });
 
-  it("filters nodes via search input", () => {
+  it("allows selecting a community filter badge", () => {
+    const handleSelectCommunity = vi.fn();
     render(
       <KnowledgeGraphCanvas
         graphData={mockGraphData}
         isLoading={false}
-        onSelectDocument={vi.fn()}
+        onSelectCommunity={handleSelectCommunity}
       />
     );
 
-    const searchInput = screen.getByPlaceholderText(/Lọc thực thể theo tên/i);
-    fireEvent.change(searchInput, { target: { value: "BERT" } });
-
-    expect(screen.getByText(/BERT: Pre-training/i)).toBeInTheDocument();
+    const communityBadge = screen.getByText(/Transformer Architectures/i);
+    fireEvent.click(communityBadge);
+    expect(handleSelectCommunity).toHaveBeenCalledWith(
+      expect.objectContaining({ label: "Transformer Architectures" })
+    );
   });
 });
