@@ -74,6 +74,40 @@ def test_semantic_reranker_score_threshold_filtering():
     assert ranked[0]["rerank_score"] >= 0.65
 
 
+def test_semantic_reranker_filter_by_confidence_uses_default_threshold():
+    reranker = SemanticRerankerService(confidence_threshold=0.65)
+    query = "What is the computational complexity of Scaled Dot-Product Attention?"
+    candidates = [
+        {"id": "c1", "content": "The weather in Seattle is rainy in autumn.", "score": 0.5},
+        {
+            "id": "c2",
+            "content": "Attention has computational complexity O(n^2 * d) where n is sequence length.",
+            "score": 0.5,
+        },
+        {
+            "id": "c3",
+            "content": "Recurrent neural networks process tokens sequentially in O(n * d^2).",
+            "score": 0.5,
+        },
+    ]
+    ranked, abstain = reranker.rerank(
+        query=query, candidates=candidates, top_k=5, filter_by_confidence=True
+    )
+    assert abstain is False
+    assert len(ranked) == 1
+    assert ranked[0]["id"] == "c2"
+    assert ranked[0]["rerank_score"] >= 0.65
+
+
+def test_semantic_reranker_shared_cache_dict():
+    # Cache dictionary keys are (model_name, str(cache_dir))
+    reranker = SemanticRerankerService()
+    r1 = reranker._get_ranker("ms-marco-TinyBERT-L-2-v2", "/tmp")
+    r2 = reranker._get_ranker("ms-marco-TinyBERT-L-2-v2", "/tmp")
+    assert r1 is r2
+    assert ("ms-marco-TinyBERT-L-2-v2", "/tmp") in SemanticRerankerService._shared_rankers
+
+
 def test_semantic_reranker_fallback_token_overlap():
     reranker = SemanticRerankerService()
     query = "Scaled Dot-Product Attention complexity"

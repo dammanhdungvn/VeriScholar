@@ -17,8 +17,8 @@ logger = structlog.get_logger(__name__)
 class SemanticRerankerService:
     """Local ONNX FlashRank Cross-Encoder Semantic Reranker with Active Abstention Gate."""
 
-    _shared_ranker: Any = None
-    _shared_ranker_failed: bool = False
+    _shared_rankers: dict[tuple[str, str], Any] = {}
+    _failed_rankers: set[tuple[str, str]] = set()
 
     def __init__(
         self,
@@ -34,18 +34,25 @@ class SemanticRerankerService:
 
     @classmethod
     def _get_ranker(cls, model_name: str, cache_dir: str) -> Any:
-        if cls._shared_ranker is not None:
-            return cls._shared_ranker
-        if cls._shared_ranker_failed:
+        cache_key = (model_name, str(cache_dir))
+        if cache_key in cls._shared_rankers:
+            return cls._shared_rankers[cache_key]
+        if cache_key in cls._failed_rankers:
             return None
         try:
             from flashrank import Ranker
 
-            cls._shared_ranker = Ranker(model_name=model_name, cache_dir=cache_dir)
-            return cls._shared_ranker
+            ranker = Ranker(model_name=model_name, cache_dir=cache_dir)
+            cls._shared_rankers[cache_key] = ranker
+            return ranker
         except Exception as ex:
-            logger.warning("flashrank_ranker_init_failed", error=str(ex))
-            cls._shared_ranker_failed = True
+            logger.warning(
+                "flashrank_ranker_init_failed",
+                model=model_name,
+                cache_dir=cache_dir,
+                error=str(ex),
+            )
+            cls._failed_rankers.add(cache_key)
             return None
 
     def _token_overlap_scoring(
@@ -130,6 +137,7 @@ class SemanticRerankerService:
         candidates: list[dict[str, Any]],
         top_k: int = 5,
         score_threshold: float | None = None,
+        filter_by_confidence: bool = False,
     ) -> tuple[list[dict[str, Any]], bool]:
         """Rerank candidate chunks against the query using FlashRank ONNX cross-encoder.
 
@@ -137,7 +145,9 @@ class SemanticRerankerService:
             query: The search query string.
             candidates: List of candidate chunk dictionaries.
             top_k: Maximum number of top chunks to return.
-            score_threshold: Optional minimum rerank score threshold (e.g. 0.65).
+            score_threshold: Explicit minimum rerank score threshold.
+            filter_by_confidence: Whether to filter candidates below confidence threshold.
+                If True and score_threshold is None, uses self.confidence_threshold.
 
         Returns:
             tuple[list[dict[str, Any]], bool]:
@@ -185,10 +195,10 @@ class SemanticRerankerService:
         max_score = max((c.get("rerank_score", 0.0) for c in scored_candidates), default=0.0)
         abstain = bool(max_score < self.abstain_threshold)
 
-        if score_threshold is not None:
-            filtered = [
-                c for c in scored_candidates if c.get("rerank_score", 0.0) >= score_threshold
-            ]
+        should_filter = filter_by_confidence or (score_threshold is not None)
+        if should_filter:
+            cutoff = score_threshold if score_threshold is not None else self.confidence_threshold
+            filtered = [c for c in scored_candidates if c.get("rerank_score", 0.0) >= cutoff]
             return filtered[:top_k], abstain
 
         return scored_candidates[:top_k], abstain
