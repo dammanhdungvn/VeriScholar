@@ -97,7 +97,7 @@ describe("DashboardTaskbar Component", () => {
     const moreBtn = screen.getByTestId("session-more-btn-s-unread");
     fireEvent.click(moreBtn);
 
-    const toggleReadBtn = screen.getByText("Đánh dấu đã đọc");
+    const toggleReadBtn = screen.getByText("Mark as read");
     expect(toggleReadBtn).toBeInTheDocument();
     fireEvent.click(toggleReadBtn);
 
@@ -119,7 +119,7 @@ describe("DashboardTaskbar Component", () => {
     const moreBtn = screen.getByTestId("session-more-btn-s-rename");
     fireEvent.click(moreBtn);
 
-    const renameBtn = screen.getByText("Đổi tên");
+    const renameBtn = screen.getByText("Rename");
     fireEvent.click(renameBtn);
 
     const renameInput = screen.getByTestId("session-rename-input-s-rename") as HTMLInputElement;
@@ -147,7 +147,7 @@ describe("DashboardTaskbar Component", () => {
     const moreBtn = screen.getByTestId("session-more-btn-s-del");
     fireEvent.click(moreBtn);
 
-    const deleteBtn = screen.getByText("Xóa");
+    const deleteBtn = screen.getByText("Delete");
     fireEvent.click(deleteBtn);
 
     const deleteDialog = screen.getByTestId("delete-session-dialog");
@@ -176,32 +176,55 @@ describe("DashboardTaskbar Component", () => {
     const moreBtn2 = screen.getByTestId("session-more-btn-s-2");
     fireEvent.click(moreBtn2);
 
-    // Verify context menu shows "Ghim"
-    const pinBtn = screen.getByText("Ghim");
+    // Verify context menu shows "Pin"
+    const pinBtn = screen.getByText("Pin");
     expect(pinBtn).toBeInTheDocument();
 
-    // Click Ghim
+    // Click Pin
     fireEvent.click(pinBtn);
 
-    // Reopen menu to verify it now says "Bỏ ghim"
+    // Reopen menu to verify it now says "Unpin"
     const reopenMoreBtn = screen.getByTestId("session-more-btn-s-2");
     fireEvent.click(reopenMoreBtn);
 
-    expect(screen.getByText("Bỏ ghim")).toBeInTheDocument();
+    expect(screen.getByText("Unpin")).toBeInTheDocument();
 
     // Verify button has no title while menu is open (preventing native tooltip overlay)
     const sessionBtn = screen.getByText("Beta Session").closest("button");
     expect(sessionBtn).not.toHaveAttribute("title");
   });
 
-  it("renders 'Viết paper' and eliminates 'Khám phá & Phiên đọc' from taskbar", () => {
+  it("positions context menu upward when session is located near bottom of the list", () => {
+    const dummySessions = [
+      { id: "s-1", title: "Session 1", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-2", title: "Session 2", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-3", title: "Session 3", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-4", title: "Bottom Session", updated_at: "2026-10-28T00:00:00Z" },
+    ];
+
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    const bottomMoreBtn = screen.getByTestId("session-more-btn-s-4");
+    fireEvent.click(bottomMoreBtn);
+
+    const menu = screen.getByTestId("session-context-menu-s-4");
+    expect(menu).toHaveAttribute("data-placement", "top");
+    expect(menu.className).toContain("bottom-full");
+  });
+
+  it("renders English navigation labels 'Writing' and 'My Library' from taskbar", () => {
     render(
       <BrowserRouter>
         <DashboardTaskbar />
       </BrowserRouter>
     );
 
-    expect(screen.getByText("Viết paper")).toBeInTheDocument();
+    expect(screen.getByText("Writing")).toBeInTheDocument();
+    expect(screen.getByText("My Library")).toBeInTheDocument();
     expect(screen.queryByText(/Khám phá & Phiên đọc/i)).toBeNull();
   });
 });

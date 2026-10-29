@@ -292,8 +292,8 @@ export function DashboardTaskbar({
   const navItems = [
     {
       id: "library",
-      label: "Kho Yêu thích",
-      title: "Thư viện tài liệu nghiên cứu",
+      label: "My Library",
+      title: "My Library",
       icon: Library,
       isActive: isLibrary,
       onClick: () => {
@@ -303,8 +303,8 @@ export function DashboardTaskbar({
     },
     {
       id: "writing",
-      label: "Viết paper",
-      title: "Viết paper (Agentic Overleaf)",
+      label: "Writing",
+      title: "Writing",
       icon: PenTool,
       isActive: isWriting,
       onClick: () => navigate("/writing"),
@@ -390,7 +390,7 @@ export function DashboardTaskbar({
           <button
             type="button"
             onClick={() => handleItemClick(onNewSession)}
-            title="Đoạn chat mới"
+            title="New Session"
             className={cn(
               "flex items-center text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1",
               isExpanded
@@ -409,7 +409,7 @@ export function DashboardTaskbar({
               }`}
             >
               <span className="font-semibold whitespace-nowrap truncate font-anthropic-serif">
-                Đoạn chat mới
+                New Session
               </span>
             </div>
           </button>
@@ -471,7 +471,7 @@ export function DashboardTaskbar({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm phiên..."
+                placeholder="Search sessions..."
                 className="w-full pl-6 pr-2 py-1 rounded-lg bg-canvas dark:bg-[#141311] border border-hairline focus:border-coral-500 outline-none text-[11px] font-sans text-ink dark:text-zinc-200"
               />
             </div>
@@ -494,10 +494,10 @@ export function DashboardTaskbar({
                     ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold"
                     : "text-muted hover:text-ink"
                 }`}
-                title={filterArchived ? "Xem phiên đang hoạt động" : "Xem phiên đã lưu trữ (Archived)"}
+                title={filterArchived ? "View active sessions" : "View archived sessions"}
               >
                 <Archive className="w-3 h-3" />
-                <span>{filterArchived ? "Lưu trữ" : "Xem lưu trữ"}</span>
+                <span>{filterArchived ? "Archived" : "View archived"}</span>
               </button>
             </div>
           </div>
@@ -506,15 +506,16 @@ export function DashboardTaskbar({
             <div className="px-2 pt-1 pb-1 space-y-1 overflow-y-auto max-h-[calc(100vh-340px)] scrollbar-none">
               {displayedSessions.length === 0 ? (
                 <div className="py-6 text-center text-muted text-[11px]">
-                  {searchQuery.trim() ? "Không tìm thấy phiên" : filterArchived ? "Không có phiên lưu trữ" : "Chưa có phiên nào"}
+                  {searchQuery.trim() ? "No sessions found" : filterArchived ? "No archived sessions" : "No sessions yet"}
                 </div>
               ) : (
-                displayedSessions.map((session) => {
+                displayedSessions.map((session, index) => {
                   const isActive = session.id === activeSessionId;
                   const isMenuOpen = activeMenuSessionId === session.id;
                   const isEditing = editingSessionId === session.id;
                   const isUnread = unreadSessionIds.has(session.id);
                   const isPinned = pinnedSessionIds.has(session.id);
+                  const isNearBottom = index >= Math.max(0, displayedSessions.length - 2);
 
                   return (
                     <div key={session.id} className="relative group">
@@ -539,7 +540,7 @@ export function DashboardTaskbar({
                             disabled={isSubmittingRename}
                             onClick={() => handleSaveRename(session.id)}
                             className="p-1 text-emerald-600 hover:bg-emerald-500/10 rounded cursor-pointer"
-                            title="Lưu (Enter)"
+                            title="Save (Enter)"
                           >
                             <Check className="w-3.5 h-3.5" />
                           </button>
@@ -547,7 +548,7 @@ export function DashboardTaskbar({
                             type="button"
                             onClick={() => setEditingSessionId(null)}
                             className="p-1 text-muted hover:text-ink rounded cursor-pointer"
-                            title="Hủy (Esc)"
+                            title="Cancel (Esc)"
                           >
                             <X className="w-3.5 h-3.5" />
                           </button>
@@ -578,19 +579,19 @@ export function DashboardTaskbar({
                               {session.title}
                             </span>
                             {isPinned && (
-                              <span title="Đã ghim">
+                              <span title="Pinned">
                                 <Pin className="w-3 h-3 text-coral-500 fill-coral-500/20 shrink-0 rotate-45" />
                               </span>
                             )}
                             {isUnread && (
                               <span
                                 data-testid={`session-unread-dot-${session.id}`}
-                                title="Chưa đọc"
+                                title="Unread"
                                 className="w-2 h-2 rounded-full bg-coral-500 shrink-0 shadow-2xs"
                               />
                             )}
                             {session.is_archived && (
-                              <span title="Phiên đã hết hạn lưu trữ (Archived)">
+                              <span title="Archived session">
                                 <Archive className="w-3 h-3 text-amber-500 shrink-0" />
                               </span>
                             )}
@@ -600,7 +601,7 @@ export function DashboardTaskbar({
                           <button
                             type="button"
                             data-testid={`session-more-btn-${session.id}`}
-                            aria-label={`Tùy chọn ${session.title}`}
+                            aria-label={`Options for ${session.title}`}
                             onClick={(e) => {
                               e.stopPropagation();
                               setActiveMenuSessionId(isMenuOpen ? null : session.id);
@@ -613,13 +614,17 @@ export function DashboardTaskbar({
                             <MoreHorizontal className="w-3.5 h-3.5" />
                           </button>
 
-                          {/* Context Menu Popup (Image 2 style: Pin, Mark as unread/read, Rename, Delete) */}
+                          {/* Context Menu Popup */}
                           {isMenuOpen && (
                             <div
                               ref={menuContainerRef}
                               data-testid={`session-context-menu-${session.id}`}
+                              data-placement={isNearBottom ? "top" : "bottom"}
                               onClick={(e) => e.stopPropagation()}
-                              className="absolute right-0 top-full mt-1 z-50 w-44 p-1 rounded-xl bg-white dark:bg-[#201e1b] border border-[#e5dfd4] dark:border-[#38332c] shadow-xl text-xs select-none animate-in fade-in zoom-in-95 duration-100"
+                              className={cn(
+                                "absolute right-0 z-50 w-44 p-1 rounded-xl bg-white dark:bg-[#201e1b] border border-[#e5dfd4] dark:border-[#38332c] shadow-xl text-xs select-none animate-in fade-in zoom-in-95 duration-100",
+                                isNearBottom ? "bottom-full mb-1 origin-bottom-right" : "top-full mt-1 origin-top-right"
+                              )}
                             >
                               <button
                                 type="button"
@@ -629,12 +634,12 @@ export function DashboardTaskbar({
                                 {isPinned ? (
                                   <>
                                     <PinOff className="w-3.5 h-3.5 text-coral-500" />
-                                    <span>Bỏ ghim</span>
+                                    <span>Unpin</span>
                                   </>
                                 ) : (
                                   <>
                                     <Pin className="w-3.5 h-3.5 text-zinc-500" />
-                                    <span>Ghim</span>
+                                    <span>Pin</span>
                                   </>
                                 )}
                               </button>
@@ -646,12 +651,12 @@ export function DashboardTaskbar({
                                 {isUnread ? (
                                   <>
                                     <MailOpen className="w-3.5 h-3.5 text-zinc-500" />
-                                    <span>Đánh dấu đã đọc</span>
+                                    <span>Mark as read</span>
                                   </>
                                 ) : (
                                   <>
                                     <Mail className="w-3.5 h-3.5 text-zinc-500" />
-                                    <span>Đánh dấu chưa đọc</span>
+                                    <span>Mark as unread</span>
                                   </>
                                 )}
                               </button>
@@ -661,7 +666,7 @@ export function DashboardTaskbar({
                                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
                               >
                                 <Pencil className="w-3.5 h-3.5 text-zinc-500" />
-                                <span>Đổi tên</span>
+                                <span>Rename</span>
                               </button>
                               <div className="my-1 border-t border-hairline dark:border-[#2f2b26]" />
                               <button
@@ -673,7 +678,7 @@ export function DashboardTaskbar({
                                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer font-medium"
                               >
                                 <Trash2 className="w-3.5 h-3.5 text-rose-500" />
-                                <span>Xóa</span>
+                                <span>Delete</span>
                               </button>
                             </div>
                           )}
@@ -760,10 +765,10 @@ export function DashboardTaskbar({
         <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#1f1d1a] border border-[#e5dfd4] dark:border-[#38332c] p-5 shadow-2xl space-y-4">
           <div className="space-y-1.5">
             <h3 className="font-serif font-bold text-sm sm:text-base text-ink dark:text-zinc-100">
-              Xác nhận xóa phiên nghiên cứu?
+              Delete Research Session
             </h3>
             <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
-              Bạn có chắc chắn muốn xóa phiên <span className="font-semibold text-ink dark:text-zinc-200 font-serif">"{deletingSession.title}"</span>? Thao tác này không thể hoàn tác.
+              Are you sure you want to delete session <span className="font-semibold text-ink dark:text-zinc-200 font-serif">"{deletingSession.title}"</span>? This action cannot be undone.
             </p>
           </div>
           <div className="flex items-center justify-end gap-2 pt-2">
@@ -773,7 +778,7 @@ export function DashboardTaskbar({
               disabled={isSubmittingDelete}
               className="px-3 py-1.5 rounded-xl text-xs font-medium text-muted hover:text-ink dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#282521] transition-colors cursor-pointer"
             >
-              Hủy
+              Cancel
             </button>
             <button
               type="button"
@@ -782,7 +787,7 @@ export function DashboardTaskbar({
               onClick={handleConfirmDelete}
               className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
             >
-              {isSubmittingDelete ? "Đang xóa..." : "Xóa vĩnh viễn"}
+              {isSubmittingDelete ? "Deleting..." : "Delete Session"}
             </button>
           </div>
         </div>
