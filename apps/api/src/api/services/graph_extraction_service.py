@@ -330,12 +330,34 @@ class GraphExtractionService:
                                 page_number=d.page_number,
                             )
                         )
+            elif papers and datasets:
+                for p in papers:
+                    for d in datasets:
+                        relations.append(
+                            ExtractedRelation(
+                                source_name=p.name,
+                                target_name=d.name,
+                                type="EVALUATED_ON",
+                                page_number=d.page_number,
+                            )
+                        )
             if methods and metrics:
                 for m in methods:
                     for r in metrics:
                         relations.append(
                             ExtractedRelation(
                                 source_name=m.name,
+                                target_name=r.name,
+                                type="ACHIEVES",
+                                page_number=r.page_number,
+                            )
+                        )
+            elif papers and metrics:
+                for p in papers:
+                    for r in metrics:
+                        relations.append(
+                            ExtractedRelation(
+                                source_name=p.name,
                                 target_name=r.name,
                                 type="ACHIEVES",
                                 page_number=r.page_number,
