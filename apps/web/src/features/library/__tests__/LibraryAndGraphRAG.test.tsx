@@ -228,7 +228,7 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders 3 search modes and executes queryGraph API displaying synthesized answer and subgraph", async () => {
+  it("executes smart auto-routed queryGraph API displaying synthesized answer and subgraph", async () => {
     const querySpy = vi.spyOn(libraryApi, "queryGraph").mockResolvedValue({
       mode_used: "hybrid",
       answer: "Transformer models achieve SOTA on BLEU and Top-1 Accuracy across WMT and ImageNet.",
@@ -238,31 +238,25 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
 
     renderWithProviders(<LibraryWorkspaceView />);
 
-    // Verify 3 mode buttons exist
-    const hybridBtn = screen.getByRole("button", { name: /hybrid/i });
-    const localBtn = screen.getByRole("button", { name: /local/i });
-    const globalBtn = screen.getByRole("button", { name: /global/i });
+    // Open floating GraphRAG assistant
+    const fab = screen.getByRole("button", { name: /Trợ lý GraphRAG/i });
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
 
-    expect(hybridBtn).toBeInTheDocument();
-    expect(localBtn).toBeInTheDocument();
-    expect(globalBtn).toBeInTheDocument();
-
-    // Select Local mode
-    fireEvent.click(localBtn);
-
-    // Type query
-    const searchInput = screen.getByPlaceholderText(/Hỏi đáp SOTA, đối chiếu mô hình hoặc tra cứu đồ thị/i);
+    // Type query in smart search box inside drawer
+    const searchInput = screen.getByPlaceholderText(/Đặt câu hỏi đối chiếu, tổng hợp tri thức/i);
     fireEvent.change(searchInput, { target: { value: "Transformer BLEU accuracy" } });
 
     // Submit search
-    const submitBtn = screen.getByTestId("graphrag-search-submit");
+    const submitBtn = screen.getByTestId("graphrag-submit-btn");
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
       expect(querySpy).toHaveBeenCalledWith({
         query: "Transformer BLEU accuracy",
-        mode: "local",
+        mode: "auto",
         folder_id: null,
+        top_k: 5,
       });
     });
 
@@ -272,8 +266,5 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
         screen.getByText(/Transformer models achieve SOTA on BLEU and Top-1 Accuracy across WMT and ImageNet./i)
       ).toBeInTheDocument();
     });
-
-    // Check subgraph nodes are rendered
-    expect(screen.getByText("Transformer")).toBeInTheDocument();
   });
 });

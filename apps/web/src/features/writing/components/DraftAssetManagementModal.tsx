@@ -95,16 +95,23 @@ export function DraftAssetManagementModal({
     return "supplementary";
   };
 
-  // Upload handler
-  const handleUploadFile = async (file: File) => {
+  // Batch upload handler
+  const handleUploadFiles = async (files: FileList | File[]) => {
     if (!effectiveDraftId) return;
+    const fileList = Array.from(files);
+    if (fileList.length === 0) return;
 
     // Validate extension (.png, .pdf, .bib, .cls, .sty, .jpg, .jpeg)
-    const ext = file.name.split(".").pop()?.toLowerCase() || "";
     const allowed = ["png", "jpg", "jpeg", "webp", "pdf", "bib", "cls", "sty", "tex", "csv"];
-    if (!allowed.includes(ext)) {
+    const invalidFile = fileList.find((f) => {
+      const ext = f.name.split(".").pop()?.toLowerCase() || "";
+      return !allowed.includes(ext);
+    });
+
+    if (invalidFile) {
+      const ext = invalidFile.name.split(".").pop()?.toLowerCase() || "";
       setErrorMessage(
-        `Định dạng .${ext} không được hỗ trợ. Vui lòng tải lên tệp (.png, .pdf, .bib, .cls, .sty).`
+        `Định dạng .${ext} (${invalidFile.name}) không được hỗ trợ. Vui lòng tải lên tệp (.png, .pdf, .bib, .cls, .sty).`
       );
       return;
     }
@@ -113,32 +120,35 @@ export function DraftAssetManagementModal({
       setIsUploading(true);
       setErrorMessage(null);
 
-      // Read file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const res = reader.result as string;
-          const commaIndex = res.indexOf(",");
-          resolve(commaIndex !== -1 ? res.slice(commaIndex + 1) : res);
+      const uploadTasks = fileList.map(async (file) => {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            const res = reader.result as string;
+            const commaIndex = res.indexOf(",");
+            resolve(commaIndex !== -1 ? res.slice(commaIndex + 1) : res);
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+
+        const assetType = getAssetTypeFromFilename(file.name);
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        const payload: CreateDraftAssetRequest = {
+          asset_type: assetType,
+          filename: file.name,
+          content_base64: base64,
+          caption: assetType === "image" ? `Biểu đồ ${file.name}` : undefined,
+          latex_label: assetType === "image" ? `fig:${nameWithoutExt}` : undefined,
         };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
+
+        return await draftsApi.createAsset(effectiveDraftId, payload);
       });
 
-      const assetType = getAssetTypeFromFilename(file.name);
-      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-      const payload: CreateDraftAssetRequest = {
-        asset_type: assetType,
-        filename: file.name,
-        content_base64: base64,
-        caption: assetType === "image" ? `Biểu đồ ${file.name}` : undefined,
-        latex_label: assetType === "image" ? `fig:${nameWithoutExt}` : undefined,
-      };
-
-      const newAsset = await draftsApi.createAsset(effectiveDraftId, payload);
-      setAssets((prev) => [newAsset, ...prev]);
+      const uploadedAssets = await Promise.all(uploadTasks);
+      setAssets((prev) => [...uploadedAssets, ...prev]);
     } catch (err) {
-      console.error("Failed to upload draft asset:", err);
+      console.error("Failed to upload draft assets:", err);
       setErrorMessage("Tải lên asset thất bại. Vui lòng kiểm tra lại tệp.");
     } finally {
       setIsUploading(false);
@@ -164,8 +174,7 @@ export function DraftAssetManagementModal({
     setIsDragging(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      const file = e.dataTransfer.files[0];
-      handleUploadFile(file);
+      handleUploadFiles(e.dataTransfer.files);
     }
   };
 
@@ -278,10 +287,11 @@ export function DraftAssetManagementModal({
             <input
               ref={fileInputRef}
               type="file"
+              multiple
               accept=".png,.jpg,.jpeg,.webp,.pdf,.bib,.cls,.sty,.tex"
               onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleUploadFile(e.target.files[0]);
+                if (e.target.files && e.target.files.length > 0) {
+                  handleUploadFiles(e.target.files);
                   e.target.value = "";
                 }
               }}
@@ -314,147 +324,144 @@ export function DraftAssetManagementModal({
             )}
           </div>
 
-          {/* Filter Bar */}
-          <div className="flex items-center justify-between border-b border-[#ece8df] dark:border-[#2a2824] pb-2 text-xs">
-            <div className="flex items-center gap-1.5">
-              {[
-                { id: "all", label: "Tất cả" },
-                { id: "image", label: "Hình ảnh (.png/.jpg)" },
-                { id: "bibtex", label: "Trích dẫn (.bib)" },
-                { id: "other", label: "Khác (.cls/.sty/.pdf)" },
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  onClick={() => setSelectedFilter(tab.id)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer text-[11px]",
-                    selectedFilter === tab.id
-                      ? "bg-coral-500/10 text-coral-600 dark:text-coral-400 font-semibold"
-                      : "text-muted hover:text-ink dark:text-zinc-400"
-                  )}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
+          {/* Filter Bar & Asset List (Only shown when assets exist) */}
+          {assets.length > 0 && (
+            <>
+              <div className="flex items-center justify-between border-b border-[#ece8df] dark:border-[#2a2824] pb-2 text-xs">
+                <div className="flex items-center gap-1.5">
+                  {[
+                    { id: "all", label: "Tất cả" },
+                    { id: "image", label: "Hình ảnh (.png/.jpg)" },
+                    { id: "bibtex", label: "Trích dẫn (.bib)" },
+                    { id: "other", label: "Khác (.cls/.sty/.pdf)" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setSelectedFilter(tab.id)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-medium transition-colors cursor-pointer text-[11px]",
+                        selectedFilter === tab.id
+                          ? "bg-coral-500/10 text-coral-600 dark:text-coral-400 font-semibold"
+                          : "text-muted hover:text-ink dark:text-zinc-400"
+                      )}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
 
-            <span className="text-[11px] text-zinc-400">
-              Hiển thị {filteredAssets.length} / {assets.length} tệp
-            </span>
-          </div>
+                <span className="text-[11px] text-zinc-400">
+                  Hiển thị {filteredAssets.length} / {assets.length} tệp
+                </span>
+              </div>
 
-          {/* Asset List */}
-          {isLoading ? (
-            <div className="py-12 flex flex-col items-center justify-center text-zinc-400 space-y-2">
-              <Loader2 className="w-6 h-6 animate-spin text-coral-500" />
-              <span>Đang tải danh sách assets...</span>
-            </div>
-          ) : filteredAssets.length > 0 ? (
-            <div className="space-y-2.5" data-testid="asset-list-container">
-              {filteredAssets.map((asset) => {
-                const ext = asset.filename.split(".").pop()?.toLowerCase() || "";
-                const isImage = ["png", "jpg", "jpeg", "webp"].includes(ext) || asset.asset_type === "image";
-                const isBib = ext === "bib" || asset.asset_type === "bibtex";
-                const isCopied = copiedAssetId === asset.id;
+              {isLoading ? (
+                <div className="py-12 flex flex-col items-center justify-center text-zinc-400 space-y-2">
+                  <Loader2 className="w-6 h-6 animate-spin text-coral-500" />
+                  <span>Đang tải danh sách assets...</span>
+                </div>
+              ) : filteredAssets.length > 0 ? (
+                <div className="space-y-2.5" data-testid="asset-list-container">
+                  {filteredAssets.map((asset) => {
+                    const ext = asset.filename.split(".").pop()?.toLowerCase() || "";
+                    const isImage = ["png", "jpg", "jpeg", "webp"].includes(ext) || asset.asset_type === "image";
+                    const isBib = ext === "bib" || asset.asset_type === "bibtex";
+                    const isCopied = copiedAssetId === asset.id;
 
-                return (
-                  <div
-                    key={asset.id}
-                    data-testid="asset-item-card"
-                    className="p-3 rounded-lg bg-[#faf8f5] dark:bg-[#1a1917] border border-[#e2dcd2] dark:border-[#2e2b26] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-coral-500/40 transition-colors"
-                  >
-                    {/* Left: Icon & Info */}
-                    <div className="flex items-start sm:items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#252320] border border-[#e2dcd2] dark:border-[#2e2b26] flex items-center justify-center shrink-0">
-                        {isImage ? (
-                          <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-                        ) : isBib ? (
-                          <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-                        ) : ext === "pdf" ? (
-                          <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-                        ) : (
-                          <FileCode className="w-4 h-4 text-coral-600 dark:text-coral-400" />
-                        )}
-                      </div>
+                    return (
+                      <div
+                        key={asset.id}
+                        data-testid="asset-item-card"
+                        className="p-3 rounded-lg bg-[#faf8f5] dark:bg-[#1a1917] border border-[#e2dcd2] dark:border-[#2e2b26] flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-coral-500/40 transition-colors"
+                      >
+                        {/* Left: Icon & Info */}
+                        <div className="flex items-start sm:items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-lg bg-white dark:bg-[#252320] border border-[#e2dcd2] dark:border-[#2e2b26] flex items-center justify-center shrink-0">
+                            {isImage ? (
+                              <ImageIcon className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                            ) : isBib ? (
+                              <BookOpen className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                            ) : ext === "pdf" ? (
+                              <FileText className="w-4 h-4 text-rose-600 dark:text-rose-400" />
+                            ) : (
+                              <FileCode className="w-4 h-4 text-coral-600 dark:text-coral-400" />
+                            )}
+                          </div>
 
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-ink dark:text-zinc-100 font-mono truncate">
-                            {asset.filename}
-                          </span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">
-                            {formatBytes(asset.file_size_bytes)}
-                          </span>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-ink dark:text-zinc-100 font-mono truncate">
+                                {asset.filename}
+                              </span>
+                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">
+                                {formatBytes(asset.file_size_bytes)}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[11px] text-muted dark:text-zinc-400 mt-0.5">
+                              {asset.caption && (
+                                <span className="truncate italic">
+                                  "{asset.caption}"
+                                </span>
+                              )}
+                              {asset.latex_label && (
+                                <span className="font-mono text-[10px] text-coral-600 dark:text-coral-400 bg-coral-500/10 px-1 rounded">
+                                  \\ref&#123;{asset.latex_label}&#125;
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="flex items-center gap-2 text-[11px] text-muted dark:text-zinc-400 mt-0.5">
-                          {asset.caption && (
-                            <span className="truncate italic">
-                              "{asset.caption}"
-                            </span>
-                          )}
-                          {asset.latex_label && (
-                            <span className="font-mono text-[10px] text-coral-600 dark:text-coral-400 bg-coral-500/10 px-1 rounded">
-                              \\ref&#123;{asset.latex_label}&#125;
-                            </span>
-                          )}
+                        {/* Right: Actions */}
+                        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                          <button
+                            type="button"
+                            onClick={() => handleCopySnippet(asset)}
+                            data-testid="copy-latex-btn"
+                            className={cn(
+                              "px-2.5 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer",
+                              isCopied
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
+                                : "bg-white dark:bg-[#252320] border-[#e2dcd2] dark:border-[#2e2b26] text-ink dark:text-zinc-200 hover:bg-[#ece8df] dark:hover:bg-[#2d2a26]"
+                            )}
+                            title="Sao chép mã chèn LaTeX vào clipboard"
+                          >
+                            {isCopied ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Đã sao chép</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5" />
+                                <span>Sao chép mã LaTeX</span>
+                              </>
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleInsertIntoEditor(asset)}
+                            data-testid="insert-editor-btn"
+                            className="px-2.5 py-1.5 rounded-lg bg-coral-500 hover:bg-coral-600 text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Chèn mã LaTeX này trực tiếp vào văn bản soạn thảo"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>Chèn vào bài</span>
+                          </button>
                         </div>
                       </div>
-                    </div>
-
-                    {/* Right: Actions */}
-                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                      <button
-                        type="button"
-                        onClick={() => handleCopySnippet(asset)}
-                        data-testid="copy-latex-btn"
-                        className={cn(
-                          "px-2.5 py-1.5 rounded-lg border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer",
-                          isCopied
-                            ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400"
-                            : "bg-white dark:bg-[#252320] border-[#e2dcd2] dark:border-[#2e2b26] text-ink dark:text-zinc-200 hover:bg-[#ece8df] dark:hover:bg-[#2d2a26]"
-                        )}
-                        title="Sao chép mã chèn LaTeX vào clipboard"
-                      >
-                        {isCopied ? (
-                          <>
-                            <Check className="w-3.5 h-3.5 text-emerald-600" />
-                            <span>Đã sao chép</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="w-3.5 h-3.5" />
-                            <span>Sao chép mã LaTeX</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleInsertIntoEditor(asset)}
-                        data-testid="insert-editor-btn"
-                        className="px-2.5 py-1.5 rounded-lg bg-coral-500 hover:bg-coral-600 text-white font-medium text-xs shadow-xs transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Chèn mã LaTeX này trực tiếp vào văn bản soạn thảo"
-                      >
-                        <Plus className="w-3.5 h-3.5" />
-                        <span>Chèn vào bài</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="p-8 rounded-xl border border-dashed border-[#e2dcd2] dark:border-[#2e2b26] text-center space-y-2">
-              <FolderArchive className="w-8 h-8 text-zinc-400 mx-auto" />
-              <p className="font-medium text-ink dark:text-zinc-300">
-                Chưa có asset nào trong bản thảo
-              </p>
-              <p className="text-[11px] text-muted dark:text-zinc-400 max-w-sm mx-auto">
-                Kéo thả hình ảnh hoặc tệp .bib vào vùng tải lên ở trên để quản lý và tạo mã chèn LaTeX nhanh.
-              </p>
-            </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="py-8 text-center text-xs text-zinc-400">
+                  Không có tệp nào phù hợp với bộ lọc đã chọn.
+                </div>
+              )}
+            </>
           )}
         </div>
 

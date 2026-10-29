@@ -222,6 +222,10 @@ async def upload_document(
         None,
         description="ID phiên nghiên cứu cần gắn kết tài liệu (tùy chọn)",
     ),
+    folder_id: UUID | None = Form(
+        None,
+        description="ID thư mục đề tài nghiên cứu cần lưu trữ (tùy chọn)",
+    ),
     current_user: UserModel = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
     service: DocumentService = Depends(get_document_service),
@@ -232,6 +236,7 @@ async def upload_document(
         user_id=current_user.id,
         db=db,
         session_id=session_id,
+        folder_id=folder_id,
     )
     return DocumentUploadEnvelope(
         success=True,

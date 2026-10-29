@@ -4,38 +4,44 @@ import {
   Search,
   LayoutGrid,
   List as ListIcon,
+  Share2,
   Plus,
   Star,
   FileText,
   Folder,
+  FolderPlus,
+  FolderInput,
+  ArrowLeft,
+  Pencil,
   Sparkles,
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  Send,
-  Loader2,
-  X,
-  ChevronDown,
-  ChevronUp,
+  Trash2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { documentsApi } from "@/features/documents/api/documentsApi";
 import {
   useDocumentsList,
-  useStarDocumentMutation,
   useDeleteDocumentMutation,
 } from "@/features/documents/hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
-import { FolderTreeView } from "./FolderTreeView";
-import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
-import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
+import { FolderCard } from "./FolderCard";
+import { CreateFolderModal } from "./CreateFolderModal";
+import { RenameFolderModal } from "./RenameFolderModal";
+import { MoveToFolderModal } from "./MoveToFolderModal";
+import {
+  useFoldersListQuery,
+  useDeleteFolderMutation,
+} from "../hooks/useFolderQueries";
+import type { FolderItem } from "../types";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
-import { KnowledgeSubgraphViewer } from "./KnowledgeSubgraphViewer";
+import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
+import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
 import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
 import { libraryApi } from "../api/libraryApi";
 import type {
-  GraphQueryMode,
-  GraphQueryResponseData,
   BibliometricsResponseData,
-  GraphEdge,
 } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +49,7 @@ interface LibraryWorkspaceViewProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
 }
 
-type LibraryFilterTab = "all" | "suggestions" | "favorites" | "folders";
+export type LibraryFilterTab = "all" | "folders" | "graph";
 type ViewLayout = "grid" | "list";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
@@ -53,50 +59,58 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
 
-  // GraphRAG States
-  const [graphQuery, setGraphQuery] = useState("");
-  const [graphMode, setGraphMode] = useState<GraphQueryMode>("hybrid");
-  const [isQueryingGraph, setIsQueryingGraph] = useState(false);
-  const [graphResult, setGraphResult] = useState<GraphQueryResponseData | null>(null);
-  const [graphError, setGraphError] = useState<string | null>(null);
-  const [showSubgraph, setShowSubgraph] = useState(true);
-
   // Bibliometrics States
   const [folderBibliometrics, setFolderBibliometrics] = useState<BibliometricsResponseData | null>(null);
   const [isLoadingBibliometrics, setIsLoadingBibliometrics] = useState(false);
   const [showBibliometrics, setShowBibliometrics] = useState(false);
 
   // Modals state
-  const [selectedParseDoc, setSelectedParseDoc] = useState<DocumentListItem | null>(null);
-  const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [renameFolderTarget, setRenameFolderTarget] = useState<FolderItem | null>(null);
+  const [moveDocTarget, setMoveDocTarget] = useState<DocumentListItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
+
+  // Folders list query
+  const { data: folders = [], refetch: refetchFolders } = useFoldersListQuery();
+  const deleteFolderMutation = useDeleteFolderMutation();
+
+  // Knowledge Graph query (LLM Wiki)
+  const {
+    data: libraryGraphData,
+    isLoading: isLoadingLibraryGraph,
+    refetch: refetchGraph,
+  } = useQuery({
+    queryKey: ["library", "graph", selectedFolderId],
+    queryFn: () => libraryApi.getLibraryGraph(selectedFolderId),
+  });
 
   const {
     data: paginatedData,
     refetch,
   } = useDocumentsList({
+    star: true,
     page: currentPage,
     per_page: 24,
   });
 
-  const starMutation = useStarDocumentMutation();
   const deleteMutation = useDeleteDocumentMutation();
 
   const rawDocuments = useMemo(() => paginatedData?.data || [], [paginatedData]);
   const meta = paginatedData?.meta;
   const totalPages = meta?.total_pages ?? Math.max(1, Math.ceil((meta?.total ?? rawDocuments.length) / 24));
 
-  // Filter based on active tab and search query
-  const documents = useMemo(() => {
-    let result = rawDocuments;
+  const selectedFolder = useMemo(
+    () => folders.find((f) => f.id === selectedFolderId) || null,
+    [folders, selectedFolderId]
+  );
 
-    if (activeTab === "favorites") {
-      result = result.filter((d) => Boolean(d.starred_at || d.folder_id));
-    } else if (activeTab === "suggestions") {
-      result = result.slice(0, 6);
-    } else if (activeTab === "folders" && selectedFolderId) {
+  // Filter based on active tab and search query - strict persistence for My Library
+  const documents = useMemo(() => {
+    let result = rawDocuments.filter((d) => Boolean(d.is_persistent || d.starred_at || d.folder_id));
+
+    if (activeTab === "folders" && selectedFolderId) {
       result = result.filter((d) => d.folder_id === selectedFolderId);
     }
 
@@ -141,42 +155,25 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     }
   }, [selectedFolderId, activeTab]);
 
-  const handleGraphSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const query = graphQuery.trim();
-    if (!query) return;
-
-    setIsQueryingGraph(true);
-    setGraphError(null);
-    try {
-      const res = await libraryApi.queryGraph({
-        query,
-        mode: graphMode,
-        folder_id: selectedFolderId || null,
-      });
-      setGraphResult(res);
-      setShowSubgraph(true);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Truy vấn GraphRAG thất bại. Vui lòng thử lại.";
-      setGraphError(message);
-    } finally {
-      setIsQueryingGraph(false);
-    }
-  };
-
   const handleToggleStar = async (doc: DocumentListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      if (doc.starred_at) {
-        // Unstar
-        await starMutation.mutateAsync({ documentId: doc.id, folderId: null });
-      } else {
-        // Open star modal to pick folder or star directly
-        setSelectedStarDoc(doc);
+    setMoveDocTarget(doc);
+  };
+
+  const handleDeleteFolder = async (folder: FolderItem) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete folder "${folder.name}"? Papers inside will remain in All Papers.`
+      )
+    ) {
+      try {
+        await deleteFolderMutation.mutateAsync(folder.id);
+        if (selectedFolderId === folder.id) {
+          setSelectedFolderId(null);
+        }
+      } catch (err) {
+        console.warn("Failed to delete folder:", err);
       }
-    } catch (err) {
-      console.warn("Failed to toggle star:", err);
     }
   };
 
@@ -187,27 +184,33 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await ingest(file);
-      refetch();
+      try {
+        await documentsApi.uploadDocument(
+          file,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          selectedFolderId || undefined
+        );
+        refetch();
+        refetchGraph();
+      } catch (err) {
+        console.warn("Direct library upload failed, falling back to ingestion:", err);
+        await ingest(file);
+        refetch();
+        refetchGraph();
+      }
     }
   };
 
   const handleDelete = async (docId: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (window.confirm("Bạn có chắc chắn muốn xóa tài liệu này khỏi thư viện?")) {
+    if (window.confirm("Are you sure you want to delete this document from your library?")) {
       try {
         await deleteMutation.mutateAsync(docId);
       } catch (err) {
         console.warn("Failed to delete document:", err);
-      }
-    }
-  };
-
-  const handleEdgeSelect = (edge: GraphEdge) => {
-    if (edge.document_id && onSelectDocument) {
-      const matched = rawDocuments.find((d) => d.id === edge.document_id);
-      if (matched) {
-        onSelectDocument(matched);
       }
     }
   };
@@ -223,7 +226,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           </div>
           <div>
             <h1 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
-              Library
+              My Library
             </h1>
             <p className="text-[11px] text-muted dark:text-zinc-400">
               {meta?.total ?? rawDocuments.length} documents
@@ -298,10 +301,9 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       <div className="px-6 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#f8f6f0] dark:bg-[#1a1916] flex items-center justify-between shrink-0 overflow-x-auto">
         <div className="flex items-center gap-1 text-xs font-medium">
           {[
-            { id: "all" as const, label: "All", icon: Library },
-            { id: "suggestions" as const, label: "Suggested", icon: Sparkles },
-            { id: "favorites" as const, label: "Starred", icon: Star },
+            { id: "all" as const, label: "All Papers", icon: Library },
             { id: "folders" as const, label: "Folders", icon: Folder },
+            { id: "graph" as const, label: "Knowledge Graph", icon: Share2 },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -324,10 +326,10 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           <button
             type="button"
             onClick={() => setShowBibliometrics(!showBibliometrics)}
-            className="px-2.5 py-1 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink-muted hover:text-ink dark:text-zinc-300 flex items-center gap-1.5 transition-colors"
+            className="px-2.5 py-1 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink-muted hover:text-ink dark:text-zinc-300 flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#c15f3e]" />
-            <span>{showBibliometrics ? "Ẩn Thư mục học" : "Xem Thư mục học"}</span>
+            <span>{showBibliometrics ? "Hide Bibliometrics" : "View Bibliometrics"}</span>
           </button>
         )}
       </div>
@@ -335,129 +337,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       {/* 3. Main Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* A. GraphRAG Smart Dual-Level Search Box */}
-          <div className="rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] bg-white dark:bg-[#1c1b18] p-4 shadow-xs">
-            <form onSubmit={handleGraphSearch} className="space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted font-mono">
-                    Chế độ Tra Cứu Tri Thức:
-                  </span>
-                  <div className="flex items-center bg-[#f4f0e8] dark:bg-[#262420] p-0.5 rounded-lg border border-[#e5dfd5] dark:border-[#302d28]">
-                    {(
-                      [
-                        { id: "hybrid" as const, label: "Hybrid" },
-                        { id: "local" as const, label: "Local" },
-                        { id: "global" as const, label: "Global" },
-                      ] as const
-                    ).map((m) => (
-                      <button
-                        key={m.id}
-                        type="button"
-                        onClick={() => setGraphMode(m.id)}
-                        className={cn(
-                          "px-2.5 py-1 rounded-md text-xs font-medium transition-all cursor-pointer",
-                          graphMode === m.id
-                            ? "bg-white dark:bg-[#1c1b18] text-[#c15f3e] font-semibold shadow-xs"
-                            : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
-                        )}
-                      >
-                        {m.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {selectedFolderId && (
-                  <span className="text-[11px] font-mono text-muted dark:text-zinc-400">
-                    Lọc theo thư mục đang chọn
-                  </span>
-                )}
-              </div>
-
-              <div className="relative flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={graphQuery}
-                    onChange={(e) => setGraphQuery(e.target.value)}
-                    placeholder="Hỏi đáp SOTA, đối chiếu mô hình hoặc tra cứu đồ thị..."
-                    className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[#faf8f4] dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#322f2a] text-xs text-ink dark:text-zinc-100 placeholder:text-muted dark:placeholder:text-zinc-500 outline-none focus:border-[#c15f3e] transition-colors"
-                  />
-                  {graphQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setGraphQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  data-testid="graphrag-search-submit"
-                  disabled={isQueryingGraph || !graphQuery.trim()}
-                  className="h-10 px-4 rounded-xl bg-[#c15f3e] hover:bg-[#a84f32] disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                >
-                  {isQueryingGraph ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )}
-                  <span>Tra cứu</span>
-                </button>
-              </div>
-            </form>
-
-            {graphError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs">
-                {graphError}
-              </div>
-            )}
-
-            {/* Synthesized Answer & Subgraph */}
-            {graphResult && (
-              <div className="mt-4 pt-4 border-t border-[#ece8df] dark:border-[#282622] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <h3 className="text-xs font-semibold text-ink dark:text-zinc-100 uppercase tracking-wider font-mono">
-                      Câu Trả Lời Tổng Hợp ({graphResult.mode_used})
-                    </h3>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSubgraph(!showSubgraph)}
-                    className="text-xs text-muted hover:text-ink dark:text-zinc-400 flex items-center gap-1"
-                  >
-                    <span>{showSubgraph ? "Thu gọn đồ thị" : "Xem đồ thị tri thức"}</span>
-                    {showSubgraph ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#faf8f4] dark:bg-[#1a1916] border border-[#ece8df] dark:border-[#2a2824] text-xs leading-relaxed text-ink dark:text-zinc-200 whitespace-pre-wrap">
-                  {graphResult.answer}
-                </div>
-
-                {showSubgraph && graphResult.subgraph && (
-                  <KnowledgeSubgraphViewer
-                    subgraph={graphResult.subgraph}
-                    onEdgeSelect={handleEdgeSelect}
-                    height={440}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* B. Bibliometrics Card (when toggled or available in folder) */}
+          {/* A. Bibliometrics Card (when toggled or available in folder) */}
           {activeTab === "folders" && (showBibliometrics || folderBibliometrics) && (
             <BibliometricsPriorWorksCard
               data={folderBibliometrics}
@@ -465,26 +345,130 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             />
           )}
 
-          {/* C. Documents and Folders Hierarchy */}
-          {activeTab === "folders" ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="md:col-span-1 bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
-                <FolderTreeView
-                  selectedFolderId={selectedFolderId}
-                  onSelectFolder={(folderId) => setSelectedFolderId(folderId)}
-                />
+          {/* C. Knowledge Graph (LLM Wiki) OR Documents and Folders Hierarchy */}
+          {activeTab === "graph" ? (
+            <div className="h-[640px] w-full rounded-2xl overflow-hidden border border-[#e8e4dc] dark:border-[#2a2824] shadow-xs">
+              <KnowledgeGraphCanvas
+                graphData={libraryGraphData || null}
+                isLoading={isLoadingLibraryGraph}
+                onSelectDocument={(doc) => onSelectDocument?.(doc as any)}
+              />
+            </div>
+          ) : activeTab === "folders" ? (
+            !selectedFolderId ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2">
+                  <div>
+                    <h2 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
+                      Folders
+                    </h2>
+                    <p className="text-xs text-muted dark:text-zinc-400">
+                      Organize your research papers by project and topic.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateFolderOpen(true)}
+                    className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xs transition-colors cursor-pointer"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>New Folder</span>
+                  </button>
+                </div>
+
+                {folders.length === 0 ? (
+                  <div className="p-12 text-center rounded-2xl border border-dashed border-[#e2dcd2] dark:border-[#2e2b26] bg-[#f8f6f0]/50 dark:bg-[#1a1916]/50">
+                    <Folder className="w-8 h-8 text-muted dark:text-zinc-600 mx-auto mb-2" />
+                    <p className="text-sm font-anthropic-serif font-semibold text-ink dark:text-zinc-200">
+                      No folders yet
+                    </p>
+                    <p className="text-xs text-muted dark:text-zinc-400 mt-1 mb-4">
+                      Create your first folder to organize your library.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateFolderOpen(true)}
+                      className="h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white transition-colors cursor-pointer"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      <span>New Folder</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {folders.map((folder) => {
+                      const count = rawDocuments.filter((d) => d.folder_id === folder.id).length;
+                      return (
+                        <FolderCard
+                          key={folder.id}
+                          folder={folder}
+                          paperCount={count}
+                          onClick={() => setSelectedFolderId(folder.id)}
+                          onRename={(f) => setRenameFolderTarget(f)}
+                          onDelete={(f) => handleDeleteFolder(f)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="md:col-span-3">
+            ) : (
+              <div className="space-y-4">
+                {/* Drill-down Header with Breadcrumb */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#ece8df] dark:border-[#282622]">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFolderId(null)}
+                      className="h-8 px-2.5 rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Folders</span>
+                    </button>
+                    <div>
+                      <h2 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100 flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-[#c15f3e]" />
+                        <span>{selectedFolder?.name || "Folder"}</span>
+                        <span className="text-xs font-normal text-muted dark:text-zinc-400 font-mono">
+                          ({documents.length} {documents.length === 1 ? "paper" : "papers"})
+                        </span>
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {selectedFolder && (
+                      <button
+                        type="button"
+                        onClick={() => setRenameFolderTarget(selectedFolder)}
+                        className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-black/5 transition-colors cursor-pointer"
+                        title="Rename Folder"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleUploadClick}
+                      className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Upload PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Folder Papers Grid */}
                 <DocumentGrid
                   documents={documents}
                   viewLayout={viewLayout}
                   onToggleStar={handleToggleStar}
                   onSelectDocument={onSelectDocument}
-                  onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
+                  onMoveFolder={(doc) => setMoveDocTarget(doc)}
                   onDelete={handleDelete}
                 />
               </div>
-            </div>
+            )
           ) : (
             <div className="space-y-6">
               <DocumentGrid
@@ -492,7 +476,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 viewLayout={viewLayout}
                 onToggleStar={handleToggleStar}
                 onSelectDocument={onSelectDocument}
-                onOpenParseConfig={(doc) => setSelectedParseDoc(doc)}
+                onMoveFolder={(doc) => setMoveDocTarget(doc)}
                 onDelete={handleDelete}
               />
 
@@ -527,25 +511,41 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
         </div>
       </div>
 
-      {/* Parse Config Modal */}
-      {selectedParseDoc && (
-        <ParseConfigModal
-          documentId={selectedParseDoc.id}
-          documentTitle={selectedParseDoc.title || selectedParseDoc.filename}
-          isOpen={Boolean(selectedParseDoc)}
-          onClose={() => setSelectedParseDoc(null)}
-        />
-      )}
+      {/* Floating GraphRAG Assistant Bubble */}
+      <GraphRagAssistantFab folderId={selectedFolderId} />
 
-      {/* Star Document Modal */}
-      {selectedStarDoc && (
-        <StarDocumentModal
-          documentId={selectedStarDoc.id}
-          documentTitle={selectedStarDoc.title || selectedStarDoc.filename}
-          isStarred={Boolean(selectedStarDoc.starred_at)}
-          isOpen={Boolean(selectedStarDoc)}
-          onClose={() => setSelectedStarDoc(null)}
-          onStarSuccess={() => refetch()}
+      {/* Create Folder Modal */}
+      <CreateFolderModal
+        isOpen={isCreateFolderOpen}
+        onClose={() => setIsCreateFolderOpen(false)}
+        onSuccess={(id) => {
+          refetchFolders();
+          setSelectedFolderId(id);
+        }}
+      />
+
+      {/* Rename Folder Modal */}
+      <RenameFolderModal
+        isOpen={Boolean(renameFolderTarget)}
+        folder={renameFolderTarget}
+        onClose={() => setRenameFolderTarget(null)}
+        onSuccess={() => {
+          refetchFolders();
+        }}
+      />
+
+      {/* Move Document to Folder Modal */}
+      {moveDocTarget && (
+        <MoveToFolderModal
+          isOpen={Boolean(moveDocTarget)}
+          documentId={moveDocTarget.id}
+          documentTitle={moveDocTarget.title || moveDocTarget.filename}
+          currentFolderId={moveDocTarget.folder_id}
+          onClose={() => setMoveDocTarget(null)}
+          onSuccess={() => {
+            refetch();
+            refetchFolders();
+          }}
         />
       )}
     </div>
@@ -557,7 +557,7 @@ interface DocumentGridProps {
   viewLayout: ViewLayout;
   onToggleStar: (doc: DocumentListItem, e: React.MouseEvent) => void;
   onSelectDocument?: (doc: DocumentListItem) => void;
-  onOpenParseConfig: (doc: DocumentListItem) => void;
+  onMoveFolder: (doc: DocumentListItem) => void;
   onDelete: (docId: string, e: React.MouseEvent) => void;
 }
 
@@ -566,7 +566,7 @@ function DocumentGrid({
   viewLayout,
   onToggleStar,
   onSelectDocument,
-  onOpenParseConfig,
+  onMoveFolder,
   onDelete,
 }: DocumentGridProps) {
   if (documents.length === 0) {
@@ -633,28 +633,36 @@ function DocumentGrid({
                   {doc.publication_year ?? "—"}
                 </td>
                 <td className="py-3 px-4">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-emerald-500/10 text-emerald-700 dark:text-emerald-400">
-                    {doc.status}
-                  </span>
+                  {doc.status !== "completed" && (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-amber-500/10 text-amber-700 dark:text-amber-400">
+                      {doc.status}
+                    </span>
+                  )}
                 </td>
                 <td className="py-3 px-4 text-right">
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenParseConfig(doc);
-                    }}
-                    className="px-2 py-1 text-[11px] rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer mr-1"
-                  >
-                    Config
-                  </button>
-                  <button
-                    type="button"
-                    onClick={(e) => onDelete(doc.id, e)}
-                    className="px-2 py-1 text-[11px] rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      type="button"
+                      data-testid={`doc-move-btn-${doc.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveFolder(doc);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                      title="Move to Folder"
+                    >
+                      <FolderInput className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      data-testid={`doc-delete-btn-${doc.id}`}
+                      onClick={(e) => onDelete(doc.id, e)}
+                      className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
+                      title="Delete document"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -706,24 +714,30 @@ function DocumentGrid({
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-[#f0eae1] dark:border-[#262420] text-[10px] text-muted dark:text-zinc-500">
-            <span className="font-mono">{doc.status}</span>
+            <span className="font-mono">
+              {doc.status !== "completed" ? doc.status : ""}
+            </span>
             <div className="flex items-center gap-1">
               <button
                 type="button"
+                data-testid={`doc-move-btn-${doc.id}`}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onOpenParseConfig(doc);
+                  onMoveFolder(doc);
                 }}
-                className="px-1.5 py-0.5 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                title="Move to Folder"
               >
-                Config
+                <FolderInput className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
+                data-testid={`doc-delete-btn-${doc.id}`}
                 onClick={(e) => onDelete(doc.id, e)}
-                className="px-1.5 py-0.5 rounded hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer"
+                className="p-1 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
+                title="Delete document"
               >
-                Delete
+                <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

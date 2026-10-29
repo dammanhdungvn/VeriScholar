@@ -2,6 +2,7 @@ import { useRef, useEffect, useState } from "react";
 import { Copy, Check, ThumbsUp, ThumbsDown, Square, Sparkles, User, Brain } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
 import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
+import { TypingWaveIndicator } from "@/components/shared/TypingWaveIndicator";
 import { PresuppositionBanner } from "./PresuppositionBanner";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -63,7 +64,7 @@ export function DashboardChatStreamView({
 
             <div className="space-y-1.5">
               <h3 className="font-serif font-semibold text-base text-ink dark:text-zinc-100">
-                Socratic Copilot sẵn sàng đối thoại
+                Socratic Assistant sẵn sàng đối thoại
               </h3>
               <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans max-w-md mx-auto">
                 Đặt câu hỏi nghiên cứu hoặc chọn gợi ý để đối thoại phản biện.
@@ -138,12 +139,6 @@ export function DashboardChatStreamView({
               <div className="flex-1 space-y-3 min-w-0">
                 <div className="text-3xs font-mono font-medium text-muted dark:text-zinc-500 flex items-center gap-2">
                   <span className="font-semibold text-ink dark:text-zinc-300 font-anthropic-sans">Socratic</span>
-                  {message.is_streaming && (
-                    <span className="inline-flex items-center gap-1 text-coral-600 dark:text-coral-400 animate-pulse">
-                      <span className="w-1.5 h-1.5 rounded-full bg-coral-500" />
-                      <span>Đang suy luận...</span>
-                    </span>
-                  )}
                 </div>
 
                 {/* Collapsible Reasoning / Thinking Tokens if available */}
@@ -171,6 +166,13 @@ export function DashboardChatStreamView({
                   </details>
                 )}
 
+                {/* Pre-content Typing Wave Indicator */}
+                {message.is_streaming && !message.content && !message.thought && (
+                  <div className="py-1">
+                    <TypingWaveIndicator />
+                  </div>
+                )}
+
                 {/* Socratic Presupposition Alert if detected */}
                 {message.presupposition_alert && (
                   <PresuppositionBanner alert={message.presupposition_alert} />
@@ -179,6 +181,7 @@ export function DashboardChatStreamView({
                 {/* Formatted Markdown, KaTeX Math & Inline Citations */}
                 <AcademicMarkdownRenderer
                   content={message.content}
+                  isStreaming={message.is_streaming}
                   citations={message.citations}
                   onCitationClick={(citationOrId, maybeCitId) => {
                     const citId = typeof citationOrId === "string" ? citationOrId : (maybeCitId || "");
@@ -257,7 +260,7 @@ export function DashboardChatStreamView({
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white dark:bg-[#252320] border border-[#e5dfd4] dark:border-zinc-700/60 text-ink dark:text-zinc-200 text-xs font-sans shadow-xs hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
             >
               <Square className="w-3 h-3 fill-current text-coral-500" />
-              <span>Dừng suy luận</span>
+              <span>Dừng</span>
             </button>
           </div>
         )}

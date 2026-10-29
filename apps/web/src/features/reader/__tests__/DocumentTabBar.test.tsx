@@ -43,4 +43,26 @@ describe("DocumentTabBar 5-document cap invariant", () => {
     // Must NOT have any button for adding document or 5-document eviction trigger
     expect(screen.queryByRole("button", { name: /bài báo/i })).not.toBeInTheDocument();
   });
+
+  it("renders tab close button with X icon and hover red style, and does not render star icon on tabs", () => {
+    const onCloseDocument = vi.fn();
+    render(
+      <DocumentTabBar
+        documents={mockDocs.slice(0, 2)}
+        openDocumentIds={["doc-1", "doc-2"]}
+        activeDocumentId="doc-1"
+        onSelectDocument={vi.fn()}
+        onCloseDocument={onCloseDocument}
+        onAddDocument={vi.fn()}
+      />
+    );
+    // Star icon must not be in document tabs
+    expect(screen.queryByLabelText(/Lưu bài báo vào thư viện/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/Đã lưu vào thư viện/i)).not.toBeInTheDocument();
+
+    // Close button should have X icon and red hover class
+    const closeBtn = screen.getByLabelText("Đóng tab paper1.pdf");
+    expect(closeBtn).toBeInTheDocument();
+    expect(closeBtn.className).toContain("hover:text-rose-600");
+  });
 });

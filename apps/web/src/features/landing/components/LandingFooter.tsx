@@ -21,7 +21,7 @@ export function LandingFooter() {
             </p>
 
             <p className="font-sans text-xs text-on-dark-soft leading-relaxed">
-              Mọi khẳng định, số liệu và công thức đều được đối soát và bảo chứng nguồn gốc thông qua <strong>hộp trích dẫn trực quan</strong> trên trang PDF gốc. Kết hợp cùng trợ lý <strong>Socratic Copilot</strong> gợi mở tư duy và cam kết bảo mật tuyệt đối cho các bản thảo nghiên cứu chưa công bố.
+              Mọi khẳng định, số liệu và công thức đều được đối soát và bảo chứng nguồn gốc thông qua <strong>hộp trích dẫn trực quan</strong> trên trang PDF gốc. Kết hợp cùng trợ lý <strong>Socratic Assistant</strong> gợi mở tư duy và cam kết bảo mật tuyệt đối cho các bản thảo nghiên cứu chưa công bố.
             </p>
 
             {/* Core Capability Badges */}
@@ -32,7 +32,7 @@ export function LandingFooter() {
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#22201c] dark:bg-[#201e1b] border border-[#332f28] dark:border-[#332f27]">
                 <Sparkles className="w-3.5 h-3.5 text-[#d97757]" />
-                Socratic Copilot
+                Socratic Assistant
               </span>
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#22201c] dark:bg-[#201e1b] border border-[#332f28] dark:border-[#332f27]">
                 <BookOpen className="w-3.5 h-3.5 text-[#5db8a6]" />

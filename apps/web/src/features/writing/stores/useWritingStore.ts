@@ -11,6 +11,7 @@ interface WritingState {
   editorContent: string;
   editorBibContent: string;
   activeFile: "main.tex" | "references.bib";
+  openFiles: ("main.tex" | "references.bib")[];
   activeHighlightBox: {
     page: number;
     x: number;
@@ -45,6 +46,8 @@ interface WritingState {
   setEditorContent: (content: string) => void;
   setEditorBibContent: (bibContent: string) => void;
   setActiveFile: (file: "main.tex" | "references.bib") => void;
+  openFile: (file: "main.tex" | "references.bib") => void;
+  closeFile: (file: "main.tex" | "references.bib") => void;
   setActiveHighlightBox: (
     box: {
       page: number;
@@ -122,10 +125,11 @@ export const useWritingStore = create<WritingState>((set) => ({
   editorContent: DEFAULT_LATEX_CONTENT,
   editorBibContent: DEFAULT_BIB_CONTENT,
   activeFile: "main.tex",
+  openFiles: ["main.tex", "references.bib"],
   activeHighlightBox: null,
   executionBadges: [],
   editorTitle: "Untitled Draft",
-  workspaceMode: "tri-pane",
+  workspaceMode: "dual-code",
   isDirty: false,
   isSaving: false,
   isCompiling: false,
@@ -175,7 +179,32 @@ export const useWritingStore = create<WritingState>((set) => ({
       isDirty: true,
     }),
 
-  setActiveFile: (activeFile) => set({ activeFile }),
+  setActiveFile: (activeFile) =>
+    set((state) => ({
+      activeFile,
+      openFiles: state.openFiles.includes(activeFile)
+        ? state.openFiles
+        : [...state.openFiles, activeFile],
+    })),
+
+  openFile: (file) =>
+    set((state) => ({
+      activeFile: file,
+      openFiles: state.openFiles.includes(file)
+        ? state.openFiles
+        : [...state.openFiles, file],
+    })),
+
+  closeFile: (file) =>
+    set((state) => {
+      const remaining = state.openFiles.filter((f) => f !== file);
+      const nextActive =
+        state.activeFile === file ? remaining[0] || "main.tex" : state.activeFile;
+      return {
+        openFiles: remaining.length > 0 ? remaining : ["main.tex"],
+        activeFile: nextActive,
+      };
+    }),
 
   setActiveHighlightBox: (activeHighlightBox) => set({ activeHighlightBox }),
 
@@ -241,10 +270,11 @@ export const useWritingStore = create<WritingState>((set) => ({
       editorContent: DEFAULT_LATEX_CONTENT,
       editorBibContent: DEFAULT_BIB_CONTENT,
       activeFile: "main.tex",
+      openFiles: ["main.tex", "references.bib"],
       activeHighlightBox: null,
       executionBadges: [],
       editorTitle: "Untitled Draft",
-      workspaceMode: "tri-pane",
+      workspaceMode: "dual-code",
       isDirty: false,
       isSaving: false,
       isCompiling: false,

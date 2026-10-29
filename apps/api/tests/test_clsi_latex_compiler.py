@@ -40,6 +40,27 @@ def test_auto_engine_detection():
     assert engine_flag3 == "-pdf"
 
 
+def test_detect_engine_selects_xelatex_for_vietnamese_unicode():
+    """Detect XeLaTeX automatically when Unicode Vietnamese characters are present."""
+    vietnamese_tex = r"\title{KIẾN TRÚC MÔ HÌNH SOCRATIC COPILOT: TỰ ĐỘNG PHẢN BIỆN}"
+    engine, flag = CLSILatexCompiler.detect_engine(vietnamese_tex)
+    assert engine == "xelatex"
+    assert flag == "-xelatex"
+
+
+@requires_xelatex
+@pytest.mark.asyncio
+async def test_compile_vietnamese_template_succeeds_with_xelatex(tmp_path):
+    """Compile Vietnamese content succeeds with XeLaTeX."""
+    compiler = CLSILatexCompiler(work_dir=str(tmp_path))
+    content = "\\documentclass{article}\\begin{document}Học giả VeriScholar\\end{document}"
+    res = await compiler.compile(draft_id=uuid4(), main_tex=content)
+    assert res["success"] is True
+    assert res["engine"] == "xelatex"
+    assert res["pdf_path"] is not None
+    assert os.path.exists(res["pdf_path"])
+
+
 @pytest.mark.asyncio
 async def test_compilation_missing_binary_returns_diagnostic(tmp_path):
     """When latexmk executable is missing, compiler returns success=False without crashing."""

@@ -323,3 +323,105 @@ async def test_update_folder_cyclic_hierarchy_rejected(
     body_desc = res_descendant.json()
     code_desc = body_desc.get("error", {}).get("code") or body_desc.get("detail", {}).get("code")
     assert code_desc == "CYCLIC_FOLDER_HIERARCHY"
+
+
+@pytest.mark.asyncio
+async def test_upload_duplicate_document_inherits_persistence(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+) -> None:
+    # 1. Upload first time
+    files = {"file": ("attention.pdf", b"%PDF-1.4 minimal test duplicate body", "application/pdf")}
+    res1 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files)
+    assert res1.status_code in (200, 201, 202)
+    doc1_id = res1.json()["data"]["id"]
+
+    # Star / save to library
+    star_res = await async_client.post(
+        f"/api/v1/documents/{doc1_id}:star",
+        headers=auth_headers,
+        json={"toggle": True},
+    )
+    assert star_res.status_code == 200
+
+    # 2. Upload same content second time
+    files2 = {
+        "file": (
+            "attention_duplicate.pdf",
+            b"%PDF-1.4 minimal test duplicate body",
+            "application/pdf",
+        )
+    }
+    res2 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files2)
+    assert res2.status_code in (200, 201, 202)
+    doc2_data = res2.json()["data"]
+
+    # Unique document record sharing underlying CAS blob, inheriting is_persistent=True!
+    assert doc2_data["id"] != doc1_id
+    assert doc2_data["is_persistent"] is True
+
+
+@pytest.mark.asyncio
+async def test_direct_upload_without_session_marks_is_persistent_true(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+) -> None:
+    files = {
+        "file": (
+            "direct_library_paper.pdf",
+            b"%PDF-1.4 direct library upload test body",
+            "application/pdf",
+        )
+    }
+    res = await async_client.post("/api/v1/documents", headers=auth_headers, files=files)
+    assert res.status_code in (200, 201, 202)
+    doc_data = res.json()["data"]
+    # Direct upload from /library without session_id must be persistent!
+    assert doc_data["is_persistent"] is True
+
+
+@pytest.mark.asyncio
+async def test_get_library_graph_empty_and_with_documents(
+    async_client: AsyncClient,
+    auth_headers: dict[str, str],
+    current_user: UserModel,
+    db_session: AsyncSession,
+) -> None:
+    # 1. Fetch graph when no persistent documents exist for a new user
+    res_empty = await async_client.get("/api/v1/library/graph", headers=auth_headers)
+    assert res_empty.status_code == 200
+    empty_data = res_empty.json()["data"]
+    assert "nodes" in empty_data
+    assert "edges" in empty_data
+
+    # 2. Upload two persistent documents
+    files1 = {
+        "file": (
+            "graph_paper_1.pdf",
+            b"%PDF-1.4 graph paper one contents",
+            "application/pdf",
+        )
+    }
+    res1 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files1)
+    assert res1.status_code in (200, 201, 202)
+    doc1_id = res1.json()["data"]["id"]
+
+    files2 = {
+        "file": (
+            "graph_paper_2.pdf",
+            b"%PDF-1.4 graph paper two contents",
+            "application/pdf",
+        )
+    }
+    res2 = await async_client.post("/api/v1/documents", headers=auth_headers, files=files2)
+    assert res2.status_code in (200, 201, 202)
+    doc2_id = res2.json()["data"]["id"]
+
+    # 3. Fetch graph again - should contain Paper nodes for both documents
+    res_graph = await async_client.get("/api/v1/library/graph", headers=auth_headers)
+    assert res_graph.status_code == 200
+    graph_data = res_graph.json()["data"]
+    node_ids = [n["id"] for n in graph_data["nodes"]]
+    assert doc1_id in node_ids
+    assert doc2_id in node_ids
+    assert graph_data["total_nodes"] >= 2

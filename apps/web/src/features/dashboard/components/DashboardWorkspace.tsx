@@ -18,9 +18,8 @@ import {
   Moon,
   PanelLeft,
   FileText,
-  Maximize2,
   Minimize2,
-  Brain,
+  X,
 } from "lucide-react";
 import type { ChatMessage } from "@/types/dashboard";
 import type { BoundingBox } from "@/types/api";
@@ -38,6 +37,7 @@ import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
 import { DocumentGroundedSummaryCard } from "./DocumentGroundedSummaryCard";
 import { PresuppositionBanner } from "./PresuppositionBanner";
+import { SocraticThinkingBlock } from "./SocraticThinkingBlock";
 import { DashboardChatInputBox } from "./DashboardChatInputBox";
 import { DocumentTabBar } from "@/features/reader/components/DocumentTabBar";
 import { ViewportControls } from "@/features/reader/components/ViewportControls";
@@ -51,7 +51,6 @@ import { CreateNoteDialog } from "@/features/notes/components/CreateNoteDialog";
 import { AddDocumentModal } from "@/features/sessions/components/AddDocumentModal";
 import { SessionSettingsModal } from "@/features/sessions/components/SessionSettingsModal";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
-import { WorkspaceToolsMenu } from "./WorkspaceToolsMenu";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useQueryClient } from "@tanstack/react-query";
@@ -93,19 +92,20 @@ interface DashboardWorkspaceProps {
   documentCount?: number;
   createdAt?: string;
   onDeletedSession?: () => void;
+  initialAssistantOpen?: boolean;
 }
 
 
 
 export function DashboardWorkspace({
-  messages,
-  inputText,
-  onChangeText,
-  onSend,
-  isGenerating,
-  onStopGeneration,
+  messages = [],
+  inputText = "",
+  onChangeText = () => {},
+  onSend = () => {},
+  isGenerating = false,
+  onStopGeneration = () => {},
   onUploadFile,
-  onResetChat,
+  onResetChat = () => {},
   summary = null,
   sessionId,
   sessionTitle,
@@ -113,7 +113,9 @@ export function DashboardWorkspace({
   documentCount = 1,
   createdAt = new Date().toISOString(),
   onDeletedSession,
-}: DashboardWorkspaceProps) {
+  initialAssistantOpen = true,
+}: Partial<DashboardWorkspaceProps> = {}) {
+  const [isAssistantOpen, setIsAssistantOpen] = useState(initialAssistantOpen);
   // Store States
   const activeBboxStore = useDashboardStore((s) => s.activeBbox);
   const setActiveBboxStore = useDashboardStore((s) => s.setActiveBbox);
@@ -241,6 +243,7 @@ export function DashboardWorkspace({
   const rotationDeg = useReaderStore((s) => s.rotationDeg);
   const rotateClockwise = useReaderStore((s) => s.rotateClockwise);
   const activeBboxReader = useReaderStore((s) => s.activeBbox);
+  const activeBboxesReader = useReaderStore((s) => s.activeBboxes);
   const setActiveCitation = useReaderStore((s) => s.setActiveCitation);
 
   // Active Bbox Synchronization
@@ -366,38 +369,20 @@ export function DashboardWorkspace({
   const addSessionDocMutation = useAddSessionDocumentMutation();
   const createNoteMutation = useCreateNoteMutation();
 
-  // Auto-select latest/first real document if none is actively selected and no session is active
-  useEffect(() => {
-    if (!activeSessionId && documentsData?.data && documentsData.data.length > 0) {
-      if (!activeDocumentId || activeDocumentId === "doc-default") {
-        const firstDoc = documentsData.data[0];
-        setActiveDocumentId(firstDoc.id);
-        setDocument(firstDoc.id, firstDoc.title || firstDoc.filename);
-      }
-    }
-  }, [activeSessionId, documentsData?.data, activeDocumentId, setActiveDocumentId, setDocument]);
-
   const currentDocTitle =
     documentDetail?.title ||
     workspaceDocTitle ||
-    documentsData?.data?.[0]?.title ||
-    documentsData?.data?.[0]?.filename ||
     "Tài liệu nghiên cứu";
 
   // Effective Documents List for Multi-Paper Tab Bar
   const effectiveOpenIds = useMemo(() => {
     if (openDocumentIds.length > 0) return openDocumentIds;
     if (activeDocumentId && activeDocumentId !== "doc-default") return [activeDocumentId];
-    if (documentsData?.data && documentsData.data.length > 0) {
-      return [documentsData.data[0].id];
-    }
-    if (workspaceDocId && workspaceDocId !== "doc-default") {
-      return [workspaceDocId];
-    }
     return [];
-  }, [openDocumentIds, activeDocumentId, documentsData, workspaceDocId]);
+  }, [openDocumentIds, activeDocumentId]);
 
   const effectiveDocuments: DocumentListItem[] = useMemo(() => {
+    if (effectiveOpenIds.length === 0) return [];
     if (documentsData?.data && documentsData.data.length > 0) {
       return documentsData.data;
     }
@@ -414,7 +399,7 @@ export function DashboardWorkspace({
       ];
     }
     return [];
-  }, [documentsData, workspaceDocId, currentDocTitle]);
+  }, [effectiveOpenIds.length, documentsData, workspaceDocId, currentDocTitle]);
 
   // Page Sync when activeBbox changes
   useEffect(() => {
@@ -423,10 +408,17 @@ export function DashboardWorkspace({
     }
   }, [activeBbox, setCurrentPage]);
 
-  // Scroll active Bbox into view
+  // Scroll active Bbox into view locally inside viewer container
   useEffect(() => {
-    if (activeBbox && activeBbox[4] && bboxRef.current && typeof bboxRef.current.scrollIntoView === "function") {
-      bboxRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (activeBbox && activeBbox[4] && bboxRef.current) {
+      const container = bboxRef.current.closest<HTMLElement>(".overflow-auto, .overflow-y-auto");
+      if (container && typeof container.scrollTo === "function") {
+        const containerRect = container.getBoundingClientRect();
+        const bboxRect = bboxRef.current.getBoundingClientRect();
+        const relativeTop = bboxRect.top - containerRect.top + container.scrollTop;
+        const targetScrollTop = relativeTop - container.clientHeight / 2 + bboxRect.height / 2;
+        container.scrollTo({ top: Math.max(0, targetScrollTop), behavior: "smooth" });
+      }
     }
   }, [activeBbox]);
 
@@ -544,6 +536,18 @@ export function DashboardWorkspace({
     }
   };
 
+  const handleAddByFile = async (file: File) => {
+    const uploaded = await documentsApi.uploadDocument(file, activeSessionId || undefined);
+    if (uploaded?.id) {
+      addOpenDocument(uploaded.id);
+      setActiveDocumentId(uploaded.id);
+      queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.lists() });
+      if (activeSessionId) {
+        queryClient.invalidateQueries({ queryKey: ["sessions", activeSessionId, "documents"] });
+      }
+    }
+  };
+
   const handleAddToNote = (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => {
     setNoteInitialText(selectedText);
     setNotePageNumber(pageNumber);
@@ -612,6 +616,12 @@ export function DashboardWorkspace({
   const sessionDetailQuery = useSessionDetail(activeSessionId);
   const updateViewportMutation = useUpdateSessionViewportMutation();
   const sessionVersion = sessionDetailQuery.data?.data.version ?? initialSessionVersion;
+
+  const isResolvingDocument = Boolean(
+    isLoadingDocs ||
+    isLoadingDocDetail ||
+    sessionDetailQuery.isLoading
+  );
 
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
 
@@ -734,9 +744,10 @@ export function DashboardWorkspace({
   return (
     <div
       ref={workspaceContainerRef}
+      data-testid="dashboard-workspace-root"
       onContextMenu={handleContextMenu}
       className={cn(
-        "flex-1 flex flex-col md:flex-row h-full overflow-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
+        "flex-1 flex flex-col md:flex-row h-screen overflow-hidden overflow-x-hidden bg-[#faf9f5] dark:bg-[#181715] select-text relative",
         isDraggingSplit && "select-none cursor-col-resize"
       )}
     >
@@ -758,7 +769,7 @@ export function DashboardWorkspace({
           </span>
         </div>
 
-        {/* Center/Right: Segmented Switcher Pill [ 📄 Xem Bài Báo ] [ 💬 Socratic Copilot ] */}
+        {/* Center/Right: Segmented Switcher Pill [ 📄 Xem Bài Báo ] [ 💬 Socratic Assistant ] */}
         <div className="inline-flex p-0.5 rounded-lg bg-[#eee9df] dark:bg-[#24221f] text-xs font-medium border border-hairline/60">
           <button
             type="button"
@@ -795,8 +806,9 @@ export function DashboardWorkspace({
       {/* 1. LEFT PANE: MULTI-PAPER DEEP READER CANVAS (1 - 5 PAPERS)              */}
       {/* ========================================================================= */}
       <section
+        data-testid="paper-reader-container"
         style={
-          zenMode === "pdf"
+          !isAssistantOpen || zenMode === "pdf"
             ? { width: "100%" }
             : zenMode === "workspace"
             ? { display: "none" }
@@ -805,7 +817,9 @@ export function DashboardWorkspace({
               } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full w-full md:w-[var(--split-ratio)] md:min-w-[320px] border-b-0 md:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18] overflow-hidden transition-[width] duration-75",
+          "flex flex-col h-full overflow-hidden transition-[width] duration-75",
+          isAssistantOpen && zenMode === "none" && "w-full md:w-[var(--split-ratio)] md:min-w-[320px] border-b-0 md:border-r border-[#e6dfd8] dark:border-[#2a2824] bg-[#faf8f4] dark:bg-[#1c1b18]",
+          (!isAssistantOpen || zenMode === "pdf") && "w-full md:w-full border-r-0 bg-[#faf8f4] dark:bg-[#1c1b18]",
           zenMode === "workspace" && "hidden md:hidden",
           zenMode === "pdf" && "w-full",
           mobileActiveView === "reader" ? "flex" : "hidden md:flex"
@@ -835,9 +849,16 @@ export function DashboardWorkspace({
           onZoomOut={zoomOut}
           onResetZoom={resetZoom}
           onRotate={rotateClockwise}
-          isZenPdf={zenMode === "pdf"}
-          onToggleZenPdf={() => setZenMode(zenMode === "pdf" ? "none" : "pdf")}
+          isBookmarked={Boolean(effectiveDocuments.find((d) => d.id === (activeDocumentId || effectiveOpenIds[0]))?.is_persistent)}
+          onToggleBookmark={() => {
+            const docId = activeDocumentId || effectiveOpenIds[0];
+            if (docId) handleToggleStar(docId);
+          }}
           onOpenReferences={isRealDocument ? () => setIsRefModalOpen(true) : undefined}
+          onOpenNotes={() => {
+            if (!isAssistantOpen) setIsAssistantOpen(true);
+            setActiveRightTab("notes");
+          }}
         />
 
         {/* Dynamic PDF Canvas Viewport Area */}
@@ -858,6 +879,7 @@ export function DashboardWorkspace({
             zoomRatio={zoomRatio}
             rotationDeg={rotationDeg}
             activeBbox={activeBbox}
+            activeBboxes={activeBboxesReader}
             onPageCountDetected={setTotalPages}
             onClearHighlight={() => {
               setActiveBboxStore(null);
@@ -871,7 +893,7 @@ export function DashboardWorkspace({
               setMobileActiveView("workspace");
             }}
           />
-        ) : ((isRealDocument && (isLoadingDocs || isLoadingDocDetail)) || (bboxStyle && activeBbox)) ? (
+        ) : isResolvingDocument || (bboxStyle && activeBbox) ? (
           <div className="flex-1 overflow-auto p-4 sm:p-6 scrollbar-none flex justify-center bg-[#eae5db]/60 dark:bg-[#141311]">
             <div
               style={{
@@ -982,8 +1004,8 @@ export function DashboardWorkspace({
         />
       </section>
 
-      {/* Draggable Divider (Tablet & Desktop, Hidden in Zen Modes and Mobile) */}
-      {zenMode === "none" && (
+      {/* Draggable Divider (Tablet & Desktop, Hidden in Zen Modes, Mobile and when Assistant is closed) */}
+      {zenMode === "none" && isAssistantOpen && (
         <div
           role="separator"
           tabIndex={0}
@@ -1009,19 +1031,21 @@ export function DashboardWorkspace({
       {/* 2. RIGHT PANE: SOCRATIC COPILOT, SMART NOTES, SUMMARY & KNOWLEDGE DIGEST */}
       {/* ========================================================================= */}
       <section
+        data-testid="assistant-pane-container"
         onContextMenu={handleContextMenu}
         style={
-          zenMode === "workspace"
-            ? { width: "100%" }
-            : zenMode === "pdf"
+          !isAssistantOpen || zenMode === "pdf"
             ? { display: "none" }
+            : zenMode === "workspace"
+            ? { width: "100%" }
             : ({
                 "--split-ratio-right": `${100 - splitRatio}%`,
               } as React.CSSProperties)
         }
         className={cn(
-          "flex flex-col h-full w-full md:w-[var(--split-ratio-right)] md:min-w-[320px] bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
-          zenMode === "pdf" && "hidden md:hidden",
+          "flex flex-col h-full bg-[#faf9f5] dark:bg-[#181715] overflow-hidden relative transition-[width] duration-75",
+          (!isAssistantOpen || zenMode === "pdf") && "hidden md:hidden",
+          isAssistantOpen && zenMode === "none" && "w-full md:w-[var(--split-ratio-right)] md:min-w-[320px]",
           zenMode === "workspace" && "w-full",
           mobileActiveView === "workspace" ? "flex" : "hidden md:flex"
         )}
@@ -1042,173 +1066,34 @@ export function DashboardWorkspace({
             </button>
           </div>
         )}
-        {/* Right Pane Navigation Tab Bar */}
-        <header className="h-11 px-2.5 sm:px-3 bg-white/70 dark:bg-[#1c1b18]/70 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-1.5 sm:gap-2">
-          {/* 5 Tab Switchers with horizontal scroll and no shrink */}
-          <nav
-            role="tablist"
-            aria-label="Các khung tính năng học thuật"
-            className="flex items-center gap-1 overflow-x-auto scrollbar-none min-w-0 flex-1 touch-pan-x"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "chat"}
-              onClick={() => setActiveRightTab("chat")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "chat"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              <span className="sr-only">Đối thoại</span>
-              <span className="whitespace-nowrap">Chat</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "notes"}
-              onClick={() => setActiveRightTab("notes")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "notes"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <BookMarked className="w-3.5 h-3.5" />
-              <span className="sr-only">Sổ tay</span>
-              <span className="whitespace-nowrap">Notes</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "summary"}
-              onClick={() => setActiveRightTab("summary")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "summary"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
+        {/* Assistant Header (Clean Minimalist Header) */}
+        <header
+          data-testid="assistant-header"
+          className="h-11 px-3 bg-white/80 dark:bg-[#1c1b18]/80 backdrop-blur-sm border-b border-[#e6dfd8] dark:border-[#2a2824] flex items-center justify-between select-none shrink-0 z-10 gap-2"
+        >
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
               <Sparkles className="w-3.5 h-3.5" />
-              <span className="sr-only">Tóm tắt</span>
-              <span className="whitespace-nowrap">Summary</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "structure"}
-              onClick={() => setActiveRightTab("structure")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "structure"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <ListTree className="w-3.5 h-3.5" />
-              <span className="sr-only">Mục lục</span>
-              <span className="hidden sm:inline whitespace-nowrap">Outline</span>
-            </button>
-
-            <button
-              type="button"
-              role="tab"
-              aria-selected={activeRightTab === "references"}
-              onClick={() => setActiveRightTab("references")}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer shrink-0 whitespace-nowrap",
-                activeRightTab === "references"
-                  ? "bg-surface-cream-strong dark:bg-[#2c2925] text-primary font-semibold shadow-2xs border border-hairline"
-                  : "text-muted hover:text-ink hover:bg-surface-soft dark:hover:bg-[#252320]"
-              )}
-            >
-              <Quote className="w-3.5 h-3.5" />
-              <span className="sr-only">Tham khảo</span>
-              <span className="hidden sm:inline whitespace-nowrap">References</span>
-            </button>
-          </nav>
-
-          {/* Right Actions: Cài đặt phiên, Mode Dark/Light, Làm mới hội thoại */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            {/* Desktop wide tools: Cài đặt, Theme */}
-            <div className="hidden md:flex items-center gap-1.5 shrink-0">
-              {/* Session Settings Button */}
-              <button
-                type="button"
-                onClick={() => setIsSettingsOpen(true)}
-                aria-label="Cài đặt phiên nghiên cứu"
-                title="Cài đặt phiên nghiên cứu"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-              >
-                <Settings className="w-3.5 h-3.5" />
-              </button>
-
-              {/* Theme Toggle Button (Dark / Light Mode) */}
-              <button
-                type="button"
-                onClick={toggleTheme}
-                aria-label={isDark ? "Chuyển sang chế độ sáng" : "Chuyển sang chế độ tối"}
-                title={isDark ? "Chế độ sáng" : "Chế độ tối"}
-                className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
-              >
-                {isDark ? (
-                  <Sun className="w-3.5 h-3.5 text-amber-400" />
-                ) : (
-                  <Moon className="w-3.5 h-3.5 text-zinc-600" />
-                )}
-              </button>
             </div>
-
-            {/* Mobile / Narrow Pane Dropdown */}
-            <div className="flex md:hidden items-center shrink-0">
-              <WorkspaceToolsMenu
-                onOpenSettings={() => setIsSettingsOpen(true)}
-                isDark={isDark}
-                onToggleTheme={toggleTheme}
-              />
-            </div>
-
-            {/* Zen Workspace Toggle (Hide PDF) */}
-            <button
-              type="button"
-              data-testid="zen-chat-btn"
-              onClick={() => setZenMode(zenMode === "workspace" ? "none" : "workspace")}
-              aria-label={zenMode === "workspace" ? "Khôi phục chia đôi màn hình" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
-              title={zenMode === "workspace" ? "Khôi phục chia đôi màn hình (Esc)" : "Ẩn PDF / Chế độ đối thoại tập trung (Zen Chat)"}
-              className={cn(
-                "inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs",
-                zenMode === "workspace"
-                  ? "bg-primary text-white border-primary hover:bg-primary/90"
-                  : "bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26]"
-              )}
-            >
-              {zenMode === "workspace" ? (
-                <Minimize2 className="w-3.5 h-3.5" />
-              ) : (
-                <Maximize2 className="w-3.5 h-3.5" />
-              )}
-            </button>
-
-            {/* Right Action: Reset Chat when in chat tab */}
-            {activeRightTab === "chat" && (
-              <button
-                type="button"
-                onClick={onResetChat}
-                title="Làm mới hội thoại"
-                className="p-1.5 rounded-lg hover:bg-[#f0ece3] dark:hover:bg-[#282622] text-ink-muted dark:text-zinc-400 hover:text-ink dark:hover:text-zinc-100 transition-colors cursor-pointer shrink-0"
-              >
-                <RotateCcw className="w-3.5 h-3.5" />
-              </button>
-            )}
+            <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
+              Socratic Assistant
+            </h2>
           </div>
+
+          {/* Close Assistant Button (✕) */}
+          <button
+            type="button"
+            data-testid="close-assistant-btn"
+            onClick={() => {
+              setIsAssistantOpen(false);
+              setMobileActiveView("reader");
+            }}
+            aria-label="Đóng Assistant"
+            title="Đóng Assistant (✕)"
+            className="inline-flex items-center justify-center w-7 h-7 rounded-lg border border-[#e5dfd4] dark:border-[#38332c] bg-white/80 dark:bg-[#252320] hover:bg-[#f5f1ea] dark:hover:bg-[#2e2b26] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 transition-colors cursor-pointer shadow-2xs"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
         </header>
 
         {/* TAB 1: SOCRATIC COPILOT CHAT STREAM */}
@@ -1216,24 +1101,9 @@ export function DashboardWorkspace({
           <>
             <div
               ref={chatScrollRef}
-              className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-6 scrollbar-none"
+              data-testid="chat-scroll-container"
+              className="flex-1 overflow-y-auto overflow-x-hidden px-4 sm:px-6 py-5 space-y-6 scrollbar-none"
             >
-              {/* Header Badge */}
-              <div className="flex items-center justify-between pb-2 border-b border-hairline/60 dark:border-[#282622]">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-[#cc785c]/15 text-[#cc785c] flex items-center justify-center">
-                    <Sparkles className="w-3.5 h-3.5" />
-                  </div>
-                  <div>
-                    <h2 className="font-serif font-bold text-xs sm:text-sm text-ink dark:text-[#f3f2ef] leading-tight">
-                      Socratic Copilot
-                    </h2>
-                  </div>
-                </div>
-              </div>
-
-
-
               {/* Socratic Welcome & Empty State when no messages */}
               {messages.length === 0 && (
                 <div
@@ -1246,7 +1116,7 @@ export function DashboardWorkspace({
 
                   <div className="space-y-1.5">
                     <h3 className="font-serif font-semibold text-sm sm:text-base text-ink dark:text-zinc-100">
-                      Socratic Copilot sẵn sàng đối thoại
+                      Socratic Assistant sẵn sàng đối thoại
                     </h3>
                     <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
                       {isRealDocument
@@ -1335,12 +1205,6 @@ export function DashboardWorkspace({
                         <span className="font-semibold text-ink dark:text-zinc-300 font-anthropic-sans">
                           Socratic
                         </span>
-                        {message.is_streaming && (
-                          <span className="inline-flex items-center gap-1 text-[#cc785c] animate-pulse">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#cc785c]" />
-                            <span>Đang suy luận...</span>
-                          </span>
-                        )}
                       </div>
 
                       {/* Presupposition Alert */}
@@ -1348,34 +1212,15 @@ export function DashboardWorkspace({
                         <PresuppositionBanner alert={message.presupposition_alert} />
                       )}
 
-                      {/* Collapsible Reasoning / Thinking Tokens if available */}
-                      {message.thought && (
-                        <details
-                          open={Boolean(message.is_streaming && !message.content)}
-                          data-testid="reasoning-accordion"
-                          className="group p-2 rounded-xl bg-[#f4efe6]/80 dark:bg-[#211f1c] border border-[#e5dfd4] dark:border-[#332f28] text-2xs font-mono text-muted dark:text-zinc-400"
-                        >
-                          <summary className="cursor-pointer font-medium select-none flex items-center justify-between text-ink dark:text-zinc-300 hover:text-coral-600 dark:hover:text-coral-400 transition-colors">
-                            <div className="flex items-center gap-1.5">
-                              <Brain className="w-3.5 h-3.5 text-coral-500" />
-                              <span aria-hidden="true">Suy luận</span>
-                              <span className="sr-only">Suy luận học thuật</span>
-                            </div>
-                            {message.is_streaming && !message.content && (
-                              <span className="text-3xs text-coral-600 dark:text-coral-400 animate-pulse">
-                                Đang tư duy...
-                              </span>
-                            )}
-                          </summary>
-                          <div className="mt-2 pt-2 border-t border-hairline/60 dark:border-zinc-800 text-3xs font-mono leading-relaxed whitespace-pre-wrap text-zinc-700 dark:text-zinc-300">
-                            {message.thought}
-                          </div>
-                        </details>
+                      {/* Socratic Thinking Block with Agent Activity Stepper */}
+                      {(message.thought || (message.is_streaming && !message.content)) && (
+                        <SocraticThinkingBlock message={message} />
                       )}
 
                       {/* Formatted Assistant Body with Inline Citations */}
                       <AcademicMarkdownRenderer
                         content={message.content}
+                        isStreaming={message.is_streaming}
                         citations={message.citations}
                         onCitationClick={(citationOrId, maybeCitId) => {
                           const citId = typeof citationOrId === "string" ? citationOrId : (maybeCitId || "");
@@ -1397,25 +1242,46 @@ export function DashboardWorkspace({
                               matched = message.citations[0];
                             }
                           }
+                          const targetCitId = (matched as unknown as Record<string, unknown> | null)?.citation_id as string || citId;
+                          const currentActiveCitId = useReaderStore.getState().activeCitationId;
+
+                          // Toggle off if clicking the currently active citation
                           if (
-                            matched?.paper_id &&
-                            matched.paper_id !== activeDocumentId &&
-                            openDocumentIds.includes(matched.paper_id)
+                            currentActiveCitId &&
+                            (currentActiveCitId === targetCitId ||
+                              currentActiveCitId === citId ||
+                              currentActiveCitId === `cit_${citId}` ||
+                              `cit_${currentActiveCitId}` === targetCitId)
                           ) {
-                            setActiveDocumentId(matched.paper_id);
+                            setActiveBboxStore(null);
+                            setActiveCitation(null, null);
+                            return;
                           }
-                          if (matched?.bbox) {
-                            setActiveBboxStore(matched.bbox);
-                            setActiveCitation(matched.paper_id, matched.bbox, matched.page);
-                            const targetPage = matched.bbox[4] || matched.page || 1;
-                            setCurrentPage(targetPage);
-                            useReaderStore.getState().setCurrentPage(targetPage);
-                            setMobileActiveView("reader");
-                          } else if (matched?.page) {
-                            const targetPage = matched.page;
-                            setCurrentPage(targetPage);
-                            useReaderStore.getState().setCurrentPage(targetPage);
-                            setMobileActiveView("reader");
+
+                          if (matched) {
+                            const raw = matched as unknown as Record<string, unknown>;
+                            const docId = (raw.document_id || raw.paper_id) as string | undefined;
+                            const pageNum = (raw.page_number || raw.page) as number | undefined;
+                            const bboxes = (raw.bounding_boxes || (raw.bbox ? [raw.bbox] : [])) as BoundingBox[];
+                            const primaryBox = (bboxes[0] || raw.bbox || null) as BoundingBox | null;
+                            const resolvedPage = pageNum || primaryBox?.[4] || 1;
+
+                            if (docId && docId !== activeDocumentId && openDocumentIds.includes(docId)) {
+                              setActiveDocumentId(docId);
+                            }
+
+                            if (primaryBox || bboxes.length > 0) {
+                              setActiveBboxStore(primaryBox);
+                              setActiveCitation(targetCitId, primaryBox, resolvedPage, primaryBox ? [primaryBox] : null);
+                              setCurrentPage(resolvedPage);
+                              useReaderStore.getState().setCurrentPage(resolvedPage);
+                              setMobileActiveView("reader");
+                            } else if (resolvedPage) {
+                              setActiveCitation(targetCitId, null, resolvedPage, null);
+                              setCurrentPage(resolvedPage);
+                              useReaderStore.getState().setCurrentPage(resolvedPage);
+                              setMobileActiveView("reader");
+                            }
                           }
                         }}
                       />
@@ -1458,7 +1324,10 @@ export function DashboardWorkspace({
             </div>
 
             {/* Bottom-Docked Input Bar */}
-            <div className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10">
+            <div
+              data-testid="chat-composer-container"
+              className="shrink-0 pb-4 pt-2 px-3 bg-gradient-to-t from-[#faf9f5] via-[#faf9f5]/90 to-transparent dark:from-[#181715] dark:via-[#181715]/90 z-10 overflow-x-hidden max-w-full"
+            >
               {/* Short Prompt Suggestions - Sleek Horizontal Pills at the Bottom */}
               {messages.length === 0 && !isGenerating && (
                 <div className="w-full max-w-3xl md:max-w-4xl mx-auto px-4 mb-2.5 relative z-20 pointer-events-auto">
@@ -1507,7 +1376,7 @@ export function DashboardWorkspace({
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-[#252320] border border-[#e5dfd4] dark:border-zinc-700/60 text-ink dark:text-zinc-200 text-xs font-sans shadow-xs hover:bg-[#f4efe6] dark:hover:bg-[#2e2a25] transition-colors cursor-pointer"
                   >
                     <Square className="w-3 h-3 fill-current text-[#cc785c]" />
-                    <span>Dừng suy luận</span>
+                    <span>Dừng</span>
                   </button>
                 </div>
               )}
@@ -1734,6 +1603,7 @@ export function DashboardWorkspace({
         currentDocumentIds={effectiveOpenIds}
         onAddByDocumentId={handleAddByDocumentId}
         onAddByUrl={handleAddByUrl}
+        onAddByFile={handleAddByFile}
       />
 
       <CreateNoteDialog
@@ -1829,7 +1699,7 @@ export function DashboardWorkspace({
                 className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-left text-xs hover:bg-[#f3eee5] dark:hover:bg-[#2d2924] hover:text-primary transition-colors cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5 text-[#cc785c]" />
-                <span>Hỏi Socratic Copilot</span>
+                <span>Hỏi Socratic Assistant</span>
               </button>
 
               <button
@@ -1897,6 +1767,24 @@ export function DashboardWorkspace({
             )}
           </button>
         </div>
+      )}
+
+      {/* Floating AI Assistant FAB (rendered when assistant is closed) */}
+      {!isAssistantOpen && (
+        <button
+          type="button"
+          data-testid="floating-assistant-fab"
+          onClick={() => {
+            setIsAssistantOpen(true);
+            setMobileActiveView("workspace");
+          }}
+          aria-label="Mở Assistant"
+          title="Mở Assistant"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-[#cc785c] hover:bg-[#b8674d] text-white shadow-xl hover:shadow-2xl hover:scale-105 active:scale-95 transition-all cursor-pointer group"
+        >
+          <Sparkles className="w-5 h-5 transition-transform group-hover:rotate-12" />
+          <span className="text-xs font-semibold tracking-wide">Assistant</span>
+        </button>
       )}
     </div>
   );

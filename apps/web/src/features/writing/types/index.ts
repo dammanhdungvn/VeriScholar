@@ -19,6 +19,18 @@ export interface Draft {
     bib_content?: string;
     version?: number;
     saved_at?: string;
+    undo?: {
+      content?: string;
+      bib_content?: string;
+      version?: number;
+      saved_at?: string;
+    } | null;
+    redo?: {
+      content?: string;
+      bib_content?: string;
+      version?: number;
+      saved_at?: string;
+    } | null;
   } | null;
   version: number;
   created_at: string;

@@ -2,12 +2,14 @@ import { useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Settings,
-  Sparkles,
   HelpCircle,
   LogOut,
   ChevronRight,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useAuthStore } from "@/features/auth/stores/useAuthStore";
+import { useTheme } from "@/hooks/useTheme";
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { cn } from "@/lib/utils";
 
@@ -28,6 +30,8 @@ export function AvatarDropdownPopover({
 }: AvatarDropdownPopoverProps) {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+  const { theme, toggleTheme } = useTheme();
+  const isDark = theme === "dark";
   const popoverRef = useRef<HTMLDivElement>(null);
 
   // Close on Escape or click outside
@@ -125,23 +129,27 @@ export function AvatarDropdownPopover({
 
       {/* 2. Action List */}
       <div className="space-y-0.5">
-        {/* Nâng cấp gói */}
+        {/* Chuyển chế độ Sáng / Tối */}
         <button
           type="button"
           role="menuitem"
-          data-testid="popover-upgrade-btn"
+          data-testid="popover-theme-toggle-btn"
           onClick={() => {
-            onClose();
-            if (onOpenSettings) {
-              onOpenSettings();
-            } else {
-              navigate("/settings");
-            }
+            toggleTheme();
           }}
           className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] hover:text-primary transition-colors cursor-pointer text-left"
         >
-          <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Nâng cấp gói</span>
+          {isDark ? (
+            <>
+              <Sun className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>Chuyển sang chế độ sáng</span>
+            </>
+          ) : (
+            <>
+              <Moon className="w-4 h-4 text-zinc-500 shrink-0" />
+              <span>Chuyển sang chế độ tối</span>
+            </>
+          )}
         </button>
 
         {/* Cài đặt */}

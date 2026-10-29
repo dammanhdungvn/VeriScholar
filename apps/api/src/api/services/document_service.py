@@ -419,6 +419,7 @@ class DocumentService:
         user_id: UUID,
         db: AsyncSession,
         session_id: UUID | None = None,
+        folder_id: UUID | None = None,
     ) -> DocumentUploadResponseData:
         """Process an uploaded PDF file, perform CAS deduplication, and register document record.
 
@@ -566,7 +567,29 @@ class DocumentService:
                 else:
                     raise
 
-        # 5. Create user Document record
+        # 5. Check if user already has this paper marked persistent in My Library
+        stmt_persistent_check = (
+            select(DocumentModel.is_persistent, DocumentModel.folder_id)
+            .where(
+                DocumentModel.user_id == user_id,
+                DocumentModel.content_hash == content_hash,
+                DocumentModel.is_persistent.is_(True),
+            )
+            .limit(1)
+        )
+        res_persistent = await db.execute(stmt_persistent_check)
+        persistent_row = res_persistent.first()
+        is_already_persistent = persistent_row is not None
+        inherited_folder_id = persistent_row[1] if persistent_row else None
+
+        # Direct uploads (without session_id) belong to My Library permanently.
+        # Uploads targeting a folder are also explicitly marked persistent.
+        effective_persistence = (
+            True if (session_id is None or folder_id is not None) else is_already_persistent
+        )
+        target_folder_id = folder_id if folder_id is not None else inherited_folder_id
+
+        # Create user Document record
         doc = DocumentModel(
             id=uuid4(),
             user_id=user_id,
@@ -579,7 +602,8 @@ class DocumentService:
             status=DocumentStatus.UPLOADED.value,
             stage=DocumentStage.QUEUED.value,
             progress=0,
-            is_persistent=False,
+            is_persistent=effective_persistence,
+            folder_id=target_folder_id,
             created_at=now,
             updated_at=now,
         )

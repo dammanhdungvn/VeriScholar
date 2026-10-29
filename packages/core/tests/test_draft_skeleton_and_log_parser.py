@@ -149,3 +149,30 @@ def test_sanitize_asset_filename_rejects_invalid_size_or_hidden_file():
         sanitize_and_validate_asset_filename("test.png", 0)
     with pytest.raises(ValueError):
         sanitize_and_validate_asset_filename("test.png", -10)
+
+
+def test_parse_latex_log_extracts_file_line_error_format():
+    sample_log = """
+./main.tex:73: Undefined control sequence.
+<argument> \\nonexistentcommand
+                                l.73 \\nonexistentcommand{arg}
+"""
+    diagnostics = LatexLogParser.parse_log(sample_log)
+    assert len(diagnostics) >= 1
+    assert diagnostics[0]["line"] == 73
+    assert diagnostics[0]["severity"] == "error"
+    assert "Undefined control sequence" in diagnostics[0]["message"]
+    assert diagnostics[0]["file"] == "main.tex"
+
+
+def test_parse_latex_log_extracts_on_input_line_error():
+    sample_log = """
+! LaTeX Error: Environment align undefined on input line 55.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+"""
+    diagnostics = LatexLogParser.parse_log(sample_log)
+    assert len(diagnostics) >= 1
+    assert diagnostics[0]["line"] == 55
+    assert diagnostics[0]["severity"] == "error"
+    assert "Environment align undefined" in diagnostics[0]["message"]

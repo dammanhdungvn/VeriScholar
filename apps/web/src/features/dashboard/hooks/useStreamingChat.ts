@@ -3,7 +3,6 @@ import { fetchEventSource } from "@microsoft/fetch-event-source";
 import type { ChatMessage, CitationBadgeData } from "@/types/dashboard";
 import { AUTH_TOKEN_STORAGE_KEY } from "@/features/auth/stores/useAuthStore";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
-import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { generateRequestId } from "@/lib/api-client";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
@@ -14,20 +13,21 @@ interface UseStreamingChatOptions {
   onSessionCreated?: (sessionId: string) => void;
 }
 
-function normalizeCitation(raw: unknown): CitationBadgeData {
+export function normalizeCitation(raw: unknown): CitationBadgeData {
   const item = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const page = Number(item.page ?? item.page_number ?? 1);
   let bbox: [number, number, number, number, number] = [0, 0, 1, 1, page];
 
+  const rawBoxes = Array.isArray(item.bounding_boxes)
+    ? (item.bounding_boxes.filter(
+        (b) => Array.isArray(b) && b.length === 5
+      ) as [number, number, number, number, number][])
+    : [];
+
   if (Array.isArray(item.bbox) && item.bbox.length === 5) {
     bbox = item.bbox as [number, number, number, number, number];
-  } else if (
-    Array.isArray(item.bounding_boxes) &&
-    item.bounding_boxes.length > 0 &&
-    Array.isArray(item.bounding_boxes[0]) &&
-    item.bounding_boxes[0].length === 5
-  ) {
-    bbox = item.bounding_boxes[0] as [number, number, number, number, number];
+  } else if (rawBoxes.length > 0) {
+    bbox = rawBoxes[0];
   }
 
   return {
@@ -36,6 +36,15 @@ function normalizeCitation(raw: unknown): CitationBadgeData {
     paper_title: String(item.paper_title ?? item.document_title ?? "Tài liệu trích dẫn"),
     page,
     bbox,
+    bounding_boxes: rawBoxes.length > 0 ? rawBoxes : [bbox],
+    snippet:
+      typeof item.snippet === "string"
+        ? item.snippet
+        : typeof item.content === "string"
+        ? item.content
+        : undefined,
+    concept_name: typeof item.concept_name === "string" ? item.concept_name : undefined,
+    content: typeof item.content === "string" ? item.content : undefined,
   };
 }
 
@@ -129,18 +138,6 @@ export function useStreamingChat({
           if (createRes?.data?.id) {
             effectiveSessionId = createRes.data.id;
             onSessionCreated?.(effectiveSessionId);
-
-            const openDocs = useReaderStore.getState().openDocumentIds;
-            for (const docId of openDocs) {
-              try {
-                await sessionsApi.addDocumentToSession(effectiveSessionId, {
-                  source_type: "document_id",
-                  document_id: docId,
-                });
-              } catch {
-                // Ignore if already added
-              }
-            }
           }
         } catch (err) {
           console.warn("Could not auto-create session for chat:", err);
@@ -169,6 +166,9 @@ export function useStreamingChat({
       const controller = new AbortController();
       abortControllerRef.current = controller;
 
+      const streamStartTime = Date.now();
+      let thoughtDurationSeconds: number | undefined;
+
       let tokenQueue: string[] = [];
       let accumulatedContent = "";
       let isFlushing = false;
@@ -196,6 +196,12 @@ export function useStreamingChat({
       };
 
       const queueToken = (token: string) => {
+        if (thoughtDurationSeconds === undefined) {
+          thoughtDurationSeconds = Math.max(
+            1,
+            Math.round((Date.now() - streamStartTime) / 1000)
+          );
+        }
         tokenQueue.push(token);
         if (!isFlushing) {
           isFlushing = true;
@@ -219,6 +225,13 @@ export function useStreamingChat({
         }
         isFlushing = false;
 
+        if (thoughtDurationSeconds === undefined) {
+          thoughtDurationSeconds = Math.max(
+            1,
+            Math.round((Date.now() - streamStartTime) / 1000)
+          );
+        }
+
         setMessages((prev) =>
           prev.map((msg) =>
             msg.id === assistantMsgId
@@ -227,6 +240,8 @@ export function useStreamingChat({
                   content: accumulatedContent || msg.content,
                   is_streaming: false,
                   citations: citationsList.length > 0 ? citationsList : msg.citations,
+                  thought_duration_seconds:
+                    msg.thought_duration_seconds ?? thoughtDurationSeconds,
                 }
               : msg.is_streaming
               ? { ...msg, is_streaming: false }
@@ -285,19 +300,38 @@ export function useStreamingChat({
                 return;
               }
 
-              if (parsed.type === "thinking" || parsed.type === "thought") {
-                const thoughtToken = parsed.token || parsed.thought || parsed.content || "";
+              if (
+                ev.event === "reasoning" ||
+                parsed.type === "reasoning" ||
+                parsed.type === "thinking" ||
+                parsed.type === "thought"
+              ) {
+                const thoughtToken =
+                  parsed.thought || parsed.token || parsed.content || "";
+                if (typeof parsed.thought_duration_seconds === "number") {
+                  thoughtDurationSeconds = parsed.thought_duration_seconds;
+                }
                 setMessages((prev) =>
                   prev.map((msg) =>
                     msg.id === assistantMsgId
-                      ? { ...msg, thought: (msg.thought || "") + thoughtToken }
+                      ? {
+                          ...msg,
+                          thought: (msg.thought || "") + thoughtToken,
+                          thought_duration_seconds:
+                            thoughtDurationSeconds ?? msg.thought_duration_seconds,
+                        }
                       : msg
                   )
                 );
               } else if (parsed.type === "token" || parsed.type === "content") {
                 const tokenText = parsed.token || parsed.text || parsed.content || "";
                 queueToken(tokenText);
-              } else if (parsed.type === "citation" || parsed.type === "citations") {
+              } else if (
+                ev.event === "citations" ||
+                parsed.type === "citation" ||
+                parsed.type === "citations" ||
+                Array.isArray(parsed.citations)
+              ) {
                 const rawCites = Array.isArray(parsed.citations)
                   ? parsed.citations
                   : parsed.citation
@@ -347,7 +381,7 @@ export function useStreamingChat({
                         ...msg,
                         content:
                           accumulatedContent ||
-                          "Không thể kết nối đến máy chủ Socratic Copilot để hoàn tất suy luận. Vui lòng kiểm tra kết nối mạng và thử lại.",
+                          "Không thể kết nối đến máy chủ Socratic Assistant để hoàn tất suy luận. Vui lòng kiểm tra kết nối mạng và thử lại.",
                         is_streaming: false,
                       }
                     : msg

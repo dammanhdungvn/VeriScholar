@@ -86,7 +86,7 @@ describe("DashboardContainer handleNewSession", () => {
     useDashboardStore.setState({ activeSessionId: undefined });
   });
 
-  it("resets workspace store including pending parsing status when 'Đoạn chat mới' is clicked", () => {
+  it("resets workspace store including pending parsing status when 'New Session' is clicked", () => {
     // Put workspace into processing/parsing state with progress
     useWorkspaceStore.setState({
       activeSessionId: "sess-test",
@@ -107,10 +107,10 @@ describe("DashboardContainer handleNewSession", () => {
     );
 
     // Verify taskbar new session button is present
-    const newChatButton = screen.getByTitle("Đoạn chat mới");
+    const newChatButton = screen.getByTitle("New Session");
     expect(newChatButton).toBeInTheDocument();
 
-    // Click "Đoạn chat mới"
+    // Click "New Session"
     fireEvent.click(newChatButton);
 
     // Workspace store must be completely reset to initial idle standby state

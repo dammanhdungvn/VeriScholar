@@ -9,6 +9,10 @@ export interface CitationBadgeData {
   paper_title: string;
   page: number;
   bbox: BoundingBox;
+  bounding_boxes?: BoundingBox[];
+  snippet?: string;
+  concept_name?: string;
+  content?: string;
 }
 
 export interface PresuppositionAlertData {
@@ -26,6 +30,7 @@ export interface ChatMessage {
   created_at: string;
   is_streaming?: boolean;
   thought?: string;
+  thought_duration_seconds?: number;
   citations?: CitationBadgeData[];
   presupposition_alert?: PresuppositionAlertData;
 }

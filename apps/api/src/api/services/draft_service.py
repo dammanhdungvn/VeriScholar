@@ -117,7 +117,7 @@ DEFAULT_STARTER_LATEX_TEMPLATE = (
     r"    \maketitle" + "\n"
     r"    \begin{abstract}" + "\n"
     r"    \noindent" + "\n"
-    r"    Nghiên cứu này đề xuất kiến trúc \textbf{Socratic Copilot}---hệ thống trợ lý học "
+    r"    Nghiên cứu này đề xuất kiến trúc \textbf{Socratic Assistant}---hệ thống trợ lý học "
     r"thuật thông minh thế hệ mới kết hợp mô hình suy luận đa bước (\textit{Multi-step Reasoning}) "
     r"và cơ chế đối chiếu dẫn chứng không gian hai chiều (\textit{2D Bounding Box Verification}). "
     r"Khác với các mô hình sinh văn bản thông thường dễ mắc lỗi ảo giác (\textit{hallucination}), "
@@ -127,7 +127,7 @@ DEFAULT_STARTER_LATEX_TEMPLATE = (
     r"thiểu tỷ lệ ảo giác xuống dưới 0.7\%." + "\n"
     r"    \vspace{0.8em}" + "\n\n"
     r"    \noindent" + "\n"
-    r"    \textbf{Từ khóa:} Socratic Copilot, Kiểm chứng trích dẫn, Phản biện học thuật, "
+    r"    \textbf{Từ khóa:} Socratic Assistant, Kiểm chứng trích dẫn, Phản biện học thuật, "
     r"Bounding Box, Không ảo giác, Trí tuệ nhân tạo." + "\n"
     r"    \vspace{1.2em}" + "\n"
     r"    \end{abstract}" + "\n"
@@ -139,7 +139,7 @@ DEFAULT_STARTER_LATEX_TEMPLATE = (
     r"Các mô hình ngôn ngữ lớn (LLMs) tuy có khả năng tóm tắt nhanh nhưng thường xuyên mắc lỗi "
     r"bịa đặt trích dẫn (\textit{citation hallucination}) và không thể chỉ ra được vị trí chính "
     r"xác của dữ liệu trong văn bản gốc \cite{devlin2018}." + "\n\n"
-    r"Để giải quyết triệt để vấn đề này, bài báo giới thiệu mô hình Socratic Copilot với "
+    r"Để giải quyết triệt để vấn đề này, bài báo giới thiệu mô hình Socratic Assistant với "
     r"ba đóng góp cốt lõi:" + "\n"
     r"\begin{enumerate}" + "\n"
     r"  \item \textbf{Cơ chế truy xuất đa tầng:} Kết hợp Content-Addressable Storage (CAS) và "
@@ -563,6 +563,32 @@ class DraftService:
                 f"Role '{role.value}' is strictly forbidden from compiling LaTeX"
             )
 
+        # 1. Tier 1: Fast cached compilation via CLSILatexCompiler with XeLaTeX support
+        assets = _draft_assets_cache.get(draft_id, [])
+        clsi_res = await self.clsi_compiler.compile(
+            draft_id=draft_id,
+            main_tex=draft.content,
+            bib_content=draft.bib_content or "",
+            assets=assets,
+            clear_cache=False,
+            timeout_seconds=float(timeout_seconds),
+        )
+        pdf_path = clsi_res.get("pdf_path")
+        if clsi_res.get("success") and pdf_path and os.path.exists(pdf_path):
+            with open(pdf_path, "rb") as f:
+                pdf_bytes = f.read()
+            _draft_pdf_cache[draft_id] = pdf_bytes
+            preview_url = f"/api/v1/drafts/{draft_id}/preview.pdf"
+            result = LatexCompilationResult(
+                success=True,
+                pdf_bytes=pdf_bytes,
+                errors=[],
+                logs=clsi_res.get("logs", ""),
+                is_sandboxed=False,
+            )
+            logger.info("draft_compiled_clsi_success", draft_id=str(draft_id))
+            return result, preview_url
+
         with self.ai_tracing.span(
             name="latex_agentic_healing_compile",
             input={"content_length": len(draft.content), "timeout_seconds": timeout_seconds},
@@ -792,13 +818,57 @@ class DraftService:
             raise ValueError("NO_UNDO_SNAPSHOT_AVAILABLE")
 
         snapshot = draft.previous_snapshot
-        restored_content = snapshot.get("content", draft.content)
-        restored_bib = snapshot.get("bib_content", draft.bib_content)
+
+        # Two-way symmetrical snapshot support: {"undo": ..., "redo": ...}
+        if "undo" in snapshot or "redo" in snapshot:
+            undo_data = snapshot.get("undo")
+            redo_data = snapshot.get("redo")
+            if undo_data:
+                # User executes Undo -> Reverts to undo_data, current goes into redo
+                restored_content = undo_data.get("content", draft.content)
+                restored_bib = undo_data.get("bib_content", draft.bib_content)
+                new_snapshot = {
+                    "undo": None,
+                    "redo": {
+                        "content": draft.content,
+                        "bib_content": draft.bib_content,
+                        "version": draft.version,
+                        "saved_at": datetime.now(UTC).isoformat(),
+                    },
+                }
+            elif redo_data:
+                # User executes Redo -> Reverts to redo_data, current goes into undo
+                restored_content = redo_data.get("content", draft.content)
+                restored_bib = redo_data.get("bib_content", draft.bib_content)
+                new_snapshot = {
+                    "undo": {
+                        "content": draft.content,
+                        "bib_content": draft.bib_content,
+                        "version": draft.version,
+                        "saved_at": datetime.now(UTC).isoformat(),
+                    },
+                    "redo": None,
+                }
+            else:
+                raise ValueError("NO_UNDO_SNAPSHOT_AVAILABLE")
+        else:
+            # Legacy format {"content": ..., "bib_content": ...}
+            restored_content = snapshot.get("content", draft.content)
+            restored_bib = snapshot.get("bib_content", draft.bib_content)
+            new_snapshot = {
+                "undo": None,
+                "redo": {
+                    "content": draft.content,
+                    "bib_content": draft.bib_content,
+                    "version": draft.version,
+                    "saved_at": datetime.now(UTC).isoformat(),
+                },
+            }
 
         async with self._transaction():
             draft.content = restored_content
             draft.bib_content = restored_bib
-            draft.previous_snapshot = None
+            draft.previous_snapshot = new_snapshot
             draft.version += 1
             draft.updated_at = datetime.now(UTC)
 
@@ -851,10 +921,13 @@ class DraftService:
         snapshot_to_save = None
         if draft.previous_snapshot is None:
             snapshot_to_save = {
-                "content": draft.content,
-                "bib_content": draft.bib_content,
-                "version": draft.version,
-                "saved_at": datetime.now(UTC).isoformat(),
+                "undo": {
+                    "content": draft.content,
+                    "bib_content": draft.bib_content,
+                    "version": draft.version,
+                    "saved_at": datetime.now(UTC).isoformat(),
+                },
+                "redo": None,
             }
 
         assets = _draft_assets_cache.get(draft_id, [])

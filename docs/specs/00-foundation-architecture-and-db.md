@@ -104,7 +104,7 @@ erDiagram
 |---|---|---|---|
 | **1** | `users` | [`user.py`](../../apps/api/src/api/db/models/user.py) | Thêm `theme_preference VARCHAR(20) DEFAULT 'system'`, `byok_api_key_encrypted TEXT NULL` (hoặc bảng `user_api_keys` chuẩn hóa có `UNIQUE(user_id, provider)`). |
 | **2** | `documents` | [`document.py`](../../apps/api/src/api/db/models/document.py) | Thêm `is_starred BOOLEAN DEFAULT FALSE INDEX`, `folder_id UUID FK folders.id SET NULL`. |
-| **3** | `document_chunks` | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`, chuyển `embedding` sang `Vector(1536)` (HNSW `vector_cosine_ops`), thêm `content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', text_content)) STORED` (GIN index). |
+| **3** | `document_chunks` | [`chunk.py`](../../apps/api/src/api/db/models/chunk.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`, `parent_content TEXT NULL` (ngữ cảnh mẹ phân cấp cho Parent-Child RAG), chuyển `embedding` sang `Vector(1536)` (HNSW `vector_cosine_ops`), thêm `content_tsv TSVECTOR GENERATED ALWAYS AS (to_tsvector('simple', text_content)) STORED` (GIN index). |
 | **4** | `document_storage_blobs` | [`blob.py`](../../apps/api/src/api/db/models/blob.py) | Quản lý mã băm SHA-256 (`content_hash`), kích thước byte, đường dẫn lưu file, và bộ đếm `ref_count` (xử lý tại tầng Repository PostgreSQL, giữ `IBlobStoragePort` hoàn toàn phi trạng thái). |
 | **5** | `document_summaries` | [`summary.py`](../../apps/api/src/api/db/models/summary.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`; lưu tóm tắt 3 phần (`problem_statement`, `core_contributions`, `limitations`, kèm `key_findings JSONB`) gắn trích dẫn Bounding Box. |
 | **6** | `reference_items` | [`reference.py`](../../apps/api/src/api/db/models/reference.py) | Thêm `user_id UUID FK users.id CASCADE INDEX`; lưu danh mục trích dẫn cuối bài (DOI, arXiv, title, authors, year, `resolution_status`). |
@@ -204,6 +204,30 @@ CREATE TABLE draft_messages (
 );
 
 CREATE INDEX idx_draft_messages_user_draft_time ON draft_messages(user_id, draft_id, created_at);
+```
+
+#### 17. Bảng `wiki_pages` (Trang Wiki Tri Thức Học Thuật Biên Soạn)
+* **File model:** `apps/api/src/api/db/models/wiki.py`
+* **Mục đích:** Lưu trữ các trang Wiki Markdown đã được biên soạn bởi `5.6 Luna` (`OPENAI_MODEL`) kèm thẻ `[[wikilink]]` và vector embedding 1536d phục vụ truy vấn tri thức và AI viết bài.
+```sql
+CREATE TABLE wiki_pages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    folder_id UUID NULL REFERENCES folders(id) ON DELETE SET NULL,
+    slug VARCHAR(255) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    page_type VARCHAR(50) NOT NULL CHECK (page_type IN ('method', 'dataset', 'topic', 'research_gap', 'comparison')),
+    content_markdown TEXT NOT NULL,
+    metadata_json JSONB NOT NULL DEFAULT '{}'::jsonb,
+    embedding VECTOR(1536) NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    CONSTRAINT uq_wiki_pages_user_slug UNIQUE (user_id, slug)
+);
+
+CREATE INDEX idx_wiki_pages_user_folder ON wiki_pages(user_id, folder_id);
+CREATE INDEX idx_wiki_pages_embedding ON wiki_pages 
+USING hnsw (embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
 ```
 
 ---

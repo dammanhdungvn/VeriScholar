@@ -79,6 +79,8 @@ export interface CitationItemSchema {
   page_number: number;
   bounding_boxes: BoundingBox[];
   score?: number;
+  snippet?: string;
+  concept_name?: string;
 }
 
 export interface SessionTurnItem {

@@ -990,10 +990,11 @@ async def chat_stream(
             ):
                 ev_name = ev.get("event") or ev.get("type", "message")
                 ev_data = ev.get("data", {})
-                yield f"event: {ev_name}\ndata: {json.dumps(ev_data, ensure_ascii=False)}\n\n"
+                serialized_data = json.dumps(ev_data, ensure_ascii=False, default=str)
+                yield f"event: {ev_name}\ndata: {serialized_data}\n\n"
         except Exception as exc:
             err_data = {"error": str(exc)}
-            yield f"event: error\ndata: {json.dumps(err_data, ensure_ascii=False)}\n\n"
+            yield f"event: error\ndata: {json.dumps(err_data, ensure_ascii=False, default=str)}\n\n"
 
     return StreamingResponse(
         sse_generator(),

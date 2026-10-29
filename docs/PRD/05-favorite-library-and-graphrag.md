@@ -12,14 +12,24 @@
 
 ## 1. Tầm Nhìn Nghiệp Vụ & Nỗi Đau Người Dùng (Business Context & Pain Points)
 
-### 1.1. Tầm nhìn phân hệ
-Biến kho bài báo yêu thích của học giả từ danh sách tệp tĩnh thành **Mạng Tri Thức Học Thuật 4 Thực Thể** (`Bài báo`, `Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) kết hợp cơ chế **Truy vấn Kép Vi mô & Vĩ mô (Dual-Level GraphRAG)** và **Bản đồ Thư mục học (Bibliometric Prior/Derivative Works)**, giúp tổ chức thư mục đề tài và tổng hợp số liệu thực nghiệm SOTA xuyên suốt nhiều công trình trong tích tắc.
+### 1.1. Tầm nhìn phân hệ & Bản chất DNA 4 Thực Thể
+Biến kho bài báo yêu thích của học giả từ danh sách tệp tĩnh thành **Mạng Tri Thức Học Thuật 4 Thực Thể** (`Bài báo`, `Phương pháp`, `Tập dữ liệu`, `Kết quả đo lường`) kết hợp cơ chế **Truy vấn Kép Vi mô & Vĩ mô (Dual-Level GraphRAG)**, **Bản đồ Phổ hệ Nhân quả (Causal Evolution Lineage)** và **Bộ Khai phá Khoảng trống Nghiên cứu (Research Gap Extractor)**.
+
+**Tại sao bắt buộc phải là 4 Thực Thể (DNA của Khoa Học Thực Nghiệm)?**
+Mọi bài báo khoa học thực nghiệm trong ngành Khoa học Máy tính, Trí tuệ Nhân tạo và Kỹ thuật đều tuân theo một công thức chung:
+1. **Bài báo (`Paper`):** *Ai làm, công bố năm nào, tên đề tài là gì?* (Hồ sơ bài dự thi).
+2. **Phương pháp (`Method`):** *Tác giả phát minh ra thuật toán/kiến trúc mới nào?* (Động cơ mới).
+3. **Tập dữ liệu (`Dataset`):** *Phương pháp đó được đem thử nghiệm trên môi trường dữ liệu nào?* (Đoạn đường đua).
+4. **Kết quả đo lường (`MetricResult`):** *Đạt kết quả đo lường cụ thể bao nhiêu, có vượt qua người đi trước không?* (Đồng hồ bấm giờ).
+
+> **Bất biến sống còn:** Nếu loại bỏ 3 thực thể (`Method`, `Dataset`, `MetricResult`) mà chỉ giữ lại `Paper`, thư viện sẽ lập tức biến thành một "kho chứa file vô hồn" giống Zotero/Google Drive. Hệ thống sẽ bất lực trước câu hỏi: *"Bài nào đạt điểm BLEU cao nhất trên tập WMT-2014?"* và người dùng lại phải mở từng file PDF chép tay số liệu.
 
 ### 1.2. Nỗi đau thực tế của học giả
 1. **Kho lưu trữ chết và đứt gãy liên kết:** Hơn **70% học giả** không nhớ bài báo nào đề xuất thuật toán nào hoặc đạt kết quả cao nhất trên dữ liệu chuẩn, buộc phải mở đọc lại từng tệp PDF rời rạc.
 2. **Mất 30 – 50 giờ tổng hợp bảng so sánh thực nghiệm (SOTA Burden):** Khi viết phần Related Work hoặc phản hồi phản biện (Rebuttal), tác giả phải lật lại 20 – 30 bài báo để chép tay từng con số đo lường (`BLEU`, `Accuracy`, `F1`), dễ nhầm lẫn ngữ cảnh thử nghiệm.
-3. **Mất phương hướng khi tiếp cận đề tài mới:** Người nghiên cứu khó xác định đâu là các bài báo kinh điển cội nguồn (*Prior Works*) cần đọc trước, và đâu là các công trình phái sinh cải tiến mới nhất (*Derivative Works*).
+3. **Mất phương hướng trong tiến trình lịch sử đề tài:** Người nghiên cứu không xác định được đâu là bài báo kinh điển cội nguồn (*Prior Works*) cần đọc trước, và đâu là các công trình phái sinh cải tiến mới nhất (*Derivative Works*).
 4. **Hạn chế của GraphRAG thông thường:** Hệ thống hỏi đáp cục bộ chỉ trả lời được câu hỏi về một đỉnh đơn lẻ, thất bại khi học giả hỏi các câu bao quát vĩ mô (*"Các hướng tiếp cận chính và hạn chế của các bài báo trong đề tài này là gì?"*).
+5. **Tê liệt tìm ý tưởng nghiên cứu mới (Research Gap Paralysis):** Đọc rất nhiều bài báo nhưng không biết tìm đề tài nghiên cứu mới ở đâu, không biết các bài báo hiện tại đang bế tắc ở điều kiện nào (*Unsolved Frontiers*).
 
 ### 1.3. Bảng Đối Chiếu Giá Trị Trước & Sau Khi Áp Dụng (Before vs. After Value Matrix)
 
@@ -27,9 +37,10 @@ Biến kho bài báo yêu thích của học giả từ danh sách tệp tĩnh t
 | :--- | :--- | :--- |
 | **Tổ chức đề tài** | Tệp PDF tĩnh, dễ phân mảnh hoặc mất khi xóa thư mục. | **Cây thư mục gắn màu**, xóa thư mục bảo toàn 100% bài báo gốc. |
 | **Nạp tri thức khi gắn sao** | Đánh dấu thủ công, không phân tích cấu trúc bên trong. | **Nạp tăng dần (< 3s)** bóc tách 4 thực thể và gộp điểm nút Hub ngữ nghĩa. |
-| **Hỏi đáp thực nghiệm SOTA** | Mở 20 – 30 tệp PDF dò số liệu thủ công (30 – 50 giờ). | **Truy vấn Vi mô (Local Search)** trả về bảng đối chiếu kèm số trang và viền vàng. |
+| **Hỏi đáp thực nghiệm SOTA** | Mở 20 – 30 tệp PDF dò số liệu thủ công (30 – 50 giờ). | **Truy vấn Vi mô (Local Search)** xuất ma trận SOTA kèm số trang và viền vàng. |
 | **Hỏi đáp vĩ mô toàn đề tài** | Không hỗ trợ, AI thông thường bị loãng ngữ cảnh. | **Truy vấn Vĩ mô (Global Search)** tổng hợp toàn diện theo cụm đề tài thư mục. |
-| **Bản đồ phát triển đề tài** | Tự tra cứu thủ công cây trích dẫn trên mạng. | **Bản đồ Thư mục học** tự phân loại Tác phẩm Cội nguồn và Tác phẩm Phái sinh. |
+| **Bản đồ phát triển đề tài** | Tự tra cứu thủ công cây trích dẫn phẳng trên mạng. | **Bản đồ Phổ hệ Nhân quả** giải thích lý do tại sao bài cũ thất bại mà bài mới ra đời. |
+| **Tìm đề tài nghiên cứu mới** | Tự đoán mò hoặc đọc lan man hàng trăm trang sách. | **Bộ Khai Phá Khoảng Trống (Research Gap Extractor)** tự quét mục Limitations & Future Work. |
 
 ---
 
@@ -103,12 +114,26 @@ flowchart TD
   1. **Truy vấn Vi mô (Local Search):** HNSW Vector Anchor $\rightarrow$ 1-Hop CTE Traversal $\rightarrow$ Trả về ma trận SOTA đối chiếu số liệu thực nghiệm gắn với tọa độ viền vàng Bounding Box trên PDF gốc.
   2. **Truy vấn Vĩ mô (Global Search):** Tổng hợp chủ đề, phương pháp và hạn chế xuyên suốt toàn bộ một thư mục đề tài dựa trên bản tóm tắt cụm tri thức.
 
-### UC-LIB-05: Mạng Ghép Cặp Thư Mục & Bản Đồ Cội Nguồn (Connected Papers Prior & Derivative)
+### UC-LIB-05: Mạng Ghép Cặp Thư Mục & Phổ Hệ Nhân Quả (Causal Evolution Lineage)
 - **Tác nhân:** Nhà Nghiên Cứu.
 - **Luồng chuẩn:** Tự động tính toán Ghép cặp Thư mục (Bibliographic Coupling) giữa các bài báo có chung $\ge 3$ tài liệu tham khảo. Phân loại trực quan:
-  - **Tác phẩm Cội nguồn (Prior Works):** Các bài báo kinh điển có số lượng liên kết tham chiếu cao nhất trong kho.
-  - **Tác phẩm Phái sinh (Derivative Works):** Các công trình mới nhất mở rộng từ nền tảng trên.
-- **Trực quan hóa:** Hiển thị sơ đồ Cytoscape với kích thước đỉnh theo độ ảnh hưởng (Degree Centrality), nhấp vào cạnh sẽ nhảy tới Bounding Box trang PDF tương ứng.
+  - **Tác phẩm Cội nguồn (Prior Works):** Các bài báo kinh điển có số lượng liên kết tham chiếu cao nhất trong kho đại diện cho các Bậc tri thức nền tảng ($Bậc\ 1, 2, 3$).
+  - **Tác phẩm Phái sinh (Derivative Works):** Các công trình mới nhất mở rộng từ nền tảng trên ($Bậc\ 4$).
+  - **Phổ hệ Nhân quả (Causal Linkage):** Không chỉ thể hiện liên kết trích dẫn `CITES` phẳng, đồ thị giải thích rõ nguyên nhân tại sao bài cũ thất bại mà bài mới ra đời (ví dụ: RNN thất bại do triệt tiêu đạo hàm trên chuỗi dài $\rightarrow$ Attention ra đời để khắc phục).
+- **Trực quan hóa:** Hiển thị sơ đồ HTML5 Canvas 60fps với kích thước đỉnh theo độ ảnh hưởng (Degree Centrality), nhấp vào cạnh sẽ nhảy tới Bounding Box trang PDF tương ứng.
+
+### UC-LIB-06: Khai Phá Khoảng Trống Nghiên Cứu (Research Gap & Limitations Extractor)
+- **Tác nhân:** Nhà Nghiên Cứu.
+- **Tiền điều kiện:** Thư mục đề tài có ít nhất 3 bài báo đã được nạp vào đồ thị.
+- **Sự kiện kích hoạt:** Người dùng bấm nút `[🔍 Khai phá Khoảng trống Nghiên cứu]` trên thanh công cụ thư viện hoặc yêu cầu Trợ lý GraphRAG tìm đề tài mới.
+- **Luồng chuẩn:**
+  1. Hệ thống tự động quét mục *Limitations*, *Discussion*, và *Future Work* của toàn bộ các bài báo trong thư mục đề tài.
+  2. Hệ thống tổng hợp thành Ma trận Khoảng trống Nghiên cứu:
+     - **Bài toán chưa giải quyết (Unsolved Frontiers):** Những thách thức kỹ thuật mà tất cả các bài báo hiện tại đều thừa nhận chưa xử lý được.
+     - **Điểm nghẽn tài nguyên (Resource Bottlenecks):** Các hạn chế về phần cứng, độ trễ hoặc độ nhạy cảm dữ liệu.
+     - **Miền ứng dụng tiềm năng:** Các bài toán thực tế mà phương pháp hiện tại chưa được thử nghiệm.
+  3. AI đề xuất 2–3 ý tưởng nghiên cứu mới khả thi làm đề tài luận văn/bài báo cho học giả.
+- **Kết quả đầu ra:** Bảng tổng hợp khoảng trống nghiên cứu và danh mục ý tưởng đề tài mới được trích xuất trực tiếp từ các thừa nhận hạn chế của tác giả gốc.
 
 ---
 
@@ -136,6 +161,14 @@ Feature: Bản đồ thư mục học phát hiện tác phẩm cội nguồn
     Given 3 bài báo trong thư mục cùng trích dẫn công trình nền tảng của Vaswani (2017)
     When người dùng mở chế độ xem Mạng Tri Thức của thư mục
     Then bài báo Vaswani (2017) được hiển thị với kích thước lớn nhất và gắn nhãn "Tác phẩm Cội nguồn"
+
+@library @research_gap
+Feature: Khai phá khoảng trống nghiên cứu từ các hạn chế thừa nhận
+  Scenario: Tự động tổng hợp các điểm nghẽn chưa giải quyết từ mục Limitations
+    Given thư mục nghiên cứu có 3 bài báo về mô hình ngôn ngữ lớn
+    When người dùng bấm "Khai phá Khoảng trống Nghiên cứu"
+    Then hệ thống hiển thị ma trận các bài toán chưa giải quyết được trích xuất từ mục Limitations
+    And AI gợi ý các hướng phát triển đề tài luận văn tiềm năng dựa trên các điểm nghẽn này
 ```
 
 ---

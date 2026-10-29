@@ -420,3 +420,22 @@ async def test_execution_streaming_events():
     ][0]
     assert "attempt" in compile_attempt_ev["data"]
     assert "success" in compile_attempt_ev["data"]
+
+
+def test_latex_agent_file_tools():
+    """Test 6: Verify file manipulation tools create_file, edit_file, read_file, delete_file."""
+    agent = LatexCoauthorAgent()
+    create_res = agent.create_file("section1.tex", "\\section{Methods}")
+    assert create_res["status"] == "success"
+
+    edit_res = agent.edit_file("main.tex", "\\documentclass{report}")
+    assert edit_res["status"] == "success"
+
+    read_res = agent.read_file(
+        "main.tex",
+        state={"main_tex": "\\documentclass{report}", "bib_content": ""},  # type: ignore
+    )
+    assert read_res["content"] == "\\documentclass{report}"
+
+    del_res = agent.delete_file("temp.tex")
+    assert del_res["deleted"] == "temp.tex"

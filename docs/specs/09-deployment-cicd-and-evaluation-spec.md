@@ -147,22 +147,28 @@ Mục này cung cấp phương pháp luận, công thức đo lường và bản
 
 ---
 
-### Thực Nghiệm 2: Độ Chính Xác Truy Xuất AI & Minh Chứng Tọa Độ (AI Retrieval & Grounding Accuracy)
+### Thực Nghiệm 2: Độ Chính Xác Truy Xuất AI, Minh Chứng Tọa Độ & Đánh Giá LLM-as-a-Judge (AI Retrieval, Grounding & Benchmark)
 
-Thực hiện đánh giá chất lượng AI trên bộ câu hỏi kiểm định chuẩn (**Golden Academic QA Dataset** gồm 50 câu hỏi đa bài báo có gán nhãn đoạn văn bản đích và tọa độ hộp giới hạn chuẩn trên trang PDF):
+Thực hiện đánh giá chất lượng AI trên bộ kiểm định chuẩn **VeriScholar Landmark Golden Suite** (36 câu hỏi chuẩn hóa phân bổ đều vào 3 Track: Fact Retrieval, Global Graph Synthesis và Agentic Fact-Check, chi tiết tại [`07-monitoring-and-langfuse-spec.md`](./07-monitoring-and-langfuse-spec.md)) kết hợp đánh giá tọa độ hộp giới hạn và độ thu hồi:
 
-1. **Độ thu hồi Truy xuất Lai (Hybrid Search `Recall@K` với $K \in \{3, 5, 10\}$):**
+1. **Bốn Chỉ Số Đánh Giá Chuẩn Học Thuật Qua Khung LLM-as-a-Judge:**
+   - Sử dụng mô hình suy luận `5.6 Luna` (`OPENAI_MODEL`) làm Giám khảo độc lập, chấm điểm trên thang $0.0 - 1.0$:
+     - *Tính Trung Thực & Chống Ảo Giác (`Faithfulness`):* Ngưỡng nghiệm thu **$\ge 0.90$** (100% luận điểm có căn cứ tài liệu).
+     - *Độ Phù Hợp Trọng Tâm (`Answer Relevance`):* Ngưỡng nghiệm thu **$\ge 0.85$** (giải quyết trực tiếp câu hỏi).
+     - *Độ Chính Xác Trích Dẫn & Tọa Độ Vàng (`Citation & BBox Precision`):* Ngưỡng nghiệm thu **$\ge 0.85$** (đúng số trang và hộp giới hạn khớp vị trí thực tế).
+     - *Độ Toàn Vẹn Suy Luận Bắc Cầu (`Multi-Hop Completeness`):* Ngưỡng nghiệm thu **$\ge 0.80$** (xâu chuỗi đầy đủ các thực thể và trích dẫn).
+2. **Độ thu hồi Truy xuất Lai (Hybrid Search `Recall@K` với $K \in \{3, 5, 10\}$):**
    - So sánh 3 phương pháp trên cùng tập dữ liệu:
      - *Baseline 1 (Lexical FTS thuần túy):* Chỉ dùng `tsvector` (`ts_rank_cd`).
      - *Baseline 2 (Dense Vector thuần túy):* Chỉ dùng khoảng cách Cosine `<=>` trên chỉ mục HNSW `pgvector`.
      - *Phương pháp đề xuất (VeriScholar Hybrid RRF):* Kết hợp Dense Vector + Lexical FTS qua công thức Reciprocal Rank Fusion:
        $$\text{RRF\_Score}(d) = \frac{1}{60 + \text{rank}_{\text{vector}}(d)} + \frac{1}{60 + \text{rank}_{\text{fts}}(d)}$$
    - **Chỉ tiêu nghiệm thu:** Phương pháp Hybrid RRF đạt **`Recall@5 >= 0.85`**, vượt trội hơn cả hai phương pháp đơn lẻ khi truy vấn các thuật ngữ viết tắt toán học hoặc tên mô hình/bộ dữ liệu đặc thù (*BLEU*, *WMT 2014*, *Multi-Head Attention*).
-2. **Độ khớp Tọa độ Minh chứng Trực quan (`Bounding Box IoU`):**
+3. **Độ khớp Tọa độ Minh chứng Trực quan (`Bounding Box IoU`):**
    - Đo tỷ lệ giao trên hợp (Intersection over Union - IoU) giữa hộp tọa độ chuẩn hóa `[x0, y0, x1, y1, page]` (thang `[0..1000]`) do hệ thống tô sáng trên `PdfCanvasViewer` và hộp tọa độ nhãn thực tế:
      $$\text{IoU}(B_{\text{pred}}, B_{\text{gt}}) = \frac{\text{Area}(B_{\text{pred}} \cap B_{\text{gt}})}{\text{Area}(B_{\text{pred}} \cup B_{\text{gt}})}$$
    - **Chỉ tiêu nghiệm thu:** Đạt **`IoU trung bình >= 0.85`** và **100% đúng số trang (`page`)**.
-3. **Tỷ lệ Tự sửa lỗi Biên dịch LaTeX của LangGraph ReAct Loop (`Self-Healing Success Rate`):**
+4. **Tỷ lệ Tự sửa lỗi Biên dịch LaTeX của LangGraph ReAct Loop (`Self-Healing Success Rate`):**
    - Thử nghiệm 30 yêu cầu chỉnh sửa LaTeX cố tình chứa lỗi cú pháp phổ biến (thiếu dấu `}`, quên đóng môi trường `\end{tabular}`, sai khóa trích dẫn `\cite{...}`).
    - **Chỉ tiêu nghiệm thu:** Vòng lặp `compile_e2b -> diagnose_error -> edit_tex` (tối đa 3 lần thử) tự động khắc phục và xuất PDF thành công **$\ge 90\%$** trường hợp mà không cần người dùng can thiệp thủ công.
 

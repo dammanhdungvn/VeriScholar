@@ -3,6 +3,7 @@ import type {
   GraphQueryRequest,
   GraphQueryResponseData,
   BibliometricsResponseData,
+  LibraryGraphResponseData,
 } from "../types";
 
 export const libraryApi = {
@@ -26,6 +27,16 @@ export const libraryApi = {
    */
   async getFolderBibliometrics(folderId: string): Promise<BibliometricsResponseData> {
     return apiClient<BibliometricsResponseData>(`/folders/${folderId}/bibliometrics`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * Get full personal knowledge graph across user's library (LLM Wiki)
+   */
+  async getLibraryGraph(folderId?: string | null): Promise<LibraryGraphResponseData> {
+    const params = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : "";
+    return apiClient<LibraryGraphResponseData>(`/library/graph${params}`, {
       method: "GET",
     });
   },

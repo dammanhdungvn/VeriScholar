@@ -1,15 +1,12 @@
 import { useState, useEffect, useRef } from "react";
-import { Link } from "react-router-dom";
 import {
   Save,
-  Play,
   Download,
   Columns3,
   SplitSquareVertical,
   Sidebar,
   Maximize2,
   FileCode,
-  ArrowLeft,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -17,7 +14,6 @@ import {
   ChevronDown,
   Wrench,
   Sparkles,
-  PanelLeft,
   FileText,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
@@ -33,24 +29,20 @@ interface WritingHeaderBarProps {
 
 export function WritingHeaderBar({
   onSave,
-  onCompile,
+  onCompile: _onCompile,
   onExportBundle,
   onOpenAssets,
 }: WritingHeaderBarProps) {
   const {
-    draft,
     editorTitle,
     setEditorTitle,
     workspaceMode,
     setWorkspaceMode,
     isDirty,
     isSaving,
-    isCompiling,
     openAssetModal,
     mobileActiveTab,
     setMobileActiveTab,
-    isFileTreeOpen,
-    toggleFileTree,
   } = useWritingStore();
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
@@ -94,44 +86,8 @@ export function WritingHeaderBar({
     <div className="flex flex-col shrink-0 select-none border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fbf9f5] dark:bg-[#1c1b18]">
       {/* 1. Main Top Header Bar */}
       <header className="h-14 px-3 sm:px-4 flex items-center justify-between gap-2 sm:gap-3 relative z-30">
-        {/* Left: Navigation back & Title */}
+        {/* Left: Draft Title & Save status */}
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-          <Link
-            to="/dashboard"
-            className="p-1.5 rounded-lg text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#ece8df] dark:hover:bg-[#282623] transition-colors shrink-0"
-            title="Dashboard"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </Link>
-
-          {/* Mobile Sidebar (File Tree & Outline) Toggle Button (< 768px) */}
-          <button
-            type="button"
-            data-testid="mobile-toggle-sidebar-btn"
-            onClick={toggleFileTree}
-            className="md:hidden p-1.5 rounded-lg text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#ece8df] dark:hover:bg-[#282623] transition-colors shrink-0 cursor-pointer"
-            title="Files & Outline"
-          >
-            <PanelLeft className="w-4 h-4 text-[#c15f3e]" />
-          </button>
-
-          {/* Desktop Sidebar (File Tree & Outline) Toggle Button (>= 768px) */}
-          <button
-            type="button"
-            data-testid="toggle-file-tree-btn"
-            onClick={toggleFileTree}
-            className={cn(
-              "hidden md:flex p-1.5 rounded-lg transition-colors shrink-0 cursor-pointer items-center gap-1.5 text-xs font-medium",
-              isFileTreeOpen
-                ? "bg-stone-500/10 text-ink dark:text-zinc-100 border border-hairline"
-                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#ece8df] dark:hover:bg-[#282623]"
-            )}
-            title={isFileTreeOpen ? "Hide sidebar" : "Show sidebar"}
-          >
-            <PanelLeft className="w-4 h-4 text-[#c15f3e]" />
-            <span className="hidden sm:inline">Files</span>
-          </button>
-
           <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
             {isEditingTitle ? (
               <input
@@ -147,17 +103,11 @@ export function WritingHeaderBar({
               <button
                 type="button"
                 onClick={() => setIsEditingTitle(true)}
-                className="text-xs sm:text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100 truncate hover:underline text-left cursor-pointer max-w-[90px] xs:max-w-[130px] sm:max-w-[200px] md:max-w-xs"
+                className="text-xs sm:text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100 truncate hover:underline text-left cursor-pointer max-w-[120px] xs:max-w-[180px] sm:max-w-[280px] md:max-w-md"
                 title="Rename draft"
               >
                 {editorTitle || "Untitled Draft"}
               </button>
-            )}
-
-            {draft && (
-              <span className="px-1.5 py-0.5 rounded text-[10px] sm:text-[11px] font-mono bg-zinc-200/60 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 shrink-0">
-                v{draft.version}
-              </span>
             )}
 
             {/* Save Status Indicator */}
@@ -315,25 +265,8 @@ export function WritingHeaderBar({
             title="Save (Ctrl+S / ⌘S)"
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span className="sr-only">Lưu</span>
+            <span className="sr-only">Save</span>
             <span className="hidden sm:inline">Save</span>
-          </button>
-
-          {/* PROMINENT BUTTON 2: Compile (Primary Accent) */}
-          <button
-            type="button"
-            onClick={onCompile}
-            disabled={isCompiling}
-            className="h-8 px-2.5 sm:px-3.5 rounded-lg text-xs font-semibold font-anthropic-serif flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
-            title="Compile (LaTeX Engine)"
-          >
-            {isCompiling ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5 fill-current" />
-            )}
-            <span className="sr-only">Biên dịch</span>
-            <span className="hidden xs:inline">Compile</span>
           </button>
         </div>
       </header>

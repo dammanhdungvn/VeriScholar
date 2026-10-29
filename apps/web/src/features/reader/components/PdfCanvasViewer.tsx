@@ -5,6 +5,7 @@ import { getCachedPdfDocument, clearCachedPdfDocument } from "../lib/pdfRenderQu
 import { PdfPageCanvas } from "./PdfPageCanvas";
 import { PdfThumbnailSidebar } from "./PdfThumbnailSidebar";
 import { ScholarSelectionMenu } from "./ScholarSelectionMenu";
+import { calculateSelectionBoundingBox } from "../lib/selection-bbox";
 import { useReaderStore } from "../stores/useReaderStore";
 import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore";
 import { useTheme } from "@/hooks/useTheme";
@@ -20,6 +21,7 @@ interface PdfCanvasViewerProps {
   zoomRatio: number;
   rotationDeg: 0 | 90 | 180 | 270;
   activeBbox: BoundingBox | null;
+  activeBboxes?: BoundingBox[] | null;
   isLoading?: boolean;
   onPageCountDetected?: (count: number) => void;
   onClearHighlight?: () => void;
@@ -38,6 +40,7 @@ export function PdfCanvasViewer({
   zoomRatio,
   rotationDeg,
   activeBbox,
+  activeBboxes,
   isLoading: isExternalLoading = false,
   onPageCountDetected,
   onClearHighlight,
@@ -66,6 +69,8 @@ export function PdfCanvasViewer({
   const isUserScrollingRef = useRef(false);
   const userScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollRafRef = useRef<number | null>(null);
+  const isProgrammaticScrollRef = useRef(false);
+  const programmaticScrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Store & Theme States
   const { theme } = useTheme();
@@ -75,6 +80,8 @@ export function PdfCanvasViewer({
   const isThumbnailsOpen = useReaderStore((s) => s.isThumbnailsOpen);
   const setIsThumbnailsOpen = useReaderStore((s) => s.setIsThumbnailsOpen);
   const setCurrentPage = useReaderStore((s) => s.setCurrentPage);
+  const storeActiveBboxes = useReaderStore((s) => s.activeBboxes);
+  const effectiveBboxes = activeBboxes !== undefined ? activeBboxes : storeActiveBboxes;
 
   // Text selection state
   const [selectedText, setSelectedText] = useState("");
@@ -181,6 +188,9 @@ export function PdfCanvasViewer({
 
   // Active scroll tracking: identify the page occupying the reading viewport
   const updateCurrentPageFromScroll = useCallback(() => {
+    if (isProgrammaticScrollRef.current) {
+      return;
+    }
     if (!scrollContainer || readingMode !== "continuous" || totalPages <= 1) {
       return;
     }
@@ -240,15 +250,26 @@ export function PdfCanvasViewer({
   }, [updateCurrentPageFromScroll]);
 
   useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClearHighlight?.();
+        useDashboardStore.getState().setActiveBbox(null);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
+      window.removeEventListener("keydown", handleKeyDown);
       if (scrollRafRef.current !== null) {
         cancelAnimationFrame(scrollRafRef.current);
       }
       if (userScrollTimeoutRef.current) {
         clearTimeout(userScrollTimeoutRef.current);
       }
+      if (programmaticScrollTimeoutRef.current) {
+        clearTimeout(programmaticScrollTimeoutRef.current);
+      }
     };
-  }, []);
+  }, [onClearHighlight]);
 
   // 2. Handle Text Selection in PDF Text Layer with Normalized BoundingBox Calculation
   const handleMouseUp = () => {
@@ -278,29 +299,10 @@ export function PdfCanvasViewer({
         const targetPageEl =
           matchedPageEl || document.getElementById(`pdf-page-${detectedPage}`);
 
-        // Calculate normalized BoundingBox: [x0, y0, x1, y1, page]
+        // Calculate normalized BoundingBox: [x0, y0, x1, y1, page] using multi-rect column clamping
         let calculatedBbox: BoundingBox | null = null;
-        if (targetPageEl) {
-          const innerPage =
-            targetPageEl.querySelector<HTMLElement>(".textLayer")?.parentElement ||
-            targetPageEl.querySelector<HTMLElement>("canvas")?.parentElement ||
-            targetPageEl;
-          const pageRect = innerPage.getBoundingClientRect();
-
-          if (pageRect.width > 0 && pageRect.height > 0) {
-            const rawX0 = (rect.left - pageRect.left) / pageRect.width;
-            const rawY0 = (rect.top - pageRect.top) / pageRect.height;
-            const rawX1 = (rect.right - pageRect.left) / pageRect.width;
-            const rawY1 = (rect.bottom - pageRect.top) / pageRect.height;
-
-            const x0 = Number(Math.max(0, Math.min(1, rawX0)).toFixed(4));
-            const y0 = Number(Math.max(0, Math.min(1, rawY0)).toFixed(4));
-            const x1 = Number(Math.max(x0, Math.min(1, rawX1)).toFixed(4));
-            const y1 = Number(Math.max(y0, Math.min(1, rawY1)).toFixed(4));
-            const normalizedPage = Math.max(1, detectedPage);
-
-            calculatedBbox = [x0, y0, x1, y1, normalizedPage];
-          }
+        if (targetPageEl && range) {
+          calculatedBbox = calculateSelectionBoundingBox(range, targetPageEl, detectedPage);
         }
 
         setSelectedText(text);
@@ -335,23 +337,25 @@ export function PdfCanvasViewer({
     // A. Citation Highlight Clicked: Scroll into view and center on bounding box ONCE
     if (activeBbox && activeBbox[4]) {
       const bboxKey = `${activeBbox[0]}-${activeBbox[1]}-${activeBbox[2]}-${activeBbox[3]}-${activeBbox[4]}`;
+      const pageNum = activeBbox[4];
+      const pageEl = document.getElementById(`pdf-page-${pageNum}`);
+
       if (lastScrolledBboxKeyRef.current === bboxKey) {
         return;
       }
 
-      const pageNum = activeBbox[4];
-      const pageEl = document.getElementById(`pdf-page-${pageNum}`);
       if (pageEl && scrollContainer) {
         lastScrolledBboxKeyRef.current = bboxKey;
+        isProgrammaticScrollRef.current = true;
+        if (programmaticScrollTimeoutRef.current) {
+          clearTimeout(programmaticScrollTimeoutRef.current);
+        }
+        programmaticScrollTimeoutRef.current = setTimeout(() => {
+          isProgrammaticScrollRef.current = false;
+        }, 800);
+
         const bboxOverlay = pageEl.querySelector<HTMLElement>('[data-testid="grounded-bbox-overlay"]');
         const target = bboxOverlay || pageEl;
-        if (typeof target.scrollIntoView === "function") {
-          try {
-            target.scrollIntoView({ behavior: "smooth", block: "center" });
-          } catch {
-            // Safe fallback
-          }
-        }
 
         const containerRect = scrollContainer.getBoundingClientRect();
         const targetRect = target.getBoundingClientRect();
@@ -405,6 +409,14 @@ export function PdfCanvasViewer({
     const pageEl = document.getElementById(`pdf-page-${currentPage}`);
     if (pageEl && scrollContainer) {
       lastScrolledByObserverRef.current = currentPage;
+      isProgrammaticScrollRef.current = true;
+      if (programmaticScrollTimeoutRef.current) {
+        clearTimeout(programmaticScrollTimeoutRef.current);
+      }
+      programmaticScrollTimeoutRef.current = setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 800);
+
       const containerRect = scrollContainer.getBoundingClientRect();
       const pageRect = pageEl.getBoundingClientRect();
       const relativeTop = pageRect.top - containerRect.top + scrollContainer.scrollTop;
@@ -608,7 +620,7 @@ export function PdfCanvasViewer({
   }[colorTheme];
 
   return (
-    <div className="flex-1 flex w-full h-full overflow-hidden relative select-text">
+    <div className="flex-1 flex w-full h-full overflow-hidden relative select-none">
       {/* 1. Left Thumbnail Sidebar Drawer */}
       <PdfThumbnailSidebar
         isOpen={isThumbnailsOpen}
@@ -635,7 +647,10 @@ export function PdfCanvasViewer({
         onMouseUp={handleMouseUp}
         onMouseMove={resetHudTimer}
         className={cn(
-          "flex-1 relative overflow-y-auto overflow-x-hidden px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style] scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+          "flex-1 relative overflow-y-auto overflow-x-auto px-0 sm:px-2.5 py-0 sm:py-4 transition-colors duration-200 [contain:layout_style]",
+          effectiveZoom > 1.0
+            ? "paper-scrollbar"
+            : "scrollbar-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
           containerThemeBg
         )}
       >
@@ -659,7 +674,7 @@ export function PdfCanvasViewer({
         {/* Pages Container: Stack for Continuous, Side-by-Side Book for Two-Page, Centered for Single */}
         <div
           className={cn(
-            "w-full mx-auto pb-16 flex flex-col items-center",
+            "min-w-fit w-fit mx-auto pb-16 flex flex-col items-center",
             readingMode === "continuous" && "gap-2 sm:gap-3",
             readingMode === "single" && "justify-center min-h-[calc(100vh-140px)]",
             readingMode === "two-page" && "gap-2"
@@ -675,6 +690,7 @@ export function PdfCanvasViewer({
                   zoomRatio={twoPageZoom}
                   rotationDeg={rotationDeg}
                   activeBbox={activeBbox}
+                  activeBboxes={effectiveBboxes}
                   onClearHighlight={onClearHighlight}
                   colorTheme={colorTheme}
                   isCurrentPage={pageNum === currentPage}
@@ -695,6 +711,7 @@ export function PdfCanvasViewer({
                 zoomRatio={effectiveZoom}
                 rotationDeg={rotationDeg}
                 activeBbox={activeBbox}
+                activeBboxes={effectiveBboxes}
                 onClearHighlight={onClearHighlight}
                 colorTheme={colorTheme}
                 isCurrentPage={pageNum === currentPage}

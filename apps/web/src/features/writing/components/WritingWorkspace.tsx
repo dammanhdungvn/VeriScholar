@@ -15,9 +15,10 @@ import type { SessionItem } from "@/types/dashboard";
 
 interface WritingWorkspaceProps {
   sessions?: SessionItem[];
+  hideTaskbar?: boolean;
 }
 
-export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
+export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorkspaceProps = {}) {
   const {
     activeDraftId,
     draft,
@@ -50,8 +51,18 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
   const [editorRatio, setEditorRatio] = useState(50);
   const [isDraggingEditor, setIsDraggingEditor] = useState(false);
   const [targetScrollLine, setTargetScrollLine] = useState<number | null>(null);
+  const [isAssistantOpen, setIsAssistantOpen] = useState(false);
+  const [assistantWidth, setAssistantWidth] = useState(420);
+  const [isDraggingAssistant, setIsDraggingAssistant] = useState(false);
   const mainWorkspaceRef = useRef<HTMLDivElement>(null);
   const workspaceContainerRef = useRef<HTMLDivElement>(null);
+
+  // Sync assistant drawer state with mode & mobile tab
+  useEffect(() => {
+    if (workspaceMode === "tri-pane" || workspaceMode === "dual-ai" || mobileActiveTab === "assistant") {
+      setIsAssistantOpen(true);
+    }
+  }, [workspaceMode, mobileActiveTab]);
 
   // Drag handler for Sidebar Width relative to workspace container
   useEffect(() => {
@@ -94,6 +105,32 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
       window.removeEventListener("pointerup", handlePointerUp);
     };
   }, [isDraggingEditor]);
+
+  // Drag handler for Assistant Drawer Width (from right edge)
+  useEffect(() => {
+    if (!isDraggingAssistant) return;
+    const prevCursor = document.body.style.cursor;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const handlePointerMove = (e: PointerEvent) => {
+      const currentX = window.innerWidth - e.clientX;
+      const maxWidth = Math.min(850, Math.floor(window.innerWidth * 0.85));
+      const newWidth = Math.max(320, Math.min(maxWidth, currentX));
+      setAssistantWidth(newWidth);
+    };
+    const handlePointerUp = () => setIsDraggingAssistant(false);
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    return () => {
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevUserSelect;
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isDraggingAssistant]);
 
   // Save handler with OCC version tracking
   const handleSave = useCallback(async () => {
@@ -266,25 +303,22 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
     workspaceMode === "dual-ai" ||
     workspaceMode === "zen-pdf";
 
-  const showAi =
-    workspaceMode === "tri-pane" || workspaceMode === "dual-ai";
-
   // Handler for forwarding surrounding context buffer to AI Assistant Chat
   const handleSelectionAddToChat = useCallback((contextBuffer: string) => {
-    if (workspaceMode === "dual-code" || workspaceMode === "zen-code" || workspaceMode === "zen-pdf") {
-      setWorkspaceMode("tri-pane");
-    }
+    setIsAssistantOpen(true);
     setAssistantPrompt(contextBuffer);
-  }, [workspaceMode, setWorkspaceMode, setAssistantPrompt]);
+  }, [setAssistantPrompt]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
-      {/* 1. Left Navigation Taskbar (Inherited from Dashboard) */}
-      <DashboardTaskbar
-        sessions={sessions}
-        onSelectSession={(id) => navigate(`/dashboard/${id}`)}
-        onNewSession={() => navigate("/dashboard")}
-      />
+    <div className="flex h-screen w-full overflow-hidden bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef]">
+      {/* 1. Left Navigation Taskbar (Optional if not wrapped in AppLayout) */}
+      {!hideTaskbar && (
+        <DashboardTaskbar
+          sessions={sessions}
+          onSelectSession={(id) => navigate(`/dashboard/${id}`)}
+          onNewSession={() => navigate("/dashboard")}
+        />
+      )}
 
       {/* 2. Main Writing Area */}
       <div
@@ -432,45 +466,68 @@ export function WritingWorkspace({ sessions }: WritingWorkspaceProps = {}) {
               </div>
             )}
 
-            {/* Column 3: AI Writing Assistant */}
-            {showAi && (
-              <div
-                className={cn(
-                  "flex-col relative min-w-0 h-full",
-                  mobileActiveTab === "assistant" ? "flex w-full" : "hidden md:flex"
-                )}
-              >
-                <WritingAssistantPane
-                  onClose={() => {
-                    setWorkspaceMode("dual-code");
-                    if (mobileActiveTab === "assistant") {
-                      setMobileActiveTab("editor");
-                    }
-                  }}
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Floating AI Chat Bubble when Assistant is closed */}
-      {!showAi && (
+      {/* Socratic Assistant Overlay Drawer (420px slide-out) */}
+      {isAssistantOpen && (
+        <>
+          <div
+            data-testid="writing-assistant-backdrop"
+            onClick={() => setIsAssistantOpen(false)}
+            className="fixed inset-0 bg-black/20 z-40 md:hidden backdrop-blur-2xs transition-opacity animate-in fade-in"
+          />
+          <div
+            data-testid="writing-assistant-drawer"
+            style={{ width: `${assistantWidth}px` }}
+            className="fixed inset-y-0 right-0 max-w-[95vw] shadow-2xl z-40 bg-[#fbf9f5] dark:bg-[#181715] border-l border-[#ece8df] dark:border-[#2a2824] flex flex-col animate-in slide-in-from-right duration-200"
+          >
+            {/* Draggable left border resize handle */}
+            <div
+              data-testid="assistant-resize-handle"
+              onPointerDown={(e) => {
+                e.preventDefault();
+                setIsDraggingAssistant(true);
+              }}
+              className="absolute inset-y-0 -left-2 w-4 cursor-col-resize hover:bg-coral-500/25 active:bg-coral-500/40 transition-colors z-50 flex items-center justify-center group touch-none select-none"
+              title="Kéo để điều chỉnh độ rộng trợ lý AI (320px - 850px)"
+            >
+              <div className="w-1 h-10 rounded-full bg-stone-300 dark:bg-stone-600 group-hover:bg-coral-500 transition-colors" />
+            </div>
+
+            <WritingAssistantPane
+              onClose={() => {
+                setIsAssistantOpen(false);
+                if (mobileActiveTab === "assistant") {
+                  setMobileActiveTab("editor");
+                }
+                if (workspaceMode === "tri-pane") {
+                  setWorkspaceMode("dual-code");
+                }
+              }}
+            />
+          </div>
+        </>
+      )}
+
+      {/* Socratic Assistant Floating Action Button (FAB) at bottom right */}
+      {!isAssistantOpen && (
         <div className="fixed bottom-5 right-5 z-30 pointer-events-auto">
           <button
             type="button"
-            data-testid="floating-ai-chat-bubble"
+            data-testid="writing-assistant-fab"
             onClick={() => {
-              setWorkspaceMode("tri-pane");
+              setIsAssistantOpen(true);
               if (typeof window !== "undefined" && window.innerWidth < 768) {
                 setMobileActiveTab("assistant");
               }
             }}
-            className="h-10 px-4 rounded-full bg-white dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#38332c] hover:border-coral-500/50 hover:bg-coral-500/10 text-ink dark:text-zinc-100 shadow-xl flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
-            title="Mở Trợ lý AI (Chat AI)"
+            className="h-10 px-4 rounded-full bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xl flex items-center gap-2 text-xs font-semibold font-anthropic-serif transition-all hover:scale-105 active:scale-95 cursor-pointer group"
+            title="Mở Trợ lý Socratic Assistant"
           >
-            <Sparkles className="w-4 h-4 text-coral-500 group-hover:rotate-12 transition-transform" />
-            <span>Chat AI</span>
+            <Sparkles className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
+            <span>Socratic Assistant</span>
           </button>
         </div>
       )}

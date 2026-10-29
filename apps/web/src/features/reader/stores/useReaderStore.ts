@@ -14,6 +14,7 @@ export interface ReaderState {
   rotationDeg: 0 | 90 | 180 | 270;
   activeCitationId: string | null;
   activeBbox: BoundingBox | null;
+  activeBboxes: BoundingBox[] | null;
   readingMode: ReadingMode;
   colorTheme: ReaderColorTheme;
   fitMode: FitMode;
@@ -34,7 +35,12 @@ export interface ReaderState {
   prevPage: () => void;
   setRotationDeg: (deg: 0 | 90 | 180 | 270) => void;
   rotateClockwise: () => void;
-  setActiveCitation: (citationId: string | null, bbox: BoundingBox | null, page?: number) => void;
+  setActiveCitation: (
+    citationId: string | null,
+    bbox: BoundingBox | null,
+    page?: number,
+    bboxes?: BoundingBox[] | null
+  ) => void;
   setReadingMode: (mode: ReadingMode) => void;
   setColorTheme: (theme: ReaderColorTheme) => void;
   setFitMode: (mode: FitMode) => void;
@@ -53,6 +59,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
   rotationDeg: 0,
   activeCitationId: null,
   activeBbox: null,
+  activeBboxes: null,
   readingMode: "continuous",
   colorTheme: "default",
   fitMode: "width",
@@ -69,6 +76,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
         currentPage: 1,
         activeCitationId: null,
         activeBbox: null,
+        activeBboxes: null,
       };
     }),
 
@@ -155,12 +163,16 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       return { rotationDeg: nextDeg };
     }),
 
-  setActiveCitation: (citationId, bbox, page) =>
-    set((state) => ({
-      activeCitationId: citationId,
-      activeBbox: bbox,
-      currentPage: page !== undefined ? page : bbox ? bbox[4] : state.currentPage,
-    })),
+  setActiveCitation: (citationId, bbox, page, bboxes) =>
+    set((state) => {
+      const primaryBox = bbox ?? (bboxes && bboxes.length > 0 ? bboxes[0] : null);
+      return {
+        activeCitationId: citationId,
+        activeBbox: primaryBox,
+        activeBboxes: primaryBox ? [primaryBox] : null,
+        currentPage: page !== undefined ? page : primaryBox ? primaryBox[4] : state.currentPage,
+      };
+    }),
 
   setReadingMode: (mode) => set({ readingMode: mode }),
   setColorTheme: (theme) => set({ colorTheme: theme }),
@@ -183,6 +195,7 @@ export const useReaderStore = create<ReaderState>((set, get) => ({
       rotationDeg: 0,
       activeCitationId: null,
       activeBbox: null,
+      activeBboxes: null,
       readingMode: "continuous",
       colorTheme: "default",
       fitMode: "width",

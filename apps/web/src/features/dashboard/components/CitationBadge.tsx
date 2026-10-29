@@ -21,6 +21,11 @@ export function CitationBadge({ citation, onOpenReferences: _onOpenReferences }:
   );
 
   const handleClick = () => {
+    if (isSelected) {
+      setActiveBbox(null);
+      return;
+    }
+
     const docId = citation.paper_id;
     if (docId) {
       useReaderStore.getState().setActiveDocumentId(docId);

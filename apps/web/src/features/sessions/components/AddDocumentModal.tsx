@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { X, Plus, Link, Library, FileText } from "lucide-react";
+import { useState, useMemo, useRef } from "react";
+import { X, Plus, Link, Library, FileText, UploadCloud, Loader2, AlertCircle } from "lucide-react";
 import type { DocumentListItem } from "@/types/document";
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,7 @@ interface AddDocumentModalProps {
   currentDocumentIds: string[];
   onAddByDocumentId: (documentId: string) => Promise<void>;
   onAddByUrl: (url: string, title?: string) => Promise<void>;
+  onAddByFile?: (file: File) => Promise<void>;
 }
 
 export function AddDocumentModal({
@@ -19,17 +20,37 @@ export function AddDocumentModal({
   currentDocumentIds,
   onAddByDocumentId,
   onAddByUrl,
+  onAddByFile,
 }: AddDocumentModalProps) {
-  const [tab, setTab] = useState<"library" | "url">("library");
+  const [tab, setTab] = useState<"library" | "upload" | "url">("library");
   const [url, setUrl] = useState("");
   const [urlTitle, setUrlTitle] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const selectableDocs = useMemo(() => {
+    const raw = availableLibraryDocs || [];
+    const notOpened = raw.filter(
+      (doc) => !currentDocumentIds.includes(doc.id) && (doc as any).is_persistent !== false
+    );
+    const seen = new Set<string>();
+    const deduplicated: DocumentListItem[] = [];
+    for (const doc of notOpened) {
+      const norm = (doc.title || doc.filename || "")
+        .trim()
+        .toLowerCase()
+        .replace(/\.pdf$/i, "");
+      if (norm && !seen.has(norm)) {
+        seen.add(norm);
+        deduplicated.push(doc);
+      }
+    }
+    return deduplicated;
+  }, [availableLibraryDocs, currentDocumentIds]);
 
   if (!isOpen) return null;
-
-  const selectableDocs = availableLibraryDocs.filter(
-    (doc) => !currentDocumentIds.includes(doc.id)
-  );
 
   const handleSelectDoc = async (docId: string) => {
     setIsSubmitting(true);
@@ -50,6 +71,26 @@ export function AddDocumentModal({
       setUrl("");
       setUrlTitle("");
       onClose();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleFileUpload = async (file: File) => {
+    if (!file.name.toLowerCase().endsWith(".pdf")) {
+      setUploadError("Vui lòng chọn tệp định dạng PDF (.pdf).");
+      return;
+    }
+    setIsSubmitting(true);
+    setUploadError(null);
+    try {
+      if (onAddByFile) {
+        await onAddByFile(file);
+      }
+      onClose();
+    } catch (err) {
+      console.error("Failed to upload document to session:", err);
+      setUploadError(err instanceof Error ? err.message : "Tải lên bài báo thất bại.");
     } finally {
       setIsSubmitting(false);
     }
@@ -94,6 +135,20 @@ export function AddDocumentModal({
           >
             <Library className="w-3.5 h-3.5" />
             <span>Thư viện</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setTab("upload")}
+            className={cn(
+              "flex-1 py-2.5 flex items-center justify-center gap-1.5 font-medium border-b-2 transition-colors",
+              tab === "upload"
+                ? "border-primary text-primary bg-canvas dark:bg-[#1a1917]"
+                : "border-transparent text-muted hover:text-ink"
+            )}
+          >
+            <UploadCloud className="w-3.5 h-3.5" />
+            <span>Tải lên PDF</span>
           </button>
 
           <button
@@ -146,6 +201,75 @@ export function AddDocumentModal({
                 ))}
               </div>
             )
+          ) : tab === "upload" ? (
+            <div className="space-y-3">
+              {uploadError && (
+                <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-300 flex items-center gap-2 text-xs">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{uploadError}</span>
+                </div>
+              )}
+
+              <div
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  setIsDragging(true);
+                }}
+                onDragLeave={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  if (e.dataTransfer.files?.[0]) {
+                    handleFileUpload(e.dataTransfer.files[0]);
+                  }
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                className={cn(
+                  "p-8 rounded-xl border-2 border-dashed transition-all flex flex-col items-center justify-center text-center cursor-pointer select-none",
+                  isDragging
+                    ? "border-primary bg-primary/10"
+                    : "border-hairline dark:border-[#2f2b26] hover:border-primary/50 bg-surface-soft/30 dark:bg-[#141311]"
+                )}
+              >
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,application/pdf"
+                  data-testid="session-pdf-file-input"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      handleFileUpload(e.target.files[0]);
+                      e.target.value = "";
+                    }
+                  }}
+                />
+                {isSubmitting ? (
+                  <div className="flex flex-col items-center space-y-2 py-2">
+                    <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                    <span className="font-medium text-ink dark:text-zinc-200">
+                      Đang tải và nạp bài báo vào phiên...
+                    </span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center space-y-1.5">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-1">
+                      <UploadCloud className="w-5 h-5" />
+                    </div>
+                    <div className="font-medium text-ink dark:text-zinc-200">
+                      Kéo thả tệp PDF vào đây, hoặc{" "}
+                      <span className="text-primary underline">chọn từ máy tính</span>
+                    </div>
+                    <p className="text-[11px] text-muted dark:text-zinc-400">
+                      Chỉ hỗ trợ tệp định dạng .pdf (tối đa 50MB)
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
           ) : (
             <form onSubmit={handleUrlSubmit} className="space-y-3">
               <div className="space-y-1">

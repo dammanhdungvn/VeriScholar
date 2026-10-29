@@ -175,6 +175,8 @@ class CitationItemSchema(BaseModel):
     page_number: int
     bounding_boxes: list[list[float]] = Field(default_factory=list)
     score: float = 1.0
+    snippet: str | None = None
+    concept_name: str | None = None
 
 
 class SessionTurnItem(BaseModel):

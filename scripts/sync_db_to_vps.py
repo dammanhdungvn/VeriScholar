@@ -55,6 +55,7 @@ async def generate_sync_sql() -> tuple[str, dict[str, int]]:
     sql_lines = [
         "BEGIN;",
         "SET session_replication_role = 'replica';",
+        "ALTER TABLE IF EXISTS drafts ADD COLUMN IF NOT EXISTS source_session_id UUID;",
     ]
     summary = {}
 

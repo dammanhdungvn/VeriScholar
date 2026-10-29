@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { DashboardTaskbar } from "../components/DashboardTaskbar";
@@ -57,5 +57,174 @@ describe("DashboardTaskbar Component", () => {
     const backdrop = screen.getByTestId("avatar-popover-backdrop");
     fireEvent.click(backdrop);
     expect(screen.queryByTestId("avatar-dropdown-popover")).not.toBeInTheDocument();
+  });
+
+  it("closes context menu when clicking outside", () => {
+    const dummySessions = [
+      { id: "s-1", title: "Test Session 1", document_count: 1, active_tab: "chat", is_archived: false, created_at: "", updated_at: "" },
+    ];
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    const moreBtn = screen.getByTestId("session-more-btn-s-1");
+    fireEvent.click(moreBtn);
+
+    expect(screen.getByTestId("session-context-menu-s-1")).toBeInTheDocument();
+
+    // Click outside
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByTestId("session-context-menu-s-1")).not.toBeInTheDocument();
+  });
+
+  it("shows unread coral indicator for unread sessions and toggles status", () => {
+    localStorage.setItem("verischolar_unread_sessions_v1", JSON.stringify(["s-unread"]));
+    const dummySessions = [
+      { id: "s-unread", title: "Unread Paper Session", document_count: 1, active_tab: "chat", is_archived: false, created_at: "", updated_at: "" },
+    ];
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    // Coral unread dot should be visible
+    expect(screen.getByTestId("session-unread-dot-s-unread")).toBeInTheDocument();
+
+    // Open context menu to mark as read
+    const moreBtn = screen.getByTestId("session-more-btn-s-unread");
+    fireEvent.click(moreBtn);
+
+    const toggleReadBtn = screen.getByText("Mark as read");
+    expect(toggleReadBtn).toBeInTheDocument();
+    fireEvent.click(toggleReadBtn);
+
+    // Indicator should be gone
+    expect(screen.queryByTestId("session-unread-dot-s-unread")).not.toBeInTheDocument();
+  });
+
+  it("allows renaming a session via inline input and calls onRenameSession", async () => {
+    const onRenameSession = vi.fn().mockResolvedValue(undefined);
+    const dummySessions = [
+      { id: "s-rename", title: "Original Title", document_count: 1, active_tab: "chat", is_archived: false, created_at: "", updated_at: "" },
+    ];
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} onRenameSession={onRenameSession} />
+      </BrowserRouter>
+    );
+
+    const moreBtn = screen.getByTestId("session-more-btn-s-rename");
+    fireEvent.click(moreBtn);
+
+    const renameBtn = screen.getByText("Rename");
+    fireEvent.click(renameBtn);
+
+    const renameInput = screen.getByTestId("session-rename-input-s-rename") as HTMLInputElement;
+    expect(renameInput).toBeInTheDocument();
+    expect(renameInput.value).toBe("Original Title");
+
+    fireEvent.change(renameInput, { target: { value: "Updated Academic Title" } });
+    const saveBtn = screen.getByTestId("session-rename-save-s-rename");
+    fireEvent.click(saveBtn);
+
+    expect(onRenameSession).toHaveBeenCalledWith("s-rename", "Updated Academic Title");
+  });
+
+  it("prompts confirmation dialog and calls onDeleteSession when confirmed", async () => {
+    const onDeleteSession = vi.fn().mockResolvedValue(undefined);
+    const dummySessions = [
+      { id: "s-del", title: "Session To Delete", document_count: 1, active_tab: "chat", is_archived: false, created_at: "", updated_at: "" },
+    ];
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} onDeleteSession={onDeleteSession} />
+      </BrowserRouter>
+    );
+
+    const moreBtn = screen.getByTestId("session-more-btn-s-del");
+    fireEvent.click(moreBtn);
+
+    const deleteBtn = screen.getByText("Delete");
+    fireEvent.click(deleteBtn);
+
+    const deleteDialog = screen.getByTestId("delete-session-dialog");
+    expect(deleteDialog).toBeInTheDocument();
+    expect(deleteDialog).toHaveTextContent("Session To Delete");
+
+    const confirmBtn = screen.getByTestId("confirm-delete-session-btn");
+    fireEvent.click(confirmBtn);
+
+    expect(onDeleteSession).toHaveBeenCalledWith("s-del");
+  });
+
+  it("toggles pin on session, moves pinned session to top, and suppresses tooltip when menu is open", () => {
+    const dummySessions = [
+      { id: "s-1", title: "Alpha Session", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-2", title: "Beta Session", updated_at: "2026-10-29T00:00:00Z" },
+    ];
+
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    // Open menu on Beta Session
+    const moreBtn2 = screen.getByTestId("session-more-btn-s-2");
+    fireEvent.click(moreBtn2);
+
+    // Verify context menu shows "Pin"
+    const pinBtn = screen.getByText("Pin");
+    expect(pinBtn).toBeInTheDocument();
+
+    // Click Pin
+    fireEvent.click(pinBtn);
+
+    // Reopen menu to verify it now says "Unpin"
+    const reopenMoreBtn = screen.getByTestId("session-more-btn-s-2");
+    fireEvent.click(reopenMoreBtn);
+
+    expect(screen.getByText("Unpin")).toBeInTheDocument();
+
+    // Verify button has no title while menu is open (preventing native tooltip overlay)
+    const sessionBtn = screen.getByText("Beta Session").closest("button");
+    expect(sessionBtn).not.toHaveAttribute("title");
+  });
+
+  it("positions context menu upward when session is located near bottom of the list", () => {
+    const dummySessions = [
+      { id: "s-1", title: "Session 1", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-2", title: "Session 2", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-3", title: "Session 3", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-4", title: "Bottom Session", updated_at: "2026-10-28T00:00:00Z" },
+    ];
+
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    const bottomMoreBtn = screen.getByTestId("session-more-btn-s-4");
+    fireEvent.click(bottomMoreBtn);
+
+    const menu = screen.getByTestId("session-context-menu-s-4");
+    expect(menu).toHaveAttribute("data-placement", "top");
+    expect(menu.className).toContain("bottom-full");
+  });
+
+  it("renders English navigation labels 'Writing' and 'My Library' from taskbar", () => {
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar />
+      </BrowserRouter>
+    );
+
+    expect(screen.getByText("Writing")).toBeInTheDocument();
+    expect(screen.getByText("My Library")).toBeInTheDocument();
+    expect(screen.queryByText(/Khám phá & Phiên đọc/i)).toBeNull();
   });
 });

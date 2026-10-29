@@ -12,12 +12,12 @@ import {
   ListOrdered,
   Heading,
   BookMarked,
-  ArrowRightCircle,
-  Loader2,
+  X,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
-import { draftsApi } from "../api/draftsApi";
 import { buildSelectionContextBuffer } from "../lib/contextBuffer";
+import { WritingSelectionPopover } from "./WritingSelectionPopover";
 import { cn } from "@/lib/utils";
 
 interface WritingEditorPaneProps {
@@ -30,23 +30,26 @@ export function WritingEditorPane({
   scrollToLine,
 }: WritingEditorPaneProps) {
   const {
-    activeDraftId,
     editorContent,
     setEditorContent,
     editorBibContent,
     setEditorBibContent,
     activeFile,
     setActiveFile,
-    setActiveHighlightBox,
+    openFiles,
+    closeFile,
+    isFileTreeOpen,
+    toggleFileTree,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
   } = useWritingStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorBodyRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
-  const [isSyncingForward, setIsSyncingForward] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
 
   const currentContent = activeFile === "main.tex" ? editorContent : editorBibContent;
 
@@ -54,21 +57,26 @@ export function WritingEditorPane({
     return currentContent.split("\n").length;
   }, [currentContent]);
 
+  const jumpToLine = (targetLine: number) => {
+    if (!textareaRef.current) return;
+    const lines = currentContent.split("\n");
+    let charIndex = 0;
+    for (let i = 0; i < Math.min(targetLine - 1, lines.length); i++) {
+      charIndex += lines[i].length + 1;
+    }
+    textareaRef.current.focus();
+    textareaRef.current.setSelectionRange(
+      charIndex,
+      charIndex + (lines[targetLine - 1]?.length || 0)
+    );
+    const lineHeightPx = 20;
+    textareaRef.current.scrollTop = Math.max(0, (targetLine - 4) * lineHeightPx);
+  };
+
   // Jump to specific line when requested by Outline or SyncTeX inverse
   useEffect(() => {
-    if (scrollToLine && textareaRef.current) {
-      const lines = currentContent.split("\n");
-      let charIndex = 0;
-      for (let i = 0; i < Math.min(scrollToLine - 1, lines.length); i++) {
-        charIndex += lines[i].length + 1;
-      }
-      textareaRef.current.focus();
-      textareaRef.current.setSelectionRange(
-        charIndex,
-        charIndex + (lines[scrollToLine - 1]?.length || 0)
-      );
-      const lineHeightPx = 20;
-      textareaRef.current.scrollTop = Math.max(0, (scrollToLine - 4) * lineHeightPx);
+    if (scrollToLine) {
+      jumpToLine(scrollToLine);
     }
   }, [scrollToLine, currentContent]);
 
@@ -100,12 +108,31 @@ export function WritingEditorPane({
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
     setStoreSelectionRange({ start, end });
-    if (start !== end) {
+    if (start !== end && end - start >= 2) {
       setSelectedText(currentContent.substring(start, end).trim());
       setSelectionRange({ start, end });
     } else {
       setSelectedText("");
       setSelectionRange(null);
+      setPopoverPos(null);
+    }
+  };
+
+  const handleTextareaMouseUp = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    handleSelect();
+    if (!editorBodyRef.current) return;
+    const bodyRect = editorBodyRef.current.getBoundingClientRect();
+    const relX = Math.max(120, Math.min(bodyRect.width - 120, e.clientX - bodyRect.left));
+    const relY = Math.max(40, e.clientY - bodyRect.top);
+    setPopoverPos({ top: relY, left: relX });
+  };
+
+  const handleTextareaKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    handleSelect();
+    if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      if (!editorBodyRef.current) return;
+      const bodyRect = editorBodyRef.current.getBoundingClientRect();
+      setPopoverPos({ top: 80, left: bodyRect.width / 2 });
     }
   };
 
@@ -113,22 +140,6 @@ export function WritingEditorPane({
     navigator.clipboard.writeText(currentContent);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  // SyncTeX forward search trigger
-  const handleSyncTexForward = async () => {
-    if (!activeDraftId || !textareaRef.current) return;
-    const cursor = textareaRef.current.selectionStart || 0;
-    const lineNum = currentContent.substring(0, cursor).split("\n").length;
-    try {
-      setIsSyncingForward(true);
-      const coords = await draftsApi.synctexForward(activeDraftId, activeFile, lineNum);
-      setActiveHighlightBox(coords);
-    } catch (err) {
-      console.error("SyncTeX forward failed:", err);
-    } finally {
-      setIsSyncingForward(false);
-    }
   };
 
   // Helper for inserting formatting snippets around cursor or selection
@@ -156,7 +167,7 @@ export function WritingEditorPane({
     }, 10);
   };
 
-  const handleAddToChatClick = () => {
+  const handleAddToChatClick = (askAi = false) => {
     if (!onSelectionAddToChat) return;
 
     let start = selectionRange?.start ?? -1;
@@ -166,10 +177,14 @@ export function WritingEditorPane({
       end = start !== -1 ? start + selectedText.length : 0;
     }
 
-    const contextBuffer =
+    let contextBuffer =
       start !== -1
         ? buildSelectionContextBuffer(currentContent, start, end)
         : `<target_selection>\n${selectedText}\n</target_selection>`;
+
+    if (askAi) {
+      contextBuffer = `${contextBuffer}\n\nPlease review, analyze, or explain this selected section.`;
+    }
 
     onSelectionAddToChat(contextBuffer);
   };
@@ -179,59 +194,63 @@ export function WritingEditorPane({
   return (
     <div className="flex-1 flex flex-col h-full bg-[#ffffff] dark:bg-[#1a1917] border-r border-[#e8e4dc] dark:border-[#2e2b26] overflow-hidden relative">
       {/* 1. File Tabs Strip & Copy */}
-      <div className="h-9 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
-        {/* Tabs: main.tex / references.bib */}
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            data-testid="editor-tab-main"
-            onClick={() => setActiveFile("main.tex")}
-            className={cn(
-              "px-3 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeFile === "main.tex"
-                ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
-                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
-            )}
-          >
-            <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400" />
-            <span>main.tex</span>
-            <span className="text-[10px] text-zinc-400 font-sans">({lineCount} dòng)</span>
-          </button>
+      <div className="h-9 px-2 sm:px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f7f5f0] dark:bg-[#1e1c19] flex items-center justify-between text-xs select-none shrink-0">
+        {/* Tabs: main.tex / references.bib with unhide button when sidebar is collapsed */}
+        <div className="flex items-center gap-1 min-w-0">
+          {!isFileTreeOpen && (
+            <button
+              type="button"
+              data-testid="unhide-sidebar-btn"
+              onClick={toggleFileTree}
+              className="p-1 mr-1 rounded hover:bg-[#eae4d9] dark:hover:bg-[#282622] text-[#c15f3e] transition-colors cursor-pointer shrink-0"
+              title="Hiện danh sách tệp"
+            >
+              <PanelLeftOpen className="w-4 h-4" />
+            </button>
+          )}
 
-          <button
-            type="button"
-            data-testid="editor-tab-bib"
-            onClick={() => setActiveFile("references.bib")}
-            className={cn(
-              "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2",
-              activeFile === "references.bib"
-                ? "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
-                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
-            )}
-          >
-            <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span>references.bib</span>
-          </button>
+          {openFiles.map((file) => {
+            const isActive = activeFile === file;
+            const isMain = file === "main.tex";
+            return (
+              <div
+                key={file}
+                data-testid={isMain ? "editor-tab-main" : "editor-tab-bib"}
+                onClick={() => setActiveFile(file)}
+                className={cn(
+                  "px-2.5 py-1 rounded-t-lg font-mono text-xs flex items-center gap-1.5 transition-colors cursor-pointer border-t-2 shrink-0 group",
+                  isActive
+                    ? isMain
+                      ? "bg-white dark:bg-[#1a1917] text-coral-600 dark:text-coral-400 font-semibold border-coral-500 shadow-2xs"
+                      : "bg-white dark:bg-[#1a1917] text-emerald-600 dark:text-emerald-400 font-semibold border-emerald-500 shadow-2xs"
+                    : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 border-transparent hover:bg-[#eee8dd] dark:hover:bg-[#252320]"
+                )}
+              >
+                {isMain ? (
+                  <FileCode className="w-3.5 h-3.5 text-coral-600 dark:text-coral-400 shrink-0" />
+                ) : (
+                  <BookMarked className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                )}
+                <span>{file}</span>
+                <button
+                  type="button"
+                  data-testid={`close-tab-${file}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    closeFile(file);
+                  }}
+                  className="p-0.5 rounded hover:bg-rose-500/15 hover:text-rose-500 text-zinc-400 dark:text-zinc-500 transition-colors cursor-pointer ml-0.5"
+                  title={`Đóng ${file}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            );
+          })}
         </div>
 
-        {/* Right side: SyncTeX & Copy */}
+        {/* Right side: Copy */}
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            data-testid="synctex-forward-btn"
-            onClick={handleSyncTexForward}
-            disabled={isSyncingForward}
-            className="p-1 px-2 rounded hover:bg-[#ece8df] dark:hover:bg-[#282623] text-coral-600 dark:text-coral-400 hover:text-coral-700 transition-colors cursor-pointer flex items-center gap-1 font-sans text-[11px]"
-            title="Đồng bộ vị trí sang PDF (Forward SyncTeX)"
-          >
-            {isSyncingForward ? (
-              <Loader2 className="w-3 h-3 animate-spin" />
-            ) : (
-              <ArrowRightCircle className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden sm:inline">SyncTeX</span>
-          </button>
-
           <button
             type="button"
             onClick={handleCopy}
@@ -333,26 +352,19 @@ export function WritingEditorPane({
             <Heading className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* Selected text contextual tools */}
-        {selectedText && (
-          <div className="flex items-center gap-1 bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 rounded text-[11px] animate-in fade-in shrink-0">
-            <span>Đã chọn {selectedText.length} ký tự</span>
-            {onSelectionAddToChat && (
-              <button
-                type="button"
-                onClick={handleAddToChatClick}
-                className="font-medium hover:underline ml-1 cursor-pointer"
-              >
-                [Thêm vào Chat]
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 3. Editor Body: Code View */}
-      <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
+      <div ref={editorBodyRef} className="flex-1 flex overflow-hidden relative font-mono text-xs">
+        {/* Floating Context Selection Toolbar (Cursor/Medium style) */}
+        <WritingSelectionPopover
+          selectedText={selectedText}
+          position={popoverPos || { top: 60, left: 240 }}
+          isOpen={Boolean(selectedText && selectedText.length >= 2)}
+          onAddToChat={() => handleAddToChatClick(false)}
+          onAskAi={() => handleAddToChatClick(true)}
+        />
+
         {/* Line numbers gutter */}
         <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
           {Array.from({ length: lineCount }).map((_, i) => {
@@ -361,12 +373,16 @@ export function WritingEditorPane({
             return (
               <div
                 key={lineNum}
+                onClick={() => hasError && jumpToLine(lineNum)}
                 className={cn(
-                  "h-5",
-                  hasError && "text-rose-500 font-bold bg-rose-500/10 rounded-xs"
+                  "h-5 flex items-center justify-end gap-1 cursor-default",
+                  hasError && "text-rose-500 font-bold bg-rose-500/15 cursor-pointer hover:bg-rose-500/25 px-0.5 rounded-xs"
                 )}
+                title={hasError ? `Lỗi biên dịch tại dòng ${lineNum}. Nhấn để nhảy tới dòng này.` : undefined}
+                data-testid={hasError ? `gutter-error-line-${lineNum}` : undefined}
               >
-                {lineNum}
+                {hasError && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block animate-pulse shrink-0" />}
+                <span>{lineNum}</span>
               </div>
             );
           })}
@@ -386,7 +402,8 @@ export function WritingEditorPane({
             }
           }}
           onKeyDown={handleKeyDown}
-          onKeyUp={handleSelect}
+          onKeyUp={handleTextareaKeyUp}
+          onMouseUp={handleTextareaMouseUp}
           onClick={handleSelect}
           onSelect={handleSelect}
           spellCheck={false}
@@ -405,7 +422,15 @@ export function WritingEditorPane({
             {errors.map((err, idx) => (
               <div
                 key={idx}
-                className="p-1.5 bg-white/80 dark:bg-[#201e1a] rounded border border-rose-500/20 text-rose-800 dark:text-rose-300"
+                onClick={() => jumpToLine(err.line)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") jumpToLine(err.line);
+                }}
+                className="p-1.5 bg-white/80 dark:bg-[#201e1a] rounded border border-rose-500/20 text-rose-800 dark:text-rose-300 cursor-pointer hover:bg-rose-500/10 transition-colors"
+                title="Nhấn để cuộn đến dòng này trong trình soạn thảo"
+                data-testid={`error-item-${err.line}`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold">

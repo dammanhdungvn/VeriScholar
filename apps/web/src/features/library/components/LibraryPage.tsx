@@ -6,9 +6,10 @@ import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore
 import { useWorkspaceStore } from "@/features/dashboard/stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { useDashboardSessions } from "@/features/dashboard/hooks/useDashboardSessions";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import type { DocumentListItem } from "@/types/document";
 
-export function LibraryPage() {
+export function LibraryPage({ hideTaskbar = true }: { hideTaskbar?: boolean } = {}) {
   const navigate = useNavigate();
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
   const setDocument = useWorkspaceStore((s) => s.setDocument);
@@ -23,9 +24,17 @@ export function LibraryPage() {
     setDocument(doc.id, targetTitle);
     setStatus("completed", 100);
 
-    // Initialize session and navigate to dashboard
+    // Initialize session and navigate to dashboard with document attached
     try {
-      const newSession = await createSession(`Nghiên cứu: ${targetTitle}`);
+      const newSession = await createSession(`Research: ${targetTitle}`);
+      try {
+        await sessionsApi.addDocumentToSession(newSession.id, {
+          source_type: "document_id",
+          document_id: doc.id,
+        });
+      } catch (err) {
+        console.warn("Failed to attach document to session:", err);
+      }
       selectSession(newSession.id);
       navigate(`/dashboard/${newSession.id}`);
     } catch {
@@ -38,16 +47,18 @@ export function LibraryPage() {
   };
 
   return (
-    <div className="h-screen w-screen flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
-      {/* 1. Left Navigation Taskbar */}
-      <DashboardTaskbar
-        sessions={sessions}
-        onSelectSession={(id) => navigate(`/dashboard/${id}`)}
-        onNewSession={handleNewSession}
-      />
+    <div className="h-screen w-full flex bg-canvas dark:bg-[#181715] text-ink dark:text-[#f3f2ef] overflow-hidden">
+      {/* 1. Left Navigation Taskbar (Optional if not wrapped in AppLayout) */}
+      {!hideTaskbar && (
+        <DashboardTaskbar
+          sessions={sessions}
+          onSelectSession={(id) => navigate(`/dashboard/${id}`)}
+          onNewSession={handleNewSession}
+        />
+      )}
 
       {/* 2. Center Library Content */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
+      <div className="flex-1 flex flex-col h-screen overflow-hidden relative min-w-0">
         <MobileDashboardHeader
           onToggleSidebar={toggleSidebar}
           onNewSession={handleNewSession}
@@ -55,7 +66,7 @@ export function LibraryPage() {
         <div className="flex-1 flex flex-col h-full overflow-hidden">
           <LibraryWorkspaceView onSelectDocument={handleSelectDocument} />
         </div>
-      </main>
+      </div>
     </div>
   );
 }

@@ -97,7 +97,7 @@ class AIGuardrailsService:
 
     # Academic Scope Guardrail: Refusal message for non-academic casual queries
     ACADEMIC_SCOPE_REFUSAL_MESSAGE = (
-        "Socratic Copilot là trợ lý chuyên sâu cho nghiên cứu khoa học và phản biện bài báo. "
+        "Socratic Assistant là trợ lý chuyên sâu cho nghiên cứu khoa học và phản biện bài báo. "
         "Câu hỏi của bạn nằm ngoài phạm vi học thuật. "
         "Vui lòng đặt câu hỏi liên quan đến tài liệu đang đọc hoặc phương pháp nghiên cứu khoa học."
     )

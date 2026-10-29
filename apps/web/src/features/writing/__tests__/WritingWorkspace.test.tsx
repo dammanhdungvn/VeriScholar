@@ -65,6 +65,9 @@ class MockIntersectionObserver {
 window.IntersectionObserver = MockIntersectionObserver as any;
 globalThis.IntersectionObserver = MockIntersectionObserver as any;
 
+// Helper to render with MemoryRouter
+const renderWithRouter = (ui: React.ReactElement) => render(<MemoryRouter>{ui}</MemoryRouter>);
+
 describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
   const mockDraft: Draft = {
     id: "draft-456",
@@ -73,6 +76,9 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     content: "\\documentclass{article}\n\\begin{document}\nHello World\n\\end{document}",
     bib_content: "@article{sample,\n  title={Sample},\n  year={2026}\n}",
     format: "latex",
+    previous_snapshot: {
+      undo: { content: "old" },
+    },
     version: 3,
     created_at: "2026-10-25T10:00:00Z",
     updated_at: "2026-10-25T10:00:00Z",
@@ -129,17 +135,29 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     });
   });
 
-  it("1. Renders 3 columns workspace (Editor, PDF Preview, AI Assistant) in tri-pane mode", () => {
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+  it("renders single smart Recompile button and removes bulky clear-cache action bar", async () => {
+    renderWithRouter(<WritingWorkspace />);
+    expect(screen.getByTestId("recompile-btn")).toBeInTheDocument();
+    expect(screen.queryByText(/Bản Dựng PDF Trực Tiếp/i)).toBeNull();
+    expect(screen.queryByText(/🧹 Xóa đệm & Dựng lại/i)).toBeNull();
+  });
 
-    // Verify 3 columns are in the document
+  it("renders Socratic Assistant floating action button at bottom right", async () => {
+    renderWithRouter(<WritingWorkspace />);
+    const fab = screen.getByTestId("writing-assistant-fab");
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
+    expect(screen.getByTestId("writing-assistant-drawer")).toBeInTheDocument();
+  });
+
+  it("1. Renders 2 columns workspace (Editor, PDF Preview) with Assistant in drawer", () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Verify Editor & Preview are in the document
     expect(screen.getByTestId("writing-editor-textarea")).toBeInTheDocument();
     expect(screen.getByTestId("writing-preview-pane")).toBeInTheDocument();
-    expect(screen.getByText("Trợ lý Học thuật AI")).toBeInTheDocument();
+    // Assistant FAB is present
+    expect(screen.getByTestId("writing-assistant-fab")).toBeInTheDocument();
   });
 
   it("2. Supports file tab switching between main.tex and references.bib", () => {
@@ -183,12 +201,12 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
     });
   });
 
-  it("4. Action button [🧹 Xóa đệm & Dựng lại] calls draftsApi.recompileClearCache", async () => {
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+  it("4. Action [Clear cache & Recompile] calls draftsApi.recompileClearCache", async () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Click recompile dropdown trigger
+    const dropdownTrigger = await screen.findByTestId("recompile-dropdown-trigger");
+    fireEvent.click(dropdownTrigger);
 
     const clearCacheBtn = await screen.findByTestId("recompile-clear-cache-btn");
     expect(clearCacheBtn).toBeInTheDocument();
@@ -247,11 +265,10 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       });
     });
 
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+    renderWithRouter(<WritingWorkspace />);
+
+    // Open assistant drawer via FAB
+    fireEvent.click(screen.getByTestId("writing-assistant-fab"));
 
     const promptInput = screen.getByPlaceholderText(/Yêu cầu AI/i);
     fireEvent.change(promptInput, { target: { value: "Viết lại phần tóm tắt" } });
@@ -283,11 +300,10 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       version: 4,
     });
 
-    render(
-      <MemoryRouter>
-        <WritingWorkspace />
-      </MemoryRouter>
-    );
+    renderWithRouter(<WritingWorkspace />);
+
+    // Open assistant drawer via FAB
+    fireEvent.click(screen.getByTestId("writing-assistant-fab"));
 
     const undoBtn = screen.getByTestId("undo-draft-btn");
     expect(undoBtn).toBeInTheDocument();
@@ -302,5 +318,50 @@ describe("Overleaf-Parity Writing Workspace (Plan 06, Task 6)", () => {
       expect(useWritingStore.getState().editorContent).toContain("% Restored original");
       expect(useWritingStore.getState().editorBibContent).toContain("@article{restored");
     });
+  });
+
+  it("8. Minimalist header and tabs: removes <-, Files, v1 badge, and line counts from tabs", () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // Arrow back link and files button should not exist in header
+    expect(screen.queryByTitle("Dashboard")).toBeNull();
+    expect(screen.queryByTestId("toggle-file-tree-btn")).toBeNull();
+    expect(screen.queryByText(/^v\d+$/)).toBeNull();
+
+    // Line counts should not be in tabs
+    expect(screen.queryByText(/\(\d+\s*dòng\)/)).toBeNull();
+  });
+
+  it("9. Supports closing tabs with X and unhiding sidebar when collapsed", async () => {
+    renderWithRouter(<WritingWorkspace />);
+
+    // references.bib tab has close button X
+    const closeBibBtn = screen.getByTestId("close-tab-references.bib");
+    expect(closeBibBtn).toBeInTheDocument();
+
+    fireEvent.click(closeBibBtn);
+
+    // Tab references.bib is now closed
+    expect(screen.queryByTestId("editor-tab-bib")).toBeNull();
+
+    // Collapse sidebar
+    const collapseBtn = screen.getByTestId("sidebar-collapse-btn");
+    fireEvent.click(collapseBtn);
+
+    // Sidebar should be hidden
+    expect(useWritingStore.getState().isFileTreeOpen).toBe(false);
+
+    // Unhide button should appear on tab strip
+    const unhideBtn = screen.getByTestId("unhide-sidebar-btn");
+    expect(unhideBtn).toBeInTheDocument();
+
+    // Click unhide button
+    fireEvent.click(unhideBtn);
+    expect(useWritingStore.getState().isFileTreeOpen).toBe(true);
+
+    // Now clicking references.bib in sidebar re-opens it
+    const sidebarBib = await screen.findByTestId("file-references-bib");
+    fireEvent.click(sidebarBib);
+    expect(screen.getByTestId("editor-tab-bib")).toBeInTheDocument();
   });
 });

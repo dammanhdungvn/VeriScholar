@@ -1,5 +1,5 @@
-# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ KHÔNG GIAN SOẠN THẢO AGENTIC OVERLEAF, LANGGRAPH AGENT & SANDBOX E2B
-# (AGENTIC OVERLEAF WRITING WORKSPACE, LANGGRAPH AGENT & E2B SANDBOX SPECIFICATION)
+# ĐẶC TẢ KỸ THUẬT: PHÂN HỆ KHÔNG GIAN SOẠN THẢO AGENTIC OVERLEAF, MULTI-AGENT REVIEWER & E2B SANDBOX
+# (AGENTIC OVERLEAF WRITING WORKSPACE, MULTI-AGENT REVIEWER & E2B SANDBOX SPECIFICATION)
 
 **Trạng thái:** DỰ THẢO CHÍNH THỨC (TECHNICAL SPECIFICATION V1)  
 **Nguồn tham chiếu PRD:** [`06-agentic-overleaf-writing.md`](../PRD/06-agentic-overleaf-writing.md)  
@@ -31,7 +31,7 @@
 - **Bối cảnh & Vấn đề thực tế:** Ngôn ngữ LaTeX nổi tiếng là khó tính với các thông báo lỗi trừu tượng như `Missing $ inserted`, `Undefined control sequence`, `Runaway argument`, hiển thị dấu hỏi chấm `[?]` do undefined citations hoặc xung đột gói macro toán học (`Command already defined`). Người dùng không muốn phải bấm duyệt hay xác nhận từng bước trung gian. Khi gặp lỗi, họ muốn AI tự động tiếp quản, đọc log lỗi và tự sửa chữa cho đến khi biên dịch thành công.
 - **Giải pháp của phân hệ:**
   - Khi người dùng bấm `[⚙️ Biên dịch PDF]` hoặc nhấn phím tắt `Ctrl+S`: E2B Sandbox MicroVM thực thi biên dịch.
-  - Nếu gặp lỗi cú pháp: **LangGraph ReAct Agent** lập tức tự động tiếp quản:
+  - Nếu gặp lỗi cú pháp: **ReAct Agent** lập tức tự động tiếp quản:
     1. Tự động lưu bản chụp `previous_snapshot` trước khi sửa.
     2. Đọc log lỗi `stderr`, suy luận nguyên nhân (Reasoning).
     3. Tự động gọi công cụ `edit_latex_files` để vá code `main.tex` hoặc `references.bib` (Acting).
@@ -39,32 +39,44 @@
     5. Vòng lặp này tự động lặp lại cho đến khi biên dịch thành công ra PDF (ngân sách an toàn tối đa 3 lần thử).
   - Suốt quá trình, Cột 3 stream các bước chuyển trạng thái thời gian thực (*`⚠️ Gặp lỗi dòng 42` $\rightarrow$ `✍️ AI đang tự vá cú pháp` $\rightarrow$ `⚙️ Biên dịch lại (Lần 2/3)` $\rightarrow$ `🎉 Hoàn tất!`*). Bản dựng PDF tự động hiện lên Cột 2. Người dùng không cần bấm thêm bất kỳ thao tác nào, và nút **`[↩️ Hoàn tác]`** luôn sẵn sàng để khôi phục code gốc nếu muốn.
 
+### D. Usecase 4: Hệ Thống Đa Tác Nhân Soạn Thảo & Phản Biện Chéo (Collaborative Author & Adversarial Reviewer #2)
+- **Bối cảnh & Vấn đề thực tế:** Khi dùng AI viết bài nghiên cứu, LLM thông thường có xu hướng viết văn mẫu chung chung, tâng bốc thái quá hoặc đưa ra các khẳng định thiếu căn cứ thực nghiệm. Để bài báo đạt chuẩn hội nghị quốc tế, tác giả cần một góc nhìn phản biện nghiêm khắc (Peer Reviewer) để bóc tách các sơ hở logic trước khi nộp bài.
+- **Giải pháp của phân hệ:**
+  - Vận hành mô hình **Multi-Agent Collaborative System**:
+    - **Tác nhân 1: `Academic Lead Author`:** Nhận prompt của học giả, nạp kiến thức tinh hoa từ `wiki_pages` (Compiled Wiki) và các bảng thực nghiệm SOTA (Spec 05), soạn thảo bản thảo LaTeX chuẩn mực.
+    - **Tác nhân 2: `Adversarial Reviewer #2`:** Đóng vai phản biện khó tính, tự động rà soát toàn bộ bản thảo: kiểm tra chéo các mã trích dẫn `\cite{...}` với `references.bib`, bắt bẻ các câu khẳng định thiếu số liệu đối chứng, và chỉ ra các điểm yếu cần bổ sung thí nghiệm.
+    - **Cơ chế Human-in-the-Loop:** Học giả đóng vai trò Tổng biên tập (Editor-in-Chief), xem xét phản biện của `Reviewer #2`, bấm `[Chấp nhận sửa đổi]` hoặc `[Bảo lưu lập luận]` trước khi lưu vào bản thảo chính thức.
+
 ---
 
 ## 2. Phạm Vi & Bảng Đối Chiếu Hiện Trạng (`As-Is` vs `Delta`)
 
-Phân hệ này chịu trách nhiệm trọn vẹn toàn bộ chu trình soạn thảo, quản lý tệp học thuật, trợ lý thông minh LangGraph và hạ tầng biên dịch LaTeX cô lập trên E2B Cloud Sandbox.
+Phân hệ này chịu trách nhiệm trọn vẹn toàn bộ chu trình soạn thảo, quản lý tệp học thuật, hệ thống **Multi-Agent Tác giả & Phản biện (Lead Author & Reviewer #2)** và hạ tầng biên dịch LaTeX cô lập trên E2B Cloud Sandbox.
 
 ```mermaid
 flowchart TD
     subgraph StudioUI ["Không Gian Soạn Thảo Học Thuật 3 Cột (Agentic LaTeX IDE)"]
         EditorPane["Cột 1: Cây Dự Án & Trình Soạn Thảo Mã Nguồn (Monaco Editor)"]
         PreviewPane["Cột 2: Khung Xem Trước PDF & Đồng Bộ Hai Chiều SyncTeX"]
-        AssistantPane["Cột 3: Trợ Lý Soạn Thảo Tự Hành (Luồng SSE Unbuffered)"]
+        AssistantPane["Cột 3: Trợ Lý Soạn Thảo Đa Tác Nhân (Luồng SSE Unbuffered)"]
     end
 
     subgraph OrchestrationLayer ["Tầng Điều Phối Bản Thảo & Kiểm Soát Phiên Bản"]
         OCCGuard["Kiểm Soát Đồng Thời Lạc Quan (OCC Version & ETag)"]
         SnapshotVault["Kho Lưu Ảnh Chụp Toàn Dự Án (1-Click Undo Snapshot)"]
-        ReActStream["Kênh Điều Phối Tác Nhân LangGraph Qua SSE"]
+        MultiAgentStream["Kênh Phối Hợp Đa Tác Nhân (Multi-Agent SSE Stream)"]
         SyncTexBridge["Cầu Nối Đồng Bộ Tọa Độ Hai Chiều (SyncTeX Bridge)"]
     end
 
-    subgraph AgentCore ["Động Cơ Tác Nhân Tự Sửa Lỗi (LangGraph ReAct Engine)"]
-        Planner["Bộ Lập Kế Hoạch & Chống Dao Động (Anti-Oscillation SHA-256)"]
-        GraphTool["Công Cụ Truy Xuất Tri Thức Đồ Thị (GraphRAG Tool)"]
-        PatchTool["Công Cụ Vá Mã Nguồn LaTeX & Đồng Bộ BibTeX"]
-        CompileTool["Công Cụ Biên Dịch Cô Lập (Tối Đa 3 Vòng Tự Sửa Lỗi)"]
+    subgraph MultiAgentCore ["Hệ Thống Đa Tác Nhân Học Thuật (Collaborative Multi-Agent Engine)"]
+        LeadWriter["1. Tác Giả Soạn Thảo Chính (Lead Author Agent: 5.6 Luna)"]
+        ReviewerTwo["2. Nhà Phản Biện Đối Kháng (Adversarial Reviewer #2 Agent)"]
+        HumanGate{"3. Human-in-the-Loop Gate (Học Giả Phê Duyệt / Bảo Lưu)"}
+        
+        WikiTool["Công Cụ Đọc Wiki Tri Thức (wiki_pages)"]
+        GraphTool["Công Cụ Truy Xuất SOTA (GraphRAG Tool)"]
+        PatchTool["Công Cụ Vá Mã Nguồn LaTeX & BibTeX"]
+        CompileTool["Công Cụ Biên Dịch Hộp Cát (E2B Sandbox)"]
     end
 
     subgraph CloudSandbox ["Hạ Tầng Hộp Cát Vi Máy Ảo Chuẩn Overleaf CLSI (E2B Sandbox)"]
@@ -79,16 +91,18 @@ flowchart TD
     EditorPane --> SyncTexBridge
     PreviewPane --> SyncTexBridge
     PreviewPane --> OCCGuard
-    AssistantPane --> ReActStream
-    ReActStream --> Planner
-    Planner --> GraphTool
-    Planner --> PatchTool
-    Planner --> CompileTool
+    AssistantPane --> MultiAgentStream
+    MultiAgentStream --> LeadWriter
+    LeadWriter --> WikiTool & GraphTool & PatchTool
+    LeadWriter --> ReviewerTwo
+    ReviewerTwo -->|"Phản biện logic & citation"| HumanGate
+    HumanGate -->|"Chấp thuận"| CompileTool
+    HumanGate -->|"Yêu cầu viết lại"| LeadWriter
     CompileTool --> LatexmkRunner
     LatexmkRunner --> EngineSelector
     LatexmkRunner --> IncrementalCache
     LatexmkRunner --> LogParser
-    LogParser --> Planner
+    LogParser -->|"Báo lỗi biên dịch"| LeadWriter
 ```
 
 ### Bảng Kiểm Kê Thành Phần Mã Nguồn
@@ -266,6 +280,9 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
   event: content_update
   data: {"target_file": "main.tex", "patch_type": "full", "content": "...", "bib_content": "...", "new_version": 3}
 
+  event: reviewer_critique
+  data: {"reviewer": "Reviewer #2", "critique": "Mục Related Work khẳng định Transformer vượt trội trên mọi tác vụ nhưng chưa nêu rõ hạn chế bộ nhớ O(N^2) được chỉ ra bởi Vaswani et al. (2017). Đã tự động bổ sung câu thảo luận phản biện.", "confidence": 0.95}
+
   event: compile_status
   data: {"attempt": 1, "success": false, "message": "Missing \\end{equation} tại dòng 35. Đang tự động vá..."}
 
@@ -273,7 +290,7 @@ CREATE INDEX IF NOT EXISTS idx_draft_messages_user_draft_time ON draft_messages(
   data: {"attempt": 2, "success": true, "message": "Biên dịch thành công tại lần thử 2."}
 
   event: done
-  data: {"pdf_preview_url": "/api/v1/drafts/draft-uuid/preview.pdf", "final_message": "Đã hoàn thành mục Related Work và biên dịch thành công ra PDF."}
+  data: {"pdf_preview_url": "/api/v1/drafts/draft-uuid/preview.pdf", "final_message": "Đã hoàn thành mục Related Work, phản biện chéo qua Reviewer #2 và biên dịch thành công ra PDF."}
   ```
 
 ### E. CRUD Thư Mục Hình Ảnh (`figures/`)
@@ -398,26 +415,30 @@ Bảng ma trận dưới đây quy định toàn bộ các mã lỗi tất đị
 
 ---
 
-## 5. Kiến Trúc LangGraph Agent & Vòng Lặp ReAct Tự Vá Lỗi
+## 5. Kiến Trúc Multi-Agent Soạn Thảo & Phản Biện Đối Kháng (Lead Author & Reviewer #2)
 
-Agent soạn thảo được xây dựng dựa trên `StateGraph` của **LangGraph** theo mô hình **ReAct (Reasoning + Acting)** với bộ 4 công cụ (Tools) chuyên trách:
+Hệ thống soạn thảo học thuật được xây dựng theo mô hình **Hợp tác Đa Tác Nhân (Collaborative Multi-Agent Architecture)** kết hợp vòng lặp **ReAct (Reasoning + Acting)** và **E2B Sandbox MicroVM**:
 
 ```mermaid
 flowchart TD
     Start(["Nhận Yêu Cầu Soạn Thảo Từ Học Giả"]) --> SaveSnapshot["Lưu Ảnh Chụp Bản Thảo (1-Click Undo Snapshot)"]
-    SaveSnapshot --> AgentReasoning["Nút Suy Luận Trung Tâm (LangGraph ReAct Planner)"]
+    SaveSnapshot --> LeadAuthor["1. Tác Giả Soạn Thảo Chính (Lead Author Agent: 5.6 Luna)"]
 
-    AgentReasoning -->|"Tra cứu tri thức"| CallGraphRAG["Truy Xuất Đồ Thị Tri Thức (GraphRAG)"]
-    AgentReasoning -->|"Kiểm tra tài nguyên"| CallListFiles["Liệt Kê Cây Tệp & Hình Ảnh Dự Án"]
-    AgentReasoning -->|"Soạn thảo & vá mã"| CallEdit["Cập Nhật Mã Nguồn LaTeX & BibTeX"]
-    AgentReasoning -->|"Kiểm định bản dựng"| CallCompile["Biên Dịch Hộp Cát Cô Lập (E2B Firecracker)"]
+    LeadAuthor -->|"Tra cứu tri thức"| CallWikiGraph["Truy Xuất Wiki Tri Thức & GraphRAG"]
+    LeadAuthor -->|"Kiểm tra tài nguyên"| CallListFiles["Liệt Kê Cây Tệp & Hình Ảnh figures/"]
+    LeadAuthor -->|"Soạn thảo & cập nhật"| CallEdit["Cập Nhật main.tex & references.bib"]
 
-    CallGraphRAG --> AgentReasoning
-    CallListFiles --> AgentReasoning
-    CallEdit --> AgentReasoning
+    CallWikiGraph --> LeadAuthor
+    CallListFiles --> LeadAuthor
+    CallEdit --> ReviewerTwo["2. Nhà Phản Biện Đối Kháng (Adversarial Reviewer #2 Agent)"]
+
+    ReviewerTwo -->|"Kiểm tra chéo số liệu & citation"| FactCheck{"Fact-Check & Logic Đạt?"}
+    FactCheck -->|"Phát hiện sơ hở / trích dẫn thiếu"| AutoRefine["Lead Author Tự Tiếp Thu & Bổ Sung Thảo Luận"]
+    AutoRefine --> CallEdit
+    FactCheck -->|"Đạt chuẩn học thuật"| CallCompile["3. Biên Dịch Hộp Cát Cô Lập (E2B Firecracker)"]
 
     CallCompile --> CheckCompile{"Biên Dịch Thành Công?"}
-    CheckCompile -->|"Thành công (Mã thoát 0)"| EmitSuccess["Xuất Bản Dựng PDF Mới & Kết Thúc"]
+    CheckCompile -->|"Thành công (Mã thoát 0)"| EmitSuccess["Xuất Bản Dựng PDF Mới & Hoàn Tất"]
     CheckCompile -->|"Lỗi cú pháp (Số lần thử < 3)"| SelfHeal["Nút Tự Sửa Lỗi: Phân Tích Nhật Ký & Vá Cú Pháp"]
     CheckCompile -->|"Quá 3 lần thử"| GracefulFail["Dừng An Toàn: Báo Dòng Lỗi & Gợi Ý Khắc Phục"]
 
@@ -426,22 +447,35 @@ flowchart TD
     GracefulFail --> Done
 ```
 
-### A. Chi Tiết 4 Công Cụ (Tools) Chuyên Biệt
+### A. Chi Tiết Vai Trò 2 Tác Nhân Học Thuật
+1. **Tác Giả Soạn Thảo Chính (`Lead Author Agent`):**
+   - Vận hành trên nền `5.6 Luna` (`OPENAI_MODEL`).
+   - Phân tích chỉ dẫn của học giả, tra cứu các trang Wiki tinh hoa (`wiki_pages`) và kết quả đo lường (`graph_nodes`) từ Spec 05.
+   - Soạn thảo cấu trúc bài báo chuẩn quốc tế (IEEE/ACM), viết biểu thức toán học KaTeX/LaTeX, bảng thực nghiệm và các lệnh trích dẫn `\cite{...}`.
+2. **Nhà Phản Biện Đối Kháng (`Adversarial Reviewer #2 Agent`):**
+   - Đóng vai trò là người bình duyệt khó tính (Peer Reviewer).
+   - **Kiểm định tính xác thực (Fact-Checking):** Đối soát từng con số trong bảng thực nghiệm với bảng `graph_nodes` (MetricResult) để ngăn chặn 100% ảo giác số liệu.
+   - **Tính toàn vẹn trích dẫn (Citation Integrity):** Đảm bảo mọi bài báo được trích dẫn đều tồn tại trong `references.bib` và kho tài liệu của học giả.
+   - **Phản biện lập luận:** Phát hiện các khẳng định chủ quan thiếu căn cứ, tự động nhắc Lead Author bổ sung câu thảo luận hạn chế hoặc sinh sự kiện SSE `reviewer_critique` hiển thị cho người dùng.
+
+### B. Chi Tiết 5 Công Cụ (Tools) Chuyên Biệt
 1. **`edit_latex_files(target_file: str, content: str)`**:
    - Tham số: `target_file` (`"main.tex"` hoặc `"references.bib"`), `content` (nội dung mới).
    - Chức năng: Cập nhật nội dung mã nguồn trong bộ nhớ state và lưu xuống CSDL với OCC an toàn.
 2. **`list_project_files()`**:
    - Trả về danh sách cấu trúc cây thư mục dự án: `main.tex`, `references.bib`, và danh sách tên chính xác của các file ảnh trong `figures/` (ví dụ: `figures/architecture_diagram.png`). Giúp Agent viết chính xác câu lệnh `\includegraphics{figures/...}` không bao giờ bị lỗi sai tên file.
-3. **`query_library_graph_rag(query: str, top_k: int = 5)`**:
-   - Gọi trực tiếp phân hệ GraphRAG (Spec 05) để tìm kiếm các phương pháp, bộ dữ liệu và kết quả thực nghiệm từ kho bài báo yêu thích của người dùng để viết phần Tổng quan hoặc So sánh phương pháp.
-4. **`compile_latex_e2b(clear_cache: bool = False)`**:
+3. **`query_library_wiki_and_graph(query: str, top_k: int = 5)`**:
+   - Gọi trực tiếp phân hệ GraphRAG & Wiki (Spec 05) để đọc các trang Wiki đã biên soạn (`wiki_pages`) và đối chiếu số liệu SOTA, tiết kiệm 70% token so với nạp PDF thô.
+4. **`fact_check_citations_and_metrics(content: str, bib_content: str)`**:
+   - Được kích hoạt bởi `Reviewer #2` để quét toàn bộ các thẻ trích dẫn `\cite{...}` và số liệu trong bảng, đối soát với CSDL nguồn.
+5. **`compile_latex_e2b(clear_cache: bool = False)`**:
    - Đóng gói toàn bộ `main.tex`, `references.bib` và toàn bộ hình ảnh trong thư mục `figures/` từ bảng `draft_assets`.
-   - Chạy qua Hạ tầng biên dịch chuẩn Overleaf CLSI (Mục 5.B).
+   - Chạy qua Hạ tầng biên dịch chuẩn Overleaf CLSI (Mục 5.C).
    - Trả về kết quả: `success: bool`, `logs: str`, `errors: list[LatexDiagnostic]`, `pdf_url: str | None`, `synctex_path: str | None`.
 
 ---
 
-### B. Động Cơ Biên Dịch Chuẩn Overleaf CLSI Trên E2B Sandbox
+### C. Động Cơ Biên Dịch Chuẩn Overleaf CLSI Trên E2B Sandbox
 Học hỏi từ kiến trúc `overleaf/clsi`, hệ thống sử dụng `latexmk` làm động cơ điều phối chính bên trong E2B MicroVM Sandbox:
 
 ```bash
@@ -589,26 +623,34 @@ sequenceDiagram
     autonumber
     actor Scholar as Học Giả
     participant IDE as Giao Diện Soạn Thảo 3 Cột
-    participant Agent as Tác Nhân LangGraph ReAct
-    participant DB as PostgreSQL (drafts)
+    participant LeadAuthor as Tác Nhân Soạn Thảo Chính (Lead Author)
+    participant ReviewerTwo as Tác Nhân Phản Biện (Reviewer #2)
+    participant DB as PostgreSQL (drafts, wiki_pages, graph)
     participant E2B as Hộp Cát E2B Firecracker
 
-    Scholar->>IDE: Yêu cầu viết mục Related Work từ Thư viện Yêu thích
-    IDE->>Agent: POST /api/v1/drafts/{id}/chat:stream (SSE)
-    Agent->>DB: Lưu ảnh chụp previous_snapshot (Bảo toàn 1-Click Undo)
-    Agent->>DB: Truy vấn GraphRAG lấy các bài báo & khóa trích dẫn BibTeX
-    Agent->>Agent: Cập nhật nội dung LaTeX & chèn khóa \cite{...}
+    Scholar->>IDE: Yêu cầu viết/chỉnh sửa mục thảo luận & so sánh kết quả
+    IDE->>LeadAuthor: POST /api/v1/drafts/{id}/chat:stream (SSE)
+    LeadAuthor->>DB: Lưu ảnh chụp previous_snapshot (Bảo toàn 1-Click Undo)
+    LeadAuthor->>DB: Truy vấn Compiled Wiki & Graph (query_library_wiki_and_graph)
+    LeadAuthor->>LeadAuthor: Soạn thảo nội dung LaTeX & gắn nhãn \cite{...}
+    LeadAuthor->>ReviewerTwo: Gửi bản thảo để bình duyệt chéo (Adversarial Review)
+    ReviewerTwo->>DB: Đối soát số liệu thực nghiệm & kiểm tra tồn tại citekey
+    alt Phát hiện sơ hở logic hoặc trích dẫn thiếu
+        ReviewerTwo-->>IDE: Stream sự kiện reviewer_critique (Đề xuất bổ sung thực nghiệm)
+        ReviewerTwo->>LeadAuthor: Yêu cầu tinh chỉnh lập luận & bổ sung thảo luận giới hạn
+        LeadAuthor->>LeadAuthor: Tự tinh chỉnh bản thảo LaTeX
+    end
     loop Vòng lặp Tự Sửa Lỗi Biên Dịch (Tối đa 3 lần thử)
-        Agent->>E2B: Gửi mã nguồn LaTeX + BibTeX biên dịch cô lập (--no-shell-escape)
+        LeadAuthor->>E2B: Gửi mã nguồn LaTeX + BibTeX biên dịch cô lập (--no-shell-escape)
         alt Biên dịch thành công (exit_code = 0)
-            E2B-->>Agent: Trả về luồng PDF đã biên dịch
+            E2B-->>LeadAuthor: Trả về luồng PDF đã biên dịch
         else Lỗi cú pháp LaTeX (attempt < 3)
-            E2B-->>Agent: Trả về nhật ký lỗi (stderr & số dòng lỗi)
-            Agent->>Agent: Phân tích log lỗi & tự động vá cú pháp LaTeX
+            E2B-->>LeadAuthor: Trả về nhật ký lỗi (stderr & số dòng lỗi)
+            LeadAuthor->>LeadAuthor: Phân tích log lỗi & tự động vá cú pháp LaTeX
         end
     end
-    Agent->>DB: Lưu bản thảo mới & tăng số phiên bản OCC
-    Agent-->>IDE: Phát sự kiện content_update & hiển thị PDF trực tiếp
+    LeadAuthor->>DB: Lưu bản thảo mới & tăng số phiên bản OCC
+    LeadAuthor-->>IDE: Phát sự kiện compile_status, content_update & PDF URL
 ```
 
 | Tên Test Case | File Kiểm Thử | Mục tiêu kiểm chứng | Kỳ vọng nghiệm thu |
@@ -627,13 +669,15 @@ sequenceDiagram
 | `test_undo_snapshot_lifecycle` | `apps/api/tests/test_drafts_undo.py` | Sửa draft qua AI rồi gọi `POST :undo` | Khôi phục nguyên vẹn nội dung ban đầu, `version` tăng tuần tiến. |
 | `test_export_submission_bundle_zip` | `apps/api/tests/test_drafts_export.py` | Gọi `POST /api/v1/drafts/{id}:export-bundle` | Trả về stream `.zip` chứa đủ `main.tex`, `references.bib`, `figures/`. |
 | `test_assist_sse_event_stream_unbuffered` | `apps/api/tests/test_drafts_assist_sse.py` | Gửi prompt vào endpoint `/assist` | Nhận stream SSE chuẩn định dạng, kết thúc bằng event `done`. |
+| `test_lead_author_and_reviewer_two_collaboration` | `apps/api/tests/test_drafts_multi_agent.py` | Prompt yêu cầu viết phân tích kết quả thực nghiệm | Lead Author soạn thảo, Reviewer #2 phản biện và stream `reviewer_critique`, Lead Author tự động hoàn thiện trước khi biên dịch. |
+| `test_fact_check_citations_against_bib_and_graph` | `packages/core/tests/test_draft_fact_checker.py` | Bản thảo chứa `\cite{missing_key}` hoặc metric sai lệch so với `graph_nodes` | Trả về danh sách cảnh báo chi tiết, chặn việc biên dịch các trích dẫn ma. |
 
 ---
 
 ## 9. Tiêu Chí Nghiệm Thu Kỹ Thuật (Definition of Done)
 
 - [ ] Phân hệ có tên định danh rõ ràng là **Phân Hệ Soạn Thảo & Agentic LaTeX (Writing Workspace & Agentic LaTeX)**, không dùng số thứ tự định danh trong nội dung tài liệu.
-- [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 3 kịch bản: Cầu nối Khung sườn học thuật, Quản lý ảnh `figures/`, và Vòng lặp ReAct tự sửa lỗi biên dịch tự trị.
+- [ ] Phần **Usecase & Bối Cảnh Người Dùng** được đặt ngay tại Mục 1 ở đầu file, mô tả đầy đủ 4 kịch bản: Cầu nối Khung sườn học thuật, Quản lý ảnh `figures/`, Vòng lặp ReAct tự sửa lỗi biên dịch tự trị, và Hệ Thống Đa Tác Nhân Soạn Thảo & Phản Biện Chéo (Collaborative Author & Adversarial Reviewer #2).
 - [ ] Cầu nối từ Đọc sang Viết tự động khởi tạo sẵn `main.tex` và `references.bib` hợp lệ 100% cú pháp, hiển thị bản dựng PDF xem trước tức thì trên Cột 2 mà không gặp lỗi.
 - [ ] Tiêu đề và tác giả chứa ký tự đặc biệt (`&`, `%`, `_`, `$`, `#`) được thoát tự động trước khi ghi vào `references.bib`.
 - [ ] Động cơ biên dịch sử dụng `latexmk` chuẩn Overleaf CLSI với cờ `-cd -f -jobname=output -auxdir=... -synctex=1 -interaction=batchmode`, tự động chọn `pdflatex` hoặc `xelatex`.
@@ -641,7 +685,8 @@ sequenceDiagram
 - [ ] Tính năng SyncTeX hai chiều (Forward và Inverse Search) hoạt động chuẩn xác giữa Monaco Editor và PDF Viewer.
 - [ ] Bộ bóc tách nhật ký có cấu trúc (Structured Log Parser) phân tích file `.log` thành mảng `LatexDiagnostic` JSON nạp vào LangGraph ReAct Planner.
 - [ ] Cơ chế Anti-Oscillation Guard với SHA-256 chặn đứng 100% nguy cơ lặp vòng lặp vá lỗi vô hạn.
+- [ ] Mô hình Multi-Agent Cộng tác & Đối kháng (Lead Author & Adversarial Reviewer #2) tích hợp công cụ kiểm tra tính toàn vẹn trích dẫn (`fact_check_citations_and_metrics`) và tra cứu Compiled Wiki (`query_library_wiki_and_graph`).
 - [ ] Xóa bỏ vĩnh viễn hàm preview giả lập PyMuPDF `_generate_in_memory_pdf_preview()`, bảo toàn tuyệt đối kiến trúc lục giác cho `packages/core/`.
 - [ ] Cơ chế `previous_snapshot` ghi nhận bản chụp trước Attempt 1 và endpoint `:undo` khôi phục an toàn trong 1 click cả `main.tex` và `references.bib`.
 - [ ] Toàn bộ các mã lỗi trong Ma trận Mã Lỗi Chuẩn Hóa Mục 4.I được cài đặt đầy đủ theo chuẩn Error Envelope.
-- [ ] Toàn bộ 14 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.
+- [ ] Toàn bộ 16 bài test trong Ma trận TDD Mục 8 đạt trạng thái `100% PASS` trên môi trường kiểm thử.

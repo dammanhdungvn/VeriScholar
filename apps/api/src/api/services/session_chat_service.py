@@ -33,7 +33,7 @@ from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
 from core.services.socratic_roadmap import extract_and_strip_bridge_hint
 from fastapi import HTTPException, status
-from sqlalchemy import and_, delete, func, or_, select, text
+from sqlalchemy import and_, case, delete, func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.session_chat")
@@ -180,6 +180,22 @@ class SessionChatService:
 
         recent_turns = chat_history[-5:]
 
+        # 1. Resolve numeric list selections (e.g. "1", "câu 1", "mục 2", "2)")
+        num_match = re.match(
+            r"^(?:câu\s+|mục\s+|ý\s+|phần\s+|số\s+)?(\d+)[\.\)]?$", stripped_query, re.IGNORECASE
+        )
+        if num_match:
+            item_num = int(num_match.group(1))
+            for turn in reversed(recent_turns):
+                role = turn.get("role") or ("user" if "question" in turn else "assistant")
+                if role == "assistant":
+                    content = turn.get("content") or turn.get("answer") or ""
+                    for line in content.split("\n"):
+                        cleaned_line = line.strip().lstrip("-* ").strip()
+                        m = re.match(rf"^{item_num}[\.\)]\s*(.+)$", cleaned_line)
+                        if m:
+                            return f"Giải thích chi tiết về: {m.group(1).strip()}"
+
         is_test_env = settings.ENVIRONMENT == "test" or "InMemory" in type(self.db).__name__
         has_llm_key = bool(
             settings.OPENAI_API_KEY and settings.OPENAI_API_KEY.get_secret_value().strip()
@@ -193,6 +209,11 @@ class SessionChatService:
             r"\bbài báo này\b",
             r"\bnghiên cứu này\b",
             r"\bthuật toán này\b",
+            r"\bmô hình đó\b",
+            r"\bphương pháp đó\b",
+            r"\bbài báo đó\b",
+            r"\bnghiên cứu đó\b",
+            r"\bthuật toán đó\b",
             r"\bở trên\b",
             r"\bvừa nói\b",
             r"\bđó\b",
@@ -203,6 +224,8 @@ class SessionChatService:
             r"\bthis method\b",
             r"\bthis paper\b",
             r"\bthis architecture\b",
+            r"\bthat model\b",
+            r"\bthat method\b",
         ]
         has_anaphora = any(
             re.search(pat, stripped_query, re.IGNORECASE) for pat in anaphora_patterns
@@ -295,6 +318,56 @@ class SessionChatService:
                     candidate_entities.extend(words[:2])
                     break
 
+        elliptical_triggers = [
+            "chi tiết hơn",
+            "nói rõ hơn",
+            "giải thích thêm",
+            "cụ thể hơn",
+            "tại sao",
+            "vì sao",
+            "tiếp tục",
+            "more detail",
+        ]
+        conversational_tokens = {
+            "cảm ơn",
+            "cam on",
+            "cảm ơn bạn",
+            "ok",
+            "okay",
+            "chào",
+            "chào bạn",
+            "hello",
+            "hi",
+            "tuyệt",
+            "tuyệt vời",
+            "được rồi",
+            "thanks",
+            "thank you",
+        }
+        is_conversational = stripped_query.lower().strip("!.,?") in conversational_tokens
+
+        is_elliptical = not is_conversational and (
+            any(trig in stripped_query.lower() for trig in elliptical_triggers)
+            or (
+                len(stripped_query.split()) <= 3
+                and not any(
+                    kw in stripped_query.lower()
+                    for kw in ["là gì", "what is", "who", "where", "khi nào"]
+                )
+            )
+        )
+
+        if is_elliptical and not has_anaphora:
+            last_user_query = ""
+            for turn in reversed(recent_turns):
+                role = turn.get("role") or ("user" if "question" in turn else "assistant")
+                if role == "user":
+                    last_user_query = turn.get("content") or turn.get("question") or ""
+                    if last_user_query:
+                        break
+            if last_user_query:
+                return f"{stripped_query} liên quan đến: {last_user_query.strip('?')}"
+
         if candidate_entities and has_anaphora:
             top_entity = candidate_entities[0]
             condensed = stripped_query
@@ -304,6 +377,18 @@ class SessionChatService:
             )
             condensed = re.sub(
                 r"\bphương pháp này\b", f"phương pháp {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bmô hình đó\b", f"mô hình {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bphương pháp đó\b", f"phương pháp {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bthuật toán đó\b", f"thuật toán {top_entity}", condensed, flags=re.IGNORECASE
+            )
+            condensed = re.sub(
+                r"\bnghiên cứu đó\b", f"nghiên cứu {top_entity}", condensed, flags=re.IGNORECASE
             )
             condensed = re.sub(
                 r"\bbài báo này\b", f"bài báo {top_entity}", condensed, flags=re.IGNORECASE
@@ -329,6 +414,7 @@ class SessionChatService:
             )
             condensed = re.sub(r"\bnó\b", top_entity, condensed, flags=re.IGNORECASE)
             condensed = re.sub(r"\bit\b", top_entity, condensed, flags=re.IGNORECASE)
+            condensed = re.sub(r"\bđó\b", top_entity, condensed, flags=re.IGNORECASE)
             return condensed
 
         return stripped_query
@@ -503,12 +589,18 @@ class SessionChatService:
                 fts_ranks AS (
                     SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
                            COALESCE(
+                               ts_rank_cd(
+                                   content_tsv, websearch_to_tsquery('english', :fts_or_query)
+                               ),
                                ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
                                ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
                                0.0
                            ) AS fts_score,
                            ROW_NUMBER() OVER (
                                ORDER BY COALESCE(
+                                   ts_rank_cd(
+                                       content_tsv, websearch_to_tsquery('english', :fts_or_query)
+                                   ),
                                    ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)),
                                    ts_rank_cd(content_tsv, plainto_tsquery('simple', :fts_query)),
                                    0.0
@@ -518,7 +610,8 @@ class SessionChatService:
                     WHERE document_id = ANY(:active_doc_ids)
                       AND user_id = :user_id
                       AND (
-                          content_tsv @@ plainto_tsquery('english', :fts_query)
+                          content_tsv @@ websearch_to_tsquery('english', :fts_or_query)
+                          OR content_tsv @@ plainto_tsquery('english', :fts_query)
                           OR content_tsv @@ plainto_tsquery('simple', :fts_query)
                       )
                     ORDER BY rank_fts ASC
@@ -553,12 +646,38 @@ class SessionChatService:
                 ORDER BY cb.rrf_score DESC
                 LIMIT :limit;
             """)
+            # For cross-lingual FTS search, extract Latin/English keywords with length >= 3
+            latin_words = re.findall(r"\b[A-Za-z]{3,}\b", query_text)
+            vn_ascii_stops = {
+                "dung",
+                "sang",
+                "cho",
+                "cac",
+                "nay",
+                "cua",
+                "trong",
+                "tren",
+                "duoc",
+                "khong",
+                "biet",
+                "xem",
+                "doc",
+                "tim",
+                "hoi",
+                "dich",
+            }
+            meaningful_latin = [w for w in latin_words if w.lower() not in vn_ascii_stops]
+            effective_words = meaningful_latin if meaningful_latin else latin_words
+            fts_or_query = " or ".join(effective_words) if effective_words else query_text
+            effective_fts = " ".join(effective_words) if effective_words else query_text
+
             vec_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
             params = {
                 "hyde_vector": vec_str,
                 "query_vec": vec_str,
-                "fts_query": query_text,
-                "query_text": query_text,
+                "fts_or_query": fts_or_query,
+                "fts_query": effective_fts,
+                "query_text": effective_fts,
                 "active_doc_ids": target_doc_ids,
                 "doc_ids": target_doc_ids,
                 "user_id": user_id,
@@ -799,6 +918,463 @@ class SessionChatService:
         # tau < 0.20 -> ACTIVE_ABSTENTION
         return "ACTIVE_ABSTENTION", candidate_chunks, True
 
+    @staticmethod
+    def _extract_formula_symbols(query: str) -> list[str]:
+        """Extract mathematical entities, symbols, or function calls from a query."""
+        symbols: list[str] = []
+        # 1. Function calls like A(H), Attention(Q, K, V), softmax(x)
+        call_matches = re.findall(r"\b([A-Za-z]+(?:\s*\([^)]*\)))", query)
+        for m in call_matches:
+            cleaned = m.strip()
+            if cleaned not in symbols:
+                symbols.append(cleaned)
+
+        # 2. Subscripted mathematical variables: e.g. e_{ij}, W_Q, W_K, W_V, h_n, v_n, q_n
+        var_matches = re.findall(
+            r"\b([A-Za-z][a-zA-Z0-9]*_(?:\{[A-Za-z0-9,]+\}|[A-Za-z0-9]+))", query
+        )
+        for v in var_matches:
+            if v not in symbols:
+                symbols.append(v)
+
+        # 3. Known Greek letters commonly used in academic papers
+        greek_letters = {
+            "alpha",
+            "beta",
+            "gamma",
+            "theta",
+            "sigma",
+            "lambda",
+            "epsilon",
+            "omega",
+            "mu",
+            "pi",
+            "tau",
+            "delta",
+            "psi",
+            "phi",
+        }
+        for word in re.findall(r"\b[A-Za-z]+\b", query):
+            if word.lower() in greek_letters:
+                if word.lower() not in [s.lower() for s in symbols]:
+                    symbols.append(word.lower())
+
+        # 4. Specific math operators or functions
+        for kw in ["attention", "softmax", "sigmoid", "layernorm", "multihead", "relu", "gelu"]:
+            if re.search(rf"\b{kw}\b", query, re.IGNORECASE):
+                if kw not in [s.lower() for s in symbols]:
+                    symbols.append(kw)
+
+        return symbols
+
+    @staticmethod
+    def _detect_formula_query(query: str) -> dict[str, Any] | None:
+        """Detect whether query asks for an equation or formula, with typo and symbol extraction."""
+        q = query.lower()
+        math_intent_keywords = [
+            "công thức",
+            "cong thuc",
+            "formula",
+            "equation",
+            "phương trình",
+            "phuong trinh",
+            "biểu thức",
+            "bieu thuc",
+            "tính toán",
+            "toán học",
+            "hàm số",
+        ]
+        has_math_intent = any(kw in q for kw in math_intent_keywords)
+
+        # Typo correction: attendsion -> Attention, soft max -> softmax
+        normalized_names: list[str] = []
+        if re.search(r"\b(?:attendsion|atention|attension)\b", q):
+            normalized_names.append("Attention")
+            has_math_intent = True
+        elif re.search(r"\battention\b", q):
+            normalized_names.append("Attention")
+
+        if re.search(r"\b(?:soft\s+max|soft-max)\b", q):
+            normalized_names.append("Softmax")
+            has_math_intent = True
+        elif re.search(r"\bsoftmax\b", q):
+            normalized_names.append("Softmax")
+
+        # Equation numbers like (1), (2), (3) or "công thức 1", "eq. 3"
+        eq_numbers: list[str] = []
+        eq_pattern = (
+            r"(?:\((?P<num>\d+[a-z]?)\)|"
+            r"(?:công thức|phương trình|equation|eq\.?)\s*(?P<num2>\d+[a-z]?))"
+        )
+        for eq_match in re.finditer(eq_pattern, q):
+            n = eq_match.group("num") or eq_match.group("num2")
+            if n:
+                has_math_intent = True
+                clean_n = n.strip("()")
+                if clean_n not in eq_numbers:
+                    eq_numbers.append(clean_n)
+
+        # Check for symbol calls like A(H)
+        has_call = bool(re.search(r"\b[A-Za-z]\s*\([A-Za-z0-9,\s]+\)", query))
+        if has_call:
+            has_math_intent = True
+
+        if not has_math_intent:
+            return None
+
+        symbols = SessionChatService._extract_formula_symbols(query)
+        for name in normalized_names:
+            if name not in symbols and name.lower() not in [s.lower() for s in symbols]:
+                symbols.append(name)
+
+        return {
+            "is_formula": True,
+            "symbols": symbols,
+            "equation_numbers": eq_numbers,
+            "normalized_names": normalized_names,
+        }
+
+    @staticmethod
+    def _detect_target_section(query: str) -> str | None:
+        """Detect whether the scholarly query specifically targets a well-known paper section."""
+        q = query.lower()
+
+        # 1. Numbered sections first (e.g. "mục 1", "phần 1", "1. instruction")
+        if (
+            re.search(r"\b1[\.\s]+instruction\b", q)
+            or re.search(r"\b(?:mục|phần|section)\s*1\b", q)
+            or re.search(r"\bmục\s*instruction\b", q)
+        ):
+            return "introduction"
+
+        sec_num_match = re.search(r"\b(?:mục|phần|section)\s*(\d+)\b", q)
+        if sec_num_match:
+            num = int(sec_num_match.group(1))
+            if num == 1:
+                return "introduction"
+            return f"section_{num}"
+
+        # 2. Introduction / Motivation
+        if any(kw in q for kw in ["introduction", "mở đầu", "mo dau", "đặt vấn đề", "giới thiệu"]):
+            return "introduction"
+
+        # 3. Abstract / Executive summary
+        if any(kw in q for kw in ["abstract", "tóm tắt", "tom tat", "sơ lược", "khái quát"]):
+            return "abstract"
+
+        # 4. Conclusion / Summary
+        if any(
+            kw in q for kw in ["conclusion", "kết luận", "ket luan", "tổng kết", "hướng phát triển"]
+        ):
+            return "conclusion"
+        # 5. Methodology / Proposed Architecture
+        if any(
+            kw in q
+            for kw in ["methodology", "kiến trúc mô hình", "phương pháp đề xuất", "thuật toán"]
+        ):
+            return "methodology"
+        # 6. Related Work
+        if any(kw in q for kw in ["related work", "nghiên cứu liên quan", "tổng quan tài liệu"]):
+            return "related_work"
+        return None
+
+    @staticmethod
+    def _is_full_section_query(query: str) -> bool:
+        """Detect whether the scholarly query specifically asks for a full/entire section."""
+        if not query:
+            return False
+        q = query.lower()
+        full_pattern = re.compile(
+            r"\b(toàn bộ|toan bo|tất cả|tat ca|toàn phần|toan phan|"
+            r"full|all|entire|trọn vẹn|tron ven)\b",
+            re.IGNORECASE,
+        )
+        return bool(full_pattern.search(q))
+
+    @staticmethod
+    def _is_next_section_header(line: str, start_section_num: int | None = None) -> bool:
+        """Check if a line is a genuine subsequent section heading, ignoring body enumerations."""
+        if not line:
+            return False
+        clean = line.strip()
+        if len(clean) > 70 or len(clean) < 3:
+            return False
+
+        # Body sentences or numbered list items ending with punctuation are not section titles
+        if clean.endswith((".", ";", ",", ":")) and not clean.startswith("#"):
+            return False
+
+        effective_start = start_section_num if start_section_num is not None else 1
+
+        # 1. Standard section keywords at line start (with optional hashes/number)
+        kw_pattern = re.compile(
+            r"^\s*(?:#{1,3}\s+)?(?:\d+\.?\s+)?(?:Background|Preliminaries|Related\s+Work|"
+            r"Methodology|Proposed\s+Method|Experiments|Results|Discussion|Conclusion)\b",
+            re.IGNORECASE,
+        )
+        if kw_pattern.match(clean):
+            num_match = re.match(r"^\s*(?:#{1,3}\s+)?(\d+)\.?", clean)
+            if num_match:
+                n = int(num_match.group(1))
+                if n <= effective_start:
+                    return False
+            return True
+
+        # 2. Numbered section heading with number > effective_start (e.g. '2 Background')
+        numbered_match = re.match(
+            r"^\s*(?:#{1,3}\s+)?(\d+)\.?\s+([A-Z][a-zA-Z\s]{2,50})$",
+            clean,
+        )
+        if numbered_match:
+            n = int(numbered_match.group(1))
+            title = numbered_match.group(2).strip()
+            if n > effective_start:
+                first_word = title.split()[0].lower()
+                if first_word not in {
+                    "we",
+                    "our",
+                    "in",
+                    "there",
+                    "this",
+                    "these",
+                    "it",
+                    "they",
+                    "as",
+                }:
+                    return True
+
+        # 3. Explicit markdown header (## or ###) with title words
+        md_match = re.match(r"^\s*#{1,3}\s+([A-Z][a-zA-Z\s]{2,50})$", clean)
+        if md_match:
+            title = md_match.group(1).strip()
+            first_word = title.split()[0].lower()
+            if first_word not in {
+                "we",
+                "our",
+                "in",
+                "there",
+                "this",
+                "these",
+                "it",
+                "they",
+                "as",
+            }:
+                return True
+
+        return False
+
+    @staticmethod
+    def _filter_contiguous_section_chunks(
+        chunks: list[Any],
+        start_chunk_index: int,
+        max_chunks: int = 6,
+        max_tokens: int = 4000,
+        start_section_num: int | None = None,
+    ) -> list[Any]:
+        """Filter sequential chunks starting from start_chunk_index.
+
+        Inspects each chunk after the first line-by-line for major next-section headings.
+        If matched, or if a chunk index discontinuity is encountered, or if the
+        accumulated token count exceeds max_tokens, halts expansion and returns
+        prior chunks.
+        """
+        if not chunks:
+            return []
+
+        def get_idx(c: Any) -> int:
+            if isinstance(c, dict):
+                val = c.get("chunk_index")
+            else:
+                val = getattr(c, "chunk_index", None)
+            return val if val is not None else -1
+
+        def get_content(c: Any) -> str:
+            if isinstance(c, dict):
+                return c.get("content") or c.get("text_content") or ""
+            return getattr(c, "content", "") or ""
+
+        def get_tokens(c: Any) -> int:
+            if isinstance(c, dict):
+                tok = c.get("token_count")
+            else:
+                tok = getattr(c, "token_count", None)
+            if tok is not None and isinstance(tok, (int, float)):
+                return int(tok)
+            cnt = get_content(c)
+            return max(1, int(len(cnt.split()) * 1.3))
+
+        # Detect start_section_num if not provided
+        start_sec_num = start_section_num
+        if start_sec_num is None:
+            for c in chunks:
+                if get_idx(c) == start_chunk_index:
+                    c_content = get_content(c)
+                    for raw_line in c_content.splitlines()[:5]:
+                        clean_line = raw_line.strip()
+                        m = re.match(r"^\s*(?:#{1,3}\s+)?(\d+)\.?", clean_line)
+                        if m:
+                            try:
+                                start_sec_num = int(m.group(1))
+                                break
+                            except ValueError:
+                                pass
+                    break
+        if start_sec_num is None:
+            start_sec_num = 1
+
+        # Filter candidate chunks having chunk_index >= start_chunk_index and sort ascending
+        sorted_chunks = sorted(
+            [c for c in chunks if get_idx(c) >= start_chunk_index],
+            key=get_idx,
+        )
+
+        expanded: list[Any] = []
+        expected_idx = start_chunk_index
+        total_tokens = 0
+
+        for chunk in sorted_chunks:
+            idx = get_idx(chunk)
+            if idx != expected_idx:
+                # Discontinuity detected (gap in sequential chunks)
+                break
+
+            # If not the first chunk in expansion, check if it hits the next section heading
+            if expanded:
+                content = get_content(chunk)
+                hit_next = False
+                for line in content.splitlines():
+                    if SessionChatService._is_next_section_header(
+                        line, start_section_num=start_sec_num
+                    ):
+                        hit_next = True
+                        break
+                if hit_next:
+                    break
+
+            chunk_tokens = get_tokens(chunk)
+            if expanded and (total_tokens + chunk_tokens > max_tokens):
+                # Token safety ceiling reached (default 4000 tokens)
+                break
+
+            expanded.append(chunk)
+            total_tokens += chunk_tokens
+            expected_idx += 1
+
+            if len(expanded) >= max_chunks:
+                break
+
+        return expanded
+
+    async def _expand_contiguous_section_chunks(
+        self,
+        document_id: Any,
+        start_chunk_index: int,
+        max_chunks: int = 6,
+        max_tokens: int = 4000,
+        start_section_num: int | None = None,
+    ) -> list[DocumentChunkModel]:
+        """Fetch sequential chunks from DB starting at start_chunk_index
+        and filter contiguous section chunks.
+        """
+        stmt = (
+            select(DocumentChunkModel)
+            .where(
+                DocumentChunkModel.document_id == document_id,
+                DocumentChunkModel.chunk_index >= start_chunk_index,
+                DocumentChunkModel.chunk_index < start_chunk_index + max_chunks + 4,
+            )
+            .order_by(DocumentChunkModel.chunk_index.asc())
+        )
+        res = await self.db.execute(stmt)
+        chunks = list(res.scalars().all())
+        return self._filter_contiguous_section_chunks(
+            chunks,
+            start_chunk_index=start_chunk_index,
+            max_chunks=max_chunks,
+            max_tokens=max_tokens,
+            start_section_num=start_section_num,
+        )
+
+    async def _build_document_anchor_context(self, documents: list[DocumentModel]) -> str:
+        """Build Tier-1 permanent Document Anchor Memory (Title, Authors, Abstract, TOC)."""
+        if not documents:
+            return ""
+
+        sections_out: list[str] = [
+            "### TÀI LIỆU NGHIÊN CỨU HIỆN TẠI (DOCUMENT ANCHOR MEMORY)\n"
+            "Dưới đây là thông tin định danh và tóm tắt chính thức của các tài liệu nghiên cứu "
+            "đang mở trong phiên làm việc. Đây là chân lý tham chiếu gốc của tài liệu, "
+            "hãy sử dụng thông tin này làm nền tảng ngữ cảnh bất biến:"
+        ]
+
+        for doc in documents:
+            title = doc.title or doc.filename or "Tài liệu không tên"
+            authors_str = (
+                ", ".join(doc.authors)
+                if isinstance(doc.authors, list)
+                else (str(doc.authors) if doc.authors else "Không rõ tác giả")
+            )
+            year_doi = f"Năm: {doc.publication_year or 'N/A'} | DOI: {doc.doi or 'N/A'}"
+            meta = doc.parsed_metadata or {}
+
+            # Extract official abstract
+            abstract = meta.get("abstract") or ""
+            if not abstract and isinstance(meta.get("structure"), dict):
+                abstract = meta.get("structure", {}).get("abstract", "")
+
+            # If still empty and document is completed, try finding abstract from earliest chunks
+            if not abstract and doc.id and hasattr(self, "db") and self.db is not None:
+                try:
+                    chk_stmt = (
+                        select(DocumentChunkModel.content)
+                        .where(
+                            DocumentChunkModel.document_id == doc.id,
+                            DocumentChunkModel.chunk_index <= 5,
+                            DocumentChunkModel.content.ilike("%abstract%"),
+                        )
+                        .order_by(DocumentChunkModel.chunk_index.asc())
+                        .limit(1)
+                    )
+                    chk_res = await self.db.execute(chk_stmt)
+                    chk_content = chk_res.scalar_one_or_none()
+                    if chk_content:
+                        abstract = chk_content.strip()
+                except Exception as ex:
+                    logger.debug("could_not_extract_chunk_abstract", error=str(ex))
+
+            doc_block = [
+                f"#### Tài liệu: {title}",
+                f"- **Tác giả:** {authors_str}",
+                f"- **Định danh:** {year_doi}",
+            ]
+
+            if abstract:
+                doc_block.append(
+                    f"- **[BẢN TÓM TẮT CHÍNH THỨC (OFFICIAL ABSTRACT)]:**\n> {abstract.strip()}"
+                )
+
+            # Extract Table of Contents / Section headings
+            raw_sections = (
+                meta.get("structure", {}).get("sections", [])
+                if isinstance(meta.get("structure"), dict)
+                else meta.get("sections", [])
+            )
+            if isinstance(raw_sections, list) and raw_sections:
+                toc_lines = []
+                for s in raw_sections[:25]:
+                    if isinstance(s, dict) and s.get("title"):
+                        p_num = s.get("page_number")
+                        page_str = f" (Trang {p_num})" if p_num else ""
+                        toc_lines.append(f"  - {s.get('title')}{page_str}")
+                if toc_lines:
+                    doc_block.append(
+                        "- **Khung cấu trúc bài báo (Table of Contents):**\n" + "\n".join(toc_lines)
+                    )
+
+            sections_out.append("\n".join(doc_block))
+
+        return "\n\n".join(sections_out)
+
     async def retrieve_and_prepare_context(
         self,
         session_id: UUID,
@@ -848,6 +1424,428 @@ class SessionChatService:
             target_doc_ids=target_doc_ids,
         )
 
+        # 3b. Section-Aware Query Routing: prioritize key section chunks (e.g. Abstract)
+        target_section = self._detect_target_section(
+            condensed_query
+        ) or self._detect_target_section(question)
+        is_full_section = self._is_full_section_query(
+            condensed_query
+        ) or self._is_full_section_query(question)
+        if target_section == "abstract" and target_doc_ids:
+            try:
+                doc_meta_stmt = select(
+                    DocumentModel.id,
+                    DocumentModel.title,
+                    DocumentModel.filename,
+                    DocumentModel.parsed_metadata,
+                ).where(DocumentModel.id.in_(target_doc_ids))
+                doc_meta_res = await self.db.execute(doc_meta_stmt)
+                doc_map = {row.id: row for row in doc_meta_res.all()}
+
+                section_prioritized: list[dict[str, Any]] = []
+                for doc_id, doc_row in doc_map.items():
+                    parsed_meta = doc_row.parsed_metadata or {}
+                    abstract_meta = (parsed_meta.get("abstract") or "").strip()
+                    clean_abstract = re.sub(
+                        r"^(abstract[:\s\-*]*)+", "", abstract_meta, flags=re.IGNORECASE
+                    ).strip()
+                    prefix = clean_abstract[:50].strip() if len(clean_abstract) >= 20 else ""
+
+                    score_cases = []
+                    if prefix:
+                        safe_prefix = re.sub(r"[%_]", "", prefix[:35]).strip()
+                        if len(safe_prefix) >= 15:
+                            score_cases.append(
+                                (DocumentChunkModel.content.ilike(f"%{safe_prefix}%"), 0)
+                            )
+
+                    score_cases.append((DocumentChunkModel.content.ilike("%abstract%"), 1))
+                    score_cases.append(
+                        (
+                            and_(
+                                DocumentChunkModel.chunk_index > 0,
+                                func.length(DocumentChunkModel.content) >= 150,
+                            ),
+                            2,
+                        )
+                    )
+                    score_cases.append(
+                        (
+                            and_(
+                                DocumentChunkModel.chunk_index == 0,
+                                func.length(DocumentChunkModel.content) >= 300,
+                            ),
+                            3,
+                        )
+                    )
+
+                    stmt = (
+                        select(DocumentChunkModel)
+                        .where(
+                            DocumentChunkModel.document_id == doc_id,
+                            DocumentChunkModel.page_number <= 2,
+                            DocumentChunkModel.chunk_index <= 6,
+                        )
+                        .order_by(
+                            case(*score_cases, else_=9).asc(),
+                            DocumentChunkModel.chunk_index.asc(),
+                        )
+                        .limit(1)
+                    )
+                    res = await self.db.execute(stmt)
+                    chk = res.scalar_one_or_none()
+                    if chk:
+                        dtitle = doc_row.title or doc_row.filename or "Tài liệu"
+                        dfilename = doc_row.filename
+                        section_prioritized.append(
+                            {
+                                "chunk_id": str(chk.id),
+                                "id": str(chk.id),
+                                "document_id": str(chk.document_id),
+                                "chunk_index": chk.chunk_index,
+                                "page_number": chk.page_number,
+                                "content": chk.content,
+                                "text_content": chk.content,
+                                "bounding_boxes": chk.bounding_boxes,
+                                "token_count": chk.token_count,
+                                "document_title": dtitle,
+                                "filename": dfilename,
+                                "max_cosine_sim": 1.0,
+                                "rrf_score": 2.0,
+                            }
+                        )
+
+                if section_prioritized:
+                    seen = {c["chunk_id"] for c in section_prioritized}
+                    combined = list(section_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("section_aware_routing_failed", error=str(ex))
+
+        elif target_section == "introduction" and target_doc_ids:
+            try:
+                intro_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 3,
+                        or_(
+                            DocumentChunkModel.content.ilike("%1. Introduction%"),
+                            DocumentChunkModel.content.ilike("%1 Introduction%"),
+                            DocumentChunkModel.content.ilike("%1.Introduction%"),
+                            DocumentChunkModel.content.ilike("%Introduction%"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike("%1. Introduction%"), 0),
+                            (DocumentChunkModel.content.ilike("%1 Introduction%"), 1),
+                            (DocumentChunkModel.content.ilike("%1.Introduction%"), 2),
+                            (DocumentChunkModel.content.ilike("%Introduction%"), 3),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                intro_res = await self.db.execute(intro_stmt)
+                intro_rows = intro_res.all()
+                if intro_rows:
+                    intro_prioritized: list[dict[str, Any]] = []
+                    seen_docs: set[Any] = set()
+                    for chk, dtitle, dfilename in intro_rows:
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
+                        )
+                        for c in expanded or [chk]:
+                            intro_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
+                    seen = {c["chunk_id"] for c in intro_prioritized}
+                    combined = list(intro_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    effective_limit = max(limit, len(intro_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
+            except Exception as ex:
+                logger.debug("introduction_routing_failed", error=str(ex))
+
+        elif target_section == "methodology" and target_doc_ids:
+            try:
+                meth_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 10,
+                        or_(
+                            DocumentChunkModel.content.ilike("%Methodology%"),
+                            DocumentChunkModel.content.ilike("%Phương pháp%"),
+                            DocumentChunkModel.content.ilike("%Proposed Method%"),
+                            DocumentChunkModel.content.ilike("%Model Architecture%"),
+                            DocumentChunkModel.content.ilike("%Method%"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike("%Methodology%"), 0),
+                            (DocumentChunkModel.content.ilike("%Phương pháp%"), 1),
+                            (DocumentChunkModel.content.ilike("%Proposed Method%"), 2),
+                            (DocumentChunkModel.content.ilike("%Model Architecture%"), 3),
+                            (DocumentChunkModel.content.ilike("%Method%"), 4),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                meth_res = await self.db.execute(meth_stmt)
+                meth_rows = meth_res.all()
+                if meth_rows:
+                    meth_prioritized: list[dict[str, Any]] = []
+                    seen_docs = set()
+                    for chk, dtitle, dfilename in meth_rows:
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
+                        )
+                        for c in expanded or [chk]:
+                            meth_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
+                    seen = {c["chunk_id"] for c in meth_prioritized}
+                    combined = list(meth_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    effective_limit = max(limit, len(meth_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
+            except Exception as ex:
+                logger.debug("methodology_routing_failed", error=str(ex))
+
+        elif target_section and target_section.startswith("section_") and target_doc_ids:
+            try:
+                sec_num = target_section.replace("section_", "")
+                sec_stmt = (
+                    select(
+                        DocumentChunkModel,
+                        DocumentModel.title,
+                        DocumentModel.filename,
+                    )
+                    .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                    .where(
+                        DocumentChunkModel.document_id.in_(target_doc_ids),
+                        DocumentChunkModel.page_number <= 8,
+                        or_(
+                            DocumentChunkModel.content.ilike(f"%{sec_num}. %"),
+                            DocumentChunkModel.content.ilike(f"%{sec_num} %"),
+                        ),
+                    )
+                    .order_by(
+                        case(
+                            (DocumentChunkModel.content.ilike(f"%{sec_num}. %"), 0),
+                            (DocumentChunkModel.content.ilike(f"%{sec_num} %"), 1),
+                            else_=9,
+                        ),
+                        DocumentChunkModel.chunk_index.asc(),
+                    )
+                    .limit(2)
+                )
+                sec_res = await self.db.execute(sec_stmt)
+                sec_rows = sec_res.all()
+                if sec_rows:
+                    sec_prioritized: list[dict[str, Any]] = []
+                    seen_docs = set()
+                    for chk, dtitle, dfilename in sec_rows:
+                        if chk.document_id in seen_docs:
+                            continue
+                        seen_docs.add(chk.document_id)
+                        max_sec_chunks = 6 if is_full_section else 2
+                        expanded = await self._expand_contiguous_section_chunks(
+                            document_id=chk.document_id,
+                            start_chunk_index=chk.chunk_index,
+                            max_chunks=max_sec_chunks,
+                        )
+                        for c in expanded or [chk]:
+                            sec_prioritized.append(
+                                {
+                                    "chunk_id": str(c.id),
+                                    "id": str(c.id),
+                                    "document_id": str(c.document_id),
+                                    "chunk_index": c.chunk_index,
+                                    "page_number": c.page_number,
+                                    "content": c.content,
+                                    "text_content": c.content,
+                                    "bounding_boxes": c.bounding_boxes,
+                                    "token_count": c.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 2.0,
+                                }
+                            )
+                    seen = {c["chunk_id"] for c in sec_prioritized}
+                    combined = list(sec_prioritized)
+                    for c in hybrid_candidates:
+                        cid = str(c.get("chunk_id") or c.get("id"))
+                        if cid not in seen:
+                            combined.append(c)
+                            seen.add(cid)
+                    effective_limit = max(limit, len(sec_prioritized))
+                    hybrid_candidates = combined[:effective_limit]
+            except Exception as ex:
+                logger.debug("section_num_routing_failed", error=str(ex))
+
+        # 3c. Formula & Equation-Aware Symbolic Retrieval Boost
+        formula_info = self._detect_formula_query(question) or self._detect_formula_query(
+            condensed_query
+        )
+        if formula_info and target_doc_ids:
+            try:
+                eq_cases = []
+                score_cases = []
+                for sym in formula_info.get("symbols", []):
+                    clean_sym = sym.strip()
+                    if clean_sym and len(clean_sym) >= 2:
+                        # Match exact symbol in text content
+                        eq_cases.append(DocumentChunkModel.content.contains(clean_sym))
+                        eq_cases.append(DocumentChunkModel.content.ilike(f"%{clean_sym}%"))
+                        score_cases.append((DocumentChunkModel.content.contains(clean_sym), 0))
+                        score_cases.append((DocumentChunkModel.content.ilike(f"%{clean_sym}%"), 1))
+                for eq_num in formula_info.get("equation_numbers", []):
+                    clean_num = eq_num.strip("()")
+                    if clean_num:
+                        patterns = [
+                            f"%({clean_num})%",
+                            f"%Eq. {clean_num}%",
+                            f"%Eq. ({clean_num})%",
+                            f"%Eqs. {clean_num}%",
+                            f"%Eqs. ({clean_num})%",
+                            f"%Equation {clean_num}%",
+                            f"%Equation ({clean_num})%",
+                            f"%công thức {clean_num}%",
+                            f"%công thức ({clean_num})%",
+                            f"%phương trình {clean_num}%",
+                            f"%phương trình ({clean_num})%",
+                        ]
+                        for pat in patterns:
+                            eq_cases.append(DocumentChunkModel.content.ilike(pat))
+                            score_cases.append((DocumentChunkModel.content.ilike(pat), 0))
+
+                if eq_cases:
+                    order_expr = (
+                        case(*score_cases, else_=9).asc()
+                        if score_cases
+                        else DocumentChunkModel.chunk_index.asc()
+                    )
+                    eq_stmt = (
+                        select(
+                            DocumentChunkModel,
+                            DocumentModel.title,
+                            DocumentModel.filename,
+                        )
+                        .join(DocumentModel, DocumentChunkModel.document_id == DocumentModel.id)
+                        .where(
+                            DocumentChunkModel.document_id.in_(target_doc_ids),
+                            or_(*eq_cases),
+                        )
+                        .order_by(
+                            order_expr,
+                            DocumentChunkModel.chunk_index.asc(),
+                        )
+                        .limit(3)
+                    )
+                    eq_res = await self.db.execute(eq_stmt)
+                    eq_rows = eq_res.all()
+                    if eq_rows:
+                        eq_prioritized: list[dict[str, Any]] = []
+                        for chk, dtitle, dfilename in eq_rows:
+                            eq_prioritized.append(
+                                {
+                                    "chunk_id": str(chk.id),
+                                    "id": str(chk.id),
+                                    "document_id": str(chk.document_id),
+                                    "chunk_index": chk.chunk_index,
+                                    "page_number": chk.page_number,
+                                    "content": chk.content,
+                                    "text_content": chk.content,
+                                    "bounding_boxes": chk.bounding_boxes,
+                                    "token_count": chk.token_count,
+                                    "document_title": dtitle or dfilename or "Tài liệu",
+                                    "filename": dfilename,
+                                    "max_cosine_sim": 1.0,
+                                    "rrf_score": 3.0,
+                                }
+                            )
+                        seen = {c["chunk_id"] for c in eq_prioritized}
+                        combined = list(eq_prioritized)
+                        for c in hybrid_candidates:
+                            cid = str(c.get("chunk_id") or c.get("id"))
+                            if cid not in seen:
+                                combined.append(c)
+                                seen.add(cid)
+                        hybrid_candidates = combined[:limit]
+            except Exception as ex:
+                logger.debug("formula_symbolic_boost_failed", error=str(ex))
+
         selected_chunks: list[dict[str, Any]] = []
         citations: list[dict[str, Any]] = []
         abstain = False
@@ -895,6 +1893,17 @@ class SessionChatService:
                     else:
                         norm_bboxes = [[0.1, 0.1, 0.9, 0.2, page_num]]
 
+                    raw_content = item.get("content") or item.get("text_content") or ""
+                    snippet = raw_content[:300].strip() if raw_content else None
+                    concept_name = item.get("concept_name") or item.get("section_title")
+                    if not concept_name and raw_content:
+                        first_line = raw_content.strip().split("\n")[0].strip("#* ")
+                        if 3 <= len(first_line) <= 40:
+                            concept_name = first_line
+                    if not concept_name:
+                        doc_t = item.get("document_title") or item.get("filename") or "Khái niệm"
+                        concept_name = doc_t.split(".")[0][:30]
+
                     citations.append(
                         {
                             "citation_id": f"cit_{idx}",
@@ -908,6 +1917,8 @@ class SessionChatService:
                             "chunk_index": item.get("chunk_index"),
                             "bounding_boxes": norm_bboxes,
                             "score": round(max(0.35, min(1.0, item.get("rrf_score", 0.5))), 2),
+                            "snippet": snippet,
+                            "concept_name": concept_name,
                         }
                     )
         else:
@@ -983,6 +1994,19 @@ class SessionChatService:
                     break
 
             for idx, chk_dict in enumerate(selected_chunks, start=1):
+                chk_content = chk_dict.get("content") or chk_dict.get("text_content") or ""
+                snippet = chk_content[:300].strip() if chk_content else None
+                concept_name = chk_dict.get("concept_name") or chk_dict.get("section_title")
+                if not concept_name and chk_content:
+                    first_line = chk_content.strip().split("\n")[0].strip("#* ")
+                    if 3 <= len(first_line) <= 40:
+                        concept_name = first_line
+                if not concept_name:
+                    doc_t = (
+                        chk_dict.get("document_title") or chk_dict.get("filename") or "Khái niệm"
+                    )
+                    concept_name = doc_t.split(".")[0][:30]
+
                 citations.append(
                     {
                         "citation_id": f"cit_{idx}",
@@ -992,10 +2016,147 @@ class SessionChatService:
                         "chunk_index": chk_dict.get("chunk_index"),
                         "bounding_boxes": chk_dict["bounding_boxes"],
                         "score": round(max(0.35, min(1.0, chk_dict["rrf_score"])), 2),
+                        "snippet": snippet,
+                        "concept_name": concept_name,
                     }
                 )
 
+        # Cap evidence chunks (up to 6 for full section expansion) to prevent overflow
+        max_cap = 6 if is_full_section else (min(limit, 5) if limit else 5)
+        selected_chunks = selected_chunks[:max_cap]
+        citations = citations[:max_cap]
+
         return selected_chunks, citations, abstain
+
+    @staticmethod
+    def _build_evidence_blocks(
+        citations: list[dict[str, Any]],
+        selected_chunks: list[tuple[Any, float]],
+        abstract_only_docs: list[Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Build structured evidence blocks for LLM prompt context without premature truncation."""
+        evidence_blocks: list[dict[str, Any]] = []
+        for cit in citations:
+            cid = cit.get("citation_id", "")
+            dtitle = cit.get("document_title", "")
+            page = cit.get("page_number", 1)
+            matched_content = ""
+            for it, _score in selected_chunks:
+                if isinstance(it, dict):
+                    if (
+                        str(it.get("document_id", "")) == cit.get("document_id")
+                        and it.get("page_number") == page
+                    ):
+                        matched_content = it.get("content", "")
+                        break
+                else:
+                    chk = it[0] if hasattr(it, "__getitem__") else it
+                    if (
+                        str(getattr(chk, "document_id", "")) == cit.get("document_id")
+                        and getattr(chk, "page_number", None) == page
+                    ):
+                        matched_content = getattr(chk, "content", "")
+                        break
+            if not matched_content and selected_chunks:
+                it0 = selected_chunks[0][0]
+                if isinstance(it0, dict):
+                    matched_content = it0.get("content", "")
+                else:
+                    chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
+                    matched_content = getattr(chk0, "content", "")
+
+            # Preserve full academic content up to generous 12k safety ceiling
+            # (never truncate legitimate paragraphs)
+            snippet_content = matched_content[:12000] if matched_content else "(Nội dung trang)"
+            evidence_blocks.append(
+                {
+                    "citation_id": cid,
+                    "document_id": cit.get("document_id"),
+                    "document_title": dtitle,
+                    "page_number": page,
+                    "bounding_boxes": cit.get("bounding_boxes"),
+                    "content": snippet_content,
+                }
+            )
+
+        if abstract_only_docs:
+            for idx, doc in enumerate(abstract_only_docs, start=len(citations) + 1):
+                doc_abstract = (getattr(doc, "parsed_metadata", None) or {}).get("abstract", "")
+                if doc_abstract:
+                    evidence_blocks.append(
+                        {
+                            "citation_id": f"cit_{idx}",
+                            "document_id": str(getattr(doc, "id", "")),
+                            "document_title": (
+                                getattr(doc, "title", None)
+                                or getattr(doc, "filename", None)
+                                or "Tài liệu tóm tắt"
+                            ),
+                            "page_number": 1,
+                            "bounding_boxes": [[0.1, 0.1, 0.9, 0.3, 1]],
+                            "content": f"[BẢN TÓM TẮT CHÍNH THỨC]: {doc_abstract[:12000]}",
+                        }
+                    )
+
+        return evidence_blocks
+
+    @staticmethod
+    def _build_socratic_system_prompt(abstract_warning: str = "") -> str:
+        """Build core Socratic system prompt with grounding and LaTeX formatting directives."""
+        security_directive = AIGuardrailsService.get_security_directive()
+        return (
+            "Bạn là Socratic Assistant — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
+            "Nhiệm vụ của bạn là giải đáp sâu sắc, chính xác và có căn cứ khoa học "
+            "dựa trên các bài báo được cung cấp.\n\n"
+            f"{security_directive}\n\n"
+            "QUY TẮC PHẢN HỒI:\n"
+            "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
+            "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
+            "2. Gắn trích dẫn khái niệm ngữ nghĩa (Semantic Concept Pills): Khi đưa ra "
+            "số liệu, công thức, kiến trúc hay luận điểm then chốt lấy từ ngữ cảnh, hãy gắn "
+            "thẻ trích dẫn ngữ nghĩa dạng [cite:TênKháiNiệm] (ví dụ: [cite:Architecture], "
+            "[cite:Multi-Head Attention], [cite:Scalability]) hoặc "
+            "[cite:chunk_id:page:TênKháiNiệm] NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa luận điểm đó "
+            "thay vì chỉ dùng số thuần túy [1], [2]. Tên khái niệm phải ngắn gọn (1-4 từ), "
+            "phản ánh đúng nội dung học thuật đang nói tới để hệ thống tự động "
+            "hiển thị thẻ capsule tương tác [ ↪ TênKháiNiệm ]. Tuyệt đối KHÔNG viết "
+            "[^cit], [^cit_X], hay [^\\text{cit}]. CHỈ trích dẫn khi trong ngữ cảnh thực sự "
+            "rõ ràng cho chi tiết. Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa "
+            "trích dẫn.\n"
+            "3. Hiển thị công thức toán học KaTeX: Bắt buộc xuất các công thức toán học "
+            "nhiều dòng, định lý hoặc công thức trọng tâm dưới dạng KaTeX hiển thị riêng "
+            "dòng bằng $$...$$ (hoặc \\[ ... \\]), và sử dụng \\( ... \\) hoặc $...$ "
+            "cho công thức inline trong dòng.\n"
+            "Khi người dùng yêu cầu trích xuất hoặc giải thích một công thức toán học cụ thể "
+            "(như Attention, A(H), Softmax...):\n"
+            "  • Trích dẫn nguyên văn công thức toán học ở dạng chuẩn KaTeX ($$...$$).\n"
+            "  • Giải thích chi tiết ý nghĩa từng biến số, vector, ma trận theo đúng bài báo.\n"
+            "  • Gắn thẻ trích dẫn [cite:TênCôngThức] vào dòng công thức để viền sáng khối "
+            "công thức trên PDF.\n"
+            "4. Trực quan hóa sơ đồ & Luồng dữ liệu (Mermaid Visualization): Khi giải thích "
+            "về kiến trúc hệ thống, quy trình luồng dữ liệu (dataflow), quy trình thực thi "
+            "(pipeline/workflow), hoặc cấu trúc phân cấp/mindmap, hãy chủ động xuất khối "
+            "mã ```mermaid ... ``` với cú pháp Mermaid chuẩn hợp lệ (ví dụ: flowchart TD, "
+            "flowchart LR, sequenceDiagram, mindmap, classDiagram) để hệ thống tự động vẽ "
+            "sơ đồ trực quan tương tác và hỗ trợ người dùng xuất vector SVG/PNG.\n"
+            "5. Phản biện Socratic: Nếu câu hỏi có tiền đề sai hoặc ngộ nhận kiến trúc, "
+            "hãy giải thích lịch thiệp, chỉ rõ điểm sai và hướng dẫn đối chiếu bài báo.\n"
+            "6. Phong cách: Khoa học, sư phạm, Markdown rõ ràng bằng tiếng Việt "
+            "(hoặc ngôn ngữ câu hỏi).\n"
+            "7. Ranh giới học thuật (Academic Boundary): Luôn giữ vững vai trò Socratic "
+            "học thuật. Tuyệt đối không giải đáp các chủ đề đời sống, thời tiết, "
+            "nấu ăn, tán gẫu, giải trí hoặc không liên quan đến bài báo hay phương pháp "
+            "nghiên cứu. Nếu câu hỏi ngoài luồng lọt qua bộ lọc, hãy lịch thiệp từ chối "
+            "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu.\n"
+            "8. Gợi ý Lộ trình Học Socratic (Bridge Hint): Nếu câu hỏi của người dùng "
+            "yêu cầu giải thích sâu về một công thức, mô hình hoặc khái niệm nền tảng mà "
+            "bài báo hiện tại kế thừa từ tài liệu tham khảo [ref_index] trong danh mục: "
+            "hãy giải thích trực quan khái niệm, đồng thời xuất thẻ gợi ý ở cuối câu "
+            "theo đúng cú pháp:\n"
+            '<bridge_hint ref_index="k" concept="Tên khái niệm" '
+            'reason="Lý do cần đọc bài tham khảo trước" />'
+            f"{abstract_warning}"
+        )
 
     def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
         """Rank document chunks dynamically based on query lexical and concept overlap.
@@ -1768,14 +2929,16 @@ class SessionChatService:
         except Exception as ex:
             logger.debug("could_not_load_turn_history", error=str(ex))
 
+        active_documents: list[DocumentModel] = []
         if target_doc_ids:
+            doc_stmt = select(DocumentModel).where(DocumentModel.id.in_(target_doc_ids))
+            doc_res = await self.db.execute(doc_stmt)
+            active_documents = list(doc_res.scalars().all())
+
             # Check for abstract-only or parsing documents
-            abs_stmt = select(DocumentModel).where(
-                DocumentModel.id.in_(target_doc_ids),
-                DocumentModel.status.in_(["abstract_only", "parsing"]),
-            )
-            abs_res = await self.db.execute(abs_stmt)
-            abstract_only_docs = list(abs_res.scalars().all())
+            abstract_only_docs = [
+                d for d in active_documents if d.status in ("abstract_only", "parsing")
+            ]
             if abstract_only_docs:
                 doc_titles = ", ".join(f"'{d.title or d.filename}'" for d in abstract_only_docs)
                 abstract_warning = (
@@ -1884,113 +3047,18 @@ class SessionChatService:
 
         if should_use_llm:
             try:
-                security_directive = AIGuardrailsService.get_security_directive()
-                system_prompt = (
-                    "Bạn là Socratic Copilot — Trợ lý Nghiên cứu Khoa học của VeriScholar.\n"
-                    "Nhiệm vụ của bạn là giải đáp sâu sắc, chính xác và có căn cứ khoa học "
-                    "dựa trên các bài báo được cung cấp.\n\n"
-                    f"{security_directive}\n\n"
-                    "QUY TẮC PHẢN HỒI:\n"
-                    "1. Căn cứ khoa học: Bám sát các đoạn trích từ bài báo. "
-                    "Tuyệt đối không bịa đặt số liệu hay nội dung.\n"
-                    "2. Gắn trích dẫn inline chuẩn xác: Khi đưa ra số liệu, công thức "
-                    "hay luận điểm then chốt lấy từ ngữ cảnh, hãy gắn thẻ trích dẫn chính xác "
-                    "dạng số trong ngoặc vuông (ví dụ: [1], [2]) hoặc thẻ neo ngữ nghĩa "
-                    "[cite:chunk_id:page:concept_name] NGAY TẠI CUỐI DÒNG hoặc cuối câu chứa "
-                    "luận điểm đó. Số trích dẫn [1], [2] tương ứng với thứ tự các đoạn tài liệu "
-                    "được cung cấp trong ngữ cảnh (1 cho tài liệu/chunk đầu tiên, "
-                    "2 cho tài liệu/chunk tiếp theo, v.v.). Tuyệt đối KHÔNG viết [^cit], "
-                    "[^cit_X], hay [^\\text{cit}]. CHỈ trích dẫn khi trong ngữ cảnh thực sự "
-                    "có nội dung bằng chứng rõ ràng cho chi tiết. "
-                    "Nếu chưa có trích đoạn tương ứng, tuyệt đối KHÔNG tự bịa trích dẫn.\n"
-                    "3. Hiển thị công thức toán học KaTeX: Bắt buộc xuất các công thức toán học "
-                    "nhiều dòng, định lý hoặc công thức trọng tâm dưới dạng KaTeX hiển thị riêng "
-                    "dòng bằng $$...$$ (hoặc \\[ ... \\]), và sử dụng \\( ... \\) hoặc $...$ "
-                    "cho công thức inline trong dòng.\n"
-                    "4. Vẽ sơ đồ / mindmap / kiến trúc: Khi người dùng yêu cầu vẽ mindmap, "
-                    "kiến trúc, sơ đồ hoặc flowchart (hoặc khi cần trực quan hóa luồng dữ liệu), "
-                    "hãy sử dụng khối mã code ```mermaid ... ``` với cú pháp Mermaid chuẩn (ví dụ: "
-                    "graph TD, flowchart LR, mindmap, sequenceDiagram) để hệ thống tự động vẽ "
-                    "sơ đồ trực quan tương tác.\n"
-                    "5. Phản biện Socratic: Nếu câu hỏi có tiền đề sai hoặc ngộ nhận kiến trúc, "
-                    "hãy giải thích lịch thiệp, chỉ rõ điểm sai và hướng dẫn đối chiếu bài báo.\n"
-                    "6. Phong cách: Khoa học, sư phạm, Markdown rõ ràng bằng tiếng Việt "
-                    "(hoặc ngôn ngữ câu hỏi).\n"
-                    "7. Ranh giới học thuật (Academic Boundary): Luôn giữ vững vai trò Socratic "
-                    "học thuật. Tuyệt đối không giải đáp các chủ đề đời sống, thời tiết, "
-                    "nấu ăn, tán gẫu, giải trí hoặc không liên quan đến bài báo hay phương pháp "
-                    "nghiên cứu. Nếu câu hỏi ngoài luồng lọt qua bộ lọc, hãy lịch thiệp từ chối "
-                    "và hướng dẫn người dùng quay lại trọng tâm học thuật của tài liệu.\n"
-                    "8. Gợi ý Lộ trình Học Socratic (Bridge Hint): Nếu câu hỏi của người dùng "
-                    "yêu cầu giải thích sâu về một công thức, mô hình hoặc khái niệm nền tảng mà "
-                    "bài báo hiện tại kế thừa từ tài liệu tham khảo [ref_index] trong danh mục: "
-                    "hãy giải thích trực quan khái niệm, đồng thời xuất thẻ gợi ý ở cuối câu "
-                    "theo đúng cú pháp:\n"
-                    '<bridge_hint ref_index="k" concept="Tên khái niệm" '
-                    'reason="Lý do cần đọc bài tham khảo trước" />'
-                    f"{abstract_warning}"
+                system_prompt = self._build_socratic_system_prompt(
+                    abstract_warning=abstract_warning
                 )
 
-                evidence_blocks: list[dict[str, Any]] = []
-                for cit in citations:
-                    cid = cit.get("citation_id", "")
-                    dtitle = cit.get("document_title", "")
-                    page = cit.get("page_number", 1)
-                    matched_content = ""
-                    for it, _score in selected_chunks:
-                        if isinstance(it, dict):
-                            if (
-                                str(it.get("document_id", "")) == cit.get("document_id")
-                                and it.get("page_number") == page
-                            ):
-                                matched_content = it.get("content", "")
-                                break
-                        else:
-                            chk = it[0] if hasattr(it, "__getitem__") else it
-                            if (
-                                str(getattr(chk, "document_id", "")) == cit.get("document_id")
-                                and getattr(chk, "page_number", None) == page
-                            ):
-                                matched_content = getattr(chk, "content", "")
-                                break
-                    if not matched_content and selected_chunks:
-                        it0 = selected_chunks[0][0]
-                        if isinstance(it0, dict):
-                            matched_content = it0.get("content", "")
-                        else:
-                            chk0 = it0[0] if hasattr(it0, "__getitem__") else it0
-                            matched_content = getattr(chk0, "content", "")
+                # Inject Tier-1 Document Anchor Memory (Title, Authors, Official Abstract & Outline)
+                doc_anchor = await self._build_document_anchor_context(active_documents)
+                if doc_anchor:
+                    system_prompt += f"\n\n{doc_anchor}"
 
-                    snippet_content = (
-                        matched_content[:1000] if matched_content else "(Nội dung trang)"
-                    )
-                    evidence_blocks.append(
-                        {
-                            "citation_id": cid,
-                            "document_id": cit.get("document_id"),
-                            "document_title": dtitle,
-                            "page_number": page,
-                            "bounding_boxes": cit.get("bounding_boxes"),
-                            "content": snippet_content,
-                        }
-                    )
-
-                if abstract_only_docs:
-                    for idx, doc in enumerate(abstract_only_docs, start=len(citations) + 1):
-                        doc_abstract = (doc.parsed_metadata or {}).get("abstract", "")
-                        if doc_abstract:
-                            evidence_blocks.append(
-                                {
-                                    "citation_id": f"cit_{idx}",
-                                    "document_id": str(doc.id),
-                                    "document_title": (
-                                        doc.title or doc.filename or "Tài liệu tóm tắt"
-                                    ),
-                                    "page_number": 1,
-                                    "bounding_boxes": [[0.1, 0.1, 0.9, 0.3, 1]],
-                                    "content": f"[BẢN TÓM TẮT CHÍNH THỨC]: {doc_abstract}",
-                                }
-                            )
+                evidence_blocks = self._build_evidence_blocks(
+                    citations, selected_chunks, abstract_only_docs
+                )
 
                 sandboxed_context = AIGuardrailsService.build_hierarchical_sandboxed_context(
                     evidence_blocks
@@ -2315,3 +3383,11 @@ class SessionChatService:
         trace_span.score(name="groundedness", value=1.0 if out_guard.is_grounded else 0.0)
         trace_span.score(name="citations_count", value=float(len(citations)))
         trace_span.__exit__(None, None, None)
+
+
+# Module-level aliases for direct imports and backward compatibility
+_detect_formula_query = SessionChatService._detect_formula_query
+_extract_formula_symbols = SessionChatService._extract_formula_symbols
+_detect_target_section = SessionChatService._detect_target_section
+_is_full_section_query = SessionChatService._is_full_section_query
+_filter_contiguous_section_chunks = SessionChatService._filter_contiguous_section_chunks

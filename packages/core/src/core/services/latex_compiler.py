@@ -23,6 +23,7 @@ import structlog
 from core.domain.entities.latex import LatexCompilationResult, LatexSyntaxError
 from core.ports.latex import ILatexCompilerPort
 from core.services.latex_linter import FastLatexAstLinter
+from core.services.latex_log_parser import LatexLogParser
 from core.services.sandbox_probe import SandboxRuntimeCapabilityProbe
 
 logger = structlog.get_logger("core.services.latex_compiler")
@@ -289,14 +290,25 @@ class SandboxedLatexCompiler:
 
         user_local_tectonic = str(Path.home() / ".local/bin/tectonic")
         ci_tectonic = "/home/VeriScholar/.local/bin/tectonic"
-        compiler_bin = (
-            shutil.which("tectonic")
-            or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
-            or (ci_tectonic if os.path.exists(ci_tectonic) else None)
-            or shutil.which("pdflatex")
-            if self.prefer_system_compiler
-            else None
-        )
+        has_unicode = any(ord(char) > 127 for char in code)
+        compiler_bin = None
+        if self.prefer_system_compiler:
+            if has_unicode or "fontspec" in code or "xelatex" in code.lower():
+                compiler_bin = (
+                    shutil.which("xelatex")
+                    or shutil.which("tectonic")
+                    or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
+                    or (ci_tectonic if os.path.exists(ci_tectonic) else None)
+                    or shutil.which("pdflatex")
+                )
+            else:
+                compiler_bin = (
+                    shutil.which("tectonic")
+                    or (user_local_tectonic if os.path.exists(user_local_tectonic) else None)
+                    or (ci_tectonic if os.path.exists(ci_tectonic) else None)
+                    or shutil.which("pdflatex")
+                    or shutil.which("xelatex")
+                )
 
         if compiler_bin:
             return await self._compile_with_cli(compiler_bin, code, timeout_seconds)
@@ -434,17 +446,40 @@ class SandboxedLatexCompiler:
                         is_sandboxed=is_sandboxed,
                     )
 
-                return LatexCompilationResult(
-                    success=False,
-                    pdf_bytes=None,
-                    errors=[
+                parsed_diags = LatexLogParser.parse_log(log_output)
+                syntax_errors = [
+                    LatexSyntaxError(
+                        line=d["line"],
+                        column=d["column"],
+                        rule="SYNTAX_ERROR",
+                        message=d["message"],
+                        suggested_fix=d.get("hint") or "Kiểm tra cú pháp tại dòng này.",
+                    )
+                    for d in parsed_diags
+                    if d.get("severity") == "error"
+                ]
+                if not syntax_errors:
+                    line_m = re.search(
+                        r"(?:main\.tex:(\d+):|l\.(\d+)|on input line (\d+))",
+                        log_output,
+                    )
+                    found_line = (
+                        int(line_m.group(1) or line_m.group(2) or line_m.group(3)) if line_m else 1
+                    )
+                    syntax_errors = [
                         LatexSyntaxError(
-                            line=1,
+                            line=found_line,
+                            column=0,
                             rule="COMPILATION_FAILED",
                             message="CLI LaTeX compiler exited with non-zero status.",
                             suggested_fix="Check logs for missing packages or syntax faults.",
                         )
-                    ],
+                    ]
+
+                return LatexCompilationResult(
+                    success=False,
+                    pdf_bytes=None,
+                    errors=syntax_errors,
                     logs=log_output[-2000:],
                     is_sandboxed=is_sandboxed,
                 )

@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import {
-  FileText,
   ZoomIn,
   ZoomOut,
   RefreshCw,
@@ -9,12 +8,13 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Sparkles,
   Play,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
-import { pdfjsLib } from "@/features/reader/lib/pdfjs-init";
+import { getCachedPdfDocument } from "@/features/reader/lib/pdfRenderQueue";
 import { cn } from "@/lib/utils";
 
 interface WritingPreviewPaneProps {
@@ -218,6 +218,19 @@ export function WritingPreviewPane({
   const [totalPages, setTotalPages] = useState(3);
   const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
   const [pdfJsError, setPdfJsError] = useState(false);
+  const [isRecompileMenuOpen, setIsRecompileMenuOpen] = useState(false);
+  const recompileMenuRef = useRef<HTMLDivElement | null>(null);
+
+  // Close recompile dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (recompileMenuRef.current && !recompileMenuRef.current.contains(e.target as Node)) {
+        setIsRecompileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -350,11 +363,7 @@ export function WritingPreviewPane({
     async function loadPdfDoc() {
       try {
         setPdfJsError(false);
-        const loadingTask = pdfjsLib.getDocument({
-          url: effectivePdfUrl!,
-          withCredentials: false,
-        });
-        const doc = await loadingTask.promise;
+        const doc = await getCachedPdfDocument(effectivePdfUrl!);
         if (!isCancelled) {
           setPdfDoc(doc);
           setTotalPages(doc.numPages);
@@ -420,39 +429,65 @@ export function WritingPreviewPane({
       <div className="h-10 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#fbf9f5] dark:bg-[#1e1c19] flex items-center justify-between text-xs text-muted dark:text-zinc-400 select-none shrink-0 gap-2">
         {/* Left: Prominent Green [Recompile] button & Download */}
         <div className="flex items-center gap-2">
-          {/* Prominent Green Recompile Button */}
-          <button
-            type="button"
-            data-testid="preview-recompile-btn"
-            onClick={onRecompile}
-            disabled={isCompiling}
-            className="h-7 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
-            title="Biên dịch lại bản thảo LaTeX (Recompile)"
-          >
-            {isCompiling ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5 fill-current" />
-            )}
-            <span>Recompile</span>
-          </button>
+          {/* Smart Green Recompile Split Button with Dropdown */}
+          <div className="relative inline-flex items-center rounded-lg shadow-xs" ref={recompileMenuRef}>
+            <button
+              type="button"
+              data-testid="recompile-btn"
+              onClick={onRecompile}
+              disabled={isCompiling}
+              className="h-7 px-3 rounded-l-lg text-xs font-semibold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-colors cursor-pointer"
+              title="Biên dịch lại bản thảo LaTeX (Recompile)"
+            >
+              {isCompiling ? (
+                <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Play className="w-3.5 h-3.5 fill-current" />
+              )}
+              <span>Recompile</span>
+            </button>
+            <button
+              type="button"
+              data-testid="recompile-dropdown-trigger"
+              onClick={() => setIsRecompileMenuOpen((prev) => !prev)}
+              disabled={isCompiling}
+              className="h-7 px-1.5 rounded-r-lg border-l border-emerald-700 bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50 transition-colors cursor-pointer flex items-center justify-center"
+              title="Tùy chọn biên dịch"
+            >
+              <ChevronDown className="w-3 h-3" />
+            </button>
 
-          {/* Action button: [🧹 Xóa đệm & Dựng lại] */}
-          <button
-            type="button"
-            data-testid="recompile-clear-cache-btn"
-            onClick={handleClearCacheRecompile}
-            disabled={isCompiling}
-            className="h-7 px-2.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white shadow-xs disabled:opacity-50 transition-colors cursor-pointer"
-            title="Xóa bộ nhớ đệm và biên dịch lại từ đầu (Clear Cache & Recompile)"
-          >
-            {isCompiling ? (
-              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Sparkles className="w-3.5 h-3.5" />
+            {isRecompileMenuOpen && (
+              <div
+                data-testid="recompile-menu-dropdown"
+                className="absolute left-0 top-8 w-52 bg-white dark:bg-[#24221e] border border-[#e2dcd2] dark:border-[#33302b] rounded-xl shadow-xl z-50 p-1 text-xs space-y-0.5 animate-in fade-in zoom-in-95 duration-100"
+              >
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsRecompileMenuOpen(false);
+                    onRecompile?.();
+                  }}
+                  className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Recompile</span>
+                </button>
+                <button
+                  type="button"
+                  data-testid="recompile-clear-cache-btn"
+                  onClick={() => {
+                    setIsRecompileMenuOpen(false);
+                    handleClearCacheRecompile();
+                  }}
+                  className="w-full px-2.5 py-1.5 rounded-lg text-left flex items-center gap-2 hover:bg-[#f2ece1] dark:hover:bg-[#2e2b26] text-ink dark:text-zinc-200 cursor-pointer"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+                  <span>Xóa bộ đệm & Dựng lại</span>
+                </button>
+              </div>
             )}
-            <span>🧹 Xóa đệm & Dựng lại</span>
-          </button>
+          </div>
 
           {/* Download PDF button */}
           <button
@@ -464,11 +499,6 @@ export function WritingPreviewPane({
           >
             <Download className="w-3.5 h-3.5" />
           </button>
-
-          <div className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-500 hidden sm:flex">
-            <FileText className="w-3 h-3 text-coral-600 dark:text-coral-400" />
-            <span>Bản Dựng PDF Trực Tiếp</span>
-          </div>
         </div>
 
         {/* Center: Page Navigation < 1 / 3 > */}

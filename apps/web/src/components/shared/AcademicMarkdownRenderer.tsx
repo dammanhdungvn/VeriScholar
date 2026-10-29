@@ -1,7 +1,6 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ArrowUpRight, FileText } from "lucide-react";
 import { MathRenderer } from "./MathRenderer";
 import { MermaidRenderer } from "./MermaidRenderer";
 import { cn } from "@/lib/utils";
@@ -12,6 +11,174 @@ export interface AcademicMarkdownRendererProps {
   className?: string;
   citations?: CitationBadgeData[];
   onCitationClick?: (citation: CitationBadgeData | null | string, citId?: string) => void;
+  isStreaming?: boolean;
+}
+
+export interface ConceptPillProps {
+  concept: string;
+  citation?: CitationBadgeData | null;
+  citId?: string;
+  onClick?: (citation: CitationBadgeData | null | string, citId?: string) => void;
+}
+
+/**
+ * Formats a concept title by separating PascalCase/camelCase into human-readable words with spaces,
+ * replacing underscores with spaces, and normalizing whitespace.
+ * e.g. "SelectiveAttention" -> "Selective Attention"
+ * e.g. "ContextNoise" -> "Context Noise"
+ */
+export function formatConceptTitle(raw: string): string {
+  if (!raw) return "";
+  let formatted = raw.replace(/_+/g, " ").trim();
+  formatted = formatted.replace(/([a-z\d])([A-Z])/g, "$1 $2");
+  formatted = formatted.replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
+  return formatted.replace(/\s+/g, " ").trim();
+}
+
+function normalizeKey(str: string): string {
+  return str.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function findBestCitationMatch(
+  conceptName: string,
+  pageNum?: number,
+  chunkId?: string,
+  citations?: CitationBadgeData[]
+): CitationBadgeData | null {
+  if (!citations || citations.length === 0) return null;
+
+  // 1. Direct chunk ID / citation ID match
+  if (chunkId) {
+    const byId = citations.find(
+      (c) => c.citation_id === chunkId || c.paper_id === chunkId
+    );
+    if (byId) return byId;
+  }
+
+  // 2. Direct page match if page is specified
+  if (pageNum && !isNaN(pageNum)) {
+    const byPage = citations.find(
+      (c) => (c.page ?? (c as unknown as Record<string, unknown>).page_number) === pageNum
+    );
+    if (byPage) return byPage;
+  }
+
+  const cleanConcept = normalizeKey(conceptName);
+
+  // 3. Exact normalized match on concept_name
+  const byConcept = citations.find(
+    (c) => c.concept_name && normalizeKey(c.concept_name) === cleanConcept
+  );
+  if (byConcept) return byConcept;
+
+  // 4. Exact normalized match on paper_title
+  const byTitle = citations.find(
+    (c) => c.paper_title && normalizeKey(c.paper_title) === cleanConcept
+  );
+  if (byTitle) return byTitle;
+
+  // 5. Keyword match: words in conceptName contained in citation concept_name, snippet, or content
+  const formatted = formatConceptTitle(conceptName);
+  const words = formatted
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2);
+
+  if (words.length > 0) {
+    let bestScore = 0;
+    let bestMatch: CitationBadgeData | null = null;
+    for (const c of citations) {
+      const text = `${c.concept_name || ""} ${c.snippet || ""} ${c.content || ""}`.toLowerCase();
+      const score = words.filter((w) => text.includes(w)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        bestMatch = c;
+      }
+    }
+    if (bestMatch && bestScore > 0) {
+      return bestMatch;
+    }
+  }
+
+  // 6. Default to first citation
+  return citations[0] || null;
+}
+
+export function ConceptPill({
+  concept,
+  citation,
+  citId,
+  onClick,
+}: ConceptPillProps) {
+  const [isHovered, setIsHovered] = useState(false);
+  const pageNumber = citation?.page ?? (citation?.bbox ? citation.bbox[4] : 1);
+  const snippet =
+    citation?.snippet ||
+    citation?.content ||
+    citation?.paper_title ||
+    "Đoạn bằng chứng khoa học trích xuất từ tài liệu học thuật.";
+
+  const resolvedCitId = citId || citation?.citation_id || "cit_1";
+  const displayName = formatConceptTitle(concept);
+
+  return (
+    <span
+      className="relative inline-block align-baseline my-0.5"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <button
+        type="button"
+        data-testid="concept-pill"
+        data-citation-id={resolvedCitId}
+        aria-label={`[ ↪ ${displayName} ]`}
+        onClick={(e) => {
+          e.stopPropagation();
+          onClick?.(citation || null, resolvedCitId);
+        }}
+        className={cn(
+          "inline-flex items-center gap-1 px-2 py-0.5 mx-0.5 rounded-md text-xs font-sans font-medium transition-all cursor-pointer align-baseline select-none",
+          "bg-[#f4efe6] hover:bg-[#ede5d8] text-[#38342e] hover:text-[#141413] border border-[#e3ded3] hover:border-[#cc785c]",
+          "dark:bg-[#22211e] dark:hover:bg-[#2a2824] dark:text-[#dcd7cc] dark:hover:text-[#f5f3ed] dark:border-[#38342e] dark:hover:border-[#cc785c]",
+          "shadow-2xs active:scale-95"
+        )}
+      >
+        <span className="opacity-50 text-[11px] font-mono">[ </span>
+        <span className="text-[11px] opacity-75">↪</span>
+        <span> {displayName} </span>
+        <span className="opacity-50 text-[11px] font-mono">]</span>
+        <span data-testid="citation-badge" className="hidden" aria-hidden="true" />
+      </button>
+
+      {isHovered && (
+        <span
+          role="tooltip"
+          data-testid="concept-preview-popover"
+          className={cn(
+            "block absolute z-50 bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 sm:w-80 p-3 rounded-lg shadow-xl pointer-events-auto",
+            "bg-[#1c1b18] text-[#e8e4dc] border border-[#38342e]",
+            "animate-in fade-in zoom-in-95 duration-150 text-left"
+          )}
+        >
+          <span className="flex items-center justify-between gap-2 mb-2 pb-1.5 border-b border-[#38342e]/80">
+            <span className="text-[11px] font-medium text-[#a8a29e] truncate flex items-center gap-1">
+              <span className="text-[#cc785c]">↪</span>
+              <span className="truncate">{displayName}</span>
+            </span>
+            <span
+              data-testid="popover-page-badge"
+              className="shrink-0 px-1.5 py-0.5 rounded text-[10px] font-mono font-semibold bg-[#2a2723] text-[#cc785c] border border-[#3f3b35]"
+            >
+              Page {pageNumber}
+            </span>
+          </span>
+          <span className="block text-xs leading-relaxed text-[#c4beb3] max-h-36 overflow-y-auto italic">
+            "{snippet}"
+          </span>
+        </span>
+      )}
+    </span>
+  );
 }
 
 /**
@@ -54,19 +221,71 @@ function parseInlineCitationsAndMath(
   onCitationClick?: (citation: CitationBadgeData | null | string, citId?: string) => void
 ): React.ReactNode {
   // Regex matches:
-  // 1. [1], [2], [^1], [^2], [^cit_x], [cit_x], [^cit-encoder]
-  // 2. $...$ (inline math)
-  // 3. \(...\) (LaTeX inline math)
-  const regex = /(\[\^?\d+\]|\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
+  // 1. [cite:concept_name] or [cite:chunk_id:page:concept_name]
+  // 2. [ ↪ concept_name ]
+  // 3. [1], [2], [^1], [^2], [^cit_x], [cit_x]
+  // 4. [ConceptName] (e.g. [Architecture])
+  // 5. $...$ (inline math)
+  // 6. \(...\) (LaTeX inline math)
+  const regex =
+    /(\[cite:[^\]]+\]|\[\s*↪\s*[^\]]+\]|\[\^?\d+\]|\[\^(?:cit_)?[\w-]+\]|\[cit_[\w-]+\]|\[[A-Z][\w\s-]{1,50}\]|\$(?:\\.|[^$\n])+\$|\\\((?:\\.|[^)\n])+\\\))/g;
   const parts = text.split(regex);
   if (parts.length === 1) return text;
 
   return parts.map((part, index) => {
     if (!part) return null;
 
-    const citMatch = part.match(/^\[(?:\^?([\w-]+))\]$/);
-    if (citMatch) {
-      const rawCitId = citMatch[1];
+    // 1. Explicit [cite:...] concept tag
+    if (part.startsWith("[cite:") && part.endsWith("]")) {
+      const inner = part.slice(6, -1).trim();
+      const segments = inner.split(":");
+      const conceptName = segments[segments.length - 1].trim();
+      const pageStr = segments.length >= 2 ? segments[segments.length - 2] : "";
+      const pageNum = parseInt(pageStr, 10);
+      const chunkId = segments.length >= 3 ? segments[0] : "";
+
+      const matched = findBestCitationMatch(
+        conceptName,
+        isNaN(pageNum) ? undefined : pageNum,
+        chunkId,
+        citations
+      );
+
+      const citId = matched?.citation_id || chunkId || "cit_1";
+
+      return (
+        <ConceptPill
+          key={index}
+          concept={matched?.concept_name || conceptName}
+          citation={matched}
+          citId={citId}
+          onClick={onCitationClick}
+        />
+      );
+    }
+
+    // 1b. Literal [ ↪ concept_name ] tag
+    const literalArrowMatch = part.match(/^\[\s*↪\s*([^\]]+)\]$/);
+    if (literalArrowMatch) {
+      const conceptName = literalArrowMatch[1].trim();
+      const matched = findBestCitationMatch(conceptName, undefined, undefined, citations);
+      const citId = matched?.citation_id || "cit_1";
+
+      return (
+        <ConceptPill
+          key={index}
+          concept={matched?.concept_name || conceptName}
+          citation={matched}
+          citId={citId}
+          onClick={onCitationClick}
+        />
+      );
+    }
+
+    // 2. Numbered citation marker like [1], [2], [^1], [cit_1]
+    const numCitMatch = part.match(/^\[(?:\^?([\w-]+))\]$/);
+    if (numCitMatch) {
+      const rawCitId = numCitMatch[1];
       const citId = rawCitId.startsWith("cit_") ? rawCitId : `cit_${rawCitId}`;
       const numericPart = rawCitId.replace(/\D/g, "");
       const numIndex = numericPart ? parseInt(numericPart, 10) - 1 : -1;
@@ -75,33 +294,46 @@ function parseInlineCitationsAndMath(
         citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
         (numIndex >= 0 && citations && citations[numIndex] ? citations[numIndex] : null);
 
-      const pageNumber = matchedCitation?.page ?? (numIndex >= 0 ? numIndex + 1 : 1);
-      const docTitle = matchedCitation?.paper_title || "Tài liệu học thuật";
-      const displayLabel = numericPart || rawCitId;
+      if (!matchedCitation) {
+        return part;
+      }
+
+      const conceptName =
+        matchedCitation.concept_name ||
+        matchedCitation.paper_title ||
+        (numericPart ? `Tài liệu ${numericPart}` : rawCitId);
 
       return (
-        <button
+        <ConceptPill
           key={index}
-          type="button"
-          data-testid="citation-badge"
-          data-citation-id={citId}
-          aria-label={`[${rawCitId}]`}
-          onClick={(e) => {
-            e.stopPropagation();
-            if (matchedCitation) {
-              onCitationClick?.(matchedCitation, rawCitId);
-            } else {
-              onCitationClick?.(rawCitId);
-            }
-          }}
-          title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pageNumber} • ${docTitle} (Bấm để mở Bounding Box trên PDF)`}
-          className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
-        >
-          [{displayLabel}]
-        </button>
+          concept={conceptName}
+          citation={matchedCitation}
+          citId={citId}
+          onClick={onCitationClick}
+        />
       );
     }
 
+    // 3. Bracketed concept name e.g. [Architecture]
+    const conceptBracketMatch = part.match(/^\[([A-Z][\w\s-]{1,50})\]$/);
+    if (conceptBracketMatch) {
+      const candidate = conceptBracketMatch[1].trim();
+      const matched = findBestCitationMatch(candidate, undefined, undefined, citations);
+
+      if (matched) {
+        return (
+          <ConceptPill
+            key={index}
+            concept={matched.concept_name || candidate}
+            citation={matched}
+            citId={matched.citation_id || "cit_1"}
+            onClick={onCitationClick}
+          />
+        );
+      }
+    }
+
+    // 4. Inline LaTeX math \( ... \)
     if (part.startsWith("\\(") && part.endsWith("\\)") && part.length > 4) {
       return (
         <MathRenderer
@@ -112,6 +344,7 @@ function parseInlineCitationsAndMath(
       );
     }
 
+    // 5. Inline math $ ... $
     if (part.startsWith("$") && part.endsWith("$") && part.length > 2) {
       return (
         <MathRenderer
@@ -149,6 +382,7 @@ export function AcademicMarkdownRenderer({
   className,
   citations,
   onCitationClick,
+  isStreaming = false,
 }: AcademicMarkdownRendererProps) {
   // 1. Split block math ($$...$$) so KaTeX renders blocks cleanly without markdown interference
   const segments = useMemo(() => {
@@ -160,81 +394,6 @@ export function AcademicMarkdownRenderer({
       text: part,
     }));
   }, [content]);
-
-  // 2. Derive deduplicated list of cited references from content and citations
-  const referenceList = useMemo(() => {
-    if (!citations || citations.length === 0 || !content) return [];
-
-    // Check if the response explicitly indicates absence of evidence / refusal to cite
-    const isRefusalOrNoEvidence =
-      /không\s*(?:thể\s*gắn\s*thẻ|xuất\s*hiện\s*trong\s*tài\s*liệu|tìm\s*thấy\s*trong\s*tài\s*liệu)/i.test(
-        content
-      );
-    if (isRefusalOrNoEvidence) {
-      return [];
-    }
-
-    // Find all citation markers in the content: [1], [2], [^1], [^cit_1], [cit_1]
-    const matches = Array.from(
-      content.matchAll(/\[(?:\^?(\d+)|\^?(?:cit_)?([\w-]+))\]/g)
-    );
-
-    const hasInlineTokens = matches.length > 0;
-
-    // If no inline tokens in text, but citations are provided and not a refusal,
-    // include all citations so references are displayed with [1], [2] etc.
-    if (!hasInlineTokens) {
-      return citations.map((cit, idx) => ({
-        citation: cit,
-        label: String(idx + 1),
-        citId: cit.citation_id || `cit_${idx + 1}`,
-        hasInlineToken: false,
-      }));
-    }
-
-    const seenKeys = new Set<string>();
-    const result: Array<{
-      citation: CitationBadgeData;
-      label: string;
-      citId: string;
-      hasInlineToken: boolean;
-    }> = [];
-
-    for (const match of matches) {
-      const rawCitId = match[1] || match[2];
-      if (!rawCitId) continue;
-
-      const citId = rawCitId.startsWith("cit_") ? rawCitId : `cit_${rawCitId}`;
-      const numPart = rawCitId.replace(/\D/g, "");
-      const numIdx = numPart ? parseInt(numPart, 10) - 1 : -1;
-
-      const matchedCit =
-        citations.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
-        (numIdx >= 0 && citations[numIdx] ? citations[numIdx] : null);
-
-      if (!matchedCit) continue;
-
-      const displayLabel = numPart || rawCitId;
-      const dedupeKey = `${matchedCit.paper_id || ""}_${matchedCit.page}_${displayLabel}`;
-
-      if (!seenKeys.has(dedupeKey)) {
-        seenKeys.add(dedupeKey);
-        result.push({
-          citation: matchedCit,
-          label: displayLabel,
-          citId,
-          hasInlineToken: true,
-        });
-      }
-    }
-
-    return result.sort((a, b) => {
-      const numA = parseInt(a.label, 10);
-      const numB = parseInt(b.label, 10);
-      if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
-      return a.label.localeCompare(b.label);
-    });
-  }, [content, citations]);
 
   return (
     <div
@@ -332,7 +491,7 @@ export function AcademicMarkdownRenderer({
                   if (!codeString || codeString.trim() === "undefined" || codeString.trim().length < 5) {
                     return null;
                   }
-                  return <MermaidRenderer chart={codeString} />;
+                  return <MermaidRenderer key={codeString} chart={codeString} />;
                 }
 
                 const isInline = !codeClassName && typeof children === "string" && !children.includes("\n");
@@ -353,41 +512,55 @@ export function AcademicMarkdownRenderer({
                   );
                 }
 
-                // Check for citation marker like [^cit_x] or [cit_x] or [1]
+                // Check for citation marker like [^cit_x] or [cit_x] or [1] or cite:...
                 if (
                   isInline &&
                   typeof children === "string" &&
-                  /^(\^?cit_[\w-]+|\^\d+|\d+)$/.test(children)
+                  /^(\^?cit_[\w-]+|\^\d+|\d+|cite:[\w:-]+)$/.test(children)
                 ) {
-                  const rawCitId = children.replace(/^\^/, "");
+                  const rawText = children;
+                  if (rawText.startsWith("cite:")) {
+                    const conceptName = rawText.slice(5).split(":").pop() || "Khái niệm";
+                    const matched =
+                      citations?.find(
+                        (c) =>
+                          (c.concept_name && c.concept_name.toLowerCase() === conceptName.toLowerCase()) ||
+                          (c.paper_title && c.paper_title.toLowerCase() === conceptName.toLowerCase())
+                      ) ||
+                      citations?.[0] ||
+                      null;
+                    return (
+                      <ConceptPill
+                        concept={conceptName}
+                        citation={matched}
+                        citId={matched?.citation_id || "cit_1"}
+                        onClick={onCitationClick}
+                      />
+                    );
+                  }
+
+                  const rawCitId = rawText.replace(/^\^/, "");
                   const citId = rawCitId.startsWith("cit_") ? rawCitId : `cit_${rawCitId}`;
                   const numPart = rawCitId.replace(/\D/g, "");
                   const numIdx = numPart ? parseInt(numPart, 10) - 1 : -1;
                   const matched =
                     citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
                     (numIdx >= 0 && citations && citations[numIdx] ? citations[numIdx] : null);
-                  const pNum = matched?.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
-                  const displayLabel = numPart || rawCitId;
+
+                  if (!matched) {
+                    return `[${children}]`;
+                  }
+
+                  const conceptName =
+                    matched.concept_name || matched.paper_title || (numPart ? `Tài liệu ${numPart}` : rawCitId);
 
                   return (
-                    <button
-                      type="button"
-                      data-testid="citation-badge"
-                      data-citation-id={citId}
-                      aria-label={`[${rawCitId}]`}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (matched) {
-                          onCitationClick?.(matched, rawCitId);
-                        } else {
-                          onCitationClick?.(rawCitId);
-                        }
-                      }}
-                      className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
-                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
-                    >
-                      [{displayLabel}]
-                    </button>
+                    <ConceptPill
+                      concept={conceptName}
+                      citation={matched}
+                      citId={citId}
+                      onClick={onCitationClick}
+                    />
                   );
                 }
 
@@ -453,22 +626,21 @@ export function AcademicMarkdownRenderer({
                   const matched =
                     citations?.find((c) => c.citation_id === rawCitId || c.citation_id === citId) ||
                     (numIdx >= 0 && citations && citations[numIdx] ? citations[numIdx] : null);
-                  const pNum = matched?.page ?? (numIdx >= 0 ? numIdx + 1 : 1);
-                  const displayLabel = numPart || rawCitId;
+
+                  if (!matched) {
+                    return `[${rawCitId}]`;
+                  }
+
+                  const conceptName =
+                    matched.concept_name || matched.paper_title || (numPart ? `Tài liệu ${numPart}` : rawCitId);
 
                   return (
-                    <button
-                      type="button"
-                      data-testid="inline-citation-badge"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onCitationClick?.(matched, citId);
-                      }}
-                      className="inline-flex items-center justify-center min-w-[20px] h-[19px] px-1.5 mx-0.5 -translate-y-0.5 rounded text-[11px] font-sans font-semibold text-primary dark:text-coral-400 bg-primary/10 hover:bg-primary/20 dark:bg-coral-500/15 dark:hover:bg-coral-500/25 border border-primary/25 dark:border-coral-500/30 transition-all cursor-pointer align-baseline select-none shadow-2xs hover:scale-105 active:scale-95"
-                      title={`[${displayLabel}] Xem đoạn bằng chứng tại trang ${pNum} • ${matched?.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
-                    >
-                      [{displayLabel}]
-                    </button>
+                    <ConceptPill
+                      concept={conceptName}
+                      citation={matched}
+                      citId={citId}
+                      onClick={onCitationClick}
+                    />
                   );
                 }
 
@@ -491,45 +663,13 @@ export function AcademicMarkdownRenderer({
         );
       })}
 
-      {/* Structured "Nguồn trích dẫn" (References) Section with Numbered Chips */}
-      {referenceList.length > 0 && (
-        <div
-          data-testid="citation-sources-footer"
-          className="mt-4 pt-3 border-t border-[#e5dfd4] dark:border-[#38332c]/80"
-        >
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-[#66635c] dark:text-zinc-400 mb-2">
-            <FileText className="w-3.5 h-3.5 text-primary dark:text-coral-400" />
-            <span>Nguồn trích dẫn ({referenceList.length})</span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {referenceList.map(({ citation, label, citId, hasInlineToken }) => (
-              <button
-                key={`${citId}_${citation.page}_${label}`}
-                type="button"
-                data-testid={hasInlineToken ? "citation-source-item" : "citation-badge"}
-                data-citation-id={citId}
-                aria-label={`Nguồn [${label}]: ${citation.paper_title || "Tài liệu học thuật"} trang ${citation.page}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onCitationClick?.(citation, citId);
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-sans bg-[#f5efe6] hover:bg-amber-100/90 text-amber-900 dark:bg-[#2b2721] dark:hover:bg-amber-950/70 dark:text-amber-200 border border-amber-300/80 dark:border-amber-700/60 shadow-2xs transition-all hover:scale-[1.02] active:scale-[0.98] cursor-pointer text-left"
-                title={`[${label}] Xem đoạn bằng chứng tại trang ${citation.page} • ${citation.paper_title || "Tài liệu học thuật"} (Bấm để mở Bounding Box trên PDF)`}
-              >
-                <span className="font-bold text-primary dark:text-coral-400">
-                  [{label}]
-                </span>
-                <span className="truncate max-w-[180px] sm:max-w-[240px] font-medium text-ink dark:text-zinc-200">
-                  {citation.paper_title || "Tài liệu học thuật"}
-                </span>
-                <span className="text-[11px] font-semibold text-primary dark:text-coral-400 opacity-90">
-                  Tr.{citation.page}
-                </span>
-                <ArrowUpRight className="w-3 h-3 opacity-60 shrink-0 text-primary dark:text-coral-400" />
-              </button>
-            ))}
-          </div>
-        </div>
+      {/* Subtle Inline Streaming Caret: Only renders immediately adjacent to streaming text, never on empty stream */}
+      {isStreaming && Boolean(content && content.trim()) && (
+        <span
+          data-testid="typing-caret"
+          className="inline-block w-1 h-3.5 ml-1 rounded-full bg-[#cc785c]/80 dark:bg-coral-400/80 align-middle animate-pulse"
+          aria-hidden="true"
+        />
       )}
     </div>
   );

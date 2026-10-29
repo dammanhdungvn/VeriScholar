@@ -326,10 +326,11 @@ export const draftsApi = {
 
           // Completion
           if (evName === "done") {
-            if (parsed.final_answer) {
-              callbacks.onToken?.(parsed.final_answer);
+            const answer = parsed.final_answer || parsed.data?.final_answer;
+            if (answer) {
+              callbacks.onToken?.(answer);
             }
-            callbacks.onComplete?.(parsed);
+            callbacks.onComplete?.(parsed.data || parsed);
           }
 
           // Error

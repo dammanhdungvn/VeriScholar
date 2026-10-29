@@ -40,15 +40,20 @@ class CLSILatexCompiler:
         """Detect whether pdflatex or xelatex is required.
 
         Returns (engine_name, engine_flag):
-        - ("xelatex", "-xelatex") if fontspec or XeTeX directives are present.
+        - ("xelatex", "-xelatex") if fontspec, XeTeX, or Unicode characters are present.
         - ("pdflatex", "-pdf") otherwise.
         """
         if not main_tex:
             return ("pdflatex", "-pdf")
 
-        # Check for fontspec package or xetex indications
+        # Check for fontspec package or xetex indications or non-ASCII unicode
         fontspec_pattern = re.compile(r"\\usepackage(?:\[.*?\])?\{fontspec\}")
-        if fontspec_pattern.search(main_tex) or "fontspec" in main_tex:
+        if (
+            fontspec_pattern.search(main_tex)
+            or "fontspec" in main_tex
+            or "xelatex" in main_tex.lower()
+            or any(ord(char) > 127 for char in main_tex)
+        ):
             return ("xelatex", "-xelatex")
 
         return ("pdflatex", "-pdf")
@@ -234,7 +239,7 @@ class CLSILatexCompiler:
                 "hint": "Ensure TeXLive and latexmk are installed on the host environment.",
             }
             return {
-                "draft_id": draft_id,
+                "draft_id": str(draft_id),
                 "success": False,
                 "pdf_path": None,
                 "synctex_path": None,
@@ -270,7 +275,7 @@ class CLSILatexCompiler:
                 "hint": "Optimize images or simplify complex macros to reduce compile time.",
             }
             return {
-                "draft_id": draft_id,
+                "draft_id": str(draft_id),
                 "success": False,
                 "pdf_path": None,
                 "synctex_path": None,
@@ -311,6 +316,23 @@ class CLSILatexCompiler:
 
         success = (proc.returncode == 0) and (not has_error) and has_pdf
 
+        if not success and not has_error:
+            line_m = re.search(
+                r"(?:main\.tex:(\d+):|l\.(\d+)|on input line (\d+))",
+                log_text,
+            )
+            found_line = int(line_m.group(1) or line_m.group(2) or line_m.group(3)) if line_m else 1
+            fallback_diag: LatexDiagnostic = {
+                "file": "main.tex",
+                "line": found_line,
+                "column": 1,
+                "severity": "error",
+                "message": "CLI LaTeX compiler exited with non-zero status.",
+                "context": "",
+                "hint": f"Kiểm tra các gói khai báo hoặc lỗi cú pháp quanh dòng {found_line}.",
+            }
+            diagnostics.append(fallback_diag)
+
         # Locate synctex file only if compilation succeeded
         synctex_path: str | None = None
         if success:
@@ -338,7 +360,7 @@ class CLSILatexCompiler:
         duration = time.perf_counter() - start_time
 
         return {
-            "draft_id": draft_id,
+            "draft_id": str(draft_id),
             "success": success,
             "pdf_path": pdf_path if (success and has_pdf) else None,
             "synctex_path": synctex_path if success else None,

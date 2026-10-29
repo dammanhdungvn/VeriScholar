@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useEffect, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
@@ -9,8 +9,17 @@ import {
   PanelLeft,
   Search,
   Archive,
-  BookOpen,
   CheckCircle2,
+  ChevronDown,
+  MoreHorizontal,
+  Pin,
+  PinOff,
+  Mail,
+  MailOpen,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react";
 import { AcademicLogo } from "@/components/shared/AcademicLogo";
 import { useDashboardStore } from "../stores/useDashboardStore";
@@ -19,8 +28,51 @@ import { AccountSettingsModal } from "@/features/auth/components/AccountSettings
 import { AvatarDropdownPopover } from "@/features/auth/components/AvatarDropdownPopover";
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { useTheme } from "@/hooks/useTheme";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
+import { QueryClientContext } from "@tanstack/react-query";
 import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
+
+const UNREAD_STORAGE_KEY = "verischolar_unread_sessions_v1";
+const PINNED_STORAGE_KEY = "verischolar_pinned_sessions_v1";
+
+function loadPinnedSessionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedSessionIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // ignore
+  }
+}
+
+function loadUnreadSessionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(UNREAD_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function saveUnreadSessionIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(UNREAD_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // ignore
+  }
+}
 
 interface DashboardTaskbarProps {
   sessions?: SessionItem[];
@@ -28,6 +80,8 @@ interface DashboardTaskbarProps {
   onSelectSession?: (sessionId: string) => void;
   onNewSession?: () => void;
   onOpenLibrary?: () => void;
+  onRenameSession?: (sessionId: string, newTitle: string) => Promise<void>;
+  onDeleteSession?: (sessionId: string) => Promise<void>;
 }
 
 export function DashboardTaskbar({
@@ -36,6 +90,8 @@ export function DashboardTaskbar({
   onSelectSession: propOnSelectSession,
   onNewSession: propOnNewSession,
   onOpenLibrary,
+  onRenameSession,
+  onDeleteSession,
 }: DashboardTaskbarProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,6 +100,8 @@ export function DashboardTaskbar({
   const { user } = useAuthStore();
   const sidebarState = useDashboardStore((s) => s.sidebarState);
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
+
+  const queryClient = useContext(QueryClientContext);
 
   const sessions = useMemo(() => propSessions ?? [], [propSessions]);
   const onSelectSession = propOnSelectSession ?? ((id: string) => navigate(`/dashboard/${id}`));
@@ -54,9 +112,145 @@ export function DashboardTaskbar({
   const [filterArchived, setFilterArchived] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isAvatarDropdownOpen, setIsAvatarDropdownOpen] = useState(false);
+  const [isRecentsCollapsed, setIsRecentsCollapsed] = useState(false);
+  const [activeMenuSessionId, setActiveMenuSessionId] = useState<string | null>(null);
+
+  // Read / Unread session tracking
+  const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(loadUnreadSessionIds);
+
+  // Pinned session tracking
+  const [pinnedSessionIds, setPinnedSessionIds] = useState<Set<string>>(loadPinnedSessionIds);
+
+  // Inline rename state
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState("");
+  const [isSubmittingRename, setIsSubmittingRename] = useState(false);
+
+  // Delete session modal state
+  const [deletingSession, setDeletingSession] = useState<SessionItem | null>(null);
+  const [isSubmittingDelete, setIsSubmittingDelete] = useState(false);
+
+  const menuContainerRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside listener for context menu
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(event.target as Node)
+      ) {
+        setActiveMenuSessionId(null);
+      }
+    }
+    if (activeMenuSessionId) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [activeMenuSessionId]);
+
+  const handleSelectSession = (sessionId: string) => {
+    if (unreadSessionIds.has(sessionId)) {
+      setUnreadSessionIds((prev) => {
+        const next = new Set(prev);
+        next.delete(sessionId);
+        saveUnreadSessionIds(next);
+        return next;
+      });
+    }
+    handleItemClick(() => onSelectSession(sessionId));
+  };
+
+  const handleToggleUnread = (sessionId: string) => {
+    setUnreadSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      saveUnreadSessionIds(next);
+      return next;
+    });
+    setActiveMenuSessionId(null);
+  };
+
+  const handleTogglePin = (sessionId: string) => {
+    setPinnedSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      savePinnedSessionIds(next);
+      return next;
+    });
+    setActiveMenuSessionId(null);
+  };
+
+  const handleStartRename = (session: SessionItem) => {
+    setEditingSessionId(session.id);
+    setEditingTitle(session.title);
+    setActiveMenuSessionId(null);
+  };
+
+  const handleSaveRename = async (sessionId: string) => {
+    const trimmed = editingTitle.trim();
+    if (!trimmed) {
+      setEditingSessionId(null);
+      return;
+    }
+    try {
+      setIsSubmittingRename(true);
+      if (onRenameSession) {
+        await onRenameSession(sessionId, trimmed);
+      } else {
+        const detail = await sessionsApi.getSessionDetail(sessionId);
+        const etag =
+          detail.etag ||
+          detail.headers?.get?.("etag") ||
+          detail.headers?.get?.("ETag") ||
+          `v${detail.data?.version || 1}`;
+        await sessionsApi.updateSessionMetadata(sessionId, trimmed, etag);
+        queryClient?.invalidateQueries({ queryKey: ["dashboard", "sessions"] });
+        queryClient?.invalidateQueries({ queryKey: ["sessions"] });
+      }
+      const target = sessions.find((s) => s.id === sessionId);
+      if (target) target.title = trimmed;
+      setEditingSessionId(null);
+    } catch (err) {
+      console.error("Failed to rename session:", err);
+    } finally {
+      setIsSubmittingRename(false);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingSession) return;
+    try {
+      setIsSubmittingDelete(true);
+      if (onDeleteSession) {
+        await onDeleteSession(deletingSession.id);
+      } else {
+        await sessionsApi.deleteSession(deletingSession.id);
+        queryClient?.invalidateQueries({ queryKey: ["dashboard", "sessions"] });
+        queryClient?.invalidateQueries({ queryKey: ["sessions"] });
+      }
+      if (activeSessionId === deletingSession.id) {
+        navigate("/dashboard");
+      }
+      setDeletingSession(null);
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+    } finally {
+      setIsSubmittingDelete(false);
+    }
+  };
 
   const displayedSessions = useMemo(() => {
-    return sessions.filter((session) => {
+    const filtered = sessions.filter((session) => {
       if (filterArchived) {
         if (!session.is_archived) return false;
       }
@@ -66,7 +260,16 @@ export function DashboardTaskbar({
       }
       return true;
     });
-  }, [sessions, searchQuery, filterArchived]);
+
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedSessionIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedSessionIds.has(b.id) ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned; // pinned sessions first
+      }
+      return 0;
+    });
+  }, [sessions, searchQuery, filterArchived, pinnedSessionIds]);
 
   const handleItemClick = (callback?: () => void) => {
     if (callback) callback();
@@ -80,28 +283,12 @@ export function DashboardTaskbar({
   const pathname = location.pathname;
   const isLibrary = pathname.startsWith("/library");
   const isWriting = pathname.startsWith("/writing");
-  const isResearch =
-    !isLibrary &&
-    !isWriting &&
-    (pathname === "/dashboard" ||
-      pathname.startsWith("/dashboard/") ||
-      pathname.startsWith("/research") ||
-      pathname.startsWith("/discovery") ||
-      pathname === "/");
 
   const navItems = [
     {
-      id: "research",
-      label: "Khám phá & Phiên đọc",
-      title: "Khám phá & Phiên đọc (Đọc & Nghiên cứu)",
-      icon: BookOpen,
-      isActive: isResearch,
-      onClick: () => navigate("/dashboard"),
-    },
-    {
       id: "library",
-      label: "Kho Yêu thích",
-      title: "Thư viện tài liệu nghiên cứu",
+      label: "My Library",
+      title: "My Library",
       icon: Library,
       isActive: isLibrary,
       onClick: () => {
@@ -111,8 +298,8 @@ export function DashboardTaskbar({
     },
     {
       id: "writing",
-      label: "Soạn thảo LaTeX",
-      title: "Soạn thảo LaTeX (Agentic Overleaf)",
+      label: "Writing",
+      title: "Writing",
       icon: PenTool,
       isActive: isWriting,
       onClick: () => navigate("/writing"),
@@ -198,10 +385,15 @@ export function DashboardTaskbar({
           <button
             type="button"
             onClick={() => handleItemClick(onNewSession)}
-            title="Đoạn chat mới"
-            className="w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1"
+            title="New Session"
+            className={cn(
+              "flex items-center text-xs font-anthropic-serif font-semibold text-white bg-coral-500 hover:bg-coral-600 transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] shadow-xs cursor-pointer overflow-hidden focus:outline-none mb-1",
+              isExpanded
+                ? "w-full min-h-[44px] md:min-h-0 md:h-9 rounded-xl"
+                : "w-10 h-10 aspect-square rounded-full mx-auto justify-center p-0"
+            )}
           >
-            <div className="w-10 min-h-[44px] md:min-h-0 md:h-9 shrink-0 flex items-center justify-center">
+            <div className={cn("shrink-0 flex items-center justify-center", isExpanded ? "w-10 min-h-[44px] md:min-h-0 md:h-9" : "w-10 h-10")}>
               <Plus className="w-4 h-4 stroke-[2.2]" />
             </div>
             <div
@@ -212,7 +404,7 @@ export function DashboardTaskbar({
               }`}
             >
               <span className="font-semibold whitespace-nowrap truncate font-anthropic-serif">
-                Đoạn chat mới
+                New Session
               </span>
             </div>
           </button>
@@ -227,9 +419,9 @@ export function DashboardTaskbar({
                 onClick={() => handleItemClick(item.onClick)}
                 title={item.title}
                 className={cn(
-                  "w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif font-semibold transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none",
+                  "w-full min-h-[44px] md:min-h-0 md:h-9 flex items-center rounded-xl text-xs font-anthropic-serif transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] cursor-pointer overflow-hidden focus:outline-none",
                   item.isActive
-                    ? "bg-coral-500/15 text-coral-700 dark:text-coral-300 border border-coral-500/25 font-bold"
+                    ? "text-coral-700 dark:text-coral-300 font-bold"
                     : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-100 hover:bg-[#f2ece1] dark:hover:bg-[#262420]"
                 )}
               >
@@ -274,71 +466,225 @@ export function DashboardTaskbar({
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm phiên..."
+                placeholder="Search sessions..."
                 className="w-full pl-6 pr-2 py-1 rounded-lg bg-canvas dark:bg-[#141311] border border-hairline focus:border-coral-500 outline-none text-[11px] font-sans text-ink dark:text-zinc-200"
               />
             </div>
-            <div className="flex items-center justify-between text-[10px]">
-              <span className="font-semibold text-muted uppercase tracking-wider font-mono">
-                {filterArchived ? "Đã lưu trữ" : "Gần đây"} ({displayedSessions.length})
-              </span>
+            <div className="flex items-center justify-between text-[11px] pt-1">
+              <button
+                type="button"
+                data-testid="recents-collapse-toggle"
+                onClick={() => setIsRecentsCollapsed(!isRecentsCollapsed)}
+                className="flex items-center gap-1.5 font-semibold text-muted hover:text-ink dark:hover:text-zinc-200 cursor-pointer focus:outline-none"
+              >
+                <span>Recents</span>
+                <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", isRecentsCollapsed && "-rotate-90")} />
+                <span className="text-[10px] text-muted font-normal">({displayedSessions.length})</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setFilterArchived(!filterArchived)}
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer ${
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors cursor-pointer text-[10px] ${
                   filterArchived
                     ? "bg-amber-500/10 text-amber-700 dark:text-amber-400 font-semibold"
                     : "text-muted hover:text-ink"
                 }`}
-                title={filterArchived ? "Xem phiên đang hoạt động" : "Xem phiên đã lưu trữ (Archived)"}
+                title={filterArchived ? "View active sessions" : "View archived sessions"}
               >
                 <Archive className="w-3 h-3" />
-                <span>{filterArchived ? "Lưu trữ" : "Xem lưu trữ"}</span>
+                <span>{filterArchived ? "Archived" : "View archived"}</span>
               </button>
             </div>
           </div>
 
-          <div className="px-2 pt-1 pb-1 space-y-1 overflow-y-auto max-h-[calc(100vh-340px)] scrollbar-none">
-            {displayedSessions.length === 0 ? (
-              <div className="py-6 text-center text-muted text-[11px]">
-                {searchQuery.trim() ? "Không tìm thấy phiên" : filterArchived ? "Không có phiên lưu trữ" : "Chưa có phiên nào"}
-              </div>
-            ) : (
-              displayedSessions.map((session) => {
-                const isActive = session.id === activeSessionId;
-                return (
-                  <button
-                    key={session.id}
-                    type="button"
-                    onClick={() => handleItemClick(() => onSelectSession(session.id))}
-                    title={session.title}
-                    className={`w-full text-left flex items-center gap-2.5 px-3 py-2 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer group relative overflow-hidden focus:outline-none ${
-                      isActive
-                        ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
-                        : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
-                    }`}
-                  >
-                    {isActive && (
-                      <span className="absolute left-1 top-2 bottom-2 w-1 rounded-full bg-coral-500" />
-                    )}
-                    <MessageSquare
-                      className={`w-3.5 h-3.5 shrink-0 ${
-                        isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
-                      }`}
-                    />
-                    <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">
-                      {session.title}
-                    </span>
-                    {session.is_archived && (
-                      <span title="Phiên đã hết hạn lưu trữ (Archived)">
-                        <Archive className="w-3 h-3 text-amber-500 shrink-0" />
-                      </span>
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
+          {!isRecentsCollapsed && (
+            <div className="px-2 pt-1 pb-1 space-y-1 overflow-y-auto max-h-[calc(100vh-340px)] scrollbar-none">
+              {displayedSessions.length === 0 ? (
+                <div className="py-6 text-center text-muted text-[11px]">
+                  {searchQuery.trim() ? "No sessions found" : filterArchived ? "No archived sessions" : "No sessions yet"}
+                </div>
+              ) : (
+                displayedSessions.map((session, index) => {
+                  const isActive = session.id === activeSessionId;
+                  const isMenuOpen = activeMenuSessionId === session.id;
+                  const isEditing = editingSessionId === session.id;
+                  const isUnread = unreadSessionIds.has(session.id);
+                  const isPinned = pinnedSessionIds.has(session.id);
+                  const isNearBottom = index >= Math.max(0, displayedSessions.length - 2);
+
+                  return (
+                    <div key={session.id} className="relative group">
+                      {isEditing ? (
+                        <div className="flex items-center gap-1 px-2 py-1.5 w-full bg-white dark:bg-[#282622] rounded-xl border border-coral-500 shadow-2xs">
+                          <input
+                            type="text"
+                            autoFocus
+                            data-testid={`session-rename-input-${session.id}`}
+                            value={editingTitle}
+                            onChange={(e) => setEditingTitle(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveRename(session.id);
+                              if (e.key === "Escape") setEditingSessionId(null);
+                            }}
+                            disabled={isSubmittingRename}
+                            className="flex-1 bg-transparent text-xs font-sans text-ink dark:text-zinc-100 outline-none min-w-0"
+                          />
+                          <button
+                            type="button"
+                            data-testid={`session-rename-save-${session.id}`}
+                            disabled={isSubmittingRename}
+                            onClick={() => handleSaveRename(session.id)}
+                            className="p-1 text-emerald-600 hover:bg-emerald-500/10 rounded cursor-pointer"
+                            title="Save (Enter)"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSessionId(null)}
+                            className="p-1 text-muted hover:text-ink rounded cursor-pointer"
+                            title="Cancel (Esc)"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleSelectSession(session.id)}
+                            title={activeMenuSessionId ? undefined : session.title}
+                            className={cn(
+                              "w-full text-left flex items-center gap-2 px-3 py-2 pr-7 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer relative overflow-hidden focus:outline-none",
+                              isActive
+                                ? "bg-white dark:bg-[#282622] text-ink dark:text-zinc-100 shadow-xs border border-[#e8e4dc] dark:border-[#38342e]"
+                                : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#24221e]"
+                            )}
+                          >
+                            {isActive && (
+                              <span className="absolute left-1 top-2 bottom-2 w-1 rounded-full bg-coral-500" />
+                            )}
+                            <MessageSquare
+                              className={cn(
+                                "w-3.5 h-3.5 shrink-0",
+                                isActive ? "text-coral-500" : "text-muted dark:text-zinc-500 group-hover:text-coral-500"
+                              )}
+                            />
+                            <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">
+                              {session.title}
+                            </span>
+                            {isPinned && (
+                              <span title="Pinned">
+                                <Pin className="w-3 h-3 text-coral-500 fill-coral-500/20 shrink-0 rotate-45" />
+                              </span>
+                            )}
+                            {isUnread && (
+                              <span
+                                data-testid={`session-unread-dot-${session.id}`}
+                                title="Unread"
+                                className="w-2 h-2 rounded-full bg-coral-500 shrink-0 shadow-2xs"
+                              />
+                            )}
+                            {session.is_archived && (
+                              <span title="Archived session">
+                                <Archive className="w-3 h-3 text-amber-500 shrink-0" />
+                              </span>
+                            )}
+                          </button>
+
+                          {/* More (...) Button */}
+                          <button
+                            type="button"
+                            data-testid={`session-more-btn-${session.id}`}
+                            aria-label={`Options for ${session.title}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuSessionId(isMenuOpen ? null : session.id);
+                            }}
+                            className={cn(
+                              "absolute right-1.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-lg flex items-center justify-center text-muted hover:text-ink dark:hover:text-zinc-100 hover:bg-[#e8e3d8] dark:hover:bg-[#33302a] transition-all cursor-pointer z-10",
+                              isMenuOpen ? "opacity-100 bg-[#e8e3d8] dark:bg-[#33302a]" : "opacity-0 group-hover:opacity-100"
+                            )}
+                          >
+                            <MoreHorizontal className="w-3.5 h-3.5" />
+                          </button>
+
+                          {/* Context Menu Popup */}
+                          {isMenuOpen && (
+                            <div
+                              ref={menuContainerRef}
+                              data-testid={`session-context-menu-${session.id}`}
+                              data-placement={isNearBottom ? "top" : "bottom"}
+                              onClick={(e) => e.stopPropagation()}
+                              className={cn(
+                                "absolute right-0 z-50 w-44 p-1 rounded-xl bg-white dark:bg-[#201e1b] border border-[#e5dfd4] dark:border-[#38332c] shadow-xl text-xs select-none animate-in fade-in zoom-in-95 duration-100",
+                                isNearBottom ? "bottom-full mb-1 origin-bottom-right" : "top-full mt-1 origin-top-right"
+                              )}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => handleTogglePin(session.id)}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                              >
+                                {isPinned ? (
+                                  <>
+                                    <PinOff className="w-3.5 h-3.5 text-coral-500" />
+                                    <span>Unpin</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pin className="w-3.5 h-3.5 text-zinc-500" />
+                                    <span>Pin</span>
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleUnread(session.id)}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                              >
+                                {isUnread ? (
+                                  <>
+                                    <MailOpen className="w-3.5 h-3.5 text-zinc-500" />
+                                    <span>Mark as read</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Mail className="w-3.5 h-3.5 text-zinc-500" />
+                                    <span>Mark as unread</span>
+                                  </>
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleStartRename(session)}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
+                              >
+                                <Pencil className="w-3.5 h-3.5 text-zinc-500" />
+                                <span>Rename</span>
+                              </button>
+                              <div className="my-1 border-t border-hairline dark:border-[#2f2b26]" />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setActiveMenuSessionId(null);
+                                  setDeletingSession(session);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer font-medium"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -404,6 +750,44 @@ export function DashboardTaskbar({
       isOpen={isSettingsOpen}
       onClose={() => setIsSettingsOpen(false)}
     />
+
+    {/* Delete Session Confirmation Dialog */}
+    {deletingSession && (
+      <div
+        data-testid="delete-session-dialog"
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs animate-in fade-in duration-150"
+      >
+        <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-[#1f1d1a] border border-[#e5dfd4] dark:border-[#38332c] p-5 shadow-2xl space-y-4">
+          <div className="space-y-1.5">
+            <h3 className="font-serif font-bold text-sm sm:text-base text-ink dark:text-zinc-100">
+              Delete Research Session
+            </h3>
+            <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed font-sans">
+              Are you sure you want to delete session <span className="font-semibold text-ink dark:text-zinc-200 font-serif">"{deletingSession.title}"</span>? This action cannot be undone.
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setDeletingSession(null)}
+              disabled={isSubmittingDelete}
+              className="px-3 py-1.5 rounded-xl text-xs font-medium text-muted hover:text-ink dark:hover:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#282521] transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              data-testid="confirm-delete-session-btn"
+              disabled={isSubmittingDelete}
+              onClick={handleConfirmDelete}
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+            >
+              {isSubmittingDelete ? "Deleting..." : "Delete Session"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
   </>
   );
 }

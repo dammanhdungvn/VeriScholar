@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type KeyboardEvent } from "react";
 import {
   Sparkles,
   Loader2,
@@ -6,6 +6,9 @@ import {
   ArrowUp,
   X,
   RotateCcw,
+  RotateCw,
+  Copy,
+  Check,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
@@ -46,13 +49,23 @@ export function WritingAssistantPane({
   const [promptInput, setPromptInput] = useState("");
   const [undoWarning, setUndoWarning] = useState<string | null>(null);
   const [isUndoing, setIsUndoing] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-resize textarea up to 160px
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = "auto";
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
+    }
+  }, [promptInput]);
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, isAssisting]);
 
   // Zero-Click Focus when selection context buffer is passed
   useEffect(() => {
@@ -60,14 +73,20 @@ export function WritingAssistantPane({
     if (promptToSet) {
       const timer = setTimeout(() => {
         setPromptInput(promptToSet);
-        if (inputRef.current) {
-          inputRef.current.focus();
-          inputRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
       }, 0);
       return () => clearTimeout(timer);
     }
   }, [externalPrompt, assistantPrompt]);
+
+  const handleCopy = (msgId: string, text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedMsgId(msgId);
+    setTimeout(() => setCopiedMsgId(null), 2000);
+  };
 
   const handleUndo = async () => {
     if (!activeDraftId) return;
@@ -144,6 +163,22 @@ export function WritingAssistantPane({
         },
         onError: (err) => {
           console.error("Stream draft chat error:", err);
+          const errorMsg =
+            typeof err === "string"
+              ? err
+              : err?.error || err?.message || "Có lỗi xảy ra khi trợ lý AI xử lý yêu cầu.";
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantMsgId
+                ? {
+                    ...msg,
+                    content: msg.content
+                      ? `${msg.content}\n\n❌ ${errorMsg}`
+                      : `❌ ${errorMsg}`,
+                  }
+                : msg
+            )
+          );
         },
       });
     } catch (err: any) {
@@ -157,34 +192,69 @@ export function WritingAssistantPane({
     }
   };
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      if (!isAssisting && promptInput.trim()) {
+        handleSendPrompt();
+      }
+    }
+  };
+
   const promptPresets = [
     "Viết Literature Review từ các bài đã đọc",
     "Chuẩn hóa văn phong học thuật",
     "Rà soát tính nhất quán luận điểm",
   ];
 
+  const previousSnapshot = draft?.previous_snapshot;
+  const isRedoAvailable = Boolean(previousSnapshot?.redo && !previousSnapshot?.undo);
+  const isUndoAvailable = Boolean(
+    previousSnapshot?.undo ||
+      (!previousSnapshot?.undo && !previousSnapshot?.redo && previousSnapshot?.content)
+  );
+  const hasSnapshot = isRedoAvailable || isUndoAvailable;
+
   return (
-    <div className="w-full md:w-80 xl:w-96 flex flex-col h-full bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none shrink-0 border-l border-[#ece8df] dark:border-[#2a2824]">
+    <div className="w-full h-full flex flex-col bg-[#faf9f5] dark:bg-[#181715] overflow-hidden select-none shrink-0 font-anthropic-sans">
       {/* 1. Header with Undo & Close Button */}
-      <div className="h-10 px-3 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f5f1e8] dark:bg-[#1e1c19] flex items-center justify-between text-xs font-semibold text-ink dark:text-zinc-200">
-        <div className="flex items-center gap-1.5 font-anthropic-serif">
-          <Sparkles className="w-4 h-4 text-coral-600 dark:text-coral-400" />
-          <span aria-hidden="true">Trợ lý Học thuật AI</span>
+      <div className="h-11 px-3.5 border-b border-[#ece8df] dark:border-[#2a2824] bg-[#f5f1e8] dark:bg-[#1e1c19] flex items-center justify-between text-xs font-semibold text-ink dark:text-zinc-200 shrink-0">
+        <div className="flex items-center gap-2 font-anthropic-serif">
+          <div className="w-5 h-5 rounded-lg bg-coral-500/10 flex items-center justify-center text-coral-600 dark:text-coral-400">
+            <Sparkles className="w-3.5 h-3.5" />
+          </div>
+          <span className="font-semibold text-ink dark:text-zinc-100 tracking-tight">Trợ lý Học thuật AI</span>
           <span className="sr-only">AI Writing Assistant</span>
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Undo Button */}
+          {/* Symmetrical Undo / Redo Button */}
           <button
             type="button"
             data-testid="undo-draft-btn"
             onClick={handleUndo}
-            disabled={isUndoing || isAssisting}
-            className="px-2 py-1 rounded-md bg-white dark:bg-[#282622] hover:bg-[#eae4d9] dark:hover:bg-[#302d28] border border-[#e2dcd2] dark:border-[#38332c] text-ink dark:text-zinc-200 text-[11px] font-sans flex items-center gap-1 cursor-pointer disabled:opacity-50 transition-colors shadow-2xs"
-            title="Hoàn tác thay đổi của AI về bản trước"
+            disabled={isUndoing || isAssisting || !hasSnapshot}
+            className={cn(
+              "px-2.5 py-1 rounded-lg bg-white dark:bg-[#282622] hover:bg-[#eae4d9] dark:hover:bg-[#302d28] border border-[#e2dcd2] dark:border-[#38332c] text-ink dark:text-zinc-200 text-xs font-sans flex items-center gap-1.5 cursor-pointer disabled:opacity-40 transition-colors shadow-2xs",
+              isRedoAvailable && "text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+            )}
+            title={
+              isRedoAvailable
+                ? "Khôi phục lại thay đổi AI vừa sinh (Redo)"
+                : "Hoàn tác thay đổi của AI về bản trước"
+            }
           >
-            <RotateCcw className="w-3 h-3 text-amber-600 dark:text-amber-400" />
-            <span>↩️ Hoàn tác</span>
+            {isRedoAvailable ? (
+              <>
+                <RotateCw className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Khôi phục (Redo)</span>
+              </>
+            ) : (
+              <>
+                <RotateCcw className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Hoàn tác</span>
+              </>
+            )}
           </button>
 
           {onClose && (
@@ -192,7 +262,7 @@ export function WritingAssistantPane({
               type="button"
               data-testid="close-assistant-pane-btn"
               onClick={onClose}
-              className="p-1 rounded-md hover:bg-[#eae4d9] dark:hover:bg-[#282622] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-[#eae4d9] dark:hover:bg-[#282622] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
               title="Ẩn trợ lý AI (X)"
             >
               <X className="w-4 h-4" />
@@ -203,7 +273,7 @@ export function WritingAssistantPane({
 
       {/* Undo Warning Banner */}
       {undoWarning && (
-        <div className="mx-3 mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between">
+        <div className="mx-3 mt-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between animate-in fade-in">
           <span className="truncate pr-2">{undoWarning}</span>
           <button
             type="button"
@@ -215,27 +285,34 @@ export function WritingAssistantPane({
         </div>
       )}
 
-      {/* 2. Assistant Guidance & Messages Body */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      {/* 2. Messages Stream */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-none select-text">
         {messages.length === 0 ? (
-          <div className="p-4 rounded-xl border border-dashed border-[#e2dcd2] dark:border-[#2e2b26] text-center text-xs text-muted dark:text-zinc-400">
-            <Sparkles className="w-6 h-6 text-coral-500 mx-auto mb-1.5" />
-            <p className="font-medium text-ink dark:text-zinc-200">
-              Hỗ trợ soạn thảo LaTeX học thuật
-            </p>
-            <p className="text-[11px] mt-1">
-              Chọn văn bản trong trình soạn thảo và nhấn "[Thêm vào Chat]" hoặc nhập yêu cầu bên dưới.
-            </p>
+          <div
+            data-testid="writing-assistant-empty-state"
+            className="my-auto flex flex-col items-center justify-center text-center py-12 px-3 select-none space-y-3 max-w-sm mx-auto animate-in fade-in duration-200"
+          >
+            <div className="w-11 h-11 rounded-2xl bg-coral-500/10 text-coral-600 dark:text-coral-400 flex items-center justify-center border border-coral-500/20 shadow-xs">
+              <Sparkles className="w-5 h-5 stroke-[2.2]" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
+                Trợ lý Soạn thảo LaTeX Học thuật
+              </h3>
+              <p className="text-xs text-muted dark:text-zinc-400 leading-relaxed">
+                Yêu cầu viết Literature Review từ bài đọc trong Thư viện, chuẩn hóa văn phong hoặc tự động sửa lỗi biên dịch.
+              </p>
+            </div>
           </div>
         ) : (
           messages.map((msg) => (
             <div
               key={msg.id}
               className={cn(
-                "rounded-xl p-3 text-xs leading-relaxed space-y-2 select-text",
+                "rounded-2xl p-3.5 text-xs leading-relaxed space-y-2 select-text",
                 msg.role === "user"
-                  ? "bg-[#eee8dd] dark:bg-[#2a2824] text-ink dark:text-zinc-100 ml-6"
-                  : "bg-white dark:bg-[#201e1a] border border-[#e5dfd4] dark:border-[#2e2b26] text-ink dark:text-zinc-200 mr-2 shadow-2xs"
+                  ? "bg-[#ede8df] dark:bg-[#282622] text-ink dark:text-zinc-100 ml-8 self-end shadow-2xs"
+                  : "bg-white dark:bg-[#201e1a] border border-[#e5dfd4] dark:border-[#2e2b26] text-ink dark:text-zinc-200 mr-2 shadow-xs"
               )}
             >
               {/* Dynamic Execution Badges */}
@@ -254,11 +331,35 @@ export function WritingAssistantPane({
 
               {/* Message text content */}
               {msg.content ? (
-                <div className="whitespace-pre-wrap">{msg.content}</div>
+                <div className="space-y-2">
+                  <div className="whitespace-pre-wrap leading-relaxed font-sans">{msg.content}</div>
+                  {msg.role === "assistant" && (
+                    <div className="flex items-center justify-end pt-1 border-t border-[#ece8df] dark:border-[#2a2824]">
+                      <button
+                        type="button"
+                        onClick={() => handleCopy(msg.id, msg.content)}
+                        className="inline-flex items-center gap-1 text-[11px] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                        title="Sao chép nội dung"
+                      >
+                        {copiedMsgId === msg.id ? (
+                          <>
+                            <Check className="w-3 h-3 text-emerald-600" />
+                            <span>Đã chép</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Sao chép</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+                </div>
               ) : isAssisting && msg.role === "assistant" ? (
-                <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span className="text-[11px]">AI đang tương tác và suy nghĩ...</span>
+                <div className="flex items-center gap-2 text-muted dark:text-zinc-400 py-1">
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-coral-500" />
+                  <span className="text-xs">AI đang tra cứu và soạn thảo nội dung...</span>
                 </div>
               ) : null}
             </div>
@@ -267,47 +368,53 @@ export function WritingAssistantPane({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* 3. AI Writing Assistant Prompt Box */}
-      <div className="p-3 border-t border-[#ece8df] dark:border-[#2a2824] bg-[#f5f1e8] dark:bg-[#1c1b18] shrink-0 space-y-2">
+      {/* 3. AI Writing Assistant Prompt Box (Matches DashboardChatInputBox) */}
+      <div className="p-3 border-t border-[#ece8df] dark:border-[#2a2824] bg-[#f5f1e8] dark:bg-[#1c1b18] shrink-0 space-y-2.5">
         {/* Preset chips */}
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap gap-1.5">
           {promptPresets.map((preset, i) => (
             <button
               key={i}
               type="button"
-              onClick={() => setPromptInput(preset)}
-              className="text-[10px] px-2 py-0.5 rounded-full bg-white dark:bg-[#252320] border border-[#e2dcd2] dark:border-[#2e2b26] text-muted hover:text-ink dark:text-zinc-300 transition-colors cursor-pointer"
+              onClick={() => {
+                setPromptInput(preset);
+                textareaRef.current?.focus();
+              }}
+              className="text-xs px-2.5 py-1 rounded-full bg-white dark:bg-[#252320] border border-[#e2dcd2] dark:border-[#2e2b26] text-muted hover:text-ink dark:text-zinc-300 hover:border-coral-500/40 transition-all cursor-pointer shadow-2xs whitespace-nowrap"
             >
               {preset}
             </button>
           ))}
         </div>
 
-        {/* Prompt Input Box */}
-        <div className="bg-white dark:bg-[#201e1a] p-1.5 rounded-2xl border border-[#e2dcd2] dark:border-[#2e2b26] shadow-2xs focus-within:border-sky-400/60 dark:focus-within:border-sky-400/50 transition-all flex flex-col gap-1.5">
-          <input
-            ref={inputRef}
-            type="text"
+        {/* Unified ChatGPT / Dashboard-style Chat Pill Box */}
+        <div
+          data-testid="writing-chat-input-container"
+          className="bg-white dark:bg-[#201e1a] rounded-2xl border border-[#e2dcd2] dark:border-[#2e2b26] shadow-xs focus-within:border-coral-500/50 dark:focus-within:border-[#cc785c]/60 focus-within:ring-2 focus-within:ring-coral-500/10 dark:focus-within:ring-[#cc785c]/15 transition-all p-2 flex flex-col gap-1.5"
+        >
+          <textarea
+            ref={textareaRef}
+            rows={1}
             value={promptInput}
             onChange={(e) => setPromptInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !isAssisting && handleSendPrompt()}
+            onKeyDown={handleKeyDown}
             disabled={isAssisting}
             placeholder={
               isAssisting
-                ? "AI đang tạo đề xuất gợi ý..."
+                ? "AI đang tiến hành phân tích..."
                 : "Yêu cầu AI viết tiếp hoặc sửa văn phong..."
             }
-            className="w-full text-xs px-2.5 pt-1.5 pb-0.5 bg-transparent text-ink dark:text-zinc-100 outline-none placeholder:text-zinc-400 disabled:opacity-50"
+            className="w-full text-xs sm:text-sm px-2 pt-1 pb-1 bg-transparent text-ink dark:text-zinc-100 outline-none placeholder:text-muted dark:placeholder:text-zinc-500 resize-none min-h-[38px] max-h-[160px] leading-relaxed disabled:opacity-50"
           />
 
-          <div className="flex items-center justify-between px-1.5 pb-0.5">
-            {/* Socratic Reasoning Pure Icon */}
+          <div className="flex items-center justify-between px-1 pt-0.5">
+            {/* Socratic Reasoning Indicator Button */}
             <div
-              className="w-7 h-7 rounded-full flex items-center justify-center bg-sky-500/15 dark:bg-sky-400/20 text-sky-600 dark:text-sky-300 border border-sky-400/30"
+              className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-sky-500/10 dark:bg-sky-400/15 text-sky-700 dark:text-sky-300 border border-sky-400/30 text-[11px] font-medium"
               title="Chế độ Socratic Reasoning đang kích hoạt"
             >
-              <Brain className="w-3.5 h-3.5" />
-              <span className="sr-only">Socratic Reasoning</span>
+              <Brain className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+              <span>Socratic Reasoning</span>
             </div>
 
             {/* Circular Send Button */}
@@ -315,11 +422,12 @@ export function WritingAssistantPane({
               type="button"
               onClick={handleSendPrompt}
               disabled={!promptInput.trim() || isAssisting}
-              className={`w-7 h-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center ${
+              className={cn(
+                "w-7 h-7 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center",
                 promptInput.trim() && !isAssisting
                   ? "bg-ink dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 shadow-2xs font-bold"
                   : "bg-black/10 dark:bg-white/10 text-muted/40 dark:text-zinc-500 cursor-not-allowed"
-              }`}
+              )}
               title="Gửi prompt"
             >
               {isAssisting ? (

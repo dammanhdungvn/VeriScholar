@@ -109,7 +109,7 @@ export function WritingPage() {
 
   if (loading && !activeDraftId) {
     return (
-      <div className="h-screen w-screen flex flex-col items-center justify-center bg-canvas dark:bg-[#181715] text-ink dark:text-zinc-200">
+      <div className="flex-1 flex flex-col items-center justify-center h-full w-full bg-canvas dark:bg-[#181715] text-ink dark:text-zinc-200">
         <Loader2 className="w-8 h-8 animate-spin text-coral-500 mb-2" />
         <p className="text-xs font-anthropic-serif">Đang nạp bản thảo...</p>
       </div>
