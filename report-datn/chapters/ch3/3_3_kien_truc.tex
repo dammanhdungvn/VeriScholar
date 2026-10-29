@@ -18,84 +18,91 @@ Kiến trúc phân tầng tự phản biện hai dải màu của hệ thống �
 \centering
 \begin{tikzpicture}[
     scale=0.80, transform shape,
-    band_exec/.style={draw=blue!75!black, fill=blue!3, rounded corners=8pt, line width=1.1pt},
-    band_refl/.style={draw=orange!80!black, fill=orange!3, rounded corners=8pt, line width=1.1pt},
-    box_query/.style={draw=blue!70!black, fill=white, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.6cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_core/.style={draw=purple!80!black, fill=purple!8, rounded corners=5pt, line width=1.2pt, align=center, inner sep=4pt, text width=2.6cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_act/.style={draw=teal!70!black, fill=white, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.2cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_env/.style={draw=cyan!70!black, fill=white, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.2cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_obs/.style={draw=blue!70!black, fill=white, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.2cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_critic/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, text width=3.8cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_grounded/.style={draw=green!65!black, fill=green!10, rounded corners=5pt, line width=1.2pt, align=center, inner sep=4pt, text width=3.1cm, font=\linespread{1.0}\selectfont\footnotesize},
-    box_refl/.style={draw=red!70!black, fill=red!8, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, text width=2.9cm, font=\linespread{1.0}\selectfont\footnotesize},
-    arrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=blue!80!black},
-    arrow_ok/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=green!65!black},
-    arrow_fail/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=red!70!black},
-    feedback/.style={-{Stealth[length=2.5mm]}, line width=1.2pt, draw=red!75!black}
+    band_react/.style={fill=red!5, draw=red!25, rounded corners=6pt, line width=0.9pt},
+    band_reflect/.style={fill=cyan!5, draw=cyan!25, rounded corners=6pt, line width=0.9pt},
+    box_white/.style={draw=black!80, fill=white, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
+    box_core/.style={draw=black!85, fill=red!10, rounded corners=4pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
+    box_grounded/.style={draw=green!60!black, fill=green!8, rounded corners=4pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
+    arrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
+    arrow_ok/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=green!60!black},
+    arrow_fail/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=red!75!black},
+    feedback/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=red!80!black}
 ]
     % =========================================================================
-    % DẢI 1: KHUNG BAO EXECUTION BAND (REACT)
+    % DẢI 1: KHUNG BAO REACT (REACT BAND) - Theo Shinn et al. (2023)
     % =========================================================================
-    \draw[band_exec] (-8.6, 1.1) rectangle (8.6, 4.6);
-    \node[anchor=north west, fill=blue!12, draw=blue!70!black, rounded corners=3pt, font=\bfseries\scriptsize, text=blue!90!black, inner sep=3pt] at (-8.3, 4.35) {DẢI 1: LUỒNG THỰC THI (REACT EXECUTION BAND)};
+    \draw[band_react] (-8.6, 1.0) rectangle (8.6, 4.4);
+    \node[anchor=west, font=\large\bfseries, text=red!80!black] at (-8.3, 2.7) {ReAct};
 
-    % Các khối chức năng Dải 1 (khoảng cách rộng rãi, mũi tên > 1cm)
-    \node[box_query, minimum height=1.35cm] (q) at (-6.8, 2.7) {
-        \textbf{Truy vấn Học giả}\\
+    % 5 Khối tuần tự Dải ReAct
+    \node[box_white, minimum width=2.4cm, minimum height=1.3cm] (q) at (-6.2, 2.7) {
+        \textbf{Truy vấn}\\
         \scriptsize (\textit{Query} $q$)
     };
-    \node[box_core, minimum height=1.35cm] (reasoner) at (-3.4, 2.7) {
-        \textbf{Lõi Tác nhân AI}\\
+    \node[box_core, minimum width=2.4cm, minimum height=1.3cm] (reasoner) at (-3.1, 2.7) {
+        \textbf{Lõi Tác nhân}\\
         \scriptsize (\textit{LLM Reasoner})
     };
-    \node[box_act, minimum height=1.35cm] (action) at (0.0, 2.7) {
-        \textbf{Gọi Công cụ}\\
+    \node[box_white, minimum width=2.4cm, minimum height=1.3cm] (action) at (0.0, 2.7) {
+        \textbf{Hành động}\\
         \scriptsize (\textit{Action} $a_t$)
     };
-    \node[box_env, minimum height=1.35cm] (env) at (3.4, 2.7) {
+    \node[box_white, minimum width=2.4cm, minimum height=1.3cm] (env) at (3.1, 2.7) {
         \textbf{Môi trường}\\
         \scriptsize (\textit{Environment} $\mathcal{E}$)
     };
-    \node[box_obs, minimum height=1.35cm] (obs) at (6.8, 2.7) {
-        \textbf{Bằng chứng}\\
-        \scriptsize (\textit{Observation} $o_t$)
+    \node[box_white, minimum width=2.4cm, minimum height=1.3cm] (reward) at (6.2, 2.7) {
+        \textbf{Đánh giá}\\
+        \scriptsize (\textit{Reward} $r_t$)
     };
 
-    % Mũi tên tuần tự Dải 1
+    % Tuyến tuần tự Dải ReAct
     \draw[arrow] (q) -- (reasoner);
     \draw[arrow] (reasoner) -- (action);
     \draw[arrow] (action) -- (env);
-    \draw[arrow] (env) -- (obs);
+    \draw[arrow] (env) -- (reward);
 
     % =========================================================================
-    % DẢI 2: KHUNG BAO REFLEXION & CRITIC BAND
+    % DẢI 2: KHUNG BAO REFLECT (REFLECT BAND) - Theo Shinn et al. (2023)
     % =========================================================================
-    \draw[band_refl] (-8.6, -4.1) rectangle (8.6, -1.0);
-    \node[anchor=north west, fill=orange!15, draw=orange!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=orange!90!black, inner sep=2.5pt, align=left] at (-8.3, -1.25) {DẢI 2: PHẢN TƯ\\\& KIỂM ĐỊNH};
+    \draw[band_reflect] (-8.6, -4.3) rectangle (8.6, -0.9);
+    \node[anchor=west, font=\large\bfseries, text=cyan!80!black] at (-8.3, -2.6) {Reflect};
 
-    % Các khối chức năng Dải 2 (nới rộng tối đa, mũi tên phân nhánh thông thoáng)
-    \node[box_refl, minimum height=1.35cm] (refl) at (-3.4, -2.6) {
+    % Ký hiệu chuỗi tương tác toán học (Trajectory & Reward Sequences)
+    \node[font=\bfseries\small] (traj) at (1.5, -0.2) {$\{a_0, o_0, a_1, o_1, \dots, a_N, o_N\}$};
+    \node[font=\bfseries\small] (rew) at (6.2, -0.2) {$\{r_0, r_1, \dots, r_N\}$};
+
+    % Khối chức năng Dải Reflect
+    \node[box_white, minimum width=3.4cm, minimum height=1.35cm] (critic) at (1.5, -2.6) {
+        \textbf{Hàm Heuristic ($h$)}\\
+        \scriptsize (\textit{Trạm Kiểm định Liêm chính})\\
+        \tiny $\mathrm{IoU} \ge 0.85 \;\wedge\; \mathrm{ExitCode} = 0$
+    };
+    \node[box_white, minimum width=3.2cm, minimum height=1.35cm] (refl) at (-3.8, -2.6) {
         \textbf{Phản tư Ngôn ngữ}\\
-        \scriptsize (\textit{Verbal Reflection})
+        \scriptsize (\textit{Verbal Reflection LLM})\\
+        \tiny Đánh giá lỗi \& Chỉ dẫn vá
     };
-    \node[box_critic, minimum height=1.35cm] (critic) at (1.8, -2.6) {
-        \textbf{Trạm Kiểm định Liêm chính}\\
-        \scriptsize (\textit{Heuristic \& Model Critic})
-    };
-    \node[box_grounded, minimum height=1.35cm] (grounded) at (6.8, -2.6) {
-        \textbf{Xuất bản Minh chứng}\\
-        \scriptsize (\textit{Grounded Answer})
+    \node[box_grounded, minimum width=2.8cm, minimum height=1.35cm] (grounded) at (6.2, -2.6) {
+        \textbf{Minh chứng chuẩn}\\
+        \scriptsize (\textit{Grounded Answer})\\
+        \tiny Golden BBox $[0..1000]$
     };
 
-    % Chuyển giao quan sát từ Dải 1 sang Dải 2 (hành lang 2.1cm)
-    \draw[arrow] (obs.south) -- (6.8, 0.05) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=blue!85!black] {Chuyển giao kết quả quan sát ($o_t$)} (1.8, 0.05) -- (critic.north);
+    % Luồng dữ liệu chuyển giao từ Dải 1 xuống Dải 2
+    \draw[arrow] (action.south) |- (traj.west);
+    \draw[arrow] (env.south) -- (traj.north -| env);
+    \draw[arrow] (reward.south) -- (rew.north);
 
-    % Phân nhánh trong Dải 2
-    \draw[arrow_ok] (critic.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=green!60!black] {Đạt chuẩn} (grounded.west);
+    \draw[arrow] (traj.south) -- (critic.north);
+    \draw[arrow] (rew.south) -- (critic.north -| rew);
+
+    % Phân nhánh trong Dải Reflect
     \draw[arrow_fail] (critic.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!75!black] {Không đạt} (refl.east);
+    \draw[arrow_ok] (critic.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=green!60!black] {Đạt chuẩn} (grounded.west);
 
-    % Vòng lặp hồi quy tự phản tư (Closed Reflexion Loop - trục dọc thẳng tắp)
-    \draw[feedback] (refl.north) -- node[midway, fill=white, draw=red!50, rounded corners=3pt, inner sep=2.5pt, font=\scriptsize\bfseries, text=red!80!black] {Phản tư sửa lỗi ($N < 3$)} (reasoner.south);
+    % Vòng lặp hồi quy tự phản tư trực giao (Closed Reflexion Loop)
+    \draw[feedback] (refl.north) -- (-3.8, 0.4) -| node[pos=0.25, left=2pt, font=\scriptsize\bfseries, text=red!80!black] {Phản tư sửa lỗi ($N < 3$)} (q.south);
 \end{tikzpicture}
 \caption[Kiến trúc Phân tầng Tự phản biện hai dải màu (Dual-Band)]{Kiến trúc Phân tầng Tự phản biện hai dải màu (Dual-Band Reflexion Architecture)}
 \label{fig:e2e_pipeline_arch}

@@ -75,105 +75,105 @@ Nhằm đảm bảo tọa độ hiển thị nhất quán trên mọi kích thư
 x_{\text{norm}} = \text{round}\left(\frac{x}{W_{\text{page}}} \times 1000\right), \quad y_{\text{norm}} = \text{round}\left(\frac{y}{H_{\text{page}}} \times 1000\right)
 \end{equation}
 
-Quy trình xử lý dữ liệu và truy xuất lai hai luồng (Dual-Stream Hybrid RAG Pipeline) được mô hình hóa trực quan trong Hình~\ref{fig:hybrid_rag_flow}.
+Quy trình xử lý truy xuất tăng cường 3 giai đoạn kết hợp truy xuất lai và mở rộng ngữ cảnh (SOTA 3-Stage Advanced RAG Pipeline) được mô hình hóa trực quan trong Hình~\ref{fig:hybrid_rag_flow}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
-    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, text width=2.9cm, font=\small},
-    sourcebox/.style={draw=blue!80!black, fill=blue!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
-    procbox/.style={draw=teal!80!black, fill=teal!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
-    indexbox/.style={draw=purple!80!black, fill=white, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, text width=5.0cm},
+    scale=0.72, transform shape,
+    agentbox/.style={draw=blue!85!black, fill=blue!5, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    procbox/.style={draw=teal!85!black, fill=teal!5, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    indexbox/.style={draw=purple!85!black, fill=white, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, text width=4.8cm},
     storecard/.style={draw=purple!80!black, fill=purple!3, rounded corners=8pt, line width=1.2pt},
-    rrfbox/.style={draw=orange!90!black, fill=orange!8, rounded corners=5pt, line width=1.2pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
-    outputbox/.style={draw=green!70!black, fill=green!6, rounded corners=5pt, line width=1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    rrfbox/.style={draw=orange!90!black, fill=orange!7, rounded corners=5pt, line width=1.2pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
+    outputbox/.style={draw=green!70!black, fill=green!6, rounded corners=5pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!85!black},
-    ingestarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!85!black},
-    rankarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=orange!90!black}
+    streamarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=teal!85!black},
+    rankarrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=orange!90!black},
+    feedbackarrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=red!75!black, dashed}
 ]
     % ==========================================================================
-    % 1. LUỒNG TIẾP NHẬN & CHỈ MỤC HÓA (INGESTION PIPELINE) - BÊN TRÊN
+    % GIAI ĐOẠN 1: TIỀN TRUY VẤN & BIẾN ĐỔI TRUY VẤN (PRE-RETRIEVAL & ROUTING)
     % ==========================================================================
-    \node[sourcebox, text width=2.5cm] (src) at (-5.4, 3.6) {
-        \textbf{Ấn phẩm PDF}\\[2pt]
-        \footnotesize Bài báo 2 cột
-    };
-    \node[procbox, text width=2.5cm] (loader) at (-1.8, 3.6) {
-        \textbf{Bóc tách 2 cột}\\[2pt]
-        \footnotesize Gutter Detection
-    };
-    \node[procbox, text width=2.5cm] (chunks) at (1.8, 3.6) {
-        \textbf{Phân đoạn Chunks}\\[2pt]
-        \footnotesize BBox $[0..1000]$
-    };
-    \node[procbox, text width=2.5cm] (embed) at (5.4, 3.6) {
-        \textbf{Mã hóa biểu diễn}\\[2pt]
-        \footnotesize Dense $\parallel$ BM25
+    \node[agentbox, text width=2.6cm] (query) at (-5.8, 3.6) {
+        \textbf{Truy vấn Học giả}\\[2pt]
+        \footnotesize Scholar Query $q$
     };
 
-    \draw[ingestarrow] (src.east) -- (loader.west);
-    \draw[ingestarrow] (loader.east) -- (chunks.west);
-    \draw[ingestarrow] (chunks.east) -- (embed.west);
+    \node[agentbox, text width=3.6cm] (hyde) at (-1.2, 3.6) {
+        \textbf{Biến đổi HyDE \& Định tuyến}\\[2pt]
+        \footnotesize Giả định văn bản \& Đa ngữ
+    };
+
+    \node[procbox, text width=3.2cm] (dispatch) at (3.4, 3.6) {
+        \textbf{Điều phối Đa luồng}\\[2pt]
+        \footnotesize Dense $\parallel$ Sparse Search
+    };
+
+    \draw[arrowstyle] (query.east) -- (hyde.west);
+    \draw[arrowstyle] (hyde.east) -- (dispatch.west);
 
     % ==========================================================================
-    % 2. KHO LƯU TRỮ CHỈ MỤC KÉP TRÊN POSTGRESQL (DUAL-INDEX STORE) - TRUNG TÂM
+    % GIAI ĐOẠN 2: KHO LƯU TRỮ CHỈ MỤC KÉP POSTGRESQL & TRUY XUẤT LAI (STAGE 2)
     % ==========================================================================
-    \node[storecard, minimum width=15.4cm, minimum height=2.4cm] (store_card) at (0, 0.5) {};
-    \node[anchor=south, fill=purple!12, draw=purple!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, 1.7) {KHO CHỈ MỤC KÉP POSTGRESQL 16};
+    \node[storecard, minimum width=15.4cm, minimum height=2.4cm] (store_card) at (0, 0.4) {};
+    \node[anchor=south, fill=purple!12, draw=purple!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, 1.45) {KHO CHỈ MỤC KÉP POSTGRESQL 16};
 
-    \node[indexbox] (idx_dense) at (-3.8, 0.45) {
+    \node[indexbox] (idx_dense) at (-3.8, 0.35) {
         \textbf{Chỉ mục Vector HNSW (Dense)}\\[1pt]
         \footnotesize Không gian 1536d $\parallel$ Cosine Similarity
     };
-    \node[indexbox] (idx_sparse) at (3.8, 0.45) {
+    \node[indexbox] (idx_sparse) at (3.8, 0.35) {
         \textbf{Chỉ mục Ngược GIN (Sparse)}\\[1pt]
-        \footnotesize Từ điển từ khóa thưa $\parallel$ Thuật toán BM25
+        \footnotesize Từ điển từ khóa thưa $\parallel$ BM25 Token Matching
     };
 
-    % Nạp dữ liệu từ Ingestion vào 2 chỉ mục
-    \draw[ingestarrow] (chunks.south) -- ++(0, -0.45) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Nạp Vector} ++(-6.1, 0) -- ([xshift=-15pt]idx_dense.north);
-    \draw[ingestarrow] (embed.south) -- ++(0, -0.45) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Nạp BM25} ++(-1.1, 0) -- ([xshift=15pt]idx_sparse.north);
+    % Hành lang cấp phát dữ liệu (y = 2.3) - Hoàn toàn thông thoáng giữa 2 hàng
+    \draw[streamarrow] ([xshift=-16pt]dispatch.south) -- ++(0, -0.7) 
+        -- node[midway, above=1pt, fill=white, inner sep=1.5pt, text=teal!90!black, font=\tiny\bfseries] {Vector nhúng $\mathbf{u}$}
+        (-3.8, 2.3) -- (idx_dense.north);
+
+    \draw[streamarrow] (dispatch.south -| idx_sparse.north) -- node[midway, right=3pt, fill=white, inner sep=1.5pt, text=teal!90!black, font=\tiny\bfseries] {Từ khóa thưa $Q$} (idx_sparse.north);
 
     % ==========================================================================
-    % 3. LUỒNG TRUY VẤN LAI & HỢP NHẤT RRF (QUERY & FUSION STREAM) - BÊN DƯỚI
+    % GIAI ĐOẠN 3: HỢP NHẤT RRF, HẬU XỬ LÝ CRAG & TÔ SÁNG KHUNG VÀNG (STAGE 3)
     % ==========================================================================
-    \node[sourcebox, text width=2.4cm] (query) at (-6.0, -3.3) {
-        \textbf{Câu hỏi Học giả}\\[2pt]
-        \footnotesize (User Query)
-    };
-    \node[procbox, text width=2.6cm] (qproc) at (-2.6, -3.3) {
-        \textbf{Mã hóa truy vấn}\\[2pt]
-        \footnotesize Dense $\mathbf{u}$ $\parallel$ Sparse $Q$
-    };
-    \node[rrfbox, text width=3.2cm] (rrf) at (1.8, -3.3) {
+    \node[rrfbox, text width=3.2cm] (rrf) at (-4.2, -3.3) {
         \textbf{Hợp nhất RRF ($k=60$)}\\[2pt]
         \footnotesize $\text{Score}(d) = \sum \frac{1}{60 + r_m(d)}$
     };
-    \node[outputbox, text width=2.8cm] (answer) at (6.0, -3.3) {
-        \textbf{Phản hồi có Tọa độ}\\[2pt]
-        \footnotesize Golden BBox $[0..1000]$
+
+    \node[procbox, text width=3.4cm] (crag) at (0.2, -3.3) {
+        \textbf{Tái xếp hạng \& Mở rộng CRAG}\\[2pt]
+        \footnotesize Cửa sổ công thức đa dòng
     };
 
-    \draw[arrowstyle] (query.east) -- (qproc.west);
+    \node[outputbox, text width=3.0cm] (answer) at (4.6, -3.3) {
+        \textbf{Sinh Phản hồi \& BBox}\\[2pt]
+        \footnotesize LLM Context $\to$ Golden BBox
+    };
 
-    % Truy vấn 2 luồng hoàn toàn trực giao, 2 hành lang độc lập:
-    % 1. Vector u: trục đứng thẳng tắp từ qproc lên idx_dense (x = -3.8)
-    \draw[arrowstyle] ([xshift=-34pt]qproc.north) -- node[midway, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Vector $\mathbf{u}$} ([xshift=-34pt]qproc.north |- idx_dense.south);
-    
-    % 2. Từ khóa Q: hành lang trên y = -1.2 sang idx_sparse
-    \draw[arrowstyle] ([xshift=20pt]qproc.north) -- ([xshift=20pt]qproc.north |- 0, -1.2) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Từ khóa $Q$} ([xshift=-22pt]idx_sparse.south |- 0, -1.2) -- ([xshift=-22pt]idx_sparse.south);
+    % Hành lang trả thứ hạng trực giao tách biệt (y = -1.5 và y = -2.0)
+    \draw[rankarrow] (idx_dense.south) -- (idx_dense.south |- 0, -1.5) 
+        -- node[midway, above=1pt, fill=white, inner sep=1.5pt, text=orange!90!black, font=\tiny\bfseries] {Thứ hạng $r_{\text{dense}}$}
+        ([xshift=-14pt]rrf.north |- 0, -1.5) -- ([xshift=-14pt]rrf.north);
 
-    % 3. Trả về thứ hạng Dense: hành lang dưới y = -1.8 về rrf
-    \draw[rankarrow] ([xshift=24pt]idx_dense.south) -- ([xshift=24pt]idx_dense.south |- 0, -1.8) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{dense}}$} ([xshift=-28pt]rrf.north |- 0, -1.8) -- ([xshift=-28pt]rrf.north);
+    \draw[rankarrow] (idx_sparse.south) -- (idx_sparse.south |- 0, -2.0) 
+        -- node[midway, above=1pt, fill=white, inner sep=1.5pt, text=orange!90!black, font=\tiny\bfseries] {Thứ hạng $r_{\text{bm25}}$}
+        ([xshift=14pt]rrf.north |- 0, -2.0) -- ([xshift=14pt]rrf.north);
 
-    % 4. Trả về thứ hạng Sparse: hành lang dưới y = -1.8 về rrf
-    \draw[rankarrow] ([xshift=24pt]idx_sparse.south) -- ([xshift=24pt]idx_sparse.south |- 0, -1.8) -- node[above=1pt, fill=white, inner sep=1.5pt, font=\tiny\bfseries] {Thứ hạng $r_{\text{bm25}}$} ([xshift=28pt]rrf.north |- 0, -1.8) -- ([xshift=28pt]rrf.north);
+    % Luồng giai đoạn 3
+    \draw[arrowstyle] (rrf.east) -- (crag.west);
+    \draw[arrowstyle] (crag.east) -- (answer.west);
 
-    % RRF chuyển sang khối tạo câu trả lời
-    \draw[arrowstyle] (rrf.east) -- (answer.west);
+    % Tuyến phản hồi bao ngoài biên giới phải (x = 6.8) và đỉnh trên (y = 5.2)
+    \draw[feedbackarrow] (answer.east) -- ++(1.0, 0) coordinate (fbr)
+        -- (fbr |- 0, 5.2)
+        -- node[midway, above=2pt, fill=white, inner sep=2pt, font=\tiny\bfseries, text=red!75!black] {Phản tư \& Tuyến gọi công cụ bổ sung (Tool Choice / Self-Reflective Feedback)}
+        (hyde.north |- 0, 5.2)
+        -- (hyde.north);
 \end{tikzpicture}
-\caption{Mô hình luồng dữ liệu truy xuất lai (Dual-Stream Hybrid RAG Dataflow) chuẩn mực}
+\caption{Mô hình Kiến trúc Truy xuất Tăng cường 3 Giai đoạn (SOTA 3-Stage Advanced RAG Architecture)}
 \label{fig:hybrid_rag_flow}
 \end{figure}
 
