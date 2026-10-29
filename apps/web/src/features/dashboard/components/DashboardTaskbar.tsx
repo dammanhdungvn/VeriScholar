@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useEffect } from "react";
+import { useState, useMemo, useRef, useEffect, useContext } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import {
   Plus,
@@ -29,7 +29,7 @@ import { AvatarDropdownPopover } from "@/features/auth/components/AvatarDropdown
 import { getScholarInitials } from "@/features/auth/utils/avatarUtils";
 import { useTheme } from "@/hooks/useTheme";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
-import { useQueryClient } from "@tanstack/react-query";
+import { QueryClientContext } from "@tanstack/react-query";
 import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
@@ -101,12 +101,7 @@ export function DashboardTaskbar({
   const sidebarState = useDashboardStore((s) => s.sidebarState);
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
 
-  let queryClient: ReturnType<typeof useQueryClient> | null = null;
-  try {
-    queryClient = useQueryClient();
-  } catch {
-    queryClient = null;
-  }
+  const queryClient = useContext(QueryClientContext);
 
   const sessions = useMemo(() => propSessions ?? [], [propSessions]);
   const onSelectSession = propOnSelectSession ?? ((id: string) => navigate(`/dashboard/${id}`));
