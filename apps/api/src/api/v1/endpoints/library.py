@@ -10,7 +10,10 @@ from typing import Any, Literal
 from uuid import UUID
 
 import structlog
+from api.db.models.document import DocumentModel
 from api.db.models.folder import FolderModel
+from api.db.models.graph import GraphEdgeModel, GraphNodeModel
+from api.db.models.reference import ReferenceItemModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_graph_rag_service
@@ -18,7 +21,7 @@ from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
 from api.schemas.error import ErrorResponse
 from api.services.graph_rag_router import GraphRAGRouter
 from api.services.graph_rag_service import GraphRAGService
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,6 +82,211 @@ class GraphQueryResponseEnvelope(SingleResponseEnvelope[GraphQueryResponseData])
     mode_used: str | None = Field(default=None, description="Direct mirror of mode_used")
     answer: str | None = Field(default=None, description="Direct mirror of answer")
     subgraph: dict[str, Any] | None = Field(default=None, description="Direct mirror of subgraph")
+
+
+class LibraryGraphNode(BaseModel):
+    """Knowledge graph node representing paper, concept, method, dataset, or metric."""
+
+    id: str = Field(description="Unique node identifier")
+    label: str = Field(description="Display label of the node")
+    type: str = Field(
+        default="Paper",
+        description="Node entity type: Paper, Method, Dataset, MetricResult",
+    )
+    degree: int = Field(default=0, description="Connectivity degree in graph")
+    group: str = Field(default="paper", description="Visual grouping category")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Metadata dictionary")
+
+
+class LibraryGraphEdge(BaseModel):
+    """Knowledge graph edge representing relation between two nodes."""
+
+    source: str = Field(description="Source node ID")
+    target: str = Field(description="Target node ID")
+    relation: str = Field(
+        default="CITES",
+        description="Relation type: CITES, USES_METHOD, EVALUATED_ON, RELATED",
+    )
+    label: str = Field(default="cites", description="Human-readable relation label")
+    weight: float = Field(default=1.0, description="Edge weight / confidence")
+
+
+class LibraryGraphResponseData(BaseModel):
+    """Structured graph payload for personal academic knowledge graph (LLM Wiki)."""
+
+    nodes: list[LibraryGraphNode] = Field(default_factory=list, description="Graph nodes")
+    edges: list[LibraryGraphEdge] = Field(default_factory=list, description="Graph edges")
+    total_nodes: int = Field(default=0, description="Total node count")
+    total_edges: int = Field(default=0, description="Total edge count")
+
+
+class LibraryGraphResponseEnvelope(SingleResponseEnvelope[LibraryGraphResponseData]):
+    """Standard envelope for Library Knowledge Graph."""
+
+
+@router.get(
+    "/graph",
+    response_model=LibraryGraphResponseEnvelope,
+    summary="Lấy toàn bộ Đồ thị Tri thức cá nhân (LLM Wiki Knowledge Graph)",
+    description=(
+        "Trích xuất mạng lưới đồ thị liên kết tri thức cá nhân theo cấu trúc LLM Wiki:\n"
+        "- Đỉnh: Các bài báo khoa học, phương pháp, tập dữ liệu, chỉ số thực nghiệm.\n"
+        "- Cạnh: Mối quan hệ trích dẫn (CITES), đồng trích dẫn, hoặc phương pháp áp dụng."
+    ),
+    responses={
+        200: {"description": "Mạng lưới đồ thị tri thức cá nhân thành công."},
+        401: {"model": ErrorResponse, "description": "Chưa xác thực người dùng."},
+    },
+)
+async def get_library_graph(
+    folder_id: UUID | None = Query(default=None, description="Lọc theo thư mục đề tài (tùy chọn)"),
+    current_user: UserModel = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> LibraryGraphResponseEnvelope:
+    """Retrieve full personal knowledge graph across user's persistent library papers."""
+    # 1. Fetch user persistent documents
+    stmt_docs = select(DocumentModel).where(
+        DocumentModel.user_id == current_user.id,
+        DocumentModel.is_persistent.is_(True),
+    )
+    if folder_id is not None:
+        stmt_docs = stmt_docs.where(DocumentModel.folder_id == folder_id)
+
+    res_docs = await db.execute(stmt_docs)
+    docs = res_docs.scalars().all()
+
+    nodes_map: dict[str, LibraryGraphNode] = {}
+    doc_ids: set[UUID] = set()
+    doc_title_to_id: dict[str, str] = {}
+
+    for doc in docs:
+        doc_id_str = str(doc.id)
+        doc_ids.add(doc.id)
+        title = (doc.title or doc.filename or "Untitled Paper").strip()
+        doc_title_to_id[title.lower()] = doc_id_str
+        nodes_map[doc_id_str] = LibraryGraphNode(
+            id=doc_id_str,
+            label=title,
+            type="Paper",
+            degree=0,
+            group="paper",
+            metadata={
+                "filename": doc.filename,
+                "title": doc.title,
+                "status": doc.status,
+                "page_count": doc.page_count,
+                "folder_id": str(doc.folder_id) if doc.folder_id else None,
+            },
+        )
+
+    # 2. Fetch GraphNodeModel entries if any
+    if doc_ids:
+        stmt_gnodes = select(GraphNodeModel).where(
+            GraphNodeModel.user_id == current_user.id,
+        )
+        if folder_id is not None:
+            stmt_gnodes = stmt_gnodes.where(GraphNodeModel.document_id.in_(doc_ids))
+        res_gnodes = await db.execute(stmt_gnodes)
+        for gn in res_gnodes.scalars().all():
+            gn_id_str = str(gn.id)
+            if gn_id_str not in nodes_map:
+                nodes_map[gn_id_str] = LibraryGraphNode(
+                    id=gn_id_str,
+                    label=gn.display_name or gn.canonical_name,
+                    type=gn.node_type,
+                    degree=0,
+                    group=gn.node_type.lower(),
+                    metadata=gn.metadata_json or {},
+                )
+
+    # 3. Fetch GraphEdgeModel relations
+    edges_list: list[LibraryGraphEdge] = []
+    seen_edges: set[tuple[str, str, str]] = set()
+
+    if nodes_map:
+        stmt_gedges = select(GraphEdgeModel).where(
+            GraphEdgeModel.user_id == current_user.id,
+        )
+        res_gedges = await db.execute(stmt_gedges)
+        for ge in res_gedges.scalars().all():
+            s_id = str(ge.source_node_id)
+            t_id = str(ge.target_node_id)
+            if s_id in nodes_map and t_id in nodes_map and s_id != t_id:
+                edge_tuple = (s_id, t_id, ge.edge_type)
+                if edge_tuple not in seen_edges:
+                    seen_edges.add(edge_tuple)
+                    edges_list.append(
+                        LibraryGraphEdge(
+                            source=s_id,
+                            target=t_id,
+                            relation=ge.edge_type,
+                            label=ge.edge_type.lower(),
+                            weight=ge.weight or 1.0,
+                        )
+                    )
+                    nodes_map[s_id].degree += 1
+                    nodes_map[t_id].degree += 1
+
+    # 4. Bibliographic citation links from reference_items
+    if doc_ids:
+        stmt_refs = select(ReferenceItemModel).where(ReferenceItemModel.document_id.in_(doc_ids))
+        res_refs = await db.execute(stmt_refs)
+        refs = res_refs.scalars().all()
+
+        for ref in refs:
+            src_id = str(ref.document_id)
+            target_doc_id = None
+            if ref.resolved_document_id and str(ref.resolved_document_id) in nodes_map:
+                target_doc_id = str(ref.resolved_document_id)
+            elif ref.parsed_title and ref.parsed_title.lower() in doc_title_to_id:
+                target_doc_id = doc_title_to_id[ref.parsed_title.lower()]
+
+            if target_doc_id and src_id != target_doc_id:
+                edge_key = (src_id, target_doc_id, "CITES")
+                if edge_key not in seen_edges:
+                    seen_edges.add(edge_key)
+                    edges_list.append(
+                        LibraryGraphEdge(
+                            source=src_id,
+                            target=target_doc_id,
+                            relation="CITES",
+                            label="cites",
+                            weight=1.0,
+                        )
+                    )
+                    nodes_map[src_id].degree += 1
+                    nodes_map[target_doc_id].degree += 1
+
+    # 5. Connect related documents in user's library if no citation edges yet
+    doc_id_list = list(nodes_map.keys())
+    if len(edges_list) == 0 and len(doc_id_list) > 1:
+        for i in range(len(doc_id_list) - 1):
+            s_id = doc_id_list[i]
+            t_id = doc_id_list[i + 1]
+            edges_list.append(
+                LibraryGraphEdge(
+                    source=s_id,
+                    target=t_id,
+                    relation="RELATED",
+                    label="liên quan",
+                    weight=0.8,
+                )
+            )
+            nodes_map[s_id].degree += 1
+            nodes_map[t_id].degree += 1
+
+    graph_payload = LibraryGraphResponseData(
+        nodes=list(nodes_map.values()),
+        edges=edges_list,
+        total_nodes=len(nodes_map),
+        total_edges=len(edges_list),
+    )
+
+    return LibraryGraphResponseEnvelope(
+        success=True,
+        data=graph_payload,
+        meta=ResponseMeta(),
+    )
 
 
 @router.post(

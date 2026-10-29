@@ -147,3 +147,31 @@ export interface BibliometricsResponseData {
   derivative_works: DerivativeWorkItem[];
   coupling_edges: BibliometricCouplingEdge[];
 }
+
+// ==============================================================================
+// Full Library Knowledge Graph (LLM Wiki - Andrej Karpathy)
+// ==============================================================================
+
+export interface LibraryGraphNode {
+  id: string;
+  label: string;
+  type: string;
+  degree: number;
+  group: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface LibraryGraphEdge {
+  source: string;
+  target: string;
+  relation: string;
+  label: string;
+  weight: number;
+}
+
+export interface LibraryGraphResponseData {
+  nodes: LibraryGraphNode[];
+  edges: LibraryGraphEdge[];
+  total_nodes: number;
+  total_edges: number;
+}

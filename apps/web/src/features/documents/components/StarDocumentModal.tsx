@@ -1,8 +1,13 @@
 import { useState } from "react";
-import { X, Star, Folder, CheckCircle2, AlertCircle } from "lucide-react";
+import { X, Star, Folder, CheckCircle2, AlertCircle, Plus } from "lucide-react";
 import { documentsApi } from "../api/documentsApi";
 import { useQueryClient } from "@tanstack/react-query";
 import { DOCUMENT_QUERY_KEYS } from "../hooks/useDocumentQueries";
+import {
+  useFoldersListQuery,
+  useCreateFolderMutation,
+  FOLDER_QUERY_KEYS,
+} from "@/features/library/hooks/useFolderQueries";
 
 interface StarDocumentModalProps {
   isOpen: boolean;
@@ -26,6 +31,13 @@ export function StarDocumentModal({
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // New folder creation state
+  const [isCreatingFolder, setIsCreatingFolder] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+
+  const { data: folders = [] } = useFoldersListQuery();
+  const createFolderMutation = useCreateFolderMutation();
 
   if (!isOpen) return null;
 
@@ -104,20 +116,81 @@ export function StarDocumentModal({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="folder-id-input" className="text-xs font-medium text-ink dark:text-zinc-200 flex items-center gap-1.5">
-              <Folder className="w-3.5 h-3.5 text-muted" />
-              <span>Thư mục / Bộ sưu tập (Tùy chọn):</span>
-            </label>
-            <input
-              id="folder-id-input"
-              type="text"
-              value={folderId}
-              onChange={(e) => setFolderId(e.target.value)}
-              placeholder="Để trống để lưu tại thư mục gốc..."
-              className="w-full px-3 py-2 rounded-lg bg-canvas dark:bg-[#151412] border border-hairline focus:border-amber-500 outline-none font-sans text-xs"
-            />
+            <div className="flex items-center justify-between">
+              <label htmlFor="folder-select" className="text-xs font-medium text-ink dark:text-zinc-200 flex items-center gap-1.5">
+                <Folder className="w-3.5 h-3.5 text-muted" />
+                <span>Thư mục lưu trữ:</span>
+              </label>
+              {!isCreatingFolder && (
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingFolder(true)}
+                  className="text-[11px] text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Tạo thư mục mới</span>
+                </button>
+              )}
+            </div>
+
+            {isCreatingFolder ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Nhập tên thư mục mới..."
+                  className="flex-1 px-3 py-1.5 rounded-lg bg-canvas dark:bg-[#151412] border border-amber-500 outline-none font-sans text-xs"
+                />
+                <button
+                  type="button"
+                  disabled={!newFolderName.trim()}
+                  onClick={async () => {
+                    if (!newFolderName.trim()) return;
+                    try {
+                      const created = await createFolderMutation.mutateAsync({
+                        name: newFolderName.trim(),
+                      });
+                      queryClient.invalidateQueries({ queryKey: FOLDER_QUERY_KEYS.all });
+                      setFolderId(created.id);
+                      setIsCreatingFolder(false);
+                      setNewFolderName("");
+                    } catch (err) {
+                      setErrorMsg("Không thể tạo thư mục mới.");
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white text-xs font-medium transition-colors disabled:opacity-50 cursor-pointer"
+                >
+                  Tạo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCreatingFolder(false);
+                    setNewFolderName("");
+                  }}
+                  className="px-2 py-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted text-xs cursor-pointer"
+                >
+                  Hủy
+                </button>
+              </div>
+            ) : (
+              <select
+                id="folder-select"
+                value={folderId}
+                onChange={(e) => setFolderId(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg bg-canvas dark:bg-[#151412] border border-hairline focus:border-amber-500 outline-none font-sans text-xs cursor-pointer"
+              >
+                <option value="">Thư viện chung (Không gán thư mục)</option>
+                {folders.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    📁 {f.name} ({f.document_count || 0} bài báo)
+                  </option>
+                ))}
+              </select>
+            )}
             <p className="text-[10px] text-muted">
-              Nhập mã hoặc tên thư mục để phân loại theo chuyên đề nghiên cứu.
+              Chọn thư mục đề tài nghiên cứu để phân loại khoa học.
             </p>
           </div>
 

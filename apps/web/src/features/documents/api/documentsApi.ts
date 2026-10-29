@@ -66,13 +66,17 @@ export const documentsApi = {
     sessionId?: string,
     autoParse = true,
     title?: string,
-    idempotencyKey?: string
+    idempotencyKey?: string,
+    folderId?: string
   ): Promise<DocumentUploadResponseData> {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("auto_parse", String(autoParse));
     if (sessionId) {
       formData.append("session_id", sessionId);
+    }
+    if (folderId) {
+      formData.append("folder_id", folderId);
     }
     if (title) {
       formData.append("title", title);

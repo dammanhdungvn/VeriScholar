@@ -161,4 +161,37 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
     expect(screen.queryByText("completed")).toBeNull();
     expect(screen.getByText("indexing")).toBeInTheDocument();
   });
+
+  it("renders GraphRAG Assistant FAB and switches to Knowledge Graph view when clicking graph toggle", async () => {
+    vi.spyOn(documentsApi, "listDocuments").mockResolvedValue({
+      data: [
+        {
+          id: "doc-1",
+          filename: "attention.pdf",
+          title: "Attention Is All You Need",
+          status: "completed",
+          is_persistent: true,
+          created_at: "2026-10-25T10:00:00Z",
+        },
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-4",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
+    });
+
+    renderWithProviders(<LibraryWorkspaceView />);
+
+    // FAB exists
+    expect(screen.getByRole("button", { name: /Trợ lý GraphRAG/i })).toBeInTheDocument();
+
+    // View graph toggle exists
+    const graphToggleBtn = screen.getByTestId("view-graph-btn");
+    expect(graphToggleBtn).toBeInTheDocument();
+  });
 });

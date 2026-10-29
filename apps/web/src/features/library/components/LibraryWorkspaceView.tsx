@@ -4,6 +4,7 @@ import {
   Search,
   LayoutGrid,
   List as ListIcon,
+  Share2,
   Plus,
   Star,
   FileText,
@@ -20,6 +21,8 @@ import {
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { documentsApi } from "@/features/documents/api/documentsApi";
 import {
   useDocumentsList,
   useStarDocumentMutation,
@@ -31,6 +34,8 @@ import { ParseConfigModal } from "@/features/documents/components/ParseConfigMod
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
 import { KnowledgeSubgraphViewer } from "./KnowledgeSubgraphViewer";
+import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
+import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
 import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
 import { libraryApi } from "../api/libraryApi";
 import type {
@@ -46,7 +51,7 @@ interface LibraryWorkspaceViewProps {
 }
 
 type LibraryFilterTab = "all" | "suggestions" | "favorites" | "folders";
-type ViewLayout = "grid" | "list";
+type ViewLayout = "grid" | "list" | "graph";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
   const [activeTab, setActiveTab] = useState<LibraryFilterTab>("all");
@@ -74,6 +79,16 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
+
+  // Knowledge Graph query (LLM Wiki)
+  const {
+    data: libraryGraphData,
+    isLoading: isLoadingLibraryGraph,
+    refetch: refetchGraph,
+  } = useQuery({
+    queryKey: ["library", "graph", selectedFolderId],
+    queryFn: () => libraryApi.getLibraryGraph(selectedFolderId),
+  });
 
   const {
     data: paginatedData,
@@ -189,8 +204,23 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      await ingest(file);
-      refetch();
+      try {
+        await documentsApi.uploadDocument(
+          file,
+          undefined,
+          true,
+          undefined,
+          undefined,
+          selectedFolderId || undefined
+        );
+        refetch();
+        refetchGraph();
+      } catch (err) {
+        console.warn("Direct library upload failed, falling back to ingestion:", err);
+        await ingest(file);
+        refetch();
+        refetchGraph();
+      }
     }
   };
 
@@ -274,6 +304,20 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
               title="List"
             >
               <ListIcon className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              data-testid="view-graph-btn"
+              onClick={() => setViewLayout("graph")}
+              className={cn(
+                "p-1 rounded-md transition-colors cursor-pointer",
+                viewLayout === "graph"
+                  ? "bg-white dark:bg-[#1a1916] text-[#c15f3e] shadow-xs"
+                  : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
+              )}
+              title="Đồ thị Tri thức (LLM Wiki)"
+            >
+              <Share2 className="w-3.5 h-3.5" />
             </button>
           </div>
 
@@ -437,8 +481,16 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             />
           )}
 
-          {/* C. Documents and Folders Hierarchy */}
-          {activeTab === "folders" ? (
+          {/* C. Knowledge Graph (LLM Wiki) OR Documents and Folders Hierarchy */}
+          {viewLayout === "graph" ? (
+            <div className="h-[640px] w-full rounded-2xl overflow-hidden border border-[#e8e4dc] dark:border-[#2a2824] shadow-xs">
+              <KnowledgeGraphCanvas
+                graphData={libraryGraphData || null}
+                isLoading={isLoadingLibraryGraph}
+                onSelectDocument={(doc) => onSelectDocument?.(doc as any)}
+              />
+            </div>
+          ) : activeTab === "folders" ? (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="md:col-span-1 bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
                 <FolderTreeView
@@ -498,6 +550,9 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           )}
         </div>
       </div>
+
+      {/* Floating GraphRAG Assistant Bubble */}
+      <GraphRagAssistantFab folderId={selectedFolderId} />
 
       {/* Parse Config Modal */}
       {selectedParseDoc && (
