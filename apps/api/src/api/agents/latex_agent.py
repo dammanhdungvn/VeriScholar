@@ -11,6 +11,7 @@ Provides:
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import AsyncGenerator
 from typing import Any, TypedDict
@@ -21,11 +22,120 @@ from core.services.latex_log_parser import LatexDiagnostic
 from langgraph.graph import END, StateGraph
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.core.config import settings
 from api.services.clsi_latex_compiler import CLSILatexCompiler
 from api.services.graph_rag_service import GraphRAGService
 from api.services.graph_rag_tools import query_library_knowledge_graph
 
 logger = structlog.get_logger(__name__)
+
+LATEX_AGENT_TOOLS: list[dict[str, Any]] = [
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_latex_files",
+            "description": "Cập nhật hoặc tạo nội dung tệp LaTeX (main.tex hoặc references.bib).",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "target_file": {
+                        "type": "string",
+                        "description": "Tên tệp cần chỉnh sửa (ví dụ: main.tex, references.bib).",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "Toàn bộ nội dung LaTeX mới để ghi vào tệp.",
+                    },
+                },
+                "required": ["target_file", "content"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_project_files",
+            "description": (
+                "Liệt kê danh sách tất cả các tệp trong dự án LaTeX hiện tại "
+                "(main.tex, references.bib, hình ảnh figures/...)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {},
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "query_library_graph_rag",
+            "description": (
+                "Tra cứu tri thức học thuật SOTA, bài báo khoa học và bằng chứng "
+                "từ Kho GraphRAG của thư viện cá nhân."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Câu truy vấn học thuật hoặc tên phương pháp cần tra cứu.",
+                    },
+                    "top_k": {
+                        "type": "integer",
+                        "description": "Số lượng kết quả tri thức tối đa cần lấy (mặc định: 5).",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "compile_latex_e2b",
+            "description": "Biên dịch mã nguồn LaTeX thành tài liệu PDF thông qua CLSI Compiler.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "clear_cache": {
+                        "type": "boolean",
+                        "description": "Xoá cache biên dịch trước khi chạy lại (mặc định: false).",
+                    },
+                },
+            },
+        },
+    },
+]
+
+
+def _parse_tool_call(tool_call: Any) -> tuple[str, dict[str, Any]]:
+    """Parse tool name and arguments dictionary from an OpenAI tool call object or dict."""
+    func = getattr(tool_call, "function", None)
+    if func is None and isinstance(tool_call, dict):
+        func = tool_call.get("function")
+
+    if func is None:
+        raise ValueError("Invalid tool_call: missing function attribute")
+
+    name = getattr(func, "name", None)
+    if name is None and isinstance(func, dict):
+        name = func.get("name")
+
+    args_raw = getattr(func, "arguments", None)
+    if args_raw is None and isinstance(func, dict):
+        args_raw = func.get("arguments")
+
+    if isinstance(args_raw, str):
+        try:
+            parsed_args = json.loads(args_raw) if args_raw.strip() else {}
+        except Exception:
+            parsed_args = {}
+    elif isinstance(args_raw, dict):
+        parsed_args = args_raw
+    else:
+        parsed_args = {}
+
+    return str(name or ""), parsed_args
 
 
 class LatexAgentState(TypedDict, total=False):
@@ -320,6 +430,74 @@ async def reason_and_plan(state: LatexAgentState) -> dict[str, Any]:
             "tool_input": {"target_file": "main.tex", "content": patched_tex},
             "new_events": new_events,
         }
+
+    # Dynamic OpenAI Tool Calling schema when client is available
+    if openai_client is not None:
+        create_fn = None
+        if (
+            hasattr(openai_client, "chat")
+            and hasattr(openai_client.chat, "completions")
+            and hasattr(openai_client.chat.completions, "create")
+        ):
+            create_fn = openai_client.chat.completions.create
+        elif hasattr(openai_client, "chat_completions_create"):
+            create_fn = openai_client.chat_completions_create
+
+        if create_fn is not None:
+            try:
+                model_name = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
+                prompt_messages = [
+                    {
+                        "role": "system",
+                        "content": (
+                            "Bạn là Trợ lý AI Đồng tác giả Học thuật (LaTeX Coauthor ReAct Agent). "
+                            "Lựa chọn công cụ phù hợp với yêu cầu của học giả.\n"
+                            "Các công cụ khả dụng:\n"
+                            "- edit_latex_files: Chỉnh sửa nội dung tệp LaTeX\n"
+                            "- list_project_files: Liệt kê danh sách tệp dự án\n"
+                            "- query_library_graph_rag: Tra cứu tri thức từ Kho GraphRAG\n"
+                            "- compile_latex_e2b: Biên dịch bản thảo sang PDF"
+                        ),
+                    },
+                    {"role": "user", "content": message},
+                ]
+                resp = await create_fn(
+                    model=model_name,
+                    messages=prompt_messages,
+                    tools=LATEX_AGENT_TOOLS,
+                    tool_choice="auto",
+                )
+                choices = getattr(resp, "choices", None) or (
+                    resp.get("choices") if isinstance(resp, dict) else []
+                )
+                if choices:
+                    first_choice = choices[0]
+                    choice_msg = getattr(first_choice, "message", None) or (
+                        first_choice.get("message") if isinstance(first_choice, dict) else None
+                    )
+                    tool_calls = getattr(choice_msg, "tool_calls", None) or (
+                        choice_msg.get("tool_calls") if isinstance(choice_msg, dict) else None
+                    )
+                    if tool_calls:
+                        tool_name, tool_input = _parse_tool_call(tool_calls[0])
+                        if tool_name:
+                            new_events = [
+                                {
+                                    "event": "thinking",
+                                    "type": "thinking",
+                                    "data": {"message": f"🤖 Gọi công cụ {tool_name}..."},
+                                }
+                            ]
+                            return {
+                                "tool_to_call": tool_name,
+                                "tool_input": tool_input,
+                                "new_events": new_events,
+                            }
+            except Exception as exc:
+                logger.warning(
+                    "Dynamic tool calling failed, falling back to heuristic planner",
+                    error=str(exc),
+                )
 
     # 3. Query GraphRAG if scholarly evidence is requested and not yet fetched
     rag_keywords = (
