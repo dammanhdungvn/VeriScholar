@@ -15,7 +15,7 @@ import structlog
 from api.db.models.wiki import WikiPageModel
 from core.models.wiki import WikiPageDraft
 from core.services.wiki_compiler import WikiCompiler
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.wiki_service")
@@ -100,6 +100,7 @@ class WikiService:
         limit: int = 50,
         offset: int = 0,
         folder_id: UUID | None = None,
+        page_type: str | None = None,
         db: AsyncSession | None = None,
     ) -> list[WikiPageModel]:
         """List wiki pages belonging to a user with pagination and optional folder filter.
@@ -146,8 +147,32 @@ class WikiService:
         if folder_id is not None:
             stmt = stmt.where(WikiPageModel.folder_id == folder_id)
 
+        if page_type is not None:
+            stmt = stmt.where(WikiPageModel.page_type == page_type)
+
         result = await session.execute(stmt)
         return list(result.scalars().all())
+
+    async def count_pages(
+        self,
+        user_id: UUID,
+        folder_id: UUID | None = None,
+        page_type: str | None = None,
+        db: AsyncSession | None = None,
+    ) -> int:
+        """Count total wiki pages matching criteria for user."""
+        session = self._resolve_session(db)
+        if not isinstance(user_id, UUID):
+            user_id = UUID(str(user_id))
+
+        stmt = select(func.count(WikiPageModel.id)).where(WikiPageModel.user_id == user_id)
+        if folder_id is not None:
+            stmt = stmt.where(WikiPageModel.folder_id == folder_id)
+        if page_type is not None:
+            stmt = stmt.where(WikiPageModel.page_type == page_type)
+
+        result = await session.execute(stmt)
+        return int(result.scalar() or 0)
 
     async def upsert_page(
         self,
