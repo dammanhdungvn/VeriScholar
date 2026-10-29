@@ -10,6 +10,7 @@ import { ProfilePage } from "@/features/auth/components/ProfilePage";
 import { SettingsPage } from "@/features/auth/components/SettingsPage";
 import { LibraryPage } from "@/features/library/components/LibraryPage";
 import { DiscoveryPage } from "@/features/discovery/components/DiscoveryPage";
+import { WikiGraphPage } from "@/features/wiki/components/WikiGraphPage";
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +44,10 @@ export const router = createBrowserRouter([
       {
         path: "/library",
         element: <LibraryPage />,
+      },
+      {
+        path: "/wiki-graph",
+        element: <WikiGraphPage />,
       },
       {
         path: "/writing",

@@ -4,6 +4,8 @@ import type {
   GraphQueryResponseData,
   BibliometricsResponseData,
   LibraryGraphResponseData,
+  WikiPageItem,
+  ResearchGapsResponseData,
 } from "../types";
 
 export const libraryApi = {
@@ -38,6 +40,37 @@ export const libraryApi = {
     const params = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : "";
     return apiClient<LibraryGraphResponseData>(`/library/graph${params}`, {
       method: "GET",
+    });
+  },
+
+  /**
+   * List compiled academic wiki pages
+   */
+  async listWikiPages(): Promise<WikiPageItem[]> {
+    return apiClient<WikiPageItem[]>("/library/wiki", {
+      method: "GET",
+    });
+  },
+
+  /**
+   * Get a compiled academic wiki page by slug
+   */
+  async getWikiPage(slug: string): Promise<WikiPageItem> {
+    return apiClient<WikiPageItem>(`/library/wiki/${encodeURIComponent(slug)}`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * Synthesize research gaps across library papers
+   */
+  async getResearchGaps(folderId?: string | null, topK: number = 5): Promise<ResearchGapsResponseData> {
+    return apiClient<ResearchGapsResponseData>("/library/research-gaps", {
+      method: "POST",
+      body: JSON.stringify({
+        folder_id: folderId || null,
+        top_k: topK,
+      }),
     });
   },
 };

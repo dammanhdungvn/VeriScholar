@@ -191,3 +191,35 @@ export interface LibraryGraphResponseData {
   total_nodes: number;
   total_edges: number;
 }
+
+// ==============================================================================
+// Compiled Academic Wiki & Research Gaps Types (Spec 05)
+// ==============================================================================
+
+export interface WikiPageItem {
+  id: string;
+  slug: string;
+  title: string;
+  page_type: "concept" | "sota_matrix" | "gap_synthesis" | string;
+  markdown_content: string;
+  yaml_metadata: Record<string, unknown>;
+  wikilinks: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ResearchGapsResponseData {
+  total_papers_analyzed: number;
+  identified_limitations: Array<{
+    paper_title?: string;
+    limitation?: string;
+    [key: string]: unknown;
+  }>;
+  unsolved_frontiers: Array<{
+    topic?: string;
+    open_question?: string;
+    [key: string]: unknown;
+  }>;
+  recommended_directions: string[];
+  synthesized_matrix_markdown: string;
+}

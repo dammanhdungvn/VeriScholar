@@ -53,12 +53,18 @@ describe("UserProfileModal 3 Tabs Component", () => {
   });
 
   it("performs live E2E profile, theme, and BYOK update via UserProfileModal & authApi when backend is running", async () => {
+    if (import.meta.env.VITE_RUN_LIVE_TESTS !== "true") {
+      return;
+    }
+
     (globalThis as { __VITE_API_BASE_URL__?: string }).__VITE_API_BASE_URL__ =
       "http://localhost:8000";
 
     let backendReady = false;
     try {
-      const probe = await fetch("http://localhost:8000/health/ready");
+      const probe = await fetch("http://localhost:8000/health/ready", {
+        signal: AbortSignal.timeout(1000),
+      });
       backendReady = probe.ok;
     } catch {
       backendReady = false;

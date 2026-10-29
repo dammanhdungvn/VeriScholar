@@ -71,6 +71,14 @@ const NODE_TYPE_COLORS: Record<string, string> = {
   MetricResult: "#c15f3e",
 };
 
+const ENTITY_TYPE_FILTERS = [
+  { id: "all", label: "Tất cả" },
+  { id: "Paper", label: "Bài báo" },
+  { id: "Method", label: "Phương pháp" },
+  { id: "Dataset", label: "Tập dữ liệu" },
+  { id: "MetricResult", label: "Chỉ số" },
+];
+
 export function KnowledgeGraphCanvas({
   graphData,
   isLoading = false,
@@ -86,6 +94,7 @@ export function KnowledgeGraphCanvas({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEntityType, setSelectedEntityType] = useState<string>("all");
   const [selectedCommunityId, setSelectedCommunityId] = useState<number | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -181,18 +190,18 @@ export function KnowledgeGraphCanvas({
         "link",
         forceLink<SimNode, SimLink>(simLinks)
           .id((d) => d.id)
-          .distance(75)
-          .strength(0.4)
+          .distance(90)
+          .strength(0.35)
       )
-      .force("charge", forceManyBody().strength(-200))
-      .force("center", forceCenter(width / 2, height / 2).strength(0.1))
+      .force("charge", forceManyBody().strength(-280))
+      .force("center", forceCenter(width / 2, height / 2).strength(0.08))
       .force(
         "collision",
         forceCollide<SimNode>()
-          .radius((d) => d.radius + 8)
-          .iterations(2)
+          .radius((d) => d.radius + 14)
+          .iterations(3)
       )
-      .alphaDecay(0.028);
+      .alphaDecay(0.024);
 
     simulationRef.current = sim;
 
@@ -310,11 +319,14 @@ export function KnowledgeGraphCanvas({
         const isFocus = n.id === focusNodeId;
         const isHovered = n.id === hoveredNodeId;
         const isNeighbor = activeHoverId ? spotlightNeighbors?.has(n.id) : false;
+        const matchesEntity =
+          selectedEntityType === "all" || n.type === selectedEntityType;
         const isDimmed =
+          !matchesEntity ||
           (selectedCommunityId !== null && n.community_id !== selectedCommunityId) ||
           (activeHoverId && !isHovered && !isFocus && !isNeighbor);
 
-        const alpha = isDimmed ? 0.25 : 1.0;
+        const alpha = isDimmed ? 0.2 : 1.0;
         ctx.save();
         ctx.globalAlpha = alpha;
 
@@ -334,16 +346,28 @@ export function KnowledgeGraphCanvas({
         ctx.font = `${
           isHovered || isFocus ? "bold 11px" : "10px"
         } 'Anthropic Sans', system-ui, sans-serif`;
+
+        const truncatedLabel =
+          n.label.length > 24 ? `${n.label.slice(0, 22)}…` : n.label;
+        const textMetrics = ctx.measureText(truncatedLabel);
+        const textWidth = textMetrics.width;
+
+        // Subtle background pill for crystal clear text readability over edges
+        ctx.fillStyle = "rgba(253, 252, 249, 0.88)";
+        ctx.fillRect(
+          n.x - textWidth / 2 - 3,
+          n.y + n.radius + 3,
+          textWidth + 6,
+          13
+        );
+
         ctx.fillStyle = matchesSearch
           ? "#c15f3e"
           : isHovered || isFocus
           ? "#111827"
-          : "#4b5563";
+          : "#374151";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-
-        const truncatedLabel =
-          n.label.length > 22 ? `${n.label.slice(0, 20)}…` : n.label;
         ctx.fillText(truncatedLabel, n.x, n.y + n.radius + 4);
 
         ctx.restore();
@@ -508,10 +532,10 @@ export function KnowledgeGraphCanvas({
         className
       )}
     >
-      {/* Top Bar: Search, Community Filter Ribbon, and Controls */}
+      {/* Top Bar: Search, Entity Filter Tabs, and Controls */}
       <div className="px-3 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex flex-wrap items-center justify-between gap-2 shrink-0 z-10">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
+          <div className="relative flex-1 max-w-xs min-w-[140px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               type="text"
@@ -522,8 +546,27 @@ export function KnowledgeGraphCanvas({
             />
           </div>
 
+          {/* Entity Type Filter Tabs */}
+          <div className="flex items-center gap-0.5 bg-[#ede8df]/60 dark:bg-[#252320] p-0.5 rounded-lg border border-[#e2dcd2]/70 dark:border-[#322f2a]">
+            {ENTITY_TYPE_FILTERS.map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setSelectedEntityType(f.id)}
+                className={cn(
+                  "px-2 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer",
+                  selectedEntityType === f.id
+                    ? "bg-[#c15f3e] text-white shadow-2xs"
+                    : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
+                )}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
           <span className="text-[11px] text-muted font-mono whitespace-nowrap">
-            {rawNodes.length} đỉnh • {rawEdges.length} cạnh
+            {rawNodes.length} đỉnh • {rawEdges.length} liên kết
           </span>
         </div>
 
