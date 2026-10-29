@@ -153,7 +153,7 @@ describe("DashboardContainer Session Document Lifecycle", () => {
       </QueryClientProvider>
     );
 
-    const newChatButton = screen.getByTitle("Đoạn chat mới");
+    const newChatButton = screen.getByTitle("New Session");
     fireEvent.click(newChatButton);
 
     expect(useReaderStore.getState().openDocumentIds).toEqual([]);

@@ -36,7 +36,7 @@ describe("Taskbar and Avatar Refinements", () => {
       </MemoryRouter>
     );
 
-    const newChatBtn = screen.getByTitle("Đoạn chat mới");
+    const newChatBtn = screen.getByTitle("New Session");
     expect(newChatBtn).toBeDefined();
     // In collapsed mode, it must have rounded-full and centered Plus icon
     expect(newChatBtn.className).toContain("rounded-full");
@@ -53,7 +53,7 @@ describe("Taskbar and Avatar Refinements", () => {
       </MemoryRouter>
     );
 
-    const writingBtn = screen.getByTitle("Viết paper (Agentic Overleaf)");
+    const writingBtn = screen.getByTitle("Writing");
     expect(writingBtn).toBeDefined();
     // Glowing border and background must be removed
     expect(writingBtn.className).not.toContain("bg-coral-500/15");
@@ -103,10 +103,10 @@ describe("Taskbar and Avatar Refinements", () => {
     fireEvent.click(moreBtn);
 
     // Verify context menu options
-    expect(screen.getByText("Ghim")).toBeDefined();
-    expect(screen.getByText("Đánh dấu chưa đọc")).toBeDefined();
-    expect(screen.getByText("Đổi tên")).toBeDefined();
-    expect(screen.getByText("Xóa")).toBeDefined();
+    expect(screen.getByText("Pin")).toBeDefined();
+    expect(screen.getByText("Mark as unread")).toBeDefined();
+    expect(screen.getByText("Rename")).toBeDefined();
+    expect(screen.getByText("Delete")).toBeDefined();
 
     // Verify "Add to project" is absent
     expect(screen.queryByText(/Add to project/i)).toBeNull();
