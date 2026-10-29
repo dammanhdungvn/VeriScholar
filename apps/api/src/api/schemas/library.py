@@ -29,6 +29,11 @@ class GraphQueryRequest(BaseModel):
         description="Optional folder UUID filter",
         examples=[None],
     )
+    community_id: int | None = Field(
+        default=None,
+        description="Optional community cluster ID filter",
+        examples=[None],
+    )
     top_k: int = Field(
         default=5,
         description="Number of anchor nodes or top communities (1..50)",

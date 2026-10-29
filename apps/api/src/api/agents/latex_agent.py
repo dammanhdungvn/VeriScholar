@@ -23,6 +23,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.services.clsi_latex_compiler import CLSILatexCompiler
 from api.services.graph_rag_service import GraphRAGService
+from api.services.graph_rag_tools import query_library_knowledge_graph
 
 logger = structlog.get_logger(__name__)
 
@@ -99,9 +100,22 @@ async def query_library_graph_rag(
     graph_rag_service: GraphRAGService | None = None,
     db: AsyncSession | None = None,
     user_id: UUID | None = None,
+    community_id: int | None = None,
 ) -> dict[str, Any]:
     """Query Scholarly Knowledge Graph for literature and SOTA evidence."""
-    if graph_rag_service is not None:
+    if graph_rag_service is not None and db is not None:
+        try:
+            return await query_library_knowledge_graph(
+                db=db,
+                user_id=user_id or uuid4(),
+                query=query,
+                community_id=community_id,
+                graph_rag_service=graph_rag_service,
+                top_k=top_k,
+            )
+        except Exception as exc:
+            logger.warning("GraphRAG query execution failed", error=str(exc))
+    elif graph_rag_service is not None:
         try:
             import inspect
 
@@ -466,6 +480,7 @@ async def tool_execution(state: LatexAgentState) -> dict[str, Any]:
             graph_rag_service=state.get("graph_rag_service"),
             db=state.get("db"),
             user_id=state.get("user_id"),
+            community_id=tool_input.get("community_id"),
         )
         new_events.append(
             {
@@ -801,6 +816,7 @@ class LatexCoauthorAgent:
         top_k: int = 5,
         db: AsyncSession | None = None,
         user_id: UUID | None = None,
+        community_id: int | None = None,
     ) -> dict[str, Any]:
         """Tool 3: Query GraphRAG for scholarly literature and SOTA evidence."""
         return await query_library_graph_rag(
@@ -809,6 +825,7 @@ class LatexCoauthorAgent:
             graph_rag_service=self.graph_rag_service,
             db=db,
             user_id=user_id,
+            community_id=community_id,
         )
 
     async def compile_latex_e2b(

@@ -333,6 +333,18 @@ async def query_library_graph(
         top_k=payload.top_k,
     )
 
+    if payload.community_id is not None:
+        subgraph = result.get("subgraph", {})
+        nodes = subgraph.get("nodes", [])
+        edges = subgraph.get("edges", [])
+        matching_nodes = [n for n in nodes if n.get("community_id") == payload.community_id]
+        if matching_nodes:
+            node_ids = {n.get("id") for n in matching_nodes}
+            result["subgraph"]["nodes"] = matching_nodes
+            result["subgraph"]["edges"] = [
+                e for e in edges if e.get("source") in node_ids and e.get("target") in node_ids
+            ]
+
     data_payload = GraphQueryResponseData(
         mode_used=result["mode_used"],
         answer=result["answer"],
