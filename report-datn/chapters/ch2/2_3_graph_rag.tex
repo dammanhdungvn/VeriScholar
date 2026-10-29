@@ -14,7 +14,7 @@ VeriScholar khắc phục hạn chế này bằng cách mô hình hóa tri thứ
     \item \textbf{Kết quả đo lường (\textit{MetricResult Node}):} Các chỉ số định lượng cụ thể đo lường hiệu năng của phương pháp trên bộ dữ liệu tương ứng (chứa trường tên chỉ số, giá trị định lượng, và đơn vị đo lường).
 \end{enumerate}
 
-Cấu trúc đường ống dữ liệu trích xuất tri thức phân tầng và mạng lưới 4 thực thể cốt lõi được mô hình hóa trong Hình~\ref{fig:graphrag_model}.
+Cấu trúc Data Pipeline trích xuất tri thức phân tầng và mạng lưới 4 thực thể cốt lõi được mô hình hóa trong Hình~\ref{fig:graphrag_model}.
 
 \begin{figure}[htbp]
 \centering
@@ -83,7 +83,7 @@ Cấu trúc đường ống dữ liệu trích xuất tri thức phân tầng v�
     % PHA 3: PHÂN CỤM CỘNG ĐỒNG LEIDEN & TÓM TẮT BÁO CÁO (COMMUNITY DETECTION)
     % ==========================================================================
     \node[groupcard, minimum width=15.4cm, minimum height=2.3cm] (card_comm) at (0, -1.3) {};
-    \node[fill=purple!12, draw=purple!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, -0.3) {PHÂN CỤM CỘNG ĐỒNG LEIDEN};
+    \node[fill=white, draw=purple!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, -0.15) {PHÂN CỤM CỘNG ĐỒNG LEIDEN};
 
     \node[commbox, text width=4.0cm] (comm_level0) at (-3.6, -1.4) {
         \textbf{Cộng đồng Vi mô (Level 0)}\\[2pt]
@@ -121,7 +121,7 @@ Cấu trúc đường ống dữ liệu trích xuất tri thức phân tầng v�
     \draw[dualarrow] (comm_level0.south) -- (ret_low.north);
     \draw[dualarrow] (comm_level1.south) -- (ret_high.north);
 \end{tikzpicture}
-\caption[Quy trình trích xuất tri thức phân tầng GraphRAG]{Quy trình đường ống dữ liệu trích xuất tri thức phân tầng GraphRAG}
+\caption[Quy trình trích xuất tri thức phân tầng GraphRAG]{Quy trình Data Pipeline trích xuất tri thức phân tầng GraphRAG}
 \label{fig:graphrag_model}
 \end{figure}
 

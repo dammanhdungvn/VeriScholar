@@ -53,21 +53,21 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
     };
 
     % =========================================================================
-    % TẦNG 2: ĐƯỜNG ỐNG THU NHẬN & TRUY XUẤT HỌC THUẬT (RETRIEVAL PIPELINE)
+    % TẦNG 2: RETRIEVAL PIPELINE VÀ TRI THỨC LAI (HYBRID RETRIEVAL PIPELINE)
     % =========================================================================
     \draw[tier_band, fill=blue!4] (-8.6, -0.7) rectangle (8.6, 1.9);
-    \node[header_tag, fill=blue!15, text=blue!90!black, anchor=north west] at (-8.4, 1.7) {TẦNG 2: ĐƯỜNG ỐNG TRUY XUẤT VÀ TRI THỨC LAI (\textit{HYBRID RETRIEVAL PIPELINE})};
+    \node[header_tag, fill=blue!15, text=blue!90!black, anchor=north west] at (-8.4, 1.7) {TẦNG 2: RETRIEVAL PIPELINE VÀ TRI THỨC LAI (\textit{HYBRID RETRIEVAL PIPELINE})};
 
     \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p1) at (-6.4, 0.4) {
         \textbf{Nạp ấn phẩm}\\[1pt]
         \scriptsize PDF \& Metadata
     };
     \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p2) at (-3.2, 0.4) {
-        \textbf{Bóc tách 2 cột}\\[1pt]
+        \textbf{Chunking 2 cột}\\[1pt]
         \scriptsize BBox $[0..1000]$
     };
     \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p3) at (0.0, 0.4) {
-        \textbf{Mô hình nhúng}\\[1pt]
+        \textbf{Vector Embedding}\\[1pt]
         \scriptsize Text Embeddings
     };
     \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p4) at (3.2, 0.4) {

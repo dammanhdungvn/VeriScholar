@@ -6,78 +6,140 @@
 \label{subsec:erd}
 Hệ thống \VS\ sử dụng cơ sở dữ liệu quan hệ PostgreSQL 16 kết hợp tiện ích mở rộng \texttt{pgvector}. Thay vì xây dựng các cấu trúc dữ liệu rời rạc, các thực thể dữ liệu được tổ chức theo luồng chuyển hóa tri thức khoa học liền mạch giữa 4 cụm chức năng cốt lõi:
 
-\begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Cụm Định danh và Bảo mật (Identity \& Vault):} Lưu trữ thông tin học giả (\texttt{users}) gắn liền với mã định danh quốc tế ORCID iD, phiên xác thực OTP không mật khẩu (\texttt{email\_otps}) và két sắt lưu trữ khóa API cá nhân (\texttt{user\_secrets}) mã hóa AES-256-GCM.
-    \item \textbf{Cụm Ấn phẩm và Khử trùng lặp CAS (Document \& Storage):} Phân tách rạch ròi giữa hồ sơ ấn phẩm (\texttt{documents}) và khối tệp nhị phân trên đĩa cứng (\texttt{storage\_blobs}) thông qua mã băm SHA-256, giúp tiết kiệm 98\% dung lượng lưu trữ tệp trùng lặp.
-    \item \textbf{Cụm Đoạn trích và Đồ thị Tri thức (Chunks \& GraphRAG):} Mỗi đoạn trích (\texttt{document\_chunks}) lưu trữ tọa độ Bounding Box $[0..1000]$ và vector nhúng 1536 chiều, đồng thời liên kết trực tiếp với mạng đồ thị 4 thực thể (\texttt{paper\_nodes}, \texttt{method\_nodes}, \texttt{dataset\_nodes}, \texttt{metric\_results}).
-    \item \textbf{Cụm Tương tác và Soạn thảo (Sessions \& Drafts):} Quản lý phiên đọc hiểu chuyên sâu (\texttt{reading\_sessions}), lịch sử tin nhắn hỏi đáp (\texttt{chat\_messages}) và dự án biên soạn bản thảo (\texttt{draft\_projects}, \texttt{draft\_files}) gắn với máy ảo E2B Sandbox.
+\begin{enumerate}[label=\textbf{(\arabic*)}, itemsep=2pt, topsep=2pt, parsep=0pt]
+    \item \textbf{Cụm Định danh và Bảo mật (Identity \& Secrets Vault):} Lưu trữ hồ sơ học giả (\textit{User Profiles}) gắn liền với mã định danh quốc tế ORCID iD, phiên xác thực OTP một lần và két sắt lưu trữ khóa cá nhân (\textit{User Secrets Vault}) mã hóa AES-256-GCM bảo vệ khóa API độc lập.
+    \item \textbf{Cụm Ấn phẩm và Khử trùng lặp CAS (Academic Documents \& Storage):} Phân tách rạch ròi giữa hồ sơ thư mục ấn phẩm (\textit{Academic Documents}) và khối tệp nhị phân trên đĩa cứng (\textit{CAS Storage Blobs}) thông qua mã băm SHA-256, giúp tiết kiệm 98\% dung lượng lưu trữ tệp trùng lặp.
+    \item \textbf{Cụm Phân đoạn và Mạng tri thức (Chunks \& GraphRAG):} Mỗi phân đoạn văn bản sau quy trình Chunking (\textit{Document Chunks}) được gán tọa độ Bounding Box $[0..1000]$ và vector Embedding 1536 chiều, đồng thời liên kết trực tiếp với mạng đồ thị 4 thực thể (\textit{Paper Nodes}, \textit{Method Nodes}, \textit{Dataset Nodes}, \textit{Metric Results}).
+    \item \textbf{Cụm Tương tác và Soạn thảo (Reading Sessions \& Draft Projects):} Quản lý phiên đọc hiểu chuyên sâu (\textit{Reading Sessions}), lịch sử hỏi đáp ngữ cảnh (\textit{Chat Messages}) và dự án biên soạn bản thảo (\textit{Draft Projects}) gắn với máy ảo hộp cát E2B MicroVM.
 \end{enumerate}
 
-Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật được mô tả trong Hình~\ref{fig:erd_model}.
+Mô hình thực thể tri thức và lược đồ dữ liệu lai (Hybrid Relational-Vector-Graph ERD) được mô tả chi tiết trong Hình~\ref{fig:erd_model}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
-    clusterbox/.style={draw=blue!80!black, fill=blue!3, rounded corners=6pt, line width=1pt, inner sep=8pt},
-    ent/.style={draw=teal!80!black, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, minimum width=3.8cm},
-    coreent/.style={draw=purple!80!black, fill=purple!8, rounded corners=4pt, line width=1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small, minimum width=3.8cm},
-    flow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!80!black}
+    scale=0.64, transform shape,
+    table_rdbms/.style={draw=black!80, fill=white, rounded corners=3pt, line width=0.85pt, align=left, inner sep=5pt, text width=4.7cm, font=\linespread{1.05}\selectfont},
+    table_vector/.style={draw=teal!85!black, fill=teal!4, rounded corners=3pt, line width=1.0pt, align=left, inner sep=5pt, text width=4.7cm, font=\linespread{1.05}\selectfont},
+    table_graph/.style={draw=purple!85!black, fill=purple!4, rounded corners=3pt, line width=1.0pt, align=left, inner sep=5pt, text width=4.7cm, font=\linespread{1.05}\selectfont},
+    rel/.style={-{Stealth[length=2.2mm]}, line width=0.95pt, draw=black!75},
+    card_label/.style={font=\bfseries\scriptsize, fill=white, draw=black!30, rounded corners=2pt, inner sep=2pt}
 ]
-    % Phân vùng 1: CAS và Định danh
-    \node[clusterbox, minimum width=15.8cm, minimum height=4.6cm] (c_top) at (0, 2.8) {};
-    \node[anchor=north east, font=\bfseries\scriptsize, text=blue!90!black] at (7.4, 4.8) {PHÂN VÙNG 1: ĐỊNH DANH HỌC GIẢ VÀ ẤN PHẨM KHỬ TRÙNG LẶP (CAS)};
-    \node[ent, minimum width=4.2cm, text width=4.0cm] (u) at (-5.2, 3.4) {\textbf{users}\\Mã định danh ORCID};
-    \node[ent, minimum width=4.2cm, text width=4.0cm] (sec) at (-5.2, 1.4) {\textbf{user\_secrets}\\Két sắt khóa cá nhân BYOK};
-    \node[coreent, text width=3.6cm] (doc) at (0.0, 2.4) {\textbf{documents}\\Hồ sơ bài báo \& DOI};
-    \node[ent, text width=3.6cm] (blob) at (5.2, 2.4) {\textbf{storage\_blobs}\\Mã băm nội dung CAS};
-    \draw[flow] (u.south) -- (sec.north);
-    \draw[flow] (u.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {sở hữu} (doc.west);
-    \draw[flow] (doc.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {trỏ tệp} (blob.west);
+    % =========================================================================
+    % CỘT 1: ĐỊNH DANH & BẢO MẬT (USERS & SECRETS VAULT)
+    % =========================================================================
+    \node[table_rdbms, anchor=north] (users) at (-6.2, 3.2) {
+        {\centering\textbf{USERS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \phantom{PK} \texttt{email}: VARCHAR(255)\\
+        \phantom{PK} \texttt{orcid\_id}: VARCHAR(19)\\
+        \phantom{PK} \texttt{full\_name}: VARCHAR(128)\\
+        \phantom{PK} \texttt{created\_at}: TIMESTAMPTZ
+    };
 
-    % Phân vùng 2: Đoạn trích và GraphRAG
-    \node[clusterbox, minimum width=15.8cm, minimum height=4.0cm] (c_bot) at (0, -2.0) {};
-    \node[anchor=north east, font=\bfseries\scriptsize, text=blue!90!black] at (7.4, -0.3) {PHÂN VÙNG 2: ĐOẠN TRÍCH TỌA ĐỘ VÀ ĐỒ THỊ TRI THỨC (GRAPHRAG)};
-    \node[coreent, minimum width=4.0cm, text width=3.8cm] (chk) at (-5.0, -2.3) {
-        \textbf{document\_chunks}\\
-        \footnotesize Tọa độ BBox $[0..1000]$\\
-        \footnotesize Vector HNSW 1536 chiều
+    \node[table_rdbms, anchor=north] (secrets) at (-6.2, -1.6) {
+        {\centering\textbf{USER SECRETS VAULT}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID (1:1)\\
+        \phantom{PK} \texttt{encrypted\_key}: TEXT (AES)\\
+        \phantom{PK} \texttt{iv}: VARCHAR(32)\\
+        \phantom{PK} \texttt{auth\_tag}: VARCHAR(32)
     };
-    \node[ent, minimum width=3.8cm, text width=3.6cm] (graph) at (0.0, -2.3) {
-        \textbf{GraphRAG 4 thực thể}\\
-        \footnotesize Paper $\rightarrow$ Method\\
-        \footnotesize $\rightarrow$ Dataset $\rightarrow$ Metric
+
+    % =========================================================================
+    % CỘT 2: ẤN PHẨM & PHÂN ĐOẠN VECTOR (DOCUMENTS & CHUNKS)
+    % =========================================================================
+    \node[table_rdbms, anchor=north] (docs) at (0.0, 3.2) {
+        {\centering\textbf{ACADEMIC DOCUMENTS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID\\
+        \phantom{PK} \texttt{title}: TEXT\\
+        \phantom{PK} \texttt{doi}: VARCHAR(128)\\
+        \textbf{FK} \texttt{cas\_hash}: VARCHAR(64)
     };
-    \node[ent, minimum width=3.8cm, text width=3.6cm] (draft) at (5.0, -2.3) {
-        \textbf{draft\_projects}\\
-        \footnotesize Cây tệp mã nguồn \LaTeX\\
-        \footnotesize Hộp cát E2B MicroVM
+
+    \node[table_vector, anchor=north] (chunks) at (0.0, -1.6) {
+        {\centering\textbf{DOCUMENT CHUNKS (VECTOR)}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{document\_id}: UUID\\
+        \phantom{PK} \texttt{chunk\_text}: TEXT\\
+        \textbf{IX} \texttt{embedding}: VECTOR(1536)\\
+        \textbf{IX} \texttt{content\_tsv}: TSVECTOR\\
+        \phantom{PK} \texttt{bbox}: JSONB \textit{[$0..1000$]}
     };
-    \draw[flow] (doc.south) -- (0, 0.25) -| (chk.north);
-    \draw[flow] (chk.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {trích xuất} (graph.west);
-    \draw[flow] (graph.east) -- node[midway, above=2pt, font=\scriptsize, fill=white, inner sep=1.5pt] {đối chiếu} (draft.west);
+
+    % =========================================================================
+    % CỘT 3: LƯU TRỮ CAS & ĐỒ THỊ TRI THỨC (STORAGE & GRAPHRAG)
+    % =========================================================================
+    \node[table_rdbms, anchor=north] (blobs) at (6.2, 3.2) {
+        {\centering\textbf{CAS STORAGE BLOBS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{sha256\_hash}: VARCHAR(64)\\
+        \phantom{PK} \texttt{file\_size\_bytes}: BIGINT\\
+        \phantom{PK} \texttt{mime\_type}: VARCHAR(64)\\
+        \phantom{PK} \texttt{storage\_path}: TEXT\\
+        \phantom{PK} \texttt{ref\_count}: INTEGER
+    };
+
+    \node[table_graph, anchor=north] (graph) at (6.2, -1.6) {
+        {\centering\textbf{GRAPH KNOWLEDGE NODES}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{chunk\_id}: UUID\\
+        \phantom{PK} \texttt{entity\_type}: VARCHAR(32)\\
+        \phantom{PK} \texttt{entity\_name}: VARCHAR(255)\\
+        \phantom{PK} \texttt{community\_id}: INTEGER
+    };
+
+    % =========================================================================
+    % QUAN HỆ THỰC THỂ (RELATIONSHIPS)
+    % =========================================================================
+    % Users 1-1 User Secrets Vault
+    \draw[rel] (users.south) -- node[card_label, midway] {1:1} (secrets.north);
+
+    % Users 1-N Academic Documents
+    \draw[rel] (users.east) -- node[card_label, midway] {1:N} (docs.west);
+
+    % Academic Documents N-1 CAS Storage Blobs
+    \draw[rel] (docs.east) -- node[card_label, midway] {N:1} (blobs.west);
+
+    % Academic Documents 1-N Document Chunks
+    \draw[rel] (docs.south) -- node[card_label, midway] {1:N} (chunks.north);
+
+    % Document Chunks 1-N Graph Knowledge Nodes
+    \draw[rel] (chunks.east) -- node[card_label, midway] {1:N} (graph.west);
 \end{tikzpicture}
-\caption{Lược đồ thực thể tri thức và Dòng chảy dữ liệu học thuật trong hệ thống}
+\caption{Lược đồ thực thể quan hệ lai (Hybrid Relational-Vector-Graph ERD)}
 \label{fig:erd_model}
 \end{figure}
 
-\subsection{Từ điển dữ liệu cho các bảng cơ sở dữ liệu cốt lõi}
+\subsection{Từ điển dữ liệu cho các thực thể cơ sở dữ liệu cốt lõi}
 \label{subsec:tu_dien_du_lieu}
-Để làm sáng tỏ đặc tả vật lý và ràng buộc kỹ thuật của các cấu trúc dữ liệu lưu trữ, Bảng~\ref{tab:document_chunks} và Bảng~\ref{tab:document_storage_blobs} trình bày từ điển dữ liệu của các bảng phục vụ tính năng nạp tài liệu CAS và đối chiếu tọa độ trực quan:
+Để làm sáng tỏ đặc tả vật lý và ràng buộc kỹ thuật của các cấu trúc dữ liệu lưu trữ, Bảng~\ref{tab:document_chunks} và Bảng~\ref{tab:document_storage_blobs} trình bày từ điển dữ liệu của các thực thể phục vụ tính năng nạp tài liệu CAS và đối chiếu tọa độ trực quan:
 
 \begin{table}[htbp]
 \centering
 \singlespacing
 \small
 \renewcommand{\arraystretch}{1.2}
-\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_chunks}}
+\caption{Đặc tả cấu trúc từ điển dữ liệu thực thể Phân đoạn văn bản (Document Chunks)}
 \label{tab:document_chunks}
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
 1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất toàn cầu của đoạn trích văn bản \\ \hline
-2 & \texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới bảng ấn phẩm \texttt{documents} \\ \hline
+2 & \texttt{document\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại liên kết tới thực thể ấn phẩm \\ \hline
 3 & \texttt{page\_number} & INTEGER & Chỉ mục B-Tree & Số thứ tự trang giấy thực tế trong bản PDF gốc \\ \hline
 4 & \texttt{chunk\_text} & TEXT & Chỉ mục GIN & Nội dung văn bản phục vụ truy xuất từ khóa BM25 \\ \hline
 5 & \texttt{bbox} & JSONB & Không & Tọa độ hộp chữ Bounding Box $[x_0, y_0, x_1, y_1] \in [0..1000]$ \\ \hline
@@ -90,7 +152,7 @@ Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật đ�
 \singlespacing
 \small
 \renewcommand{\arraystretch}{1.2}
-\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{document\_storage\_blobs}}
+\caption{Đặc tả cấu trúc từ điển dữ liệu thực thể Khối tệp nhị phân CAS (Storage Blobs)}
 \label{tab:document_storage_blobs}
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.8cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
@@ -105,21 +167,21 @@ Mô hình thực thể tri thức và dòng chảy dữ liệu học thuật đ�
 \end{tabular}
 \end{table}
 
-Tiếp theo, Bảng~\ref{tab:user_secrets} trình bày cấu trúc bảo mật của bảng \texttt{user\_secrets} bảo vệ khóa API cá nhân của người dùng:
+Tiếp theo, Bảng~\ref{tab:user_secrets} trình bày cấu trúc bảo mật của thực thể Két sắt khóa cá nhân (User Secrets Vault) bảo vệ khóa API riêng của học giả:
 
 \begin{table}[htbp]
 \centering
 \singlespacing
 \small
 \renewcommand{\arraystretch}{1.2}
-\caption{Đặc tả cấu trúc từ điển dữ liệu bảng \texttt{user\_secrets}}
+\caption{Đặc tả cấu trúc từ điển dữ liệu thực thể Két sắt khóa cá nhân (User Secrets Vault)}
 \label{tab:user_secrets}
 \setlength{\tabcolsep}{3.5pt}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.4cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.3cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên trường} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Khóa / Chỉ mục} & \centering\textbf{Mô tả nghiệp vụ học thuật} \tabularnewline \hline
 1 & \texttt{id} & UUID & Khóa chính (PK) & Định danh duy nhất của bản ghi két sắt khóa \\ \hline
-2 & \texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với bảng \texttt{users} \\ \hline
+2 & \texttt{user\_id} & UUID & Khóa ngoại (FK) & Khóa ngoại duy nhất (1-1) liên kết với thực thể học giả \\ \hline
 3 & \texttt{encrypted\_key} & TEXT & Không & Bản mã khóa API mã hóa đối xứng AES-256-GCM \\ \hline
 4 & \texttt{iv} & VARCHAR(32) & Không & Vectơ khởi tạo ngẫu nhiên 96 bits cho mỗi lần mã hóa \\ \hline
 5 & \texttt{auth\_tag} & VARCHAR(32) & Không & Thẻ xác thực toàn vẹn 128 bits chống tấn công đảo bit \\ \hline

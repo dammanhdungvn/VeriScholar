@@ -9,7 +9,7 @@ Trong nghiên cứu về các hệ thống trí tuệ nhân tạo hiện đại,
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ làm việc ngắn hạn (\textit{Short-term Working Memory} lưu trữ ngữ cảnh hội thoại đa lượt và luồng sự kiện SSE) và bộ nhớ dài hạn (\textit{Long-term Memory} lưu trữ đồ thị tri thức 4 thực thể và kho vector nhúng HNSW).
     \item \textbf{Lập kế hoạch (\textit{Planning}):} Chịu trách nhiệm phân rã bài toán phức tạp thành các mục tiêu con (\textit{Subgoal Decomposition}), thiết lập chuỗi suy luận (\textit{Chain of Thoughts}) và thực hiện phản tư tự sửa lỗi (\textit{Self-Reflection / Self-Critics}) nhằm loại bỏ triệt để hiện tượng ảo giác trích dẫn.
-    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Cung cấp cho tác nhân khả năng tương tác thông qua các giao diện lập trình: bộ truy xuất lai \texttt{HybridRetriever()}, công cụ định vị \texttt{PDFCanvas()} và trình biên dịch cô lập \texttt{MicroVMCompiler()}.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Cung cấp cho tác nhân khả năng tương tác thông qua các giao diện lập trình: công cụ tìm kiếm lai \texttt{HybridRetriever()}, công cụ định vị \texttt{PDFCanvas()} và trình biên dịch cô lập \texttt{MicroVMCompiler()}.
     \item \textbf{Hành động (\textit{Action}):} Thực thi các quyết định cụ thể dựa trên kế hoạch và kết quả từ công cụ, bao gồm truyền phát câu trả lời, vẽ khung viền vàng trên bản PDF gốc và vá lỗi cú pháp bản thảo \LaTeX.
 \end{enumerate}
 
