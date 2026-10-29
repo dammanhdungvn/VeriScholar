@@ -47,6 +47,7 @@ export interface ListDocumentsParams {
   page?: number;
   per_page?: number;
   status?: string;
+  star?: boolean;
 }
 
 export interface ListChunksParams {
@@ -116,6 +117,7 @@ export const documentsApi = {
     if (params.page !== undefined) query.set("page", String(params.page));
     if (params.per_page !== undefined) query.set("per_page", String(params.per_page));
     if (params.status) query.set("status", params.status);
+    if (params.star !== undefined) query.set("star", String(params.star));
 
     const queryString = query.toString();
     const endpoint = queryString ? `/documents?${queryString}` : "/documents";

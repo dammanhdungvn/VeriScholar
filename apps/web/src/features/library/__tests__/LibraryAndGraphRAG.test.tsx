@@ -238,17 +238,17 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
 
     renderWithProviders(<LibraryWorkspaceView />);
 
-    // Verify manual mode buttons are eliminated in favor of auto-routing
-    expect(screen.queryByRole("button", { name: /^hybrid$/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^local$/i })).toBeNull();
-    expect(screen.queryByRole("button", { name: /^global$/i })).toBeNull();
+    // Open floating GraphRAG assistant
+    const fab = screen.getByRole("button", { name: /Trợ lý GraphRAG/i });
+    expect(fab).toBeInTheDocument();
+    fireEvent.click(fab);
 
-    // Type query in smart search box
-    const searchInput = screen.getByPlaceholderText(/Tra cứu tri thức, đối chiếu mô hình hoặc hỏi đáp/i);
+    // Type query in smart search box inside drawer
+    const searchInput = screen.getByPlaceholderText(/Đặt câu hỏi đối chiếu, tổng hợp tri thức/i);
     fireEvent.change(searchInput, { target: { value: "Transformer BLEU accuracy" } });
 
     // Submit search
-    const submitBtn = screen.getByTestId("graphrag-search-submit");
+    const submitBtn = screen.getByTestId("graphrag-submit-btn");
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -256,6 +256,7 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
         query: "Transformer BLEU accuracy",
         mode: "auto",
         folder_id: null,
+        top_k: 5,
       });
     });
 
@@ -265,8 +266,5 @@ describe("LibraryWorkspaceView GraphRAG Search", () => {
         screen.getByText(/Transformer models achieve SOTA on BLEU and Top-1 Accuracy across WMT and ImageNet./i)
       ).toBeInTheDocument();
     });
-
-    // Check subgraph nodes are rendered
-    expect(screen.getByText("Transformer")).toBeInTheDocument();
   });
 });

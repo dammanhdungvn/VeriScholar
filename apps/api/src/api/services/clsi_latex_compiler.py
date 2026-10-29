@@ -239,7 +239,7 @@ class CLSILatexCompiler:
                 "hint": "Ensure TeXLive and latexmk are installed on the host environment.",
             }
             return {
-                "draft_id": draft_id,
+                "draft_id": str(draft_id),
                 "success": False,
                 "pdf_path": None,
                 "synctex_path": None,
@@ -275,7 +275,7 @@ class CLSILatexCompiler:
                 "hint": "Optimize images or simplify complex macros to reduce compile time.",
             }
             return {
-                "draft_id": draft_id,
+                "draft_id": str(draft_id),
                 "success": False,
                 "pdf_path": None,
                 "synctex_path": None,
@@ -360,7 +360,7 @@ class CLSILatexCompiler:
         duration = time.perf_counter() - start_time
 
         return {
-            "draft_id": draft_id,
+            "draft_id": str(draft_id),
             "success": success,
             "pdf_path": pdf_path if (success and has_pdf) else None,
             "synctex_path": synctex_path if success else None,

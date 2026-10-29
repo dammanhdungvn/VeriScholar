@@ -160,6 +160,40 @@ describe("DashboardTaskbar Component", () => {
     expect(onDeleteSession).toHaveBeenCalledWith("s-del");
   });
 
+  it("toggles pin on session, moves pinned session to top, and suppresses tooltip when menu is open", () => {
+    const dummySessions = [
+      { id: "s-1", title: "Alpha Session", updated_at: "2026-10-28T00:00:00Z" },
+      { id: "s-2", title: "Beta Session", updated_at: "2026-10-29T00:00:00Z" },
+    ];
+
+    render(
+      <BrowserRouter>
+        <DashboardTaskbar sessions={dummySessions as any} />
+      </BrowserRouter>
+    );
+
+    // Open menu on Beta Session
+    const moreBtn2 = screen.getByTestId("session-more-btn-s-2");
+    fireEvent.click(moreBtn2);
+
+    // Verify context menu shows "Ghim"
+    const pinBtn = screen.getByText("Ghim");
+    expect(pinBtn).toBeInTheDocument();
+
+    // Click Ghim
+    fireEvent.click(pinBtn);
+
+    // Reopen menu to verify it now says "Bỏ ghim"
+    const reopenMoreBtn = screen.getByTestId("session-more-btn-s-2");
+    fireEvent.click(reopenMoreBtn);
+
+    expect(screen.getByText("Bỏ ghim")).toBeInTheDocument();
+
+    // Verify button has no title while menu is open (preventing native tooltip overlay)
+    const sessionBtn = screen.getByText("Beta Session").closest("button");
+    expect(sessionBtn).not.toHaveAttribute("title");
+  });
+
   it("renders 'Viết paper' and eliminates 'Khám phá & Phiên đọc' from taskbar", () => {
     render(
       <BrowserRouter>

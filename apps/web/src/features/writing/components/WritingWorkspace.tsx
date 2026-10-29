@@ -109,9 +109,15 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
   // Drag handler for Assistant Drawer Width (from right edge)
   useEffect(() => {
     if (!isDraggingAssistant) return;
+    const prevCursor = document.body.style.cursor;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
     const handlePointerMove = (e: PointerEvent) => {
       const currentX = window.innerWidth - e.clientX;
-      const newWidth = Math.max(360, Math.min(760, currentX));
+      const maxWidth = Math.min(850, Math.floor(window.innerWidth * 0.85));
+      const newWidth = Math.max(320, Math.min(maxWidth, currentX));
       setAssistantWidth(newWidth);
     };
     const handlePointerUp = () => setIsDraggingAssistant(false);
@@ -119,6 +125,8 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
     window.addEventListener("pointermove", handlePointerMove);
     window.addEventListener("pointerup", handlePointerUp);
     return () => {
+      document.body.style.cursor = prevCursor;
+      document.body.style.userSelect = prevUserSelect;
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
@@ -482,10 +490,10 @@ export function WritingWorkspace({ sessions, hideTaskbar = true }: WritingWorksp
                 e.preventDefault();
                 setIsDraggingAssistant(true);
               }}
-              className="absolute inset-y-0 -left-1.5 w-3 cursor-col-resize hover:bg-coral-500/30 active:bg-coral-500/50 transition-colors z-50 flex items-center justify-center group"
-              title="Kéo để điều chỉnh độ rộng trợ lý AI (360px - 760px)"
+              className="absolute inset-y-0 -left-2 w-4 cursor-col-resize hover:bg-coral-500/25 active:bg-coral-500/40 transition-colors z-50 flex items-center justify-center group touch-none select-none"
+              title="Kéo để điều chỉnh độ rộng trợ lý AI (320px - 850px)"
             >
-              <div className="w-0.5 h-8 rounded-full bg-stone-300 dark:bg-stone-600 group-hover:bg-coral-500 transition-colors" />
+              <div className="w-1 h-10 rounded-full bg-stone-300 dark:bg-stone-600 group-hover:bg-coral-500 transition-colors" />
             </div>
 
             <WritingAssistantPane

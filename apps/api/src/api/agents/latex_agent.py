@@ -620,7 +620,20 @@ async def generate_final_answer(state: LatexAgentState) -> dict[str, Any]:
             f"Đã dừng an toàn tại lần thử {compile_count} để bảo toàn bản thảo."
         )
     elif success:
-        final_answer = f"Bản thảo đã được biên dịch thành công ra PDF tại lần thử {compile_count}."
+        if state.get("rag_context"):
+            evidence = state["rag_context"].get("evidence_chunks", [])
+            titles = [f"«{e['title']}»" for e in evidence if e.get("title")]
+            titles_str = f" ({', '.join(titles[:3])})" if titles else ""
+            final_answer = (
+                f"Đã tra cứu tri thức từ Kho GraphRAG{titles_str} và bổ sung mục "
+                "Tổng quan nghiên cứu (Related Work / Literature Review) vào `main.tex`. "
+                f"Bản thảo đã được biên dịch thành công ra PDF tại lần thử {compile_count}."
+            )
+        else:
+            final_answer = (
+                "Bản thảo đã được cập nhật thành công và biên dịch ra PDF "
+                f"tại lần thử {compile_count}."
+            )
     elif compile_count >= state.get("max_compile_attempts", 3):
         diags = state.get("diagnostics", [])
         msg = diags[0].get("message") if diags else "Lỗi biên dịch"

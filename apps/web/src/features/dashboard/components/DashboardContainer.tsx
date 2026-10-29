@@ -53,6 +53,8 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
     activeSession,
     selectSession,
     createSession,
+    deleteSession,
+    updateTitle,
   } = useDashboardSessions();
 
   const effectiveSessionId = routeSessionId || activeSessionId;
@@ -372,6 +374,13 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
           onSelectSession={handleSelectSession}
           onNewSession={handleNewSession}
           onOpenLibrary={() => navigate("/library")}
+          onRenameSession={async (sessionId, newTitle) => {
+            const target = sessions.find((s) => s.id === sessionId);
+            await updateTitle(sessionId, newTitle, target?.version ?? 1);
+          }}
+          onDeleteSession={async (sessionId) => {
+            await deleteSession(sessionId);
+          }}
         />
       )}
 

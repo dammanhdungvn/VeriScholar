@@ -13,6 +13,7 @@ import {
   ChevronDown,
   MoreHorizontal,
   Pin,
+  PinOff,
   Mail,
   MailOpen,
   Pencil,
@@ -33,6 +34,26 @@ import type { SessionItem } from "@/types/dashboard";
 import { cn } from "@/lib/utils";
 
 const UNREAD_STORAGE_KEY = "verischolar_unread_sessions_v1";
+const PINNED_STORAGE_KEY = "verischolar_pinned_sessions_v1";
+
+function loadPinnedSessionIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(PINNED_STORAGE_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function savePinnedSessionIds(ids: Set<string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(Array.from(ids)));
+  } catch {
+    // ignore
+  }
+}
 
 function loadUnreadSessionIds(): Set<string> {
   if (typeof window === "undefined") return new Set();
@@ -102,6 +123,9 @@ export function DashboardTaskbar({
   // Read / Unread session tracking
   const [unreadSessionIds, setUnreadSessionIds] = useState<Set<string>>(loadUnreadSessionIds);
 
+  // Pinned session tracking
+  const [pinnedSessionIds, setPinnedSessionIds] = useState<Set<string>>(loadPinnedSessionIds);
+
   // Inline rename state
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState("");
@@ -157,6 +181,20 @@ export function DashboardTaskbar({
     setActiveMenuSessionId(null);
   };
 
+  const handleTogglePin = (sessionId: string) => {
+    setPinnedSessionIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(sessionId)) {
+        next.delete(sessionId);
+      } else {
+        next.add(sessionId);
+      }
+      savePinnedSessionIds(next);
+      return next;
+    });
+    setActiveMenuSessionId(null);
+  };
+
   const handleStartRename = (session: SessionItem) => {
     setEditingSessionId(session.id);
     setEditingTitle(session.title);
@@ -175,8 +213,13 @@ export function DashboardTaskbar({
         await onRenameSession(sessionId, trimmed);
       } else {
         const detail = await sessionsApi.getSessionDetail(sessionId);
-        const etag = detail.headers?.get?.("etag") || `v${detail.data.version}`;
+        const etag =
+          detail.etag ||
+          detail.headers?.get?.("etag") ||
+          detail.headers?.get?.("ETag") ||
+          `v${detail.data?.version || 1}`;
         await sessionsApi.updateSessionMetadata(sessionId, trimmed, etag);
+        queryClient?.invalidateQueries({ queryKey: ["dashboard", "sessions"] });
         queryClient?.invalidateQueries({ queryKey: ["sessions"] });
       }
       const target = sessions.find((s) => s.id === sessionId);
@@ -197,6 +240,7 @@ export function DashboardTaskbar({
         await onDeleteSession(deletingSession.id);
       } else {
         await sessionsApi.deleteSession(deletingSession.id);
+        queryClient?.invalidateQueries({ queryKey: ["dashboard", "sessions"] });
         queryClient?.invalidateQueries({ queryKey: ["sessions"] });
       }
       if (activeSessionId === deletingSession.id) {
@@ -211,7 +255,7 @@ export function DashboardTaskbar({
   };
 
   const displayedSessions = useMemo(() => {
-    return sessions.filter((session) => {
+    const filtered = sessions.filter((session) => {
       if (filterArchived) {
         if (!session.is_archived) return false;
       }
@@ -221,7 +265,16 @@ export function DashboardTaskbar({
       }
       return true;
     });
-  }, [sessions, searchQuery, filterArchived]);
+
+    return filtered.sort((a, b) => {
+      const aPinned = pinnedSessionIds.has(a.id) ? 1 : 0;
+      const bPinned = pinnedSessionIds.has(b.id) ? 1 : 0;
+      if (aPinned !== bPinned) {
+        return bPinned - aPinned; // pinned sessions first
+      }
+      return 0;
+    });
+  }, [sessions, searchQuery, filterArchived, pinnedSessionIds]);
 
   const handleItemClick = (callback?: () => void) => {
     if (callback) callback();
@@ -461,6 +514,7 @@ export function DashboardTaskbar({
                   const isMenuOpen = activeMenuSessionId === session.id;
                   const isEditing = editingSessionId === session.id;
                   const isUnread = unreadSessionIds.has(session.id);
+                  const isPinned = pinnedSessionIds.has(session.id);
 
                   return (
                     <div key={session.id} className="relative group">
@@ -503,7 +557,7 @@ export function DashboardTaskbar({
                           <button
                             type="button"
                             onClick={() => handleSelectSession(session.id)}
-                            title={session.title}
+                            title={activeMenuSessionId ? undefined : session.title}
                             className={cn(
                               "w-full text-left flex items-center gap-2 px-3 py-2 pr-7 min-h-[44px] md:min-h-0 rounded-xl text-xs font-anthropic-serif font-semibold transition-colors cursor-pointer relative overflow-hidden focus:outline-none",
                               isActive
@@ -523,6 +577,11 @@ export function DashboardTaskbar({
                             <span className="truncate flex-1 whitespace-nowrap font-anthropic-serif font-semibold">
                               {session.title}
                             </span>
+                            {isPinned && (
+                              <span title="Đã ghim">
+                                <Pin className="w-3 h-3 text-coral-500 fill-coral-500/20 shrink-0 rotate-45" />
+                              </span>
+                            )}
                             {isUnread && (
                               <span
                                 data-testid={`session-unread-dot-${session.id}`}
@@ -564,11 +623,20 @@ export function DashboardTaskbar({
                             >
                               <button
                                 type="button"
-                                onClick={() => setActiveMenuSessionId(null)}
+                                onClick={() => handleTogglePin(session.id)}
                                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-left text-ink dark:text-zinc-200 hover:bg-[#f4efe6] dark:hover:bg-[#2c2925] transition-colors cursor-pointer"
                               >
-                                <Pin className="w-3.5 h-3.5 text-zinc-500" />
-                                <span>Ghim</span>
+                                {isPinned ? (
+                                  <>
+                                    <PinOff className="w-3.5 h-3.5 text-coral-500" />
+                                    <span>Bỏ ghim</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Pin className="w-3.5 h-3.5 text-zinc-500" />
+                                    <span>Ghim</span>
+                                  </>
+                                )}
                               </button>
                               <button
                                 type="button"

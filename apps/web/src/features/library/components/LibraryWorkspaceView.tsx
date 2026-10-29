@@ -13,11 +13,6 @@ import {
   ChevronLeft,
   ChevronRight,
   BookOpen,
-  Send,
-  Loader2,
-  X,
-  ChevronDown,
-  ChevronUp,
   SlidersHorizontal,
   Trash2,
 } from "lucide-react";
@@ -33,16 +28,12 @@ import { FolderTreeView } from "./FolderTreeView";
 import { ParseConfigModal } from "@/features/documents/components/ParseConfigModal";
 import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
-import { KnowledgeSubgraphViewer } from "./KnowledgeSubgraphViewer";
 import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
 import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
 import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
 import { libraryApi } from "../api/libraryApi";
 import type {
-  GraphQueryMode,
-  GraphQueryResponseData,
   BibliometricsResponseData,
-  GraphEdge,
 } from "../types";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +41,7 @@ interface LibraryWorkspaceViewProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
 }
 
-type LibraryFilterTab = "all" | "suggestions" | "favorites" | "folders";
+type LibraryFilterTab = "all" | "folders";
 type ViewLayout = "grid" | "list" | "graph";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
@@ -59,14 +50,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [searchQuery, setSearchQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-
-  // GraphRAG States
-  const [graphQuery, setGraphQuery] = useState("");
-  const [graphMode] = useState<GraphQueryMode>("auto");
-  const [isQueryingGraph, setIsQueryingGraph] = useState(false);
-  const [graphResult, setGraphResult] = useState<GraphQueryResponseData | null>(null);
-  const [graphError, setGraphError] = useState<string | null>(null);
-  const [showSubgraph, setShowSubgraph] = useState(true);
 
   // Bibliometrics States
   const [folderBibliometrics, setFolderBibliometrics] = useState<BibliometricsResponseData | null>(null);
@@ -94,6 +77,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     data: paginatedData,
     refetch,
   } = useDocumentsList({
+    star: true,
     page: currentPage,
     per_page: 24,
   });
@@ -109,11 +93,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const documents = useMemo(() => {
     let result = rawDocuments.filter((d) => Boolean(d.is_persistent || d.starred_at || d.folder_id));
 
-    if (activeTab === "favorites") {
-      result = result.filter((d) => Boolean(d.starred_at || d.folder_id));
-    } else if (activeTab === "suggestions") {
-      result = result.slice(0, 6);
-    } else if (activeTab === "folders" && selectedFolderId) {
+    if (activeTab === "folders" && selectedFolderId) {
       result = result.filter((d) => d.folder_id === selectedFolderId);
     }
 
@@ -157,30 +137,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       setFolderBibliometrics(null);
     }
   }, [selectedFolderId, activeTab]);
-
-  const handleGraphSearch = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    const query = graphQuery.trim();
-    if (!query) return;
-
-    setIsQueryingGraph(true);
-    setGraphError(null);
-    try {
-      const res = await libraryApi.queryGraph({
-        query,
-        mode: graphMode,
-        folder_id: selectedFolderId || null,
-      });
-      setGraphResult(res);
-      setShowSubgraph(true);
-    } catch (err: unknown) {
-      const message =
-        err instanceof Error ? err.message : "Truy vấn GraphRAG thất bại. Vui lòng thử lại.";
-      setGraphError(message);
-    } finally {
-      setIsQueryingGraph(false);
-    }
-  };
 
   const handleToggleStar = async (doc: DocumentListItem, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -235,15 +191,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     }
   };
 
-  const handleEdgeSelect = (edge: GraphEdge) => {
-    if (edge.document_id && onSelectDocument) {
-      const matched = rawDocuments.find((d) => d.id === edge.document_id);
-      if (matched) {
-        onSelectDocument(matched);
-      }
-    }
-  };
-
   return (
     <div className="flex-1 flex flex-col h-full bg-[#fbf9f5] dark:bg-[#181715] overflow-hidden select-none">
       {/* 1. Header Bar */}
@@ -255,7 +202,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           </div>
           <div>
             <h1 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
-              Library
+              My Library
             </h1>
             <p className="text-[11px] text-muted dark:text-zinc-400">
               {meta?.total ?? rawDocuments.length} documents
@@ -344,10 +291,8 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       <div className="px-6 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#f8f6f0] dark:bg-[#1a1916] flex items-center justify-between shrink-0 overflow-x-auto">
         <div className="flex items-center gap-1 text-xs font-medium">
           {[
-            { id: "all" as const, label: "All", icon: Library },
-            { id: "suggestions" as const, label: "Suggested", icon: Sparkles },
-            { id: "favorites" as const, label: "Starred", icon: Star },
-            { id: "folders" as const, label: "Folders", icon: Folder },
+            { id: "all" as const, label: "Tất cả bài báo", icon: Library },
+            { id: "folders" as const, label: "Thư mục đề tài", icon: Folder },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -381,99 +326,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       {/* 3. Main Body */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         <div className="max-w-7xl mx-auto space-y-6">
-          {/* A. GraphRAG Smart Intent-Routed Search Box */}
-          <div className="rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824] bg-white dark:bg-[#1c1b18] p-4 shadow-xs">
-            <form onSubmit={handleGraphSearch} className="space-y-3">
-              {selectedFolderId && (
-                <div className="flex items-center gap-1.5 text-[11px] font-mono text-muted dark:text-zinc-400">
-                  <Folder className="w-3.5 h-3.5 text-[#c15f3e]" />
-                  <span>Đang lọc theo thư mục đề tài đang chọn</span>
-                </div>
-              )}
-
-              <div className="relative flex items-center gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={graphQuery}
-                    onChange={(e) => setGraphQuery(e.target.value)}
-                    placeholder="Tra cứu tri thức, đối chiếu mô hình hoặc hỏi đáp trên toàn bộ thư viện..."
-                    className="w-full h-10 pl-3.5 pr-10 rounded-xl bg-[#faf8f4] dark:bg-[#201e1a] border border-[#e2dcd2] dark:border-[#322f2a] text-xs text-ink dark:text-zinc-100 placeholder:text-muted dark:placeholder:text-zinc-500 outline-none focus:border-[#c15f3e] transition-colors"
-                  />
-                  {graphQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setGraphQuery("")}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-ink cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  data-testid="graphrag-search-submit"
-                  disabled={isQueryingGraph || !graphQuery.trim()}
-                  className="h-10 px-4 rounded-xl bg-[#c15f3e] hover:bg-[#a84f32] disabled:opacity-50 text-white text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
-                >
-                  {isQueryingGraph ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Send className="w-3.5 h-3.5" />
-                  )}
-                  <span>Tra cứu</span>
-                </button>
-              </div>
-            </form>
-
-            {graphError && (
-              <div className="mt-3 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs">
-                {graphError}
-              </div>
-            )}
-
-            {/* Synthesized Answer & Subgraph */}
-            {graphResult && (
-              <div className="mt-4 pt-4 border-t border-[#ece8df] dark:border-[#282622] space-y-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    <h3 className="text-xs font-semibold text-ink dark:text-zinc-100 uppercase tracking-wider font-mono">
-                      Câu Trả Lời Tổng Hợp ({graphResult.mode_used})
-                    </h3>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowSubgraph(!showSubgraph)}
-                    className="text-xs text-muted hover:text-ink dark:text-zinc-400 flex items-center gap-1"
-                  >
-                    <span>{showSubgraph ? "Thu gọn đồ thị" : "Xem đồ thị tri thức"}</span>
-                    {showSubgraph ? (
-                      <ChevronUp className="w-3.5 h-3.5" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="p-4 rounded-xl bg-[#faf8f4] dark:bg-[#1a1916] border border-[#ece8df] dark:border-[#2a2824] text-xs leading-relaxed text-ink dark:text-zinc-200 whitespace-pre-wrap">
-                  {graphResult.answer}
-                </div>
-
-                {showSubgraph && graphResult.subgraph && (
-                  <KnowledgeSubgraphViewer
-                    subgraph={graphResult.subgraph}
-                    onEdgeSelect={handleEdgeSelect}
-                    height={440}
-                  />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* B. Bibliometrics Card (when toggled or available in folder) */}
+          {/* A. Bibliometrics Card (when toggled or available in folder) */}
           {activeTab === "folders" && (showBibliometrics || folderBibliometrics) && (
             <BibliometricsPriorWorksCard
               data={folderBibliometrics}
