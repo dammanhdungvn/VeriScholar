@@ -1,0 +1,122 @@
+% !TEX root = ../../main.tex
+\section{Khảo sát nghiệp vụ và quy trình xử lý tài liệu nghiên cứu}
+\label{sec:khao_sat_nghiep_vu}
+
+Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, nhóm nghiên cứu đã tiến hành khảo sát thực tế tại các nhóm nghiên cứu khoa học và phòng thí nghiệm trí tuệ nhân tạo tại VinUniversity. Việc khảo sát tập trung vào các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên tham gia làm đồ án tốt nghiệp, làm rõ các khó khăn, bất cập trong quy trình nghiên cứu truyền thống và các yêu cầu nghiệp vụ mới.
+
+\subsection{Khảo sát quy trình tìm kiếm và thu thập ấn phẩm nghiên cứu}
+\label{subsec:khao_sat_tim_kiem}
+Hiện nay, việc tìm kiếm bài báo khoa học chủ yếu dựa trên thao tác thủ công của học giả trên các công cụ tìm kiếm phổ quát và các cơ sở dữ liệu học thuật độc lập:
+\begin{itemize}
+    \item Học giả nhập từ khóa trên Google Scholar, arXiv hoặc Semantic Scholar, sau đó duyệt từng trang kết quả để tải tệp PDF về máy tính.
+    \item Việc tải tài liệu diễn ra phân tán ở nhiều thư mục máy tính cá nhân. Khi làm việc theo nhóm, các thành viên thường gửi tệp qua email hoặc ứng dụng nhắn tin, dẫn đến tình trạng nhiều người tải trùng một tệp PDF dung lượng từ $5\,\text{MB}$ đến $20\,\text{MB}$, gây lãng phí dung lượng lưu trữ và khó kiểm soát bản mới nhất.
+    \item Khó khăn trong việc phân loại sơ bộ: Nhiều bài báo trên arXiv chỉ là bản thảo chưa qua bình duyệt (\textit{Preprint}), trong khi các bài trên tạp chí đã trải qua phản biện kín (\textit{Peer-Reviewed}). Học giả mất nhiều thời gian tra cứu thủ công xem bài báo đã được chấp nhận xuất bản hay chưa.
+\end{itemize}
+
+\subsection{Khảo sát quy trình đọc sâu và thẩm định nguồn trích dẫn}
+\label{subsec:khao_sat_doc_sau}
+Trong giai đoạn đọc hiểu tài liệu chuyên ngành:
+\begin{itemize}
+    \item Hầu hết các bài báo quốc tế (định dạng IEEE, ACM, Springer) đều được trình bày dạng hai cột (\textit{two-column}). Khi sử dụng các công cụ bóc tách PDF thông thường, văn bản bị đọc nhảy ngang giữa hai cột, làm đảo lộn hoàn toàn thứ tự ngữ nghĩa của các công thức toán và đoạn văn.
+    \item Khi sử dụng các công cụ AI trò chuyện với tài liệu, câu trả lời do mô hình sinh ra thường chỉ dẫn chứng số trang chung chung (ví dụ: ``theo trang 4 của tài liệu''). Trong một trang chứa hàng nghìn chữ cùng nhiều bảng biểu và biểu đồ, học giả vẫn phải tự mắt tìm kiếm từng câu chữ để xác nhận.
+    \item Nguy cơ ảo giác: Mô hình ngôn ngữ lớn có xu hướng tự điền khuyết các số liệu đo lường khi không tìm thấy thông tin chính xác, dẫn đến nguy cơ sai lệch nghiêm trọng nếu học giả đưa số liệu này vào bài báo của mình. Do đó, yêu cầu hiển thị khung viền tọa độ Bounding Box định vị chính xác vị trí văn bản gốc là tiêu chí bắt buộc để bảo đảm liêm chính học thuật.
+\end{itemize}
+
+\subsection{Khảo sát quy trình quản lý và liên kết đồ thị tri thức học thuật}
+\label{subsec:khao_sat_do_thi}
+Khi tiến hành tổng quan tài liệu (\textit{Literature Review}):
+\begin{itemize}
+    \item Nhà nghiên cứu cần đối chiếu xem các công trình tiền nhiệm đã sử dụng kiến trúc mô hình nào, thử nghiệm trên bộ dữ liệu chuẩn nào và đạt kết quả đo lường cụ thể ra sao.
+    \item Phương pháp truyền thống là tạo bảng tính Excel thủ công. Khi số lượng bài báo tăng lên hàng chục hoặc hàng trăm bài, bảng tính trở nên cồng kềnh, khó cập nhật và hoàn toàn mất đi khả năng truy vấn quan hệ bắc cầu giữa các thực thể tri thức.
+    \item Học giả có nhu cầu xây dựng tự động một mạng đồ thị tri thức liên kết 4 thực thể cốt lõi: \textit{Bài báo (Paper) $\rightarrow$ Phương pháp (Method) $\rightarrow$ Bộ dữ liệu (Dataset) $\rightarrow$ Kết quả đo lường (Metric Result)}, cho phép đặt câu hỏi so sánh liên tài liệu trong cùng một không gian nghiên cứu.
+\end{itemize}
+
+\subsection{Khảo sát quy trình biên soạn bản thảo và sửa lỗi biên dịch \LaTeX}
+\label{subsec:khao_sat_bien_soan}
+Biên soạn bản thảo là công đoạn tốn nhiều thời gian và công sức nhất trong toàn bộ chu trình nghiên cứu:
+\begin{itemize}
+    \item Ngôn ngữ \LaTeX\ là tiêu chuẩn công bố bắt buộc của các hội nghị khoa học uy tín, nhưng có cú pháp rất chặt chẽ. Chỉ một lỗi nhỏ như quên đóng ngoặc môi trường toán học, sử dụng ký tự đặc biệt chưa thoát mã (như \texttt{\_}, \texttt{\%}, \texttt{\&}), hoặc sai nhãn trích dẫn BibTeX cũng khiến toàn bộ quá trình biên dịch bị đình trệ.
+    \item Tệp nhật ký lỗi (\texttt{.log}) của bộ biên dịch XeLaTeX thường dài hàng nghìn dòng với nhiều thông điệp kỹ thuật khó hiểu. Học giả, đặc biệt là sinh viên mới nghiên cứu, thường mất nhiều thời gian tra cứu Google để tìm cách khắc phục.
+    \item Nhu cầu thực tế là một trợ lý AI có khả năng tự động đọc tệp nhật ký lỗi, phát hiện nguyên nhân gốc rễ và tự tạo bản vá sửa lỗi chính xác trên mã nguồn \LaTeX\ mà không làm biến dạng các phần nội dung khác.
+\end{itemize}
+
+\subsection{Khảo sát quy trình quản lý hồ sơ học giả và bảo mật khóa cá nhân}
+\label{subsec:khao_sat_ho_so}
+Đối với công tác quản trị và bảo mật thông tin nghiên cứu:
+\begin{itemize}
+    \item Học giả cần một định danh duy nhất toàn cầu để phân biệt với các tác giả trùng tên khác. Chuẩn quốc tế ORCID iD gồm 16 chữ số là chuẩn mực được cộng đồng học thuật toàn cầu công nhận.
+    \item Về tính bảo mật và quyền sở hữu trí tuệ: Các công trình nghiên cứu đang trong quá trình thực hiện chứa các phát kiến độc quyền chưa công bố. Học giả rất e ngại việc dữ liệu nghiên cứu bị các nền tảng AI thương mại sử dụng để huấn luyện mô hình.
+    \item Do đó, hệ thống cần trang bị cơ chế ``Tự mang khóa bí mật'' (\textit{Bring Your Own Key -- BYOK}), cho phép học giả sử dụng khóa API riêng của mình. Khóa phải được mã hóa bảo vệ nghiêm ngặt và tuân thủ quy chuẩn không lưu vết trên đĩa cứng, bảo đảm sự an tâm tuyệt đối cho nhà khoa học.
+\end{itemize}
+
+Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy trình nghiên cứu truyền thống (AS-IS) sang quy trình nghiên cứu mới (TO-BE) trên nền tảng \VS\ được mô hình hóa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.76, transform shape,
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
+    arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
+    trans_arrow/.style={-{Stealth[length=2.8mm]}, line width=1.3pt, draw=teal!80!black, dashed}
+]
+    % Cột AS-IS (Truyền thống)
+    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_asis) at (-4.4, 4.6) {QUY TRÌNH TRUYỀN THỐNG (AS-IS)};
+    
+    \node[box_asis] (a1) at (-4.4, 3.0) {
+        \textbf{1. Tìm kiếm phân mảnh thủ công}\\
+        \footnotesize Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
+    };
+    \node[box_asis] (a2) at (-4.4, 0.8) {
+        \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
+        \footnotesize Bóc tách thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
+    };
+    \node[box_asis] (a3) at (-4.4, -1.4) {
+        \textbf{3. Lập bảng đối chiếu thủ công}\\
+        \footnotesize Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức
+    };
+    \node[box_asis] (a4) at (-4.4, -3.6) {
+        \textbf{4. Soạn thảo \& Tự dò lỗi \LaTeX}\\
+        \footnotesize Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công
+    };
+
+    % Cột TO-BE (Đề xuất VeriScholar)
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_tobe) at (4.4, 4.6) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+
+    \node[box_tobe] (b1) at (4.4, 3.0) {
+        \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
+        \footnotesize Tìm kiếm đa nguồn; Tiết kiệm 98\% dung lượng lưu trữ
+    };
+    \node[box_tobe] (b2) at (4.4, 0.8) {
+        \textbf{2. Đọc sâu có minh chứng tọa độ}\\
+        \footnotesize Agentic Hybrid RAG; Khung vàng BBox 1s ($\text{IoU} \ge 0{,}85$)
+    };
+    \node[box_tobe] (b3) at (4.4, -1.4) {
+        \textbf{3. Mạng tri thức tự động (GraphRAG)}\\
+        \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
+    };
+    \node[box_tobe] (b4) at (4.4, -3.6) {
+        \textbf{4. Tác nhân tự phục hồi bản thảo \LaTeX}\\
+        \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $> 90\%$
+    };
+
+    % Mũi tên tuần tự dọc
+    \draw[arrow_down] (h_asis) -- (a1);
+    \draw[arrow_down] (a1) -- (a2);
+    \draw[arrow_down] (a2) -- (a3);
+    \draw[arrow_down] (a3) -- (a4);
+
+    \draw[arrow_down] (h_tobe) -- (b1);
+    \draw[arrow_down] (b1) -- (b2);
+    \draw[arrow_down] (b2) -- (b3);
+    \draw[arrow_down] (b3) -- (b4);
+
+    % Mũi tên chuyển đổi giữa 2 luồng
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Khử trùng};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự sửa};
+\end{tikzpicture}
+\caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
+\label{fig:workflow_as_is_to_be}
+\end{figure}

@@ -1,0 +1,348 @@
+% !TEX root = ../../main.tex
+\section{Thiết kế cơ sở dữ liệu cho hệ thống}
+\label{sec:thiet_ke_csdl}
+
+Cơ sở dữ liệu là thành phần nền tảng quyết định độ tin cậy, tính toàn vẹn và hiệu năng vận hành của toàn bộ hệ thống \VS. Căn cứ vào các yêu cầu nghiệp vụ và các ca sử dụng đã được phân tích ở các mục trước, hệ thống sử dụng hệ quản trị cơ sở dữ liệu quan hệ PostgreSQL 16 mạnh mẽ nhằm bảo đảm tính toàn vẹn giao dịch (ACID), khả năng mở rộng lưu trữ lớn và bảo mật cao.
+
+\subsection{Thiết kế cơ sở dữ liệu của hệ thống}
+\label{subsec:csdl_tong_quan}
+
+Cơ sở dữ liệu của hệ thống \VS\ được thiết kế nhằm phục vụ ba nhóm nghiệp vụ chính:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Quản lý người dùng và bảo mật học thuật:} Lưu trữ thông tin tài khoản học giả, định danh nghiên cứu quốc tế ORCID iD, và két sắt bảo vệ khóa bí mật cá nhân (BYOK) theo cơ chế mã hóa đối xứng phân tầng.
+    \item \textbf{Quản lý ấn phẩm và kho lưu trữ hướng nội dung (CAS):} Quản lý không gian làm việc (\textit{Workspaces}), thông tin thư mục các bài báo khoa học, và phân tách độc lập với khối tệp nhị phân lưu trữ trên đĩa cứng thông qua mã băm SHA-256 để triệt tiêu tệp trùng lặp.
+    \item \textbf{Quản lý phân đoạn văn bản, hội thoại và bản thảo nghiên cứu:} Lưu trữ các đoạn văn bản bóc tách từ PDF kèm số trang và tọa độ Bounding Box, lịch sử các phiên đọc hiểu chuyên sâu, các thông điệp trao đổi và các bản thảo bài báo \LaTeX.
+\end{enumerate}
+
+Cơ sở dữ liệu quan hệ của hệ thống bao gồm các bảng chính được tổng hợp trong Bảng~\ref{tab:db_tables_summary}.
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Các bảng cơ sở dữ liệu của hệ thống VeriScholar}
+\label{tab:db_tables_summary}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{4.5cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên bảng} & \centering\textbf{Ý nghĩa nghiệp vụ} \tabularnewline
+\hline
+1 & \texttt{users} & Lưu trữ thông tin tài khoản học giả và mã định danh ORCID \tabularnewline \hline
+2 & \texttt{user\_secrets\_vault} & Két sắt mã hóa lưu trữ khóa API cá nhân (BYOK) của học giả \tabularnewline \hline
+3 & \texttt{workspaces} & Không gian làm việc và đề tài nghiên cứu của học giả \tabularnewline \hline
+4 & \texttt{academic\_documents} & Hồ sơ thư mục ấn phẩm học thuật và siêu dữ liệu bài báo \tabularnewline \hline
+5 & \texttt{cas\_storage\_blobs} & Khối tệp nhị phân PDF lưu trữ hướng nội dung (khử trùng lặp CAS) \tabularnewline \hline
+6 & \texttt{document\_chunks} & Các phân đoạn văn bản bóc tách từ PDF kèm số trang và Bounding Box \tabularnewline \hline
+7 & \texttt{reading\_sessions} & Phiên đọc hiểu và phân tích chuyên sâu tài liệu của học giả \tabularnewline \hline
+8 & \texttt{chat\_messages} & Các câu hỏi và thông điệp phản hồi trong phiên hội thoại nghiên cứu \tabularnewline \hline
+9 & \texttt{citations} & Dữ liệu thẩm định trích dẫn liên kết câu trả lời với tọa độ đoạn trích gốc \tabularnewline \hline
+10 & \texttt{draft\_projects} & Dự án biên soạn bản thảo bài báo khoa học \LaTeX\ và tệp cấu hình \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsection{Đặc tả các bảng cơ sở dữ liệu của hệ thống}
+\label{subsec:csdl_dac_ta}
+
+Nhằm làm rõ cấu trúc vật lý, kiểu dữ liệu và các ràng buộc toàn vẹn, tiểu mục này trình bày đặc tả chi tiết các bảng cơ sở dữ liệu cốt lõi của hệ thống.
+
+\subsubsection{Đặc tả bảng \texttt{users}}
+Bảng \texttt{users} lưu trữ định danh cá nhân của học giả, hỗ trợ đăng nhập và liên kết với mã định danh quốc tế ORCID iD (Bảng~\ref{tab:spec_users}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{users}}
+\label{tab:spec_users}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh duy nhất người dùng \tabularnewline \hline
+2 & \texttt{email} & VARCHAR(255) & Unique, Not Null & Địa chỉ email đăng nhập hệ thống \tabularnewline \hline
+3 & \texttt{full\_name} & VARCHAR(128) & Not Null & Họ và tên của học giả \tabularnewline \hline
+4 & \texttt{orcid\_id} & VARCHAR(19) & Unique, Null & Mã định danh học giả quốc tế ORCID iD \tabularnewline \hline
+5 & \texttt{role} & VARCHAR(32) & Default 'scholar' & Vai trò của tài khoản (scholar / admin) \tabularnewline \hline
+6 & \texttt{created\_at} & TIMESTAMPTZ & Default NOW() & Thời điểm khởi tạo tài khoản \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả bảng \texttt{user\_secrets\_vault}}
+Bảng \texttt{user\_secrets\_vault} bảo vệ khóa API cá nhân của học giả theo cơ chế BYOK, sử dụng thuật toán mã hóa đối xứng AES-256-GCM (Bảng~\ref{tab:spec_vault}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{user\_secrets\_vault}}
+\label{tab:spec_vault}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{id} & UUID & PK, Not Null & Khóa chính của bản ghi két sắt \tabularnewline \hline
+2 & \texttt{user\_id} & UUID & FK $\to$ users(id), Unique & Khóa ngoại liên kết duy nhất 1:1 với người dùng \tabularnewline \hline
+3 & \texttt{encrypted\_key} & TEXT & Not Null & Bản mã khóa API cá nhân của học giả \tabularnewline \hline
+4 & \texttt{iv} & VARCHAR(32) & Not Null & Vector khởi tạo ngẫu nhiên cho mỗi lần mã hóa \tabularnewline \hline
+5 & \texttt{auth\_tag} & VARCHAR(32) & Not Null & Thẻ xác thực chống tấn công toàn vẹn dữ liệu \tabularnewline \hline
+6 & \texttt{updated\_at} & TIMESTAMPTZ & Default NOW() & Thời điểm cập nhật khóa gần nhất \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả bảng \texttt{academic\_documents}}
+Bảng \texttt{academic\_documents} quản lý thông tin thư mục, tác giả, năm xuất bản và liên kết với khối tệp nhị phân CAS (Bảng~\ref{tab:spec_documents}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{academic\_documents}}
+\label{tab:spec_documents}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh tài liệu học thuật \tabularnewline \hline
+2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với học giả sở hữu \tabularnewline \hline
+3 & \texttt{title} & TEXT & Not Null & Tiêu đề bài báo khoa học đã chuẩn hóa \tabularnewline \hline
+4 & \texttt{doi} & VARCHAR(128) & Index, Null & Mã định danh đối tượng số (DOI) quốc tế \tabularnewline \hline
+5 & \texttt{arxiv\_id} & VARCHAR(64) & Index, Null & Mã bài báo trên cổng lưu trữ arXiv \tabularnewline \hline
+6 & \texttt{is\_peer\_reviewed}& BOOLEAN & Default FALSE & Trạng thái bài báo đã qua phản biện kín \tabularnewline \hline
+7 & \texttt{cas\_hash} & VARCHAR(64) & FK $\to$ cas(hash) & Khóa ngoại liên kết khối tệp nhị phân trên đĩa \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả bảng \texttt{cas\_storage\_blobs}}
+Bảng \texttt{cas\_storage\_blobs} quản lý các khối tệp nhị phân trên hệ thống tệp đĩa cứng, áp dụng cơ chế định danh theo nội dung SHA-256 (Bảng~\ref{tab:spec_cas}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{cas\_storage\_blobs}}
+\label{tab:spec_cas}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{sha256\_hash} & VARCHAR(64) & PK, Not Null & Khóa chính là mã băm SHA-256 của tệp PDF \tabularnewline \hline
+2 & \texttt{file\_size\_bytes}& BIGINT & Not Null & Dung lượng vật lý của tệp tin (bytes) \tabularnewline \hline
+3 & \texttt{storage\_path} & TEXT & Not Null & Đường dẫn tệp phân cấp trên máy chủ lưu trữ \tabularnewline \hline
+4 & \texttt{ref\_count} & INTEGER & Default 1 & Biến đếm số tài liệu đang dùng chung tệp \tabularnewline \hline
+5 & \texttt{created\_at} & TIMESTAMPTZ & Default NOW() & Thời điểm nạp tệp lần đầu tiên vào hệ thống \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả bảng \texttt{document\_chunks}}
+Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản bóc tách từ tài liệu PDF, số trang và tọa độ Bounding Box (Bảng~\ref{tab:spec_chunks}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{document\_chunks}}
+\label{tab:spec_chunks}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh phân đoạn văn bản \tabularnewline \hline
+2 & \texttt{document\_id} & UUID & FK $\to$ documents(id) & Khóa ngoại liên kết tới ấn phẩm gốc \tabularnewline \hline
+3 & \texttt{page\_number} & INTEGER & Not Null, Index & Số thứ tự trang giấy trong bản PDF gốc \tabularnewline \hline
+4 & \texttt{chunk\_text} & TEXT & Not Null & Nội dung văn bản phục vụ truy xuất từ khóa \tabularnewline \hline
+5 & \texttt{bbox} & JSONB & Not Null & Tọa độ hình chữ nhật BBox $[x_0, y_0, x_1, y_1]$ \tabularnewline \hline
+6 & \texttt{chunk\_index} & INTEGER & Not Null & Vị trí thứ tự phân đoạn trong toàn bộ tài liệu \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Đặc tả bảng \texttt{chat\_messages} và bảng \texttt{citations}}
+Bảng \texttt{chat\_messages} lưu trữ câu hỏi và câu trả lời trong phiên hội thoại; bảng \texttt{citations} lưu trữ các mối liên kết trích dẫn giữa thông điệp và đoạn trích văn bản kèm điểm thẩm định liêm chính học thuật (Bảng~\ref{tab:spec_citations}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả bảng \texttt{citations}}
+\label{tab:spec_citations}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh liên kết trích dẫn \tabularnewline \hline
+2 & \texttt{message\_id} & UUID & FK $\to$ messages(id)& Khóa ngoại liên kết tới thông điệp hội thoại \tabularnewline \hline
+3 & \texttt{chunk\_id} & UUID & FK $\to$ chunks(id) & Khóa ngoại liên kết tới phân đoạn gốc chứng minh \tabularnewline \hline
+4 & \texttt{citation\_index}& INTEGER & Not Null & Chỉ số trích dẫn hiển thị trong câu trả lời ($[1], [2]$) \tabularnewline \hline
+5 & \texttt{iou\_score} & FLOAT & Not Null & Điểm trùng khớp hình học hộp chữ ($\text{IoU} \ge 0{,}85$) \tabularnewline \hline
+6 & \texttt{is\_verified} & BOOLEAN & Default TRUE & Trạng thái đã vượt qua kiểm định liêm chính \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsection{Lược đồ thực thể quan hệ (ERD) của hệ thống}
+\label{subsec:csdl_erd}
+
+Từ các bảng cơ sở dữ liệu và các ràng buộc toàn vẹn khóa chính (PK) -- khóa ngoại (FK) đã được đặc tả, Lược đồ thực thể quan hệ (ERD) mô tả mối quan hệ giữa các bảng trong hệ quản trị cơ sở dữ liệu quan hệ được trình bày trong Hình~\ref{fig:erd_model}. Lược đồ thể hiện chuẩn mực cấu trúc bảng quan hệ (RDBMS), tách biệt hoàn toàn với các cấu trúc chỉ mục chuyên dụng khác.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.68, transform shape,
+    table/.style={draw=black!85, fill=white, rounded corners=3pt, line width=0.85pt, align=left, inner sep=5pt, text width=4.5cm, font=\linespread{1.05}\selectfont},
+    rel/.style={-{Stealth[length=2.2mm]}, line width=0.95pt, draw=black!75},
+    card_label/.style={font=\bfseries\scriptsize, fill=white, draw=black!30, rounded corners=2pt, inner sep=2pt}
+]
+    % =========================================================================
+    % CỘT 1: NGƯỜI DÙNG & BẢO MẬT & BẢN THẢO
+    % =========================================================================
+    \node[table, anchor=north] (users) at (-6.2, 4.0) {
+        {\centering\textbf{USERS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \phantom{PK} \texttt{email}: VARCHAR(255)\\
+        \phantom{PK} \texttt{full\_name}: VARCHAR(128)\\
+        \phantom{PK} \texttt{orcid\_id}: VARCHAR(19)\\
+        \phantom{PK} \texttt{role}: VARCHAR(32)\\
+        \phantom{PK} \texttt{created\_at}: TIMESTAMPTZ
+    };
+
+    \node[table, anchor=north] (secrets) at (-6.2, -0.6) {
+        {\centering\textbf{USER\_SECRETS\_VAULT}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID (1:1)\\
+        \phantom{PK} \texttt{encrypted\_key}: TEXT\\
+        \phantom{PK} \texttt{iv}: VARCHAR(32)\\
+        \phantom{PK} \texttt{auth\_tag}: VARCHAR(32)\\
+        \phantom{PK} \texttt{updated\_at}: TIMESTAMPTZ
+    };
+
+    \node[table, anchor=north] (drafts) at (-6.2, -4.8) {
+        {\centering\textbf{DRAFT\_PROJECTS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID\\
+        \phantom{PK} \texttt{title}: VARCHAR(255)\\
+        \phantom{PK} \texttt{latex\_source}: TEXT\\
+        \phantom{PK} \texttt{status}: VARCHAR(32)\\
+        \phantom{PK} \texttt{updated\_at}: TIMESTAMPTZ
+    };
+
+    % =========================================================================
+    % CỘT 2: ẤN PHẨM & PHÂN ĐOẠN VĂN BẢN
+    % =========================================================================
+    \node[table, anchor=north] (docs) at (0.0, 4.0) {
+        {\centering\textbf{ACADEMIC\_DOCUMENTS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID\\
+        \phantom{PK} \texttt{title}: TEXT\\
+        \phantom{PK} \texttt{doi}: VARCHAR(128)\\
+        \phantom{PK} \texttt{is\_peer\_reviewed}: BOOLEAN\\
+        \textbf{FK} \texttt{cas\_hash}: VARCHAR(64)
+    };
+
+    \node[table, anchor=north] (chunks) at (0.0, -0.6) {
+        {\centering\textbf{DOCUMENT\_CHUNKS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{document\_id}: UUID\\
+        \phantom{PK} \texttt{page\_number}: INTEGER\\
+        \phantom{PK} \texttt{chunk\_text}: TEXT\\
+        \phantom{PK} \texttt{bbox}: JSONB\\
+        \phantom{PK} \texttt{chunk\_index}: INTEGER
+    };
+
+    \node[table, anchor=north] (citations) at (0.0, -5.2) {
+        {\centering\textbf{CITATIONS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{message\_id}: UUID\\
+        \textbf{FK} \texttt{chunk\_id}: UUID\\
+        \phantom{PK} \texttt{citation\_index}: INTEGER\\
+        \phantom{PK} \texttt{iou\_score}: FLOAT\\
+        \phantom{PK} \texttt{is\_verified}: BOOLEAN
+    };
+
+    % =========================================================================
+    % CỘT 3: KHO CAS & PHIÊN HỘI THOẠI
+    % =========================================================================
+    \node[table, anchor=north] (cas) at (6.2, 4.0) {
+        {\centering\textbf{CAS\_STORAGE\_BLOBS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{sha256\_hash}: VARCHAR(64)\\
+        \phantom{PK} \texttt{file\_size\_bytes}: BIGINT\\
+        \phantom{PK} \texttt{storage\_path}: TEXT\\
+        \phantom{PK} \texttt{ref\_count}: INTEGER\\
+        \phantom{PK} \texttt{created\_at}: TIMESTAMPTZ
+    };
+
+    \node[table, anchor=north] (sessions) at (6.2, -0.6) {
+        {\centering\textbf{READING\_SESSIONS}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{user\_id}: UUID\\
+        \textbf{FK} \texttt{document\_id}: UUID\\
+        \phantom{PK} \texttt{created\_at}: TIMESTAMPTZ
+    };
+
+    \node[table, anchor=north] (messages) at (6.2, -4.6) {
+        {\centering\textbf{CHAT\_MESSAGES}\par}\vspace{2pt}
+        \rule{\linewidth}{0.4pt}\vspace{3pt}
+        \scriptsize
+        \textbf{PK} \texttt{id}: UUID\\
+        \textbf{FK} \texttt{session\_id}: UUID\\
+        \phantom{PK} \texttt{role}: VARCHAR(16)\\
+        \phantom{PK} \texttt{content}: TEXT\\
+        \phantom{PK} \texttt{created\_at}: TIMESTAMPTZ
+    };
+
+    % =========================================================================
+    % QUAN HỆ KHÓA CHÍNH - KHÓA NGOẠI (RELATIONSHIPS)
+    % =========================================================================
+    % Users 1:1 Secrets Vault
+    \draw[rel] (users.south) -- node[card_label, midway] {1:1} (secrets.north);
+
+    % Users 1:N Draft Projects
+    \draw[rel] (secrets.south) -- node[card_label, midway] {1:N} (drafts.north);
+
+    % Users 1:N Academic Documents
+    \draw[rel] (users.east) -- node[card_label, midway] {1:N} (docs.west);
+
+    % Academic Documents N:1 CAS Storage Blobs
+    \draw[rel] (docs.east) -- node[card_label, midway] {N:1} (cas.west);
+
+    % Academic Documents 1:N Document Chunks
+    \draw[rel] (docs.south) -- node[card_label, midway] {1:N} (chunks.north);
+
+    % Documents 1:N Sessions & Chunks
+    \draw[rel] (docs.south east) -- node[card_label, midway] {1:N} (sessions.north west);
+
+    % Sessions 1:N Chat Messages
+    \draw[rel] (sessions.south) -- node[card_label, midway] {1:N} (messages.north);
+
+    % Messages 1:N Citations
+    \draw[rel] (messages.west) -- node[card_label, midway] {1:N} (citations.east);
+
+    % Chunks 1:N Citations
+    \draw[rel] (chunks.south) -- node[card_label, midway] {1:N} (citations.north);
+\end{tikzpicture}
+\caption{Mối quan hệ giữa các bảng trong hệ quản trị cơ sở dữ liệu quan hệ (ERD)}
+\label{fig:erd_model}
+\end{figure}
+
+\subsection{Thiết kế hạ tầng lưu trữ vector và đồ thị tri thức phụ trợ}
+\label{subsec:csdl_vector_graph}
+
+Bên cạnh lược đồ thực thể quan hệ RDBMS chuẩn mực nêu trên, để hỗ trợ năng lực suy luận ngữ nghĩa của tác nhân AI và khám phá mạng lưới học thuật, hệ thống thiết kế tách biệt hai cấu trúc lưu trữ phụ trợ chuyên biệt:
+
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Chỉ mục Không gian Vector (Vector Store Index):} Nhằm phục vụ truy xuất tương đồng ngữ nghĩa trong kiến trúc Hybrid Search, các vector nhúng (Embedding 1536 chiều từ mô hình ngôn ngữ) của từng phân đoạn văn bản được quản lý thông qua tiện ích mở rộng \texttt{pgvector}. Trường vector được đánh chỉ mục phân cấp HNSW (\textit{Hierarchical Navigable Small World}) với hàm khoảng cách Cosine (\texttt{vector\_cosine\_ops}), bảo đảm thời gian tìm kiếm $k$-láng giềng gần nhất dưới $15\,\text{ms}$ trên tập dữ liệu hàng triệu phân đoạn.
+    \item \textbf{Mô hình Đồ thị Tri thức Đa thực thể (Graph Knowledge Store):} Phục vụ cho tính năng GraphRAG, mạng lưới tri thức học thuật được cấu trúc hóa thành 4 thực thể cốt lõi: \textit{Bài báo (Paper)}, \textit{Phương pháp (Method)}, \textit{Bộ dữ liệu (Dataset)}, và \textit{Chỉ số thực nghiệm (Metric)}. Các thực thể và quan hệ được trích xuất tự động qua các truy vấn đệ quy CTE (\textit{Common Table Expressions}), cho phép học giả thực hiện các truy vấn so sánh liên tài liệu tức thời mà không làm ảnh hưởng đến cấu trúc bảng quan hệ nghiệp vụ.
+\end{enumerate}

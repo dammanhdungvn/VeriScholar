@@ -1,0 +1,210 @@
+% !TEX root = ../../main.tex
+\section{Phân tích các ca sử dụng của hệ thống}
+\label{sec:phan_tich_usecase}
+
+Từ bảng các ca sử dụng đối với từng tác nhân được xác định ở Mục~\ref{sec:tac_nhan_usecase}, biểu đồ ca sử dụng tổng quan (Use Case Diagram) minh họa mối quan hệ tương tác giữa các tác nhân và các phân hệ của \VS\ được trình bày trong Hình~\ref{fig:usecase_overview}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.78, transform shape,
+    actor/.style={draw=black!80, fill=blue!10, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\small\bfseries, minimum width=2.4cm, minimum height=1.0cm},
+    usecase/.style={draw=black!75, fill=white, line width=0.85pt, ellipse, align=center, inner sep=3pt, font=\linespread{1.05}\selectfont\scriptsize, minimum width=3.8cm, minimum height=1.0cm},
+    sysbox/.style={draw=black!60, fill=black!1, rounded corners=6pt, line width=0.9pt, dashed},
+    line/.style={draw=black!75, line width=0.85pt}
+]
+    % Khung bao hệ thống (System Boundary)
+    \draw[sysbox] (-4.5, -6.6) rectangle (4.5, 6.2);
+    \node[font=\bfseries\small, text=blue!85!black] at (0, 5.8) {HỆ THỐNG TRỢ LÝ HỌC THUẬT VERISCHOLAR};
+
+    % Tác nhân (Actors)
+    \node[actor] (scholar) at (-7.0, 0.0) {HỌC GIẢ\\(Scholar)};
+    \node[actor] (admin) at (7.0, -1.5) {QUẢN TRỊ VIÊN\\(Administrator)};
+
+    % Các Ca sử dụng (Use Cases) phía Học giả
+    \node[usecase] (uc1) at (0, 4.8) {Khám phá \& Tìm kiếm ấn phẩm};
+    \node[usecase] (uc2) at (0, 3.4) {Nạp tài liệu \& Khử trùng CAS};
+    \node[usecase] (uc3) at (0, 2.0) {Đọc sâu PDF \& Hỏi đáp RAG};
+    \node[usecase] (uc4) at (0, 0.6) {Kiểm chứng trích dẫn BBox};
+    \node[usecase] (uc5) at (0, -0.8) {Khám phá Đồ thị tri thức};
+    \node[usecase] (uc6) at (0, -2.2) {Quản lý ORCID \& Khóa BYOK};
+    \node[usecase] (uc7) at (0, -3.6) {Biên soạn \& Tự sửa lỗi \LaTeX};
+
+    % Các Ca sử dụng phía Quản trị viên
+    \node[usecase] (uc8) at (0, -5.0) {Giám sát vết thực thi Trace};
+    \node[usecase] (uc9) at (0, -6.0) {Quản trị người dùng \& Phân quyền};
+
+    % Đường nối Actor Học giả -> Use Cases
+    \draw[line] (scholar) -- (uc1.west);
+    \draw[line] (scholar) -- (uc2.west);
+    \draw[line] (scholar) -- (uc3.west);
+    \draw[line] (scholar) -- (uc4.west);
+    \draw[line] (scholar) -- (uc5.west);
+    \draw[line] (scholar) -- (uc6.west);
+    \draw[line] (scholar) -- (uc7.west);
+
+    % Đường nối Actor Quản trị viên -> Use Cases
+    \draw[line] (admin) -- (uc6.east);
+    \draw[line] (admin) -- (uc8.east);
+    \draw[line] (admin) -- (uc9.east);
+\end{tikzpicture}
+\caption{Biểu đồ ca sử dụng tổng quan của hệ thống VeriScholar}
+\label{fig:usecase_overview}
+\end{figure}
+
+\subsection{Phân tích các ca sử dụng phía Học giả}
+\label{subsec:uc_scholar}
+
+Nhằm làm rõ bản chất vận hành của các chức năng trọng tâm, tiểu mục này tiến hành đặc tả chi tiết 3 ca sử dụng tiêu biểu của học giả: \textit{Tra cứu và nạp ấn phẩm nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}.
+
+\subsubsection{Phân tích ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\label{subsubsec:uc_kham_pha}
+
+Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên cứu khoa học từ các kho học thuật mở toàn cầu (arXiv, CrossRef, Semantic Scholar), lọc các ấn phẩm đã bình duyệt, và nạp trực tiếp tài liệu vào kho lưu trữ cá nhân kèm cơ chế khử trùng lặp CAS SHA-256. Đặc tả chi tiết được trình bày trong Bảng~\ref{tab:uc_kham_pha_spec}.
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\label{tab:uc_kham_pha_spec}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{Tên Use Case} & \textbf{Tra cứu và nạp ấn phẩm nghiên cứu} \tabularnewline \hline
+\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Mục tiêu} & Tìm kiếm bài báo khoa học theo từ khóa hoặc mã DOI/arXiv, lọc bài báo đã bình duyệt và lưu trữ vào thư viện nghiên cứu cá nhân. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập vào hệ thống \VS. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Tài liệu được nạp vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
+\textbf{Luồng sự kiện chính} & 
+1. Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI vào thanh tìm kiếm.\\
+& 2. Hệ thống truy vấn đồng thời qua các cổng học thuật mở và hiển thị danh sách bài báo.\\
+& 3. Học giả có thể kích hoạt nút gạt ``Đã bình duyệt'' để hệ thống tái sắp xếp thứ tự ưu tiên.\\
+& 4. Học giả chọn bài báo mong muốn và nhấp nút ``Nạp tài liệu''.\\
+& 5. Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra khử trùng lặp trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả. \tabularnewline \hline
+\textbf{Luồng thay thế / Ngoại lệ} & 
+- Nếu tệp PDF đã tồn tại trong kho lưu trữ chung: Hệ thống tái sử dụng khối tệp vật lý sẵn có và tăng biến đếm tham chiếu (\texttt{ref\_count}), rút ngắn thời gian nạp xuống mức tức thời.\\
+- Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (\textit{Abstract}) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính. \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Phân tích ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\label{subsubsec:uc_doc_sau}
+
+Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung bài báo, đặt câu hỏi cho trợ lý AI và nhận câu trả lời có kèm các thẻ trích dẫn tọa độ Bounding Box hiển thị viền vàng trực quan trên bản PDF gốc (Bảng~\ref{tab:uc_doc_sau_spec}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\label{tab:uc_doc_sau_spec}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
+\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Mục tiêu} & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Học giả đã mở một tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số $[1]$, $[2]$ liên kết với tọa độ BBox. \tabularnewline \hline
+\textbf{Luồng sự kiện chính} & 
+1. Học giả nhập câu hỏi nghiên cứu vào khung hội thoại (ví dụ: ``Độ chính xác phân loại của mô hình trên ImageNet là bao nhiêu?'').\\
+& 2. Tác nhân AI kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) để trích xuất các phân đoạn văn bản liên quan nhất.\\
+& 3. Tác nhân kiểm định liêm chính trích dẫn và tổng hợp câu trả lời.\\
+& 4. Trợ lý AI truyền luồng phản hồi theo thời gian thực về giao diện người dùng.\\
+& 5. Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc ($\text{IoU} \ge 0{,}85$). \tabularnewline \hline
+\textbf{Luồng thay thế / Ngoại lệ} & 
+- Nếu câu hỏi nằm ngoài phạm vi tri thức của tài liệu: Hệ thống thông báo rõ ràng ``Tài liệu không cung cấp thông tin về nội dung này'', tuyệt đối không tự suy đoán số liệu.\\
+- Nếu học giả chưa nạp khóa API cá nhân (BYOK): Hệ thống điều hướng mở hộp thoại cài đặt khóa. \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Phân tích ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\label{subsubsec:uc_bien_soan}
+
+Ca sử dụng này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa học, biên dịch tài liệu sang định dạng PDF trong môi trường máy ảo cách ly, và tự động sửa các lỗi cú pháp khi biên dịch thất bại (Bảng~\ref{tab:uc_bien_soan_spec}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\label{tab:uc_bien_soan_spec}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX} \tabularnewline \hline
+\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học \LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua tác nhân AI ReAct. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
+\textbf{Luồng sự kiện chính} & 
+1. Học giả chỉnh sửa mã nguồn \LaTeX\ trên trình biên tập Monaco Editor.\\
+& 2. Học giả nhấp nút ``Biên dịch bản thảo''.\\
+& 3. Hệ thống chuyển mã nguồn vào máy ảo vi mô E2B MicroVM cách ly an toàn và kích hoạt lệnh \texttt{xelatex}.\\
+& 4. Nếu biên dịch thành công ($\text{ExitCode} == 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực. \tabularnewline \hline
+\textbf{Luồng thay thế / Ngoại lệ} & 
+- Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):\\
+& \quad a. Hệ thống bóc tách tệp nhật ký lỗi \texttt{main.log}.\\
+& \quad b. Tác nhân AI phân tích lỗi và tạo bản vá sửa đổi vi phẫu (\textit{Surgical Diff}).\\
+& \quad c. Hệ thống tự động áp dụng bản vá và kích hoạt tái biên dịch ($N < 3$).\\
+& \quad d. Khi thành công, thông báo lỗi được xóa bỏ và giao diện cập nhật PDF mới. \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsection{Phân tích các ca sử dụng phía Quản trị viên}
+\label{subsec:uc_admin}
+
+\subsubsection{Phân tích ca sử dụng ``Quản trị người dùng và chính sách bảo mật BYOK''}
+Ca sử dụng cho phép Quản trị viên theo dõi danh sách học giả tham gia hệ thống, quản lý hạn ngạch phiên làm việc, cấp quyền sử dụng máy ảo MicroVM và đảm bảo các chính sách két sắt khóa mã hóa tuân thủ chuẩn an toàn thông tin (Bảng~\ref{tab:uc_admin_users}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả ca sử dụng ``Quản trị người dùng và chính sách bảo mật BYOK''}
+\label{tab:uc_admin_users}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{Tên Use Case} & \textbf{Quản trị người dùng và chính sách bảo mật BYOK} \tabularnewline \hline
+\textbf{Tác nhân (Actor)} & Quản trị viên (Administrator) \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tài khoản học giả, quản lý hạn ngạch tài nguyên và đảm bảo tính an toàn của két sắt khóa cá nhân. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập với quyền hạn cao nhất. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Thông tin tài khoản và cấu hình hạn ngạch được cập nhật chính xác. \tabularnewline \hline
+\textbf{Luồng sự kiện chính} & 
+1. Quản trị viên truy cập bảng điều khiển quản trị.\\
+& 2. Hệ thống hiển thị danh sách người dùng, trạng thái kích hoạt và định danh ORCID.\\
+& 3. Quản trị viên điều chỉnh hạn ngạch tài nguyên máy ảo MicroVM hoặc đặt lại phiên đăng nhập.\\
+& 4. Hệ thống lưu cấu hình và ghi nhật ký kiểm toán. \tabularnewline \hline
+\textbf{Luồng ngoại lệ} & 
+- Nếu phát hiện phiên làm việc bất thường: Hệ thống tự động thu hồi phiên và gửi thông báo cảnh báo bảo mật. \tabularnewline \hline
+\end{tabular}
+\end{table}
+
+\subsubsection{Phân tích ca sử dụng ``Giám sát hệ thống và vết thực thi mô hình''}
+Ca sử dụng cho phép Quản trị viên theo dõi các chỉ số hoạt động của hệ thống, thời gian phản hồi API, chi phí Token sử dụng và các luồng vết thực thi (\textit{Trace Logs}) phục vụ kiểm định chất lượng (Bảng~\ref{tab:uc_admin_logs}).
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Đặc tả ca sử dụng ``Giám sát hệ thống và vết thực thi mô hình''}
+\label{tab:uc_admin_logs}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
+\hline
+\textbf{Tên Use Case} & \textbf{Giám sát hệ thống và vết thực thi mô hình} \tabularnewline \hline
+\textbf{Tác nhân (Actor)} & Quản trị viên (Administrator) \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tình trạng vận hành, hiệu năng truy xuất RAG và theo dõi chi tiết vết thực thi suy luận của tác nhân. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập; dịch vụ Langfuse đang hoạt động bình thường. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Báo cáo số liệu hiệu năng và danh sách vết thực thi được hiển thị đầy đủ. \tabularnewline \hline
+\textbf{Luồng sự kiện chính} & 
+1. Quản trị viên chọn phân hệ ``Giám sát hệ thống''.\\
+& 2. Hệ thống truy xuất dữ liệu từ dịch vụ giám sát Langfuse và cơ sở dữ liệu.\\
+& 3. Hiển thị biểu đồ đo lường: độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi \LaTeX, và tổng số lượng Token đã tiêu thụ.\\
+& 4. Quản trị viên xem xét các phiên có độ trễ cao để tối ưu hóa chỉ mục HNSW. \tabularnewline \hline
+\textbf{Luồng ngoại lệ} & 
+- Nếu dịch vụ giám sát bên ngoài bị ngắt kết nối: Hệ thống chuyển sang đọc nhật ký nội bộ lưu trên cơ sở dữ liệu. \tabularnewline \hline
+\end{tabular}
+\end{table}

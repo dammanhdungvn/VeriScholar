@@ -53,6 +53,7 @@
 \usepackage{multirow}
 \usepackage{array}
 \usepackage{enumitem}
+\usepackage{float}
 
 % 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI, Cỡ chữ 12pt)
 \usepackage{caption}
@@ -216,13 +217,41 @@
   {\theparagraph}{0.5em}{}[:]
 \titlespacing*{\paragraph}{0pt}{4pt}{0.75em}
 
-% 8. Liên kết siêu văn bản PDF học thuật
+% 8. Liên kết siêu văn bản PDF học thuật & Phân cấp PDF Bookmarks Outline
 \usepackage{hyperref}
 \hypersetup{
     colorlinks=true,
     linkcolor=black,
     citecolor=blue,
     urlcolor=blue,
+    bookmarks=true,
+    bookmarksnumbered=true,
+    bookmarksopen=true,
+    bookmarksopenlevel=1,
+    pdfencoding=auto,
+    unicode=true,
     pdfauthor={Đàm Mạnh Dũng},
     pdftitle={Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn}
 }
+
+% Gói bookmark cao cấp giúp tạo cây Outline phân cấp chuẩn xác
+\usepackage{bookmark}
+\bookmarksetup{
+    numbered=true,
+    open=true,
+    openlevel=1,
+    depth=4
+}
+
+% Định dạng số thứ tự chuẩn trên PDF Outline (Bookmarks):
+% - Cấp 0 (Chapter có số): "CHƯƠNG X: "
+% - Cấp con (Section, Subsection...): "X.Y. ", "X.Y.Z. "
+\makeatletter
+\renewcommand{\Hy@numberline}[1]{%
+  \ifnum\BKM@level=0
+    CHƯƠNG #1:\ %
+  \else
+    #1.\ %
+  \fi
+}
+\makeatother

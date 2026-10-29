@@ -1,0 +1,41 @@
+% !TEX root = ../../main.tex
+\section{Giới thiệu các tác nhân và các ca sử dụng tương ứng trong hệ thống}
+\label{sec:tac_nhan_usecase}
+
+Từ việc khảo sát nghiệp vụ và quy trình nghiên cứu khoa học thực tế (Mục~\ref{sec:khao_sat_nghiep_vu}), có thể nhận thấy nhu cầu cấp thiết trong việc xây dựng một nền tảng trợ lý AI chuyên sâu, phục vụ đa dạng các thao tác nghiên cứu từ khám phá tài liệu, đọc sâu kiểm chứng đến biên soạn bản thảo.
+
+Dựa trên yêu cầu bài toán và quy trình vận hành hệ thống, đề tài đề xuất hệ thống được thiết kế với \textbf{2 tác nhân chính}:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Học giả (Scholar / Researcher):} Là tác nhân trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với các phân hệ của nền tảng: tra cứu và nạp ấn phẩm nghiên cứu từ các kho học thuật mở, đọc sâu tài liệu với sự trợ giúp của AI kèm định vị khung viền Bounding Box, khai phá đồ thị tri thức đa thực thể, quản lý kho lưu trữ tài liệu cá nhân và biên soạn bản thảo bài báo \LaTeX.
+    \item \textbf{Quản trị viên hệ thống (Administrator):} Chịu trách nhiệm quản lý người dùng, cấu hình chính sách bảo mật két sắt khóa cá nhân (BYOK), theo dõi các luồng sự kiện vết thực thi mô hình ngôn ngữ lớn (\textit{Trace Logs}) trên nền tảng Langfuse, và giám sát hạ tầng máy ảo hộp cát cách ly.
+\end{enumerate}
+
+Các ca sử dụng chính đối với mỗi tác nhân được tổng hợp và liệt kê trong Bảng~\ref{tab:actors_usecases}.
+
+\begin{table}[htbp]
+\centering
+\singlespacing
+\small
+\caption{Các ca sử dụng chính đối với mỗi tác nhân trong hệ thống VeriScholar}
+\label{tab:actors_usecases}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{4.0cm}|>{\raggedright\arraybackslash}p{9.0cm}|}
+\hline
+\textbf{STT} & \centering\textbf{Tên tác nhân} & \centering\textbf{Ca sử dụng (Use Case)} \tabularnewline
+\hline
+1 & \multirow{8}{*}{\textbf{Học giả (Scholar)}} & Đăng ký / Đăng nhập tài khoản \\ \cline{3-3}
+2 & & Khám phá và tìm kiếm ấn phẩm học thuật \\ \cline{3-3}
+3 & & Nạp tài liệu cá nhân và Khử trùng lặp lưu trữ CAS \\ \cline{3-3}
+4 & & Đọc sâu tài liệu PDF hai cột và Hỏi đáp với AI \\ \cline{3-3}
+5 & & Kiểm chứng trích dẫn tọa độ Bounding Box trực quan \\ \cline{3-3}
+6 & & Khám phá và truy vấn Đồ thị tri thức (GraphRAG) \\ \cline{3-3}
+7 & & Quản lý hồ sơ định danh ORCID và Két sắt khóa BYOK \\ \cline{3-3}
+8 & & Biên soạn bản thảo \LaTeX\ và Tự phục hồi lỗi biên dịch \\
+\hline
+9 & \multirow{4}{*}{\textbf{Quản trị viên (Admin)}} & Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
+10 & & Giám sát sức khỏe hạ tầng máy ảo vi mô (Sandbox) \\ \cline{3-3}
+11 & & Theo dõi vết thực thi mô hình ngôn ngữ và Chi phí Token \\ \cline{3-3}
+12 & & Cấu hình chính sách lưu trữ và an toàn dữ liệu \\
+\hline
+\end{tabular}
+\end{table}

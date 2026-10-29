@@ -1,0 +1,148 @@
+% !TEX root = ../../main.tex
+\section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
+\label{sec:bieu_do_tuan_tu}
+
+Biểu đồ tuần tự (Sequence Diagram) được sử dụng để mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng và thành phần trong hệ thống khi thực thi một ca sử dụng cụ thể. Nhằm làm rõ cơ chế phối hợp giữa giao diện người dùng, lõi nghiệp vụ và các dịch vụ hạ tầng, tiểu mục này trình bày ba biểu đồ tuần tự cho ba nghiệp vụ cốt lõi của \VS.
+
+\subsection{Biểu đồ tuần tự ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\label{subsec:seq_kham_pha}
+
+Quy trình tra cứu đa nguồn, kiểm tra khử trùng lặp nội dung theo mã băm SHA-256 và lưu trữ vào kho CAS được mô tả trong Hình~\ref{fig:seq_kham_pha}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.74, transform shape,
+    lifeline/.style={draw=black!50, dashed, line width=0.8pt},
+    entity/.style={draw=black!80, fill=blue!8, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\small\bfseries, minimum width=2.4cm, minimum height=0.9cm},
+    msg/.style={-{Stealth[length=2.2mm]}, line width=0.85pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.85pt, draw=blue!85!black},
+    lbl/.style={font=\linespread{1.0}\selectfont\scriptsize, fill=white, inner sep=1.5pt}
+]
+    % Các thực thể tham gia (Entities)
+    \node[entity] (user) at (0, 0) {Học giả};
+    \node[entity] (ui) at (3.2, 0) {Giao diện Web};
+    \node[entity] (api) at (6.8, 0) {Lõi Nghiệp vụ};
+    \node[entity] (ext) at (10.4, 0) {Cổng Học thuật};
+    \node[entity] (cas) at (14.0, 0) {Kho Lưu trữ CAS};
+
+    % Đường thời gian (Lifelines)
+    \draw[lifeline] (user) -- (0, -7.5);
+    \draw[lifeline] (ui) -- (3.2, -7.5);
+    \draw[lifeline] (api) -- (6.8, -7.5);
+    \draw[lifeline] (ext) -- (10.4, -7.5);
+    \draw[lifeline] (cas) -- (14.0, -7.5);
+
+    % Luồng thông điệp (Messages)
+    \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhập từ khóa / DOI} (3.2, -1.0);
+    \draw[msg] (3.2, -1.6) -- node[lbl, above] {2: Gửi yêu cầu tìm kiếm} (6.8, -1.6);
+    \draw[msg] (6.8, -2.2) -- node[lbl, above] {3: Truy vấn arXiv / CrossRef} (10.4, -2.2);
+    \draw[retmsg] (10.4, -2.8) -- node[lbl, above] {4: Trả về danh sách bài báo} (6.8, -2.8);
+    \draw[retmsg] (6.8, -3.4) -- node[lbl, above] {5: Hiển thị kết quả tìm kiếm} (3.2, -3.4);
+
+    \draw[msg] (0, -4.2) -- node[lbl, above] {6: Chọn nạp tài liệu} (3.2, -4.2);
+    \draw[msg] (3.2, -4.8) -- node[lbl, above] {7: Yêu cầu nạp \& Tải PDF} (6.8, -4.8);
+    \draw[msg] (6.8, -5.4) -- node[lbl, above] {8: Tính băm SHA-256 \& Kiểm tra trùng} (14.0, -5.4);
+    \draw[retmsg] (14.0, -6.0) -- node[lbl, above] {9: Xác nhận lưu trữ / Tái dùng tệp} (6.8, -6.0);
+    \draw[retmsg] (6.8, -6.6) -- node[lbl, above] {10: Liên kết vào Không gian làm việc} (3.2, -6.6);
+    \draw[retmsg] (3.2, -7.1) -- node[lbl, above] {11: Thông báo nạp thành công} (0, -7.1);
+\end{tikzpicture}
+\caption{Biểu đồ tuần tự ca sử dụng Tra cứu và nạp ấn phẩm nghiên cứu}
+\label{fig:seq_kham_pha}
+\end{figure}
+
+\subsection{Biểu đồ tuần tự ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\label{subsec:seq_doc_sau}
+
+Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.74, transform shape,
+    lifeline/.style={draw=black!50, dashed, line width=0.8pt},
+    entity/.style={draw=black!80, fill=teal!10, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\small\bfseries, minimum width=2.4cm, minimum height=0.9cm},
+    msg/.style={-{Stealth[length=2.2mm]}, line width=0.85pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.85pt, draw=teal!85!black},
+    lbl/.style={font=\linespread{1.0}\selectfont\scriptsize, fill=white, inner sep=1.5pt}
+]
+    % Các thực thể tham gia
+    \node[entity] (user) at (0, 0) {Học giả};
+    \node[entity] (canvas) at (3.2, 0) {PDF Canvas UI};
+    \node[entity] (agent) at (6.8, 0) {Tác nhân AI};
+    \node[entity] (retriever) at (10.4, 0) {Hybrid Retriever};
+    \node[entity] (llm) at (14.0, 0) {Mô hình LLM};
+
+    % Đường thời gian
+    \draw[lifeline] (user) -- (0, -8.0);
+    \draw[lifeline] (canvas) -- (3.2, -8.0);
+    \draw[lifeline] (agent) -- (6.8, -8.0);
+    \draw[lifeline] (retriever) -- (10.4, -8.0);
+    \draw[lifeline] (llm) -- (14.0, -8.0);
+
+    % Luồng thông điệp
+    \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhập câu hỏi nghiên cứu} (canvas);
+    \draw[msg] (3.2, -1.6) -- node[lbl, above] {2: Khởi tạo luồng SSE} (agent);
+    \draw[msg] (6.8, -2.2) -- node[lbl, above] {3: Tìm kiếm lai (HNSW + BM25)} (retriever);
+    \draw[retmsg] (10.4, -2.8) -- node[lbl, above] {4: Trả về $k$ đoạn trích + BBox} (agent);
+    \draw[msg] (6.8, -3.5) -- node[lbl, above] {5: Soạn prompt ngữ cảnh} (llm);
+    \draw[retmsg] (14.0, -4.2) -- node[lbl, above] {6: Truyền phát token trả lời} (agent);
+    \draw[retmsg] (6.8, -4.9) -- node[lbl, above] {7: Đẩy luồng SSE kèm thẻ $[1]$} (canvas);
+    \draw[retmsg] (3.2, -5.5) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -5.5);
+
+    % Hành động nhấp kiểm chứng trích dẫn
+    \draw[msg] (0, -6.3) -- node[lbl, above] {9: Nhấp vào thẻ trích dẫn $[1]$} (canvas);
+    \draw[msg] (3.2, -7.0) -- node[lbl, above] {10: Tự động cuộn trang \& Vẽ viền vàng BBox ($1\,\text{s}$)} (canvas);
+    \draw[retmsg] (3.2, -7.6) -- node[lbl, above] {11: Bằng chứng tọa độ hiển thị trực quan} (0, -7.6);
+\end{tikzpicture}
+\caption{Biểu đồ tuần tự ca sử dụng Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}
+\label{fig:seq_doc_sau}
+\end{figure}
+
+\subsection{Biểu đồ tuần tự ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\label{subsec:seq_bien_soan}
+
+Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo vi mô E2B MicroVM cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.74, transform shape,
+    lifeline/.style={draw=black!50, dashed, line width=0.8pt},
+    entity/.style={draw=black!80, fill=orange!10, rounded corners=3pt, line width=0.9pt, align=center, inner sep=4pt, font=\small\bfseries, minimum width=2.4cm, minimum height=0.9cm},
+    msg/.style={-{Stealth[length=2.2mm]}, line width=0.85pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.85pt, draw=orange!85!black},
+    lbl/.style={font=\linespread{1.0}\selectfont\scriptsize, fill=white, inner sep=1.5pt}
+]
+    % Các thực thể tham gia
+    \node[entity] (user) at (0, 0) {Học giả};
+    \node[entity] (editor) at (3.2, 0) {Monaco Editor};
+    \node[entity] (server) at (6.8, 0) {Dịch vụ Biên dịch};
+    \node[entity] (vm) at (10.4, 0) {Máy ảo E2B MicroVM};
+    \node[entity] (agent) at (14.0, 0) {Tác nhân Sửa lỗi ReAct};
+
+    % Đường thời gian
+    \draw[lifeline] (user) -- (0, -8.2);
+    \draw[lifeline] (editor) -- (3.2, -8.2);
+    \draw[lifeline] (server) -- (6.8, -8.2);
+    \draw[lifeline] (vm) -- (10.4, -8.2);
+    \draw[lifeline] (agent) -- (14.0, -8.2);
+
+    % Luồng thông điệp
+    \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhấp nút ``Biên dịch bản thảo''} (editor);
+    \draw[msg] (3.2, -1.6) -- node[lbl, above] {2: Chuyển mã nguồn \LaTeX} (server);
+    \draw[msg] (6.8, -2.2) -- node[lbl, above] {3: Khởi tạo MicroVM \& Chạy \texttt{xelatex}} (vm);
+    \draw[retmsg] (10.4, -2.9) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (server);
+
+    % Chu trình ReAct
+    \draw[msg] (6.8, -3.6) -- node[lbl, above] {5: Chuyển log lỗi cho tác nhân} (agent);
+    \draw[msg] (14.0, -4.3) -- node[lbl, above] {6: Phân tích log lỗi \& Sinh bản vá Diff} (server);
+    \draw[msg] (6.8, -5.0) -- node[lbl, above] {7: Áp bản vá \& Tái biên dịch trong MicroVM} (vm);
+    \draw[retmsg] (10.4, -5.8) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (server);
+
+    \draw[retmsg] (6.8, -6.6) -- node[lbl, above] {9: Cập nhật mã nguồn \& Trả tệp PDF} (editor);
+    \draw[retmsg] (3.2, -7.4) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -7.4);
+\end{tikzpicture}
+\caption{Biểu đồ tuần tự ca sử dụng Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}
+\label{fig:seq_bien_soan}
+\end{figure}

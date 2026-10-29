@@ -1,0 +1,358 @@
+% !TEX root = ../../main.tex
+\section{Tổng quan về Advanced RAG}
+\label{sec:advanced_rag}
+
+\subsection{RAG là gì? (Retrieval-Augmented Generation)}
+\label{subsec:rag_la_gi}
+RAG (\textit{Retrieval-Augmented Generation} -- Tạo sinh tăng cường truy xuất) là một kỹ thuật kiến trúc đột phá trong xử lý ngôn ngữ tự nhiên, được Patrick Lewis và các cộng sự tại Meta AI giới thiệu lần đầu tiên vào năm 2020 \cite{lewis2020}. Ý tưởng cốt lõi của RAG là kết hợp sức mạnh suy luận ngôn ngữ của các mô hình ngôn ngữ lớn (LLM) với khả năng truy xuất thông tin chính xác từ một kho dữ liệu tri thức bên ngoài (\textit{External Knowledge Base}).
+
+Trước khi có RAG, các mô hình ngôn ngữ lớn thuần túy dựa vào tập tham số tĩnh được học trong quá trình tiền huấn luyện. Điều này bộc lộ ba hạn chế nghiêm trọng:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Tri thức bị giới hạn thời gian (\textit{Knowledge Cutoff}):} Mô hình không có khả năng cập nhật các công bố khoa học hoặc dữ liệu phát sinh sau thời điểm hoàn tất huấn luyện.
+    \item \textbf{Hiện tượng ảo giác (\textit{Hallucination}):} Khi đối mặt với các câu hỏi chuyên sâu hoặc thiếu thông tin, mô hình có xu hướng tự tạo ra các câu trả lời nghe có vẻ hợp lý nhưng hoàn toàn sai lệch về mặt sự thật học thuật.
+    \item \textbf{Thiếu minh bạch và khả năng kiểm chứng:} Mô hình ngôn ngữ truyền thống không cung cấp nguồn dẫn chứng gốc, khiến các nhà nghiên cứu không thể xác minh độ tin cậy của phát biểu.
+\end{enumerate}
+
+Kiến trúc RAG truyền thống (\textit{Naive RAG}) vận hành qua ba pha tuần tự: Đánh chỉ mục (\textit{Indexing}), Truy xuất (\textit{Retrieval}) và Tạo sinh (\textit{Generation}). Mô hình kiến trúc chi tiết được thể hiện trong Hình~\ref{fig:naive_rag}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.88, transform shape,
+    circle_node/.style={circle, draw=blue!75!black, fill=blue!8, line width=1.0pt, align=center, inner sep=3pt, font=\bfseries\footnotesize, minimum size=1.8cm},
+    box_node/.style={rectangle, draw=black!80, fill=white, rounded corners=6pt, line width=1.0pt, align=center, inner sep=8pt, font=\linespread{1.1}\selectfont\footnotesize},
+    store_node/.style={rectangle, draw=black!85, fill=white, rounded corners=6pt, line width=1.1pt, align=center, inner sep=8pt, font=\linespread{1.1}\selectfont\footnotesize, minimum width=3.6cm, minimum height=2.8cm},
+    cylinder_node/.style={cylinder, shape border rotate=90, draw=blue!85!black, fill=blue!5, line width=1.1pt, aspect=0.35, minimum width=3.0cm, minimum height=1.5cm, align=center, font=\linespread{1.1}\selectfont\bfseries\footnotesize},
+    arrowstyle/.style={-{Stealth[length=2.8mm]}, line width=1.05pt, draw=black!85},
+    bluearrow/.style={-{Stealth[length=2.8mm]}, line width=1.05pt, draw=blue!80!black}
+]
+    % Header
+    \node[font=\bfseries\large, text=black!90] at (0.6, 4.4) {Naive RAG};
+
+    % 1. Database (Cơ sở dữ liệu - ở trên cùng)
+    \node[cylinder_node] (db) at (0.6, 2.7) {Database\\[2pt]\scriptsize(Cơ sở dữ liệu)};
+
+    % 2. Vector Store Index (Ở giữa)
+    \node[store_node] (vstore) at (0.6, -0.6) {
+        \textbf{Vector Store Index}\\[2pt]
+        \scriptsize (Kho chỉ mục Vector)\\[8pt]
+        {\color{blue!30}\rule{2.6cm}{2.5pt}}\\[3.5pt]
+        {\color{blue!30}\rule{2.6cm}{2.5pt}}\\[3.5pt]
+        {\color{blue!30}\rule{2.6cm}{2.5pt}}\\[3.5pt]
+        {\color{blue!30}\rule{1.8cm}{2.5pt}}
+    };
+
+    % 3. Embedding Model (Bên trái Vector Store)
+    \node[box_node, minimum width=2.6cm, minimum height=1.3cm] (embed) at (-3.8, -0.6) {
+        \textbf{Embedding}\\[2pt]
+        \textbf{Model}\\[2pt]
+        \scriptsize (Mô hình nhúng)
+    };
+
+    % 4. Query (Bên trái ngoài cùng)
+    \node[circle_node] (query) at (-7.2, -0.6) {Query\\[2pt]\scriptsize(Truy vấn)};
+
+    % 5. Context (Bên phải Vector Store)
+    \node[circle_node] (context) at (5.0, -0.6) {Context\\[2pt]\scriptsize(Ngữ cảnh)};
+
+    % 6. LLM (Bên dưới Context)
+    \node[box_node, minimum width=2.8cm, minimum height=1.3cm] (llm) at (5.0, -3.5) {
+        \textbf{LLM}\\[2pt]
+        \scriptsize (Language Model)
+    };
+
+    % 7. Answer (Bên phải LLM)
+    \node[circle_node] (answer) at (8.4, -3.5) {Answer\\[2pt]\scriptsize(Câu trả lời)};
+
+    % Đường kết nối & Mũi tên
+    \draw[arrowstyle] (query) -- (embed);
+    \draw[arrowstyle] (embed) -- (vstore);
+    \draw[bluearrow] (vstore.north) -- (db.south);
+    \draw[bluearrow] (db.east) -| (context.north);
+    \draw[arrowstyle] (context) -- (llm);
+    \draw[arrowstyle] (query.south) -- (-7.2, -3.5) -- (llm.west);
+    \draw[arrowstyle] (llm) -- (answer);
+\end{tikzpicture}
+\caption{Mô hình kiến trúc tạo sinh tăng cường truy xuất truyền thống (Naive RAG)}
+\label{fig:naive_rag}
+\end{figure}
+
+\subsection{Advanced RAG là gì?}
+\label{subsec:advanced_rag_la_gi}
+Mặc dù Naive RAG giải quyết được vấn đề cập nhật thông tin, mô hình này bộc lộ nhiều điểm nghẽn nghiêm trọng khi áp dụng vào tài liệu học thuật phức tạp: việc cắt đoạn văn bản cố định làm đứt gãy ngữ cảnh, tìm kiếm vector đơn lẻ bỏ sót các thuật ngữ chuyên ngành chính xác, và câu trả lời sinh ra thường chứa nhiều thông tin nhiễu không liên quan.
+
+Advanced RAG (RAG Nâng cao) ra đời nhằm khắc phục triệt để các hạn chế trên thông qua việc tái cấu trúc toàn diện quy trình truy xuất tri thức thành ba giai đoạn tinh chỉnh chuyên sâu \cite{asai2023selfrag, yan2024crag}:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Giai đoạn Tiền truy xuất (\textit{Pre-Retrieval}):} Tối ưu hóa câu hỏi của người dùng thông qua các kỹ thuật viết lại truy vấn (\textit{Query Rewriting}), phân rã câu hỏi phức tạp thành các câu hỏi phụ (\textit{Sub-query Decomposition}), và phân đoạn tài liệu thông minh dựa trên bố cục trang thay vì cắt theo số lượng ký tự cố định.
+    \item \textbf{Giai đoạn Truy xuất (\textit{Retrieval}):} Kết hợp nhiều chiến lược tìm kiếm khác nhau (\textit{Hybrid Search}) để vừa thu nhận ngữ nghĩa tổng quát, vừa khớp chính xác các thực thể từ khóa đặc thù.
+    \item \textbf{Giai đoạn Hậu truy xuất (\textit{Post-Retrieval}):} Lọc bỏ các thông tin nhiễu thông qua thuật toán tái xếp hạng (\textit{Re-ranking}), nén ngữ cảnh có chọn lọc (\textit{Contextual Compression}), và bắt buộc đối chiếu từng câu trả lời với tọa độ văn bản gốc để bảo đảm tính liêm chính trích dẫn.
+\end{enumerate}
+
+Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối, phân luồng truy xuất và hậu xử lý ngữ cảnh được mô hình hóa trong Hình~\ref{fig:advanced_rag}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.82, transform shape,
+    circle_node/.style={circle, draw=blue!75!black, fill=blue!8, line width=1.1pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize, minimum size=1.85cm},
+    box_node/.style={rectangle, draw=black!85, fill=white, rounded corners=6pt, line width=1.05pt, align=center, inner sep=6pt, font=\linespread{1.05}\selectfont\footnotesize},
+    store_node/.style={rectangle, draw=black!85, fill=white, rounded corners=6pt, line width=1.05pt, align=center, inner sep=6pt, font=\linespread{1.05}\selectfont\footnotesize, minimum width=3.2cm, minimum height=1.85cm},
+    diamond_node/.style={diamond, draw=black!85, fill=white, line width=1.05pt, align=center, inner sep=2pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize, aspect=1.3, minimum width=2.4cm, minimum height=1.7cm},
+    cylinder_node/.style={cylinder, shape border rotate=90, draw=blue!80!black, fill=blue!5, line width=1.1pt, aspect=0.35, minimum width=2.8cm, minimum height=1.5cm, align=center, font=\linespread{1.05}\selectfont\bfseries\footnotesize},
+    agent_card/.style={draw=blue!45, fill=blue!3, rounded corners=10pt, line width=1.0pt},
+    arrowstyle/.style={-{Stealth[length=2.8mm]}, line width=1.05pt, draw=black!85},
+    bluearrow/.style={-{Stealth[length=2.8mm]}, line width=1.05pt, draw=blue!80!black}
+]
+    % Header
+    \node[font=\bfseries\Large, text=black!90] at (1.5, 6.7) {Advanced RAG};
+
+    % Khung bao Agents (Agentic Query Orchestration)
+    \node[agent_card, minimum width=6.6cm, minimum height=4.2cm] (c_agent) at (-3.2, 0.9) {};
+    \node[font=\bfseries\normalsize, text=blue!85!black] at (-3.2, 2.6) {Agents};
+
+    % Các node bên trong Agents
+    \node[box_node, text width=2.5cm, minimum height=1.4cm] (q_trans) at (-4.8, 0.9) {
+        \textbf{Query}\\[2pt]
+        \textbf{Transformation}\\[2pt]
+        \scriptsize (Biến đổi truy vấn)
+    };
+    \node[diamond_node] (q_route) at (-1.6, 0.9) {Query\\[2pt]Routing\\[2pt]\scriptsize(Định tuyến)};
+
+    % Query bên ngoài Agents
+    \node[circle_node] (query) at (-7.8, 0.9) {Query\\[2pt]\scriptsize(Truy vấn)};
+
+    % Fusion Retrieval (Phía trên Agents)
+    \node[box_node, text width=2.6cm, minimum height=1.3cm] (fusion) at (-4.8, 4.3) {
+        \textbf{Fusion}\\[2pt]
+        \textbf{Retrieval}\\[2pt]
+        \scriptsize (Truy xuất hợp nhất)
+    };
+
+    % DB Storage (Phía trên ở giữa)
+    \node[cylinder_node] (db) at (2.8, 4.3) {DB Storage\\[2pt]\scriptsize(Kho lưu trữ dữ liệu)};
+
+    % Vector Store Index & Summary Index
+    \node[store_node] (vstore) at (2.8, 1.8) {
+        \textbf{Vector Store Index}\\[2pt]
+        \scriptsize (Kho chỉ mục Vector)\\[5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{1.5cm}{2.2pt}}
+    };
+
+    \node[store_node] (sstore) at (2.8, -0.9) {
+        \textbf{Summary Index}\\[2pt]
+        \scriptsize (Kho chỉ mục Tóm tắt)\\[5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{2.2cm}{2.2pt}}\\[2.5pt]
+        {\color{blue!30}\rule{1.5cm}{2.2pt}}
+    };
+
+    % Reranking Postprocessing (Phía trên bên phải)
+    \node[box_node, text width=2.9cm, minimum height=1.3cm] (rerank) at (8.0, 4.3) {
+        \textbf{Reranking}\\[2pt]
+        \textbf{Postprocessing}\\[2pt]
+        \scriptsize (Tái xếp hạng \& Hậu xử lý)
+    };
+
+    % Retrieval Context
+    \node[circle_node] (context) at (8.0, 0.5) {Retrieval\\[2pt]Context\\[2pt]\scriptsize(Ngữ cảnh)};
+
+    % LLM & Answer (Phía dưới bên phải)
+    \node[box_node, text width=2.6cm, minimum height=1.3cm] (llm) at (8.0, -3.5) {
+        \textbf{LLM}\\[2pt]
+        \scriptsize (Language Model)
+    };
+    \node[circle_node] (answer) at (11.2, -3.5) {Answer\\[2pt]\scriptsize(Câu trả lời)};
+
+    % --- Các đường kết nối luồng chính ---
+    \draw[arrowstyle] (query) -- (q_trans);
+    \draw[arrowstyle] (q_trans) -- (q_route);
+    \draw[arrowstyle] (q_trans.north) -- (fusion.south);
+    \draw[arrowstyle] (fusion.east) -- ([yshift=4pt]db.west);
+
+    % Query routing đến DB Storage và các Indices
+    \draw[arrowstyle] (q_route.north) |- ([yshift=-4pt]db.west);
+    \draw[arrowstyle] (q_route.east) -- ++(1.0, 0) |- (vstore.west);
+    \draw[arrowstyle] (q_route.east) -- ++(1.0, 0) |- (sstore.west);
+
+    % Indices trả về DB Storage
+    \draw[arrowstyle] (vstore.north) -- (db.south);
+    \draw[arrowstyle] (sstore.east) -- ++(1.4, 0) |- ([yshift=-4pt]db.east);
+
+    % DB Storage qua Rerank -> Context -> LLM
+    \draw[arrowstyle] ([yshift=4pt]db.east) -- (rerank.west);
+    \draw[arrowstyle] (rerank.south) -- (context.north);
+    \draw[arrowstyle] (context.south) -- (llm.north);
+
+    % LLM -> Answer
+    \draw[arrowstyle] (llm) -- (answer);
+
+    % --- Các đường điều khiển và truy vấn chạy hoàn toàn ngang vào LLM ---
+    % 1. Đường Tool Choice từ Query Routing (vào đỉnh trên LLM.west tại y = -3.25)
+    \draw[bluearrow] ([xshift=4pt]q_route.south) -- (-1.4, -3.25) 
+        node[pos=0.45, right=3pt, font=\scriptsize\bfseries, text=blue!85!black] {Tool Choice} 
+        -- ([yshift=7pt]llm.west);
+
+    % 2. Đường Transformed query từ Query Transformation (vào giữa LLM.west tại y = -3.50)
+    \draw[bluearrow] (q_trans.south) -- (-4.8, -3.50) 
+        node[pos=0.45, left=3pt, align=right, font=\scriptsize\bfseries, text=blue!85!black] {Transformed query,\\list of queries} 
+        -- (llm.west);
+
+    % 3. Đường Query gốc từ Query circle (vào đáy dưới LLM.west tại y = -3.75)
+    \draw[arrowstyle] (query.south) -- (-7.8, -3.75) 
+        -- ([yshift=-7pt]llm.west);
+
+\end{tikzpicture}
+\caption{Mô hình kiến trúc tạo sinh tăng cường truy xuất nâng cao (Advanced RAG)}
+\label{fig:advanced_rag}
+\end{figure}
+
+\subsection{Hybrid Search và thuật toán RRF}
+\label{subsec:hybrid_search_rrf}
+Trong hệ thống truy xuất ấn phẩm khoa học, hai phương pháp tìm kiếm truyền thống bộc lộ những ưu và nhược điểm trái ngược nhau:
+
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Truy xuất vector đặc (\textit{Dense Vector Retrieval}):}
+    Văn bản được ánh xạ thành các vector nhúng ngữ nghĩa trong không gian nhiều chiều (1536 chiều). Mức độ tương đồng giữa câu hỏi của học giả $\mathbf{u}$ và đoạn trích tài liệu $\mathbf{v}$ được đo lường thông qua hàm độ tương đồng Cosine:
+    \begin{equation}
+    \label{eq:cosine_sim}
+    \text{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^{d} u_i v_i}{\sqrt{\sum_{i=1}^{d} u_i^2} \sqrt{\sum_{i=1}^{d} v_i^2}}
+    \end{equation}
+    \textit{Ưu điểm:} Bắt trọn được ngữ nghĩa khái quát, các khái niệm tương đương và từ đồng nghĩa mà không cần trùng khớp mặt chữ chính xác. \\
+    \textit{Nhược điểm:} Thường hoạt động kém hiệu quả đối với các thuật ngữ chuyên ngành hiếm gặp, tên riêng tác giả, mã số DOI, hoặc các công thức toán học đặc thù.
+
+    \item \textbf{Truy xuất từ khóa thưa (\textit{Sparse Keyword Retrieval -- BM25}):}
+    Dựa trên tần suất xuất hiện của từ khóa ($TF$) kết hợp với nghịch đảo tần suất xuất hiện trong toàn bộ kho tài liệu ($IDF$) theo thuật toán chuẩn hóa BM25 \cite{robertson1995}:
+    \begin{equation}
+    \label{eq:bm25}
+    \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
+    \end{equation}
+    trong đó $f(q_i, D)$ là tần suất từ $q_i$ trong tài liệu $D$, $|D|$ là độ dài tài liệu, $\text{avgdl}$ là độ dài trung bình, $k_1 = 1.2$ và $b = 0.75$. \\
+    \textit{Ưu điểm:} Khớp chính xác tuyệt đối các mã định danh, số hiệu phương trình và thuật ngữ riêng biệt. \\
+    \textit{Nhược điểm:} Hoàn toàn bất lực trước hiện tượng đồng nghĩa hoặc câu hỏi diễn giải bằng ngôn từ khác.
+\end{enumerate}
+
+Bảng~\ref{tab:search_comparison} so sánh đối chiếu đặc tính vận hành giữa hai phương pháp.
+
+\begin{table}[H]
+\centering
+\singlespacing
+\small
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{|p{3.0cm}|p{5.2cm}|p{5.2cm}|}
+\hline
+\textbf{Tiêu chí so sánh} & \textbf{Dense Vector (Cosine HNSW)} & \textbf{Sparse Keyword (BM25 GIN)} \\
+\hline
+\textbf{Không gian biểu diễn} & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc \\
+\hline
+\textbf{Khả năng hiểu ngữ nghĩa} & Xuất sắc: Bắt được từ đồng nghĩa, ẩn dụ & Kém: Chỉ dựa trên trùng khớp ký tự \\
+\hline
+\textbf{Độ chính xác thuật ngữ} & Trung bình: Dễ bị nhiễu với từ viết tắt & Xuất sắc: Khớp tuyệt đối DOI, tên riêng \\
+\hline
+\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng HNSW & Danh sách nghịch đảo (Inverted Index) \\
+\hline
+\end{tabular}
+\caption{So sánh đặc tính giữa tìm kiếm ngữ nghĩa Dense Vector và từ khóa BM25}
+\label{tab:search_comparison}
+\end{table}
+
+Để dung hòa trọn vẹn sức mạnh của cả hai phương pháp, đề tài ứng dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (\textit{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009}. Thay vì cộng gộp điểm số vốn không cùng thang đo giữa Cosine và BM25, RRF chỉ tính toán dựa trên thứ hạng nguyên vị trí của tài liệu trong từng danh sách:
+\begin{equation}
+\label{eq:rrf_calc}
+\text{RRF\_Score}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
+\end{equation}
+trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ hạng nguyên của tài liệu $d$ trong danh sách trả về từ phương pháp $m$ ($r_m(d) \ge 1$), và $k = 60$ là hằng số làm mịn chuẩn hóa học thuật giúp cân bằng điểm số giữa các vị trí dẫn đầu. 
+
+Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính điểm định lượng phân hạng được thể hiện trực quan trong Hình~\ref{fig:hybrid_search_rrf}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.72, transform shape,
+    box_dense/.style={draw=orange!85!black, fill=yellow!8, rounded corners=6pt, line width=1.0pt},
+    box_sparse/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.0pt},
+    box_rrf/.style={draw=gray!80, fill=gray!5, rounded corners=8pt, line width=1.0pt},
+    box_hybrid/.style={draw=teal!85!black, fill=teal!5, rounded corners=8pt, line width=1.1pt},
+    item_box/.style={draw=black!65, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=2.5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    container_hybrid/.style={draw=teal!75!black, fill=teal!3, dashed, rounded corners=10pt, line width=1.1pt},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85},
+    pipearrow/.style={-{Stealth[length=2.8mm]}, line width=1.2pt, draw=teal!85!black}
+]
+    % 1. Khối Truy vấn đầu vào (Scholar Query - ở đỉnh trên cùng)
+    \node[draw=orange!85!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, minimum width=4.8cm, minimum height=1.0cm, align=center, font=\bfseries\small] (query) at (0, 9.5) {
+        Truy vấn học giả (Scholar Query)
+    };
+
+    % 2. TẦNG 1: KHUNG TÌM KIẾM LAI (HYBRID SEARCH CONTAINER)
+    \node[container_hybrid, minimum width=14.6cm, minimum height=6.4cm] (box_hybrid_search) at (0, 4.4) {};
+    
+    % Header của Khung Tìm Kiếm Lai
+    \node[font=\bfseries\normalsize, text=teal!90!black, align=center] at (0, 7.1) {CƠ CHẾ TÌM KIẾM LAI (HYBRID SEARCH)};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (0, 6.6) {Không gian tìm kiếm song song bổ trợ ngữ nghĩa và từ khóa};
+
+    % Thành phần 1: Dense Search (Phía bên trái của Khung Hybrid Search)
+    \node[box_dense, text width=6.0cm, align=center, inner sep=5pt] (card_dense) at (-3.7, 3.4) {
+        {\bfseries\footnotesize\color{orange!90!black} (1) Dense Vector Search (Ngữ nghĩa)}\\[1pt]
+        {\scriptsize\color{orange!80!black} Không gian nhúng 1536 chiều, chỉ mục Cosine HNSW}\\[6pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\cos = 0{,}94$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 3} \hfill \scriptsize (Hạng 2: $\cos = 0{,}89$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 3: $\cos = 0{,}85$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 4} \hfill \scriptsize (Hạng 4: $\cos = 0{,}78$)};}
+    };
+
+    % Thành phần 2: Sparse Search (Phía bên phải của Khung Hybrid Search)
+    \node[box_sparse, text width=6.0cm, align=center, inner sep=5pt] (card_sparse) at (3.7, 3.4) {
+        {\bfseries\footnotesize\color{blue!90!black} (2) Sparse Keyword Search (Từ khóa)}\\[1pt]
+        {\scriptsize\color{blue!80!black} Danh sách nghịch đảo, thuật toán chuẩn hóa BM25 GIN}\\[6pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\text{BM25} = 14{,}2$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 2: $\text{BM25} = 11{,}8$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 4} \hfill \scriptsize (Hạng 3: $\text{BM25} = 9{,}5$)};}\\[3pt]
+        \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 3} \hfill \scriptsize (Hạng 4: $\text{BM25} = 7{,}1$)};}
+    };
+
+    % Phân nhánh từ Query vào 2 thành phần của Khung Hybrid Search (nhãn nằm trên đoạn ngang thoáng)
+    \draw[arrowstyle] (query.south) -- ++(0, -0.6) -| (card_dense.north);
+    \draw[arrowstyle] (query.south) -- ++(0, -0.6) -| (card_sparse.north);
+    \node[font=\scriptsize\bfseries, text=orange!90!black, above=1pt] at (-1.9, 8.4) {Nhúng vector};
+    \node[font=\scriptsize\bfseries, text=blue!90!black, above=1pt] at (1.9, 8.4) {Tách từ khóa};
+
+    % 3. TẦNG 2: ĐỘNG CƠ HỢP NHẤT XẾP HẠNG RRF (RRF SCORES ENGINE - Ở GIỮA)
+    \node[box_rrf, text width=14.2cm, align=center, inner sep=6pt] (card_rrf) at (0, -1.8) {
+        {\bfseries\normalsize Động cơ Hợp nhất Xếp hạng (RRF Scores Engine)}\\[2pt]
+        {\scriptsize Công thức Reciprocal Rank Fusion: $\displaystyle \text{Score}_{\text{RRF}}(d) = \sum_{m \in \{\text{Dense},\, \text{Sparse}\}} \frac{1}{k + r_m(d)} \quad (k = 0 \text{ dùng để minh họa})$}\\[6pt]
+        \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 1}\\[2pt] $\frac{1}{1} + \frac{1}{1} = \mathbf{2{,}00}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 2}\\[2pt] $\frac{1}{3} + \frac{1}{2} = \mathbf{0{,}83}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 3}\\[2pt] $\frac{1}{2} + \frac{1}{4} = \mathbf{0{,}75}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 4}\\[2pt] $\frac{1}{4} + \frac{1}{3} = \mathbf{0{,}58}$};}
+        \end{tabular}
+    };
+
+    % Mũi tên từ 2 thành phần Hybrid Search xuống RRF Engine (nhãn nằm ở khoảng giữa)
+    \draw[arrowstyle] (card_dense.south) -- (card_dense.south |- card_rrf.north);
+    \draw[arrowstyle] (card_sparse.south) -- (card_sparse.south |- card_rrf.north);
+    \node[font=\tiny\bfseries, text=orange!90!black, left=2pt] at (-3.7, 0.2) {Thứ hạng Dense};
+    \node[font=\tiny\bfseries, text=blue!90!black, right=2pt] at (3.7, 0.2) {Thứ hạng Sparse};
+
+    % 4. TẦNG 3: KẾT QUẢ XẾP HẠNG LAI TỐI ƯU (OPTIMAL HYBRID RANK - DƯỚI CÙNG)
+    \node[box_hybrid, text width=14.2cm, align=center, inner sep=6pt] (card_hybrid) at (0, -6.0) {
+        {\bfseries\normalsize\color{teal!90!black} Thứ hạng Lai Hợp nhất Tối ưu (Optimal Hybrid Rank)}\\[2pt]
+        {\scriptsize Danh sách các đoạn trích dẫn khoa học có trọng số hội tụ cao nhất nạp vào mô hình LLM}\\[6pt]
+        \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 1] Chunk 1}\\[2pt]\scriptsize Điểm RRF: \textbf{2{,}00}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 2] Chunk 2}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}83}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 3] Chunk 3}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}75}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 4] Chunk 4}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}58}};}
+        \end{tabular}
+    };
+
+    % Mũi tên từ RRF Engine xuống Thứ hạng Lai Tối ưu
+    \draw[pipearrow] (card_rrf.south) -- (card_hybrid.north) node[midway, right=5pt, font=\scriptsize\bfseries, text=teal!90!black] {Tái sắp xếp hợp nhất tối ưu (Optimal Rerank \& Fuse)};
+\end{tikzpicture}
+\caption{Cơ chế tìm kiếm lai (Hybrid Search) kết hợp thuật toán Hợp nhất Xếp hạng Đảo ngược (RRF)}
+\label{fig:hybrid_search_rrf}
+\end{figure}
+\clearpage
