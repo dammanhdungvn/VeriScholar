@@ -23,6 +23,7 @@ from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
+from api.services.benchmark_runner_service import BenchmarkRunnerService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
 from api.services.embedding_service import EmbeddingService
@@ -360,3 +361,24 @@ async def get_current_user(
         },
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+async def get_current_active_user(
+    current_user: UserModel = Depends(get_current_user),
+) -> UserModel:
+    """Retrieve current active authenticated user."""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "code": "USER_INACTIVE",
+                "message": "Tài khoản người dùng đã bị vô hiệu hóa.",
+            },
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
+
+
+def get_benchmark_runner_service() -> BenchmarkRunnerService:
+    """Dependency providing BenchmarkRunnerService instance."""
+    return BenchmarkRunnerService()
