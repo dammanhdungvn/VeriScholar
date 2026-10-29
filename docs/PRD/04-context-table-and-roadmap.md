@@ -14,8 +14,9 @@
 
 Trong hoạt động nghiên cứu học thuật, việc đọc một bài báo khoa học đỉnh cao không bao giờ là một hoạt động đơn lẻ khép kín:
 - **Nỗi đau 1 — Đứt gãy mạch tư duy khi tra cứu tài liệu tham khảo (15 – 23 phút khôi phục sự tập trung):** Một bài báo nghiên cứu thường chứa từ 30 đến 70 tài liệu tham khảo ở mục cuối. Khi gặp một trích dẫn quan trọng ở giữa bài (ví dụ `[14]`), người đọc phải cuộn xuống tận cuối tài liệu, sao chép tên bài báo, mở tab trình duyệt mới để tìm kiếm, vượt qua các trang web lộn xộn để tìm bản PDF, rồi tải về và mở riêng. Quá trình thủ công này mất trung bình **3 – 5 phút thao tác cơ học** cho mỗi bài tham khảo và làm tiêu tốn **15 – 23 phút** để não bộ khôi phục lại trạng thái tập trung sâu (Deep Flow) ban đầu.
-- **Nỗi đau 2 — Hiện tượng "học nhảy cóc" và ngợp kiến thức toán học ($A \rightarrow D$):** Khảo sát đào tạo sau đại học cho thấy **hơn 55% sinh viên và nghiên cứu sinh mới bỏ cuộc giữa chừng** khi đọc các bài báo ứng dụng hiện đại ($D$, ví dụ: *Mô hình Khuếch tán Ẩn*), bởi tác giả chỉ nhắc lướt qua các công thức suy hao hoặc kiến trúc lõi đã được chứng minh trong các bài báo nền tảng trước đó ($B, C$). Khi người đọc hỏi các công cụ AI thông thường, AI thường giải thích trực diện vào phần ngọn ($D$) mà không chỉ ra gốc rễ kế thừa ($A \rightarrow B \rightarrow C$), khiến người học bị ngợp và không hiểu thấu đáo bản chất khoa học.
-- **Nỗi đau 3 — Loãng ngữ cảnh khi nạp tràn lan (Context Dilution & Accuracy Drop):** Nếu đưa bừa bãi toàn bộ 50 tài liệu tham khảo vào cuộc trò chuyện cùng lúc, độ chính xác khi trích xuất số liệu của AI bị **suy giảm tới 40%** do nhiễu chéo giữa các bài báo, đồng thời chi phí xử lý tăng gấp hàng chục lần. Học giả cần quyền chủ động lựa chọn chính xác 1 – 5 bài báo trọng tâm nhất để đưa vào bộ nhớ làm việc.
+- **Nỗi đau 2 — Hiện tượng "học nhảy cóc" và ngợp kiến thức toán học ($Bậc\ 1 \to 4$):** Khảo sát đào tạo sau đại học cho thấy **hơn 55% sinh viên và nghiên cứu sinh mới bỏ cuộc giữa chừng** khi đọc các bài báo ở trình độ cao (ví dụ: bài báo kinh điển 2017 *Attention Is All You Need* thực chất nằm ở **Bậc 4 - Trình độ Đại học**). Tác giả chỉ nhắc lướt qua các công thức kế thừa từ Bậc 1 (Bag-of-Words), Bậc 2 (RNN/Vanishing Gradient), Bậc 3 (Seq2Seq + Attention sơ khai). Khi người đọc hỏi các công cụ AI thông thường, AI giải thích thẳng vào ngọn ($D$) mà thiếu lộ trình cội nguồn, đồng thời thiếu **trực giác toán học (Mathematical Intuition)** khiến người học ngợp và từ bỏ.
+- **Nỗi đau 3 — Hố sâu giữa toán học và lập trình (Theory-to-Code Gap):** 90% sinh viên hiểu công thức toán trên giấy nhưng khi mở IDE lên viết PyTorch thì bế tắc hoàn toàn vì không biết kích thước Tensor thực tế ghép nối ra sao `[batch, heads, seq_len, dim]`.
+- **Nỗi đau 4 — Loãng ngữ cảnh khi nạp tràn lan (Context Dilution & Accuracy Drop):** Nếu đưa bừa bãi toàn bộ 50 tài liệu tham khảo vào cuộc trò chuyện cùng lúc, độ chính xác khi trích xuất số liệu của AI bị **suy giảm tới 40%** do nhiễu chéo giữa các bài báo. Học giả cần quyền chủ động lựa chọn chính xác 1 – 5 bài báo trọng tâm nhất.
 
 ### 1.1. Bảng Đối Chiếu Giá Trị Trước & Sau Khi Áp Dụng Bảng Ngữ Cảnh & Lộ Trình Học (Before vs. After Value Matrix)
 
@@ -23,8 +24,10 @@ Trong hoạt động nghiên cứu học thuật, việc đọc một bài báo 
 | :--- | :--- | :--- |
 | **Tra cứu tài liệu tham khảo `[k]`** | Cuộn xuống cuối trang PDF $\rightarrow$ Copy tên $\rightarrow$ Mở Google Scholar tìm kiếm (mất 3 – 5 phút/bài). | Mở **Bảng Ngữ cảnh 3 Cột** xem ngay tiêu đề, tác giả, trạng thái PDF mở và đường dẫn gốc tại chỗ. |
 | **Đưa bài tham khảo vào hỏi đáp** | Phải tải file PDF về máy tính rồi tự tạo phiên làm việc mới hoặc tải lên thủ công. | Bấm **1-Click `[➕ Thêm vào phiên]`** $\rightarrow$ Có mặt ngay trên thanh Tab và hỏi đáp được trong **< 500ms**. |
-| **Khi gặp công thức kế thừa khó hiểu** | Tự mò mẫm đoán ý nghĩa ký hiệu hoặc tự tìm đọc hàng chục bài báo cũ không rõ thứ tự. | AI tự động phát **Thẻ Gợi ý Lộ trình Học tuần tự ($A \rightarrow B \rightarrow C \rightarrow D$)** chỉ rõ bài nền tảng cần đọc trước. |
-| **Khi bài tham khảo bị khóa thu phí** | Bị chặn hoàn toàn không biết bài báo đó đóng góp nội dung gì. | Tự động nạp **Bản Tóm tắt Học thuật** trong 500ms và cam kết không bịa đặt số liệu thân bài. |
+| **Tiếp cận bài báo kế thừa** | Tự mò mẫm đoán ý nghĩa ký hiệu hoặc nhảy cóc vào Bậc 4 mà chưa học Bậc 1, 2, 3. | AI phát **Thẻ Gợi Ý Lộ Trình Gợi Mở (Opt-in Scaffolding)** chỉ rõ các cột mốc cội nguồn cần học trước. |
+| **Giải mã công thức toán học** | Đọc các chứng minh đại số khô khan, không hiểu bản chất hình học. | **Bóc tách Trực giác Toán học:** Giải nghĩa bản chất hình học và phân rã biến đầu vào vs trọng số. |
+| **Chuyển từ Toán sang Code** | Hiểu công thức nhưng chịu chết không biết viết PyTorch thế nào. | **Math-to-Tensor Grounding:** Hiển thị trực quan kích thước Tensor và code PyTorch 5 dòng. |
+| **Khắc sâu kiến thức lâu dài** | Đọc thụ động, ảo tưởng hiểu bài, 1 tuần sau quên sạch. | **Active Recall Probes:** AI chủ động đặt câu hỏi phản xạ chiều sâu để kiểm tra bản chất. |
 
 VeriScholar giải quyết triệt để vấn đề này bằng hai cơ chế nghiệp vụ đột phá:
 1. **Bảng Quản Lý Ngữ Cảnh 3 Cột (Smart 3-Column Reference Table):** Tự động bóc tách và phân loại toàn bộ tài liệu tham khảo, cho phép người dùng mở rộng ngữ cảnh phiên đọc chỉ với 1 cú nhấp chuột mà không rời mắt khỏi trang sách.
@@ -96,25 +99,29 @@ flowchart LR
 
 ---
 
-### UC-ROAD-03: Gợi Ý Lộ Trình Học Tuần Tự Chống Học Nhảy Cóc (Socratic Bridge Hint: A → B → C → D)
+### UC-ROAD-03: Gợi Ý Lộ Trình Phổ Hệ Tri Thức & Bóc Tách Trực Giác Toán (Socratic Scaffolding & Math Grounding)
 - **Tác nhân:** Nhà Nghiên Cứu & Trợ Lý AI Socratic.
-- **Tiền điều kiện:** Người dùng đang đối thoại với trợ lý AI về tài liệu hiện tại.
-- **Sự kiện kích hoạt:** Người dùng đặt câu hỏi đào sâu về một công thức, thuật toán hoặc khái niệm phức tạp ($D$) mà tài liệu hiện tại chỉ kế thừa từ tài liệu tham khảo nền tảng ($B$).
+- **Tiền điều kiện:** Người dùng đang đối thoại với trợ lý AI về tài liệu hiện tại trong phiên đọc sâu.
+- **Sự kiện kích hoạt:** Người dùng đặt câu hỏi về một công thức toán, thuật toán hoặc khái niệm phức tạp ($Bậc\ 4$) mà tài liệu hiện tại chỉ kế thừa từ các công trình tiền đề trước đó ($Bậc\ 1, 2, 3$).
 - **Luồng sự kiện chính (Happy Path):**
-  1. Trợ lý AI trả lời câu hỏi trực tiếp của người dùng ở mức độ giải thích bản chất trực quan để giải tỏa thắc mắc trước mắt.
-  2. Đồng thời, AI tự động phát hiện bài báo nền tảng gốc chứa công thức này nằm ở mục trích dẫn số `[k]` trong danh mục tham khảo.
-  3. Ở cuối câu trả lời, AI xuất hiện một thẻ giao diện đặc biệt mang tên **Thẻ Gợi Ý Lộ Trình Học Tuần Tự**:
-     - Tiêu đề: *💡 Lộ trình học tuần tự gợi ý (A → B → C → D)*
-     - Khái niệm nền tảng: Tên công thức hoặc thuật toán gốc.
-     - Tài liệu gốc: Tên bài báo tham khảo `[k]`, tên tác giả và năm xuất bản.
-     - Lý do gợi ý: Lời giải thích sư phạm tại sao cần đọc tài liệu `[k]` để hiểu bản chất tài liệu hiện tại.
-     - Nút hành động: `[➕ Nạp bài [k] vào phiên để tìm hiểu trước]` và `[Bỏ qua]`.
-  4. Người dùng nhấp vào nút `[➕ Nạp bài [k] vào phiên để tìm hiểu trước]`. Hệ thống tự động thực hiện quy trình Nạp nhanh (như `UC-ROAD-02`) mà người dùng không cần phải tự mở Bảng 3 Cột để tra cứu.
+  1. **Bóc tách Trực giác Toán học (Mathematical Intuition Explainer):**
+     - Trợ lý AI giải thích trực quan bản chất hình học hoặc tương tự đời thực của công thức, chỉ rõ đâu là biến số dữ liệu đầu vào và đâu là trọng số tối ưu trước khi đi vào chứng minh đại số.
+  2. **Cầu Nối Toán Sang Mã Nguồn (Math-to-Tensor Grounding):**
+     - Đối với các công thức toán thực thi mô hình (ví dụ: Self-Attention), AI cung cấp nút xem **Kích thước Tensor thực tế** (ví dụ: `[batch_size, num_heads, seq_len, head_dim]`) và đoạn code PyTorch 5 dòng tối thiểu để người học ánh xạ ngay sang lập trình.
+  3. **Thẻ Gợi Ý Lộ Trình Phổ Hệ Tri Thức Gợi Mở (Opt-in Scaffolding Card):**
+     - AI không võ đoán hay phán xét trình độ người dùng. Ở cuối câu trả lời, AI hiển thị thẻ gợi ý mang tính đồng hành:
+       > *"💡 Bài báo bạn đang đọc thuộc Bậc 4 (Kiến trúc Transformer). Nếu bạn là người mới chưa có kiến thức vững vàng thì hãy tham khảo lộ trình dưới đây để hiểu bản chất của paper hơn nha:*
+       > - *Bậc 2 (Cột mốc RNN & Triệt tiêu đạo hàm): Bài báo Elman (1990).*
+       > - *Bậc 3 (Cột mốc Attention sơ khai giải cứu RNN): Bài báo Bahdanau et al. (2014).*
+       > 👉 `[➕ Nạp bài Bậc 3 vào phiên để tìm hiểu trước]`"
+     - Thẻ chỉ đặt nút hành động `[➕ Nạp vào phiên]` ở bậc liền kề trực tiếp nhất để tránh làm ngợp người học.
+  4. **Kiểm Tra Phản Xạ Hiểu Bài Chủ Động (Active Recall Probe):**
+     - Sau khi người dùng đọc xong lời giải thích, AI chủ động đặt một câu hỏi phản xạ chiều sâu nghịch đảo (ví dụ: *"Nếu ta không chia ma trận cho căn bậc hai $\sqrt{d_k}$ thì hàm Softmax sẽ gặp hiện tượng gì?"*) để người học khắc sâu kiến thức vào não bộ, chống ảo tưởng hiểu bài.
 - **Kết quả đầu ra (Post-conditions):**
-  - Học giả vừa nhận được lời giải thích trực quan cho câu hỏi hiện tại, vừa có cầu nối 1-Click để nạp ngay bài báo nền tảng vào phiên đọc mà không bị ngợp kiến thức.
+  - Học giả nắm được bản chất trực giác của toán học, có cầu nối sang code PyTorch, nhận được thẻ gợi ý lộ trình cội nguồn văn minh, và được kích hoạt tư duy phản xạ chủ động.
 - **Luồng sự kiện ngoại lệ (Exception Flows):**
-  - *Ngoại lệ 3a — Tài liệu nền tảng đã có sẵn trong phiên:* AI chỉ dẫn chiếu trực tiếp đến Tab tài liệu đã mở và số trang liên quan mà không hiển thị nút nạp thêm.
-  - *Ngoại lệ 3b — Chuỗi kiến thức nền tảng nhiều tầng ($A \rightarrow B \rightarrow C$):* Nếu bài báo hiện tại dẫn chiếu tới đồng thời 2 công trình tiền đề, hệ thống ưu tiên gợi ý công trình nền tảng trực tiếp và cốt lõi nhất (tối đa 1 thẻ gợi ý mỗi lượt trả lời) để giữ sự tập trung tối đa cho người học.
+  - *Ngoại lệ 3a — Người dùng là học giả Senior đã vững kiến thức:* Người dùng chỉ cần bấm nút `[✕ Bỏ qua gợi ý]` hoặc tiếp tục đọc, thẻ nằm gọn ở chân tin nhắn không làm gián đoạn mạch làm việc.
+  - *Ngoại lệ 3b — Tài liệu nền tảng đã có sẵn trong phiên:* AI chỉ dẫn chiếu trực tiếp đến Tab tài liệu đã mở và số trang liên quan mà không hiển thị nút nạp thêm.
 
 ---
 
@@ -159,14 +166,15 @@ Then trong vòng dưới 500 mili-giây, hệ thống phải mở thêm một Ta
   And sau khi hoàn tất tải ngầm, người dùng có thể nhấp vào xem toàn văn bài báo và sử dụng tính năng soi minh chứng
 ```
 
-### Kịch bản 3: Gợi ý lộ trình học tuần tự khi phát hiện câu hỏi phụ thuộc kiến thức gốc
+### Kịch bản 3: Gợi ý lộ trình phổ hệ tri thức & bóc tách trực giác toán
 ```gherkin
 Given người dùng đang hỏi về một công thức phức tạp kế thừa từ bài báo tham khảo [14]
 When trợ lý AI phân tích và phát hiện khoảng trống kiến thức nền tảng
-Then câu trả lời của AI phải chứa Thẻ Gợi Ý Lộ Trình Học Tuần Tự
-  And thẻ phải giải thích rõ ràng khái niệm gốc và lý do tại sao nên đọc bài [14] trước
-  And thẻ phải cung cấp nút bấm trực tiếp "[➕ Nạp bài [14] vào phiên để tìm hiểu trước]"
-  And khi người dùng nhấp nút này, bài báo [14] được tự động nạp vào phiên mà không cần mở bảng tra cứu
+Then câu trả lời của AI phải bóc tách bản chất trực giác toán học và kích thước Tensor PyTorch tương ứng
+  And câu trả lời phải chứa Thẻ Gợi Ý Lộ Trình Phổ Hệ Tri Thức mang văn phong gợi mở (Opt-in)
+  And thẻ phải giải thích nhẹ nhàng: "Nếu bạn là người mới... hãy tham khảo lộ trình dưới đây"
+  And thẻ phải cung cấp nút bấm trực tiếp "[➕ Nạp bài [14] vào phiên để tìm hiểu trước]" tại bậc liền kề
+  And AI chủ động đưa ra câu hỏi kiểm tra phản xạ hiểu bài (Active Recall Probe) để chống ảo tưởng năng lực
 ```
 
 ### Kịch bản 4: Chống bịa đặt nội dung khi bài báo bị thu phí bản quyền
