@@ -6,6 +6,7 @@ import { useDashboardStore } from "@/features/dashboard/stores/useDashboardStore
 import { useWorkspaceStore } from "@/features/dashboard/stores/useWorkspaceStore";
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { useDashboardSessions } from "@/features/dashboard/hooks/useDashboardSessions";
+import { sessionsApi } from "@/features/sessions/api/sessionsApi";
 import type { DocumentListItem } from "@/types/document";
 
 export function LibraryPage({ hideTaskbar = true }: { hideTaskbar?: boolean } = {}) {
@@ -23,9 +24,17 @@ export function LibraryPage({ hideTaskbar = true }: { hideTaskbar?: boolean } = 
     setDocument(doc.id, targetTitle);
     setStatus("completed", 100);
 
-    // Initialize session and navigate to dashboard
+    // Initialize session and navigate to dashboard with document attached
     try {
-      const newSession = await createSession(`Nghiên cứu: ${targetTitle}`);
+      const newSession = await createSession(`Research: ${targetTitle}`);
+      try {
+        await sessionsApi.addDocumentToSession(newSession.id, {
+          source_type: "document_id",
+          document_id: doc.id,
+        });
+      } catch (err) {
+        console.warn("Failed to attach document to session:", err);
+      }
       selectSession(newSession.id);
       navigate(`/dashboard/${newSession.id}`);
     } catch {
