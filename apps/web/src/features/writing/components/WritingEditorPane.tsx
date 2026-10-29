@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
 import { buildSelectionContextBuffer } from "../lib/contextBuffer";
+import { WritingSelectionPopover } from "./WritingSelectionPopover";
 import { cn } from "@/lib/utils";
 
 interface WritingEditorPaneProps {
@@ -44,9 +45,11 @@ export function WritingEditorPane({
   } = useWritingStore();
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorBodyRef = useRef<HTMLDivElement>(null);
   const [copied, setCopied] = useState(false);
   const [selectedText, setSelectedText] = useState("");
   const [selectionRange, setSelectionRange] = useState<{ start: number; end: number } | null>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
 
   const currentContent = activeFile === "main.tex" ? editorContent : editorBibContent;
 
@@ -105,12 +108,31 @@ export function WritingEditorPane({
     const start = textareaRef.current.selectionStart;
     const end = textareaRef.current.selectionEnd;
     setStoreSelectionRange({ start, end });
-    if (start !== end) {
+    if (start !== end && end - start >= 2) {
       setSelectedText(currentContent.substring(start, end).trim());
       setSelectionRange({ start, end });
     } else {
       setSelectedText("");
       setSelectionRange(null);
+      setPopoverPos(null);
+    }
+  };
+
+  const handleTextareaMouseUp = (e: React.MouseEvent<HTMLTextAreaElement>) => {
+    handleSelect();
+    if (!editorBodyRef.current) return;
+    const bodyRect = editorBodyRef.current.getBoundingClientRect();
+    const relX = Math.max(120, Math.min(bodyRect.width - 120, e.clientX - bodyRect.left));
+    const relY = Math.max(40, e.clientY - bodyRect.top);
+    setPopoverPos({ top: relY, left: relX });
+  };
+
+  const handleTextareaKeyUp = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    handleSelect();
+    if (e.shiftKey && (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "ArrowUp" || e.key === "ArrowDown")) {
+      if (!editorBodyRef.current) return;
+      const bodyRect = editorBodyRef.current.getBoundingClientRect();
+      setPopoverPos({ top: 80, left: bodyRect.width / 2 });
     }
   };
 
@@ -145,7 +167,7 @@ export function WritingEditorPane({
     }, 10);
   };
 
-  const handleAddToChatClick = () => {
+  const handleAddToChatClick = (askAi = false) => {
     if (!onSelectionAddToChat) return;
 
     let start = selectionRange?.start ?? -1;
@@ -155,10 +177,14 @@ export function WritingEditorPane({
       end = start !== -1 ? start + selectedText.length : 0;
     }
 
-    const contextBuffer =
+    let contextBuffer =
       start !== -1
         ? buildSelectionContextBuffer(currentContent, start, end)
         : `<target_selection>\n${selectedText}\n</target_selection>`;
+
+    if (askAi) {
+      contextBuffer = `${contextBuffer}\n\nPlease review, analyze, or explain this selected section.`;
+    }
 
     onSelectionAddToChat(contextBuffer);
   };
@@ -326,26 +352,19 @@ export function WritingEditorPane({
             <Heading className="w-3.5 h-3.5" />
           </button>
         </div>
-
-        {/* Selected text contextual tools */}
-        {selectedText && (
-          <div className="flex items-center gap-1 bg-coral-500/10 text-coral-700 dark:text-coral-300 px-2 py-0.5 rounded text-[11px] animate-in fade-in shrink-0">
-            <span>Đã chọn {selectedText.length} ký tự</span>
-            {onSelectionAddToChat && (
-              <button
-                type="button"
-                onClick={handleAddToChatClick}
-                className="font-medium hover:underline ml-1 cursor-pointer"
-              >
-                [Thêm vào Chat]
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {/* 3. Editor Body: Code View */}
-      <div className="flex-1 flex overflow-hidden relative font-mono text-xs">
+      <div ref={editorBodyRef} className="flex-1 flex overflow-hidden relative font-mono text-xs">
+        {/* Floating Context Selection Toolbar (Cursor/Medium style) */}
+        <WritingSelectionPopover
+          selectedText={selectedText}
+          position={popoverPos || { top: 60, left: 240 }}
+          isOpen={Boolean(selectedText && selectedText.length >= 2)}
+          onAddToChat={() => handleAddToChatClick(false)}
+          onAskAi={() => handleAddToChatClick(true)}
+        />
+
         {/* Line numbers gutter */}
         <div className="w-12 py-3 bg-[#f7f5f0] dark:bg-[#161513] border-r border-[#ece8df] dark:border-[#2a2824] select-none text-right pr-2 text-zinc-400 dark:text-zinc-600 overflow-hidden leading-5">
           {Array.from({ length: lineCount }).map((_, i) => {
@@ -383,7 +402,8 @@ export function WritingEditorPane({
             }
           }}
           onKeyDown={handleKeyDown}
-          onKeyUp={handleSelect}
+          onKeyUp={handleTextareaKeyUp}
+          onMouseUp={handleTextareaMouseUp}
           onClick={handleSelect}
           onSelect={handleSelect}
           spellCheck={false}

@@ -267,25 +267,8 @@ export function WritingHeaderBar({
             title="Save (Ctrl+S / ⌘S)"
           >
             {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            <span className="sr-only">Lưu</span>
+            <span className="sr-only">Save</span>
             <span className="hidden sm:inline">Save</span>
-          </button>
-
-          {/* PROMINENT BUTTON 2: Compile (Primary Accent) */}
-          <button
-            type="button"
-            onClick={onCompile}
-            disabled={isCompiling}
-            className="h-8 px-2.5 sm:px-3.5 rounded-lg text-xs font-semibold font-anthropic-serif flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-sm disabled:opacity-50 transition-colors cursor-pointer"
-            title="Compile (LaTeX Engine)"
-          >
-            {isCompiling ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Play className="w-3.5 h-3.5 fill-current" />
-            )}
-            <span className="sr-only">Biên dịch</span>
-            <span className="hidden xs:inline">Compile</span>
           </button>
         </div>
       </header>
