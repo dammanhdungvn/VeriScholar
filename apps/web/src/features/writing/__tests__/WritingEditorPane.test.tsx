@@ -11,8 +11,9 @@ describe("WritingEditorPane", () => {
       editorBibContent: "",
       activeFile: "main.tex",
       lastCompileResult: {
+        draft_id: "test-draft-123",
         success: false,
-        diagnostics: [],
+        retries_attempted: 0,
         errors: [
           {
             line: 3,
@@ -23,7 +24,6 @@ describe("WritingEditorPane", () => {
           },
         ],
         logs: "Error on line 3",
-        duration_seconds: 0.5,
       },
     });
   });

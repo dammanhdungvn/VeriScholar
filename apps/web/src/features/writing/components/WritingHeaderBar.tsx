@@ -35,7 +35,6 @@ export function WritingHeaderBar({
   onOpenAssets,
 }: WritingHeaderBarProps) {
   const {
-    draft,
     editorTitle,
     setEditorTitle,
     workspaceMode,

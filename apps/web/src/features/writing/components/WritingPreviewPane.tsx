@@ -15,7 +15,6 @@ import {
 import { useWritingStore } from "../stores/useWritingStore";
 import { draftsApi } from "../api/draftsApi";
 import { getCachedPdfDocument } from "@/features/reader/lib/pdfRenderQueue";
-import { pdfjsLib } from "@/features/reader/lib/pdfjs-init";
 import { cn } from "@/lib/utils";
 
 interface WritingPreviewPaneProps {

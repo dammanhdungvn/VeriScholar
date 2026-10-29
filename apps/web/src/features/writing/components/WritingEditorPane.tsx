@@ -16,7 +16,6 @@ import {
   PanelLeftOpen,
 } from "lucide-react";
 import { useWritingStore } from "../stores/useWritingStore";
-import { draftsApi } from "../api/draftsApi";
 import { buildSelectionContextBuffer } from "../lib/contextBuffer";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +29,6 @@ export function WritingEditorPane({
   scrollToLine,
 }: WritingEditorPaneProps) {
   const {
-    activeDraftId,
     editorContent,
     setEditorContent,
     editorBibContent,
@@ -41,7 +39,6 @@ export function WritingEditorPane({
     closeFile,
     isFileTreeOpen,
     toggleFileTree,
-    setActiveHighlightBox,
     lastCompileResult,
     setSelectionRange: setStoreSelectionRange,
   } = useWritingStore();

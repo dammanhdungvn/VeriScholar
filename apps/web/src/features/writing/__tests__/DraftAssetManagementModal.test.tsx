@@ -49,7 +49,7 @@ describe("DraftAssetManagementModal", () => {
     vi.mocked(draftsApi.createAsset).mockImplementation(async (_draftId, payload) => ({
       id: `asset-${payload.filename}`,
       draft_id: "test-draft-123",
-      asset_type: payload.asset_type,
+      asset_type: payload.asset_type || "image",
       filename: payload.filename,
       file_size_bytes: 512,
       storage_url: `/assets/${payload.filename}`,
