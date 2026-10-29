@@ -536,6 +536,18 @@ export function DashboardWorkspace({
     }
   };
 
+  const handleAddByFile = async (file: File) => {
+    const uploaded = await documentsApi.uploadDocument(file, activeSessionId || undefined);
+    if (uploaded?.id) {
+      addOpenDocument(uploaded.id);
+      setActiveDocumentId(uploaded.id);
+      queryClient.invalidateQueries({ queryKey: DOCUMENT_QUERY_KEYS.lists() });
+      if (activeSessionId) {
+        queryClient.invalidateQueries({ queryKey: ["sessions", activeSessionId, "documents"] });
+      }
+    }
+  };
+
   const handleAddToNote = (selectedText: string, pageNumber: number, bbox?: BoundingBox | null) => {
     setNoteInitialText(selectedText);
     setNotePageNumber(pageNumber);
@@ -1591,6 +1603,7 @@ export function DashboardWorkspace({
         currentDocumentIds={effectiveOpenIds}
         onAddByDocumentId={handleAddByDocumentId}
         onAddByUrl={handleAddByUrl}
+        onAddByFile={handleAddByFile}
       />
 
       <CreateNoteDialog
