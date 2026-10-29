@@ -14,50 +14,114 @@ VeriScholar khắc phục hạn chế này bằng cách mô hình hóa tri thứ
     \item \textbf{Kết quả đo lường (\textit{MetricResult Node}):} Các chỉ số định lượng cụ thể đo lường hiệu năng của phương pháp trên bộ dữ liệu tương ứng (chứa trường tên chỉ số, giá trị định lượng, và đơn vị đo lường).
 \end{enumerate}
 
-Cấu trúc đồ thị mạng lưới 4 thực thể cùng các mối liên kết ngữ nghĩa được mô hình hóa trong Hình~\ref{fig:graphrag_model}.
+Cấu trúc đường ống dữ liệu trích xuất tri thức phân tầng và mạng lưới 4 thực thể cốt lõi được mô hình hóa trong Hình~\ref{fig:graphrag_model}.
 
 \begin{figure}[htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.78, transform shape,
-    papernode/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
-    methodnode/.style={draw=teal!80!black, fill=teal!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
-    datanode/.style={draw=purple!80!black, fill=purple!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
-    metricnode/.style={draw=orange!80!black, fill=orange!6, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\small},
-    edgearrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!70},
-    labelbox/.style={font=\scriptsize\bfseries, fill=white, inner sep=2pt, rounded corners=2pt}
+    scale=0.72, transform shape,
+    phasebox/.style={draw=blue!85!black, fill=blue!5, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    entitybox/.style={draw=teal!85!black, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    commbox/.style={draw=purple!85!black, fill=purple!4, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    retbox/.style={draw=orange!90!black, fill=orange!6, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    groupcard/.style={draw=gray!50, fill=gray!2, rounded corners=7pt, line width=0.9pt, dashed},
+    pipearrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!85!black},
+    edgearrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=teal!85!black},
+    commarrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=purple!85!black},
+    dualarrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=orange!90!black}
 ]
-    % 4 Thực thể cốt lõi (4 Core Entities)
-    \node[papernode, minimum width=4.4cm] (paper) at (0, 2.6) {
-        \textbf{Bài báo Khoa học (\textit{Paper})}\\[2pt]
-        \footnotesize \textit{Title, DOI, Year, Authors, Abstract}
-    };
-    
-    \node[methodnode, minimum width=4.4cm] (method) at (0, 0.2) {
-        \textbf{Phương pháp Đề xuất (\textit{Method})}\\[2pt]
-        \footnotesize \textit{Name, Category, Architecture, Task}
-    };
-    
-    \node[datanode, minimum width=4.2cm] (dataset) at (-4.2, -2.3) {
-        \textbf{Bộ dữ liệu Chuẩn (\textit{Dataset})}\\[2pt]
-        \footnotesize \textit{Name, Domain, Benchmark, Split}
-    };
-    
-    \node[metricnode, minimum width=4.2cm] (metric) at (4.2, -2.3) {
-        \textbf{Kết quả Đo lường (\textit{MetricResult})}\\[2pt]
-        \footnotesize \textit{MetricName, Value, Unit, Baseline}
+    % ==========================================================================
+    % PHA 1: NẠP ẤN PHẨM & PHÂN ĐOẠN TEXTUNITS (INGESTION & CHUNKING)
+    % ==========================================================================
+    \node[phasebox, text width=3.4cm] (pdf) at (-4.8, 4.2) {
+        \textbf{Ấn phẩm Khoa học}\\[2pt]
+        \footnotesize PDF hai cột chuẩn quốc tế
     };
 
-    % Các Cạnh liên kết ngữ nghĩa có nhãn song ngữ
-    \draw[edgearrow] (paper) -- (method) node[midway, right=3pt, font=\footnotesize\bfseries, fill=white, inner sep=2pt] {ĐỀ XUẤT (\textit{PROPOSES})};
-    
-    \draw[edgearrow] (method) -- (dataset) node[midway, above left=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐÁNH GIÁ TRÊN (\textit{EVALUATES})};
-    
-    \draw[edgearrow] (method) -- (metric) node[midway, above right=1pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐẠT KẾT QUẢ (\textit{YIELDS})};
-    
-    \draw[edgearrow, dashed] (metric.south west) to[bend left=16] node[midway, below=2pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {ĐO LƯỜNG TRÊN (\textit{BENCHMARKED\_ON})} (dataset.south east);
+    \node[phasebox, text width=4.2cm] (textunits) at (2.4, 4.2) {
+        \textbf{Bóc tách Phân đoạn TextUnits}\\[2pt]
+        \footnotesize Gutter Detection $\to$ BBox $[0..1000]$
+    };
+
+    \draw[pipearrow] (pdf.east) -- node[midway, above=1pt, font=\tiny\bfseries] {Bóc tách layout} (textunits.west);
+
+    % ==========================================================================
+    % PHA 2: TRÍCH XUẤT 4 THỰC THỂ DNA & RESEARCH GAP (GRAPH EXTRACTION)
+    % ==========================================================================
+    \node[groupcard, minimum width=15.4cm, minimum height=2.4cm] (card_extract) at (0, 1.6) {};
+    \node[fill=teal!12, draw=teal!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=teal!90!black, inner sep=2.5pt] at (0, 2.65) {TRÍCH XUẤT MẠNG TRI THỨC 4 THỰC THỂ DNA};
+
+    \node[entitybox, text width=2.6cm] (paper) at (-5.6, 1.5) {
+        \textbf{Bài báo (Paper)}\\[1pt]
+        \footnotesize DOI, Authors, Year
+    };
+
+    \node[entitybox, text width=2.8cm] (method) at (-1.8, 1.5) {
+        \textbf{Phương pháp (Method)}\\[1pt]
+        \footnotesize Architecture, Tasks
+    };
+
+    \node[entitybox, text width=2.6cm] (data) at (2.0, 1.5) {
+        \textbf{Bộ dữ liệu (Dataset)}\\[1pt]
+        \footnotesize Domain, Benchmark
+    };
+
+    \node[entitybox, text width=2.6cm] (metric) at (5.8, 1.5) {
+        \textbf{Kết quả (Metric)}\\[1pt]
+        \footnotesize Value, Unit, Baseline
+    };
+
+    % Đường nối trực giao giữa Pha 1 xuống Pha 2 qua biên trái ngoài (x = -7.2)
+    \draw[pipearrow] (textunits.south) -- ++(0, -0.55) -| (-7.2, 1.5) -- (paper.west);
+
+    % Cạnh nối quan hệ giữa các thực thể
+    \draw[edgearrow] (paper.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐỀ XUẤT} (method.west);
+    \draw[edgearrow] (method.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐÁNH GIÁ} (data.west);
+    \draw[edgearrow] (data.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐO LƯỜNG} (metric.west);
+
+    % ==========================================================================
+    % PHA 3: PHÂN CỤM CỘNG ĐỒNG LEIDEN & TÓM TẮT BÁO CÁO (COMMUNITY DETECTION)
+    % ==========================================================================
+    \node[groupcard, minimum width=15.4cm, minimum height=2.3cm] (card_comm) at (0, -1.3) {};
+    \node[fill=purple!12, draw=purple!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, -0.3) {PHÂN CỤM CỘNG ĐỒNG LEIDEN};
+
+    \node[commbox, text width=4.0cm] (comm_level0) at (-3.6, -1.4) {
+        \textbf{Cộng đồng Vi mô (Level 0)}\\[2pt]
+        \footnotesize Cụm phương pháp cùng đề tài
+    };
+
+    \node[commbox, text width=4.0cm] (comm_level1) at (3.6, -1.4) {
+        \textbf{Cộng đồng Vĩ mô (Level 1)}\\[2pt]
+        \footnotesize Báo cáo tổng quan phân ngành
+    };
+
+    % Chuyển tiếp thực thể vào thuật toán phân cụm qua 2 nhánh trực giao
+    \draw[commarrow] (method.south) -- (method.south |- 0, 0.05) -| (comm_level0.north);
+    \node[above=2pt, font=\tiny\bfseries, fill=white, inner sep=1.5pt, text=purple!85!black] at (-3.6, 0.05) {Thuật toán Leiden CTE};
+
+    \draw[commarrow] (metric.south) -- (metric.south |- 0, 0.05) -| (comm_level1.north);
+    \node[above=2pt, font=\tiny\bfseries, fill=white, inner sep=1.5pt, text=purple!85!black] at (3.6, 0.05) {Tóm tắt phân tầng};
+
+    \draw[commarrow] (comm_level0.east) -- node[midway, above=1pt, font=\tiny\bfseries] {Tổng hợp đệ quy} (comm_level1.west);
+
+    % ==========================================================================
+    % PHA 4: TRUY XUẤT PHÂN TẦNG HAI CẤP ĐỘ (DUAL-LEVEL RETRIEVAL PIPELINE)
+    % ==========================================================================
+    \node[retbox, text width=6.2cm] (ret_low) at (-3.8, -3.8) {
+        \textbf{Truy xuất Mức thấp (Low-Level Retrieval)}\\[2pt]
+        \footnotesize Khớp chính xác Thực thể DNA \& Số liệu kiểm chứng
+    };
+
+    \node[retbox, text width=6.2cm] (ret_high) at (3.8, -3.8) {
+        \textbf{Truy xuất Mức cao (High-Level Retrieval)}\\[2pt]
+        \footnotesize Khám phá Mối quan hệ vĩ mô \& Research Gap
+    };
+
+    % Đường dẫn xuống truy xuất 2 cấp độ
+    \draw[dualarrow] (comm_level0.south) -- (ret_low.north);
+    \draw[dualarrow] (comm_level1.south) -- (ret_high.north);
 \end{tikzpicture}
-\caption{Mô hình đồ thị tri thức học thuật 4 thực thể cốt lõi (GraphRAG)}
+\caption[Quy trình trích xuất tri thức phân tầng GraphRAG]{Quy trình đường ống dữ liệu trích xuất tri thức phân tầng GraphRAG}
 \label{fig:graphrag_model}
 \end{figure}
 

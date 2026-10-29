@@ -18,75 +18,105 @@ Tuân thủ phong cách thiết kế phân rã module của các hệ thống AI
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
-    bigcard/.style={draw=black!75, fill=gray!3, rounded corners=8pt, line width=1.1pt, inner sep=10pt},
-    subcard_ret/.style={draw=blue!80!black, fill=white, rounded corners=6pt, line width=0.9pt, inner sep=8pt},
-    subcard_ag/.style={draw=teal!80!black, fill=white, rounded corners=6pt, line width=0.9pt, inner sep=8pt},
-    subcard_ex/.style={draw=purple!80!black, fill=white, rounded corners=6pt, line width=0.9pt, inner sep=8pt},
-    pill_ret/.style={draw=blue!75!black, fill=blue!6, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
-    pill_ag/.style={draw=teal!80!black, fill=teal!6, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont},
-    pill_ex/.style={draw=purple!80!black, fill=purple!6, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont},
-    conn/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=blue!75!black}
+    tier_band/.style={draw=black!40, rounded corners=6pt, line width=0.8pt, inner sep=6pt},
+    header_tag/.style={rounded corners=3pt, font=\bfseries\scriptsize, inner sep=3pt},
+    node_card/.style={draw=black!75, fill=white, rounded corners=4pt, line width=0.8pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
+    pipe_node/.style={draw=blue!80!black, fill=white, rounded corners=3pt, line width=0.8pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\footnotesize},
+    arrow_seq/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=blue!80!black},
+    arrow_flow/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.85pt, draw=black!55}
 ]
-    % Khung bao lớn tổng thể
-    \node[bigcard, minimum width=17.2cm, minimum height=14.8cm] (maincard) at (0, -0.6) {};
-    \node[anchor=north, fill=black!8, draw=black!60, rounded corners=3pt, font=\bfseries\small, text=black!90, inner sep=4pt] (t_main) at ([yshift=-10pt]maincard.north) {CÁC KHỐI NĂNG LỰC TÍCH HỢP HỆ THỐNG (SYSTEM INTEGRATION COMPONENTS)};
+    % =========================================================================
+    % TẦNG 1: NĂNG LỰC TÁC NHÂN AI & TƯƠNG TÁC HỌC GIẢ (AGENT LAYER)
+    % =========================================================================
+    \draw[tier_band, fill=teal!4] (-8.6, 2.5) rectangle (8.6, 5.7);
+    \node[header_tag, fill=teal!15, text=teal!90!black, anchor=north west] at (-8.4, 5.5) {TẦNG 1: NĂNG LỰC TÁC NHÂN AI VÀ TƯƠNG TÁC HỌC GIẢ (\textit{AI AGENT \& INTERACTION LAYER})};
 
-    % Khối 1: Typical Retrieval Flow (Bên trên)
-    \node[subcard_ret, minimum width=16.2cm, minimum height=2.8cm, below=10pt of t_main.south, anchor=north] (c_ret) {};
-    \node[anchor=north, fill=blue!12, draw=blue!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=blue!90!black, inner sep=2.5pt] at ([yshift=-7pt]c_ret.north) {LUỒNG THU NHẬP VÀ TRUY XUẤT HỌC THUẬT (ACADEMIC RETRIEVAL PIPELINE)};
-
-    \node[pill_ret, minimum width=2.5cm, text width=2.4cm] (p1) at ([xshift=-6.0cm, yshift=-9pt]c_ret.center) {\textbf{Nạp ấn phẩm}\\\scriptsize Document Loaders};
-    \node[pill_ret, minimum width=2.5cm, text width=2.4cm] (p2) at ([xshift=-3.0cm, yshift=-9pt]c_ret.center) {\textbf{Bóc tách 2 cột}\\\scriptsize Gutter Splitters};
-    \node[pill_ret, minimum width=2.5cm, text width=2.4cm] (p3) at ([xshift=0.0cm, yshift=-9pt]c_ret.center) {\textbf{Mô hình nhúng}\\\scriptsize Text Embeddings};
-    \node[pill_ret, minimum width=2.5cm, text width=2.4cm] (p4) at ([xshift=3.0cm, yshift=-9pt]c_ret.center) {\textbf{Chỉ mục kép}\\\scriptsize HNSW \& GIN};
-    \node[pill_ret, minimum width=2.5cm, text width=2.4cm] (p5) at ([xshift=6.0cm, yshift=-9pt]c_ret.center) {\textbf{Hợp nhất RRF}\\\scriptsize Rank Fusion};
-
-    \draw[conn] (p1) -- (p2);
-    \draw[conn] (p2) -- (p3);
-    \draw[conn] (p3) -- (p4);
-    \draw[conn] (p4) -- (p5);
-
-    % Khối 2: Agent Capabilities (Góc dưới trái)
-    \node[subcard_ag, minimum width=7.8cm, minimum height=9.6cm, below=14pt of c_ret.south west, anchor=north west] (c_agent) {};
-    \node[anchor=north, fill=teal!15, draw=teal!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=teal!90!black, inner sep=3pt] (t_ag) at ([yshift=-10pt]c_agent.north) {NĂNG LỰC TÁC NHÂN AI (HỌC GIẢ TƯƠNG TÁC)};
-
-    \node[pill_ag, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of t_ag] (ag1) {
-        \textbf{\small Bộ công cụ tác nhân (\textit{Tools})}\\[2pt]
-        \scriptsize Tra cứu ấn phẩm, xem PDF và biên dịch mã
+    \node[node_card, minimum width=3.8cm, minimum height=1.65cm] (ag_ui) at (-6.0, 3.7) {
+        \textbf{Tương tác Học giả}\\[2pt]
+        \scriptsize Luồng phản hồi SSE thời gian thực\\
+        \scriptsize \& Định vị khung vàng $[0..1000]$
     };
-    \node[pill_ag, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ag1] (ag2) {
-        \textbf{\small Tự phản biện liêm chính (\textit{Reflection})}\\[2pt]
-        \scriptsize Kiểm định minh chứng và loại trừ ảo giác
+    \node[node_card, minimum width=3.8cm, minimum height=1.65cm] (ag_plan) at (-2.0, 3.7) {
+        \textbf{Lập kế hoạch Phân rã}\\[2pt]
+        \scriptsize Chuỗi suy luận ReAct đa bước\\
+        \scriptsize \& Chia nhỏ bài toán nghiên cứu
     };
-    \node[pill_ag, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ag2] (ag3) {
-        \textbf{\small Lập kế hoạch phân rã (\textit{Planning})}\\[2pt]
-        \scriptsize Suy luận ReAct và phân tách mục tiêu
+    \node[node_card, minimum width=3.8cm, minimum height=1.65cm] (ag_tool) at (2.0, 3.7) {
+        \textbf{Tập công cụ Tác nhân}\\[2pt]
+        \scriptsize Giao diện tra cứu DOI, PDF Canvas\\
+        \scriptsize \& Hộp cát biên dịch cô lập
     };
-    \node[pill_ag, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ag3] (ag4) {
-        \textbf{\small Tương tác học giả (\textit{Interaction})}\\[2pt]
-        \scriptsize Hỏi đáp ngữ cảnh và định vị minh chứng
+    \node[node_card, minimum width=3.8cm, minimum height=1.65cm] (ag_refl) at (6.0, 3.7) {
+        \textbf{Tự phản biện Liêm chính}\\[2pt]
+        \scriptsize Kiểm định đối sánh trích dẫn\\
+        \scriptsize IoU $\ge 0.85$ \& Tự sửa lỗi bản thảo
     };
 
-    % Khối 3: Execution and State (Góc dưới phải)
-    \node[subcard_ex, minimum width=7.8cm, minimum height=9.6cm, below=14pt of c_ret.south east, anchor=north east] (c_exec) {};
-    \node[anchor=north, fill=purple!15, draw=purple!80!black, rounded corners=3pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=3pt] (t_ex) at ([yshift=-10pt]c_exec.north) {HẠ TẦNG THỰC THI VÀ QUẢN TRỊ HỆ THỐNG};
+    % =========================================================================
+    % TẦNG 2: ĐƯỜNG ỐNG THU NHẬN & TRUY XUẤT HỌC THUẬT (RETRIEVAL PIPELINE)
+    % =========================================================================
+    \draw[tier_band, fill=blue!4] (-8.6, -0.7) rectangle (8.6, 1.9);
+    \node[header_tag, fill=blue!15, text=blue!90!black, anchor=north west] at (-8.4, 1.7) {TẦNG 2: ĐƯỜNG ỐNG TRUY XUẤT VÀ TRI THỨC LAI (\textit{HYBRID RETRIEVAL PIPELINE})};
 
-    \node[pill_ex, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of t_ex] (ex1) {
-        \textbf{\small Máy ảo hộp cát (\textit{Sandbox})}\\[2pt]
-        \scriptsize Thực thi và biên dịch \LaTeX\ trong vùng cô lập
+    \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p1) at (-6.4, 0.4) {
+        \textbf{Nạp ấn phẩm}\\[1pt]
+        \scriptsize PDF \& Metadata
     };
-    \node[pill_ex, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ex1] (ex2) {
-        \textbf{\small Cơ sở dữ liệu tri thức (\textit{Database})}\\[2pt]
-        \scriptsize Mở rộng pgvector và khử trùng lặp CAS
+    \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p2) at (-3.2, 0.4) {
+        \textbf{Bóc tách 2 cột}\\[1pt]
+        \scriptsize BBox $[0..1000]$
     };
-    \node[pill_ex, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ex2] (ex3) {
-        \textbf{\small Két sắt bảo mật khóa (\textit{BYOK})}\\[2pt]
-        \scriptsize Quản lý và bảo vệ khóa định danh cá nhân
+    \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p3) at (0.0, 0.4) {
+        \textbf{Mô hình nhúng}\\[1pt]
+        \scriptsize Text Embeddings
     };
-    \node[pill_ex, minimum width=7.1cm, text width=6.9cm, minimum height=1.45cm, below=13pt of ex3] (ex4) {
-        \textbf{\small Giám sát quản trị (\textit{Monitoring})}\\[2pt]
-        \scriptsize Truy vết suy luận và kiểm soát hạn ngạch
+    \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p4) at (3.2, 0.4) {
+        \textbf{Chỉ mục kép}\\[1pt]
+        \scriptsize HNSW \& GIN BM25
     };
+    \node[pipe_node, minimum width=2.8cm, minimum height=1.35cm] (p5) at (6.4, 0.4) {
+        \textbf{Hợp nhất RRF}\\[1pt]
+        \scriptsize Rank Fusion $k=60$
+    };
+
+    \draw[arrow_seq] (p1) -- (p2);
+    \draw[arrow_seq] (p2) -- (p3);
+    \draw[arrow_seq] (p3) -- (p4);
+    \draw[arrow_seq] (p4) -- (p5);
+
+    % =========================================================================
+    % TẦNG 3: HẠ TẦNG THỰC THI VÀ QUẢN TRỊ HỆ THỐNG (INFRASTRUCTURE LAYER)
+    % =========================================================================
+    \draw[tier_band, fill=purple!4] (-8.6, -3.9) rectangle (8.6, -1.3);
+    \node[header_tag, fill=purple!15, text=purple!90!black, anchor=north west] at (-8.4, -1.5) {TẦNG 3: HẠ TẦNG THỰC THI VÀ QUẢN TRỊ HỆ THỐNG (\textit{EXECUTION \& STORAGE INFRASTRUCTURE})};
+
+    \node[node_card, minimum width=3.8cm, minimum height=1.45cm] (ex_vm) at (-6.0, -2.8) {
+        \textbf{Hộp cát MicroVM}\\[2pt]
+        \scriptsize Firecracker cô lập an toàn\\
+        \scriptsize Biên dịch \LaTeX\ chống RCE
+    };
+    \node[node_card, minimum width=3.8cm, minimum height=1.45cm] (ex_db) at (-2.0, -2.8) {
+        \textbf{Kho tri thức pgvector}\\[2pt]
+        \scriptsize PostgreSQL 16 Mở rộng\\
+        \scriptsize \& Lưu trữ CAS SHA-256
+    };
+    \node[node_card, minimum width=3.8cm, minimum height=1.45cm] (ex_byok) at (2.0, -2.8) {
+        \textbf{Két sắt khóa BYOK}\\[2pt]
+        \scriptsize Quản lý khóa riêng tư học giả\\
+        \scriptsize Giải mã tức thời trên RAM
+    };
+    \node[node_card, minimum width=3.8cm, minimum height=1.45cm] (ex_mon) at (6.0, -2.8) {
+        \textbf{Giám sát Langfuse}\\[2pt]
+        \scriptsize Truy vết suy luận LLM Trace\\
+        \scriptsize \& Kiểm soát chi phí hạn ngạch
+    };
+
+    % Mũi tên tương tác liên tầng trực giao
+    \draw[arrow_flow] (ag_tool.south) -- (p3.north);
+    \draw[arrow_flow] (p5.north) -- (ag_refl.south);
+    \draw[arrow_flow] (p3.south) -- (ex_db.north);
+    \draw[arrow_flow] (ag_tool.south) -- (2.0, 2.2) -| (ex_vm.north);
+    \draw[arrow_flow] (ag_plan.south) -- (-2.0, 2.2) -| (ex_mon.north);
 \end{tikzpicture}
 \caption[Mô hình phân rã cấu trúc năng lực của hệ thống VeriScholar]{Mô hình phân rã cấu trúc năng lực chức năng của hệ thống VeriScholar}
 \label{fig:use_case_diagram}

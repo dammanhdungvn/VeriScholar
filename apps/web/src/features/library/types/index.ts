@@ -158,7 +158,15 @@ export interface LibraryGraphNode {
   type: string;
   degree: number;
   group: string;
-  metadata?: Record<string, unknown>;
+  community_id?: number | null;
+  community_label?: string | null;
+  citation_count?: number;
+  metadata?: {
+    abstract?: string;
+    publication_year?: number;
+    filename?: string;
+    [key: string]: unknown;
+  };
 }
 
 export interface LibraryGraphEdge {
@@ -169,9 +177,17 @@ export interface LibraryGraphEdge {
   weight: number;
 }
 
+export interface LibraryCommunity {
+  id: number;
+  label: string;
+  paper_count: number;
+  node_ids: string[];
+}
+
 export interface LibraryGraphResponseData {
   nodes: LibraryGraphNode[];
   edges: LibraryGraphEdge[];
+  communities?: LibraryCommunity[];
   total_nodes: number;
   total_edges: number;
 }

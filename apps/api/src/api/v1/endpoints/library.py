@@ -6,7 +6,6 @@ Provides:
 
 from __future__ import annotations
 
-from typing import Any, Literal
 from uuid import UUID
 
 import structlog
@@ -17,111 +16,28 @@ from api.db.models.reference import ReferenceItemModel
 from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.deps import get_current_user, get_graph_rag_service
-from api.schemas.envelope import ResponseMeta, SingleResponseEnvelope
+from api.schemas.envelope import ResponseMeta
 from api.schemas.error import ErrorResponse
+from api.schemas.library import (
+    GraphQueryRequest,
+    GraphQueryResponseData,
+    GraphQueryResponseEnvelope,
+    LibraryCommunity,
+    LibraryGraphEdge,
+    LibraryGraphNode,
+    LibraryGraphResponseData,
+    LibraryGraphResponseEnvelope,
+)
+from api.services.graph_community_service import GraphCommunityService
 from api.services.graph_rag_router import GraphRAGRouter
 from api.services.graph_rag_service import GraphRAGService
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.endpoints.library")
 
 router = APIRouter(prefix="/library", tags=["library"])
-
-
-class GraphQueryRequest(BaseModel):
-    """Payload for querying the personal academic knowledge graph."""
-
-    query: str = Field(
-        ...,
-        description="Scholarly synthesis or comparative question (3..1000 chars)",
-        examples=["Các mô hình Transformer đạt kết quả BLEU và Accuracy như thế nào?"],
-    )
-    mode: Literal["auto", "local", "global", "hybrid"] = Field(
-        default="auto",
-        description=(
-            "Search depth: 'auto' (smart router), 'local' (micro CTE), 'global' (macro), 'hybrid'"
-        ),
-        examples=["auto"],
-    )
-    folder_id: UUID | None = Field(
-        default=None,
-        description="Optional folder UUID filter",
-        examples=[None],
-    )
-    top_k: int = Field(
-        default=5,
-        description="Number of anchor nodes or top communities (1..50)",
-        examples=[5],
-    )
-
-
-class GraphQueryResponseData(BaseModel):
-    """Data payload returned by GraphRAG query."""
-
-    mode_used: str = Field(description="Depth strategy used: local, global, or hybrid")
-    answer: str = Field(description="Synthesized scholarly answer")
-    subgraph: dict[str, Any] = Field(
-        description="Extracted knowledge subgraph with nodes, edges, and evidence chunks"
-    )
-    evidence_chunks: list[dict[str, Any]] = Field(
-        default_factory=list,
-        description="Grounding evidence chunks with page numbers and bounding boxes",
-    )
-    meta: dict[str, Any] = Field(
-        default_factory=dict,
-        description="Retrieval trace and match metadata",
-    )
-
-
-class GraphQueryResponseEnvelope(SingleResponseEnvelope[GraphQueryResponseData]):
-    """Standard envelope for GraphRAG query with top-level field mirrors for Spec 05 contract."""
-
-    mode_used: str | None = Field(default=None, description="Direct mirror of mode_used")
-    answer: str | None = Field(default=None, description="Direct mirror of answer")
-    subgraph: dict[str, Any] | None = Field(default=None, description="Direct mirror of subgraph")
-
-
-class LibraryGraphNode(BaseModel):
-    """Knowledge graph node representing paper, concept, method, dataset, or metric."""
-
-    id: str = Field(description="Unique node identifier")
-    label: str = Field(description="Display label of the node")
-    type: str = Field(
-        default="Paper",
-        description="Node entity type: Paper, Method, Dataset, MetricResult",
-    )
-    degree: int = Field(default=0, description="Connectivity degree in graph")
-    group: str = Field(default="paper", description="Visual grouping category")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Metadata dictionary")
-
-
-class LibraryGraphEdge(BaseModel):
-    """Knowledge graph edge representing relation between two nodes."""
-
-    source: str = Field(description="Source node ID")
-    target: str = Field(description="Target node ID")
-    relation: str = Field(
-        default="CITES",
-        description="Relation type: CITES, USES_METHOD, EVALUATED_ON, RELATED",
-    )
-    label: str = Field(default="cites", description="Human-readable relation label")
-    weight: float = Field(default=1.0, description="Edge weight / confidence")
-
-
-class LibraryGraphResponseData(BaseModel):
-    """Structured graph payload for personal academic knowledge graph (LLM Wiki)."""
-
-    nodes: list[LibraryGraphNode] = Field(default_factory=list, description="Graph nodes")
-    edges: list[LibraryGraphEdge] = Field(default_factory=list, description="Graph edges")
-    total_nodes: int = Field(default=0, description="Total node count")
-    total_edges: int = Field(default=0, description="Total edge count")
-
-
-class LibraryGraphResponseEnvelope(SingleResponseEnvelope[LibraryGraphResponseData]):
-    """Standard envelope for Library Knowledge Graph."""
 
 
 @router.get(
@@ -164,11 +80,16 @@ async def get_library_graph(
         doc_ids.add(doc.id)
         title = (doc.title or doc.filename or "Untitled Paper").strip()
         doc_title_to_id[title.lower()] = doc_id_str
+        abstract_val = None
+        if isinstance(doc.parsed_metadata, dict):
+            abstract_val = doc.parsed_metadata.get("abstract")
+
         nodes_map[doc_id_str] = LibraryGraphNode(
             id=doc_id_str,
             label=title,
             type="Paper",
             degree=0,
+            citation_count=0,
             group="paper",
             metadata={
                 "filename": doc.filename,
@@ -176,6 +97,8 @@ async def get_library_graph(
                 "status": doc.status,
                 "page_count": doc.page_count,
                 "folder_id": str(doc.folder_id) if doc.folder_id else None,
+                "abstract": abstract_val,
+                "publication_year": doc.publication_year,
             },
         )
 
@@ -190,13 +113,18 @@ async def get_library_graph(
         for gn in res_gnodes.scalars().all():
             gn_id_str = str(gn.id)
             if gn_id_str not in nodes_map:
+                gn_meta = dict(gn.metadata_json or {})
+                gn_meta.setdefault("abstract", None)
+                gn_meta.setdefault("publication_year", None)
+                gn_meta.setdefault("filename", None)
                 nodes_map[gn_id_str] = LibraryGraphNode(
                     id=gn_id_str,
                     label=gn.display_name or gn.canonical_name,
                     type=gn.node_type,
                     degree=0,
+                    citation_count=0,
                     group=gn.node_type.lower(),
-                    metadata=gn.metadata_json or {},
+                    metadata=gn_meta,
                 )
 
     # 3. Fetch GraphEdgeModel relations
@@ -275,9 +203,39 @@ async def get_library_graph(
             nodes_map[s_id].degree += 1
             nodes_map[t_id].degree += 1
 
+    # 6. Calculate in-degree citation count for nodes based on CITES relations
+    for edge in edges_list:
+        if edge.relation == "CITES" and edge.target in nodes_map:
+            nodes_map[edge.target].citation_count += 1
+
+    # 7. Partition communities via Louvain
+    raw_nodes = [{"id": n.id, "label": n.label, "type": n.type} for n in nodes_map.values()]
+    raw_edges = [{"source": e.source, "target": e.target, "weight": e.weight} for e in edges_list]
+    node_to_comm, comms_data = GraphCommunityService.partition_communities(
+        raw_nodes, raw_edges, seed=42
+    )
+
+    comm_id_to_label = {c["id"]: c["label"] for c in comms_data}
+    for node_id, node in nodes_map.items():
+        comm_id = node_to_comm.get(node_id)
+        node.community_id = comm_id
+        if comm_id is not None:
+            node.community_label = comm_id_to_label.get(comm_id)
+
+    communities = [
+        LibraryCommunity(
+            id=c["id"],
+            label=c["label"],
+            paper_count=c["paper_count"],
+            node_ids=c["node_ids"],
+        )
+        for c in comms_data
+    ]
+
     graph_payload = LibraryGraphResponseData(
         nodes=list(nodes_map.values()),
         edges=edges_list,
+        communities=communities,
         total_nodes=len(nodes_map),
         total_edges=len(edges_list),
     )
@@ -374,6 +332,18 @@ async def query_library_graph(
         folder_id=payload.folder_id,
         top_k=payload.top_k,
     )
+
+    if payload.community_id is not None:
+        subgraph = result.get("subgraph", {})
+        nodes = subgraph.get("nodes", [])
+        edges = subgraph.get("edges", [])
+        matching_nodes = [n for n in nodes if n.get("community_id") == payload.community_id]
+        if matching_nodes:
+            node_ids = {n.get("id") for n in matching_nodes}
+            result["subgraph"]["nodes"] = matching_nodes
+            result["subgraph"]["edges"] = [
+                e for e in edges if e.get("source") in node_ids and e.get("target") in node_ids
+            ]
 
     data_payload = GraphQueryResponseData(
         mode_used=result["mode_used"],

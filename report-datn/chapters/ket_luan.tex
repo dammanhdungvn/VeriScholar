@@ -4,9 +4,9 @@
 \chapter*{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 \addcontentsline{toc}{chapter}{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 
-\section*{1. Kết quả đạt được của đồ án}
+\subsection*{1. Kết quả đạt được của đồ án}
 Sau thời gian nghiên cứu và thực hiện nghiêm túc, đồ án đã hoàn thành trọn vẹn các mục tiêu đề ra ban đầu:
-\begin{itemize}
+\begin{itemize}[itemsep=1.5pt, topsep=1.5pt, parsep=0pt]
     \item Xây dựng thành công nền tảng \VS\ với kiến trúc lục giác mô-đun hóa, phân tách rạch ròi giữa miền nghiệp vụ và hạ tầng giao vận.
     \item Giải quyết dứt điểm vấn đề ảo giác của mô hình ngôn ngữ lớn trong nghiên cứu khoa học thông qua cơ chế tìm kiếm lai Hybrid RAG (RRF $k=60$) kết hợp đối chiếu tọa độ hộp chữ $[0..1000]$ trên bản PDF gốc.
     \item Hiện thực hóa mô hình mạng tri thức 4 thực thể học thuật (GraphRAG) trực tiếp trên PostgreSQL 16 và \texttt{pgvector}, đảm bảo tính nhất quán giao dịch ACID tuyệt đối.
@@ -14,16 +14,16 @@ Sau thời gian nghiên cứu và thực hiện nghiêm túc, đồ án đã ho�
     \item Thiết lập hệ thống kiểm thử tự động 4 Cổng nghiêm ngặt và đo đạc thực nghiệm định lượng trên máy chủ Azure Ubuntu.
 \end{itemize}
 
-\section*{2. Hạn chế hiện tại của đề tài}
+\subsection*{2. Hạn chế hiện tại của đề tài}
 Bên cạnh những kết quả đạt được, đề tài vẫn còn tồn tại một số hạn chế khách quan:
-\begin{itemize}
+\begin{itemize}[itemsep=1.5pt, topsep=1.5pt, parsep=0pt]
     \item Hệ thống giới hạn tối đa 5 bài báo mở đồng thời trong một phiên đọc sâu nhằm tối ưu hóa dung lượng bộ nhớ RAM trên trình duyệt của người dùng.
     \item Quy trình biên dịch các gói \LaTeX\ ngoại cỡ còn phụ thuộc vào đường truyền mạng internet tới hạ tầng đám mây E2B Sandbox.
 \end{itemize}
 
-\section*{3. Hướng phát triển tiếp theo}
+\subsection*{3. Hướng phát triển tiếp theo}
 Trong thời gian tới, tác giả dự kiến tiếp tục mở rộng đề tài theo các định hướng:
-\begin{itemize}
+\begin{itemize}[itemsep=1.5pt, topsep=1.5pt, parsep=0pt]
     \item Tích hợp cơ chế cộng tác thời gian thực nhiều tác giả dựa trên cấu trúc dữ liệu không xung đột CRDT (Yjs) trên trình soạn thảo \LaTeX.
     \item Mở rộng mô hình GraphRAG với các mô hình thị giác máy tính đa phương thức để phân tích sâu các biểu đồ, đồ thị hình ảnh trong bài báo.
     \item Triển khai cụm worker phân tán xử lý song song để hỗ trợ các viện nghiên cứu có quy mô thư viện lên tới hàng chục nghìn bài báo.

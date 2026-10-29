@@ -49,7 +49,7 @@
 - Consumes: Raw node dictionaries `[{"id": str, "label": str, "type": str}]` and edge dictionaries `[{"source": str, "target": str, "weight": float}]`.
 - Produces: `GraphCommunityService.partition_communities(nodes: list[dict], edges: list[dict], seed: int = 42) -> tuple[dict[str, int], list[dict]]` returning `(node_to_community, communities_list)`.
 
-- [ ] **Step 1: Write failing test in `apps/api/tests/test_graph_community_service.py`**
+- [x] **Step 1: Write failing test in `apps/api/tests/test_graph_community_service.py`**
 
 ```python
 import pytest
@@ -97,21 +97,21 @@ def test_partition_communities_handles_empty_and_single_node():
     assert comms_single[0]["paper_count"] == 1
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_graph_community_service.py`
 Expected: FAIL with `ModuleNotFoundError: No module named 'networkx'` or `cannot import name 'GraphCommunityService'`.
 
-- [ ] **Step 3: Add `networkx>=3.4` and implement `GraphCommunityService` in `apps/api/src/api/services/graph_community_service.py`**
+- [x] **Step 3: Add `networkx>=3.4` and implement `GraphCommunityService` in `apps/api/src/api/services/graph_community_service.py`**
 
 Add `networkx>=3.4.0` in `pyproject.toml` and `apps/api/pyproject.toml`. Implement `GraphCommunityService.partition_communities` using `networkx.Graph()`, canonical node sorting, `networkx.algorithms.community.louvain_communities(G, seed=seed, resolution=1.0)`, and generate human-readable labels from top in-degree node labels.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_graph_community_service.py`
 Expected: PASS with 2 passed tests.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add pyproject.toml apps/api/pyproject.toml apps/api/src/api/services/graph_community_service.py apps/api/tests/test_graph_community_service.py
@@ -131,7 +131,7 @@ git commit -m "feat(api): add deterministic louvain community graph service"
 - Consumes: `GraphCommunityService` from Task 1.
 - Produces: Enhanced `LibraryGraphNode` (`community_id: int`, `community_label: str`, `citation_count: int`, `metadata.abstract`, `metadata.publication_year`) and `LibraryGraphResponseData.communities: list[LibraryCommunity]`.
 
-- [ ] **Step 1: Write failing test in `apps/api/tests/test_library_endpoints.py`**
+- [x] **Step 1: Write failing test in `apps/api/tests/test_library_endpoints.py`**
 
 Extend `test_get_library_graph_returns_nodes_and_edges` to assert:
 ```python
@@ -149,12 +149,12 @@ for node in data["nodes"]:
     assert "publication_year" in node["metadata"]
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `uv run pytest apps/api/tests/test_library_endpoints.py -k test_get_library_graph`
 Expected: FAIL with `KeyError: 'communities'` or assertion failure on `community_id`.
 
-- [ ] **Step 3: Update `apps/api/src/api/schemas/library.py` and `apps/api/src/api/v1/endpoints/library.py`**
+- [x] **Step 3: Update `apps/api/src/api/schemas/library.py` and `apps/api/src/api/v1/endpoints/library.py`**
 
 1. Define `LibraryCommunity(BaseModel)` with `id: int`, `label: str`, `paper_count: int`, `node_ids: list[str]`.
 2. Add `communities: list[LibraryCommunity] = Field(default_factory=list)` to `LibraryGraphResponseData`.
@@ -165,12 +165,12 @@ Expected: FAIL with `KeyError: 'communities'` or assertion failure on `community
    - Stamp `community_id` and `community_label` onto each node.
    - Return populated `communities` in `LibraryGraphResponseData`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `uv run pytest apps/api/tests/test_library_endpoints.py -k test_get_library_graph`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/api/schemas/library.py apps/api/src/api/v1/endpoints/library.py apps/api/tests/test_library_endpoints.py
@@ -337,19 +337,23 @@ git commit -m "feat(web): implement 60fps html5 canvas force-directed graph with
 
 ---
 
-### Task 5: Frontend Paper Inspection Drawer & Community Filter Ribbon
+### Task 5: Frontend Interactive Wiki Graph Right Sidebar, Local Focus & Paper Inspection
 
 **Files:**
 - Create: `apps/web/src/features/library/components/PaperInspectionDrawer.tsx`
-- Modify: `apps/web/src/features/library/components/LibraryWorkspaceView.tsx:340-375`
+- Create: `apps/web/src/features/library/components/LibraryGraphSidebar.tsx`
+- Modify: `apps/web/src/features/library/components/LibraryWorkspaceView.tsx`
 - Test: `apps/web/src/features/library/__tests__/PaperInspectionDrawer.test.tsx`
+- Test: `apps/web/src/features/library/__tests__/LibraryGraphSidebar.test.tsx`
 - Test: `apps/web/src/features/library/__tests__/LibraryWorkspaceView.test.tsx`
 
 **Interfaces:**
-- Consumes: Selected `LibraryGraphNode` and `edges` from `KnowledgeGraphCanvas`.
-- Produces: Instant slide-out drawer showing Title, Abstract, Year, Connected Works, `[Open in Deep Reader]` and `[Ask AI About This Paper]`. Also provides Community Filter Ribbon buttons above the canvas.
+- `LibraryGraphSidebar`: A collapsible right panel (380px) hosted in `LibraryWorkspaceView.tsx`, toggled via a `[🕸️ Wiki Graph]` button in the top header.
+- Local Subgraph Focus: When a paper is selected from the library table, the sidebar graph centers on that paper and highlights its 1–2 hop connected entities (`Method`, `Dataset`, `MetricResult`, citations) while dimming unrelated nodes.
+- Wiki Peek Sheet (`PaperInspectionDrawer`): Slides over the sidebar on node click, rendering paper title, abstract, year, connected entities, KaTeX formulas, and action buttons `[Open in Deep Reader]` and `[Ask AI About This Paper]`.
+- Main view retains 100% visibility of the papers table and folders hierarchy on the left.
 
-- [ ] **Step 1: Write failing test in `apps/web/src/features/library/__tests__/PaperInspectionDrawer.test.tsx`**
+- [ ] **Step 1: Write failing test in `apps/web/src/features/library/__tests__/PaperInspectionDrawer.test.tsx` and `LibraryGraphSidebar.test.tsx`**
 
 ```tsx
 import { render, screen, fireEvent } from "@testing-library/react";
@@ -400,12 +404,15 @@ describe("PaperInspectionDrawer Component", () => {
 Run: `(cd apps/web && npx vitest run src/features/library/__tests__/PaperInspectionDrawer.test.tsx)`
 Expected: FAIL with `cannot find module PaperInspectionDrawer`.
 
-- [ ] **Step 3: Implement `PaperInspectionDrawer.tsx` and integrate into `LibraryWorkspaceView.tsx`**
+- [ ] **Step 3: Implement `PaperInspectionDrawer.tsx`, `LibraryGraphSidebar.tsx`, and integrate into `LibraryWorkspaceView.tsx`**
 
-1. Implement `PaperInspectionDrawer` with pure client-side prior/derivative derivation from `allEdges`.
-2. In `LibraryWorkspaceView.tsx`, add the Community Filter Ribbon pills:
-   `[ All Papers ]`, `[ Community 0: Transformer... ]`, `[ Community 1: RAG... ]` with `paper_count` badges.
-3. Wire node clicks to open `PaperInspectionDrawer`.
+1. Implement `PaperInspectionDrawer` with pure client-side prior/derivative derivation from `allEdges` and Markdown/KaTeX preview.
+2. Implement `LibraryGraphSidebar` wrapping `KnowledgeGraphCanvas` in a clean 380px collapsible panel with search filter and community pills.
+3. In `LibraryWorkspaceView.tsx`:
+   - Add a `[🕸️ Wiki Graph]` toggle button on the header toolbar.
+   - Maintain the documents list and folders hierarchy in the main panel.
+   - When the graph sidebar is open, render `LibraryGraphSidebar` on the right side.
+   - Clicking a paper in the table sets `focusedNodeId`, centering and highlighting its local subgraph in the sidebar.
 4. Clicking `[Summarize Community]` or `[Ask AI About This Paper]` triggers the floating GraphRAG assistant with a pre-seeded prompt.
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -416,8 +423,8 @@ Expected: PASS.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add apps/web/src/features/library/components/PaperInspectionDrawer.tsx apps/web/src/features/library/components/LibraryWorkspaceView.tsx apps/web/src/features/library/__tests__/PaperInspectionDrawer.test.tsx apps/web/src/features/library/__tests__/LibraryWorkspaceView.test.tsx
-git commit -m "feat(web): add paper inspection drawer and community filter ribbon"
+git add apps/web/src/features/library/components/PaperInspectionDrawer.tsx apps/web/src/features/library/components/LibraryGraphSidebar.tsx apps/web/src/features/library/components/LibraryWorkspaceView.tsx apps/web/src/features/library/__tests__/PaperInspectionDrawer.test.tsx apps/web/src/features/library/__tests__/LibraryWorkspaceView.test.tsx
+git commit -m "feat(web): add interactive wiki graph right sidebar, local focus and inspection drawer"
 ```
 
 ---
