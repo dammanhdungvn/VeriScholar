@@ -44,7 +44,7 @@ function renderWithProviders(ui: React.ReactElement) {
 }
 
 describe("WikiGraphWorkspaceView Component", () => {
-  it("renders Wiki Graph workspace with 3 mode tabs (Đồ thị, Trang Wiki, Khoảng trống)", async () => {
+  it("renders Graph workspace with 2 primary modes (Knowledge Graph, Wiki Graph) and sub-tabs", async () => {
     vi.spyOn(libraryApi, "getLibraryGraph").mockResolvedValue({
       nodes: [
         {
@@ -87,25 +87,28 @@ describe("WikiGraphWorkspaceView Component", () => {
     renderWithProviders(<WikiGraphWorkspaceView />);
 
     expect(screen.getByTestId("wiki-graph-workspace")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Đồ thị tri thức/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Trang Wiki/i })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Khoảng trống/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Knowledge Graph/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Wiki Graph/i })).toBeInTheDocument();
 
     // Default: Graph Canvas is rendered
     expect(screen.getByTestId("knowledge-graph-canvas")).toBeInTheDocument();
 
-    // Switch to Trang Wiki tab
-    const wikiTabBtn = screen.getByRole("button", { name: /Trang Wiki/i });
+    // Switch to Wiki Graph mode
+    const wikiTabBtn = screen.getByRole("button", { name: /Wiki Graph/i });
     fireEvent.click(wikiTabBtn);
+
+    // Sub-tab: Trang chuyên đề should be active
+    expect(screen.getByRole("button", { name: /Trang chuyên đề/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Khoảng trống nghiên cứu/i })).toBeInTheDocument();
 
     await waitFor(() => {
       expect(screen.getAllByText("Self-Attention Mechanism").length).toBeGreaterThanOrEqual(1);
       expect(screen.getAllByText("[[attention-mechanism]]").length).toBeGreaterThanOrEqual(1);
     });
 
-    // Switch to Khoảng trống tab
-    const gapsTabBtn = screen.getByRole("button", { name: /Khoảng trống/i });
-    fireEvent.click(gapsTabBtn);
+    // Switch to Khoảng trống nghiên cứu sub-tab
+    const gapsSubTabBtn = screen.getByRole("button", { name: /Khoảng trống nghiên cứu/i });
+    fireEvent.click(gapsSubTabBtn);
 
     await waitFor(() => {
       expect(screen.getByText(/Ma trận khoảng trống nghiên cứu/i)).toBeInTheDocument();

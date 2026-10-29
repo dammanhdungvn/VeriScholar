@@ -284,7 +284,7 @@ export function DashboardTaskbar({
   const pathname = location.pathname;
   const isLibrary = pathname.startsWith("/library");
   const isWriting = pathname.startsWith("/writing");
-  const isWikiGraph = pathname.startsWith("/wiki-graph");
+  const isGraph = pathname.startsWith("/graph") || pathname.startsWith("/wiki-graph");
 
   const navItems = [
     {
@@ -307,12 +307,12 @@ export function DashboardTaskbar({
       onClick: () => navigate("/writing"),
     },
     {
-      id: "wiki-graph",
-      label: "Wiki Graph",
-      title: "Wiki Graph",
+      id: "graph",
+      label: "Graph",
+      title: "Graph",
       icon: Network,
-      isActive: isWikiGraph,
-      onClick: () => navigate("/wiki-graph"),
+      isActive: isGraph,
+      onClick: () => navigate("/graph"),
     },
   ];
 

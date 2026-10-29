@@ -22,6 +22,7 @@ export interface PaperInspectionDrawerProps {
   onOpenReader?: (docId: string) => void;
   onAskAI?: (prompt: string) => void;
   onSelectNode?: (nodeId: string) => void;
+  onViewWiki?: (node: LibraryGraphNode) => void;
 }
 
 export function PaperInspectionDrawer({
@@ -33,6 +34,7 @@ export function PaperInspectionDrawer({
   onOpenReader,
   onAskAI,
   onSelectNode,
+  onViewWiki,
 }: PaperInspectionDrawerProps) {
   // Derive connected nodes from edges
   const { priorWorks, derivativeWorks, connectedConcepts } = useMemo(() => {
@@ -220,6 +222,18 @@ export function PaperInspectionDrawer({
           <BookOpen className="w-3.5 h-3.5" />
           <span>Open in Deep Reader</span>
         </button>
+
+        {onViewWiki && (
+          <button
+            type="button"
+            onClick={() => onViewWiki(node)}
+            className="h-8 px-2.5 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+            title="Xem bài viết trên Wiki"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-[#c15f3e]" />
+            <span className="hidden sm:inline">Wiki ↗</span>
+          </button>
+        )}
 
         <button
           type="button"

@@ -225,7 +225,7 @@ describe("DashboardTaskbar Component", () => {
 
     expect(screen.getByText("Writing")).toBeInTheDocument();
     expect(screen.getByText("My Library")).toBeInTheDocument();
-    expect(screen.getByText("Wiki Graph")).toBeInTheDocument();
+    expect(screen.getByText("Graph")).toBeInTheDocument();
     expect(screen.queryByText(/Khám phá & Phiên đọc/i)).toBeNull();
   });
 });

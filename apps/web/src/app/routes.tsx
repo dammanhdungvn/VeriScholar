@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LandingPageContainer } from "@/features/landing/components/LandingPageContainer";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { LoginForm } from "@/features/auth/components/LoginForm";
@@ -46,8 +46,12 @@ export const router = createBrowserRouter([
         element: <LibraryPage />,
       },
       {
-        path: "/wiki-graph",
+        path: "/graph",
         element: <WikiGraphPage />,
+      },
+      {
+        path: "/wiki-graph",
+        element: <Navigate to="/graph" replace />,
       },
       {
         path: "/writing",
