@@ -425,4 +425,3 @@ async def test_get_library_graph_empty_and_with_documents(
     assert doc1_id in node_ids
     assert doc2_id in node_ids
     assert graph_data["total_nodes"] >= 2
-
