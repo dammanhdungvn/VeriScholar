@@ -40,14 +40,14 @@ Phân hệ này là không gian làm việc trung tâm nhất của VeriScholar 
 
 ### A. Kiến Trúc Tổng Thể 2 Tầng (2-Tier Architecture Visualization)
 
-Phân hệ Deep Reading vận hành theo mô hình **Agentic Dual-Index Advanced RAG** tách biệt tường minh 2 giai đoạn:
+Phân hệ Deep Reading vận hành theo mô hình **SOTA 3-Stage Advanced RAG (Structure-Aware Ingestion, Two-Stage Hybrid Retrieval & Reranking, Academic CoT Grounding)** tách biệt tường minh 2 giai đoạn:
 
 #### 1. Sơ Đồ Tầng 1: Quy Trình Nạp Bài Báo & Đánh Chỉ Mục Kép (Offline Ingestion Pipeline)
 *(Kích hoạt 1 lần duy nhất khi người dùng tải PDF lên hoặc chọn "Mở Đọc Sâu", xử lý bất đồng bộ qua BackgroundTasks)*
 
 ```mermaid
 flowchart TD
-    PDF["1. File PDF Bài Báo Khoa Học (<= 50MB)"] --> Parser["2. PyMuPDF Layout Engine: Nhận diện 2 cột & BBox [0..1000]"]
+    PDF["1. File PDF Bài Báo Khoa Học (<= 50MB)"] --> Parser["2. PyMuPDF4LLM Layout Engine: Nhận diện 2 cột, Bảng Markdown, Công thức LaTeX & BBox [0..1000]"]
     
     Parser --> Branch{"3. Phân Rã Dữ Liệu 2 Tầng"}
     
@@ -55,14 +55,14 @@ flowchart TD
     Branch -->|"Nhánh Vĩ mô (Macro)"| SumExtract["4A. Summary Extractor: Trích xuất Title, Abstract, Headings, Kết luận"]
     SumExtract --> SumStore[("Summary Index: Bảng documents.summary_metadata")]
     
-    %% Nhánh Micro (Chunks)
-    Branch -->|"Nhánh Vi mô (Micro)"| Chunker["4B. Fine Chunking Engine: Đoạn 512 tokens + Overlap 50 tokens"]
-    Chunker --> EmbedWorker["5. OpenAI text-embedding-3-small: Sinh Vector Dense 1536 chiều"]
+    %% Nhánh Micro (Parent-Child Chunks)
+    Branch -->|"Nhánh Vi mô (Micro)"| Chunker["4B. Parent-Child Chunking Engine: Parent Section (800-1200t) -> Child Chunks (200-300t)"]
+    Chunker --> EmbedWorker["5. OpenAI text-embedding-3-small: Sinh Vector Dense 1536 chiều cho Child Chunks"]
     Chunker --> LexicalWorker["6. PostgreSQL Full-Text Parser: Tạo to_tsvector english content"]
     
     EmbedWorker --> VecStore[("Vector Store Index: PostgreSQL pgvector HNSW")]
     LexicalWorker --> FTSStore[("Inverted Index: PostgreSQL GIN tsvector")]
-    Chunker --> BBoxStore[("Evidence Store: Bảng document_chunks kèm JSONB BBoxes")]
+    Chunker --> BBoxStore[("Evidence Store: Bảng document_chunks kèm parent_content & JSONB BBoxes")]
 
     classDef proc fill:#eff6ff,stroke:#3b82f6,stroke-width:2px;
     classDef store fill:#f8fafc,stroke:#1d4ed8,stroke-width:2px;
@@ -84,33 +84,33 @@ flowchart TD
 
     %% Định tuyến
     Router -->|"Hỏi tổng quan bài báo"| ReadSummary["Đọc Summary Index"]
-    Router -->|"Truy vết công thức / số liệu"| HybridRetriever["Dual-Stream Retrieval"]
+    Router -->|"Truy vết công thức / số liệu"| HybridRetriever["Dual-Stream Coarse Retrieval"]
 
     %% Đọc từ kho dữ liệu đã được Tầng 1 chuẩn bị
     ReadSummary -.-> SumStore[("Summary Index")]
     HybridRetriever -.->|"HNSW Cosine <=>"| VecStore[("Vector Store Index")]
     HybridRetriever -.->|"BM25 ts_rank_cd"| FTSStore[("Inverted Index GIN")]
 
-    %% Reranking & CRAG
-    VecStore & FTSStore --> RRF["4. Reciprocal Rank Fusion (k=60)"]
-    RRF --> CRAG{"5. CRAG Evaluator (Ngưỡng tau = 0.35)"}
+    %% Two-Stage Retrieval: RRF Coarse -> Semantic Reranking
+    VecStore & FTSStore --> RRF["4. Coarse Retrieval: RRF k=60 (Top 20 Child Chunks)"]
+    RRF --> Rerank["5. Semantic Reranker: Local ONNX flashrank / OpenAI"]
+    Rerank --> Gate{"6. Confidence Gate (Ngưỡng tau = 0.35)"}
     
-    CRAG -->|"Tin cậy cao (tau >= 0.35)"| EvidencePack["Top Evidence Chunks + Bounding Boxes"]
-    CRAG -->|"Công thức bị đứt đoạn / Mơ hồ"| Expand["Window Expansion [i-1, i+1]"] --> EvidencePack
-    CRAG -->|"Không liên quan (tau < 0.20)"| Abstain["Chủ động từ chối (Active Abstention)"]
+    Gate -->|"Tin cậy cao (tau >= 0.35)"| ParentExp["7. Parent Section Expansion (Top 5 Chunks -> Parent Sections, Cap 3500t)"]
+    Gate -->|"Không đủ bằng chứng (tau < 0.35)"| Abstain["Chủ động từ chối (Active Abstention) & SSE bridge_hint"]
 
     %% Sinh câu trả lời & Thị giác
-    EvidencePack --> LLM["6. LLM Reasoner Engine"]
+    ParentExp --> LLM["8. Academic CoT Reasoner Engine"]
     UserQuery --> LLM
     LLM -.->|"Tool Choice (Yêu cầu mở rộng ngữ cảnh)"| Router
     
-    LLM --> StreamOut["7. SSE Streaming & Markdown KaTeX"]
-    StreamOut --> Canvas["8. PDF Canvas Highlight (Golden Bounding Box)"]
+    LLM --> StreamOut["9. SSE Streaming & Markdown KaTeX"]
+    StreamOut --> Canvas["10. PDF Canvas Highlight (Golden Bounding Box từ Child Chunk)"]
 
     classDef agentStyle fill:#eff6ff,stroke:#2563eb,stroke-width:2px;
     classDef storageStyle fill:#f8fafc,stroke:#1d4ed8,stroke-width:2px;
     classDef viewStyle fill:#f0fdf4,stroke:#16a34a,stroke-width:2px;
-    class AgentBox,RRF agentStyle;
+    class AgentBox,RRF,Rerank,ParentExp agentStyle;
     class SumStore,VecStore,FTSStore storageStyle;
     class Canvas,StreamOut viewStyle;
 ```
@@ -254,9 +254,9 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
 
 ```
 +-----------------------------------------------------------------------------------+
-| 1. INDEXING (PyMuPDF Layout-Aware Chunking + text-embedding-3-small + tsvector)    |
+| 1. INDEXING (PyMuPDF4LLM Layout + Parent-Child Chunks + text-embedding-3-small)    |
 | Input: File PDF gốc (<= 50MB, <= 100 trang)                                       |
-| Output: Bảng document_chunks có embedding vector(1536) & bounding_boxes JSONB      |
+| Output: Bảng document_chunks có parent_content, embedding(1536) & BBox JSONB      |
 +-----------------------------------------------------------------------------------+
                                           |
                                           v
@@ -275,48 +275,47 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
                                           |
                                           v
 +-----------------------------------------------------------------------------------+
-| 4. RETRIEVE & RANKING (Dual-Stream Hybrid Search + RRF k=60)                      |
+| 4. COARSE RETRIEVAL (Dual-Stream Hybrid Search + RRF k=60, Top 20)                |
 | Input: hyde_vector (Dense) + standalone_query (Sparse) + active_doc_ids           |
-| Output: Top 5 candidate chunks kèm rrf_score & cosine_similarity                  |
+| Output: Top 20 candidate child chunks kèm rrf_score & cosine_similarity           |
 +-----------------------------------------------------------------------------------+
                                           |
                                           v
 +-----------------------------------------------------------------------------------+
-| 5. CRAG EVALUATION & WINDOW EXPANSION (Confidence Gate & Multiline Expansion)     |
-| Input: Top candidate chunks + max cosine_similarity (tau)                         |
-| Process: tau >= 0.35 (Correct) | 0.20 <= tau < 0.35 (Ambiguous) -> [i-1, i+1]     |
-| Output: final_evidence_chunks (đã bao trọn công thức) HOẶC cờ ABSTAIN              |
+| 5. SEMANTIC RERANKING & CONFIDENCE GATE (Local ONNX flashrank / OpenAI)           |
+| Input: Top 20 candidate child chunks + standalone_query                            |
+| Process: Rerank score S >= 0.65 -> Top 5 fine chunks; S_max < 0.35 -> Abstain     |
+| Output: Top 5 fine child chunks HOẶC cờ ABSTAIN kèm gợi ý CITES qua SSE           |
 +-----------------------------------------------------------------------------------+
                                           |
                                           v
 +-----------------------------------------------------------------------------------+
-| 6. PROMPT AUGMENTATION (Evidence Packager & Citation Anchors)                     |
-| Input: final_evidence_chunks + standalone_query                                    |
-| Output: Augmented System Prompt cô lập với chỉ thị gắn thẻ [cite:chunk_id:page]   |
+| 6. PARENT-CHILD CONTEXT PACKAGING (Deduplication + Token Budget Cap 3500)         |
+| Input: Top 5 fine child chunks + parent_content + standalone_query                |
+| Process: Khử trùng lặp Parent Sections + áp trần MAX_EVIDENCE_TOKENS = 3500       |
+| Output: Augmented System Prompt kèm chỉ thị gắn thẻ trích dẫn [cit_x]             |
 +-----------------------------------------------------------------------------------+
                                           |
                                           v
 +-----------------------------------------------------------------------------------+
 | 7. GENERATION & VISUAL PROOF (Streaming Reasoner & Golden BBox Canvas)            |
-| Input: Augmented Prompt gửi tới LLM (GPT-4o / Claude 3.5 Sonnet)                  |
-| Output: SSE Stream (Markdown KaTeX) + Trích xuất tọa độ BBox vẽ khung vàng        |
+| Input: Augmented Prompt gửi tới LLM (OpenAI OPENAI_MODEL)                         |
+| Output: SSE Stream (Markdown KaTeX) + Ánh xạ [cit_x] vào BBox của Child Chunk     |
 +-----------------------------------------------------------------------------------+
 ```
 
 #### Chi tiết Hợp đồng Dữ liệu từng Khối:
 
-1. **Khối 1: INDEXING & DUAL STORE PIPELINE (Kèm 4 Trụ Cột Summary Index)**
+1. **Khối 1: INDEXING & STRUCTURE-AWARE PARENT-CHILD DUAL STORE PIPELINE**
    * **Input:** File PDF nhị phân (`bytes`), `document_id` (UUID), `user_id` (UUID).
    * **Process:** 
-     - PyMuPDF chia cột đọc (Gutter Detection). Cắt lát: 512 tokens, bước trượt 50 tokens.
-     - Chuẩn hóa tọa độ Bounding Box về $[0..1000]$: `{"x": float, "y": float, "width": float, "height": float}`.
-     - Trích xuất cấu trúc tri thức vĩ mô của bài báo thành **4 Trụ Cột Summary Index** (lấy cảm hứng từ chuẩn AlphaXiv):
-       1. `original_problem`: Nút thắt và hạn chế của các phương pháp tiền nhiệm.
-       2. `proposed_solution`: Kiến trúc và kỹ thuật đột phá bài báo đề xuất.
-       3. `key_insights`: Đóng góp lý thuyết mang tính bản lề.
-       4. `quantitative_results`: Kết quả thực nghiệm định lượng chính (BLEU, F1, Loss, Cost reduction).
-     - Gọi `OpenAI text-embedding-3-small` theo batch $\le 128$ chunks để tính vector dense 1536 chiều.
-     - Phân tích từ khóa toàn văn tạo cột `content_tsv` bằng `to_tsvector('english', content)`.
+     - **Bóc tách nhận thức cấu trúc:** Sử dụng `pymupdf4llm` kết hợp phân tích bảng `page.find_tables()` có sẵn trong PyMuPDF.
+     - **Bảng biểu số liệu:** Tự động chuyển đổi thành bảng Markdown Table hoàn chỉnh (cột, hàng) và tính toán bounding box bao quanh toàn bộ bảng.
+     - **Công thức Toán học (LaTeX):** Nhận diện công thức qua regex heuristic và bọc trong ký hiệu `$$...$$` hoặc `\[...\]`. Nếu công thức là ảnh quét, tự động fallback sang OpenAI Vision (`gpt-4o-mini`) qua `OPENAI_API_KEY`.
+     - **Phân cấp Parent-Child Chunking:**
+       - **Child Chunks (200–300 tokens):** Phục vụ tìm kiếm chính xác cao. Tính vector dense 1536 chiều bằng `OpenAI text-embedding-3-small` (batch $\le 128$) và phân tích từ khóa `content_tsv` bằng `to_tsvector('english', content)`. Tọa độ Bounding Box được chuẩn hóa $[0..1000]$.
+       - **Parent Section (800–1200 tokens):** Đoạn văn bản bao quát trọn vẹn ngữ cảnh lập luận (theo tiêu đề mục Markdown H1/H2), được lưu vào cột `parent_content` của bảng `document_chunks`.
+     - **4 Trụ Cột Summary Index:** Trích xuất tri thức vĩ mô lưu vào `documents.summary_metadata`: `original_problem`, `proposed_solution`, `key_insights`, `quantitative_results`.
    * **Expected Output:**
      ```json
      {
@@ -324,6 +323,7 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
        "chunk_index": 19,
        "page_number": 3,
        "content": "Answer Relevance (AR) is defined as...",
+       "parent_content": "### 3. Metric Formulation\n\nTo evaluate generative retrieval systems...",
        "embedding": [0.0124, -0.0451, ..., 0.0892],
        "bounding_boxes": [{"x": 120.5, "y": 450.2, "width": 410.0, "height": 85.4}],
        "summary_metadata": {
@@ -355,53 +355,55 @@ Mọi kỹ sư và mô hình AI thực thi bắt buộc phải tuân thủ nghi�
    * **Process:** Phân loại ý định người dùng (Ý định vĩ mô như Tóm tắt/Đóng góp $\rightarrow$ `SUMMARY_INDEX`; Ý định vi mô như Công thức/Thực nghiệm/Số liệu $\rightarrow$ `DEEP_CHUNKS`).
    * **Expected Output:** `{"route": "DEEP_CHUNKS", "target_doc_ids": ["6439868d-..."]}`.
 
-4. **Khối 4: RETRIEVE & RANKING (Dual-Stream Hybrid Search + RRF)**
+4. **Khối 4: COARSE RETRIEVAL (Dual-Stream Hybrid Search + RRF k=60)**
    * **Input:** `hyde_vector`, `condensed_query`, `active_doc_ids`, `user_id`.
-   * **Process:** Thực thi câu lệnh SQL CTE kết hợp HNSW Cosine distance và Full-Text Search ts_rank_cd qua thuật toán Reciprocal Rank Fusion ($k=60$).
-   * **Expected Output:** Danh sách Top 5 candidate chunks có điểm RRF cao nhất.
+   * **Process:** Thực thi câu lệnh SQL CTE kết hợp HNSW Cosine distance và Full-Text Search ts_rank_cd qua thuật toán Reciprocal Rank Fusion ($k=60$). Thu về $K_{\text{coarse}} = 20$ Child Chunks ứng viên tiềm năng nhất kèm `parent_content` và `bounding_boxes`.
+   * **Expected Output:** Danh sách Top 20 candidate child chunks có điểm RRF cao nhất.
 
-5. **Khối 5: CRAG EVALUATION & WINDOW EXPANSION**
-   * **Input:** Top candidate chunks, điểm tương đồng cao nhất $\tau = \max(\text{cosine\_similarity})$.
+5. **Khối 5: SEMANTIC RERANKING & CONFIDENCE GATE**
+   * **Input:** Top 20 candidate child chunks, `condensed_query`.
    * **Process:**
-     - **$\tau \ge 0.35$ (Correct):** Giữ nguyên Top chunks.
-     - **$0.20 \le \tau < 0.35$ (Ambiguous / Multiline Formula Split):** Tự động truy vấn bổ sung các chunk lân cận $[i-1, i+1]$ trên cùng trang để gom trọn vẹn công thức hoặc định lý.
-     - **Khử trùng lặp & Giới hạn Token (Deduplication & Budget Cap):** Khi mở rộng, bắt buộc khử trùng lặp theo `chunk_id` và áp trần `MAX_EVIDENCE_TOKENS = 3500` để chống tràn Context Window của LLM.
-     - **$\tau < 0.20$ (Incorrect):** Bật cờ `abstain = True`, không gửi context rác cho LLM.
+     - **Tái xếp hạng sâu:** Đưa 20 ứng viên qua bộ Semantic Reranker. Mặc định kích hoạt bộ Local ONNX Cross-Encoder (`flashrank`, mô hình nhẹ ~100MB, suy luận 30–50ms trên CPU VPS, 0 chi phí API). Khi cần thiết, có thể kích hoạt OpenAI Structured Reranker (`gpt-4o-mini`) thông qua `OPENAI_API_KEY`.
+     - **Lọc ngưỡng chất lượng:** Giữ lại các chunk có $\mathcal{S}_{\text{rerank}} \ge 0.65$, chọn ra Top $K_{\text{fine}} = 5$ Child Chunks có điểm tương quan cao nhất.
+     - **Cơ chế Chủ động từ chối (Active Abstention Gate):** Nếu điểm cao nhất $\mathcal{S}_{\text{max}} < 0.35$, hệ thống kích hoạt cờ `abstain = True`, không gửi context thiếu căn cứ cho LLM và phát sự kiện SSE `bridge_hint` chứa bài báo liên quan trong đồ thị CITES để học giả chủ động mở tab mới.
    * **Expected Output:**
      ```json
      {
-       "crag_verdict": "AMBIGUOUS_EXPANDED",
-       "final_chunks": [
-         {"chunk_index": 18, "page": 3, "content": "..."},
-         {"chunk_index": 19, "page": 3, "content": "AR = (1/n) * sum(cos(q, q_i))..."},
-         {"chunk_index": 20, "page": 3, "content": "where q is the query vector..."}
+       "rerank_verdict": "CONFIDENT_TOP_CHUNKS",
+       "top_chunks": [
+         {"chunk_index": 19, "page": 3, "rerank_score": 0.92, "content": "AR = (1/n) * sum(cos(q, q_i))..."}
        ],
        "abstain": false
      }
      ```
 
-6. **Khối 6: PROMPT AUGMENTATION**
-   * **Input:** `final_chunks`, `condensed_query`.
-   * **Process:** Ghép các chunk vào khối `[CONTEXT]` với chỉ thị: Mỗi câu khẳng định hoặc công thức toán học bắt buộc phải gắn thẻ neo `[cite:chunk_id:page]`.
-   * **Expected Output:** Chuỗi Prompt được kiểm duyệt sạch sẽ.
+6. **Khối 6: PARENT-CHILD CONTEXT EXPANSION & ACADEMIC COT PACKAGING**
+   * **Input:** Top 5 fine child chunks, `parent_content`, `condensed_query`.
+   * **Process:**
+     - Nạp `parent_content` của các Child Chunks chiến thắng để cung cấp ngữ cảnh lập luận trọn vẹn cho LLM.
+     - **Khử trùng lặp (Deduplication):** Nếu nhiều Child Chunk thuộc về cùng một Parent Section, Parent Section đó chỉ xuất hiện duy nhất 1 lần trong prompt.
+     - **Trần ngân sách Token:** Giới hạn tổng dung lượng các Parent Sections $\le 3500$ tokens (`MAX_EVIDENCE_TOKENS = 3500`) để chống tràn ngữ cảnh và bảo đảm độ trễ phản hồi.
+     - **Chỉ thị Academic CoT System Prompt:** Ép mô hình phân tích số liệu thực nghiệm từ bảng Markdown (cột, hàng) và công thức toán học LaTeX, suy luận từng bước giải thích bản chất trực giác trước khi đưa ra kết luận, gắn huy hiệu trích dẫn `[cit_x]` neo vào Child Chunk tương ứng.
+   * **Expected Output:** Chuỗi Augmented System Prompt học thuật chuẩn mực, cô lập và sạch sẽ.
 
 7. **Khối 7: GENERATION & VISUAL PROOF (Streaming Reasoner & Golden BBox Canvas)**
-   * **Input:** Augmented Prompt.
+   * **Input:** Augmented Prompt gửi tới LLM (`OPENAI_MODEL`).
    * **Process:** 
-     - LLM sinh streaming token; Backend bóc tách thẻ `[cite:chunk_id:page:concept_name]` và đẩy event SSE `citation` chứa mảng `bounding_boxes` và tên khái niệm.
-     - Frontend React Canvas nhận sự kiện, tự động cuộn trang và vẽ **Khung viền vàng nhấp nháy nét đứt** (`border: 2px dashed #f59e0b; background: rgba(245, 158, 11, 0.12); border-radius: 6px`) bao quanh công thức.
-     - Thẻ trích dẫn hiển thị dạng ngữ nghĩa: `[📄 Scaled Dot-Product Attention • Trang 4]` thay vì chỉ có số trang cộc lốc.
-   * **Expected Output:** Phản hồi hiển thị chuẩn KaTeX kèm Bounding Box vàng chính xác $\text{IoU} \ge 0.85$ và huy hiệu trích dẫn ngữ nghĩa tương tác tức thì.
+     - LLM sinh streaming token theo định dạng Markdown KaTeX.
+     - Backend bóc tách huy hiệu `[cit_x]` và đẩy sự kiện SSE `citation` chứa mảng `bounding_boxes` của **Child Chunk** tương ứng (chính xác $\text{IoU} \ge 0.85$).
+     - Tuyệt đối không để lộ mã định danh kỹ thuật nội bộ (`[target_id: ...]`) trên giao diện người dùng theo chuẩn Tối giản Radical Minimalism.
+     - Frontend React Canvas nhận sự kiện, tự động cuộn trang và vẽ **Khung viền vàng nhấp nháy nét đứt** (`border: 2px dashed #f59e0b; background: rgba(245, 158, 11, 0.12); border-radius: 6px`) bao quanh đúng đoạn văn hoặc bảng số liệu được trích dẫn.
+   * **Expected Output:** Phản hồi hiển thị chuẩn KaTeX kèm Bounding Box vàng chính xác và huy hiệu trích dẫn tương tác tức thì.
 
 ---
 
-### C. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60)
+### C. Truy Vấn Hybrid Search Trực Tiếp Trong PostgreSQL (RRF k=60, Top 20)
 
-`SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** qua vector HyDE và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion ($k=60$). Câu lệnh bắt buộc ép kiểu `CAST(:hyde_vector AS vector)`, sắp xếp `ORDER BY` trước khi lấy `LIMIT 25` để kích hoạt chỉ mục HNSW/GIN, sử dụng `= ANY(:active_doc_ids)` cho mảng UUID và `JOIN documents` để lấy tiêu đề bài báo:
+`SessionChatService` thực thi truy vấn trực tiếp trong PostgreSQL kết hợp **Vector Cosine (`pgvector`)** qua vector HyDE và **Full-Text Search (`tsvector`)** qua thuật toán Reciprocal Rank Fusion ($k=60$). Truy vấn lấy ra Top 20 candidate child chunks kèm `parent_content` để chuyển tiếp sang bộ Semantic Reranker:
 
 ```sql
 WITH vector_ranks AS (
-    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+    SELECT id, document_id, chunk_index, page_number, content, parent_content, bounding_boxes,
            (1.0 - (embedding <=> CAST(:hyde_vector AS vector))) AS cosine_sim,
            ROW_NUMBER() OVER (ORDER BY embedding <=> CAST(:hyde_vector AS vector)) AS rank_vec
     FROM document_chunks
@@ -411,7 +413,7 @@ WITH vector_ranks AS (
     LIMIT 25
 ),
 fts_ranks AS (
-    SELECT id, document_id, chunk_index, page_number, content, bounding_boxes,
+    SELECT id, document_id, chunk_index, page_number, content, parent_content, bounding_boxes,
            ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) AS fts_score,
            ROW_NUMBER() OVER (ORDER BY ts_rank_cd(content_tsv, plainto_tsquery('english', :fts_query)) DESC) AS rank_fts
     FROM document_chunks
@@ -428,7 +430,7 @@ combined AS (
     FULL OUTER JOIN fts_ranks f ON v.id = f.id
 )
 SELECT c.id AS chunk_id, c.document_id, c.chunk_index, c.page_number,
-       c.content AS text_content, c.bounding_boxes,
+       c.content AS text_content, c.parent_content, c.bounding_boxes,
        d.title AS document_title, d.filename,
        cb.max_cosine_sim, cb.rrf_score
 FROM combined cb
@@ -444,12 +446,12 @@ LIMIT :limit;
 
 1. **Vòng lặp Phản hồi của Agent (Feedback Loop):**
    - Khi LLM nhận thấy `Retrieval Context` bị ngắt quãng giữa công thức hoặc thiếu định nghĩa biến số, LLM kích hoạt sự kiện gọi công cụ ngầm (`Tool Choice: expand_context(document_id, page_number, chunk_index, direction="both")`).
-   - Service tự động nạp bổ sung chunk $[i-1, i+1]$ và tái kích hoạt lượt suy luận trước khi gửi token ra giao diện.
+   - Service tự động nạp bổ sung chunk $[i-1, i+1]$ hoặc mở rộng Parent Section và tái kích hoạt lượt suy luận trước khi gửi token ra giao diện.
 
 2. **Hàng rào Bảo vệ theo Trạng thái Tài liệu (Guardrail Rules):**
    - **Tài liệu đang xử lý (`status='parsing'`):** Chỉ nạp bản tóm tắt từ `documents.summary_metadata` vào ngữ cảnh; kèm thông báo tiến trình bóc tách ngầm cho học giả.
    - **Tài liệu chỉ có Tóm tắt (`status='abstract_only'`):** Tuyệt đối cấm suy diễn số liệu thực nghiệm chi tiết; hướng dẫn học giả tải file PDF cá nhân lên để đọc sâu.
-   - **Chủ động từ chối (Active Abstention):** Khi điểm $\tau < 0.20$, hệ thống trả về thông báo trung thực: *"Tài liệu không đề cập đến công thức hoặc dữ liệu này"*, triệt tiêu 100% ảo giác.
+   - **Chủ động từ chối (Active Abstention):** Khi điểm $\mathcal{S}_{\text{max}} < 0.35$, hệ thống trả về thông báo trung thực: *"Tài liệu trong các tab hiện tại không đề cập đến nội dung này"*, đồng thời bắn sự kiện SSE `bridge_hint` gợi ý bài báo liên quan trong đồ thị tri thức để học giả mở thêm tab, triệt tiêu 100% ảo giác.
 
 ---
 
@@ -607,7 +609,11 @@ sequenceDiagram
 |---|---|---|---|
 | `test_session_max_5_documents_limit` | `apps/api/tests/test_session_tabs.py` | Thêm bài báo thứ 6 vào phiên đọc | Trả về `409 Conflict` với mã lỗi `MAX_SESSION_DOCUMENTS_REACHED`. |
 | `test_close_document_tab_reassigns_active` | `apps/api/tests/test_session_tabs.py` | Đóng tab bài báo đang active qua `DELETE .../documents/{id}` | Xóa junction row, `active_document_id` tự chuyển sang bài còn lại. |
-| `test_hybrid_rag_search_rrf_scoring` | `apps/api/tests/test_session_chat.py` | Thực thi truy vấn Hybrid RAG với mock embedding | Trả về top 5 chunks có `rrf_score` cao nhất từ cả 2 nguồn. |
+| `test_structure_aware_table_and_formula_extraction` | `apps/api/tests/test_chunk_extraction.py` | Bóc tách PDF chứa bảng 2 cột và công thức toán học | Bảng được trích xuất thành Markdown Table hoàn chỉnh, công thức toán được bao bọc dạng LaTeX chuẩn `$$...$$`. |
+| `test_hybrid_rag_search_rrf_scoring` | `apps/api/tests/test_session_chat.py` | Thực thi truy vấn Coarse Hybrid RAG với mock embedding | Trả về top 20 candidate child chunks kèm `parent_content` và `rrf_score`. |
+| `test_semantic_reranking_top_k` | `apps/api/tests/test_session_chat.py` | Đưa 20 ứng viên qua bộ Semantic Reranker | Lọc Top 5 fine child chunks có điểm $\mathcal{S} \ge 0.65$. |
+| `test_active_abstention_and_bridge_hint` | `apps/api/tests/test_session_chat.py` | Truy vấn khi không có chunk nào đạt $\mathcal{S} \ge 0.35$ | Hệ thống không gọi LLM suy diễn bừa bãi, phát cờ abstain và sự kiện SSE `bridge_hint`. |
+| `test_parent_child_deduplication_and_budget_cap` | `apps/api/tests/test_session_chat.py` | Đóng gói ngữ cảnh khi nhiều child chunks cùng parent | Khử trùng lặp Parent Section và áp trần cứng `MAX_EVIDENCE_TOKENS = 3500`. |
 | `test_chat_sse_stream_event_sequence` | `apps/api/tests/test_session_chat.py` | Gửi câu hỏi và đọc stream response | Nhận đủ các events: `citation`, `token`, `done`. |
 | `test_reset_chat_purges_messages_only` | `apps/api/tests/test_session_chat.py` | Gọi `DELETE /api/v1/sessions/{id}/messages` | Bảng `session_turns` bị xóa hết, `research_sessions` vẫn nguyên vẹn. |
 | `test_save_and_restore_viewport_state` | `apps/api/tests/test_session_viewport.py` | Gọi `PATCH .../viewport` với `page=4`, lấy lại `GET` | Dữ liệu `viewport_state` trả về đúng `page=4`, `zoom_ratio=1.25`. |
@@ -618,6 +624,8 @@ sequenceDiagram
 
 - [ ] Giới hạn tối đa 5 bài báo / phiên đọc được thực thi nghiêm ngặt cả ở Frontend lẫn Backend API.
 - [ ] Endpoint `DELETE /api/v1/sessions/{id}/documents/{document_id}` cho phép đóng tab an toàn không xóa file gốc.
+- [ ] Pipeline nạp tài liệu trích xuất bảo toàn bảng số liệu Markdown Table và công thức toán LaTeX, lưu trữ `parent_content` phục vụ mở rộng ngữ cảnh.
+- [ ] Kiến trúc truy xuất 2 tầng (Coarse RRF Top 20 $\rightarrow$ Semantic Reranker Top 5) hoạt động độc lập chỉ với `OPENAI_API_KEY` và Local ONNX Reranker.
 - [ ] Giao diện hỗ trợ chuyển đổi linh hoạt: hiển thị `PdfCanvasViewer.tsx` khi có PDF và `AbstractCardViewer.tsx` khi bài báo ở dạng tóm tắt.
-- [ ] Luồng SSE phát đúng các sự kiện và huy hiệu citation bấm vào là cuộn trang PDF và tô viền vàng Bounding Box.
+- [ ] Luồng SSE phát đúng các sự kiện và huy hiệu citation `[cit_x]` bấm vào là cuộn trang PDF và tô viền vàng Bounding Box của Child Chunk.
 - [ ] Toàn bộ kịch bản kiểm thử trong Ma trận Kiểm thử Mục 8 đạt `100% PASS`.
