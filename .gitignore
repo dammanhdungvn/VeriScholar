@@ -116,3 +116,7 @@ report-datn/*.blg
 # Superpowers SDD workspace
 .superpowers/
 
+# Git Worktrees
+.worktrees/
+worktrees/
+
