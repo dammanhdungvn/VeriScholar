@@ -9,6 +9,10 @@ import {
   Star,
   FileText,
   Folder,
+  FolderPlus,
+  FolderInput,
+  ArrowLeft,
+  Pencil,
   Sparkles,
   ChevronLeft,
   ChevronRight,
@@ -19,12 +23,18 @@ import { useQuery } from "@tanstack/react-query";
 import { documentsApi } from "@/features/documents/api/documentsApi";
 import {
   useDocumentsList,
-  useStarDocumentMutation,
   useDeleteDocumentMutation,
 } from "@/features/documents/hooks/useDocumentQueries";
 import type { DocumentListItem } from "@/types/document";
-import { FolderTreeView } from "./FolderTreeView";
-import { StarDocumentModal } from "@/features/documents/components/StarDocumentModal";
+import { FolderCard } from "./FolderCard";
+import { CreateFolderModal } from "./CreateFolderModal";
+import { RenameFolderModal } from "./RenameFolderModal";
+import { MoveToFolderModal } from "./MoveToFolderModal";
+import {
+  useFoldersListQuery,
+  useDeleteFolderMutation,
+} from "../hooks/useFolderQueries";
+import type { FolderItem } from "../types";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
 import { KnowledgeGraphCanvas } from "./KnowledgeGraphCanvas";
 import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
@@ -55,10 +65,16 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [showBibliometrics, setShowBibliometrics] = useState(false);
 
   // Modals state
-  const [selectedStarDoc, setSelectedStarDoc] = useState<DocumentListItem | null>(null);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [renameFolderTarget, setRenameFolderTarget] = useState<FolderItem | null>(null);
+  const [moveDocTarget, setMoveDocTarget] = useState<DocumentListItem | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
+
+  // Folders list query
+  const { data: folders = [], refetch: refetchFolders } = useFoldersListQuery();
+  const deleteFolderMutation = useDeleteFolderMutation();
 
   // Knowledge Graph query (LLM Wiki)
   const {
@@ -79,12 +95,16 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
     per_page: 24,
   });
 
-  const starMutation = useStarDocumentMutation();
   const deleteMutation = useDeleteDocumentMutation();
 
   const rawDocuments = useMemo(() => paginatedData?.data || [], [paginatedData]);
   const meta = paginatedData?.meta;
   const totalPages = meta?.total_pages ?? Math.max(1, Math.ceil((meta?.total ?? rawDocuments.length) / 24));
+
+  const selectedFolder = useMemo(
+    () => folders.find((f) => f.id === selectedFolderId) || null,
+    [folders, selectedFolderId]
+  );
 
   // Filter based on active tab and search query - strict persistence for My Library
   const documents = useMemo(() => {
@@ -137,16 +157,23 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
 
   const handleToggleStar = async (doc: DocumentListItem, e: React.MouseEvent) => {
     e.stopPropagation();
-    try {
-      if (doc.starred_at) {
-        // Unstar
-        await starMutation.mutateAsync({ documentId: doc.id, folderId: null });
-      } else {
-        // Open star modal to pick folder or star directly
-        setSelectedStarDoc(doc);
+    setMoveDocTarget(doc);
+  };
+
+  const handleDeleteFolder = async (folder: FolderItem) => {
+    if (
+      window.confirm(
+        `Are you sure you want to delete folder "${folder.name}"? Papers inside will remain in All Papers.`
+      )
+    ) {
+      try {
+        await deleteFolderMutation.mutateAsync(folder.id);
+        if (selectedFolderId === folder.id) {
+          setSelectedFolderId(null);
+        }
+      } catch (err) {
+        console.warn("Failed to delete folder:", err);
       }
-    } catch (err) {
-      console.warn("Failed to toggle star:", err);
     }
   };
 
@@ -328,23 +355,120 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
               />
             </div>
           ) : activeTab === "folders" ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="md:col-span-1 bg-white dark:bg-[#1f1d1a] p-4 rounded-2xl border border-[#e8e4dc] dark:border-[#2a2824]">
-                <FolderTreeView
-                  selectedFolderId={selectedFolderId}
-                  onSelectFolder={(folderId) => setSelectedFolderId(folderId)}
-                />
+            !selectedFolderId ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between pb-2">
+                  <div>
+                    <h2 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100">
+                      Folders
+                    </h2>
+                    <p className="text-xs text-muted dark:text-zinc-400">
+                      Organize your research papers by project and topic.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsCreateFolderOpen(true)}
+                    className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xs transition-colors cursor-pointer"
+                  >
+                    <FolderPlus className="w-3.5 h-3.5" />
+                    <span>New Folder</span>
+                  </button>
+                </div>
+
+                {folders.length === 0 ? (
+                  <div className="p-12 text-center rounded-2xl border border-dashed border-[#e2dcd2] dark:border-[#2e2b26] bg-[#f8f6f0]/50 dark:bg-[#1a1916]/50">
+                    <Folder className="w-8 h-8 text-muted dark:text-zinc-600 mx-auto mb-2" />
+                    <p className="text-sm font-anthropic-serif font-semibold text-ink dark:text-zinc-200">
+                      No folders yet
+                    </p>
+                    <p className="text-xs text-muted dark:text-zinc-400 mt-1 mb-4">
+                      Create your first folder to organize your library.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setIsCreateFolderOpen(true)}
+                      className="h-8 px-3 rounded-lg text-xs font-medium inline-flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white transition-colors cursor-pointer"
+                    >
+                      <FolderPlus className="w-3.5 h-3.5" />
+                      <span>New Folder</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    {folders.map((folder) => {
+                      const count = rawDocuments.filter((d) => d.folder_id === folder.id).length;
+                      return (
+                        <FolderCard
+                          key={folder.id}
+                          folder={folder}
+                          paperCount={count}
+                          onClick={() => setSelectedFolderId(folder.id)}
+                          onRename={(f) => setRenameFolderTarget(f)}
+                          onDelete={(f) => handleDeleteFolder(f)}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-              <div className="md:col-span-3">
+            ) : (
+              <div className="space-y-4">
+                {/* Drill-down Header with Breadcrumb */}
+                <div className="flex items-center justify-between pb-2 border-b border-[#ece8df] dark:border-[#282622]">
+                  <div className="flex items-center gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedFolderId(null)}
+                      className="h-8 px-2.5 rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] bg-white dark:bg-[#201e1a] text-xs font-medium text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] flex items-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <ArrowLeft className="w-3.5 h-3.5" />
+                      <span>Back to Folders</span>
+                    </button>
+                    <div>
+                      <h2 className="text-sm font-semibold font-anthropic-serif text-ink dark:text-zinc-100 flex items-center gap-2">
+                        <Folder className="w-4 h-4 text-[#c15f3e]" />
+                        <span>{selectedFolder?.name || "Folder"}</span>
+                        <span className="text-xs font-normal text-muted dark:text-zinc-400 font-mono">
+                          ({documents.length} {documents.length === 1 ? "paper" : "papers"})
+                        </span>
+                      </h2>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {selectedFolder && (
+                      <button
+                        type="button"
+                        onClick={() => setRenameFolderTarget(selectedFolder)}
+                        className="p-1.5 rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200 hover:bg-black/5 transition-colors cursor-pointer"
+                        title="Rename Folder"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleUploadClick}
+                      className="h-8 px-3 rounded-lg text-xs font-medium flex items-center gap-1.5 bg-[#c15f3e] hover:bg-[#a84f32] text-white shadow-xs transition-colors cursor-pointer"
+                    >
+                      <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+                      <span>Upload PDF</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Folder Papers Grid */}
                 <DocumentGrid
                   documents={documents}
                   viewLayout={viewLayout}
                   onToggleStar={handleToggleStar}
                   onSelectDocument={onSelectDocument}
+                  onMoveFolder={(doc) => setMoveDocTarget(doc)}
                   onDelete={handleDelete}
                 />
               </div>
-            </div>
+            )
           ) : (
             <div className="space-y-6">
               <DocumentGrid
@@ -352,6 +476,7 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 viewLayout={viewLayout}
                 onToggleStar={handleToggleStar}
                 onSelectDocument={onSelectDocument}
+                onMoveFolder={(doc) => setMoveDocTarget(doc)}
                 onDelete={handleDelete}
               />
 
@@ -389,15 +514,38 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
       {/* Floating GraphRAG Assistant Bubble */}
       <GraphRagAssistantFab folderId={selectedFolderId} />
 
-      {/* Star Document Modal */}
-      {selectedStarDoc && (
-        <StarDocumentModal
-          documentId={selectedStarDoc.id}
-          documentTitle={selectedStarDoc.title || selectedStarDoc.filename}
-          isStarred={Boolean(selectedStarDoc.starred_at)}
-          isOpen={Boolean(selectedStarDoc)}
-          onClose={() => setSelectedStarDoc(null)}
-          onStarSuccess={() => refetch()}
+      {/* Create Folder Modal */}
+      <CreateFolderModal
+        isOpen={isCreateFolderOpen}
+        onClose={() => setIsCreateFolderOpen(false)}
+        onSuccess={(id) => {
+          refetchFolders();
+          setSelectedFolderId(id);
+        }}
+      />
+
+      {/* Rename Folder Modal */}
+      <RenameFolderModal
+        isOpen={Boolean(renameFolderTarget)}
+        folder={renameFolderTarget}
+        onClose={() => setRenameFolderTarget(null)}
+        onSuccess={() => {
+          refetchFolders();
+        }}
+      />
+
+      {/* Move Document to Folder Modal */}
+      {moveDocTarget && (
+        <MoveToFolderModal
+          isOpen={Boolean(moveDocTarget)}
+          documentId={moveDocTarget.id}
+          documentTitle={moveDocTarget.title || moveDocTarget.filename}
+          currentFolderId={moveDocTarget.folder_id}
+          onClose={() => setMoveDocTarget(null)}
+          onSuccess={() => {
+            refetch();
+            refetchFolders();
+          }}
         />
       )}
     </div>
@@ -409,6 +557,7 @@ interface DocumentGridProps {
   viewLayout: ViewLayout;
   onToggleStar: (doc: DocumentListItem, e: React.MouseEvent) => void;
   onSelectDocument?: (doc: DocumentListItem) => void;
+  onMoveFolder: (doc: DocumentListItem) => void;
   onDelete: (docId: string, e: React.MouseEvent) => void;
 }
 
@@ -417,6 +566,7 @@ function DocumentGrid({
   viewLayout,
   onToggleStar,
   onSelectDocument,
+  onMoveFolder,
   onDelete,
 }: DocumentGridProps) {
   if (documents.length === 0) {
@@ -493,6 +643,18 @@ function DocumentGrid({
                   <div className="flex items-center justify-end gap-1">
                     <button
                       type="button"
+                      data-testid={`doc-move-btn-${doc.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onMoveFolder(doc);
+                      }}
+                      className="p-1.5 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                      title="Move to Folder"
+                    >
+                      <FolderInput className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
                       data-testid={`doc-delete-btn-${doc.id}`}
                       onClick={(e) => onDelete(doc.id, e)}
                       className="p-1.5 rounded-lg hover:bg-rose-500/10 text-muted hover:text-rose-600 cursor-pointer transition-colors"
@@ -556,6 +718,18 @@ function DocumentGrid({
               {doc.status !== "completed" ? doc.status : ""}
             </span>
             <div className="flex items-center gap-1">
+              <button
+                type="button"
+                data-testid={`doc-move-btn-${doc.id}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onMoveFolder(doc);
+                }}
+                className="p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer transition-colors"
+                title="Move to Folder"
+              >
+                <FolderInput className="w-3.5 h-3.5" />
+              </button>
               <button
                 type="button"
                 data-testid={`doc-delete-btn-${doc.id}`}
