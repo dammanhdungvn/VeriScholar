@@ -7,7 +7,7 @@ import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 
 export function AppLayout() {
   const navigate = useNavigate();
-  const { sessions, selectSession, deleteSession, updateTitle } =
+  const { sessions, deleteSession, updateTitle } =
     useDashboardSessions();
 
   const handleNewSession = () => {
@@ -26,7 +26,6 @@ export function AppLayout() {
       <DashboardTaskbar
         sessions={sessions}
         onSelectSession={(id) => {
-          selectSession(id);
           navigate(`/dashboard/${id}`);
         }}
         onNewSession={handleNewSession}

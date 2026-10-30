@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import type { LibraryGraphNode, LibraryGraphEdge } from "../types";
 import { AcademicMarkdownRenderer } from "@/components/shared/AcademicMarkdownRenderer";
+import { cn } from "@/lib/utils";
 
 export interface PaperInspectionDrawerProps {
   isOpen: boolean;
@@ -214,20 +215,22 @@ export function PaperInspectionDrawer({
 
       {/* 3. Action Bar */}
       <div className="p-3 border-t border-[#ece8df] dark:border-[#282622] bg-[#f8f6f0] dark:bg-[#1a1916] flex items-center gap-2 shrink-0">
-        <button
-          type="button"
-          onClick={() => {
-            const docId =
-              (node.metadata?.paper_id as string) ||
-              (node.metadata?.document_id as string) ||
-              node.id;
-            onOpenReader?.(docId);
-          }}
-          className="flex-1 h-8 px-3 rounded-lg bg-[#c15f3e] hover:bg-[#a84f32] text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-        >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Open in Deep Reader</span>
-        </button>
+        {(node.type === "Paper" || Boolean(node.metadata?.paper_id || node.metadata?.document_id)) && (
+          <button
+            type="button"
+            onClick={() => {
+              const docId =
+                (node.metadata?.paper_id as string) ||
+                (node.metadata?.document_id as string) ||
+                node.id;
+              onOpenReader?.(docId);
+            }}
+            className="flex-1 h-8 px-3 rounded-lg bg-[#c15f3e] hover:bg-[#a84f32] text-white font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Open in Deep Reader</span>
+          </button>
+        )}
 
         {onViewWiki && (
           <button
@@ -243,12 +246,23 @@ export function PaperInspectionDrawer({
 
         <button
           type="button"
-          onClick={() =>
+          onClick={() => {
+            const isPaperNode =
+              node.type === "Paper" ||
+              Boolean(node.metadata?.paper_id || node.metadata?.document_id);
             onAskAI?.(
-              `Phân tích chi tiết đóng góp, phương pháp luận và các kết quả cốt lõi của bài báo "${node.label}".`
-            )
-          }
-          className="h-8 px-3 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              isPaperNode
+                ? `Phân tích chi tiết đóng góp, phương pháp luận và các kết quả cốt lõi của bài báo "${node.label}".`
+                : `Phân tích vai trò, cách ứng dụng và tài liệu liên quan đến thực thể "${node.label}" (${node.type || "Khái niệm"}).`
+            );
+          }}
+          className={cn(
+            "h-8 px-3 rounded-lg border border-[#e2dcd2] dark:border-[#33302b] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] font-medium text-xs flex items-center justify-center gap-1.5 shadow-xs transition-colors cursor-pointer",
+            node.type !== "Paper" &&
+              !node.metadata?.paper_id &&
+              !node.metadata?.document_id &&
+              "flex-1"
+          )}
           title="Ask AI About Paper"
         >
           <Sparkles className="w-3.5 h-3.5 text-[#c15f3e]" />

@@ -29,6 +29,46 @@ from api.services.graph_rag_tools import query_library_knowledge_graph
 
 logger = structlog.get_logger(__name__)
 
+
+class OpenAIChatCompletionsAdapter:
+    """Lightweight OpenAI chat completions adapter backed by httpx."""
+
+    def __init__(self, api_key: str, base_url: str = "https://api.openai.com/v1") -> None:
+        self.api_key = api_key
+        self.base_url = base_url.rstrip("/")
+
+    async def chat_completions_create(
+        self,
+        model: str,
+        messages: list[dict[str, Any]],
+        tools: list[dict[str, Any]] | None = None,
+        tool_choice: str = "auto",
+        **kwargs: Any,
+    ) -> Any:
+        import httpx
+
+        payload: dict[str, Any] = {
+            "model": model,
+            "messages": messages,
+        }
+        if tools:
+            payload["tools"] = tools
+            payload["tool_choice"] = tool_choice
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json",
+        }
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+            )
+            resp.raise_for_status()
+            return resp.json()
+
+
 LATEX_AGENT_TOOLS: list[dict[str, Any]] = [
     {
         "type": "function",

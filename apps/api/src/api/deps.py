@@ -188,7 +188,19 @@ def get_draft_service(
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DraftService:
     """Dependency providing DraftService bound to request database session."""
-    return DraftService(db=db, ai_tracing=ai_tracing)
+    openai_client = None
+    if settings.OPENAI_API_KEY and settings.ENVIRONMENT != "test":
+        from api.agents.latex_agent import OpenAIChatCompletionsAdapter
+
+        openai_client = OpenAIChatCompletionsAdapter(
+            api_key=settings.OPENAI_API_KEY,
+            base_url=settings.OPENAI_BASE_URL,
+        )
+    return DraftService(
+        db=db,
+        ai_tracing=ai_tracing,
+        openai_client=openai_client,
+    )
 
 
 def get_folder_service(

@@ -79,19 +79,25 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
   // Query session detail when routeSessionId is present
   const { data: sessionDetailRes } = useSessionDetail(routeSessionId);
 
+  // Track currently loaded session ID to guarantee messages are fetched on route changes
+  const loadedSessionIdRef = useRef<string | null>(null);
+
   // Sync routeSessionId with active session state
   useEffect(() => {
     if (routeSessionId) {
-      if (routeSessionId !== activeSessionId) {
+      if (loadedSessionIdRef.current !== routeSessionId) {
+        loadedSessionIdRef.current = routeSessionId;
         selectSession(routeSessionId);
         setSession(routeSessionId);
         setStatus("completed", 100);
         loadExistingSession(routeSessionId);
       }
-    } else if (activeSessionId) {
-      // Navigated to /dashboard without session ID
+    } else {
+      loadedSessionIdRef.current = null;
+      if (activeSessionId) {
+        setActiveSessionId(undefined);
+      }
       initNewStandbyChat();
-      setActiveSessionId(undefined);
       setActiveBbox(null);
       resetChat();
     }
