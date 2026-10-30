@@ -177,3 +177,38 @@ def test_graduation_forms_compliance():
     # 3. Kế hoạch thời gian 10 tuần chuẩn xác (24/08/2026 -> 02/11/2026)
     assert "24/08/2026" in decuong_content, "de_cuong_datn.tex must start week 1 at 24/08/2026"
     assert "02/11/2026" in decuong_content, "de_cuong_datn.tex must end week 10 at 02/11/2026"
+
+
+def test_no_subjective_pronouns_in_body_chapters():
+    """Kiểm tra Mục 3.1 trong RULES.md: Ngôi văn khách quan chuẩn mực.
+    Tuyệt đối cấm sử dụng đại từ nhân xưng ngôi thứ nhất (em, tôi, chúng tôi, chúng em)
+    trong toàn bộ các chương nội dung báo cáo (Chương 1 - Chương 4, Kết luận).
+    Ngoại lệ kỹ thuật: chữ viết tắt metric học thuật Exact Match (EM).
+    """
+    import re
+
+    chapters_dir = Path("report-datn/chapters")
+    assert chapters_dir.exists(), "chapters directory must exist"
+
+    # Regex bắt từ 'em' (chữ thường hoặc viết hoa đầu câu Em, nhưng không bắt EM viết hoa toàn bộ)
+    em_pattern = re.compile(r"\b(em|Em)\b")
+    subjective_pattern = re.compile(
+        r"\b(tôi|Tôi|chúng tôi|Chúng tôi|chúng em|Chúng em|của tôi|của em)\b"
+    )
+
+    for tex_file in chapters_dir.rglob("*.tex"):
+        if tex_file.name == "tai_lieu_tham_khao.tex":
+            continue
+        content = tex_file.read_text(encoding="utf-8")
+
+        em_matches = em_pattern.findall(content)
+        assert not em_matches, (
+            f"File {tex_file.relative_to(chapters_dir)} vi phạm Mục 3.1: "
+            f"chứa đại từ nhân xưng bị cấm '{em_matches[0]}'"
+        )
+
+        subj_matches = subjective_pattern.findall(content)
+        assert not subj_matches, (
+            f"File {tex_file.relative_to(chapters_dir)} vi phạm Mục 3.1: "
+            f"chứa đại từ nhân xưng bị cấm '{subj_matches[0]}'"
+        )

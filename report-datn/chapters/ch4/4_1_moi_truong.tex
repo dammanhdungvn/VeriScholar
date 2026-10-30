@@ -33,7 +33,7 @@ Nhằm đảm bảo tính nhất quán tuyệt đối giữa môi trường phá
     \item \textbf{Cấu hình dịch vụ Backend và Frontend:} Tầng Backend sử dụng ngôn ngữ Python 3.12, khung FastAPI và thư viện ánh xạ quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg}. Tầng Frontend được xây dựng trên nền tảng React 19, hệ thống tạo kiểu Tailwind CSS, thư viện quản lý trạng thái Zustand và công cụ đóng gói siêu tốc Vite.
 \end{itemize}
 
-Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt qua 3 phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ bằng rào chắn kiểm thử tự động cây cú pháp trừu tượng AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc kiểm thử ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
+Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt qua 3 phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ chặt chẽ bằng rào chắn kiểm thử tự động AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
 
 \begin{table}[H]
 \centering
@@ -61,7 +61,7 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
     \item \textbf{Cấu hình máy chủ ảo VPS và tên miền công cộng:}
     \begin{itemize}
         \item Hệ thống được đóng gói và triển khai trên máy chủ ảo Azure Ubuntu 24.04 LTS cấu hình 4 vCPU, 16GB RAM, ổ cứng SSD NVMe tốc độ cao.
-        \item Hệ thống được gắn kết với tên miền công cộng chính thức: \url{https://verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới dịch vụ giao diện và chuyển tiếp các tuyến API/SSE tới cổng dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}).
+        \item Hệ thống được vận hành trên tên miền công cộng chính thức \url{https://verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới giao diện và chuyển tiếp các tuyến API/SSE tới dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}).
         \item Toàn bộ lưu lượng truyền tải được mã hóa đầu--cuối bằng chứng chỉ số SSL/TLS tự động qua Let's Encrypt Certbot. Nhóm an ninh mạng (NSG) cô lập tuyệt đối các cổng CSDL và Redis tại mạng nội bộ.
     \end{itemize}
     \item \textbf{Môi trường thực thi Sandbox đám mây E2B MicroVM:}
@@ -76,6 +76,6 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
     \item \textbf{Kho lưu trữ mã nguồn mở dự án trên GitHub:}
     \begin{itemize}
         \item Toàn bộ mã nguồn hoàn chỉnh của dự án \VS\ được công khai và quản lý phiên bản tại kho lưu trữ GitHub chính thức: \url{https://github.com/dammanhdungvn/VeriScholar}.
-        \item Kho lưu trữ bao gồm cấu trúc Monorepo phân tách Lục giác (\texttt{packages/core}, \texttt{apps/api}, \texttt{apps/web}), tài liệu đặc tả nghiệp vụ, kịch bản triển khai tự động hóa và toàn bộ bộ kiểm thử 4 Cổng xác minh.
+        \item Kho lưu trữ tổ chức theo cấu trúc Monorepo Lục giác (\texttt{packages/}\allowbreak\texttt{core}, \texttt{apps/api}, \texttt{apps/web}), tài liệu đặc tả nghiệp vụ, kịch bản triển khai tự động hóa và toàn bộ bộ kiểm thử 4 Cổng xác minh.
     \end{itemize}
 \end{enumerate}

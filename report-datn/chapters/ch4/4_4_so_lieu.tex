@@ -34,7 +34,7 @@ Hoạt động của các mô hình AI và chi phí tiêu thụ token được g
     \end{itemize}
 \end{itemize}
 
-Nhật ký kiểm chứng chi tiết các vết thực thi (Traces) trên Langfuse Cloud được minh họa tại Hình~\ref{fig:langfuse_tracing}. Bảng quan sát ghi nhận đầy đủ 110 lượt truy vết cấp gốc (\textit{Root Observations}), bao gồm các chu trình phản tư \texttt{latex\_agentic\_healing\_react}, các lượt hội thoại học thuật \texttt{session\_chat}, truy xuất tài liệu \texttt{discovery\_search} và cập nhật an toàn khóa BYOK \texttt{scholar\_profile\_byok\_update}. Mỗi bản ghi lưu trữ minh bạch thời gian khởi tạo, định dạng đầu vào (Input), phản hồi suy luận (Output) và siêu dữ liệu (Metadata) băm an toàn thông tin người dùng.
+Nhật ký kiểm chứng chi tiết các vết thực thi (Traces) trên Langfuse Cloud được minh họa tại Hình~\ref{fig:langfuse_tracing}. Bảng quan sát ghi nhận đầy đủ 110 lượt truy vết cấp gốc (\textit{Root Observations}), bao gồm các chu trình phản tư \texttt{latex\_}\allowbreak\texttt{agentic\_}\allowbreak\texttt{healing\_}\allowbreak\texttt{react}, các lượt hội thoại học thuật \texttt{session\_chat}, truy xuất tài liệu \texttt{discovery\_search} và cập nhật an toàn khóa BYOK \texttt{scholar\_profile\_byok\_update}. Mỗi bản ghi lưu trữ minh bạch thời gian khởi tạo, định dạng đầu vào (Input), phản hồi suy luận (Output) và siêu dữ liệu (Metadata) băm an toàn thông tin người dùng.
 
 \begin{figure}[H]
 \centering
@@ -128,7 +128,7 @@ Bảng điều khiển phản ánh các thông số vận hành:
 \subsection*{Nhận xét:}
 \addcontentsline{toc}{subsection}{Nhận xét}
 
-Qua quá trình cài đặt, cấu hình và tiến hành các kịch bản thực nghiệm toàn trình trên hệ thống \VS, em rút ra một số nhận xét và đánh giá tổng kết như sau:
+Qua quá trình cài đặt, cấu hình và tiến hành các kịch bản thực nghiệm toàn trình trên hệ thống \VS, tác giả rút ra một số nhận xét và đánh giá tổng kết như sau:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Khả năng triển khai thực tiễn cao:} Hệ thống đã được đóng gói container hóa hoàn chỉnh và triển khai ổn định trên máy chủ ảo đám mây VPS với tên miền công cộng chính thức \url{https://verischolar.duckdns.org}. Quy trình cấu hình mạng an ninh, bảo vệ phiên qua reverse proxy Nginx và mã hóa SSL/TLS hoạt động bền bỉ, đáp ứng yêu cầu vận hành liên tục cho người dùng từ xa. Toàn bộ mã nguồn dự án được lưu trữ và quản lý phiên bản chuyên nghiệp trên GitHub tại \url{https://github.com/dammanhdungvn/VeriScholar}.
     \item \textbf{Trải nghiệm người dùng thông suốt:} 10 giao diện tương tác người--máy của hệ thống được xây dựng đồng bộ, hiện thực hóa chu trình nghiên cứu khép kín từ khâu khám phá, trích xuất, đối thoại minh chứng tọa độ trên tệp PDF, đến quản lý hồ sơ an toàn qua cơ chế BYOK và soạn thảo bài báo LaTeX. Việc ứng dụng công nghệ SSE và khung xương giả lập giúp triệt tiêu cảm giác trễ mạng, mang lại trải nghiệm học thuật mượt mà.
