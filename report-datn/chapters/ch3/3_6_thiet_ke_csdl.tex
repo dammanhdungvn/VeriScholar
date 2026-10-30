@@ -13,7 +13,7 @@ Cơ sở dữ liệu của hệ thống \VS\ được thiết kế bám sát đ�
     \item \textbf{Phân hệ Lưu trữ CAS \& Thư viện Tài liệu (Module 2 -- CAS Storage \& Library):} Tổ chức cây thư mục cá nhân, trích xuất siêu dữ liệu bài báo khoa học và quản lý khối tệp nhị phân trên đĩa cứng theo mã Hash nội dung SHA-256 Deduplication.
     \item \textbf{Phân hệ Trích xuất Tri thức \& Trích dẫn (Module 3 -- Chunks \& Citations):} Lưu trữ phân đoạn văn bản kèm số trang, tọa độ viền Bounding Box, cùng danh mục tài liệu tham khảo được đối chiếu trúng nguồn.
     \item \textbf{Phân hệ Hội thoại Nghiên cứu \& Đọc sâu (Module 4 -- Research Sessions):} Quản lý phiên làm việc đa tài liệu, trạng thái cuộn trang, lịch sử hỏi đáp tăng cường truy xuất Hybrid RAG và ghi chú học thuật có neo giữ tọa độ.
-    \item \textbf{Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Module 5 -- Agentic Writing):} Lưu trữ bản thảo \LaTeX\ chuẩn hội nghị IEEE/ACM và nhật ký tương tác với Agent tự động sửa lỗi biên dịch.
+    \item \textbf{Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Module 5 -- Agentic Writing):} Lưu trữ bản thảo LaTeX chuẩn hội nghị IEEE/ACM và nhật ký tương tác với Agent tự động sửa lỗi biên dịch.
 \end{enumerate}
 
 Toàn bộ các bảng cơ sở dữ liệu của hệ thống \VS\ được tổng hợp chi tiết theo từng phân hệ trong Bảng~\ref{tab:db_tables_summary}.
@@ -49,11 +49,11 @@ Toàn bộ các bảng cơ sở dữ liệu của hệ thống \VS\ được t�
 14 & session\_turns & Lịch sử các lượt hỏi đáp nghiên cứu kèm trích dẫn chứng minh \tabularnewline \hline
 15 & research\_notes & Ghi chú học thuật có neo giữ tọa độ trên trang PDF (Anchor Memory) \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{V. Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Agentic Writing)}} \tabularnewline \hline
-16 & drafts & Bản thảo bài báo khoa học định dạng \LaTeX\ chuẩn hội nghị \tabularnewline \hline
+16 & drafts & Bản thảo bài báo khoa học định dạng LaTeX chuẩn hội nghị \tabularnewline \hline
 17 & draft\_sections & Các đề mục và phân đoạn cấu trúc nội dung bản thảo bài báo \tabularnewline \hline
-18 & draft\_assets & Các tệp tài nguyên, hình ảnh và đồ thị chèn vào bản thảo \LaTeX \tabularnewline \hline
+18 & draft\_assets & Các tệp tài nguyên, hình ảnh và đồ thị chèn vào bản thảo LaTeX \tabularnewline \hline
 19 & draft\_messages & Nhật ký hội thoại giữa học giả và AI Agent đồng tác giả \tabularnewline \hline
-20 & latex\_compilations & Lịch sử các lần biên dịch \LaTeX, mã lỗi cú pháp và bản vá ReAct \tabularnewline \hline
+20 & latex\_compilations & Lịch sử các lần biên dịch LaTeX, mã lỗi cú pháp và bản vá ReAct \tabularnewline \hline
 \end{tabular}
 \end{table}
 \clearpage
@@ -308,7 +308,7 @@ Bảng session\_turns lưu trữ toàn bộ lịch sử các lượt hỏi đáp
 
 \Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng drafts}
-Bảng drafts lưu trữ các bản thảo bài báo khoa học định dạng \LaTeX, phiên bản tài liệu và liên kết phiên nghiên cứu nguồn (Bảng~\ref{tab:spec_drafts}).
+Bảng drafts lưu trữ các bản thảo bài báo khoa học định dạng LaTeX, phiên bản tài liệu và liên kết phiên nghiên cứu nguồn (Bảng~\ref{tab:spec_drafts}).
 
 \begin{table}[H]
 \centering

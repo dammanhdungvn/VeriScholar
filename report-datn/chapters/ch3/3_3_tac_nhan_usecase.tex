@@ -6,7 +6,7 @@ Từ việc khảo sát nghiệp vụ và quy trình nghiên cứu khoa học th
 
 Dựa trên yêu cầu bài toán và quy trình vận hành hệ thống, đề tài đề xuất hệ thống được thiết kế với \textbf{2 Actor chính}:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Học giả (Scholar / Researcher):} Là Actor trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với các phân hệ của nền tảng: tra cứu và tải tài liệu nghiên cứu từ các kho học thuật mở, đọc sâu tài liệu với sự trợ giúp của AI kèm định vị khung viền Bounding Box, khai phá đồ thị tri thức đa thực thể, quản lý kho lưu trữ tài liệu cá nhân và biên soạn bản thảo bài báo \LaTeX.
+    \item \textbf{Học giả (Scholar / Researcher):} Là Actor trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với các phân hệ của nền tảng: tra cứu và tải tài liệu nghiên cứu từ các kho học thuật mở, đọc sâu tài liệu với sự trợ giúp của AI kèm định vị khung viền Bounding Box, khai phá đồ thị tri thức đa thực thể, quản lý kho lưu trữ tài liệu cá nhân và biên soạn bản thảo bài báo LaTeX.
     \item \textbf{Quản trị viên hệ thống (Administrator):} Chịu trách nhiệm quản lý người dùng, cấu hình chính sách bảo mật kho khóa API cá nhân (BYOK), theo dõi các luồng sự kiện Trace mô hình ngôn ngữ lớn (\textit{Trace Logs}) trên nền tảng Langfuse, và giám sát hạ tầng máy ảo Sandbox cách ly.
 \end{enumerate}
 
@@ -30,7 +30,7 @@ Các Use Case chính đối với mỗi Actor được tổng hợp và liệt k
 5 & & Kiểm chứng trích dẫn tọa độ Bounding Box trực quan \\ \cline{3-3}
 6 & & Khám phá và truy vấn Đồ thị tri thức (GraphRAG) \\ \cline{3-3}
 7 & & Quản lý hồ sơ định danh ORCID và Kho khóa API BYOK \\ \cline{3-3}
-8 & & Biên soạn bản thảo \LaTeX\ và Tự phục hồi lỗi biên dịch \\
+8 & & Biên soạn bản thảo LaTeX và Tự phục hồi lỗi biên dịch \\
 \hline
 9 & \multirow{4}{*}{\textbf{Quản trị viên (Admin)}} & Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
 10 & & Giám sát sức khỏe hạ tầng MicroVM (Sandbox) \\ \cline{3-3}

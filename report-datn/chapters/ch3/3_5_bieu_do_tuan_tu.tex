@@ -135,7 +135,7 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
 \end{figure}
 \clearpage
 
-\subsection{Biểu đồ tuần tự Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\subsection{Biểu đồ tuần tự Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{subsec:seq_bien_soan}
 
 Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, E2B MicroVM cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
@@ -174,7 +174,7 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, E2B MicroV
 
     % Luồng thông điệp
     \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhấp nút ``Biên dịch bản thảo''} (3.1, -1.0);
-    \draw[msg] (3.3, -1.6) -- node[lbl, above] {2: Chuyển mã nguồn \LaTeX} (6.7, -1.6);
+    \draw[msg] (3.3, -1.6) -- node[lbl, above] {2: Chuyển mã nguồn LaTeX} (6.7, -1.6);
     \draw[msg] (6.9, -2.2) -- node[lbl, above] {3: Khởi tạo MicroVM \& Chạy \texttt{xelatex}} (10.3, -2.2);
 
     % Khung điều kiện xử lý lỗi ReAct
@@ -190,7 +190,7 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, E2B MicroV
     \draw[retmsg] (6.7, -7.2) -- node[lbl, above] {9: Cập nhật mã nguồn \& Trả tệp PDF} (3.3, -7.2);
     \draw[retmsg] (3.1, -7.9) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -7.9);
 \end{tikzpicture}
-\caption{Biểu đồ tuần tự Use Case Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}
+\caption{Biểu đồ tuần tự Use Case Biên soạn bản thảo và tự phục hồi lỗi LaTeX}
 \label{fig:seq_bien_soan}
 \end{figure}
 \clearpage

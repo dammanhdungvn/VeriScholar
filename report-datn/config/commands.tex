@@ -17,3 +17,9 @@
 
 % Macro ghi chú thuật ngữ viết tắt lần đầu
 \newcommand{\firstacronym}[2]{\textit{#1} (#2)}
+
+% Chuẩn hóa định dạng chữ LaTeX & TeX thành văn bản thông thường (Times New Roman),
+% loại bỏ triệt để hiệu ứng nâng hạ ký tự (thò thụt) và phông chữ Computer Modern mặc định của logo LaTeX
+\usepackage{xspace}
+\renewcommand{\LaTeX}{LaTeX\xspace}
+\renewcommand{\TeX}{TeX\xspace}

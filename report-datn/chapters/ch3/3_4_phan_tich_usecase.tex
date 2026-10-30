@@ -28,7 +28,7 @@ Từ bảng các Use Case đối với từng Actor được xác định ở M�
     \node[usecase] (uc4) at (0, 0.6) {Kiểm chứng trích dẫn BBox};
     \node[usecase] (uc5) at (0, -0.8) {Khám phá Đồ thị tri thức};
     \node[usecase] (uc6) at (0, -2.2) {Quản lý ORCID \& Khóa BYOK};
-    \node[usecase] (uc7) at (0, -3.6) {Biên soạn \& Tự sửa lỗi \LaTeX};
+    \node[usecase] (uc7) at (0, -3.6) {Biên soạn \& Tự sửa lỗi LaTeX};
 
     % Các Use Case phía Quản trị viên
     \node[usecase] (uc8) at (0, -5.0) {Giám sát Trace LLM};
@@ -55,7 +55,7 @@ Từ bảng các Use Case đối với từng Actor được xác định ở M�
 \subsection{Phân tích các Use Case phía Học giả}
 \label{subsec:uc_scholar}
 
-Nhằm làm rõ bản chất vận hành của các chức năng trọng tâm, tiểu mục này tiến hành đặc tả chi tiết 3 Use Case tiêu biểu của học giả: \textit{Tra cứu và tải tài liệu nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}.
+Nhằm làm rõ bản chất vận hành của các chức năng trọng tâm, tiểu mục này tiến hành đặc tả chi tiết 3 Use Case tiêu biểu của học giả: \textit{Tra cứu và tải tài liệu nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi LaTeX}.
 
 \Needspace{18\baselineskip}
 \subsubsection{Phân tích Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
@@ -146,7 +146,7 @@ Cơ chế kiểm chứng tọa độ trực quan được đo lường thông qu
 Hệ thống thiết lập ngưỡng kiểm định $\text{IoU} \ge 0{,}85$ nhằm bảo đảm khung viền vàng chỉ tô sáng chính xác câu văn chứa dẫn chứng khoa học mà không bị lệch dòng hay cắt ngang công thức toán học.
 
 \Needspace{18\baselineskip}
-\subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{subsubsec:uc_bien_soan}
 
 Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa học, biên dịch tài liệu sang định dạng PDF trong môi trường máy ảo cách ly, và tự động sửa các lỗi cú pháp khi biên dịch thất bại (Bảng~\ref{tab:uc_bien_soan_spec}).
@@ -155,19 +155,19 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \centering
 \singlespacing
 \small
-\caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{tab:uc_bien_soan_spec}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
-\textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX} \tabularnewline \hline
+\textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi LaTeX} \tabularnewline \hline
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học \LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct. \tabularnewline \hline
+\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Học giả chỉnh sửa mã nguồn \LaTeX\ trên trình biên tập Monaco Editor.
+    \item Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
     \item Học giả nhấp nút ``Biên dịch bản thảo''.
     \item Hệ thống chuyển mã nguồn vào E2B MicroVM cách ly an toàn và kích hoạt lệnh \texttt{xelatex}.
     \item Nếu biên dịch thành công ($\text{ExitCode} == 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
@@ -242,7 +242,7 @@ Use Case cho phép Quản trị viên theo dõi các chỉ số hoạt động c
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Quản trị viên chọn phân hệ ``Giám sát hệ thống''.
     \item Hệ thống truy xuất dữ liệu từ dịch vụ giám sát Langfuse và cơ sở dữ liệu.
-    \item Hiển thị biểu đồ đo lường: độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi \LaTeX, và tổng số lượng Token đã tiêu thụ.
+    \item Hiển thị biểu đồ đo lường: độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi LaTeX, và tổng số lượng Token đã tiêu thụ.
     \item Quản trị viên xem xét các phiên có độ trễ cao để tối ưu hóa chỉ mục HNSW.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng ngoại lệ} & 

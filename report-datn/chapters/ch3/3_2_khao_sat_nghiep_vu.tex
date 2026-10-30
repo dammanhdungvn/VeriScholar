@@ -31,13 +31,13 @@ Khi tiến hành tổng quan tài liệu (\textit{Literature Review}):
     \item Học giả có nhu cầu xây dựng tự động một mạng đồ thị tri thức liên kết 4 thực thể cốt lõi: \textit{Bài báo (Paper) $\rightarrow$ Phương pháp (Method) $\rightarrow$ Bộ dữ liệu (Dataset) $\rightarrow$ Kết quả đo lường (Metric Result)}, cho phép đặt câu hỏi so sánh liên tài liệu trong cùng một không gian nghiên cứu.
 \end{itemize}
 
-\subsection{Khảo sát quy trình biên soạn bản thảo và sửa lỗi biên dịch \LaTeX}
+\subsection{Khảo sát quy trình biên soạn bản thảo và sửa lỗi biên dịch LaTeX}
 \label{subsec:khao_sat_bien_soan}
 Biên soạn bản thảo là công đoạn tốn nhiều thời gian và công sức nhất trong toàn bộ chu trình nghiên cứu:
 \begin{itemize}
-    \item Ngôn ngữ \LaTeX\ là tiêu chuẩn công bố bắt buộc của các hội nghị khoa học uy tín, nhưng có cú pháp rất chặt chẽ. Chỉ một lỗi nhỏ như quên đóng ngoặc môi trường toán học, sử dụng ký tự đặc biệt chưa thoát mã (như \texttt{\_}, \texttt{\%}, \texttt{\&}), hoặc sai nhãn trích dẫn BibTeX cũng khiến toàn bộ quá trình biên dịch bị đình trệ.
+    \item Ngôn ngữ LaTeX là tiêu chuẩn công bố bắt buộc của các hội nghị khoa học uy tín, nhưng có cú pháp rất chặt chẽ. Chỉ một lỗi nhỏ như quên đóng ngoặc môi trường toán học, sử dụng ký tự đặc biệt chưa thoát mã (như \texttt{\_}, \texttt{\%}, \texttt{\&}), hoặc sai nhãn trích dẫn BibTeX cũng khiến toàn bộ quá trình biên dịch bị đình trệ.
     \item Tệp nhật ký lỗi (\texttt{.log}) của bộ biên dịch XeLaTeX thường dài hàng nghìn dòng với nhiều thông điệp kỹ thuật khó hiểu. Học giả, đặc biệt là sinh viên mới nghiên cứu, thường mất nhiều thời gian tra cứu Google để tìm cách khắc phục.
-    \item Nhu cầu thực tế là một trợ lý AI có khả năng tự động đọc tệp nhật ký lỗi, phát hiện nguyên nhân gốc rễ và tự tạo bản vá sửa lỗi chính xác trên mã nguồn \LaTeX\ mà không làm biến dạng các phần nội dung khác.
+    \item Nhu cầu thực tế là một trợ lý AI có khả năng tự động đọc tệp nhật ký lỗi, phát hiện nguyên nhân gốc rễ và tự tạo bản vá sửa lỗi chính xác trên mã nguồn LaTeX mà không làm biến dạng các phần nội dung khác.
 \end{itemize}
 
 \subsection{Khảo sát quy trình quản lý hồ sơ học giả và bảo mật khóa cá nhân}
@@ -76,7 +76,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
         \footnotesize Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức
     };
     \node[box_asis] (a4) at (-4.4, -3.6) {
-        \textbf{4. Soạn thảo \& Tự dò lỗi \LaTeX}\\
+        \textbf{4. Soạn thảo \& Tự dò lỗi LaTeX}\\
         \footnotesize Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công
     };
 
@@ -96,7 +96,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
         \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
     };
     \node[box_tobe] (b4) at (4.4, -3.6) {
-        \textbf{4. Agent tự phục hồi bản thảo \LaTeX}\\
+        \textbf{4. Agent tự phục hồi bản thảo LaTeX}\\
         \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $> 90\%$
     };
 

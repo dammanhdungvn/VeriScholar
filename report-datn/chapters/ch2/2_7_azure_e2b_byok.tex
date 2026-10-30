@@ -34,7 +34,7 @@ E2B Sandbox là nền tảng môi trường thực thi ảo hóa cô lập chuy�
 Công nghệ nền tảng của E2B dựa trên kiến trúc máy ảo siêu nhỏ (\textit{MicroVM}) được phát triển từ công nghệ ảo hóa AWS Firecracker \cite{agache2020firecracker}:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Khởi động siêu tốc:} Mỗi môi trường MicroVM có thể khởi tạo hoàn tất trong thời gian chưa đầy 200 mili-giây, cung cấp đầy đủ một nhân Linux hoàn chỉnh với hệ điều hành và tài nguyên tính toán độc lập.
-    \item \textbf{Cô lập ranh giới hạt nhân (Kernel-level Isolation):} Mọi đoạn mã lập trình (chẳng hạn như kịch bản phân tích số liệu Python, trích xuất biểu đồ hoặc lệnh biên dịch tài liệu \LaTeX) đều chạy bên trong ranh giới máy ảo riêng. Nếu kịch bản chứa mã độc hoặc gặp sự cố tràn bộ nhớ, sự cố hoàn toàn bị giới hạn bên trong MicroVM mà không thể lan truyền hay gây hại đến máy chủ chính của hệ thống, loại bỏ hoàn toàn nguy cơ tấn công thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
+    \item \textbf{Cô lập ranh giới hạt nhân (Kernel-level Isolation):} Mọi đoạn mã lập trình (chẳng hạn như kịch bản phân tích số liệu Python, trích xuất biểu đồ hoặc lệnh biên dịch tài liệu LaTeX) đều chạy bên trong ranh giới máy ảo riêng. Nếu kịch bản chứa mã độc hoặc gặp sự cố tràn bộ nhớ, sự cố hoàn toàn bị giới hạn bên trong MicroVM mà không thể lan truyền hay gây hại đến máy chủ chính của hệ thống, loại bỏ hoàn toàn nguy cơ tấn công thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
     \item \textbf{Môi trường trạng thái linh hoạt:} Hỗ trợ tương tác hai chiều, truyền tệp nhị phân và thu nhận kết quả tính toán tức thời để đưa ngược lại vào chu trình suy luận của Agent.
 \end{enumerate}
 

@@ -2,14 +2,14 @@
 \section{Kết quả thực nghiệm}
 \label{sec:ket_qua_thuc_nghiem}
 
-Trong thiết kế hệ thống tương tác người--máy (Human-Computer Interaction -- HCI) phục vụ nghiên cứu khoa học, rào cản lớn nhất đối với năng suất học giả là tình trạng phân mảnh ngữ cảnh (\textit{context fragmentation}). Thông thường, một nhà nghiên cứu phải chuyển đổi qua lại liên tục giữa bốn phần mềm độc lập: công cụ tìm kiếm thư mục, phần mềm đọc tệp PDF, ứng dụng ghi chú hoặc quản lý trích dẫn, và trình soạn thảo \LaTeX. Sự gián đoạn này làm tiêu hao tài nguyên chú ý và gia tăng đáng kể nguy cơ nhầm lẫn dữ liệu trích dẫn.
+Trong thiết kế hệ thống tương tác người--máy (Human-Computer Interaction -- HCI) phục vụ nghiên cứu khoa học, rào cản lớn nhất đối với năng suất học giả là tình trạng phân mảnh ngữ cảnh (\textit{context fragmentation}). Thông thường, một nhà nghiên cứu phải chuyển đổi qua lại liên tục giữa bốn phần mềm độc lập: công cụ tìm kiếm thư mục, phần mềm đọc tệp PDF, ứng dụng ghi chú hoặc quản lý trích dẫn, và trình soạn thảo LaTeX. Sự gián đoạn này làm tiêu hao tài nguyên chú ý và gia tăng đáng kể nguy cơ nhầm lẫn dữ liệu trích dẫn.
 
 Để khắc phục triệt để vấn đề trên, VeriScholar tổ chức không gian tương tác người--máy thành 4 phân hệ thống nhất, kết nối liền mạch theo một chu trình khép kín:
 \begin{enumerate}[label=\textbf{\arabic*.}]
     \item \textbf{Phân hệ Khám phá tài liệu khoa học:} Thu thập, chuẩn hóa và phân loại tức thì các tài liệu học thuật từ nhiều kho lưu trữ toàn cầu.
     \item \textbf{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box:} Khung hiển thị song song kết hợp trình đọc PDF hai cột với trợ lý suy luận nhân quả, kiểm chứng nguồn trích dẫn trực tiếp trên trang tài liệu.
     \item \textbf{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả:} Deduplication lưu trữ theo nội dung (CAS), định danh học giả quốc tế ORCID và kho khóa API mã hóa cá nhân (BYOK) (BYOK).
-    \item \textbf{Phân hệ Soạn thảo và Tự phục hồi bản thảo \LaTeX:} Môi trường biên tập trực tuyến với khả năng tự động phân tích nhật ký lỗi biên dịch và tạo bản vá sửa lỗi tự động trong môi trường máy ảo cách ly.
+    \item \textbf{Phân hệ Soạn thảo và Tự phục hồi bản thảo LaTeX:} Môi trường biên tập trực tuyến với khả năng tự động phân tích nhật ký lỗi biên dịch và tạo bản vá sửa lỗi tự động trong môi trường máy ảo cách ly.
 \end{enumerate}
 
 Kiến trúc không gian tương tác người--máy và luồng luân chuyển dữ liệu giữa 4 phân hệ chính được mô hình hóa trong Hình~\ref{fig:ui_layout_architecture}.
@@ -38,7 +38,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
             \node[card] (c1) {$\bullet$ \textbf{Tìm kiếm hợp nhất:} arXiv, Semantic Scholar, Exa AI};
             \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [\textbf{Đã bình duyệt}]; Ưu tiên xếp hạng};
             \node[card, below=of c2] (c3) {$\bullet$ \textbf{Hiệu ứng tải mượt:} 3 thẻ khung xương (\texttt{animate-pulse})};
-            \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Lọc mã \LaTeX, rút gọn tác giả, co giãn tóm tắt};
+            \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Lọc mã LaTeX, rút gọn tác giả, co giãn tóm tắt};
         \end{tikzpicture}
     };
 
@@ -80,7 +80,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \end{center}
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
-            \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu \LaTeX};
+            \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu LaTeX};
             \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} MicroVM \textbf{E2B} biên dịch cô lập};
             \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Đọc log lỗi $\to$ Lập luận $\to$ Vá lỗi vi phẫu};
             \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ $> 90\%$};
@@ -146,7 +146,7 @@ Bảng điều khiển trung tâm (Dashboard) đóng vai trò là trạm điều
 \begin{itemize}
     \item Thống kê tổng số lượng bài báo khoa học đã lưu trữ trong thư viện, phân loại theo trạng thái trích xuất và tài liệu đã được phản biện ngang hàng.
     \item Danh sách các phiên nghiên cứu chuyên sâu (\textit{Active Research Sessions}) gần nhất, cho phép học giả nối lại dòng suy luận và đọc tiếp tài liệu dở dang chỉ bằng một thao tác nhấp chuột.
-    \item Lối tắt nhanh tới các phân hệ nghiệp vụ: Khám phá tài liệu, Tra cứu trích dẫn, Mạng đồ thị tri thức và Soạn thảo bản thảo \LaTeX.
+    \item Lối tắt nhanh tới các phân hệ nghiệp vụ: Khám phá tài liệu, Tra cứu trích dẫn, Mạng đồ thị tri thức và Soạn thảo bản thảo LaTeX.
     \item Thẻ hiển thị trạng thái kết nối hạ tầng bảo mật, xác thực khóa BYOK và trạng thái liên kết định danh học giả quốc tế ORCID iD.
 \end{itemize}
 
@@ -165,7 +165,7 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
 \begin{itemize}
     \item \textbf{Hiệu ứng chờ tải mượt mà với khung xương giả lập (\texttt{animate-pulse}):} Để triệt tiêu hiện tượng giật chuyển layout (Cumulative Layout Shift) trong khi chờ dữ liệu phân tán từ các API bên ngoài, giao diện hiển thị 3 thẻ khung xương (\textit{Skeleton Cards}) áp dụng lớp hiệu ứng \texttt{animate-pulse} của Tailwind CSS, giúp giảm thiểu đáng kể nhận thức về độ trễ mạng của học giả.
     \item \textbf{Bộ lọc phân loại dạng viên nhộng (\textit{Pill Toggle}) và Ưu tiên bình duyệt:} Cho phép chuyển đổi linh hoạt giữa chế độ \textit{Tất cả} và \textbf{Đã bình duyệt} (\textit{Peer-Reviewed}). Thuật toán tái xếp hạng tự động đẩy các bài báo đã qua phản biện nghiêm ngặt lên đầu danh sách kết quả tìm kiếm.
-    \item \textbf{Thẻ bài báo chống tràn bố cục (\textit{Anti-Overflow Scholarly Card}):} Tự động làm sạch mã \LaTeX\ thô trong tiêu đề bài báo, rút gọn danh sách tác giả theo quy tắc học thuật (tối đa 2 tác giả kèm hậu tố ``và cộng sự''), và áp dụng \texttt{line-clamp-2} cho phần tóm tắt để người dùng quét nhanh tài liệu.
+    \item \textbf{Thẻ bài báo chống tràn bố cục (\textit{Anti-Overflow Scholarly Card}):} Tự động làm sạch mã LaTeX thô trong tiêu đề bài báo, rút gọn danh sách tác giả theo quy tắc học thuật (tối đa 2 tác giả kèm hậu tố ``và cộng sự''), và áp dụng \texttt{line-clamp-2} cho phần tóm tắt để người dùng quét nhanh tài liệu.
     \item \textbf{Nạp trực tiếp vào Reader:} Đối với các bài báo có tệp toàn văn mở (\textit{Open Access PDF}), giao diện hiển thị chấm xanh lục và nút tải tức thì tài liệu vào Phân hệ Đọc sâu.
 \end{itemize}
 
@@ -256,20 +256,20 @@ Giao diện Quản lý hồ sơ học giả và Kho khóa API cá nhân bảo đ
 \end{figure}
 
 \clearpage
-\subsubsection{Giao diện soạn thảo bản thảo bài báo \LaTeX\ và tự sửa lỗi biên dịch}
+\subsubsection{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
 \label{subsec:ui_writing}
 
 Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu khoa học của VeriScholar (Hình~\ref{fig:ui_writing_paper}):
 \begin{itemize}
-    \item \textbf{Môi trường soạn thảo chuyên dụng với Monaco Editor:} Giao diện tích hợp trình biên tập mã nguồn Monaco Editor, cung cấp đầy đủ tiện ích tô màu cú pháp \LaTeX, gợi ý lệnh tự động, quản lý cây thư mục dự án đa tệp (\texttt{main.tex}, \texttt{references.bib}, thư mục ảnh) và khung xem trước tài liệu PDF thời gian thực.
-    \item \textbf{Biên dịch cô lập trong môi trường E2B MicroVM:} Toàn bộ tiến trình biên dịch TeX Live được chuyển giao thực thi cách ly hoàn toàn bên trong E2B Sandbox MicroVM, khởi tạo chỉ trong 150 mili-giây, ngăn chặn hoàn toàn nguy cơ tấn công an ninh mạng qua mã macro \LaTeX.
+    \item \textbf{Môi trường soạn thảo chuyên dụng với Monaco Editor:} Giao diện tích hợp trình biên tập mã nguồn Monaco Editor, cung cấp đầy đủ tiện ích tô màu cú pháp LaTeX, gợi ý lệnh tự động, quản lý cây thư mục dự án đa tệp (\texttt{main.tex}, \texttt{references.bib}, thư mục ảnh) và khung xem trước tài liệu PDF thời gian thực.
+    \item \textbf{Biên dịch cô lập trong môi trường E2B MicroVM:} Toàn bộ tiến trình biên dịch TeX Live được chuyển giao thực thi cách ly hoàn toàn bên trong E2B Sandbox MicroVM, khởi tạo chỉ trong 150 mili-giây, ngăn chặn hoàn toàn nguy cơ tấn công an ninh mạng qua mã macro LaTeX.
     \item \textbf{Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop):} Khi quá trình biên dịch phát sinh lỗi cú pháp, AI Agent tự động kích hoạt chu trình ReAct: đọc nhật ký lỗi $\to$ lập luận suy diễn nguyên nhân $\to$ tạo bản vá vi phẫu (\textit{Surgical Diff}) sửa lỗi mã nguồn, đạt tỷ lệ tự sửa lỗi biên dịch thành công vượt trên 90\%.
 \end{itemize}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.90\textwidth]{figures/frontend/writing_paper.png}
-\caption{Giao diện soạn thảo bản thảo bài báo \LaTeX\ và tự sửa lỗi biên dịch}
+\caption{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
 \label{fig:ui_writing_paper}
 \end{figure}
 \clearpage

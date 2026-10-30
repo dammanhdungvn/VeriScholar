@@ -7,10 +7,10 @@
 
 Thời gian trễ kết nối cơ sở dữ liệu đo đạc tại điểm cuối kiểm tra sức khỏe hệ thống (\texttt{/health/ready}) đạt mức trung bình 1.66 ms. Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu tiên (Time-to-First-Token -- TTFT) qua kênh truyền phát Server-Sent Events (SSE) đạt trung bình 1.15 giây, đáp ứng xuất sắc tiêu chuẩn trải nghiệm người dùng học thuật, giúp nhà nghiên cứu tiếp nhận mạch suy luận liên tục mà không có cảm giác chờ đợi.
 
-\subsubsection{Độ chính xác định vị tọa độ và tỷ lệ tự sửa lỗi \LaTeX}
+\subsubsection{Độ chính xác định vị tọa độ và tỷ lệ tự sửa lỗi LaTeX}
 \label{subsubsec:do_chinh_xac}
 
-Độ chính xác định vị hộp tọa độ trên tài liệu PDF đạt chỉ số giao diện trên diện tích hợp IoU (\textit{Intersection over Union}) trung bình 0.88, vượt ngưỡng mục tiêu đề ra là 0.85. Agent LangGraph ReAct tự động giải quyết thành công 92\% các lỗi cú pháp biên dịch \LaTeX\ (như lỗi thiếu cặp thẻ môi trường, ký tự đặc biệt chưa escape, xung đột nhãn trích dẫn) hoàn toàn tự động mà không cần học giả phải tra cứu nhật ký lỗi thủ công.
+Độ chính xác định vị hộp tọa độ trên tài liệu PDF đạt chỉ số giao diện trên diện tích hợp IoU (\textit{Intersection over Union}) trung bình 0.88, vượt ngưỡng mục tiêu đề ra là 0.85. Agent LangGraph ReAct tự động giải quyết thành công 92\% các lỗi cú pháp biên dịch LaTeX (như lỗi thiếu cặp thẻ môi trường, ký tự đặc biệt chưa escape, xung đột nhãn trích dẫn) hoàn toàn tự động mà không cần học giả phải tra cứu nhật ký lỗi thủ công.
 
 \subsubsection{Nhật ký kiểm chứng thực tế trên Langfuse Cloud}
 \label{subsubsec:langfuse_cloud}
@@ -40,6 +40,6 @@ Hoạt động của các mô hình AI và chi phí tiêu thụ token được g
 Qua quá trình cài đặt, cấu hình và tiến hành các kịch bản thực nghiệm toàn trình trên hệ thống \VS, em rút ra một số nhận xét và đánh giá tổng kết như sau:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Khả năng triển khai thực tiễn cao:} Hệ thống đã được đóng gói container hóa hoàn chỉnh và triển khai ổn định trên máy chủ ảo đám mây VPS với tên miền công cộng chính thức \url{https://verischolar.duckdns.org}. Quy trình cấu hình mạng an ninh, bảo vệ phiên qua reverse proxy Nginx và mã hóa SSL/TLS hoạt động bền bỉ, đáp ứng yêu cầu vận hành liên tục cho người dùng từ xa.
-    \item \textbf{Trải nghiệm người dùng thông suốt:} 10 giao diện tương tác người--máy của hệ thống được xây dựng đồng bộ, hiện thực hóa chu trình nghiên cứu khép kín từ khâu khám phá, trích xuất, đối thoại minh chứng tọa độ trên tệp PDF, đến quản lý hồ sơ an toàn qua cơ chế BYOK và soạn thảo bài báo \LaTeX. Việc ứng dụng công nghệ SSE và khung xương giả lập giúp triệt tiêu cảm giác trễ mạng, mang lại trải nghiệm học thuật mượt mà.
-    \item \textbf{Độ tin cậy và tự động hóa vượt trội:} Cơ chế kiểm định tự động 4 Cổng xác minh (Verification Gates) bảo đảm 100\% các bài kiểm thử đơn vị, kiểm thử ranh giới kiến trúc AST và quy trình đóng gói bản dựng thương mại luôn đạt kết quả thành công tuyệt đối. Chu trình ReAct tự sửa lỗi biên dịch \LaTeX\ trên E2B MicroVM Sandbox đạt tỷ lệ thành công 92\%, kết hợp việc kiểm soát độ trễ và chi phí token minh bạch qua Langfuse Cloud khẳng định tính hiệu quả và đóng góp thực tiễn sâu sắc của đề tài.
+    \item \textbf{Trải nghiệm người dùng thông suốt:} 10 giao diện tương tác người--máy của hệ thống được xây dựng đồng bộ, hiện thực hóa chu trình nghiên cứu khép kín từ khâu khám phá, trích xuất, đối thoại minh chứng tọa độ trên tệp PDF, đến quản lý hồ sơ an toàn qua cơ chế BYOK và soạn thảo bài báo LaTeX. Việc ứng dụng công nghệ SSE và khung xương giả lập giúp triệt tiêu cảm giác trễ mạng, mang lại trải nghiệm học thuật mượt mà.
+    \item \textbf{Độ tin cậy và tự động hóa vượt trội:} Cơ chế kiểm định tự động 4 Cổng xác minh (Verification Gates) bảo đảm 100\% các bài kiểm thử đơn vị, kiểm thử ranh giới kiến trúc AST và quy trình đóng gói bản dựng thương mại luôn đạt kết quả thành công tuyệt đối. Chu trình ReAct tự sửa lỗi biên dịch LaTeX trên E2B MicroVM Sandbox đạt tỷ lệ thành công 92\%, kết hợp việc kiểm soát độ trễ và chi phí token minh bạch qua Langfuse Cloud khẳng định tính hiệu quả và đóng góp thực tiễn sâu sắc của đề tài.
 \end{enumerate}
