@@ -100,43 +100,43 @@
 
 % 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) với đường kẻ đôi chuẩn HUMG
 \usepackage{fancyhdr}
-\pagestyle{fancy}
-\fancyhf{} % Xóa sạch cấu hình mặc định
-\fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
-\renewcommand{\headrule}{%
-    \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
-    \hrule width \headwidth height 0.4pt%
-}
-\fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
-\fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
-\renewcommand{\footrule}{%
-    \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
-    \hrule width \headwidth height 1.2pt%
-}
 
-% Áp dụng phong cách chuẩn cho trang mở đầu chương / plain
-\fancypagestyle{plain}{
-    \fancyhf{}
-    \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}
+\newcommand{\setupdatnheaders}{%
+    \fancyhf{}%
+    \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}%
     \renewcommand{\headrule}{%
         \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
         \hrule width \headwidth height 0.4pt%
-    }
-    \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
+    }%
+    \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}%
     \renewcommand{\footrule}{%
         \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
         \hrule width \headwidth height 1.2pt%
-    }
+    }%
+}
+
+\pagestyle{fancy}
+\setupdatnheaders
+
+% Áp dụng phong cách chuẩn cho trang mở đầu chương / plain và fancy
+\fancypagestyle{fancy}{%
+    \setupdatnheaders
+}
+
+\fancypagestyle{plain}{%
+    \setupdatnheaders
 }
 
 % Phong cách trang dành cho hồ sơ hành chính đầu khóa (Phiếu giao đề tài, Đề cương)
 % Chỉ hiển thị số trang La Mã ở chân trang góc phải, không có đường kẻ header/footer
-\fancypagestyle{adminform}{
-    \fancyhf{}
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
-    \renewcommand{\headrule}{}
-    \renewcommand{\footrule}{}
+\fancypagestyle{adminform}{%
+    \fancyhf{}%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}%
+    \renewcommand{\headrulewidth}{0pt}%
+    \renewcommand{\footrulewidth}{0pt}%
+    \renewcommand{\headrule}{}%
+    \renewcommand{\footrule}{}%
 }
 
 % 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
