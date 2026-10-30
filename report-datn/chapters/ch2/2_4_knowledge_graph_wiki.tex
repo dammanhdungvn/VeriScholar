@@ -1,0 +1,145 @@
+% !TEX root = ../../main.tex
+\section{Tổng quan về Knowledge Graph và Graph Wiki}
+\label{sec:knowledge_graph_wiki}
+
+\subsection{Knowledge Graph là gì? (Đồ thị tri thức)}
+\label{subsec:knowledge_graph}
+Đồ thị tri thức (\textit{Knowledge Graph}) là mô hình toán học biểu diễn mạng lưới tri thức dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}, trong đó tập đỉnh $V$ đại diện cho các thực thể thế giới thực (\textit{Entities}) và tập cạnh $E$ đại diện cho các mối quan hệ ngữ nghĩa kết nối giữa các thực thể đó (\textit{Semantic Relations}). Tri thức trong đồ thị thường được tổ chức theo cấu trúc bộ ba vị ngữ chuẩn (\textit{Subject -- Predicate -- Object Triples}), ví dụ: $(\text{Transformer}) \xrightarrow{\text{được đề xuất bởi}} (\text{Vaswani et al.})$ \cite{vaswani2017}.
+
+So với các dạng lưu trữ dữ liệu văn bản phi cấu trúc hoặc cơ sở dữ liệu quan hệ bảng phẳng, Knowledge Graph sở hữu ba ưu thế vượt trội:
+\begin{itemize}
+    \item \textbf{Khả năng suy luận bắc cầu (\textit{Multi-hop Reasoning}):} Đồ thị cho phép lần theo chuỗi các cạnh liên kết để khám phá ra các mối liên hệ gián tiếp giữa các công trình khoa học mà không cần chúng phải xuất hiện cùng nhau trong một văn bản.
+    \item \textbf{Định danh và khử nhập nhằng thực thể (\textit{Entity Disambiguation}):} Mỗi khái niệm, phương pháp hoặc tác giả được định danh duy nhất thông qua một nút mạng, giải quyết triệt để hiện tượng trùng tên hoặc đồng âm khác nghĩa.
+    \item \textbf{Cấu trúc tri thức toàn cục (\textit{Global Structural Context}):} Cung cấp bức tranh toàn cảnh về sự phát triển của các trường phái học thuật, sơ đồ phả hệ của các mô hình và mạng lưới hợp tác nghiên cứu.
+\end{itemize}
+
+\subsection{GraphRAG là gì?}
+\label{subsec:graphrag_la_gi}
+GraphRAG (\textit{Graph-based Retrieval-Augmented Generation}) là bước tiến hóa kết hợp giữa Đồ thị tri thức và quy trình RAG, do nhóm nghiên cứu của Darren Edge tại Microsoft Research đề xuất năm 2024 \cite{edge2024}. Hạn chế lớn nhất của RAG vector truyền thống là việc xử lý các đoạn văn bản rời rạc, hoàn toàn bất lực trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn như: \textit{''Những phương pháp nào đã được thử nghiệm trên bộ dữ liệu ImageNet và đạt độ chính xác trên 90\%?''}). Khi đó, thông tin bị phân mảnh ở nhiều tài liệu khác nhau khiến cơ chế tìm kiếm tương đồng vector bỏ sót phần lớn các mối liên hệ.
+
+GraphRAG giải quyết bài toán này bằng cách chuyển đổi toàn bộ kho tài liệu thành đồ thị thực thể, sau đó áp dụng thuật toán phân cụm cộng đồng phân tầng (\textit{Hierarchical Community Detection} -- thuật toán Leiden \cite{traag2019leiden}) để xây dựng các bản tóm tắt tri thức ở nhiều cấp độ trừu tượng khác nhau. Quy trình trích xuất và truy xuất tri thức phân tầng được minh họa trong Hình~\ref{fig:graphrag_model}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.72, transform shape,
+    phasebox/.style={draw=blue!85!black, fill=blue!5, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    entitybox/.style={draw=teal!85!black, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    commbox/.style={draw=purple!85!black, fill=purple!4, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    retbox/.style={draw=orange!90!black, fill=orange!6, rounded corners=5pt, line width=1.1pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    groupcard/.style={draw=gray!50, fill=gray!2, rounded corners=7pt, line width=0.9pt, dashed},
+    pipearrow/.style={-{Stealth[length=2.5mm]}, line width=1.1pt, draw=blue!85!black},
+    edgearrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=teal!85!black},
+    commarrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=purple!85!black},
+    dualarrow/.style={-{Stealth[length=2.2mm]}, line width=1.0pt, draw=orange!90!black}
+]
+    % ==========================================================================
+    % PHA 1: NẠP ẤN PHẨM & PHÂN ĐOẠN TEXTUNITS
+    % ==========================================================================
+    \node[phasebox, text width=3.4cm] (pdf) at (-4.8, 4.2) {
+        \textbf{Ấn phẩm Khoa học}\\[2pt]
+        \footnotesize PDF bài báo chuẩn quốc tế
+    };
+
+    \node[phasebox, text width=4.2cm] (textunits) at (2.4, 4.2) {
+        \textbf{Bóc tách Phân đoạn TextUnits}\\[2pt]
+        \footnotesize Phân đoạn nội dung có cấu trúc
+    };
+
+    \draw[pipearrow] (pdf.east) -- node[midway, above=1pt, font=\tiny\bfseries] {Bóc tách văn bản} (textunits.west);
+
+    % ==========================================================================
+    % PHA 2: TRÍCH XUẤT MẠNG THỰC THỂ HỌC THUẬT
+    % ==========================================================================
+    \node[groupcard, minimum width=15.4cm, minimum height=2.4cm] (card_extract) at (0, 1.6) {};
+    \node[fill=teal!12, draw=teal!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=teal!90!black, inner sep=2.5pt] at (0, 2.65) {TRÍCH XUẤT MẠNG THỰC THỂ HỌC THUẬT CỐT LÕI};
+
+    \node[entitybox, text width=2.6cm] (paper) at (-5.6, 1.5) {
+        \textbf{Bài báo (Paper)}\\[1pt]
+        \footnotesize Tiêu đề, Tác giả, Năm
+    };
+
+    \node[entitybox, text width=2.8cm] (method) at (-1.8, 1.5) {
+        \textbf{Phương pháp (Method)}\\[1pt]
+        \footnotesize Mô hình, Thuật toán
+    };
+
+    \node[entitybox, text width=2.6cm] (data) at (2.0, 1.5) {
+        \textbf{Bộ dữ liệu (Dataset)}\\[1pt]
+        \footnotesize Tập mẫu, Benchmark
+    };
+
+    \node[entitybox, text width=2.6cm] (metric) at (5.8, 1.5) {
+        \textbf{Kết quả (Metric)}\\[1pt]
+        \footnotesize Chỉ số, Độ chính xác
+    };
+
+    % Đường nối trực giao giữa Pha 1 xuống Pha 2
+    \draw[pipearrow] (textunits.south) -- ++(0, -0.55) -| (-7.2, 1.5) -- (paper.west);
+
+    % Cạnh nối quan hệ giữa các thực thể
+    \draw[edgearrow] (paper.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐỀ XUẤT} (method.west);
+    \draw[edgearrow] (method.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐÁNH GIÁ} (data.west);
+    \draw[edgearrow] (data.east) -- node[midway, above=1pt, font=\tiny\bfseries] {ĐO LƯỜNG} (metric.west);
+
+    % ==========================================================================
+    % PHA 3: PHÂN CỤM CỘNG ĐỒNG LEIDEN & TÓM TẮT PHÂN TẦNG
+    % ==========================================================================
+    \node[groupcard, minimum width=15.4cm, minimum height=2.3cm] (card_comm) at (0, -1.3) {};
+    \node[fill=white, draw=purple!80!black, rounded corners=2pt, font=\bfseries\scriptsize, text=purple!90!black, inner sep=2.5pt] at (0, -0.15) {PHÂN CỤM CỘNG ĐỒNG LEIDEN \& TÓM TẮT};
+
+    \node[commbox, text width=4.0cm] (comm_level0) at (-3.6, -1.4) {
+        \textbf{Cộng đồng Vi mô (Level 0)}\\[2pt]
+        \footnotesize Cụm phương pháp cùng đề tài
+    };
+
+    \node[commbox, text width=4.0cm] (comm_level1) at (3.6, -1.4) {
+        \textbf{Cộng đồng Vĩ mô (Level 1)}\\[2pt]
+        \footnotesize Báo cáo tổng quan phân ngành
+    };
+
+    \draw[commarrow] (method.south) -- (method.south |- 0, 0.05) -| (comm_level0.north);
+    \node[above=2pt, font=\tiny\bfseries, fill=white, inner sep=1.5pt, text=purple!85!black] at (-3.6, 0.05) {Phân cụm vi mô};
+
+    \draw[commarrow] (metric.south) -- (metric.south |- 0, 0.05) -| (comm_level1.north);
+    \node[above=2pt, font=\tiny\bfseries, fill=white, inner sep=1.5pt, text=purple!85!black] at (3.6, 0.05) {Tóm tắt vĩ mô};
+
+    \draw[commarrow] (comm_level0.east) -- node[midway, above=1pt, font=\tiny\bfseries] {Tổng hợp đệ quy} (comm_level1.west);
+
+    % ==========================================================================
+    % PHA 4: TRUY XUẤT PHÂN TẦNG HAI CẤP ĐỘ
+    % ==========================================================================
+    \node[retbox, text width=6.2cm] (ret_low) at (-3.8, -3.8) {
+        \textbf{Truy xuất Mức thấp (Low-Level Retrieval)}\\[2pt]
+        \footnotesize Khớp chính xác Thực thể \& Dẫn chứng kiểm chứng
+    };
+
+    \node[retbox, text width=6.2cm] (ret_high) at (3.8, -3.8) {
+        \textbf{Truy xuất Mức cao (High-Level Retrieval)}\\[2pt]
+        \footnotesize Khám phá Mối quan hệ vĩ mô \& Khoảng trống nghiên cứu
+    };
+
+    \draw[dualarrow] (comm_level0.south) -- (ret_low.north);
+    \draw[dualarrow] (comm_level1.south) -- (ret_high.north);
+\end{tikzpicture}
+\caption{Quy trình Data Pipeline trích xuất tri thức phân tầng GraphRAG}
+\label{fig:graphrag_model}
+\end{figure}
+
+Hệ thống hỗ trợ cơ chế truy xuất hai cấp độ:
+\begin{itemize}
+    \item \textbf{Truy xuất mức thấp (\textit{Low-Level Retrieval}):} Phục vụ giải đáp các câu hỏi chi tiết về một thực thể, chỉ số thực nghiệm hoặc công thức cụ thể trong một bài báo.
+    \item \textbf{Truy xuất mức cao (\textit{High-Level Retrieval}):} Khai thác các báo cáo tóm tắt cộng đồng vĩ mô để trả lời các câu hỏi so sánh liên ngành, phân tích xu hướng và phát hiện khoảng trống nghiên cứu (\textit{Research Gaps}).
+\end{itemize}
+
+\subsection{Graph Wiki là gì? (Compiled Academic Wiki)}
+\label{subsec:graph_wiki_la_gi}
+Graph Wiki (\textit{Compiled Academic Wiki} -- Hệ tri thức bách khoa học thuật biên dịch sẵn) là mô hình tổ chức tri thức chuyên sâu được thiết kế để chuyển đổi toàn bộ đồ thị tri thức và mạng trích dẫn thành các trang tài liệu bách khoa có cấu trúc liên kết chéo tương tự như Wikipedia học thuật.
+
+Thay vì chỉ lưu trữ các đỉnh và cạnh trừu tượng trong cơ sở dữ liệu, Graph Wiki tự động biên dịch mạng lưới tri thức thành các danh mục trang chuyên đề:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Trang chuyên đề Phương pháp (\textit{Method Pages}):} Trình bày toàn diện nguyên lý thuật toán, bảng so sánh hiệu năng qua từng thời kỳ, danh sách các bài báo gốc đề xuất và các biến thể kế thừa.
+    \item \textbf{Trang chuẩn đánh giá (\textit{Benchmark Pages}):} Liệt kê các bộ dữ liệu tiêu chuẩn cùng bảng xếp hạng (\textit{Leaderboards}) các phương pháp tiên tiến nhất (\textit{State-of-the-Art -- SOTA}).
+    \item \textbf{Liên kết hai chiều (\textit{Bidirectional Hyperlinks}):} Cho phép học giả điều hướng mượt mà giữa các bài báo có cùng nền tảng lý thuyết, giúp việc tổng quan y văn (\textit{Literature Review}) trở nên mạch lạc và trực quan.
+\end{enumerate}
+Nhờ Graph Wiki, tác nhân AI có thể ngay lập tức truy cập vào bức tranh tri thức đã được tổng hợp sẵn, rút ngắn thời gian phản hồi và nâng cao độ chính xác khi hỗ trợ học giả viết phần liên quan trong bài báo khoa học.

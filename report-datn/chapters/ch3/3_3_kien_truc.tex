@@ -4,7 +4,7 @@
 
 \subsection{Kiến trúc tự phản biện hai dải màu và Vòng lặp phản hồi đóng}
 \label{subsec:kien_truc_pipeline}
-Khác biệt với các hệ thống hỏi đáp một chiều, nền tảng \VS\ xây dựng chu trình suy luận và kiểm định theo mô hình Kiến trúc Phân tầng Tự phản biện hai dải màu (\textit{Dual-Band Reflexion Architecture}) lấy cảm hứng từ mô hình tác nhân phản tư ngôn ngữ (Shinn và cộng sự, NeurIPS 2023) kết hợp chu trình ReAct \cite{yao2022, lewis2020}. Chu trình này thiết lập các trạm kiểm soát chất lượng dữ liệu khắt khe nhằm triệt tiêu ảo giác trích dẫn:
+Khác biệt với các hệ thống hỏi đáp một chiều, nền tảng \VS\ xây dựng chu trình suy luận và kiểm định theo mô hình Kiến trúc Phân tầng Tự phản biện hai dải màu (\textit{Dual-Band Reflexion Architecture}) lấy cảm hứng từ mô hình tác nhân phản tư ngôn ngữ \cite{shinn2023} kết hợp chu trình ReAct \cite{yao2022, lewis2020}. Chu trình này thiết lập các trạm kiểm soát chất lượng dữ liệu khắt khe nhằm triệt tiêu ảo giác trích dẫn:
 
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Dải luồng thực thi tác nhân (\textit{ReAct Execution Band}):} Tác nhân tiếp nhận câu truy vấn học giả hoặc yêu cầu biên dịch bản thảo \LaTeX, kích hoạt chuỗi suy luận đa bước (\textit{Chain-of-Thought Reasoner}), sau đó điều phối hành động gọi công cụ ngoại vi phù hợp (\texttt{HybridRetriever} cho truy xuất dữ liệu học thuật hoặc \texttt{MicroVMCompiler} trong máy ảo E2B Sandbox đối với bản thảo \LaTeX) để tương tác với môi trường và thu nhận bằng chứng quan sát $o_t$.

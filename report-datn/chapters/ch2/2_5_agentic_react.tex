@@ -1,0 +1,146 @@
+% !TEX root = ../../main.tex
+\section{Tìm hiểu về Agentic AI và ReAct}
+\label{sec:agentic_react}
+
+\subsection{Agentic AI là gì?}
+\label{subsec:agentic_ai_la_gi}
+Agentic AI (Trí tuệ nhân tạo có tính tác nhân) đại diện cho bước chuyển dịch căn bản từ mô hình ngôn ngữ lớn (LLM) bị động (chỉ tạo văn bản theo dạng câu hỏi - câu trả lời một lượt) sang các hệ thống tác nhân thông minh tự chủ có mục tiêu (\textit{Goal-Oriented Autonomous Agents}). Thay vì cố gắng giải quyết một bài toán phức tạp bằng một lần suy luận duy nhất, Agentic AI có khả năng tự phân tách nhiệm vụ thành các bước nhỏ, sử dụng các công cụ ngoại vi để thu thập dữ liệu thực tế, quan sát môi trường và tự điều chỉnh kế hoạch hành động.
+
+Theo khung lý thuyết chuẩn tắc về tác nhân thông minh của Lilian Weng \cite{weng2023agent}, một tác nhân AI hoàn chỉnh được xây dựng dựa trên 4 trụ cột năng lực cốt lõi:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bộ não trung tâm (\textit{LLM Brain}):} Mô hình ngôn ngữ lớn giữ vai trò là cơ quan điều phối nhận thức, xử lý thông tin và ra quyết định.
+    \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ ngắn hạn (\textit{Short-term Memory} lưu trữ ngữ cảnh hội thoại, lịch sử suy luận nhiều bước) và bộ nhớ dài hạn (\textit{Long-term Memory} lưu trữ đồ thị tri thức và cơ sở dữ liệu vector).
+    \item \textbf{Lập kế hoạch (\textit{Planning}):} Khả năng phân rã mục tiêu lớn thành các nhiệm vụ con (\textit{Subgoal Decomposition}), thiết lập chuỗi suy luận logic và tự đánh giá sai sót.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Các giao diện lập trình (API) cho phép tác nhân tương tác với thế giới bên ngoài, như bộ máy tìm kiếm tài liệu, trình tra cứu DOI, và môi trường hộp cát tính toán.
+\end{enumerate}
+
+Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thuật được thể hiện trong Hình~\ref{fig:react_agent_loop}.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.76, transform shape,
+    centerbox/.style={draw=black!85, fill=red!10, rounded corners=4pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    pillar/.style={draw=black!80, fill=gray!15, rounded corners=4pt, line width=0.95pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    leaf/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    leaf_code/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\ttfamily\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
+    dasharrow/.style={-{Stealth[length=2.2mm]}, dashed, line width=0.8pt, draw=black!50},
+    tree_line/.style={draw=black!80, line width=0.95pt}
+]
+    % Khối Tác nhân AI ở Trung tâm
+    \node[centerbox, minimum width=2.8cm, minimum height=1.3cm] (agent) at (0, 0) {
+        TÁC NHÂN AI\\
+        \footnotesize (\textit{LLM Agent Brain})
+    };
+
+    % 1. Trụ cột BỘ NHỚ (Phía trên)
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (memory) at (0, 2.2) {
+        BỘ NHỚ\\
+        \scriptsize (\textit{Memory})
+    };
+    \draw[arrowstyle] (agent.north) -- (memory.south);
+
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (m_short) at (-2.6, 3.8) {
+        \textbf{Bộ nhớ ngắn hạn}\\
+        \scriptsize (\textit{Context / Lịch sử suy luận})
+    };
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (m_long) at (2.6, 3.8) {
+        \textbf{Bộ nhớ dài hạn}\\
+        \scriptsize (\textit{GraphRAG \& Vector HNSW})
+    };
+    \draw[tree_line] (memory.north) |- (m_short.south);
+    \draw[tree_line] (memory.north) |- (m_long.south);
+
+    % 2. Trụ cột LẬP KẾ HOẠCH (Bên trái)
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (planning) at (-4.2, 0) {
+        KẾ HOẠCH\\
+        \scriptsize (\textit{Planning})
+    };
+    \draw[arrowstyle] (agent.west) -- (planning.east);
+
+    \node[leaf, minimum width=3.8cm, minimum height=0.85cm] (p_decomp) at (-7.6, 1.0) {
+        \textbf{Phân rã mục tiêu}\\
+        \scriptsize (\textit{Subgoal Decomposition})
+    };
+    \node[leaf, minimum width=3.8cm, minimum height=0.85cm] (p_critics) at (-7.6, -1.0) {
+        \textbf{Phản tư \& Sửa sai}\\
+        \scriptsize (\textit{Reflexion \& Self-Critique})
+    };
+    \draw[tree_line] (planning.west) |- (p_decomp.east);
+    \draw[tree_line] (planning.west) |- (p_critics.east);
+
+    % 3. Trụ cột CÔNG CỤ (Bên phải)
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (tools) at (4.2, 0) {
+        CÔNG CỤ\\
+        \scriptsize (\textit{Tools})
+    };
+    \draw[arrowstyle] (agent.east) -- (tools.west);
+
+    \node[leaf_code, minimum width=3.6cm, minimum height=0.6cm] (t1) at (7.4, 1.2) {
+        \footnotesize \textbf{HybridSearch()}
+    };
+    \node[leaf_code, minimum width=3.6cm, minimum height=0.6cm] (t2) at (7.4, 0.4) {
+        \footnotesize \textbf{GraphTraversal()}
+    };
+    \node[leaf_code, minimum width=3.6cm, minimum height=0.6cm] (t3) at (7.4, -0.4) {
+        \footnotesize \textbf{ResolveDOI()}
+    };
+    \node[leaf_code, minimum width=3.6cm, minimum height=0.6cm] (t4) at (7.4, -1.2) {
+        \footnotesize \textbf{SandboxExecution()}
+    };
+    \draw[tree_line] (tools.east) |- (t1.west);
+    \draw[tree_line] (tools.east) |- (t2.west);
+    \draw[tree_line] (tools.east) |- (t3.west);
+    \draw[tree_line] (tools.east) |- (t4.west);
+
+    % 4. Trụ cột HÀNH ĐỘNG (Phía dưới)
+    \node[pillar, minimum width=2.6cm, minimum height=0.95cm] (action) at (0, -2.2) {
+        HÀNH ĐỘNG\\
+        \scriptsize (\textit{Action})
+    };
+    \draw[arrowstyle] (agent.south) -- (action.north);
+
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (a_stream) at (-2.6, -3.8) {
+        \textbf{Phản hồi luồng SSE}\\
+        \scriptsize (\textit{Real-time Scholar Stream})
+    };
+    \node[leaf, minimum width=4.0cm, minimum height=0.85cm] (a_verify) at (2.6, -3.8) {
+        \textbf{Kiểm định trích dẫn}\\
+        \scriptsize (\textit{Citation Integrity Proof})
+    };
+    \draw[tree_line] (action.south) |- (a_stream.north);
+    \draw[tree_line] (action.south) |- (a_verify.north);
+\end{tikzpicture}
+\caption{Kiến trúc Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
+\label{fig:react_agent_loop}
+\end{figure}
+
+\subsection{ReAct Pattern là gì? (Reasoning and Acting)}
+\label{subsec:react_pattern}
+ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc tác nhân do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research đề xuất năm 2022 \cite{yao2022}. Trước ReAct, các nghiên cứu thường tách biệt hai hướng: hoặc chỉ tập trung vào suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought}) \cite{wei2022cot}, hoặc chỉ tập trung vào hành động gọi API độc lập (\textit{Toolformer}) \cite{schick2023toolformer}. ReAct kết hợp đồng thời hai cơ chế này theo một vòng lặp nhịp nhàng:
+
+\begin{equation}
+\label{eq:react_cycle}
+\text{Thought} \longrightarrow \text{Action} \longrightarrow \text{Observation} \longrightarrow \text{Thought} \dots
+\end{equation}
+
+Mỗi chu trình ReAct bao gồm ba pha nối tiếp:
+\begin{itemize}
+    \item \textbf{Suy nghĩ (\textit{Thought}):} Tác nhân tự sinh ra một lập luận bằng văn bản để phân tích tình hình hiện tại, nhận diện thông tin còn thiếu và quyết định công cụ cần gọi tiếp theo.
+    \item \textbf{Hành động (\textit{Action}):} Tác nhân phát ra một lệnh có cấu trúc cụ thể (ví dụ: gọi hàm tra cứu ấn phẩm với tham số từ khóa xác định).
+    \item \textbf{Quan sát (\textit{Observation}):} Hệ thống thực thi lệnh hành động và trả về kết quả thực tế. Tác nhân đọc kết quả quan sát này để tiếp tục chu trình suy nghĩ kế tiếp cho đến khi hoàn thành nhiệm vụ.
+\end{itemize}
+
+Nhờ ReAct, tác nhân tránh được hiện tượng suy luận mù quáng dựa trên tham số nội tại, đồng thời có thể tương tác linh hoạt với các kho dữ liệu khoa học thực tế.
+
+\subsection{Cơ chế Reflexion}
+\label{subsec:reflexion_mechanism}
+Reflexion (\textit{Language Agents with Verbal Reinforcement Learning}) là một khuôn khổ mở rộng được phát triển bởi Noah Shinn và các đồng nghiệp \cite{shinn2023}, cung cấp cho tác nhân AI khả năng tự phản tư học hỏi từ những sai lầm mà không đòi hỏi phải cập nhật trọng số mô hình.
+
+Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số trang, nhầm lẫn tác giả hoặc ảo giác dữ liệu thực nghiệm là tối kỵ. Cơ chế Reflexion vận hành thông qua ba thành phần:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bộ đánh giá (\textit{Evaluator}):} Chấm điểm kết quả đầu ra của tác nhân dựa trên tiêu chí liêm chính học thuật (ví dụ: độ phủ trích dẫn có trùng khớp 100\% với văn bản gốc hay không).
+    \item \textbf{Bộ phản tư ngôn từ (\textit{Self-Reflection}):} Nếu bộ đánh giá phát hiện lỗi sai, mô hình sẽ tự sinh ra một đoạn tự phê bình bằng lời văn (\textit{verbal critique}), phân tích nguyên nhân vì sao bước lập luận trước bị lỗi và đề xuất hướng sửa đổi cụ thể.
+    \item \textbf{Bộ nhớ phản tư (\textit{Memory Buffer}):} Lưu trữ bản tự phê bình vào ngữ cảnh hoạt động. Ở lượt thực thi tiếp theo, tác nhân đọc lại kinh nghiệm sai sót này để không lặp lại sai lầm cũ, bảo đảm bản thảo học thuật đạt độ chính xác tối đa.
+\end{enumerate}

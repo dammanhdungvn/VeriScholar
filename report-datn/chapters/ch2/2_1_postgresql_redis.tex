@@ -1,0 +1,61 @@
+% !TEX root = ../../main.tex
+\section{Tổng quan về PostgreSQL và Redis}
+\label{sec:postgresql_redis}
+
+\subsection{PostgreSQL là gì?}
+\label{subsec:postgresql}
+PostgreSQL là hệ quản trị cơ sở dữ liệu quan hệ đối tượng mã nguồn mở (\textit{Object-Relational Database Management System -- ORDBMS}) tiên tiến và đáng tin cậy nhất hiện nay, được phát triển liên tục hơn 35 năm bởi cộng đồng khoa học máy tính quốc tế. Được thiết kế với triết lý tuân thủ nghiêm ngặt chuẩn kiến trúc ANSI/ISO SQL, PostgreSQL nổi bật với độ bền vững dữ liệu, khả năng mở rộng linh hoạt và cơ chế giao dịch đạt chuẩn ACID (\textit{Atomicity, Consistency, Isolation, Durability}) tuyệt đối.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.4cm]{figures/logos/postgresql.png}
+\caption{PostgreSQL}
+\label{fig:logo_postgresql}
+\end{figure}
+
+Các đặc điểm kỹ thuật then chốt của PostgreSQL bao gồm:
+\begin{itemize}
+    \item \textbf{Cơ chế kiểm soát tương tranh đa phiên bản (MVCC):} Cho phép các thao tác đọc và ghi diễn ra đồng thời mà không gây khóa chết (\textit{deadlock}) trên dữ liệu, duy trì hiệu năng cao ngay cả dưới tải lớn của hàng trăm học giả cùng truy vấn.
+    \item \textbf{Hỗ trợ dữ liệu bán cấu trúc (JSONB):} Lưu trữ và đánh chỉ mục nhị phân các cấu trúc dữ liệu JSON phức tạp với hiệu suất truy vấn tương đương các trường dữ liệu quan hệ thông thường.
+    \item \textbf{Kiến trúc mở rộng mạnh mẽ (Extensibility):} Cho phép tích hợp các kiểu dữ liệu mới, hàm người dùng tự định nghĩa và các tiện ích mở rộng (\textit{extensions}) cấp thấp chạy trực tiếp trong nhân cơ sở dữ liệu.
+\end{itemize}
+
+Trong đề tài VeriScholar, PostgreSQL giữ vai trò là xương sống lưu trữ dữ liệu trung tâm, quản lý toàn bộ thực thể học thuật, lịch sử phiên nghiên cứu, siêu dữ liệu phân đoạn tài liệu và bản đồ băm định danh nội dung (CAS).
+
+\subsection{Extension pgvector và chỉ mục HNSW}
+\label{subsec:pgvector_hnsw}
+\texttt{pgvector} là một tiện ích mở rộng mã nguồn mở dành riêng cho PostgreSQL, bổ sung kiểu dữ liệu \texttt{vector} và các phép toán đo lường khoảng cách không gian đa chiều (khoảng cách Euclid $L_2$, khoảng cách Cosine, và tích vô hướng Inner Product). Nhờ \texttt{pgvector}, PostgreSQL có khả năng hoạt động như một cơ sở dữ liệu vector chuyên dụng (\textit{Dedicated Vector Database}), cho phép lưu trữ trực tiếp các vector nhúng ngữ nghĩa 1536 chiều sinh ra từ các mô hình học sâu.
+
+Điểm đột phá trong việc tối ưu hóa tốc độ tìm kiếm láng giềng gần nhất (\textit{Approximate Nearest Neighbor -- ANN}) của \texttt{pgvector} là việc hiện thực hóa thuật toán chỉ mục HNSW (\textit{Hierarchical Navigable Small World}) \cite{malkov2018}:
+\begin{itemize}
+    \item \textbf{Nguyên lý phân tầng đa lớp:} HNSW tổ chức không gian vector thành cấu trúc đồ thị phân tầng tương tự như danh sách liên kết bước nhảy (\textit{Skip List}). Các tầng trên cùng chứa các liên kết xa với mật độ thưa giúp định vị nhanh vùng lân cận tổng quát; các tầng dưới có mật độ nút dày đặc dần cho phép thu hẹp chính xác không gian tìm kiếm.
+    \item \textbf{Độ phức tạp truy vấn $O(\log N)$:} Thay vì phải tính toán khoảng cách tuần tự trên toàn bộ kho vector (\textit{Flat Search} với độ phức tạp $O(N)$), thuật toán định tuyến tham lam (\textit{Greedy Routing}) của HNSW chỉ cần $O(\log N)$ bước duyệt đồ thị để tìm ra các vector tương đồng nhất.
+    \item \textbf{Độ bền vững và cập nhật tức thời:} Khác với thuật toán IVFFlat đòi hỏi phải huấn luyện lại toàn bộ tâm cụm khi dữ liệu biến động, HNSW cho phép thêm mới vector liên tục mà vẫn duy trì độ chính xác truy xuất vượt trội (đạt độ thu hồi Recall $\ge 98\%$).
+\end{itemize}
+
+Việc hợp nhất dữ liệu quan hệ và dữ liệu vector nhúng trong cùng một hệ quản trị PostgreSQL giúp loại bỏ hoàn toàn sự cồng kềnh của kiến trúc đa cơ sở dữ liệu, đảm bảo tính nhất quán giao dịch ACID trong suốt quá trình người dùng lưu trữ hoặc xóa ấn phẩm.
+
+\subsection{Redis là gì?}
+\label{subsec:redis}
+Redis (\textit{Remote Dictionary Server}) là hệ thống lưu trữ cấu trúc dữ liệu trong bộ nhớ RAM (\textit{In-Memory Data Store}) mã nguồn mở với hiệu năng cực cao. Nhờ cơ chế lưu trữ toàn bộ dữ liệu trực tiếp trên bộ nhớ truy cập ngẫu nhiên và mô hình xử lý vào/ra đa hợp bất đồng bộ (\textit{I/O Multiplexing}), Redis có khả năng đáp ứng hàng trăm nghìn thao tác đọc ghi mỗi giây với độ trễ tính bằng micro giây.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/redis.png}
+\caption{Redis}
+\label{fig:logo_redis}
+\end{figure}
+
+Các đặc tính cốt lõi của Redis bao gồm:
+\begin{itemize}
+    \item \textbf{Đa dạng cấu trúc dữ liệu bản địa:} Hỗ trợ phong phú các kiểu dữ liệu như chuỗi (\textit{Strings}), bảng băm (\textit{Hashes}), danh sách (\textit{Lists}), tập hợp (\textit{Sets}), và tập hợp sắp xếp theo điểm (\textit{Sorted Sets}).
+    \item \textbf{Cơ chế hết hạn tự động (TTL -- Time-To-Live):} Cho phép thiết lập thời gian sống chính xác cho từng khóa dữ liệu, giúp bộ nhớ tự động giải phóng các bản ghi tạm mà không cần can thiệp thủ công.
+    \item \textbf{Cơ chế Xuất bản / Đăng ký (Pub/Sub):} Cung cấp hạ tầng truyền thông điệp nhẹ và tức thời giữa các tiến trình hệ thống phân tán.
+\end{itemize}
+
+Trong kiến trúc VeriScholar, Redis được ứng dụng vào ba nhiệm vụ trọng yếu:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Bộ đệm xác thực và danh sách đen mã thông báo (Token Blacklist):} Lưu trữ các phiên đăng nhập hợp lệ và thu hồi tức thì quyền truy cập của người dùng khi đăng xuất trước khi mã JWT hết hạn.
+    \item \textbf{Kiểm soát giới hạn tần suất yêu cầu (Rate Limiting):} Bảo vệ các cổng tiếp nhận suy luận AI khỏi hiện tượng lạm dụng hoặc tấn công từ chối dịch vụ.
+    \item \textbf{Đệm kết quả tra cứu định danh học thuật (DOI Cache):} Lưu tạm kết quả giải mã siêu dữ liệu của các ấn phẩm khoa học thường xuyên được trích dẫn, giảm tải cho mạng lưới tra cứu bên ngoài.
+\end{enumerate}
