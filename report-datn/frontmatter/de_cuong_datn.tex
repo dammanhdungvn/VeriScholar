@@ -12,7 +12,7 @@
 {\setstretch{1.15}
 
 % ------------------------------------------------------------------------------
-% TRANG 1 / 5 (Trang vi): Tiêu ngữ, Bảng SV, Bảng GVHD, 1. Tên đề tài, 2. Lý do
+% TRANG 1 / 5 (Trang vi): Tiêu ngữ, Bảng SV, Bảng GVHD, 1. Tên đề tài, 2. Lý do (1-2)
 % ------------------------------------------------------------------------------
 \noindent
 \begin{tabular}{@{}p{7.2cm} >{\centering\arraybackslash}p{8.8cm}@{}}
@@ -22,11 +22,11 @@
   \rule{3.5cm}{0.5pt}
 \end{tabular}
 
-\vspace{0.3cm}
+\vspace{0.35cm}
 \begin{center}
     {\fontsize{15pt}{19pt}\selectfont \textbf{ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC}}
 \end{center}
-\vspace{0.15cm}
+\vspace{0.2cm}
 
 \noindent \textbf{Sinh viên thực hiện:}
 \vspace{0.08cm}
@@ -59,28 +59,28 @@
 \end{tabular}
 \end{table}
 
-\vspace{0.12cm}
+\vspace{0.15cm}
 \noindent \textbf{1. Tên đề tài}
-\vspace{0.06cm}
+\vspace{0.08cm}
 
 Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn.
 
-\vspace{0.18cm}
+\vspace{0.25cm}
 \noindent \textbf{2. Lý do chọn đề tài}
-\vspace{0.06cm}
+\vspace{0.08cm}
 
 Trong bối cảnh cuộc Cách mạng công nghiệp lần thứ tư, Trí tuệ nhân tạo (AI) và các Mô hình ngôn ngữ lớn (LLM) đang tạo ra bước chuyển dịch mang tính đột phá trong hoạt động nghiên cứu khoa học và giáo dục đại học. Khả năng tổng hợp thông tin, gợi ý lập luận và hỗ trợ viết bài của AI đã mở ra cơ hội to lớn giúp các nhà nghiên cứu rút ngắn đáng kể thời gian chuẩn bị công bố khoa học.
 
 Đặc biệt, tại môi trường học thuật chất lượng cao như Trường Đại học VinUni, các giảng viên và học giả đối mặt với khối lượng lớn các ấn phẩm quốc tế đa nguồn cần đọc hiểu, tổng hợp và thẩm định. Việc tiếp cận nhanh chóng với các phương pháp tiên tiến, đồng thời duy trì năng suất công bố khoa học chuẩn IEEE/ACM là nhu cầu thường trực của các nhóm nghiên cứu.
 
-Tuy nhiên, việc ứng dụng các mô hình LLM thương mại vào nghiên cứu học thuật đang đối mặt với những thách thức nghiêm trọng: hiện tượng bịa đặt thông tin và trích dẫn giả mạo (Hallucination); thiếu cơ chế kiểm chứng nguồn gốc trực quan tọa độ hộp bao (Bounding Box); rào cản trong biên soạn bài báo chuẩn quốc tế bằng LaTeX; và nguy cơ rò rỉ quyền sở hữu trí tuệ bản thảo khi gửi lên máy chủ công cộng.
-
 \newpage
 \thispagestyle{adminform}
 
 % ------------------------------------------------------------------------------
-% TRANG 2 / 5 (Trang vii): Giải pháp VeriScholar & 3. Mục tiêu (Tổng quát + Cụ thể)
+% TRANG 2 / 5 (Trang vii): Lý do (tiếp), Giải pháp & Mục tiêu (Tổng quát + SP)
 % ------------------------------------------------------------------------------
+Tuy nhiên, việc ứng dụng các mô hình LLM thương mại vào nghiên cứu học thuật đang đối mặt với những thách thức nghiêm trọng: hiện tượng bịa đặt thông tin và trích dẫn giả mạo (Hallucination); thiếu cơ chế kiểm chứng trực quan tọa độ hộp bao (Bounding Box); rào cản trong biên soạn bài báo chuẩn quốc tế bằng LaTeX; và nguy cơ rò rỉ quyền sở hữu trí tuệ bản thảo khi gửi lên máy chủ công cộng.
+
 Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học giả và nhà nghiên cứu tại Trường Đại học VinUni về một giải pháp chuyên biệt, an toàn và tin cậy, đề tài \textit{``Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn''} được lựa chọn. Đề tài kết hợp Kiến trúc Lục giác, tìm kiếm lai pgvector kết hợp BM25, đồ thị tri thức GraphRAG, vòng phản tư ReAct tự sửa lỗi LaTeX trong sandbox E2B và bảo mật Zero Data Retention kết hợp BYOK. Đây là giải pháp hoàn chỉnh có giá trị khoa học cao và tính ứng dụng thực tiễn vượt trội.
 
 \vspace{0.25cm}
@@ -95,25 +95,30 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 
 \vspace{0.15cm}
 \noindent \textbf{Mục tiêu cụ thể:}
+
+\noindent \textbf{-- Về sản phẩm:}
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
-    \item[\textbf{--}] \textbf{Về sản phẩm:}
     \item Xây dựng hệ thống Backend (FastAPI, pgvector) phân tách Lục giác; dịch vụ Hybrid Search (HNSW + BM25 dung hợp RRF), Semantic Reranking.
     \item Hiện thực hóa Đồ thị tri thức (GraphRAG); trình soạn thảo LaTeX trực tuyến tích hợp E2B MicroVM và tác nhân AI ReAct tự sửa lỗi biên dịch.
     \item Xây dựng giao diện web (React 19) với trình xem PDF Canvas đa luồng và tô sáng khung tọa độ Bounding Box thời gian thực.
     \item Đảm bảo cơ chế bảo mật khóa BYOK (AES-256-GCM) và nguyên tắc Zero Data Retention bảo vệ quyền sở hữu trí tuệ của học giả.
-    \item[\textbf{--}] \textbf{Về kiến thức và kỹ năng:}
-    \item Vận dụng và làm sâu sắc kiến thức chuyên ngành: Kỹ nghệ phần mềm, CSDL nâng cao, Kiến trúc hệ thống, Học máy và Xử lý ngôn ngữ tự nhiên.
-    \item Nắm vững và thực hành quy trình phát triển phần mềm theo phương pháp TDD, bảo đảm 100\% các cổng xác minh chất lượng trước khi bàn giao.
-    \item Thành thạo các công nghệ hiện đại: FastAPI, SQLAlchemy Async, PostgreSQL/pgvector, React 19, TypeScript, Langfuse, LiteLLM, E2B MicroVM.
-    \item Rèn luyện năng lực nghiên cứu độc lập, phân tích tài liệu quốc tế và tư duy giải quyết bài toán liêm chính học thuật.
 \end{itemize}
 
 \newpage
 \thispagestyle{adminform}
 
 % ------------------------------------------------------------------------------
-% TRANG 3 / 5 (Trang viii): 4. Nhiệm vụ cụ thể & 5. Kế hoạch thực hiện (Tuần 1)
+% TRANG 3 / 5 (Trang viii): Mục tiêu (Kỹ năng), 4. Nhiệm vụ & 5. Kế hoạch (Tuần 1)
 % ------------------------------------------------------------------------------
+\noindent \textbf{-- Về kiến thức và kỹ năng:}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+    \item Vận dụng và làm sâu sắc kiến thức chuyên ngành: Kỹ nghệ phần mềm, CSDL nâng cao, Kiến trúc hệ thống, Học máy và Xử lý ngôn ngữ tự nhiên.
+    \item Nắm vững và thực hành quy trình phát triển phần mềm theo phương pháp TDD, bảo đảm 100\% các cổng xác minh chất lượng trước khi bàn giao.
+    \item Thành thạo các công nghệ hiện đại: FastAPI, SQLAlchemy Async, PostgreSQL/pgvector, React 19, TypeScript, Langfuse, LiteLLM, E2B MicroVM.
+    \item Rèn luyện năng lực nghiên cứu độc lập, phân tích tài liệu quốc tế và tư duy giải quyết bài toán liêm chính học thuật.
+\end{itemize}
+
+\vspace{0.25cm}
 \noindent \textbf{4. Các nhiệm vụ cụ thể}
 \vspace{0.08cm}
 
@@ -130,15 +135,15 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
     \item Thực hiện kiểm thử tự động TDD, đánh giá thực nghiệm và đóng gói sản phẩm bảo vệ.
 \end{enumerate}
 
-\vspace{0.35cm}
+\vspace{0.25cm}
 \noindent \textbf{5. Kế hoạch thực hiện}
-\vspace{0.12cm}
+\vspace{0.08cm}
 
 \noindent
 \begin{table}[h!]
 \centering
 \small
-\renewcommand{\arraystretch}{1.15}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{9.2cm}|}
 \hline
 \textbf{Tuần} & \textbf{Thời gian} & \textbf{Nội dung công việc} \\ \hline
@@ -156,7 +161,7 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 \begin{table}[h!]
 \centering
 \small
-\renewcommand{\arraystretch}{1.1}
+\renewcommand{\arraystretch}{1.08}
 \begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{9.2cm}|}
 \hline
 \textbf{Tuần} & \textbf{Thời gian} & \textbf{Nội dung công việc} \\ \hline
