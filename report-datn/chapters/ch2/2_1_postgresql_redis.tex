@@ -6,7 +6,7 @@
 \label{subsec:postgresql}
 PostgreSQL là hệ quản trị cơ sở dữ liệu quan hệ đối tượng mã nguồn mở (\textit{Object-Relational Database Management System -- ORDBMS}) tiên tiến và đáng tin cậy nhất hiện nay, được phát triển liên tục hơn 35 năm bởi cộng đồng khoa học máy tính quốc tế. Được thiết kế với triết lý tuân thủ nghiêm ngặt chuẩn kiến trúc ANSI/ISO SQL, PostgreSQL nổi bật với độ bền vững dữ liệu, khả năng mở rộng linh hoạt và cơ chế giao dịch đạt chuẩn ACID (\textit{Atomicity, Consistency, Isolation, Durability}) tuyệt đối.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[height=3.4cm]{figures/logos/postgresql.png}
 \caption{PostgreSQL}
@@ -24,7 +24,7 @@ Trong đề tài VeriScholar, PostgreSQL giữ vai trò là xương sống lưu 
 
 \subsection{Extension pgvector và chỉ mục HNSW}
 \label{subsec:pgvector_hnsw}
-\texttt{pgvector} là một tiện ích mở rộng mã nguồn mở dành riêng cho PostgreSQL, bổ sung kiểu dữ liệu \texttt{vector} và các phép toán đo lường khoảng cách không gian đa chiều (khoảng cách Euclid $L_2$, khoảng cách Cosine, và tích vô hướng Inner Product). Nhờ \texttt{pgvector}, PostgreSQL có khả năng hoạt động như một cơ sở dữ liệu vector chuyên dụng (\textit{Dedicated Vector Database}), cho phép lưu trữ trực tiếp các vector nhúng ngữ nghĩa 1536 chiều sinh ra từ các mô hình học sâu.
+\texttt{pgvector} là một tiện ích mở rộng mã nguồn mở dành riêng cho PostgreSQL, bổ sung kiểu dữ liệu \texttt{vector} và các phép toán đo lường khoảng cách không gian đa chiều (khoảng cách Euclid $L_2$, khoảng cách Cosine, và tích vô hướng Inner Product). Nhờ \texttt{pgvector}, PostgreSQL có khả năng hoạt động như một cơ sở dữ liệu vector chuyên dụng (\textit{Dedicated Vector Database}), cho phép lưu trữ trực tiếp các vector Embedding ngữ nghĩa 1536 chiều sinh ra từ các mô hình học sâu.
 
 Điểm đột phá trong việc tối ưu hóa tốc độ tìm kiếm láng giềng gần nhất (\textit{Approximate Nearest Neighbor -- ANN}) của \texttt{pgvector} là việc hiện thực hóa thuật toán chỉ mục HNSW (\textit{Hierarchical Navigable Small World}) \cite{malkov2018}:
 \begin{itemize}
@@ -33,13 +33,13 @@ Trong đề tài VeriScholar, PostgreSQL giữ vai trò là xương sống lưu 
     \item \textbf{Độ bền vững và cập nhật tức thời:} Khác với thuật toán IVFFlat đòi hỏi phải huấn luyện lại toàn bộ tâm cụm khi dữ liệu biến động, HNSW cho phép thêm mới vector liên tục mà vẫn duy trì độ chính xác truy xuất vượt trội (đạt độ thu hồi Recall $\ge 98\%$).
 \end{itemize}
 
-Việc hợp nhất dữ liệu quan hệ và dữ liệu vector nhúng trong cùng một hệ quản trị PostgreSQL giúp loại bỏ hoàn toàn sự cồng kềnh của kiến trúc đa cơ sở dữ liệu, đảm bảo tính nhất quán giao dịch ACID trong suốt quá trình người dùng lưu trữ hoặc xóa ấn phẩm.
+Việc hợp nhất dữ liệu quan hệ và dữ liệu vector Embedding trong cùng một hệ quản trị PostgreSQL giúp loại bỏ hoàn toàn sự cồng kềnh của kiến trúc đa cơ sở dữ liệu, đảm bảo tính nhất quán giao dịch ACID trong suốt quá trình người dùng lưu trữ hoặc xóa tài liệu.
 
 \subsection{Redis là gì?}
 \label{subsec:redis}
 Redis (\textit{Remote Dictionary Server}) là hệ thống lưu trữ cấu trúc dữ liệu trong bộ nhớ RAM (\textit{In-Memory Data Store}) mã nguồn mở với hiệu năng cực cao. Nhờ cơ chế lưu trữ toàn bộ dữ liệu trực tiếp trên bộ nhớ truy cập ngẫu nhiên và mô hình xử lý vào/ra đa hợp bất đồng bộ (\textit{I/O Multiplexing}), Redis có khả năng đáp ứng hàng trăm nghìn thao tác đọc ghi mỗi giây với độ trễ tính bằng micro giây.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[height=3.2cm]{figures/logos/redis.png}
 \caption{Redis}
@@ -57,5 +57,5 @@ Trong kiến trúc VeriScholar, Redis được ứng dụng vào ba nhiệm vụ
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Bộ đệm xác thực và danh sách đen mã thông báo (Token Blacklist):} Lưu trữ các phiên đăng nhập hợp lệ và thu hồi tức thì quyền truy cập của người dùng khi đăng xuất trước khi mã JWT hết hạn.
     \item \textbf{Kiểm soát giới hạn tần suất yêu cầu (Rate Limiting):} Bảo vệ các cổng tiếp nhận suy luận AI khỏi hiện tượng lạm dụng hoặc tấn công từ chối dịch vụ.
-    \item \textbf{Đệm kết quả tra cứu định danh học thuật (DOI Cache):} Lưu tạm kết quả giải mã siêu dữ liệu của các ấn phẩm khoa học thường xuyên được trích dẫn, giảm tải cho mạng lưới tra cứu bên ngoài.
+    \item \textbf{Đệm kết quả tra cứu định danh học thuật (DOI Cache):} Lưu tạm kết quả giải mã siêu dữ liệu của các tài liệu khoa học thường xuyên được trích dẫn, giảm tải cho mạng lưới tra cứu bên ngoài.
 \end{enumerate}

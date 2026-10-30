@@ -4,17 +4,17 @@
 
 \subsection{Khái niệm và kiến trúc tổng quan của Agentic AI}
 \label{subsec:agentic_ai_la_gi}
-Agentic AI (Trí tuệ nhân tạo có tính tác nhân) đại diện cho bước chuyển dịch căn bản từ mô hình ngôn ngữ lớn (LLM) bị động (chỉ tạo văn bản theo dạng câu hỏi -- câu trả lời một lượt) sang các hệ thống tác nhân thông minh tự chủ có mục tiêu (\textit{Goal-Oriented Autonomous Agents}). Thay vì cố gắng giải quyết một bài toán phức tạp bằng một lần suy luận duy nhất, Agentic AI có khả năng tự phân tách nhiệm vụ thành các bước nhỏ, sử dụng các công cụ ngoại vi để thu thập dữ liệu thực tế, quan sát môi trường và tự điều chỉnh kế hoạch hành động.
+Agentic AI (Trí tuệ nhân tạo có tính Agent) đại diện cho bước chuyển dịch căn bản từ mô hình ngôn ngữ lớn (LLM) bị động (chỉ tạo văn bản theo dạng câu hỏi -- câu trả lời một lượt) sang các hệ thống Agent thông minh tự chủ có mục tiêu (\textit{Goal-Oriented Autonomous Agents}). Thay vì cố gắng giải quyết một bài toán phức tạp bằng một lần suy luận duy nhất, Agentic AI có khả năng tự phân tách nhiệm vụ thành các bước nhỏ, sử dụng các công cụ ngoại vi để thu thập dữ liệu thực tế, quan sát môi trường và tự điều chỉnh kế hoạch hành động.
 
-Theo khung lý thuyết chuẩn tắc về tác nhân thông minh của Lilian Weng \cite{weng2023agent}, một tác nhân AI hoàn chỉnh được xây dựng dựa trên 4 trụ cột năng lực cốt lõi:
+Theo khung lý thuyết chuẩn tắc về Agent thông minh của Lilian Weng \cite{weng2023agent}, một AI Agent hoàn chỉnh được xây dựng dựa trên 4 trụ cột năng lực cốt lõi:
 \begin{enumerate}[label=\textbf{(\arabic*)}, noitemsep, topsep=1pt]
     \item \textbf{Bộ não trung tâm (\textit{LLM Agent Brain}):} Hạt nhân điều phối nhận thức, suy luận logic và ra quyết định hành động.
     \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ ngắn hạn (\textit{Context} hội thoại) và bộ nhớ dài hạn (\textit{GraphRAG} \& Vector).
-    \item \textbf{Lập kế hoạch (\textit{Planning}):} Phân rã mục tiêu lớn (\textit{Subgoal Decomposition}) và tự phản tư sửa sai.
-    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Các API tra cứu dữ liệu, tìm kiếm tài liệu và môi trường hộp cát tính toán.
+    \item \textbf{Lập kế hoạch (\textit{Planning}):} Phân rã mục tiêu lớn (\textit{Subgoal Decomposition}) và tự đánh giá sửa sai.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Các API tra cứu dữ liệu, tìm kiếm tài liệu và môi trường Sandbox tính toán.
 \end{enumerate}
 
-Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thuật được thể hiện trong Hình~\ref{fig:react_agent_loop}.
+Mô hình kiến trúc tổng thể của AI Agent nghiên cứu học thuật được thể hiện trong Hình~\ref{fig:react_agent_loop}.
 
 \begin{figure}[H]
 \centering
@@ -27,9 +27,9 @@ Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thu�
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
     tree_line/.style={draw=black!80, line width=0.95pt}
 ]
-    % Khối Tác nhân AI ở Trung tâm
+    % Khối AI Agent ở Trung tâm
     \node[centerbox, minimum width=3.0cm, minimum height=1.2cm] (agent) at (0, 0) {
-        TÁC NHÂN AI\\
+        AI AGENT\\
         \footnotesize (\textit{LLM Agent Brain})
     };
 
@@ -63,7 +63,7 @@ Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thu�
         \scriptsize (\textit{Subgoal Decomposition})
     };
     \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_critics) at (-7.5, -1.0) {
-        \textbf{Phản tư \& Sửa sai}\\
+        \textbf{Reflection \& Sửa sai}\\
         \scriptsize (\textit{Reflexion \& Self-Critique})
     };
     \draw[tree_line] (planning.west) |- (p_decomp.east);
@@ -112,18 +112,18 @@ Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thu�
     \draw[tree_line] (action.south) |- (a_stream.north);
     \draw[tree_line] (action.south) |- (a_verify.north);
 \end{tikzpicture}
-\caption{Kiến trúc Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
+\caption{Kiến trúc AI Agent Độc lập (LLM-Powered Autonomous Agent)}
 \label{fig:react_agent_loop}
 \end{figure}
 
-Để hiện thực hóa các năng lực tự chủ trên, cộng đồng khoa học đã chuẩn hóa thành 6 mẫu thiết kế tác nhân (\textit{Agent Design Patterns}): (1) Lập kế hoạch (\textit{Planning}), (2) Sử dụng công cụ (\textit{Tool Use}), (3) Suy luận \& Hành động (\textit{ReAct}), (4) Phản tư (\textit{Reflection}), (5) Đa tác nhân (\textit{Multi-Agent}), và (6) Người trong vòng lặp (\textit{Human-in-the-Loop}).
+Để hiện thực hóa các năng lực tự chủ trên, cộng đồng khoa học đã chuẩn hóa thành 6 mẫu thiết kế Agent (\textit{Agent Design Patterns}): (1) Lập kế hoạch (\textit{Planning}), (2) Sử dụng công cụ (\textit{Tool Use}), (3) Suy luận \& Hành động (\textit{ReAct}), (4) Tự đánh giá (\textit{Reflection}), (5) Đa Agent (\textit{Multi-Agent}), và (6) Người trong vòng lặp (\textit{Human-in-the-Loop}).
 \clearpage
 
 \subsection{Mẫu kiến trúc Lập kế hoạch (Planning Pattern)}
 \label{subsec:planning_pattern}
 Khi tiếp nhận một yêu cầu nghiên cứu học thuật phức tạp (ví dụ: ``Tổng quan các phương pháp GraphRAG trong 3 năm qua và so sánh hiệu năng trên tập dữ liệu chuẩn''), mô hình ngôn ngữ không thể đưa ra lời giải thấu đáo trong một lượt suy luận duy nhất. Mẫu kiến trúc Lập kế hoạch (\textit{Planning Pattern}) giải quyết thách thức này bằng cách mô phỏng tư duy giải quyết vấn đề của các học giả: phân tích yêu cầu, phân rã mục tiêu lớn thành các tác vụ con khả thi, thiết lập trật tự phụ thuộc và điều phối thực thi từng bước.
 
-Quy trình phân rã và điều phối kế hoạch tác nhân được mô hình hóa trong Hình~\ref{fig:planning_pattern}.
+Quy trình phân rã và điều phối kế hoạch Agent được mô hình hóa trong Hình~\ref{fig:planning_pattern}.
 
 \begin{figure}[H]
 \centering
@@ -225,7 +225,7 @@ Quy trình vận hành chi tiết của mẫu thiết kế bao gồm:
 \label{subsec:tool_use_pattern}
 Mặc dù sở hữu năng lực ngôn ngữ mạnh mẽ, các mô hình ngôn ngữ lớn (LLM) thuần túy hoàn toàn bị giới hạn bởi: (1) tri thức tĩnh không cập nhật dữ liệu mới phát sinh, (2) không có khả năng thực hiện các phép tính số học phức tạp chính xác, và (3) không thể trực tiếp thao tác với hệ thống tệp tin hoặc cơ sở dữ liệu. Mẫu kiến trúc Sử dụng Công cụ (\textit{Tool Use Pattern}) \cite{schick2023toolformer} trao cho LLM vai trò của một ``Bộ não ra quyết định'' (\textit{Decision Maker}) kết nối với hệ sinh thái công cụ thực thi chuyên biệt.
 
-Mô hình tương tác giữa tác nhân AI và tập công cụ ngoại vi được thể hiện trong Hình~\ref{fig:tool_use_pattern}.
+Mô hình tương tác giữa AI Agent và tập công cụ ngoại vi được thể hiện trong Hình~\ref{fig:tool_use_pattern}.
 
 \begin{figure}[H]
 \centering
@@ -245,7 +245,7 @@ Mô hình tương tác giữa tác nhân AI và tập công cụ ngoại vi đư
     \node[agent_oval] (agent) at (0, 0) {
         AI AGENT\\[2pt]
         Decision Maker\\[2pt]
-        \scriptsize (Tác nhân AI ra quyết định)
+        \scriptsize (AI Agent ra quyết định)
     };
 
     % Đỉnh trên: User Query
@@ -301,21 +301,21 @@ Mô hình tương tác giữa tác nhân AI và tập công cụ ngoại vi đư
     \draw[botharrow] (fileop.north) -- (web.south);
     \draw[botharrow] (fileop.south) -- (ext.north);
 \end{tikzpicture}
-\caption{Mẫu kiến trúc Tác nhân sử dụng công cụ ngoại vi (Tool Use Pattern)}
+\caption{Mẫu kiến trúc Agent sử dụng công cụ ngoại vi (Tool Use Pattern)}
 \label{fig:tool_use_pattern}
 \end{figure}
 
-Trong mẫu kiến trúc này, tác nhân AI vận hành như một thực thể điều phối trung tâm:
+Trong mẫu kiến trúc này, AI Agent vận hành như một thực thể điều phối trung tâm:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item Khi nhận truy vấn (\textit{User Query}), tác nhân phân tích xem câu trả lời có đòi hỏi dữ liệu chính xác hay tính toán đặc thù hay không.
-    \item Tác nhân phát sinh lệnh gọi hàm chuẩn hóa (\textit{Function Calling}) gửi tới các công cụ phù hợp: nhánh dữ liệu (\textit{Database Query, API Call, Python Script}) hoặc nhánh tệp và tìm kiếm (\textit{File Operations, Web Search, External System}).
+    \item Khi nhận truy vấn (\textit{User Query}), Agent phân tích xem câu trả lời có đòi hỏi dữ liệu chính xác hay tính toán đặc thù hay không.
+    \item Agent phát sinh lệnh gọi hàm chuẩn hóa (\textit{Function Calling}) gửi tới các công cụ phù hợp: nhánh dữ liệu (\textit{Database Query, API Call, Python Script}) hoặc nhánh tệp và tìm kiếm (\textit{File Operations, Web Search, External System}).
     \item Dữ liệu thực nghiệm thu được từ môi trường ngoại vi được tích hợp ngược trở lại ngữ cảnh để LLM sinh ra phản hồi chuẩn xác, giàu dẫn chứng (\textit{Enriched Response}).
 \end{itemize}
 \clearpage
 
 \subsection{Mẫu kiến trúc Suy luận và Hành động ReAct (ReAct Pattern)}
 \label{subsec:react_pattern}
-ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc tác nhân kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research đề xuất năm 2022 \cite{yao2022}. Trước ReAct, các nghiên cứu thường tách biệt hai hướng: hoặc chỉ tập trung vào suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought}) \cite{wei2022cot}, hoặc chỉ tập trung vào hành động gọi API độc lập (\textit{Toolformer}) \cite{schick2023toolformer}. ReAct kết hợp đồng thời hai cơ chế này theo một vòng lặp nhịp nhàng:
+ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc Agent kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research đề xuất năm 2022 \cite{yao2022}. Trước ReAct, các nghiên cứu thường tách biệt hai hướng: hoặc chỉ tập trung vào suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought}) \cite{wei2022cot}, hoặc chỉ tập trung vào hành động gọi API độc lập (\textit{Toolformer}) \cite{schick2023toolformer}. ReAct kết hợp đồng thời hai cơ chế này theo một vòng lặp nhịp nhàng:
 \begin{equation}
 \label{eq:react_cycle}
 \text{Thought} \longrightarrow \text{Action} \longrightarrow \text{Observation} \longrightarrow \text{Thought} \dots
@@ -396,17 +396,17 @@ Mô hình chu trình suy luận và hành động ReAct được thể hiện tr
 
 Mỗi chu trình ReAct bao gồm ba pha nối tiếp nhau:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item \textbf{Suy nghĩ (\textit{Thought / Reason}):} Tác nhân tự sinh ra lập luận bằng văn bản để phân tích tình hình hiện tại, nhận diện khoảng trống dữ liệu và lựa chọn công cụ cần gọi tiếp theo.
-    \item \textbf{Hành động (\textit{Action}):} Tác nhân phát ra lệnh có cấu trúc cụ thể (gọi hàm tra cứu ấn phẩm, tính toán dữ liệu hoặc truy vấn đồ thị).
-    \item \textbf{Quan sát (\textit{Observation}):} Hệ thống thực thi công cụ và trả về dữ liệu thực tế. Tác nhân đọc kết quả quan sát này để tiếp tục chu trình tư duy kế tiếp cho đến khi hoàn thành mục tiêu.
+    \item \textbf{Suy nghĩ (\textit{Thought / Reason}):} Agent tự sinh ra lập luận bằng văn bản để phân tích tình hình hiện tại, nhận diện khoảng trống dữ liệu và lựa chọn công cụ cần gọi tiếp theo.
+    \item \textbf{Hành động (\textit{Action}):} Agent phát ra lệnh có cấu trúc cụ thể (gọi hàm tra cứu tài liệu, tính toán dữ liệu hoặc truy vấn đồ thị).
+    \item \textbf{Quan sát (\textit{Observation}):} Hệ thống thực thi công cụ và trả về dữ liệu thực tế. Agent đọc kết quả quan sát này để tiếp tục chu trình tư duy kế tiếp cho đến khi hoàn thành mục tiêu.
 \end{itemize}
 \clearpage
 
-\subsection{Cơ chế Phản tư và Tự sửa sai Reflexion (Reflection Pattern)}
+\subsection{Cơ chế Reflection và Tự sửa sai Reflexion (Reflection Pattern)}
 \label{subsec:reflexion_mechanism}
-Reflexion (\textit{Language Agents with Verbal Reinforcement Learning}) là một khuôn khổ mở rộng được phát triển bởi Noah Shinn và các đồng nghiệp \cite{shinn2023}, cung cấp cho tác nhân AI khả năng tự phản tư học hỏi từ những sai lầm mà không đòi hỏi phải cập nhật trọng số mô hình.
+Reflexion (\textit{Language Agents with Verbal Reinforcement Learning}) là một khuôn khổ mở rộng được phát triển bởi Noah Shinn và các đồng nghiệp \cite{shinn2023}, cung cấp cho AI Agent khả năng tự đánh giá học hỏi từ những sai lầm mà không đòi hỏi phải cập nhật trọng số mô hình.
 
-Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số trang, nhầm lẫn tác giả hoặc ảo giác dữ liệu thực nghiệm là tối kỵ. Khung chu trình tự phản tư và hiệu chỉnh của Reflexion được thể hiện trong Hình~\ref{fig:reflection_pattern_loop}.
+Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số trang, nhầm lẫn tác giả hoặc ảo giác dữ liệu thực nghiệm là tối kỵ. Khung chu trình tự đánh giá và hiệu chỉnh của Reflexion được thể hiện trong Hình~\ref{fig:reflection_pattern_loop}.
 
 \begin{figure}[H]
 \centering
@@ -461,11 +461,11 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
         \tiny (Sinh tự phê bình ngôn từ)
     };
 
-    % 7. REFLEXION MEMORY (Bộ nhớ phản tư - Phía trên Reflect, cân đối đối xứng)
+    % 7. REFLEXION MEMORY (Bộ nhớ Reflexion - Phía trên Reflect, cân đối đối xứng)
     \node[box_memory] (memory) at (-5.4, 5.4) {
         REFLEXION MEMORY\\[2pt]
         \scriptsize Episodic Error Buffer\\[1pt]
-        \tiny (Bộ nhớ phản tư tích lũy)
+        \tiny (Bộ nhớ Reflexion tích lũy)
     };
 
     % Các kết nối luồng chính (Thân mũi tên dài, rõ nét)
@@ -485,23 +485,23 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
     % Hồi tiếp bộ nhớ: MEMORY nạp vào GENERATE cho lượt sinh kế tiếp
     \draw[arrowstyle] (memory.east) -- node[above=3pt, font=\tiny\bfseries, text=blue!85!black] {Augment} (generate.west);
 \end{tikzpicture}
-\caption{Cơ chế phản tư và tự sửa sai Reflexion (Reflection Pattern)}
+\caption{Cơ chế Reflection và tự sửa sai Reflexion (Reflection Pattern)}
 \label{fig:reflection_pattern_loop}
 \end{figure}
 
 Cơ chế Reflexion vận hành thông qua ba thành phần phối hợp chặt chẽ:
 \begin{enumerate}[label=\textbf{(\arabic*)}, noitemsep, topsep=1pt]
-    \item \textbf{Bộ đánh giá (\textit{Evaluator}):} Chấm điểm kết quả đầu ra của tác nhân dựa trên tiêu chí liêm chính học thuật (ví dụ: độ phủ trích dẫn có trùng khớp 100\% với văn bản gốc hay không).
-    \item \textbf{Bộ phản tư ngôn từ (\textit{Self-Reflection}):} Nếu bộ đánh giá phát hiện lỗi sai, mô hình sẽ tự sinh ra một đoạn tự phê bình bằng lời văn (\textit{verbal critique}), phân tích nguyên nhân vì sao bước lập luận trước bị lỗi và đề xuất hướng sửa đổi cụ thể.
-    \item \textbf{Bộ nhớ phản tư (\textit{Memory Buffer}):} Lưu trữ bản tự phê bình vào ngữ cảnh hoạt động. Ở lượt thực thi tiếp theo, tác nhân đọc lại kinh nghiệm sai sót này để không lặp lại sai lầm cũ, bảo đảm bản thảo học thuật đạt độ chính xác tối đa.
+    \item \textbf{Bộ đánh giá (\textit{Evaluator}):} Chấm điểm kết quả đầu ra của Agent dựa trên tiêu chí liêm chính học thuật (ví dụ: độ phủ trích dẫn có trùng khớp 100\% với văn bản gốc hay không).
+    \item \textbf{Bộ phản hồi ngôn từ (\textit{Self-Reflection}):} Nếu bộ đánh giá phát hiện lỗi sai, mô hình sẽ tự sinh ra một đoạn tự phê bình bằng lời văn (\textit{verbal critique}), phân tích nguyên nhân vì sao bước lập luận trước bị lỗi và đề xuất hướng sửa đổi cụ thể.
+    \item \textbf{Bộ nhớ Reflexion (\textit{Memory Buffer}):} Lưu trữ bản tự phê bình vào ngữ cảnh hoạt động. Ở lượt thực thi tiếp theo, Agent đọc lại kinh nghiệm sai sót này để không lặp lại sai lầm cũ, bảo đảm bản thảo học thuật đạt độ chính xác tối đa.
 \end{enumerate}
 \clearpage
 
-\subsection{Mẫu kiến trúc Phối hợp Đa tác nhân (Multi-Agent Pattern)}
+\subsection{Mẫu kiến trúc Phối hợp Đa Agent (Multi-Agent Pattern)}
 \label{subsec:multi_agent_pattern}
-Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một tác nhân đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa tác nhân (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một nhóm nghiên cứu khoa học gồm các chuyên gia đảm nhiệm từng khâu riêng biệt.
+Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một Agent đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa Agent (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một nhóm nghiên cứu khoa học gồm các chuyên gia đảm nhiệm từng khâu riêng biệt.
 
-Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể hiện trong Hình~\ref{fig:multi_agent_pattern}.
+Mô hình kiến trúc đa Agent điều phối phân cấp được thể hiện trong Hình~\ref{fig:multi_agent_pattern}.
 
 \begin{figure}[H]
 \centering
@@ -526,10 +526,10 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     \node[coord_oval] (coord) at (0, 3.0) {
         COORDINATOR\\[2pt]
         Routes \& Synthesizes\\[2pt]
-        \scriptsize (Tác nhân Điều phối \& Tổng hợp)
+        \scriptsize (Agent Điều phối \& Tổng hợp)
     };
 
-    % 4 Tác nhân chuyên trách
+    % 4 Agent chuyên trách
     \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-6.3, -1.4) {
         Data Agent\\[2pt]
         Queries \& Retrieves\\[2pt]
@@ -571,7 +571,7 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     % Kết nối luồng đầu vào
     \draw[arrowstyle] (task.south) -- (coord.north);
 
-    % Giao tiếp hai chiều điều phối - tổng hợp giữa Coordinator và 4 Tác nhân
+    % Giao tiếp hai chiều điều phối - tổng hợp giữa Coordinator và 4 Agent
     \draw[botharrow] (coord.west) -| (data_ag.north);
     \draw[botharrow] ([xshift=-22pt]coord.south) -- (ana_ag.north);
     \draw[botharrow] ([xshift=22pt]coord.south) -- (write_ag.north);
@@ -580,20 +580,20 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     % Luồng tổng hợp kết quả: Coordinator thu nhận kết quả từ 4 Agent và xuất ra báo cáo
     \draw[arrowstyle] (coord.south) -- (result.north);
 \end{tikzpicture}
-\caption{Mẫu kiến trúc phối hợp đa tác nhân chuyên trách (Multi-Agent Collaboration Pattern)}
+\caption{Mẫu kiến trúc phối hợp đa Agent chuyên trách (Multi-Agent Collaboration Pattern)}
 \label{fig:multi_agent_pattern}
 \end{figure}
 
-Cấu trúc phối hợp đa tác nhân gồm hai tầng nhận thức:
+Cấu trúc phối hợp đa Agent gồm hai tầng nhận thức:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item \textbf{Tác nhân Điều phối (\textit{Coordinator}):} Tiếp nhận nhiệm vụ lớn, lập kế hoạch phân bổ, định tuyến yêu cầu tới các tác nhân chuyên trách và chịu trách nhiệm tổng hợp các kết quả riêng lẻ thành báo cáo khoa học hoàn chỉnh.
-    \item \textbf{Các tác nhân chuyên trách (\textit{Specialized Agents}):} Mỗi tác nhân được tinh chỉnh hệ thống chỉ dẫn (\textit{system prompt}) và cấp quyền truy cập tập công cụ riêng biệt: \textit{Data Agent} kết nối CSDL tri thức, \textit{Analysis Agent} xử lý dữ liệu và thuật toán, \textit{Writing Agent} định dạng văn bản học thuật theo chuẩn quốc tế, và \textit{Review Agent} đối soát quy chế và tiêu chí liêm chính.
+    \item \textbf{Agent Điều phối (\textit{Coordinator}):} Tiếp nhận nhiệm vụ lớn, lập kế hoạch phân bổ, định tuyến yêu cầu tới các Agent chuyên trách và chịu trách nhiệm tổng hợp các kết quả riêng lẻ thành báo cáo khoa học hoàn chỉnh.
+    \item \textbf{Các Agent chuyên trách (\textit{Specialized Agents}):} Mỗi Agent được tinh chỉnh hệ thống chỉ dẫn (\textit{system prompt}) và cấp quyền truy cập tập công cụ riêng biệt: \textit{Data Agent} kết nối CSDL tri thức, \textit{Analysis Agent} xử lý dữ liệu và thuật toán, \textit{Writing Agent} định dạng văn bản học thuật theo chuẩn quốc tế, và \textit{Review Agent} đối chiếu quy chế và tiêu chí liêm chính.
 \end{itemize}
 \clearpage
 
 \subsection{Mẫu tương tác Người trong vòng lặp (Human-in-the-Loop Pattern)}
 \label{subsec:hitl_pattern}
-Trong các hệ sinh thái nghiên cứu khoa học chuyên sâu, việc trao toàn quyền tự quyết không kiểm soát cho các tác nhân AI tiềm ẩn nhiều rủi ro học thuật (như trích dẫn sai sự thật, diễn giải sai lệch số liệu thực nghiệm hoặc kích hoạt các mã lệnh không an toàn). Mẫu tương tác Người trong vòng lặp (\textit{Human-in-the-Loop -- HITL Pattern}) thiết lập các điểm kiểm soát an toàn (\textit{Checkpoints}) nhằm bảo đảm các quyết định trọng yếu luôn có sự giám sát và phê duyệt của học giả con người.
+Trong các hệ sinh thái nghiên cứu khoa học chuyên sâu, việc trao toàn quyền tự quyết không kiểm soát cho các AI Agent tiềm ẩn nhiều rủi ro học thuật (như trích dẫn sai sự thật, diễn giải sai lệch số liệu thực nghiệm hoặc kích hoạt các mã lệnh không an toàn). Mẫu tương tác Người trong vòng lặp (\textit{Human-in-the-Loop -- HITL Pattern}) thiết lập các điểm kiểm soát an toàn (\textit{Checkpoints}) nhằm bảo đảm các quyết định trọng yếu luôn có sự giám sát và phê duyệt của học giả con người.
 
 Cơ chế kiểm soát và phản hồi tương tác HITL được mô hình hóa trong Hình~\ref{fig:hitl_pattern}.
 
@@ -676,8 +676,8 @@ Cơ chế kiểm soát và phản hồi tương tác HITL được mô hình hó
 
 Cơ chế vận hành của mô hình HITL bao gồm:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item \textbf{Nhận diện tác vụ trọng yếu (\textit{High-Stakes Task}):} Hệ thống tự động xác định các hành vi có nguy cơ ảnh hưởng lớn (thay đổi trạng thái đồ thị tri thức, xuất bản bài tổng quan, hoặc thực thi mã lệnh Python trong hộp cát).
-    \item \textbf{Điểm dừng an toàn (\textit{Checkpoint}):} Tác nhân tạm dừng quy trình tự động, khóa trạng thái luồng làm việc và gửi thông báo kèm ngữ cảnh tóm tắt tới người dùng.
-    \item \textbf{Đánh giá và Quyết định (\textit{Review \& Decide}):} Học giả xem xét bản thảo hoặc mã lệnh. Nếu được chấp thuận (\textit{Approved = Yes}), hệ thống tiến hành thực thi (\textit{Execute}). Nếu bị từ chối (\textit{Approved = No}), học giả cung cấp chỉ dẫn sửa đổi; tác nhân tiếp thu phản hồi (\textit{Revise}) để tái tạo sinh kết quả cho đến khi đạt chuẩn.
+    \item \textbf{Nhận diện tác vụ trọng yếu (\textit{High-Stakes Task}):} Hệ thống tự động xác định các hành vi có nguy cơ ảnh hưởng lớn (thay đổi trạng thái đồ thị tri thức, xuất bản bài tổng quan, hoặc thực thi mã lệnh Python trong Sandbox).
+    \item \textbf{Điểm dừng an toàn (\textit{Checkpoint}):} Agent tạm dừng quy trình tự động, khóa trạng thái luồng làm việc và gửi thông báo kèm ngữ cảnh tóm tắt tới người dùng.
+    \item \textbf{Đánh giá và Quyết định (\textit{Review \& Decide}):} Học giả xem xét bản thảo hoặc mã lệnh. Nếu được chấp thuận (\textit{Approved = Yes}), hệ thống tiến hành thực thi (\textit{Execute}). Nếu bị từ chối (\textit{Approved = No}), học giả cung cấp chỉ dẫn sửa đổi; Agent tiếp thu phản hồi (\textit{Revise}) để tái tạo sinh kết quả cho đến khi đạt chuẩn.
 \end{itemize}
 \clearpage

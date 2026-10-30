@@ -4,25 +4,25 @@
 
 \subsection{Langfuse là gì? (LLM Tracing \& Observability)}
 \label{subsec:langfuse_la_gi}
-Langfuse là nền tảng kỹ nghệ mã nguồn mở hàng đầu thế giới chuyên phục vụ việc giám sát, quan sát vận hành (\textit{LLM Observability}) và truy vết chi tiết (\textit{Tracing}) dành riêng cho các ứng dụng sử dụng mô hình ngôn ngữ lớn và hệ thống tác nhân AI đa bước.
+Langfuse là nền tảng kỹ nghệ mã nguồn mở hàng đầu thế giới chuyên phục vụ việc giám sát, quan sát vận hành (\textit{LLM Observability}) và truy vết chi tiết (\textit{Tracing}) dành riêng cho các ứng dụng sử dụng mô hình ngôn ngữ lớn và hệ thống AI Agent đa bước.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[height=3.2cm]{figures/logos/langfuse.png}
 \caption{Langfuse}
 \label{fig:logo_langfuse}
 \end{figure}
 
-Trong các phần mềm truyền thống, việc giám sát thường chỉ dừng lại ở nhật ký ghi lỗi (\textit{Error Logs}) hoặc các chỉ số máy chủ cơ bản (CPU, RAM). Tuy nhiên, đối với hệ thống tác nhân AI phức tạp thực hiện hàng loạt bước suy luận, tìm kiếm và tự sửa sai, lập trình viên không thể nắm bắt được nguyên nhân dẫn đến một câu trả lời không chính xác nếu không có công cụ giám sát chuyên dụng.
+Trong các phần mềm truyền thống, việc giám sát thường chỉ dừng lại ở nhật ký ghi lỗi (\textit{Error Logs}) hoặc các chỉ số máy chủ cơ bản (CPU, RAM). Tuy nhiên, đối với hệ thống AI Agent phức tạp thực hiện hàng loạt bước suy luận, tìm kiếm và tự sửa sai, lập trình viên không thể nắm bắt được nguyên nhân dẫn đến một câu trả lời không chính xác nếu không có công cụ giám sát chuyên dụng.
 
 Langfuse giải quyết thách thức này thông qua mô hình cây truy vết phân tầng (\textit{Hierarchical Tracing}):
 \begin{itemize}
-    \item \textbf{Dấu vết tổng thể (\textit{Trace}):} Đại diện cho toàn bộ một chu trình xử lý của tác nhân từ thời điểm học giả đặt câu hỏi đến khi bản thảo câu trả lời được hoàn tất.
+    \item \textbf{Dấu vết tổng thể (\textit{Trace}):} Đại diện cho toàn bộ một chu trình xử lý của Agent từ thời điểm học giả đặt câu hỏi đến khi bản thảo câu trả lời được hoàn tất.
     \item \textbf{Khoảng đoạn thực thi (\textit{Spans}):} Đại diện cho từng hành động nghiệp vụ cụ thể bên trong chu trình, chẳng hạn như thời gian trích xuất văn bản từ tệp PDF, độ trễ truy vấn vector HNSW trên PostgreSQL, hoặc bước tra cứu đồ thị tri thức.
     \item \textbf{Lượt tạo sinh LLM (\textit{Generations}):} Ghi lại chính xác mọi tương tác với mô hình AI, bao gồm cấu hình mô hình, toàn bộ nội dung câu nhắc (\textit{Prompt}), kết quả phản hồi thô, số lượng mã thông báo (\textit{Tokens}) tiêu thụ và độ trễ mạng.
 \end{itemize}
 
-Nhờ cấu trúc truy vết này, mọi quyết định suy luận của tác nhân đều trở nên minh bạch và có thể kiểm toán toàn diện.
+Nhờ cấu trúc truy vết này, mọi quyết định suy luận của Agent đều trở nên minh bạch và có thể kiểm toán toàn diện.
 
 \subsection{Cơ chế theo dõi chi phí và độ trễ LLM}
 \label{subsec:langfuse_cost_latency}
@@ -32,7 +32,7 @@ Việc kiểm soát ngân sách và tối ưu hóa tốc độ phản hồi là 
     \item \textbf{Phân tích độ trễ và thời gian sinh ký tự đầu tiên (TTFT):} Langfuse phân rã chi tiết thời gian phản hồi thành hai chỉ số chính:
     \begin{itemize}
         \item \textit{Thời gian đến ký tự đầu tiên (\textit{Time-to-First-Token -- TTFT}):} Đo lường khoảng thời gian từ lúc người dùng gửi yêu cầu đến khi ký tự đầu tiên được truyền phát về giao diện qua luồng SSE. TTFT thấp mang lại trải nghiệm tương tác tức thì và mượt mà cho học giả.
-        \item \textit{Thời gian thực thi của từng công cụ ngoại vi:} Giúp phát hiện chính xác điểm nghẽn hiệu năng trong chuỗi tác nhân (ví dụ: bước tìm kiếm từ khóa BM25 bị chậm hay do mô hình ngôn ngữ phản hồi trễ).
+        \item \textit{Thời gian thực thi của từng công cụ ngoại vi:} Giúp phát hiện chính xác điểm nghẽn hiệu năng trong chuỗi Agent (ví dụ: bước tìm kiếm từ khóa BM25 bị chậm hay do mô hình ngôn ngữ phản hồi trễ).
     \end{itemize}
     \item \textbf{Bộ chỉ số đánh giá độ tin cậy học thuật:} Tích hợp các bộ tiêu chí chấm điểm tự động đo lường độ trung thực của dẫn chứng (\textit{Faithfulness}) và độ bám sát câu hỏi (\textit{Answer Relevance}), cung cấp bằng chứng định lượng để liên tục cải tiến hệ thống.
 \end{enumerate}

@@ -1,10 +1,10 @@
 % !TEX root = ../../main.tex
-\section{Phân tích các ca sử dụng của hệ thống}
+\section{Phân tích các Use Case của hệ thống}
 \label{sec:phan_tich_usecase}
 
-Từ bảng các ca sử dụng đối với từng tác nhân được xác định ở Mục~\ref{sec:tac_nhan_usecase}, biểu đồ ca sử dụng tổng quan (Use Case Diagram) minh họa mối quan hệ tương tác giữa các tác nhân và các phân hệ của \VS\ được trình bày trong Hình~\ref{fig:usecase_overview}.
+Từ bảng các Use Case đối với từng Actor được xác định ở Mục~\ref{sec:tac_nhan_usecase}, biểu đồ Use Case tổng quan (Use Case Diagram) minh họa mối quan hệ tương tác giữa các Actor và các phân hệ của \VS\ được trình bày trong Hình~\ref{fig:usecase_overview}.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.78, transform shape,
@@ -17,21 +17,21 @@ Từ bảng các ca sử dụng đối với từng tác nhân được xác đ�
     \draw[sysbox] (-4.5, -6.6) rectangle (4.5, 6.2);
     \node[font=\bfseries\small, text=blue!85!black] at (0, 5.8) {HỆ THỐNG TRỢ LÝ HỌC THUẬT VERISCHOLAR};
 
-    % Tác nhân (Actors)
+    % Actor (Actors)
     \node[actor] (scholar) at (-7.0, 0.0) {HỌC GIẢ\\(Scholar)};
     \node[actor] (admin) at (7.0, -1.5) {QUẢN TRỊ VIÊN\\(Administrator)};
 
-    % Các Ca sử dụng (Use Cases) phía Học giả
-    \node[usecase] (uc1) at (0, 4.8) {Khám phá \& Tìm kiếm ấn phẩm};
-    \node[usecase] (uc2) at (0, 3.4) {Nạp tài liệu \& Khử trùng CAS};
+    % Các Use Case phía Học giả
+    \node[usecase] (uc1) at (0, 4.8) {Tìm kiếm tài liệu};
+    \node[usecase] (uc2) at (0, 3.4) {Tải tài liệu \& Deduplication CAS};
     \node[usecase] (uc3) at (0, 2.0) {Đọc sâu PDF \& Hỏi đáp RAG};
     \node[usecase] (uc4) at (0, 0.6) {Kiểm chứng trích dẫn BBox};
     \node[usecase] (uc5) at (0, -0.8) {Khám phá Đồ thị tri thức};
     \node[usecase] (uc6) at (0, -2.2) {Quản lý ORCID \& Khóa BYOK};
     \node[usecase] (uc7) at (0, -3.6) {Biên soạn \& Tự sửa lỗi \LaTeX};
 
-    % Các Ca sử dụng phía Quản trị viên
-    \node[usecase] (uc8) at (0, -5.0) {Giám sát vết thực thi Trace};
+    % Các Use Case phía Quản trị viên
+    \node[usecase] (uc8) at (0, -5.0) {Giám sát Trace LLM};
     \node[usecase] (uc9) at (0, -6.0) {Quản trị người dùng \& Phân quyền};
 
     % Đường nối Actor Học giả -> Use Cases
@@ -48,42 +48,43 @@ Từ bảng các ca sử dụng đối với từng tác nhân được xác đ�
     \draw[line] (admin) -- (uc8.east);
     \draw[line] (admin) -- (uc9.east);
 \end{tikzpicture}
-\caption{Biểu đồ ca sử dụng tổng quan của hệ thống VeriScholar}
+\caption{Biểu đồ Use Case tổng quan của hệ thống VeriScholar}
 \label{fig:usecase_overview}
 \end{figure}
 
-\subsection{Phân tích các ca sử dụng phía Học giả}
+\subsection{Phân tích các Use Case phía Học giả}
 \label{subsec:uc_scholar}
 
-Nhằm làm rõ bản chất vận hành của các chức năng trọng tâm, tiểu mục này tiến hành đặc tả chi tiết 3 ca sử dụng tiêu biểu của học giả: \textit{Tra cứu và nạp ấn phẩm nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}.
+Nhằm làm rõ bản chất vận hành của các chức năng trọng tâm, tiểu mục này tiến hành đặc tả chi tiết 3 Use Case tiêu biểu của học giả: \textit{Tra cứu và tải tài liệu nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}.
 
-\subsubsection{Phân tích ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\Needspace{18\baselineskip}
+\subsubsection{Phân tích Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsubsec:uc_kham_pha}
 
-Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên cứu khoa học từ các kho học thuật mở toàn cầu (arXiv, CrossRef, Semantic Scholar), lọc các ấn phẩm đã bình duyệt, và nạp trực tiếp tài liệu vào kho lưu trữ cá nhân kèm cơ chế khử trùng lặp CAS SHA-256. Đặc tả chi tiết được trình bày trong Bảng~\ref{tab:uc_kham_pha_spec}.
+Use Case này cho phép học giả tìm kiếm các tài liệu nghiên cứu khoa học từ các kho học thuật mở toàn cầu (arXiv, CrossRef, Semantic Scholar), lọc các tài liệu đã bình duyệt, và tải trực tiếp tài liệu vào kho lưu trữ cá nhân kèm cơ chế Deduplication CAS SHA-256. Đặc tả chi tiết được trình bày trong Bảng~\ref{tab:uc_kham_pha_spec}.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\caption{Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{tab:uc_kham_pha_spec}
 \label{tab:uc_01_spec}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
-\textbf{Tên Use Case} & \textbf{Tra cứu và nạp ấn phẩm nghiên cứu} \tabularnewline \hline
-\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Tên Use Case} & \textbf{Tra cứu và tải tài liệu nghiên cứu} \tabularnewline \hline
+\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Tìm kiếm bài báo khoa học theo từ khóa hoặc mã DOI/arXiv, lọc bài báo đã bình duyệt và lưu trữ vào thư viện nghiên cứu cá nhân. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập vào hệ thống \VS. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Tài liệu được nạp vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Tài liệu được tải vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI vào thanh tìm kiếm.
     \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (\textit{Skeleton Loading}); hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard (\textit{Jaccard Token Overlap} ngưỡng $\ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
     \item Học giả có thể kích hoạt nút gạt ``Đã bình duyệt'' (\textit{Peer-reviewed}) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
-    \item Học giả chọn bài báo mong muốn và nhấp nút ``Nạp tài liệu''.
-    \item Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra khử trùng lặp trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
+    \item Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
+    \item Hệ thống tải tệp PDF toàn văn, tính mã Hash SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
@@ -98,40 +99,41 @@ Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên c
 \label{eq:jaccard_def}
 J(Q, T) = \frac{|Q \cap T|}{|Q \cup T|}
 \end{equation}
-Hệ thống thiết lập ngưỡng $J(Q, T) \ge 0{,}2$ để tự động lọc bỏ các ấn phẩm trùng lặp ngẫu nhiên hoặc lạc đề từ các cổng học thuật mở mà không làm suy giảm độ bao phủ của kết quả tìm kiếm.
+Hệ thống thiết lập ngưỡng $J(Q, T) \ge 0{,}2$ để tự động lọc bỏ các tài liệu trùng lặp ngẫu nhiên hoặc lạc đề từ các cổng học thuật mở mà không làm suy giảm độ bao phủ của kết quả tìm kiếm.
 
-\subsubsection{Phân tích ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\Needspace{18\baselineskip}
+\subsubsection{Phân tích Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsubsec:uc_doc_sau}
 
-Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung bài báo, đặt câu hỏi cho trợ lý AI và nhận câu trả lời có kèm các thẻ trích dẫn tọa độ Bounding Box hiển thị viền vàng trực quan trên bản PDF gốc (Bảng~\ref{tab:uc_doc_sau_spec}).
+Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài báo, đặt câu hỏi cho trợ lý AI và nhận câu trả lời có kèm các thẻ trích dẫn tọa độ Bounding Box hiển thị viền vàng trực quan trên bản PDF gốc (Bảng~\ref{tab:uc_doc_sau_spec}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\caption{Đặc tả Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{tab:uc_doc_sau_spec}
 \label{tab:uc_03_spec}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
-\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Học giả đã mở một tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số $[1]$, $[2]$ liên kết với tọa độ BBox. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập câu hỏi nghiên cứu vào khung hội thoại (ví dụ: ``Độ chính xác phân loại của mô hình trên ImageNet là bao nhiêu?'').
-    \item Tác nhân AI kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) để trích xuất các phân đoạn văn bản liên quan nhất.
-    \item Tác nhân kiểm định liêm chính trích dẫn và tổng hợp câu trả lời.
+    \item AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) để trích xuất các phân đoạn văn bản liên quan nhất.
+    \item Agent kiểm định liêm chính trích dẫn và tổng hợp câu trả lời.
     \item Trợ lý AI truyền luồng phản hồi theo thời gian thực về giao diện người dùng.
     \item Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc ($\text{IoU} \ge 0{,}85$).
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu câu hỏi nằm ngoài phạm vi tri thức của tài liệu: Hệ thống thông báo rõ ràng ``Tài liệu không cung cấp thông tin về nội dung này'', tuyệt đối không tự suy đoán số liệu.
-    \item Nếu học giả chưa nạp khóa API cá nhân (BYOK): Hệ thống điều hướng mở hộp thoại cài đặt khóa.
+    \item Nếu học giả chưa nhập khóa API cá nhân (BYOK): Hệ thống điều hướng mở hộp thoại cài đặt khóa.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}
@@ -143,38 +145,39 @@ Cơ chế kiểm chứng tọa độ trực quan được đo lường thông qu
 \end{equation}
 Hệ thống thiết lập ngưỡng kiểm định $\text{IoU} \ge 0{,}85$ nhằm bảo đảm khung viền vàng chỉ tô sáng chính xác câu văn chứa dẫn chứng khoa học mà không bị lệch dòng hay cắt ngang công thức toán học.
 
-\subsubsection{Phân tích ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\Needspace{18\baselineskip}
+\subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
 \label{subsubsec:uc_bien_soan}
 
-Ca sử dụng này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa học, biên dịch tài liệu sang định dạng PDF trong môi trường máy ảo cách ly, và tự động sửa các lỗi cú pháp khi biên dịch thất bại (Bảng~\ref{tab:uc_bien_soan_spec}).
+Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa học, biên dịch tài liệu sang định dạng PDF trong môi trường máy ảo cách ly, và tự động sửa các lỗi cú pháp khi biên dịch thất bại (Bảng~\ref{tab:uc_bien_soan_spec}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
 \label{tab:uc_bien_soan_spec}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX} \tabularnewline \hline
-\textbf{Tác nhân (Actor)} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học \LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua tác nhân AI ReAct. \tabularnewline \hline
+\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
+\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học \LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả chỉnh sửa mã nguồn \LaTeX\ trên trình biên tập Monaco Editor.
     \item Học giả nhấp nút ``Biên dịch bản thảo''.
-    \item Hệ thống chuyển mã nguồn vào máy ảo vi mô E2B MicroVM cách ly an toàn và kích hoạt lệnh \texttt{xelatex}.
+    \item Hệ thống chuyển mã nguồn vào E2B MicroVM cách ly an toàn và kích hoạt lệnh \texttt{xelatex}.
     \item Nếu biên dịch thành công ($\text{ExitCode} == 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):
     \begin{enumerate}[label=\alph*., noitemsep, topsep=1pt]
-        \item Hệ thống bóc tách tệp nhật ký lỗi \texttt{main.log}.
-        \item Tác nhân AI phân tích lỗi và tạo bản vá sửa đổi vi phẫu (\textit{Surgical Diff}).
+        \item Hệ thống trích xuất tệp nhật ký lỗi \texttt{main.log}.
+        \item AI Agent phân tích lỗi và tạo bản vá sửa đổi vi phẫu (\textit{Surgical Diff}).
         \item Hệ thống tự động áp dụng bản vá và kích hoạt tái biên dịch ($N < 3$).
         \item Khi thành công, thông báo lỗi được xóa bỏ và giao diện cập nhật PDF mới.
     \end{enumerate}
@@ -182,24 +185,25 @@ Ca sử dụng này hỗ trợ học giả soạn thảo trực tuyến bài bá
 \end{tabular}
 \end{table}
 
-\subsection{Phân tích các ca sử dụng phía Quản trị viên}
+\subsection{Phân tích các Use Case phía Quản trị viên}
 \label{subsec:uc_admin}
 
-\subsubsection{Phân tích ca sử dụng ``Quản trị người dùng và chính sách bảo mật BYOK''}
-Ca sử dụng cho phép Quản trị viên theo dõi danh sách học giả tham gia hệ thống, quản lý hạn ngạch phiên làm việc, cấp quyền sử dụng máy ảo MicroVM và đảm bảo các chính sách két sắt khóa mã hóa tuân thủ chuẩn an toàn thông tin (Bảng~\ref{tab:uc_admin_users}).
+\Needspace{18\baselineskip}
+\subsubsection{Phân tích Use Case ``Quản trị người dùng và chính sách bảo mật BYOK''}
+Use Case cho phép Quản trị viên theo dõi danh sách học giả tham gia hệ thống, quản lý hạn ngạch phiên làm việc, cấp quyền sử dụng máy ảo MicroVM và đảm bảo các chính sách khóa API mã hóa tuân thủ chuẩn an toàn thông tin (Bảng~\ref{tab:uc_admin_users}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả ca sử dụng ``Quản trị người dùng và chính sách bảo mật BYOK''}
+\caption{Đặc tả Use Case ``Quản trị người dùng và chính sách bảo mật BYOK''}
 \label{tab:uc_admin_users}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Quản trị người dùng và chính sách bảo mật BYOK} \tabularnewline \hline
-\textbf{Tác nhân (Actor)} & Quản trị viên (Administrator) \tabularnewline \hline
-\textbf{Mục tiêu} & Giám sát tài khoản học giả, quản lý hạn ngạch tài nguyên và đảm bảo tính an toàn của két sắt khóa cá nhân. \tabularnewline \hline
+\textbf{Actor} & Quản trị viên (Administrator) \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tài khoản học giả, quản lý hạn ngạch tài nguyên và đảm bảo tính an toàn của kho khóa API cá nhân. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập với quyền hạn cao nhất. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Thông tin tài khoản và cấu hình hạn ngạch được cập nhật chính xác. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
@@ -216,23 +220,24 @@ Ca sử dụng cho phép Quản trị viên theo dõi danh sách học giả tha
 \end{tabular}
 \end{table}
 
-\subsubsection{Phân tích ca sử dụng ``Giám sát hệ thống và vết thực thi mô hình''}
-Ca sử dụng cho phép Quản trị viên theo dõi các chỉ số hoạt động của hệ thống, thời gian phản hồi API, chi phí Token sử dụng và các luồng vết thực thi (\textit{Trace Logs}) phục vụ kiểm định chất lượng (Bảng~\ref{tab:uc_admin_logs}).
+\Needspace{18\baselineskip}
+\subsubsection{Phân tích Use Case ``Giám sát hệ thống và Trace mô hình''}
+Use Case cho phép Quản trị viên theo dõi các chỉ số hoạt động của hệ thống, thời gian phản hồi API, chi phí Token sử dụng và các \textit{Trace Logs} phục vụ kiểm định chất lượng (Bảng~\ref{tab:uc_admin_logs}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả ca sử dụng ``Giám sát hệ thống và vết thực thi mô hình''}
+\caption{Đặc tả Use Case ``Giám sát hệ thống và Trace mô hình''}
 \label{tab:uc_admin_logs}
 \renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
-\textbf{Tên Use Case} & \textbf{Giám sát hệ thống và vết thực thi mô hình} \tabularnewline \hline
-\textbf{Tác nhân (Actor)} & Quản trị viên (Administrator) \tabularnewline \hline
-\textbf{Mục tiêu} & Giám sát tình trạng vận hành, hiệu năng truy xuất RAG và theo dõi chi tiết vết thực thi suy luận của tác nhân. \tabularnewline \hline
+\textbf{Tên Use Case} & \textbf{Giám sát hệ thống và Trace mô hình} \tabularnewline \hline
+\textbf{Actor} & Quản trị viên (Administrator) \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tình trạng vận hành, hiệu năng truy xuất RAG và theo dõi chi tiết Trace suy luận của AI Agent. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập; dịch vụ Langfuse đang hoạt động bình thường. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Báo cáo số liệu hiệu năng và danh sách vết thực thi được hiển thị đầy đủ. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Báo cáo số liệu hiệu năng và danh sách Trace được hiển thị đầy đủ. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Quản trị viên chọn phân hệ ``Giám sát hệ thống''.
@@ -246,3 +251,4 @@ Ca sử dụng cho phép Quản trị viên theo dõi các chỉ số hoạt đ�
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}
+\clearpage

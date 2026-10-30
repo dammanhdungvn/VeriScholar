@@ -12,14 +12,14 @@ Visual Studio Code (kết hợp môi trường lập trình trợ lực trí tu�
 \begin{itemize}
     \item \textbf{Khả năng quản trị Monorepo linh hoạt:} Cho phép làm việc đồng thời trên nhiều gói mã nguồn (\texttt{packages/core}, \texttt{apps/api}, \texttt{apps/web}) trong cùng một không gian làm việc (\textit{Workspace}), hỗ trợ tự động nhận diện môi trường ảo hóa độc lập cho từng phân vùng.
     \item \textbf{Hệ sinh thái tiện ích lập trình phong phú:} Tích hợp chặt chẽ với tiện ích mở rộng Ruff (linter và formatter siêu tốc cho Python 3.12), Tailwind CSS IntelliSense, ESLint, Python Test Explorer (cho \texttt{pytest}) và \LaTeX\ Workshop hỗ trợ biên dịch và kiểm tra tài liệu học thuật theo thời gian thực.
-    \item \textbf{Quản lý mã nguồn phân tán với Git/GitHub:} Hỗ trợ trực quan hóa lịch sử cam kết (\textit{Git Commits}), quản lý nhánh tính năng và đối soát xung đột mã nguồn thuận tiện, đảm bảo tuân thủ nghiêm ngặt quy trình kiểm thử trước khi bàn giao.
+    \item \textbf{Quản lý mã nguồn phân tán với Git/GitHub:} Hỗ trợ trực quan hóa lịch sử cam kết (\textit{Git Commits}), quản lý nhánh tính năng và đối chiếu xung đột mã nguồn thuận tiện, đảm bảo tuân thủ nghiêm ngặt quy trình kiểm thử trước khi bàn giao.
 \end{itemize}
 
 Quy trình thiết lập môi trường phát triển cục bộ được thực hiện qua các bước:
 \begin{enumerate}
     \item Tải và cài đặt phiên bản Visual Studio Code mới nhất từ trang chủ chính thức \url{https://code.visualstudio.com/}.
-    \item Thiết lập trình quản lý gói và môi trường ảo Python siêu tốc \texttt{uv} (Astral) trên máy trạm: thực thi lệnh nạp môi trường cục bộ \texttt{uv venv} và đồng bộ hóa thư viện qua \texttt{uv sync}.
-    \item Thiết lập môi trường thực thi JavaScript/TypeScript với Node.js 22 LTS và nạp các gói phụ thuộc giao diện người dùng thông qua \texttt{npm install}.
+    \item Thiết lập trình quản lý gói và môi trường ảo Python siêu tốc \texttt{uv} (Astral) trên máy trạm: thực thi lệnh thiết lập môi trường cục bộ \texttt{uv venv} và đồng bộ hóa thư viện qua \texttt{uv sync}.
+    \item Thiết lập môi trường thực thi JavaScript/TypeScript với Node.js 22 LTS và cài đặt các gói phụ thuộc giao diện người dùng thông qua \texttt{npm install}.
 \end{enumerate}
 
 \subsection{Cài đặt môi trường hạ tầng và cơ sở dữ liệu}
@@ -35,7 +35,7 @@ Nhằm đảm bảo tính nhất quán tuyệt đối giữa môi trường phá
 
 Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt qua 3 phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ bằng rào chắn kiểm thử tự động cây cú pháp trừu tượng AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc kiểm thử ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -64,10 +64,10 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
         \item Hệ thống được gắn kết với tên miền công cộng chính thức: \url{https://verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới dịch vụ giao diện và chuyển tiếp các tuyến API/SSE tới cổng dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}).
         \item Toàn bộ lưu lượng truyền tải được mã hóa đầu--cuối bằng chứng chỉ số SSL/TLS tự động qua Let's Encrypt Certbot. Nhóm an ninh mạng (NSG) cô lập tuyệt đối các cổng CSDL và Redis tại mạng nội bộ.
     \end{itemize}
-    \item \textbf{Môi trường thực thi hộp cát đám mây E2B Sandbox MicroVM:}
+    \item \textbf{Môi trường thực thi Sandbox đám mây E2B MicroVM:}
     \begin{itemize}
-        \item Để phục vụ tác nhân AI tự động biên dịch và sửa lỗi mã nguồn \LaTeX, hệ thống kết nối với nền tảng E2B Sandbox MicroVM (công nghệ ảo hóa siêu nhẹ Firecracker).
-        \item Mỗi phiên biên dịch được cấp phát một máy ảo vi mô độc lập chỉ trong 150 mili-giây, cung cấp trọn vẹn bộ công cụ TeX Live 2024 đầy đủ. Môi trường này bảo đảm tính an toàn bảo mật tuyệt đối cho máy chủ chính, ngăn chặn hoàn toàn nguy cơ tấn công mã độc qua mã \LaTeX.
+        \item Để phục vụ AI Agent tự động biên dịch và sửa lỗi mã nguồn \LaTeX, hệ thống kết nối với nền tảng E2B Sandbox MicroVM (công nghệ ảo hóa siêu nhẹ Firecracker).
+        \item Mỗi phiên biên dịch được cấp phát một MicroVM độc lập chỉ trong 150 mili-giây, cung cấp trọn vẹn bộ công cụ TeX Live 2024 đầy đủ. Môi trường này bảo đảm tính an toàn bảo mật tuyệt đối cho máy chủ chính, ngăn chặn hoàn toàn nguy cơ tấn công mã độc qua mã \LaTeX.
     \end{itemize}
     \item \textbf{Nền tảng quan sát và kiểm chứng thực nghiệm Langfuse Cloud:}
     \begin{itemize}

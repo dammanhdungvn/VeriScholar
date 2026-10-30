@@ -2,12 +2,12 @@
 \section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
 \label{sec:bieu_do_tuan_tu}
 
-Biểu đồ tuần tự (Sequence Diagram) được sử dụng để mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng và thành phần trong hệ thống khi thực thi một ca sử dụng cụ thể. Nhằm làm rõ cơ chế phối hợp giữa giao diện người dùng, lõi nghiệp vụ và các dịch vụ hạ tầng, tiểu mục này trình bày ba biểu đồ tuần tự cho ba nghiệp vụ cốt lõi của \VS.
+Biểu đồ tuần tự (Sequence Diagram) được sử dụng để mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng và thành phần trong hệ thống khi thực thi một Use Case cụ thể. Nhằm làm rõ cơ chế phối hợp giữa giao diện người dùng, lõi nghiệp vụ và các dịch vụ hạ tầng, tiểu mục này trình bày ba biểu đồ tuần tự cho ba nghiệp vụ cốt lõi của \VS.
 
-\subsection{Biểu đồ tuần tự ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
+\subsection{Biểu đồ tuần tự Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsec:seq_kham_pha}
 
-Quy trình tra cứu đa nguồn, kiểm tra khử trùng lặp nội dung theo mã băm SHA-256 và lưu trữ vào kho CAS được mô tả trong Hình~\ref{fig:seq_kham_pha}.
+Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã Hash SHA-256 và lưu trữ vào kho CAS được mô tả trong Hình~\ref{fig:seq_kham_pha}.
 
 \begin{figure}[H]
 \centering
@@ -23,8 +23,8 @@ Quy trình tra cứu đa nguồn, kiểm tra khử trùng lặp nội dung theo 
     % Các thực thể tham gia (Entities)
     \node[entity] (user) at (0, 0) {Học giả};
     \node[entity] (ui) at (3.2, 0) {Giao diện Web};
-    \node[entity] (api) at (6.8, 0) {Lõi Nghiệp vụ};
-    \node[entity] (ext) at (10.4, 0) {Cổng Học thuật};
+    \node[entity] (api) at (6.8, 0) {Backend API};
+    \node[entity] (ext) at (10.4, 0) {Scholarly API};
     \node[entity] (cas) at (14.0, 0) {Kho Lưu trữ CAS};
 
     % Đường thời gian (Lifelines - Gióng phẳng tuyệt đối tại y = -8.0)
@@ -49,25 +49,25 @@ Quy trình tra cứu đa nguồn, kiểm tra khử trùng lặp nội dung theo 
     \draw[retmsg] (10.3, -2.8) -- node[lbl, above] {4: Trả về danh sách bài báo} (6.9, -2.8);
     \draw[retmsg] (6.7, -3.4) -- node[lbl, above] {5: Hiển thị kết quả tìm kiếm} (3.3, -3.4);
 
-    \draw[msg] (0, -4.2) -- node[lbl, above] {6: Chọn nạp tài liệu} (3.1, -4.2);
-    \draw[msg] (3.3, -4.8) -- node[lbl, above] {7: Yêu cầu nạp \& Tải PDF} (6.7, -4.8);
+    \draw[msg] (0, -4.2) -- node[lbl, above] {6: Chọn tải tài liệu} (3.1, -4.2);
+    \draw[msg] (3.3, -4.8) -- node[lbl, above] {7: Yêu cầu tải PDF} (6.7, -4.8);
 
-    % Khung logic khử trùng lặp CAS (mở rộng lề thoáng)
+    % Khung logic Deduplication CAS (mở rộng lề thoáng)
     \draw[draw=blue!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=blue!2] (6.1, -5.25) rectangle (14.6, -6.5);
-    \node[font=\tiny\bfseries, fill=blue!12, text=blue!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -5.25) {opt [Khử trùng lặp nội dung CAS SHA-256]};
+    \node[font=\tiny\bfseries, fill=blue!12, text=blue!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -5.25) {opt [Deduplication nội dung CAS SHA-256]};
 
-    \draw[msg] (6.9, -5.6) -- node[lbl, above] {8: Tính băm SHA-256 \& Kiểm tra trùng} (13.9, -5.6);
+    \draw[msg] (6.9, -5.6) -- node[lbl, above] {8: Tính Hash SHA-256 \& Kiểm tra trùng} (13.9, -5.6);
     \draw[retmsg] (13.9, -6.2) -- node[lbl, above] {9: Xác nhận lưu trữ / Tái dùng tệp} (6.9, -6.2);
 
     \draw[retmsg] (6.7, -6.9) -- node[lbl, above] {10: Liên kết vào Thư viện nghiên cứu} (3.3, -6.9);
-    \draw[retmsg] (3.1, -7.5) -- node[lbl, above] {11: Thông báo nạp thành công} (0, -7.5);
+    \draw[retmsg] (3.1, -7.5) -- node[lbl, above] {11: Thông báo tải thành công} (0, -7.5);
 \end{tikzpicture}
-\caption{Biểu đồ tuần tự ca sử dụng Tra cứu và nạp ấn phẩm nghiên cứu}
+\caption{Biểu đồ tuần tự Use Case Tra cứu và tải tài liệu nghiên cứu}
 \label{fig:seq_kham_pha}
 \end{figure}
 \clearpage
 
-\subsection{Biểu đồ tuần tự ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
+\subsection{Biểu đồ tuần tự Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsec:seq_doc_sau}
 
 Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
@@ -86,7 +86,7 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     % Các thực thể tham gia
     \node[entity] (user) at (0, 0) {Học giả};
     \node[entity] (canvas) at (3.2, 0) {PDF Canvas\\UI};
-    \node[entity] (agent) at (6.8, 0) {Tác nhân\\AI};
+    \node[entity] (agent) at (6.8, 0) {AI\\Agent};
     \node[entity] (retriever) at (10.4, 0) {Hybrid\\Retriever};
     \node[entity] (llm) at (14.0, 0) {Mô hình\\LLM};
 
@@ -130,15 +130,15 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
 
     \draw[retmsg] (3.1, -8.1) -- node[lbl, above] {11: Bằng chứng tọa độ hiển thị trực quan} (0, -8.1);
 \end{tikzpicture}
-\caption{Biểu đồ tuần tự ca sử dụng Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}
+\caption{Biểu đồ tuần tự Use Case Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}
 \label{fig:seq_doc_sau}
 \end{figure}
 \clearpage
 
-\subsection{Biểu đồ tuần tự ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
+\subsection{Biểu đồ tuần tự Use Case ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
 \label{subsec:seq_bien_soan}
 
-Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo vi mô E2B MicroVM cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
+Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, E2B MicroVM cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
 
 \begin{figure}[H]
 \centering
@@ -156,7 +156,7 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo 
     \node[entity] (editor) at (3.2, 0) {Monaco\\Editor};
     \node[entity] (server) at (6.8, 0) {Dịch vụ\\Biên dịch};
     \node[entity] (vm) at (10.4, 0) {Máy ảo E2B\\MicroVM};
-    \node[entity] (agent) at (14.0, 0) {Tác nhân\\Sửa lỗi ReAct};
+    \node[entity] (agent) at (14.0, 0) {Agent\\Sửa lỗi ReAct};
 
     % Đường thời gian (Gióng phẳng tuyệt đối tại y = -8.2)
     \draw[lifeline] (0, -0.52) -- (0, -8.6);
@@ -182,7 +182,7 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo 
     \node[font=\tiny\bfseries, fill=orange!15, text=orange!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -2.65) {alt [Biên dịch phát sinh lỗi cú pháp (ExitCode $\ne$ 0)]};
 
     \draw[retmsg] (10.3, -3.35) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (6.9, -3.35);
-    \draw[msg] (6.9, -4.0) -- node[lbl, above] {5: Chuyển log lỗi cho tác nhân} (13.9, -4.0);
+    \draw[msg] (6.9, -4.0) -- node[lbl, above] {5: Chuyển log lỗi cho Agent} (13.9, -4.0);
     \draw[msg] (13.9, -4.7) -- node[lbl, above] {6: Phân tích log lỗi \& Sinh bản vá Diff} (6.9, -4.7);
     \draw[msg] (6.9, -5.5) -- node[lbl, above] {7: Áp bản vá \& Tái biên dịch trong MicroVM} (10.3, -5.5);
     \draw[retmsg] (10.3, -6.2) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (6.9, -6.2);
@@ -190,7 +190,7 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo 
     \draw[retmsg] (6.7, -7.2) -- node[lbl, above] {9: Cập nhật mã nguồn \& Trả tệp PDF} (3.3, -7.2);
     \draw[retmsg] (3.1, -7.9) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -7.9);
 \end{tikzpicture}
-\caption{Biểu đồ tuần tự ca sử dụng Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}
+\caption{Biểu đồ tuần tự Use Case Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}
 \label{fig:seq_bien_soan}
 \end{figure}
 \clearpage

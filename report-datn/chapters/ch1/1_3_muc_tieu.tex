@@ -10,8 +10,8 @@ Xây dựng thành công nền tảng phần mềm \VS\ trợ lý AI toàn trìn
 \label{subsec:muc_tieu_cu_the}
 Đề tài hướng tới hoàn thành 4 mục tiêu kỹ thuật định lượng cụ thể:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item Hiện thực hóa cơ chế nạp bài báo 2 tầng kết hợp kho lưu trữ định danh nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã băm SHA-256 nhằm loại bỏ 98\% trùng lặp tệp nhị phân trên máy chủ lưu trữ, hỗ trợ tính năng Zero-Retention xóa an toàn tài liệu theo đồ thị phụ thuộc.
+    \item Hiện thực hóa cơ chế tải bài báo 2 tầng kết hợp kho lưu trữ định danh nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã Hash SHA-256 nhằm loại bỏ 98\% trùng lặp tệp nhị phân trên máy chủ lưu trữ, hỗ trợ tính năng Zero-Retention xóa an toàn tài liệu theo đồ thị phụ thuộc.
     \item Phát triển công cụ tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất xếp hạng đảo ngược RRF (\textit{Reciprocal Rank Fusion}, $k=60$) giữa tìm kiếm vector ngữ nghĩa (HNSW Cosine 1536 chiều) và tìm kiếm từ khóa BM25, đi kèm cơ chế đối chiếu khung viền tọa độ Bounding Box $[0..1000]$ trên bản PDF gốc với độ chính xác đạt chỉ số IoU $\ge 0.85$.
     \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG: \textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) trực tiếp trên cơ sở dữ liệu quan hệ PostgreSQL 16 với tiện ích mở rộng vector hóa \texttt{pgvector}, bảo toàn tính toàn vẹn và nhất quán giao dịch ACID tuyệt đối mà không cần duy trì các cơ sở dữ liệu đồ thị rời rạc.
-    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct hoạt động trong môi trường đám mây cô lập E2B Sandbox MicroVM, có khả năng tự động đọc log, phân tích nguyên nhân và sửa lỗi biên dịch \LaTeX\ đạt tỷ lệ thành công trên 90\%.
+    \item Tích hợp AI Agent dựa trên máy trạng thái LangGraph ReAct hoạt động trong môi trường đám mây cô lập E2B Sandbox MicroVM, có khả năng tự động đọc log, phân tích nguyên nhân và sửa lỗi biên dịch \LaTeX\ đạt tỷ lệ thành công trên 90\%.
 \end{enumerate}

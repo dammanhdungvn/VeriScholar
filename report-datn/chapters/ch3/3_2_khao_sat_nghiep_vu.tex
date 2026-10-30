@@ -4,7 +4,7 @@
 
 Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, nhóm nghiên cứu đã tiến hành khảo sát thực tế tại các nhóm nghiên cứu khoa học và phòng thí nghiệm trí tuệ nhân tạo tại VinUniversity. Việc khảo sát tập trung vào các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên tham gia làm đồ án tốt nghiệp, làm rõ các khó khăn, bất cập trong quy trình nghiên cứu truyền thống và các yêu cầu nghiệp vụ mới.
 
-\subsection{Khảo sát quy trình tìm kiếm và thu thập ấn phẩm nghiên cứu}
+\subsection{Khảo sát quy trình tìm kiếm và thu thập tài liệu nghiên cứu}
 \label{subsec:khao_sat_tim_kiem}
 Hiện nay, việc tìm kiếm bài báo khoa học chủ yếu dựa trên thao tác thủ công của học giả trên các công cụ tìm kiếm phổ quát và các cơ sở dữ liệu học thuật độc lập:
 \begin{itemize}
@@ -17,7 +17,7 @@ Hiện nay, việc tìm kiếm bài báo khoa học chủ yếu dựa trên thao
 \label{subsec:khao_sat_doc_sau}
 Trong giai đoạn đọc hiểu tài liệu chuyên ngành:
 \begin{itemize}
-    \item Hầu hết các bài báo quốc tế (định dạng IEEE, ACM, Springer) đều được trình bày dạng hai cột (\textit{two-column}). Khi sử dụng các công cụ bóc tách PDF thông thường, văn bản bị đọc nhảy ngang giữa hai cột, làm đảo lộn hoàn toàn thứ tự ngữ nghĩa của các công thức toán và đoạn văn.
+    \item Hầu hết các bài báo quốc tế (định dạng IEEE, ACM, Springer) đều được trình bày dạng hai cột (\textit{two-column}). Khi sử dụng các công cụ trích xuất PDF thông thường, văn bản bị đọc nhảy ngang giữa hai cột, làm đảo lộn hoàn toàn thứ tự ngữ nghĩa của các công thức toán và đoạn văn.
     \item Khi sử dụng các công cụ AI trò chuyện với tài liệu, câu trả lời do mô hình sinh ra thường chỉ dẫn chứng số trang chung chung (ví dụ: ``theo trang 4 của tài liệu''). Trong một trang chứa hàng nghìn chữ cùng nhiều bảng biểu và biểu đồ, học giả vẫn phải tự mắt tìm kiếm từng câu chữ để xác nhận.
     \item Nguy cơ ảo giác: Mô hình ngôn ngữ lớn có xu hướng tự điền khuyết các số liệu đo lường khi không tìm thấy thông tin chính xác, dẫn đến nguy cơ sai lệch nghiêm trọng nếu học giả đưa số liệu này vào bài báo của mình. Do đó, yêu cầu hiển thị khung viền tọa độ Bounding Box định vị chính xác vị trí văn bản gốc là tiêu chí bắt buộc để bảo đảm liêm chính học thuật.
 \end{itemize}
@@ -51,7 +51,7 @@ Biên soạn bản thảo là công đoạn tốn nhiều thời gian và công 
 
 Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy trình nghiên cứu truyền thống (AS-IS) sang quy trình nghiên cứu mới (TO-BE) trên nền tảng \VS\ được mô hình hóa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
@@ -69,7 +69,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     };
     \node[box_asis] (a2) at (-4.4, 0.8) {
         \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
-        \footnotesize Bóc tách thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
+        \footnotesize Trích xuất thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
     };
     \node[box_asis] (a3) at (-4.4, -1.4) {
         \textbf{3. Lập bảng đối chiếu thủ công}\\
@@ -84,7 +84,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_tobe) at (4.4, 4.6) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
     \node[box_tobe] (b1) at (4.4, 3.0) {
-        \textbf{1. Khám phá liên hợp \& Khử trùng CAS}\\
+        \textbf{1. Tìm kiếm đa nguồn \& Deduplication CAS}\\
         \footnotesize Tìm kiếm đa nguồn; Tiết kiệm 98\% dung lượng lưu trữ
     };
     \node[box_tobe] (b2) at (4.4, 0.8) {
@@ -96,7 +96,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
         \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
     };
     \node[box_tobe] (b4) at (4.4, -3.6) {
-        \textbf{4. Tác nhân tự phục hồi bản thảo \LaTeX}\\
+        \textbf{4. Agent tự phục hồi bản thảo \LaTeX}\\
         \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $> 90\%$
     };
 
@@ -112,7 +112,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     \draw[arrow_down] (b3) -- (b4);
 
     % Mũi tên chuyển đổi giữa 2 luồng
-    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Khử trùng};
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Deduplication};
     \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Minh chứng};
     \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự động};
     \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự sửa};

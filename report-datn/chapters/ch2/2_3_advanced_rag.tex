@@ -89,7 +89,7 @@ Advanced RAG (RAG Nâng cao) ra đời nhằm khắc phục triệt để các h
     \item \textbf{Hậu truy xuất (\textit{Post-Retrieval}):} Tái xếp hạng (\textit{Re-ranking}), nén chọn lọc ngữ cảnh và kiểm chứng trích dẫn tọa độ Bounding Box.
 \end{enumerate}
 
-Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối được mô hình hóa trong Hình~\ref{fig:advanced_rag}.
+Kiến trúc Advanced RAG phối hợp đa Agent điều phối được mô hình hóa trong Hình~\ref{fig:advanced_rag}.
 
 \begin{figure}[H]
 \centering
@@ -213,11 +213,11 @@ Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối được m�
 
 \subsection{Hybrid Search và thuật toán RRF}
 \label{subsec:hybrid_search_rrf}
-Trong hệ thống truy xuất ấn phẩm khoa học, hai phương pháp tìm kiếm truyền thống bộc lộ những ưu và nhược điểm trái ngược nhau:
+Trong hệ thống truy xuất tài liệu khoa học, hai phương pháp tìm kiếm truyền thống bộc lộ những ưu và nhược điểm trái ngược nhau:
 
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Truy xuất vector đặc (\textit{Dense Vector Retrieval}):}
-    Văn bản được ánh xạ thành các vector nhúng ngữ nghĩa trong không gian nhiều chiều (1536 chiều). Mức độ tương đồng giữa câu hỏi của học giả $\mathbf{u}$ và đoạn trích tài liệu $\mathbf{v}$ được đo lường thông qua hàm độ tương đồng Cosine:
+    Văn bản được ánh xạ thành các vector Embedding ngữ nghĩa trong không gian nhiều chiều (1536 chiều). Mức độ tương đồng giữa câu hỏi của học giả $\mathbf{u}$ và đoạn trích tài liệu $\mathbf{v}$ được đo lường thông qua hàm độ tương đồng Cosine:
     \begin{equation}
     \label{eq:cosine_sim}
     \text{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^{d} u_i v_i}{\sqrt{\sum_{i=1}^{d} u_i^2} \sqrt{\sum_{i=1}^{d} v_i^2}}
@@ -297,7 +297,7 @@ Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính đi
     % Thành phần 1: Dense Search (Phía bên trái của Khung Hybrid Search)
     \node[box_dense, text width=6.0cm, align=center, inner sep=5pt] (card_dense) at (-3.7, 3.4) {
         {\bfseries\footnotesize\color{orange!90!black} (1) Dense Vector Search (Ngữ nghĩa)}\\[1pt]
-        {\scriptsize\color{orange!80!black} Không gian nhúng 1536 chiều, chỉ mục Cosine HNSW}\\[6pt]
+        {\scriptsize\color{orange!80!black} Không gian Embedding 1536 chiều, chỉ mục Cosine HNSW}\\[6pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\cos = 0{,}94$)};}\\[3pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 3} \hfill \scriptsize (Hạng 2: $\cos = 0{,}89$)};}\\[3pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 3: $\cos = 0{,}85$)};}\\[3pt]

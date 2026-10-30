@@ -6,9 +6,9 @@ Trong thiết kế hệ thống tương tác người--máy (Human-Computer Inte
 
 Để khắc phục triệt để vấn đề trên, VeriScholar tổ chức không gian tương tác người--máy thành 4 phân hệ thống nhất, kết nối liền mạch theo một chu trình khép kín:
 \begin{enumerate}[label=\textbf{\arabic*.}]
-    \item \textbf{Phân hệ Khám phá tài liệu khoa học:} Thu thập, chuẩn hóa và phân loại tức thì các ấn phẩm học thuật từ nhiều kho lưu trữ toàn cầu.
+    \item \textbf{Phân hệ Khám phá tài liệu khoa học:} Thu thập, chuẩn hóa và phân loại tức thì các tài liệu học thuật từ nhiều kho lưu trữ toàn cầu.
     \item \textbf{Phân hệ Đọc sâu và Tô sáng tọa độ Bounding Box:} Khung hiển thị song song kết hợp trình đọc PDF hai cột với trợ lý suy luận nhân quả, kiểm chứng nguồn trích dẫn trực tiếp trên trang tài liệu.
-    \item \textbf{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả:} Khử trùng lặp lưu trữ theo nội dung (CAS), định danh học giả quốc tế ORCID và két sắt mã hóa khóa cá nhân (BYOK).
+    \item \textbf{Phân hệ Quản lý tài liệu cá nhân và Hồ sơ học giả:} Deduplication lưu trữ theo nội dung (CAS), định danh học giả quốc tế ORCID và kho khóa API mã hóa cá nhân (BYOK) (BYOK).
     \item \textbf{Phân hệ Soạn thảo và Tự phục hồi bản thảo \LaTeX:} Môi trường biên tập trực tuyến với khả năng tự động phân tích nhật ký lỗi biên dịch và tạo bản vá sửa lỗi tự động trong môi trường máy ảo cách ly.
 \end{enumerate}
 
@@ -65,10 +65,10 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \end{center}
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
-            \node[card] (p1) {$\bullet$ \textbf{Nạp tệp kéo--thả:} Hỗ trợ đa tệp PDF tiện lợi};
-            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Khử trùng lặp CAS:} Định danh nội dung tệp (tiết kiệm 98\% dung lượng)};
+            \node[card] (p1) {$\bullet$ \textbf{Tải tệp kéo--thả:} Hỗ trợ đa tệp PDF tiện lợi};
+            \node[card, below=of p1] (p2) {$\bullet$ \textbf{Deduplication CAS:} Định danh nội dung tệp (tiết kiệm 98\% dung lượng)};
             \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết quốc tế \textbf{ORCID} iD 16 chữ số};
-            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Két sắt BYOK:} Mã hóa an toàn cá nhân (bảo vệ quyền riêng tư)};
+            \node[card, below=of p3] (p4) {$\bullet$ \textbf{Quản lý khóa BYOK:} Mã hóa an toàn cá nhân (bảo vệ quyền riêng tư)};
         \end{tikzpicture}
     };
 
@@ -81,7 +81,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
             \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu \LaTeX};
-            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} Máy ảo vi mô \textbf{E2B} biên dịch cô lập};
+            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} MicroVM \textbf{E2B} biên dịch cô lập};
             \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Đọc log lỗi $\to$ Lập luận $\to$ Vá lỗi vi phẫu};
             \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ $> 90\%$};
         \end{tikzpicture}
@@ -116,7 +116,7 @@ Nhằm trực quan hóa quá trình vận hành thực tế của hệ thống, 
 \subsubsection{Giao diện đăng ký tài khoản của hệ thống}
 \label{subsubsec:ui_register}
 
-Giao diện đăng ký tài khoản được thiết kế trang nhã theo phong cách tối giản cấp sản phẩm thương mại quốc tế (Hình~\ref{fig:ui_register}). Giao diện cung cấp biểu mẫu tạo lập tài khoản học giả mới, bao gồm các trường thông tin: địa chỉ thư điện tử (\textit{Email}), họ và tên nhà nghiên cứu, mật khẩu bảo mật (được kiểm tra độ mạnh tự động và mã hóa an toàn qua hàm băm Argon2id tại phía máy chủ), vai trò tài khoản, cùng cơ quan công tác học thuật. Sau khi hoàn tất đăng ký thành công, hệ thống tự động khởi tạo không gian làm việc mặc định và chuyển hướng người dùng sang giao diện đăng nhập.
+Giao diện đăng ký tài khoản được thiết kế trang nhã theo phong cách tối giản cấp sản phẩm thương mại quốc tế (Hình~\ref{fig:ui_register}). Giao diện cung cấp biểu mẫu tạo lập tài khoản học giả mới, bao gồm các trường thông tin: địa chỉ thư điện tử (\textit{Email}), họ và tên nhà nghiên cứu, mật khẩu bảo mật (được kiểm tra độ mạnh tự động và mã hóa an toàn qua hàm Hash Argon2id tại phía máy chủ), vai trò tài khoản, cùng cơ quan công tác học thuật. Sau khi hoàn tất đăng ký thành công, hệ thống tự động khởi tạo không gian làm việc mặc định và chuyển hướng người dùng sang giao diện đăng nhập.
 
 \begin{figure}[H]
 \centering
@@ -144,7 +144,7 @@ Giao diện đăng nhập hệ thống hỗ trợ học giả truy cập an toà
 
 Bảng điều khiển trung tâm (Dashboard) đóng vai trò là trạm điều phối công việc tổng quan của nhà nghiên cứu (Hình~\ref{fig:ui_dashboard}). Giao diện tổng hợp trực quan các thông số then chốt của toàn bộ hệ sinh thái học thuật cá nhân:
 \begin{itemize}
-    \item Thống kê tổng số lượng bài báo khoa học đã lưu trữ trong thư viện, phân loại theo trạng thái bóc tách và tài liệu đã được phản biện ngang hàng.
+    \item Thống kê tổng số lượng bài báo khoa học đã lưu trữ trong thư viện, phân loại theo trạng thái trích xuất và tài liệu đã được phản biện ngang hàng.
     \item Danh sách các phiên nghiên cứu chuyên sâu (\textit{Active Research Sessions}) gần nhất, cho phép học giả nối lại dòng suy luận và đọc tiếp tài liệu dở dang chỉ bằng một thao tác nhấp chuột.
     \item Lối tắt nhanh tới các phân hệ nghiệp vụ: Khám phá tài liệu, Tra cứu trích dẫn, Mạng đồ thị tri thức và Soạn thảo bản thảo \LaTeX.
     \item Thẻ hiển thị trạng thái kết nối hạ tầng bảo mật, xác thực khóa BYOK và trạng thái liên kết định danh học giả quốc tế ORCID iD.
@@ -158,7 +158,7 @@ Bảng điều khiển trung tâm (Dashboard) đóng vai trò là trạm điều
 \end{figure}
 
 \clearpage
-\subsubsection{Giao diện tìm kiếm và khám phá ấn phẩm học thuật}
+\subsubsection{Giao diện tìm kiếm và khám phá tài liệu học thuật}
 \label{subsec:ui_discovery}
 
 Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, hỗ trợ học giả tìm kiếm hợp nhất qua các kho tri thức lớn (arXiv, Semantic Scholar, Exa AI) (Hình~\ref{fig:ui_search_paper}):
@@ -166,26 +166,26 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
     \item \textbf{Hiệu ứng chờ tải mượt mà với khung xương giả lập (\texttt{animate-pulse}):} Để triệt tiêu hiện tượng giật chuyển layout (Cumulative Layout Shift) trong khi chờ dữ liệu phân tán từ các API bên ngoài, giao diện hiển thị 3 thẻ khung xương (\textit{Skeleton Cards}) áp dụng lớp hiệu ứng \texttt{animate-pulse} của Tailwind CSS, giúp giảm thiểu đáng kể nhận thức về độ trễ mạng của học giả.
     \item \textbf{Bộ lọc phân loại dạng viên nhộng (\textit{Pill Toggle}) và Ưu tiên bình duyệt:} Cho phép chuyển đổi linh hoạt giữa chế độ \textit{Tất cả} và \textbf{Đã bình duyệt} (\textit{Peer-Reviewed}). Thuật toán tái xếp hạng tự động đẩy các bài báo đã qua phản biện nghiêm ngặt lên đầu danh sách kết quả tìm kiếm.
     \item \textbf{Thẻ bài báo chống tràn bố cục (\textit{Anti-Overflow Scholarly Card}):} Tự động làm sạch mã \LaTeX\ thô trong tiêu đề bài báo, rút gọn danh sách tác giả theo quy tắc học thuật (tối đa 2 tác giả kèm hậu tố ``và cộng sự''), và áp dụng \texttt{line-clamp-2} cho phần tóm tắt để người dùng quét nhanh tài liệu.
-    \item \textbf{Nạp trực tiếp vào Reader:} Đối với các bài báo có tệp toàn văn mở (\textit{Open Access PDF}), giao diện hiển thị chấm xanh lục và nút nạp tức thì tài liệu vào Phân hệ Đọc sâu.
+    \item \textbf{Nạp trực tiếp vào Reader:} Đối với các bài báo có tệp toàn văn mở (\textit{Open Access PDF}), giao diện hiển thị chấm xanh lục và nút tải tức thì tài liệu vào Phân hệ Đọc sâu.
 \end{itemize}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.90\textwidth]{figures/frontend/search_paper.png}
-\caption{Giao diện tìm kiếm và khám phá ấn phẩm học thuật}
+\caption{Giao diện tìm kiếm và khám phá tài liệu học thuật}
 \label{fig:ui_search_paper}
 \end{figure}
 
 \clearpage
-\subsubsection{Giao diện tra cứu và đối soát danh mục trích dẫn}
+\subsubsection{Giao diện tra cứu và đối chiếu danh mục trích dẫn}
 \label{subsubsec:ui_reference_search}
 
-Giao diện tra cứu và đối soát danh mục trích dẫn hỗ trợ học giả phân tích sâu cây tham khảo của bài báo khoa học (Hình~\ref{fig:ui_reference_search}). Hệ thống tự động bóc tách toàn bộ danh mục tài liệu tham khảo trong phần cuối của bản PDF, chuẩn hóa tiêu đề và đối soát chéo với kho dữ liệu số hóa qua mã DOI hoặc arXiv ID. Giao diện trực quan hóa trạng thái đối soát: các tài liệu đã có sẵn trong kho nội bộ, các bài báo có bản toàn văn mở trên mạng, và phát hiện các ấn phẩm có nguy cơ học thuật (như bài báo bị rút lui - retracted papers), giúp nhà khoa học bảo đảm tính liêm chính và độ tin cậy tuyệt đối của công trình trích dẫn.
+Giao diện tra cứu và đối chiếu danh mục trích dẫn hỗ trợ học giả phân tích sâu cây tham khảo của bài báo khoa học (Hình~\ref{fig:ui_reference_search}). Hệ thống tự động trích xuất toàn bộ danh mục tài liệu tham khảo trong phần cuối của bản PDF, chuẩn hóa tiêu đề và đối chiếu chéo với kho dữ liệu số hóa qua mã DOI hoặc arXiv ID. Giao diện trực quan hóa trạng thái đối chiếu: các tài liệu đã có sẵn trong kho nội bộ, các bài báo có bản toàn văn mở trên mạng, và phát hiện các tài liệu có nguy cơ học thuật (như bài báo bị rút lui - retracted papers), giúp nhà khoa học bảo đảm tính liêm chính và độ tin cậy tuyệt đối của công trình trích dẫn.
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.90\textwidth]{figures/frontend/reference_search.png}
-\caption{Giao diện tra cứu và đối soát danh mục trích dẫn}
+\caption{Giao diện tra cứu và đối chiếu danh mục trích dẫn}
 \label{fig:ui_reference_search}
 \end{figure}
 
@@ -193,11 +193,11 @@ Giao diện tra cứu và đối soát danh mục trích dẫn hỗ trợ học 
 \subsubsection{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{subsubsec:ui_my_library}
 
-Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học giả tổ chức, phân loại và lưu trữ hàng nghìn ấn phẩm khoa học một cách khoa học (Hình~\ref{fig:ui_my_library}):
+Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học giả tổ chức, phân loại và lưu trữ hàng nghìn tài liệu khoa học một cách khoa học (Hình~\ref{fig:ui_my_library}):
 \begin{itemize}
     \item \textbf{Cấu trúc thư mục phân cấp theo đề tài:} Học giả có thể tạo các thư mục chuyên đề với màu sắc nhận diện trực quan, kéo--thả bài báo giữa các thư mục và quản lý trạng thái phân loại linh hoạt.
-    \item \textbf{Khử trùng lặp lưu trữ theo nội dung (CAS):} Khi người dùng nạp tài liệu PDF qua hộp thoại kéo--thả, hệ thống tính toán mã băm SHA-256 của nội dung tệp. Nếu tệp đã tồn tại trong kho lưu trữ, hệ thống chỉ tạo bản ghi liên kết logic mà không sao chép thêm dữ liệu nhị phân trên đĩa cứng, giúp tiết kiệm tới 98\% dung lượng lưu trữ CAS và hoàn tất việc tải lên tức thì.
-    \item \textbf{Quản lý trạng thái xử lý phân đoạn:} Bảng danh sách bài báo hiển thị rõ số trang, số lượng phân đoạn đã bóc tách (\textit{Chunks}), thời điểm nạp tệp và tính năng gắn sao đánh dấu các công trình nghiên cứu trọng tâm.
+    \item \textbf{Deduplication lưu trữ theo nội dung (CAS):} Khi người dùng tải tài liệu PDF qua hộp thoại kéo--thả, hệ thống tính toán mã Hash SHA-256 của nội dung tệp. Nếu tệp đã tồn tại trong kho lưu trữ, hệ thống chỉ tạo bản ghi liên kết logic mà không sao chép thêm dữ liệu nhị phân trên đĩa cứng, giúp tiết kiệm tới 98\% dung lượng lưu trữ CAS và hoàn tất việc tải lên tức thì.
+    \item \textbf{Quản lý trạng thái xử lý phân đoạn:} Bảng danh sách bài báo hiển thị rõ số trang, số lượng phân đoạn đã trích xuất (\textit{Chunks}), thời điểm tải tệp và tính năng gắn sao đánh dấu các công trình nghiên cứu trọng tâm.
 \end{itemize}
 
 \begin{figure}[H]
@@ -239,19 +239,19 @@ Giao diện mạng đồ thị tri thức học thuật trực quan hóa không 
 \end{figure}
 
 \clearpage
-\subsubsection{Giao diện két sắt khóa cá nhân (BYOK) và hồ sơ học giả}
+\subsubsection{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
 \label{subsec:ui_profile}
 
-Giao diện Quản lý hồ sơ học giả và Két sắt khóa cá nhân bảo đảm quyền tự chủ dữ liệu và tính an toàn thông tin tuyệt đối cho nhà nghiên cứu (Hình~\ref{fig:ui_byok}):
+Giao diện Quản lý hồ sơ học giả và Kho khóa API cá nhân bảo đảm quyền tự chủ dữ liệu và tính an toàn thông tin tuyệt đối cho nhà nghiên cứu (Hình~\ref{fig:ui_byok}):
 \begin{itemize}
     \item \textbf{Định danh học giả quốc tế ORCID iD:} Hỗ trợ liên kết tài khoản với mã định danh quốc tế chuẩn ISO 27729 (ORCID iD gồm 16 chữ số). Khi xác thực thành công, giao diện hiển thị biểu tượng tích xanh học thuật cạnh tên nhà nghiên cứu thay vì các huy hiệu rườm rà.
-    \item \textbf{Két sắt khóa bảo mật cá nhân (BYOK):} Cho phép học giả cấu hình khóa API OpenAI riêng theo cơ chế ``Mang khóa bí mật của chính bạn''. Khóa được mã hóa bằng thuật toán đối xứng AES-256-GCM với cơ chế \textit{Zero-Retention trên RAM}, chỉ tồn tại tạm thời trong bộ nhớ đệm phục vụ yêu cầu suy luận tức thời, tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng hay xuất hiện trong nhật ký hệ thống.
+    \item \textbf{Kho khóa API bảo mật cá nhân (BYOK):} Cho phép học giả cấu hình khóa API OpenAI riêng theo cơ chế ``Mang khóa bí mật của chính bạn''. Khóa được mã hóa bằng thuật toán đối xứng AES-256-GCM với cơ chế \textit{Zero-Retention trên RAM}, chỉ tồn tại tạm thời trong bộ nhớ đệm phục vụ yêu cầu suy luận tức thời, tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng hay xuất hiện trong nhật ký hệ thống.
 \end{itemize}
 
 \begin{figure}[H]
 \centering
 \includegraphics[width=0.90\textwidth]{figures/frontend/byok.png}
-\caption{Giao diện két sắt khóa cá nhân (BYOK) và hồ sơ học giả}
+\caption{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
 \label{fig:ui_byok}
 \end{figure}
 
@@ -262,8 +262,8 @@ Giao diện Quản lý hồ sơ học giả và Két sắt khóa cá nhân bảo
 Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu khoa học của VeriScholar (Hình~\ref{fig:ui_writing_paper}):
 \begin{itemize}
     \item \textbf{Môi trường soạn thảo chuyên dụng với Monaco Editor:} Giao diện tích hợp trình biên tập mã nguồn Monaco Editor, cung cấp đầy đủ tiện ích tô màu cú pháp \LaTeX, gợi ý lệnh tự động, quản lý cây thư mục dự án đa tệp (\texttt{main.tex}, \texttt{references.bib}, thư mục ảnh) và khung xem trước tài liệu PDF thời gian thực.
-    \item \textbf{Biên dịch cô lập trong môi trường máy ảo vi mô E2B MicroVM:} Toàn bộ tiến trình biên dịch TeX Live được chuyển giao thực thi cách ly hoàn toàn bên trong máy ảo vi mô E2B Sandbox MicroVM, khởi tạo chỉ trong 150 mili-giây, ngăn chặn hoàn toàn nguy cơ tấn công an ninh mạng qua mã macro \LaTeX.
-    \item \textbf{Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop):} Khi quá trình biên dịch phát sinh lỗi cú pháp, tác nhân AI tự động kích hoạt chu trình ReAct: đọc nhật ký lỗi $\to$ lập luận suy diễn nguyên nhân $\to$ tạo bản vá vi phẫu (\textit{Surgical Diff}) sửa lỗi mã nguồn, đạt tỷ lệ tự sửa lỗi biên dịch thành công vượt trên 90\%.
+    \item \textbf{Biên dịch cô lập trong môi trường E2B MicroVM:} Toàn bộ tiến trình biên dịch TeX Live được chuyển giao thực thi cách ly hoàn toàn bên trong E2B Sandbox MicroVM, khởi tạo chỉ trong 150 mili-giây, ngăn chặn hoàn toàn nguy cơ tấn công an ninh mạng qua mã macro \LaTeX.
+    \item \textbf{Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop):} Khi quá trình biên dịch phát sinh lỗi cú pháp, AI Agent tự động kích hoạt chu trình ReAct: đọc nhật ký lỗi $\to$ lập luận suy diễn nguyên nhân $\to$ tạo bản vá vi phẫu (\textit{Surgical Diff}) sửa lỗi mã nguồn, đạt tỷ lệ tự sửa lỗi biên dịch thành công vượt trên 90\%.
 \end{itemize}
 
 \begin{figure}[H]
