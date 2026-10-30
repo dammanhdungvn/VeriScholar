@@ -422,7 +422,7 @@ Từ 12 bảng cơ sở dữ liệu và các ràng buộc toàn vẹn khóa chí
     };
 
     \node[table, anchor=center] (blobs) at (-2.6, -4.5) {
-        {\centering\textbf{\scriptsize STORAGE\_BLOBS}\par}\vspace{2pt}
+        {\centering\textbf{\tiny DOCUMENT\_STORAGE\_BLOBS}\par}\vspace{2pt}
         \rule{\linewidth}{0.4pt}\vspace{2pt}
         \tiny
         \textbf{PK} \texttt{id}: UUID\\
@@ -536,7 +536,7 @@ Từ 12 bảng cơ sở dữ liệu và các ràng buộc toàn vẹn khóa chí
     \draw[rel] ([xshift=22pt]docs.north) -- (0.0, 1.8) -- (0.0, 4.0) -- node[above=2pt, card_label] {1:N} (references.west);
 
     % 8. Folders self-reference (độ cong vừa vặn, không lồi trần)
-    \draw[rel] (folders.north) to[out=105, in=75, looseness=1.8] node[above=1pt, card_label] {1:N} ([xshift=-14pt]folders.north);
+    \draw[rel] (folders.north) to[out=105, in=75, looseness=1.1] node[above=1pt, card_label] {1:N} ([xshift=-14pt]folders.north);
 
     % 9. Sessions 1:N Turns (dọc, nhãn đặt bên phải)
     \draw[rel] (sessions.south) -- node[right=3pt, card_label] {1:N} (turns.north);

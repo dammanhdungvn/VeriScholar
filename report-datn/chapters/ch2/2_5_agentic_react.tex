@@ -422,20 +422,20 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85}
 ]
     % 1. Task (Đỉnh trên cùng trục giữa)
-    \node[box_task] (task) at (0, 5.2) {
+    \node[box_task] (task) at (0, 8.2) {
         Task\\[2pt]
         \scriptsize (Nhiệm vụ học thuật)
     };
 
     % 2. GENERATE: Create Initial / Revised Output
-    \node[box_generate] (generate) at (0, 3.3) {
+    \node[box_generate] (generate) at (0, 5.4) {
         GENERATE\\[2pt]
         \scriptsize Initial Draft / Refinement\\[1pt]
         \tiny (Tạo sinh / Cải tiến bản thảo)
     };
 
     % 3. CRITIQUE & EVALUATE
-    \node[box_critique] (critique) at (0, 1.3) {
+    \node[box_critique] (critique) at (0, 2.6) {
         CRITIQUE \& EVALUATE\\[2pt]
         \scriptsize Assess Academic Rigor\\[1pt]
         \tiny (Thẩm định \& Tự phê bình)
@@ -462,7 +462,7 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
     };
 
     % 7. REFLEXION MEMORY (Bộ nhớ phản tư - Phía trên Reflect, cân đối đối xứng)
-    \node[box_memory] (memory) at (-5.4, 1.3) {
+    \node[box_memory] (memory) at (-5.4, 5.4) {
         REFLEXION MEMORY\\[2pt]
         \scriptsize Episodic Error Buffer\\[1pt]
         \tiny (Bộ nhớ phản tư tích lũy)
@@ -480,10 +480,10 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
     \draw[arrowstyle] (cond.west) -- node[above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (reflect.east);
 
     % Hồi tiếp học tập: REFLECT nạp vào REFLEXION MEMORY
-    \draw[arrowstyle] (reflect.north) -- node[left=2pt, font=\tiny\bfseries, text=purple!90!black, align=right] {Store Error\\Lessons} (memory.south);
+    \draw[arrowstyle] (reflect.north) -- node[left=4pt, font=\tiny\bfseries, text=purple!90!black, align=right] {Store Error\\Lessons} (memory.south);
 
     % Hồi tiếp bộ nhớ: MEMORY nạp vào GENERATE cho lượt sinh kế tiếp
-    \draw[arrowstyle] (memory.north) |- node[pos=0.75, above=2pt, font=\tiny\bfseries, text=blue!85!black] {Augment with Memory Buffer} (generate.west);
+    \draw[arrowstyle] (memory.east) -- node[above=3pt, font=\tiny\bfseries, text=blue!85!black] {Augment} (generate.west);
 \end{tikzpicture}
 \caption{Cơ chế phản tư và tự sửa sai Reflexion (Reflection Pattern)}
 \label{fig:reflection_pattern_loop}
@@ -517,53 +517,53 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     dashline/.style={dashed, line width=0.9pt, draw=black!70}
 ]
     % Complex Task ở trên cùng (Cách Coordinator 2.0cm, mũi tên dài)
-    \node[box_task] (task) at (0, 4.4) {
+    \node[box_task] (task) at (0, 6.4) {
         Complex Task\\[2pt]
         \scriptsize (Nhiệm vụ phức tạp)
     };
 
     % COORDINATOR ở giữa
-    \node[coord_oval] (coord) at (0, 2.0) {
+    \node[coord_oval] (coord) at (0, 3.0) {
         COORDINATOR\\[2pt]
         Routes \& Synthesizes\\[2pt]
         \scriptsize (Tác nhân Điều phối \& Tổng hợp)
     };
 
     % 4 Tác nhân chuyên trách
-    \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-5.8, -0.6) {
+    \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-6.3, -1.4) {
         Data Agent\\[2pt]
         Queries \& Retrieves\\[2pt]
         \tiny (Truy xuất dữ liệu)
     };
-    \node[sub_box] (db_tool) at (-5.8, -2.3) {DB};
+    \node[sub_box] (db_tool) at (-6.3, -3.2) {DB};
     \draw[dashline] (data_ag.south) -- (db_tool.north);
 
-    \node[agent_box, draw=purple!70!black, fill=purple!15] (ana_ag) at (-2.0, -0.6) {
+    \node[agent_box, draw=purple!70!black, fill=purple!15] (ana_ag) at (-2.1, -1.4) {
         Analysis Agent\\[2pt]
         Processes \& Computes\\[2pt]
         \tiny (Xử lý \& Tính toán)
     };
-    \node[sub_box] (api_tool) at (-2.0, -2.3) {API};
+    \node[sub_box] (api_tool) at (-2.1, -3.2) {API};
     \draw[dashline] (ana_ag.south) -- (api_tool.north);
 
-    \node[agent_box, draw=red!70!black, fill=red!15] (write_ag) at (2.0, -0.6) {
+    \node[agent_box, draw=red!70!black, fill=red!15] (write_ag) at (2.1, -1.4) {
         Writing Agent\\[2pt]
         Formats \& Documents\\[2pt]
         \tiny (Soạn thảo học thuật)
     };
-    \node[sub_box] (code_tool) at (2.0, -2.3) {Code};
+    \node[sub_box] (code_tool) at (2.1, -3.2) {Code};
     \draw[dashline] (write_ag.south) -- (code_tool.north);
 
-    \node[agent_box, draw=cyan!80!black, fill=cyan!15] (rev_ag) at (5.8, -0.6) {
+    \node[agent_box, draw=cyan!80!black, fill=cyan!15] (rev_ag) at (6.3, -1.4) {
         Review Agent\\[2pt]
         Validates \& Critiques\\[2pt]
         \tiny (Thẩm định \& Đánh giá)
     };
-    \node[sub_box] (rule_tool) at (5.8, -2.3) {Rules};
+    \node[sub_box] (rule_tool) at (6.3, -3.2) {Rules};
     \draw[dashline] (rev_ag.south) -- (rule_tool.north);
 
     % Comprehensive Result ở đáy dưới (cách đều, thoáng đãng)
-    \node[box_comp] (result) at (0, -4.0) {
+    \node[box_comp] (result) at (0, -5.4) {
         Comprehensive Result\\[2pt]
         \scriptsize (Kết quả nghiên cứu toàn diện)
     };
@@ -578,7 +578,7 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     \draw[botharrow] (coord.east) -| (rev_ag.north);
 
     % Luồng tổng hợp kết quả: Coordinator thu nhận kết quả từ 4 Agent và xuất ra báo cáo
-    \draw[arrowstyle] (coord.south) -- node[fill=white, inner sep=2pt, font=\tiny\bfseries, text=blue!90!black] {Aggregate Sub-Results} (result.north);
+    \draw[arrowstyle] (coord.south) -- (result.north);
 \end{tikzpicture}
 \caption{Mẫu kiến trúc phối hợp đa tác nhân chuyên trách (Multi-Agent Collaboration Pattern)}
 \label{fig:multi_agent_pattern}

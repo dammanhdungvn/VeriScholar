@@ -53,8 +53,8 @@ Quy trình tra cứu đa nguồn, kiểm tra khử trùng lặp nội dung theo 
     \draw[msg] (3.3, -4.8) -- node[lbl, above] {7: Yêu cầu nạp \& Tải PDF} (6.7, -4.8);
 
     % Khung logic khử trùng lặp CAS (mở rộng lề thoáng)
-    \draw[draw=blue!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=blue!2] (6.1, -5.1) rectangle (14.6, -6.5);
-    \node[font=\tiny\bfseries, fill=blue!12, text=blue!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -5.1) {opt [Khử trùng lặp nội dung CAS SHA-256]};
+    \draw[draw=blue!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=blue!2] (6.1, -5.25) rectangle (14.6, -6.5);
+    \node[font=\tiny\bfseries, fill=blue!12, text=blue!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -5.25) {opt [Khử trùng lặp nội dung CAS SHA-256]};
 
     \draw[msg] (6.9, -5.6) -- node[lbl, above] {8: Tính băm SHA-256 \& Kiểm tra trùng} (13.9, -5.6);
     \draw[retmsg] (13.9, -6.2) -- node[lbl, above] {9: Xác nhận lưu trữ / Tái dùng tệp} (6.9, -6.2);
@@ -102,7 +102,7 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     \draw[activation] (3.1, -6.2) rectangle (3.3, -8.2);
     \draw[activation] (6.7, -1.5) rectangle (6.9, -5.0);
     \draw[activation] (10.3, -2.1) rectangle (10.5, -2.9);
-    \draw[activation] (13.9, -3.4) rectangle (14.1, -4.4);
+    \draw[activation] (13.9, -3.4) rectangle (14.1, -4.7);
 
     % Luồng thông điệp
     \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhập câu hỏi nghiên cứu} (3.1, -1.0);
@@ -112,13 +112,13 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     \draw[msg] (6.9, -3.5) -- node[lbl, above] {5: Soạn prompt ngữ cảnh} (13.9, -3.5);
 
     % Khung vòng lặp truyền luồng SSE (Mở rộng lề thoáng)
-    \draw[draw=teal!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=teal!2] (2.5, -3.9) rectangle (14.6, -5.3);
-    \node[font=\tiny\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (2.5, -3.9) {loop [Truyền phát từng Token qua SSE]};
+    \draw[draw=teal!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=teal!2] (2.5, -3.95) rectangle (14.6, -5.1);
+    \node[font=\tiny\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (2.5, -3.95) {loop [Truyền phát từng Token qua SSE]};
 
     \draw[retmsg] (13.9, -4.3) -- node[lbl, above] {6: Truyền phát token trả lời} (6.9, -4.3);
     \draw[retmsg] (6.7, -4.8) -- node[lbl, above] {7: Đẩy luồng SSE kèm thẻ $[1]$} (3.3, -4.8);
 
-    \draw[retmsg] (3.1, -5.5) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -5.5);
+    \draw[retmsg] (3.1, -5.7) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -5.7);
 
     % Hành động nhấp kiểm chứng trích dẫn
     \draw[msg] (0, -6.3) -- node[lbl, above] {9: Nhấp vào thẻ trích dẫn $[1]$} (3.1, -6.3);
@@ -159,18 +159,18 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo 
     \node[entity] (agent) at (14.0, 0) {Tác nhân\\Sửa lỗi ReAct};
 
     % Đường thời gian (Gióng phẳng tuyệt đối tại y = -8.2)
-    \draw[lifeline] (0, -0.52) -- (0, -8.2);
-    \draw[lifeline] (3.2, -0.52) -- (3.2, -8.2);
-    \draw[lifeline] (6.8, -0.52) -- (6.8, -8.2);
-    \draw[lifeline] (10.4, -0.52) -- (10.4, -8.2);
-    \draw[lifeline] (14.0, -0.52) -- (14.0, -8.2);
+    \draw[lifeline] (0, -0.52) -- (0, -8.6);
+    \draw[lifeline] (3.2, -0.52) -- (3.2, -8.6);
+    \draw[lifeline] (6.8, -0.52) -- (6.8, -8.6);
+    \draw[lifeline] (10.4, -0.52) -- (10.4, -8.6);
+    \draw[lifeline] (14.0, -0.52) -- (14.0, -8.6);
 
     % Hộp kích hoạt (Monaco Editor kích hoạt liên tục trong toàn bộ phiên biên dịch)
-    \draw[activation] (3.1, -0.9) rectangle (3.3, -7.7);
-    \draw[activation] (6.7, -1.5) rectangle (6.9, -6.9);
-    \draw[activation] (10.3, -2.1) rectangle (10.5, -3.1);
-    \draw[activation] (10.3, -5.1) rectangle (10.5, -6.0);
-    \draw[activation] (13.9, -3.6) rectangle (14.1, -4.5);
+    \draw[activation] (3.1, -0.9) rectangle (3.3, -8.1);
+    \draw[activation] (6.7, -1.5) rectangle (6.9, -7.3);
+    \draw[activation] (10.3, -2.1) rectangle (10.5, -3.5);
+    \draw[activation] (10.3, -5.4) rectangle (10.5, -6.3);
+    \draw[activation] (13.9, -3.9) rectangle (14.1, -4.8);
 
     % Luồng thông điệp
     \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhấp nút ``Biên dịch bản thảo''} (3.1, -1.0);
@@ -178,17 +178,17 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, máy ảo 
     \draw[msg] (6.9, -2.2) -- node[lbl, above] {3: Khởi tạo MicroVM \& Chạy \texttt{xelatex}} (10.3, -2.2);
 
     % Khung điều kiện xử lý lỗi ReAct
-    \draw[draw=orange!80!black, dashed, line width=0.6pt, rounded corners=2pt, fill=orange!2] (6.1, -2.7) rectangle (14.6, -6.3);
-    \node[font=\tiny\bfseries, fill=orange!15, text=orange!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -2.7) {alt [Biên dịch phát sinh lỗi cú pháp (ExitCode $\ne$ 0)]};
+    \draw[draw=orange!80!black, dashed, line width=0.6pt, rounded corners=2pt, fill=orange!2] (6.1, -2.65) rectangle (14.6, -6.7);
+    \node[font=\tiny\bfseries, fill=orange!15, text=orange!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (6.1, -2.65) {alt [Biên dịch phát sinh lỗi cú pháp (ExitCode $\ne$ 0)]};
 
-    \draw[retmsg] (10.3, -3.0) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (6.9, -3.0);
-    \draw[msg] (6.9, -3.7) -- node[lbl, above] {5: Chuyển log lỗi cho tác nhân} (13.9, -3.7);
-    \draw[msg] (13.9, -4.4) -- node[lbl, above] {6: Phân tích log lỗi \& Sinh bản vá Diff} (6.9, -4.4);
-    \draw[msg] (6.9, -5.2) -- node[lbl, above] {7: Áp bản vá \& Tái biên dịch trong MicroVM} (10.3, -5.2);
-    \draw[retmsg] (10.3, -5.9) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (6.9, -5.9);
+    \draw[retmsg] (10.3, -3.35) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (6.9, -3.35);
+    \draw[msg] (6.9, -4.0) -- node[lbl, above] {5: Chuyển log lỗi cho tác nhân} (13.9, -4.0);
+    \draw[msg] (13.9, -4.7) -- node[lbl, above] {6: Phân tích log lỗi \& Sinh bản vá Diff} (6.9, -4.7);
+    \draw[msg] (6.9, -5.5) -- node[lbl, above] {7: Áp bản vá \& Tái biên dịch trong MicroVM} (10.3, -5.5);
+    \draw[retmsg] (10.3, -6.2) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (6.9, -6.2);
 
-    \draw[retmsg] (6.7, -6.8) -- node[lbl, above] {9: Cập nhật mã nguồn \& Trả tệp PDF} (3.3, -6.8);
-    \draw[retmsg] (3.1, -7.6) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -7.6);
+    \draw[retmsg] (6.7, -7.2) -- node[lbl, above] {9: Cập nhật mã nguồn \& Trả tệp PDF} (3.3, -7.2);
+    \draw[retmsg] (3.1, -7.9) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -7.9);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự ca sử dụng Biên soạn bản thảo và tự phục hồi lỗi \LaTeX}
 \label{fig:seq_bien_soan}
