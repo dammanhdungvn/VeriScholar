@@ -15,7 +15,7 @@
 % TRANG 1 / 5 (Trang vi): Tiêu ngữ, Bảng SV, Bảng GVHD, 1. Tên đề tài, 2. Lý do (1-2)
 % ------------------------------------------------------------------------------
 \noindent
-\begin{tabular}{@{}p{7.2cm} >{\centering\arraybackslash}p{8.8cm}@{}}
+\begin{tabular}{@{}p{6.8cm} >{\centering\arraybackslash}p{8.2cm}@{}}
   \centering \textbf{KHOA CÔNG NGHỆ THÔNG TIN} \newline \textbf{BỘ MÔN HỆ THỐNG THÔNG TIN} & 
   \textbf{CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM} \newline
   \textbf{Độc lập -- Tự do -- Hạnh phúc} \newline
@@ -35,11 +35,12 @@
 \begin{table}[h!]
 \centering
 \small
+\setlength{\tabcolsep}{3.0pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{3.2cm}|c|c|>{\raggedright\arraybackslash}p{4.2cm}|}
+\begin{tabular}{|>{\centering\arraybackslash}p{0.5cm}|>{\centering\arraybackslash}p{1.9cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\centering\arraybackslash}p{2.2cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
 \hline
 \textbf{TT} & \textbf{Mã sinh viên} & \textbf{Họ và tên} & \textbf{Lớp} & \textbf{Điện thoại} & \textbf{E-mail} \\ \hline
-1 & 2221050359 & Đàm Mạnh Dũng & DCCTCT67\_09B & 0398686955 & dammanhdungvn@gmail.com \\ \hline
+1 & 2221050359 & Đàm Mạnh Dũng & DCCTCT67\_09B & 0978461865 & dammanhdungvn@gmail.com \\ \hline
 \end{tabular}
 \end{table}
 
@@ -51,8 +52,9 @@
 \begin{table}[h!]
 \centering
 \small
+\setlength{\tabcolsep}{3.0pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{3.2cm}|c|c|>{\raggedright\arraybackslash}p{4.2cm}|}
+\begin{tabular}{|>{\centering\arraybackslash}p{0.5cm}|>{\centering\arraybackslash}p{1.9cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\centering\arraybackslash}p{2.2cm}|>{\centering\arraybackslash}p{2.0cm}|>{\raggedright\arraybackslash}p{4.4cm}|}
 \hline
 \textbf{TT} & \textbf{Mã cán bộ} & \textbf{Họ và tên} & \textbf{Đơn vị} & \textbf{Điện thoại} & \textbf{E-mail} \\ \hline
 1 & 0802-09 & TS. Vũ Lan Phương & Khoa CNTT & 0984223379 & vulanphuong@humg.edu.vn \\ \hline
@@ -98,10 +100,11 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 
 \noindent \textbf{-- Về sản phẩm:}
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
-    \item Xây dựng hệ thống Backend (FastAPI, pgvector) phân tách Lục giác; dịch vụ Hybrid Search (HNSW + BM25 dung hợp RRF), Semantic Reranking.
-    \item Hiện thực hóa Đồ thị tri thức (GraphRAG); trình soạn thảo LaTeX trực tuyến tích hợp E2B MicroVM và tác nhân AI ReAct tự sửa lỗi biên dịch.
-    \item Xây dựng giao diện web (React 19) với trình xem PDF Canvas đa luồng và tô sáng khung tọa độ Bounding Box thời gian thực.
-    \item Đảm bảo cơ chế bảo mật khóa BYOK (AES-256-GCM) và nguyên tắc Zero Data Retention bảo vệ quyền sở hữu trí tuệ của học giả.
+    \item Phân hệ Khám phá tri thức \& Thu thập đa nguồn: Tích hợp tìm kiếm học thuật hai tầng (Exa AI, Semantic Scholar, CrossRef, arXiv) với bộ lọc ngữ nghĩa nghiêm ngặt.
+    \item Phân hệ Đọc sâu \& Bảo chứng trích dẫn tọa độ: Trình đọc đa tài liệu PDF Canvas kết hợp tìm kiếm lai (pgvector HNSW + BM25, dung hợp RRF) và trực quan hóa khung viền tọa độ (Bounding Box).
+    \item Phân hệ Đồ thị tri thức học thuật (GraphRAG): Mô hình hóa 4 loại thực thể khoa học (Khái niệm, Phương pháp, Tiêu chuẩn đối chuẩn, Tác giả) và phát hiện cụm tri thức cộng đồng.
+    \item Phân hệ Biên soạn trực tuyến \& Tác nhân AI sửa lỗi: Môi trường soạn thảo bài báo LaTeX chuẩn IEEE/ACM tích hợp sandbox máy ảo cô lập E2B và tác nhân ReAct tự động sửa lỗi biên dịch.
+    \item Phân hệ Bảo mật chủ quyền \& Liêm chính nghiên cứu: Cơ chế mã hóa khóa riêng BYOK phía máy khách và nguyên tắc không lưu trữ dữ liệu (Zero Data Retention) bảo vệ tuyệt đối ý tưởng học thuật.
 \end{itemize}
 
 \newpage
@@ -143,11 +146,12 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 \begin{table}[h!]
 \centering
 \small
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.12}
-\begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{9.2cm}|}
+\begin{tabular}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{4.2cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
 \hline
 \textbf{Tuần} & \textbf{Thời gian} & \textbf{Nội dung công việc} \\ \hline
-1 & 05/01/2026 -- 11/01/2026 & Khảo sát bài toán nghiên cứu tại VinUni, thu thập tài liệu tham khảo liên quan, lập đề cương chi tiết và kế hoạch thực hiện đồ án. \\ \hline
+1 & 24/08/2026 -- 30/08/2026 & Khảo sát bài toán nghiên cứu tại VinUni, thu thập tài liệu tham khảo liên quan, lập đề cương chi tiết và kế hoạch thực hiện đồ án. \\ \hline
 \end{tabular}
 \end{table}
 
@@ -161,18 +165,19 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 \begin{table}[h!]
 \centering
 \small
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.08}
-\begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{9.2cm}|}
+\begin{tabular}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{4.2cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
 \hline
 \textbf{Tuần} & \textbf{Thời gian} & \textbf{Nội dung công việc} \\ \hline
-2 & 12/01/2026 -- 18/01/2026 & Phân tích yêu cầu nghiệp vụ; xác định các tác nhân (Actor), biểu đồ Use Case tổng thể và đặc tả chi tiết các Use Case chính. \\ \hline
-3 & 19/01/2026 -- 25/01/2026 & Thiết kế kiến trúc Lục giác (Hexagonal Architecture), thiết kế CSDL quan hệ PostgreSQL và cơ sở dữ liệu véc-tơ pgvector. \\ \hline
-4 & 26/01/2026 -- 01/02/2026 & Thiết kế giao diện người dùng khoa học tối giản (UI/UX); thiết kế biểu đồ tuần tự cho các luồng nghiệp vụ RAG và kiểm chứng Bounding Box. \\ \hline
-5 & 02/02/2026 -- 08/02/2026 & Xây dựng Backend cốt lõi: Cấu hình môi trường, triển khai tầng Core nghiệp vụ, xác thực JWT, lưu trữ CAS và mã hóa BYOK. \\ \hline
-6 & 09/02/2026 -- 15/02/2026 & Hiện thực hóa phân hệ Hybrid RAG: Tìm kiếm kết hợp HNSW + BM25, dung hợp RRF, tái xếp hạng Cross-Encoder và trích xuất Bounding Box PDF. \\ \hline
-7 & 16/02/2026 -- 22/02/2026 & Hiện thực hóa phân hệ Đồ thị tri thức (GraphRAG) và Tác nhân AI ReAct tự động phục hồi lỗi biên dịch LaTeX trong sandbox E2B. \\ \hline
-8 & 23/02/2026 -- 01/03/2026 & Xây dựng giao diện Frontend (React 19): Monaco Editor, trình hiển thị PDF Canvas thời gian thực, bảng dẫn chứng Bbox và luồng SSE. \\ \hline
-9 & 02/03/2026 -- 08/03/2026 & Tích hợp toàn diện hệ thống Frontend -- Backend; thực hiện kiểm thử tự động TDD (Unit Test, Boundary Test, E2E); tối ưu hóa hiệu năng và bảo mật. \\ \hline
+2 & 31/08/2026 -- 06/09/2026 & Phân tích yêu cầu nghiệp vụ; xác định các tác nhân (Actor), biểu đồ Use Case tổng thể và đặc tả chi tiết các Use Case chính. \\ \hline
+3 & 07/09/2026 -- 13/09/2026 & Thiết kế kiến trúc Lục giác (Hexagonal Architecture), thiết kế CSDL quan hệ PostgreSQL và cơ sở dữ liệu véc-tơ pgvector. \\ \hline
+4 & 14/09/2026 -- 20/09/2026 & Thiết kế giao diện người dùng khoa học tối giản (UI/UX); thiết kế biểu đồ tuần tự cho các luồng nghiệp vụ RAG và kiểm chứng Bounding Box. \\ \hline
+5 & 21/09/2026 -- 27/09/2026 & Xây dựng Backend cốt lõi: Cấu hình môi trường, triển khai tầng Core nghiệp vụ, xác thực JWT, lưu trữ CAS và mã hóa BYOK. \\ \hline
+6 & 28/09/2026 -- 04/10/2026 & Hiện thực hóa phân hệ Hybrid RAG: Tìm kiếm kết hợp HNSW + BM25, dung hợp RRF, tái xếp hạng Cross-Encoder và trích xuất Bounding Box PDF. \\ \hline
+7 & 05/10/2026 -- 11/10/2026 & Hiện thực hóa phân hệ Đồ thị tri thức (GraphRAG) và Tác nhân AI ReAct tự động phục hồi lỗi biên dịch LaTeX trong sandbox E2B. \\ \hline
+8 & 12/10/2026 -- 18/10/2026 & Xây dựng giao diện Frontend (React 19): Monaco Editor, trình hiển thị PDF Canvas thời gian thực, bảng dẫn chứng Bbox và luồng SSE. \\ \hline
+9 & 19/10/2026 -- 25/10/2026 & Tích hợp toàn diện hệ thống Frontend -- Backend; thực hiện kiểm thử tự động TDD (Unit Test, Boundary Test, E2E); tối ưu hóa hiệu năng và bảo mật. \\ \hline
 \end{tabular}
 \end{table}
 
@@ -187,11 +192,12 @@ Xuất phát từ nhu cầu thực tiễn của đội ngũ giảng viên, học
 \begin{table}[h!]
 \centering
 \small
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.15}
-\begin{tabular}{|c|c|>{\raggedright\arraybackslash}p{9.2cm}|}
+\begin{tabular}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{4.2cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
 \hline
 \textbf{Tuần} & \textbf{Thời gian} & \textbf{Nội dung công việc} \\ \hline
-10 & 09/03/2026 -- 15/03/2026 & Đánh giá thực nghiệm trên các ấn phẩm khoa học thực tế; hoàn thiện báo cáo tốt nghiệp, slide thuyết trình và đóng gói sản phẩm bảo vệ. \\ \hline
+10 & 26/10/2026 -- 02/11/2026 & Đánh giá thực nghiệm trên các ấn phẩm khoa học thực tế; hoàn thiện báo cáo tốt nghiệp, slide thuyết trình, đóng gói sản phẩm và nộp báo cáo về Bộ môn Hệ thống Thông tin ngày 02/11/2026. \\ \hline
 \end{tabular}
 \end{table}
 
