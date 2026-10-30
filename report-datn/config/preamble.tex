@@ -153,7 +153,7 @@
 \renewcommand{\cftchappresnum}{CHƯƠNG }
 \renewcommand{\cftchapaftersnum}{:\ }
 \newlength{\cftchaplen}
-\settowidth{\cftchaplen}{CHƯƠNG 1:\ }
+\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1:\ }
 \setlength{\cftchapnumwidth}{\cftchaplen}
 \cftsetindents{chapter}{0pt}{\cftchaplen}
 
@@ -179,8 +179,8 @@
 \setlength{\cftbeforesubsecskip}{0.8pt}
 \setlength{\cftbeforesubsubsecskip}{0.8pt}
 
-% Phông chữ trong mục lục: chuẩn mực, thanh thoát (Times regular, không đậm theo Ảnh 2)
-\renewcommand{\cftchapfont}{\normalfont}
+% Phông chữ trong mục lục: Tiêu đề chương in đậm chuẩn theo Ảnh 1, số trang nét thường
+\renewcommand{\cftchapfont}{\bfseries}
 \renewcommand{\cftchappagefont}{\normalfont}
 \renewcommand{\cftsecfont}{\normalfont}
 \renewcommand{\cftsecpagefont}{\normalfont}
