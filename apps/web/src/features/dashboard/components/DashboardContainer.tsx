@@ -362,7 +362,7 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
   const showStandbyHero =
     isProcessing ||
     documentStatus === "error" ||
-    (!routeSessionId && isStandby && messages.length === 0 && !activeDocumentId);
+    (!routeSessionId && isStandby);
 
 
 
