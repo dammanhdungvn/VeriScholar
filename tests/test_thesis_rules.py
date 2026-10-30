@@ -138,3 +138,42 @@ def test_ch3_uc01_two_tier_discovery_spec():
     assert "bình duyệt" in content or "peer-reviewed" in content, (
         "UC-01 must specify peer-reviewed filtering"
     )
+
+
+def test_graduation_forms_compliance():
+    """Kiểm tra tính chuẩn hóa và liêm chính học thuật của 2 biểu mẫu hành chính:
+    Phiếu giao đề tài (phieu_giao_de_tai.tex) và Đề cương ĐATN (de_cuong_datn.tex).
+    """
+    phieu_path = Path("report-datn/frontmatter/phieu_giao_de_tai.tex")
+    decuong_path = Path("report-datn/frontmatter/de_cuong_datn.tex")
+
+    assert phieu_path.exists(), "phieu_giao_de_tai.tex must exist"
+    assert decuong_path.exists(), "de_cuong_datn.tex must exist"
+
+    phieu_content = phieu_path.read_text(encoding="utf-8")
+    decuong_content = decuong_path.read_text(encoding="utf-8")
+
+    # 1. Số điện thoại chính xác của tác giả
+    assert "0978461865" in phieu_content, "phieu_giao_de_tai.tex must contain phone 0978461865"
+    assert "0978461865" in decuong_content, "de_cuong_datn.tex must contain phone 0978461865"
+    assert "0398686955" not in phieu_content, (
+        "phieu_giao_de_tai.tex must not contain old phone 0398686955"
+    )
+    assert "0398686955" not in decuong_content, (
+        "de_cuong_datn.tex must not contain old phone 0398686955"
+    )
+
+    # 2. Loại bỏ phân đoạn vụn vặt và rò rỉ mã nguồn nội bộ
+    assert "Về sản phẩm (tiếp theo)" not in phieu_content, (
+        "phieu_giao_de_tai.tex must not contain 'Về sản phẩm (tiếp theo)'"
+    )
+    assert "packages/core" not in phieu_content, (
+        "phieu_giao_de_tai.tex must not contain 'packages/core'"
+    )
+    assert "packages/core" not in decuong_content, (
+        "de_cuong_datn.tex must not contain 'packages/core'"
+    )
+
+    # 3. Kế hoạch thời gian 10 tuần chuẩn xác (24/08/2026 -> 02/11/2026)
+    assert "24/08/2026" in decuong_content, "de_cuong_datn.tex must start week 1 at 24/08/2026"
+    assert "02/11/2026" in decuong_content, "de_cuong_datn.tex must end week 10 at 02/11/2026"
