@@ -51,8 +51,12 @@ export function LibraryGraphSidebar({
   const handleOpenReader = (docId: string) => {
     const doc = nodes.find((n) => n.id === docId);
     if (doc && onSelectDocument) {
+      const resolvedDocId =
+        (doc.metadata?.paper_id as string) ||
+        (doc.metadata?.document_id as string) ||
+        doc.id;
       onSelectDocument({
-        id: doc.id,
+        id: resolvedDocId,
         filename: (doc.metadata?.filename as string) || `${doc.label}.pdf`,
         title: doc.label,
         status: "completed",

@@ -118,6 +118,7 @@ async def get_library_graph(
                 "folder_id", str(matching_doc.folder_id) if matching_doc.folder_id else None
             )
             gn_meta.setdefault("paper_id", str(matching_doc.id))
+            gn_meta.setdefault("document_id", str(matching_doc.id))
             abstract_val = (
                 matching_doc.parsed_metadata.get("abstract")
                 if isinstance(matching_doc.parsed_metadata, dict)

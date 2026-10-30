@@ -625,9 +625,9 @@ function DocumentGrid({
                   </button>
                 </td>
                 <td className="py-3 px-4 font-medium text-ink dark:text-zinc-200">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted shrink-0" />
-                    <span className="truncate max-w-xs">{doc.title || doc.filename}</span>
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-4 h-4 text-muted shrink-0 mt-0.5" />
+                    <span className="break-words leading-relaxed">{doc.title || doc.filename}</span>
                   </div>
                 </td>
                 <td className="py-3 px-4 text-muted dark:text-zinc-400">

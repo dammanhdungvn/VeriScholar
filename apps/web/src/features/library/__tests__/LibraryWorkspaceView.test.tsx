@@ -265,4 +265,43 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
     fireEvent.click(docGraphBtn);
     expect(mockNavigate).toHaveBeenCalledWith("/graph?focus=doc-1");
   });
+
+  it("renders long paper titles with multiline break-words without truncate max-w-xs clamp", async () => {
+    const longTitle =
+      "A Super Long Scholarly Paper Title That Should Wrap Onto Multiple Lines Without Being Clamped By Truncate";
+    vi.spyOn(documentsApi, "listDocuments").mockResolvedValueOnce({
+      data: [
+        {
+          id: "doc-long-1",
+          filename: "long_title.pdf",
+          title: longTitle,
+          status: "completed",
+          created_at: "2026-10-25T10:00:00Z",
+          is_persistent: true,
+        },
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-long",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
+    });
+
+    renderWithProviders(<LibraryWorkspaceView />);
+
+    // Switch to List view
+    const listBtn = screen.getByTitle("List");
+    fireEvent.click(listBtn);
+
+    await waitFor(() => {
+      const titleSpan = screen.getByText(longTitle);
+      expect(titleSpan).toBeInTheDocument();
+      expect(titleSpan.className).toContain("break-words");
+      expect(titleSpan.className).not.toContain("truncate");
+    });
+  });
 });

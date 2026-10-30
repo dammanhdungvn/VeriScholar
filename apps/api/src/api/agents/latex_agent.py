@@ -540,6 +540,68 @@ async def reason_and_plan(state: LatexAgentState) -> dict[str, Any]:
             ],
         }
 
+    # 4b. Heuristic author edit rule
+    author_m = re.search(
+        r"(?:thay\s*đổi|đổi|chuyển|set|cập\s*nhật)\s+(?:tên\s+)?tác\s*giả\s+(?:thành|là|sang)\s+([^\n\.,]+)",
+        message,
+        re.IGNORECASE,
+    )
+    if not author_m:
+        author_m = re.search(r"author\s*(?:to|name|=|:)\s*([^\n\.,]+)", message, re.IGNORECASE)
+
+    if author_m and last_tool != "edit_latex_files":
+        new_author = author_m.group(1).strip()
+        curr_tex = state.get("main_tex", "")
+        author_pattern = re.compile(r"\\author\{[^}]+\}", re.DOTALL)
+        if author_pattern.search(curr_tex):
+            rep = f"\\\\author{{\\n  \\\\textbf{{{new_author}}} \\\\\\\\\\n}}"
+            patched_tex = author_pattern.sub(rep, curr_tex)
+        else:
+            patched_tex = curr_tex
+        new_events = [
+            {
+                "event": "thinking",
+                "type": "thinking",
+                "data": {"message": f"✍️ Đang cập nhật tác giả: '{new_author}'..."},
+            }
+        ]
+        return {
+            "tool_to_call": "edit_latex_files",
+            "tool_input": {"target_file": "main.tex", "content": patched_tex},
+            "new_events": new_events,
+        }
+
+    # 4c. Heuristic title edit rule
+    title_m = re.search(
+        r"(?:thay\s*đổi|đổi|chuyển|set|cập\s*nhật)\s+(?:tiêu\s*đề|tựa\s*đề)\s+(?:thành|là|sang)\s+([^\n\.,]+)",
+        message,
+        re.IGNORECASE,
+    )
+    if not title_m:
+        title_m = re.search(r"title\s*(?:to|=|:)\s*([^\n\.,]+)", message, re.IGNORECASE)
+
+    if title_m and last_tool != "edit_latex_files":
+        new_title = title_m.group(1).strip()
+        curr_tex = state.get("main_tex", "")
+        title_pattern = re.compile(r"\\title\{[^}]+\}", re.DOTALL)
+        if title_pattern.search(curr_tex):
+            rep = f"\\\\title{{\\\\textbf{{\\\\Large {new_title}}}}}"
+            patched_tex = title_pattern.sub(rep, curr_tex)
+        else:
+            patched_tex = curr_tex
+        new_events = [
+            {
+                "event": "thinking",
+                "type": "thinking",
+                "data": {"message": f"✍️ Đang cập nhật tiêu đề: '{new_title}'..."},
+            }
+        ]
+        return {
+            "tool_to_call": "edit_latex_files",
+            "tool_input": {"target_file": "main.tex", "content": patched_tex},
+            "new_events": new_events,
+        }
+
     # 5. Default compilation
     if compile_res is None:
         new_events = [

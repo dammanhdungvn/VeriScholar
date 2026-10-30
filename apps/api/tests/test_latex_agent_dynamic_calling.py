@@ -196,3 +196,26 @@ async def test_latex_agent_fallback_on_llm_exception():
     plan_res = await reason_and_plan(state)
     # Falls back gracefully to heuristic matching for sota keyword
     assert plan_res.get("tool_to_call") == "query_library_graph_rag"
+
+
+@pytest.mark.asyncio
+async def test_latex_agent_author_edit_react_tool():
+    """When user requests changing author name, agent plans edit_latex_files to update author in main.tex."""
+    main_tex = (
+        "\\documentclass{article}\n"
+        "\\author{\\textbf{Học giả VeriScholar}}\n"
+        "\\begin{document}\nHello\\end{document}"
+    )
+    state = {
+        "draft_id": uuid4(),
+        "user_id": uuid4(),
+        "message": "Thay đổi tên tác giả thành Davide Guide",
+        "main_tex": main_tex,
+        "openai_client": None,
+    }
+
+    plan_res = await reason_and_plan(state)
+    assert plan_res.get("tool_to_call") == "edit_latex_files"
+    tool_input = plan_res.get("tool_input", {})
+    assert tool_input.get("target_file") == "main.tex"
+    assert "Davide Guide" in tool_input.get("content", "")

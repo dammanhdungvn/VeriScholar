@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { DashboardTaskbar } from "@/features/dashboard/components/DashboardTaskbar";
 import { MobileDashboardHeader } from "@/features/dashboard/components/MobileDashboardHeader";
 import { LibraryWorkspaceView } from "./LibraryWorkspaceView";
@@ -7,10 +8,12 @@ import { useWorkspaceStore } from "@/features/dashboard/stores/useWorkspaceStore
 import { useReaderStore } from "@/features/reader/stores/useReaderStore";
 import { useDashboardSessions } from "@/features/dashboard/hooks/useDashboardSessions";
 import { sessionsApi } from "@/features/sessions/api/sessionsApi";
+import { SESSION_QUERY_KEYS } from "@/features/sessions/hooks/useSessionsQuery";
 import type { DocumentListItem } from "@/types/document";
 
 export function LibraryPage({ hideTaskbar = true }: { hideTaskbar?: boolean } = {}) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const toggleSidebar = useDashboardStore((s) => s.toggleSidebar);
   const setDocument = useWorkspaceStore((s) => s.setDocument);
   const setStatus = useWorkspaceStore((s) => s.setStatus);
@@ -32,6 +35,8 @@ export function LibraryPage({ hideTaskbar = true }: { hideTaskbar?: boolean } = 
           source_type: "document_id",
           document_id: doc.id,
         });
+        await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.lists() });
+        await queryClient.invalidateQueries({ queryKey: SESSION_QUERY_KEYS.detail(newSession.id) });
       } catch (err) {
         console.warn("Failed to attach document to session:", err);
       }

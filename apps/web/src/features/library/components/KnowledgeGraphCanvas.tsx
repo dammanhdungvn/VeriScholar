@@ -561,8 +561,12 @@ export function KnowledgeGraphCanvas({
           if (fullNode.type === "Paper") {
             const filename =
               (fullNode.metadata?.filename as string) || `${fullNode.label}.pdf`;
+            const docId =
+              (fullNode.metadata?.paper_id as string) ||
+              (fullNode.metadata?.document_id as string) ||
+              fullNode.id;
             onSelectDocument?.({
-              id: fullNode.id,
+              id: docId,
               title: fullNode.label,
               filename,
             });

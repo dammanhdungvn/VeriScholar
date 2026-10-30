@@ -283,8 +283,12 @@ export function WikiGraphWorkspaceView({
                 }}
                 onOpenReader={(docId) => {
                   if (onSelectDocument && selectedNode) {
+                    const resolvedDocId =
+                      (selectedNode.metadata?.paper_id as string) ||
+                      (selectedNode.metadata?.document_id as string) ||
+                      docId;
                     onSelectDocument({
-                      id: docId,
+                      id: resolvedDocId,
                       title: selectedNode.label,
                       filename:
                         (selectedNode.metadata?.filename as string) || "document.pdf",

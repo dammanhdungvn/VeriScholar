@@ -11,68 +11,68 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
-    user_node/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=2.2cm, minimum height=2.2cm, align=center},
-    pill_node/.style={draw=blue!65!black, fill=blue!6, rounded corners=12pt, line width=0.85pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\footnotesize},
-    ret_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=4.4cm, minimum height=5.0cm, align=center},
-    prompt_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=4.2cm, minimum height=4.8cm, align=center},
+    scale=0.70, transform shape,
+    user_node/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=2.1cm, minimum height=2.1cm, align=center},
+    pill_node/.style={draw=blue!65!black, fill=blue!6, rounded corners=10pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    ret_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=4.0cm, minimum height=4.8cm, align=center},
+    prompt_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=3.6cm, minimum height=4.4cm, align=center},
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85}
 ]
     % 1. User ở bên trái
-    \node[user_node] (user) at (-7.8, 0.6) {
-        \tikz{\draw[line width=1.5pt, draw=blue!80!black] (0, 0.32) circle (0.28);
-              \draw[line width=1.5pt, draw=blue!80!black] (-0.4, -0.35) arc (180:0:0.4);}\\[4pt]
+    \node[user_node] (user) at (-8.0, 0.6) {
+        \tikz{\draw[line width=1.4pt, draw=blue!80!black] (0, 0.30) circle (0.26);
+              \draw[line width=1.4pt, draw=blue!80!black] (-0.38, -0.32) arc (180:0:0.38);}\\[3pt]
         \textbf{User}\\[1pt]
         \scriptsize (Học giả)
     };
 
     % 2. Question (Hàng trên)
-    \node[pill_node, minimum width=2.8cm, minimum height=0.9cm] (question) at (-3.6, 2.4) {
+    \node[pill_node, minimum width=2.6cm, minimum height=0.85cm] (question) at (-3.8, 2.4) {
         \textbf{Question}\\[1pt]
         \scriptsize (Truy vấn học thuật)
     };
 
     % 3. Graph Extraction (Hàng trên, ở giữa)
-    \node[pill_node, minimum width=3.4cm, minimum height=0.9cm] (graphex) at (0.8, 2.4) {
+    \node[pill_node, minimum width=3.2cm, minimum height=0.85cm] (graphex) at (0.7, 2.4) {
         \textbf{Graph Extraction}\\[1pt]
         \scriptsize (Trích xuất đồ thị tri thức)
     };
 
     % 4. Retrieval Container (Hàng trên, bên phải)
-    \node[ret_container] (retrieval_box) at (5.5, 0.6) {};
-    \node[font=\bfseries\normalsize, align=center] at (5.5, 2.4) {Retrieval};
-    \node[font=\scriptsize\itshape, text=black!75, align=center] at (5.5, 1.95) {(Bộ truy xuất tích hợp)};
-    \node[pill_node, fill=blue!10, minimum width=3.6cm] (ret_kg) at (5.5, 1.1) {
+    \node[ret_container] (retrieval_box) at (5.8, 0.6) {};
+    \node[font=\bfseries\normalsize, align=center] at (5.8, 2.4) {Retrieval};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (5.8, 1.95) {(Bộ truy xuất tích hợp)};
+    \node[pill_node, fill=blue!10, minimum width=3.4cm] (ret_kg) at (5.8, 1.1) {
         \textbf{Knowledge Graphs}\\[1pt]
         \scriptsize (Đồ thị tri thức)
     };
-    \node[font=\bfseries\normalsize, text=blue!85!black] at (5.5, 0.35) {\textbf{+}};
-    \node[pill_node, fill=blue!10, minimum width=3.6cm] (ret_vec) at (5.5, -0.5) {
+    \node[font=\bfseries\normalsize, text=blue!85!black] at (5.8, 0.35) {\textbf{+}};
+    \node[pill_node, fill=blue!10, minimum width=3.4cm] (ret_vec) at (5.8, -0.4) {
         \textbf{Vector Database}\\[1pt]
         \scriptsize (Kho dữ liệu Vector)
     };
 
     % 5. Retrieved Context (Giữa Retrieval và Prompt Augmentation)
-    \node[pill_node, minimum width=3.0cm, minimum height=0.9cm] (ret_context) at (1.5, -1.8) {
+    \node[pill_node, minimum width=2.8cm, minimum height=0.85cm] (ret_context) at (1.8, -1.6) {
         \textbf{Retrieved Context}\\[1pt]
         \scriptsize (Ngữ cảnh trích xuất)
     };
 
     % 6. Prompt Augmentation Container
-    \node[prompt_container] (prompt_box) at (-1.8, -1.4) {};
-    \node[font=\bfseries\small, align=center] at (-1.8, 0.4) {Prompt Augmentation};
-    \node[font=\scriptsize\itshape, text=black!75, align=center] at (-1.8, 0.0) {(Tăng cường Prompt)};
-    \node[pill_node, fill=blue!10, minimum width=3.2cm] (p_q) at (-1.8, -1.1) {
+    \node[prompt_container] (prompt_box) at (-2.2, -1.4) {};
+    \node[font=\bfseries\small, align=center] at (-2.2, 0.35) {Prompt Augmentation};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (-2.2, -0.05) {(Tăng cường Prompt)};
+    \node[pill_node, fill=blue!10, minimum width=2.8cm] (p_q) at (-2.2, -1.0) {
         \textbf{Question}\\[1pt]
         \scriptsize (Câu hỏi gốc)
     };
-    \node[pill_node, fill=blue!10, minimum width=3.2cm] (p_c) at (-1.8, -2.3) {
+    \node[pill_node, fill=blue!10, minimum width=2.8cm] (p_c) at (-2.2, -2.1) {
         \textbf{Context}\\[1pt]
         \scriptsize (Ngữ cảnh tri thức)
     };
 
     % 7. Answer (Nằm giữa Prompt Augmentation và User)
-    \node[pill_node, minimum width=2.4cm, minimum height=0.9cm] (answer) at (-5.8, -1.8) {
+    \node[pill_node, minimum width=2.3cm, minimum height=0.85cm] (answer) at (-5.6, -1.6) {
         \textbf{Answer}\\[1pt]
         \scriptsize (Câu trả lời)
     };

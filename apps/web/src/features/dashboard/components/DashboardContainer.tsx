@@ -139,16 +139,18 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
 
   // Synchronize document details if activeSession from cached list has documents
   useEffect(() => {
-    if (activeSession && activeSession.document_ids && activeSession.document_ids.length > 0) {
-      useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
-      const activeDocId = activeSession.document_ids[0];
-      setDocument(activeDocId, activeSession.title);
-    } else if (activeSession && activeSession.document_ids?.length === 0) {
-      useReaderStore.getState().setOpenDocumentIds([]);
-      useReaderStore.getState().setActiveDocumentId(null);
-      useWorkspaceStore.getState().setDocument(null, "");
+    if (activeSession && (!effectiveSessionId || activeSession.id === effectiveSessionId)) {
+      if (activeSession.document_ids && activeSession.document_ids.length > 0) {
+        useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
+        const activeDocId = activeSession.document_ids[0];
+        setDocument(activeDocId, activeSession.title);
+      } else if (activeSession.document_ids?.length === 0) {
+        useReaderStore.getState().setOpenDocumentIds([]);
+        useReaderStore.getState().setActiveDocumentId(null);
+        useWorkspaceStore.getState().setDocument(null, "");
+      }
     }
-  }, [activeSession, setDocument]);
+  }, [activeSession, effectiveSessionId, setDocument]);
 
   /**
    * BẤT BIẾN 1 (Zero DB Junk):

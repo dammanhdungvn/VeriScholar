@@ -14,7 +14,7 @@ Trong thiết kế hệ thống tương tác người--máy (Human-Computer Inte
 
 Kiến trúc không gian tương tác người--máy và luồng luân chuyển dữ liệu giữa 4 phân hệ chính được mô hình hóa trong Hình~\ref{fig:ui_layout_architecture}.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.70, transform shape,
@@ -110,32 +110,35 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
 \subsection{Một số giao diện của hệ thống}
 \label{subsec:mot_so_giao_dien}
 
-Nhằm trực quan hóa quá trình vận hành thực tế của hệ thống, tiểu mục này trình bày chi tiết các giao diện ứng dụng web được triển khai thực tế trên môi trường sản xuất của hệ thống \VS.
+Nhằm trực quan hóa quá trình vận hành thực tế của hệ thống, tiểu mục này trình bày chi tiết các giao diện ứng dụng web được triển khai thực tế trên môi trường sản xuất của hệ thống \VS. Mỗi giao diện được kết xuất với độ phân giải cao và mô tả cụ thể chức năng tương tác học thuật tương ứng.
 
+\clearpage
 \subsubsection{Giao diện đăng ký tài khoản của hệ thống}
 \label{subsubsec:ui_register}
 
 Giao diện đăng ký tài khoản được thiết kế trang nhã theo phong cách tối giản cấp sản phẩm thương mại quốc tế (Hình~\ref{fig:ui_register}). Giao diện cung cấp biểu mẫu tạo lập tài khoản học giả mới, bao gồm các trường thông tin: địa chỉ thư điện tử (\textit{Email}), họ và tên nhà nghiên cứu, mật khẩu bảo mật (được kiểm tra độ mạnh tự động và mã hóa an toàn qua hàm băm Argon2id tại phía máy chủ), vai trò tài khoản, cùng cơ quan công tác học thuật. Sau khi hoàn tất đăng ký thành công, hệ thống tự động khởi tạo không gian làm việc mặc định và chuyển hướng người dùng sang giao diện đăng nhập.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/register.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/register.png}
 \caption{Giao diện đăng ký tài khoản của hệ thống}
 \label{fig:ui_register}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện đăng nhập hệ thống}
 \label{subsubsec:ui_login}
 
 Giao diện đăng nhập hệ thống hỗ trợ học giả truy cập an toàn vào không gian làm việc cá nhân thông qua cơ chế xác thực chứng thư phân tán JSON Web Tokens (JWT) (Hình~\ref{fig:ui_login}). Người dùng nhập thông tin tài khoản gồm Email và Mật khẩu. Khi xác thực hợp lệ, máy chủ trả về mã truy cập có thời hạn và mã làm mới phiên bảo vệ trong HTTP-only Cookie, ngăn ngừa triệt để các nguy cơ tấn công XSS hoặc đánh cắp phiên. Giao diện cũng cung cấp tùy chọn ghi nhớ đăng nhập và liên kết hỗ trợ chuyển hướng linh hoạt cho học giả mới.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/login.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/login.png}
 \caption{Giao diện đăng nhập hệ thống}
 \label{fig:ui_login}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện bảng điều khiển trung tâm}
 \label{subsubsec:ui_dashboard}
 
@@ -147,13 +150,14 @@ Bảng điều khiển trung tâm (Dashboard) đóng vai trò là trạm điều
     \item Thẻ hiển thị trạng thái kết nối hạ tầng bảo mật, xác thực khóa BYOK và trạng thái liên kết định danh học giả quốc tế ORCID iD.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/dashboard.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/dashboard.png}
 \caption{Giao diện bảng điều khiển trung tâm}
 \label{fig:ui_dashboard}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện tìm kiếm và khám phá ấn phẩm học thuật}
 \label{subsec:ui_discovery}
 
@@ -165,25 +169,27 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
     \item \textbf{Nạp trực tiếp vào Reader:} Đối với các bài báo có tệp toàn văn mở (\textit{Open Access PDF}), giao diện hiển thị chấm xanh lục và nút nạp tức thì tài liệu vào Phân hệ Đọc sâu.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/search_paper.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/search_paper.png}
 \caption{Giao diện tìm kiếm và khám phá ấn phẩm học thuật}
 \label{fig:ui_search_paper}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện tra cứu và đối soát danh mục trích dẫn}
 \label{subsubsec:ui_reference_search}
 
 Giao diện tra cứu và đối soát danh mục trích dẫn hỗ trợ học giả phân tích sâu cây tham khảo của bài báo khoa học (Hình~\ref{fig:ui_reference_search}). Hệ thống tự động bóc tách toàn bộ danh mục tài liệu tham khảo trong phần cuối của bản PDF, chuẩn hóa tiêu đề và đối soát chéo với kho dữ liệu số hóa qua mã DOI hoặc arXiv ID. Giao diện trực quan hóa trạng thái đối soát: các tài liệu đã có sẵn trong kho nội bộ, các bài báo có bản toàn văn mở trên mạng, và phát hiện các ấn phẩm có nguy cơ học thuật (như bài báo bị rút lui - retracted papers), giúp nhà khoa học bảo đảm tính liêm chính và độ tin cậy tuyệt đối của công trình trích dẫn.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/reference_search.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/reference_search.png}
 \caption{Giao diện tra cứu và đối soát danh mục trích dẫn}
 \label{fig:ui_reference_search}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{subsubsec:ui_my_library}
 
@@ -194,13 +200,14 @@ Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học gi�
     \item \textbf{Quản lý trạng thái xử lý phân đoạn:} Bảng danh sách bài báo hiển thị rõ số trang, số lượng phân đoạn đã bóc tách (\textit{Chunks}), thời điểm nạp tệp và tính năng gắn sao đánh dấu các công trình nghiên cứu trọng tâm.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/my_library.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/my_library.png}
 \caption{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{fig:ui_my_library}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
 \label{subsec:ui_deep_reading}
 
@@ -211,25 +218,27 @@ Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học
     \item \textbf{Độ chính xác hình học cao:} Khung Bounding Box đạt chỉ số chồng lấn $IoU \ge 0{,}85$, thời gian định vị dưới 1 giây, triệt tiêu hoàn toàn công sức đọc dò thủ công hàng chục trang tài liệu.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/deep_read_paper.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/deep_read_paper.png}
 \caption{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
 \label{fig:ui_deep_read_paper}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện mạng đồ thị tri thức 4 thực thể GraphRAG}
 \label{subsubsec:ui_graph}
 
 Giao diện mạng đồ thị tri thức học thuật trực quan hóa không gian liên kết ngữ nghĩa giữa các công trình khoa học (Hình~\ref{fig:ui_graph}). Mạng lưới đồ thị thể hiện 4 thực thể cốt lõi theo mã màu học thuật chuyên biệt: \textit{Bài báo (Paper)}, \textit{Phương pháp (Method)}, \textit{Tập dữ liệu (Dataset)}, và \textit{Chỉ số thực nghiệm (Metric)}. Học giả có thể tương tác trực quan bằng cách phóng to, thu nhỏ, kéo thả các đỉnh để khám phá các cụm phát hiện Leiden, nhận diện khoảng trống nghiên cứu (\textit{Research Gaps}) và thực hiện các truy vấn so sánh liên tài liệu tức thời mà không cần đọc thủ công từng bài báo.
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/graph.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/graph.png}
 \caption{Giao diện mạng đồ thị tri thức học thuật 4 thực thể GraphRAG}
 \label{fig:ui_graph}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện két sắt khóa cá nhân (BYOK) và hồ sơ học giả}
 \label{subsec:ui_profile}
 
@@ -239,13 +248,14 @@ Giao diện Quản lý hồ sơ học giả và Két sắt khóa cá nhân bảo
     \item \textbf{Két sắt khóa bảo mật cá nhân (BYOK):} Cho phép học giả cấu hình khóa API OpenAI riêng theo cơ chế ``Mang khóa bí mật của chính bạn''. Khóa được mã hóa bằng thuật toán đối xứng AES-256-GCM với cơ chế \textit{Zero-Retention trên RAM}, chỉ tồn tại tạm thời trong bộ nhớ đệm phục vụ yêu cầu suy luận tức thời, tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng hay xuất hiện trong nhật ký hệ thống.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/byok.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/byok.png}
 \caption{Giao diện két sắt khóa cá nhân (BYOK) và hồ sơ học giả}
 \label{fig:ui_byok}
 \end{figure}
 
+\clearpage
 \subsubsection{Giao diện soạn thảo bản thảo bài báo \LaTeX\ và tự sửa lỗi biên dịch}
 \label{subsec:ui_writing}
 
@@ -256,9 +266,10 @@ Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối c
     \item \textbf{Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop):} Khi quá trình biên dịch phát sinh lỗi cú pháp, tác nhân AI tự động kích hoạt chu trình ReAct: đọc nhật ký lỗi $\to$ lập luận suy diễn nguyên nhân $\to$ tạo bản vá vi phẫu (\textit{Surgical Diff}) sửa lỗi mã nguồn, đạt tỷ lệ tự sửa lỗi biên dịch thành công vượt trên 90\%.
 \end{itemize}
 
-\begin{figure}[htbp]
+\begin{figure}[H]
 \centering
-\includegraphics[width=0.92\textwidth]{figures/frontend/writing_paper.png}
+\includegraphics[width=0.90\textwidth]{figures/frontend/writing_paper.png}
 \caption{Giao diện soạn thảo bản thảo bài báo \LaTeX\ và tự sửa lỗi biên dịch}
 \label{fig:ui_writing_paper}
 \end{figure}
+\clearpage

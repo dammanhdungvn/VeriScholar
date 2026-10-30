@@ -22,29 +22,132 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = structlog.get_logger("api.services.landmark_papers_seeder")
 
 
-def generate_minimal_pdf(title: str) -> bytes:
-    """Generate minimal valid 1-page PDF binary with text stream."""
-    escaped = title.replace("(", "").replace(")", "").replace("\\", "")
-    stream_content = f"BT /F1 12 Tf 72 712 Td ({escaped}) Tj ET\n".encode("ascii", errors="replace")
-    return (
-        b"%PDF-1.4\n"
-        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
-        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
-        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R"
-        b"/Contents 4 0 R/Resources<<>>>>endobj\n"
-        b"4 0 obj<</Length "
-        + str(len(stream_content)).encode("ascii")
-        + b">>stream\n"
-        + stream_content
-        + b"endstream\nendobj\n"
-        b"xref\n0 5\n"
-        b"0000000000 65535 f \n"
-        b"0000000010 00000 n \n"
-        b"0000000053 00000 n \n"
-        b"0000000102 00000 n \n"
-        b"0000000195 00000 n \n"
-        b"trailer<</Size 5/Root 1 0 R>>\nstartxref\n320\n%%EOF\n"
+def generate_scholarly_pdf(
+    title: str,
+    authors: list[str] | None = None,
+    abstract: str | None = None,
+) -> bytes:
+    """Generate valid formatted scholarly PDF binary with title, authors, abstract, and sections."""
+
+    def wrap_text(text: str, max_chars: int = 75) -> list[str]:
+        words = text.split()
+        lines: list[str] = []
+        cur = ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = f"{cur} {w}".strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
+    safe_title = title.replace("(", "").replace(")", "").replace("\\", "")
+    author_str = ", ".join(authors) if authors else "VeriScholar Research Team"
+    safe_authors = author_str.replace("(", "").replace(")", "").replace("\\", "")
+    safe_abstract = (
+        (abstract or "A comprehensive foundational study and empirical evaluation.")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("\\", "")
     )
+
+    p1_lines = ["BT", "/F1 16 Tf", "72 720 Td"]
+    for i, tl in enumerate(wrap_text(safe_title, 55)):
+        if i > 0:
+            p1_lines.append("0 -20 Td")
+        p1_lines.append(f"({tl}) Tj")
+
+    p1_lines.append("/F1 10 Tf")
+    p1_lines.append("0 -26 Td")
+    for i, al in enumerate(wrap_text(safe_authors, 70)):
+        if i > 0:
+            p1_lines.append("0 -14 Td")
+        p1_lines.append(f"({al}) Tj")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -30 Td")
+    p1_lines.append("(Abstract) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    for al in wrap_text(safe_abstract, 80):
+        p1_lines.append(f"({al}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -20 Td")
+    p1_lines.append("(1. Introduction & Background) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    intro = (
+        "This seminal scholarly paper presents key foundational contributions to the field of AI "
+        "and natural language processing. The research provides comprehensive mathematical "
+        "formulations, empirical evaluations, and rigorous comparative baselines."
+    )
+    for il in wrap_text(intro, 80):
+        p1_lines.append(f"({il}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -20 Td")
+    p1_lines.append("(2. Methodology & Architecture) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    method = (
+        "The core methodology leverages deep semantic representations, contextual embeddings, "
+        "and parameter-efficient adaptations. Comprehensive ablation experiments demonstrate "
+        "superior performance across scholarly benchmarks."
+    )
+    for ml in wrap_text(method, 80):
+        p1_lines.append(f"({ml}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("ET\n")
+    stream1 = "\n".join(p1_lines).encode("latin1", errors="replace")
+
+    obj1 = b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+    obj2 = b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+    obj3 = (
+        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R"
+        b"/Resources<</Font<</F1 5 0 R>>>>/Contents 4 0 R>>endobj\n"
+    )
+    obj4 = (
+        b"4 0 obj<</Length "
+        + str(len(stream1)).encode("ascii")
+        + b">>stream\n"
+        + stream1
+        + b"endstream\nendobj\n"
+    )
+    obj5 = b"5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n"
+
+    header = b"%PDF-1.4\n"
+    o1 = len(header)
+    o2 = o1 + len(obj1)
+    o3 = o2 + len(obj2)
+    o4 = o3 + len(obj3)
+    o5 = o4 + len(obj4)
+    xref_offset = o5 + len(obj5)
+
+    xref = (
+        f"xref\n0 6\n"
+        f"0000000000 65535 f \n"
+        f"{o1:010d} 00000 n \n"
+        f"{o2:010d} 00000 n \n"
+        f"{o3:010d} 00000 n \n"
+        f"{o4:010d} 00000 n \n"
+        f"{o5:010d} 00000 n \n"
+    ).encode("ascii")
+
+    trailer = f"trailer<</Size 6/Root 1 0 R>>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+
+    return header + obj1 + obj2 + obj3 + obj4 + obj5 + xref + trailer
+
+
+def generate_minimal_pdf(title: str) -> bytes:
+    """Generate minimal valid 1-page PDF binary with text stream (backward compatibility)."""
+    return generate_scholarly_pdf(title)
 
 
 LANDMARK_PAPERS: list[dict[str, Any]] = [
@@ -798,7 +901,7 @@ async def seed_landmark_papers_for_user(
     for paper in LANDMARK_PAPERS:
         key = paper["id_key"]
         title = paper["title"]
-        pdf_bytes = generate_minimal_pdf(title)
+        pdf_bytes = generate_scholarly_pdf(title, paper.get("authors"), paper.get("abstract"))
 
         chash, spath, fsize = _ensure_cas_blob(pdf_bytes, blobs_dir)
 
