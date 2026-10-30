@@ -93,6 +93,13 @@ Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên c
 \end{tabular}
 \end{table}
 
+Độ tương đồng giữa truy vấn của học giả và tiêu đề bài báo được chuẩn hóa thông qua hệ số tương đồng Jaccard giữa tập từ vựng truy vấn $Q$ và tập từ vựng tiêu đề ứng viên $T$:
+\begin{equation}
+\label{eq:jaccard_def}
+J(Q, T) = \frac{|Q \cap T|}{|Q \cup T|}
+\end{equation}
+Hệ thống thiết lập ngưỡng $J(Q, T) \ge 0{,}2$ để tự động lọc bỏ các ấn phẩm trùng lặp ngẫu nhiên hoặc lạc đề từ các cổng học thuật mở mà không làm suy giảm độ bao phủ của kết quả tìm kiếm.
+
 \subsubsection{Phân tích ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsubsec:uc_doc_sau}
 
@@ -128,6 +135,13 @@ Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung b
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}
+
+Cơ chế kiểm chứng tọa độ trực quan được đo lường thông qua chỉ số diện tích giao trên diện tích hợp (\textit{Intersection over Union -- IoU}) giữa hộp bao được mô hình định vị $B_{\text{pred}}$ và hộp bao vùng văn bản nguồn $B_{\text{src}}$ trên trang PDF gốc:
+\begin{equation}
+\label{eq:iou_def}
+\text{IoU}(B_{\text{pred}}, B_{\text{src}}) = \frac{\text{Area}(B_{\text{pred}} \cap B_{\text{src}})}{\text{Area}(B_{\text{pred}} \cup B_{\text{src}})}
+\end{equation}
+Hệ thống thiết lập ngưỡng kiểm định $\text{IoU} \ge 0{,}85$ nhằm bảo đảm khung viền vàng chỉ tô sáng chính xác câu văn chứa dẫn chứng khoa học mà không bị lệch dòng hay cắt ngang công thức toán học.
 
 \subsubsection{Phân tích ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
 \label{subsubsec:uc_bien_soan}

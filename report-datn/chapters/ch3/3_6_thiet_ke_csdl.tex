@@ -26,7 +26,7 @@ Cơ sở dữ liệu quan hệ của hệ thống bao gồm các bảng chính �
 \label{tab:db_tables_summary}
 \setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{4.6cm}|>{\raggedright\arraybackslash}p{8.2cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{5.2cm}|>{\raggedright\arraybackslash}p{7.8cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên bảng} & \centering\textbf{Ý nghĩa nghiệp vụ} \tabularnewline
 \hline
@@ -35,7 +35,7 @@ Cơ sở dữ liệu quan hệ của hệ thống bao gồm các bảng chính �
 3 & \texttt{scholar\_profiles} & Hồ sơ học thuật mở rộng, cơ quan công tác và hướng nghiên cứu \tabularnewline \hline
 4 & \texttt{folders} & Cây thư mục phân cấp tổ chức tài liệu nghiên cứu cá nhân \tabularnewline \hline
 5 & \texttt{documents} & Hồ sơ bài báo khoa học, tiêu đề chuẩn hóa và siêu dữ liệu ấn phẩm \tabularnewline \hline
-6 & \texttt{document\_storage\_blobs} & Khối tệp nhị phân PDF lưu trữ hướng nội dung (khử trùng lặp CAS) \tabularnewline \hline
+6 & \texttt{document\_}\allowbreak\texttt{storage\_}\allowbreak\texttt{blobs} & Khối tệp nhị phân PDF lưu trữ hướng nội dung (khử trùng lặp CAS) \tabularnewline \hline
 7 & \texttt{document\_chunks} & Các phân đoạn văn bản bóc tách từ PDF kèm số trang và Bounding Box \tabularnewline \hline
 8 & \texttt{reference\_items} & Danh mục tài liệu tham khảo bóc tách từ bài báo và đối soát chéo \tabularnewline \hline
 9 & \texttt{research\_sessions} & Phiên nghiên cứu đa tài liệu, quản lý trạng thái hiển thị Reader \tabularnewline \hline
@@ -61,7 +61,7 @@ Bảng \texttt{users} lưu trữ định danh cá nhân của học giả, hỗ 
 \label{tab:spec_users}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh duy nhất người dùng \tabularnewline \hline
@@ -85,7 +85,7 @@ Bảng \texttt{user\_api\_keys} bảo vệ khóa API cá nhân của học giả
 \label{tab:spec_api_keys}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh bản ghi khóa \tabularnewline \hline
@@ -108,7 +108,7 @@ Bảng \texttt{documents} quản lý thông tin thư mục, tác giả, năm xu�
 \label{tab:spec_documents}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh tài liệu học thuật \tabularnewline \hline
@@ -133,13 +133,13 @@ Bảng \texttt{document\_storage\_blobs} quản lý các khối tệp nhị phâ
 \label{tab:spec_cas}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh khối tệp vật lý \tabularnewline \hline
 2 & \texttt{content\_hash} & VARCHAR(64) & Unique, Not Null & Mã băm SHA-256 nội dung nhị phân tệp PDF \tabularnewline \hline
 3 & \texttt{storage\_path} & TEXT & Not Null & Đường dẫn lưu trữ tệp phân cấp trên đĩa \tabularnewline \hline
-4 & \texttt{file\_size\_bytes}& BIGINT & Not Null & Dung lượng vật lý của tệp tin (bytes) \tabularnewline \hline
+4 & \texttt{file\_}\allowbreak\texttt{size\_}\allowbreak\texttt{bytes}& BIGINT & Not Null & Dung lượng vật lý của tệp tin (bytes) \tabularnewline \hline
 5 & \texttt{ref\_count} & INTEGER & Default 1 & Biến đếm số tài liệu đang dùng chung tệp \tabularnewline \hline
 6 & \texttt{status} & VARCHAR(32) & Default 'ready' & Trạng thái khả dụng của khối dữ liệu \tabularnewline \hline
 \end{tabular}
@@ -156,7 +156,7 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản bóc t
 \label{tab:spec_chunks}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh phân đoạn văn bản \tabularnewline \hline
@@ -165,7 +165,7 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản bóc t
 4 & \texttt{chunk\_index} & INTEGER & Not Null & Vị trí thứ tự phân đoạn trong tài liệu \tabularnewline \hline
 5 & \texttt{page\_number} & INTEGER & Not Null, Index & Số thứ tự trang giấy trong bản PDF gốc \tabularnewline \hline
 6 & \texttt{content} & TEXT & Not Null & Nội dung văn bản phục vụ truy xuất từ khóa \tabularnewline \hline
-7 & \texttt{bounding\_boxes}& JSONB & Not Null & Danh sách tọa độ hình chữ nhật Bounding Box \tabularnewline \hline
+7 & \texttt{bounding\_}\allowbreak\texttt{boxes}& JSONB & Not Null & Danh sách tọa độ hình chữ nhật Bounding Box \tabularnewline \hline
 \end{tabular}
 \end{table}
 
@@ -180,7 +180,7 @@ Bảng \texttt{reference\_items} lưu trữ danh mục tài liệu tham khảo b
 \label{tab:spec_references}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
-\begin{tabular}{|c|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{2.4cm}|>{\raggedright\arraybackslash}p{5.1cm}|}
+\begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh mục tài liệu trích dẫn \tabularnewline \hline
