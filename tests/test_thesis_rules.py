@@ -105,20 +105,28 @@ def test_ch3_uc01_two_tier_discovery_spec():
     """Kiểm tra sự hiện diện và tính toàn vẹn của Bảng đặc tả ca sử dụng UC-01
     (Khám phá bài báo học thuật hai tầng tin cậy) trong Chương 3.
     """
-    uc_file = Path("report-datn/chapters/ch3/3_2_usecase.tex")
-    assert uc_file.exists(), "3_2_usecase.tex must exist"
+    uc_file = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
+    assert uc_file.exists(), "3_4_phan_tich_usecase.tex must exist"
 
     content = uc_file.read_text(encoding="utf-8")
 
     # Kiểm tra nhãn bảng đặc tả UC-01
-    assert "\\label{tab:uc_01_spec}" in content, (
-        "Missing \\label{tab:uc_01_spec} in 3_2_usecase.tex"
+    assert "\\label{tab:uc_01_spec}" in content or "\\label{tab:uc_kham_pha_spec}" in content, (
+        "Missing \\label{tab:uc_01_spec} in 3_4_phan_tich_usecase.tex"
     )
 
     # Kiểm tra vị trí: tab:uc_01_spec phải xuất hiện trước tab:uc_03_spec
-    pos_uc01 = content.find("\\label{tab:uc_01_spec}")
-    pos_uc03 = content.find("\\label{tab:uc_03_spec}")
-    assert pos_uc03 != -1, "Missing \\label{tab:uc_03_spec} in 3_2_usecase.tex"
+    pos_uc01 = (
+        content.find("\\label{tab:uc_01_spec}")
+        if "\\label{tab:uc_01_spec}" in content
+        else content.find("\\label{tab:uc_kham_pha_spec}")
+    )
+    pos_uc03 = (
+        content.find("\\label{tab:uc_03_spec}")
+        if "\\label{tab:uc_03_spec}" in content
+        else content.find("\\label{tab:uc_doc_sau_spec}")
+    )
+    assert pos_uc03 != -1, "Missing \\label{tab:uc_03_spec} in 3_4_phan_tich_usecase.tex"
     assert pos_uc01 < pos_uc03, "tab:uc_01_spec must appear before tab:uc_03_spec"
 
     # Kiểm tra các từ khóa kỹ thuật cốt lõi của động cơ kiểm soát độ tin cậy 2 tầng

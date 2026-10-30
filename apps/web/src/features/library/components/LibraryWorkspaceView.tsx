@@ -1,10 +1,12 @@
 import { useState, useMemo, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Library,
   Search,
   LayoutGrid,
   List as ListIcon,
   Share2,
+  Network,
   Plus,
   Star,
   FileText,
@@ -19,7 +21,6 @@ import {
   BookOpen,
   Trash2,
 } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
 import { documentsApi } from "@/features/documents/api/documentsApi";
 import {
   useDocumentsList,
@@ -36,7 +37,6 @@ import {
 } from "../hooks/useFolderQueries";
 import type { FolderItem } from "../types";
 import { useDocumentIngestion } from "@/features/dashboard/hooks/useDocumentIngestion";
-import { LibraryGraphSidebar } from "./LibraryGraphSidebar";
 import { GraphRagAssistantFab } from "./GraphRagAssistantFab";
 import { BibliometricsPriorWorksCard } from "./BibliometricsPriorWorksCard";
 import { libraryApi } from "../api/libraryApi";
@@ -49,10 +49,11 @@ interface LibraryWorkspaceViewProps {
   onSelectDocument?: (doc: DocumentListItem) => void;
 }
 
-export type LibraryFilterTab = "all" | "folders" | "graph";
+export type LibraryFilterTab = "all" | "folders";
 type ViewLayout = "grid" | "list";
 
 export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewProps) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<LibraryFilterTab>("all");
   const [viewLayout, setViewLayout] = useState<ViewLayout>("grid");
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,26 +70,12 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
   const [renameFolderTarget, setRenameFolderTarget] = useState<FolderItem | null>(null);
   const [moveDocTarget, setMoveDocTarget] = useState<DocumentListItem | null>(null);
 
-  // Wiki Graph Sidebar state
-  const [isGraphSidebarOpen, setIsGraphSidebarOpen] = useState(false);
-  const [focusedNodeId, setFocusedNodeId] = useState<string | null>(null);
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { ingest } = useDocumentIngestion();
 
   // Folders list query
   const { data: folders = [], refetch: refetchFolders } = useFoldersListQuery();
   const deleteFolderMutation = useDeleteFolderMutation();
-
-  // Knowledge Graph query (LLM Wiki)
-  const {
-    data: libraryGraphData,
-    isLoading: isLoadingLibraryGraph,
-    refetch: refetchGraph,
-  } = useQuery({
-    queryKey: ["library", "graph", selectedFolderId],
-    queryFn: () => libraryApi.getLibraryGraph(selectedFolderId),
-  });
 
   const {
     data: paginatedData,
@@ -198,12 +185,10 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           selectedFolderId || undefined
         );
         refetch();
-        refetchGraph();
       } catch (err) {
         console.warn("Direct library upload failed, falling back to ingestion:", err);
         await ingest(file);
         refetch();
-        refetchGraph();
       }
     }
   };
@@ -284,20 +269,15 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             </button>
           </div>
 
-          {/* Wiki Graph Sidebar Toggle */}
+          {/* Explore Knowledge Graph & Wiki */}
           <button
             type="button"
-            onClick={() => setIsGraphSidebarOpen(!isGraphSidebarOpen)}
-            className={cn(
-              "h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border transition-colors cursor-pointer",
-              isGraphSidebarOpen
-                ? "bg-[#c15f3e]/10 border-[#c15f3e]/30 text-[#c15f3e]"
-                : "bg-white dark:bg-[#201e1a] border-[#e2dcd2] dark:border-[#322f2a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622]"
-            )}
-            title="Toggle Wiki Graph Sidebar"
+            onClick={() => navigate("/graph")}
+            className="h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1.5 border border-[#e2dcd2] dark:border-[#322f2a] bg-white dark:bg-[#201e1a] text-ink dark:text-zinc-200 hover:bg-[#f5f2eb] dark:hover:bg-[#282622] transition-colors cursor-pointer"
+            title="Mở Không gian Graph & Wiki"
           >
-            <Share2 className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Wiki Graph</span>
+            <Network className="w-3.5 h-3.5 text-[#c15f3e]" />
+            <span className="hidden sm:inline">Graph Hub →</span>
           </button>
 
           {/* + Upload PDF Button */}
@@ -325,17 +305,11 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
           {[
             { id: "all" as const, label: "All Papers", icon: Library },
             { id: "folders" as const, label: "Folders", icon: Folder },
-            { id: "graph" as const, label: "Knowledge Graph", icon: Share2 },
           ].map(({ id, label, icon: Icon }) => (
             <button
               key={id}
               type="button"
-              onClick={() => {
-                setActiveTab(id);
-                if (id === "graph") {
-                  setIsGraphSidebarOpen(true);
-                }
-              }}
+              onClick={() => setActiveTab(id)}
               className={cn(
                 "px-2.5 py-1 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer whitespace-nowrap",
                 activeTab === id
@@ -372,42 +346,8 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
             />
           )}
 
-          {/* C. Knowledge Graph (LLM Wiki) in Sidebar + Documents Hierarchy */}
-          {activeTab === "graph" ? (
-            <div className="space-y-4">
-              <div className="p-3 bg-[#c15f3e]/5 border border-[#c15f3e]/20 rounded-xl flex items-center justify-between text-xs text-[#c15f3e]">
-                <div className="flex items-center gap-2">
-                  <Share2 className="w-4 h-4 shrink-0" />
-                  <span>
-                    Interactive Wiki Knowledge Graph is active in the right sidebar. Click any paper to center its local subgraph.
-                  </span>
-                </div>
-                {!isGraphSidebarOpen && (
-                  <button
-                    type="button"
-                    onClick={() => setIsGraphSidebarOpen(true)}
-                    className="font-medium hover:underline cursor-pointer text-xs"
-                  >
-                    Open Sidebar →
-                  </button>
-                )}
-              </div>
-
-              <DocumentGrid
-                documents={documents}
-                viewLayout={viewLayout}
-                onToggleStar={handleToggleStar}
-                onSelectDocument={onSelectDocument}
-                onMoveFolder={(doc) => setMoveDocTarget(doc)}
-                onDelete={handleDelete}
-                onFocusGraph={(doc) => {
-                  setFocusedNodeId(doc.id);
-                  setIsGraphSidebarOpen(true);
-                }}
-                focusedDocId={focusedNodeId}
-              />
-            </div>
-          ) : activeTab === "folders" ? (
+          {/* Folders View or All Papers View */}
+          {activeTab === "folders" ? (
             !selectedFolderId ? (
               <div className="space-y-4">
                 <div className="flex items-center justify-between pb-2">
@@ -520,10 +460,8 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                   onMoveFolder={(doc) => setMoveDocTarget(doc)}
                   onDelete={handleDelete}
                   onFocusGraph={(doc) => {
-                    setFocusedNodeId(doc.id);
-                    setIsGraphSidebarOpen(true);
+                    navigate(`/graph?focus=${encodeURIComponent(doc.id)}`);
                   }}
-                  focusedDocId={focusedNodeId}
                 />
               </div>
             )
@@ -537,10 +475,8 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
                 onMoveFolder={(doc) => setMoveDocTarget(doc)}
                 onDelete={handleDelete}
                 onFocusGraph={(doc) => {
-                  setFocusedNodeId(doc.id);
-                  setIsGraphSidebarOpen(true);
+                  navigate(`/graph?focus=${encodeURIComponent(doc.id)}`);
                 }}
-                focusedDocId={focusedNodeId}
               />
 
               {/* Pagination Controls */}
@@ -574,17 +510,6 @@ export function LibraryWorkspaceView({ onSelectDocument }: LibraryWorkspaceViewP
         </div>
       </div>
     </div>
-
-    {/* Right Sidebar: Wiki Knowledge Graph & Local Focus */}
-    <LibraryGraphSidebar
-      isOpen={isGraphSidebarOpen}
-      onClose={() => setIsGraphSidebarOpen(false)}
-      graphData={libraryGraphData || null}
-      isLoading={isLoadingLibraryGraph}
-      focusedNodeId={focusedNodeId}
-      onClearFocus={() => setFocusedNodeId(null)}
-      onSelectDocument={onSelectDocument}
-    />
 
     {/* Floating GraphRAG Assistant Bubble */}
       <GraphRagAssistantFab folderId={selectedFolderId} />
@@ -700,9 +625,9 @@ function DocumentGrid({
                   </button>
                 </td>
                 <td className="py-3 px-4 font-medium text-ink dark:text-zinc-200">
-                  <div className="flex items-center gap-2">
-                    <FileText className="w-4 h-4 text-muted shrink-0" />
-                    <span className="truncate max-w-xs">{doc.title || doc.filename}</span>
+                  <div className="flex items-start gap-2">
+                    <FileText className="w-4 h-4 text-muted shrink-0 mt-0.5" />
+                    <span className="break-words leading-relaxed">{doc.title || doc.filename}</span>
                   </div>
                 </td>
                 <td className="py-3 px-4 text-muted dark:text-zinc-400">
@@ -731,7 +656,7 @@ function DocumentGrid({
                         "p-1.5 rounded-lg text-muted hover:text-[#c15f3e] hover:bg-[#c15f3e]/10 cursor-pointer transition-colors",
                         focusedDocId === doc.id && "text-[#c15f3e] bg-[#c15f3e]/10"
                       )}
-                      title="Focus in Wiki Graph"
+                      title="Xem trên Graph"
                     >
                       <Share2 className="w-3.5 h-3.5" />
                     </button>
@@ -826,7 +751,7 @@ function DocumentGrid({
                   "p-1 rounded-lg text-muted hover:text-[#c15f3e] hover:bg-[#c15f3e]/10 cursor-pointer transition-colors",
                   focusedDocId === doc.id && "text-[#c15f3e] bg-[#c15f3e]/10"
                 )}
-                title="Focus in Wiki Graph"
+                title="Xem trên Graph"
               >
                 <Share2 className="w-3.5 h-3.5" />
               </button>

@@ -1,0 +1,673 @@
+% !TEX root = ../../main.tex
+\section{Tìm hiểu về Agentic AI và ReAct}
+\label{sec:agentic_react}
+
+\subsection{Khái niệm và kiến trúc tổng quan của Agentic AI}
+\label{subsec:agentic_ai_la_gi}
+Agentic AI (Trí tuệ nhân tạo có tính tác nhân) đại diện cho bước chuyển dịch căn bản từ mô hình ngôn ngữ lớn (LLM) bị động (chỉ tạo văn bản theo dạng câu hỏi -- câu trả lời một lượt) sang các hệ thống tác nhân thông minh tự chủ có mục tiêu (\textit{Goal-Oriented Autonomous Agents}). Thay vì cố gắng giải quyết một bài toán phức tạp bằng một lần suy luận duy nhất, Agentic AI có khả năng tự phân tách nhiệm vụ thành các bước nhỏ, sử dụng các công cụ ngoại vi để thu thập dữ liệu thực tế, quan sát môi trường và tự điều chỉnh kế hoạch hành động.
+
+Theo khung lý thuyết chuẩn tắc về tác nhân thông minh của Lilian Weng \cite{weng2023agent}, một tác nhân AI hoàn chỉnh được xây dựng dựa trên 4 trụ cột năng lực cốt lõi:
+\begin{enumerate}[label=\textbf{(\arabic*)}, noitemsep, topsep=1pt]
+    \item \textbf{Bộ não trung tâm (\textit{LLM Agent Brain}):} Hạt nhân điều phối nhận thức, suy luận logic và ra quyết định hành động.
+    \item \textbf{Bộ nhớ (\textit{Memory}):} Gồm bộ nhớ ngắn hạn (\textit{Context} hội thoại) và bộ nhớ dài hạn (\textit{GraphRAG} \& Vector).
+    \item \textbf{Lập kế hoạch (\textit{Planning}):} Phân rã mục tiêu lớn (\textit{Subgoal Decomposition}) và tự phản tư sửa sai.
+    \item \textbf{Tập công cụ ngoại vi (\textit{Tools}):} Các API tra cứu dữ liệu, tìm kiếm tài liệu và môi trường hộp cát tính toán.
+\end{enumerate}
+
+Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thuật được thể hiện trong Hình~\ref{fig:react_agent_loop}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.75, transform shape,
+    centerbox/.style={draw=black!85, fill=red!10, rounded corners=5pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    pillar/.style={draw=black!80, fill=gray!15, rounded corners=4pt, line width=0.95pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    leaf/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
+    leaf_code/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\ttfamily\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!80},
+    tree_line/.style={draw=black!80, line width=0.95pt}
+]
+    % Khối Tác nhân AI ở Trung tâm
+    \node[centerbox, minimum width=2.8cm, minimum height=1.2cm] (agent) at (0, 0) {
+        TÁC NHÂN AI\\
+        \footnotesize (\textit{LLM Agent Brain})
+    };
+
+    % 1. Trụ cột BỘ NHỚ (Phía trên)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (memory) at (0, 1.8) {
+        BỘ NHỚ\\
+        \scriptsize (\textit{Memory})
+    };
+    \draw[arrowstyle] (agent.north) -- (memory.south);
+
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_short) at (-2.6, 3.2) {
+        \textbf{Bộ nhớ ngắn hạn}\\
+        \scriptsize (\textit{Context / Lịch sử suy luận})
+    };
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_long) at (2.6, 3.2) {
+        \textbf{Bộ nhớ dài hạn}\\
+        \scriptsize (\textit{GraphRAG \& Vector HNSW})
+    };
+    \draw[tree_line] (memory.north) |- (m_short.south);
+    \draw[tree_line] (memory.north) |- (m_long.south);
+
+    % 2. Trụ cột LẬP KẾ HOẠCH (Bên trái)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (planning) at (-3.6, 0) {
+        KẾ HOẠCH\\
+        \scriptsize (\textit{Planning})
+    };
+    \draw[arrowstyle] (agent.west) -- (planning.east);
+
+    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_decomp) at (-7.3, 0.9) {
+        \textbf{Phân rã mục tiêu}\\
+        \scriptsize (\textit{Subgoal Decomposition})
+    };
+    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_critics) at (-7.3, -0.9) {
+        \textbf{Phản tư \& Sửa sai}\\
+        \scriptsize (\textit{Reflexion \& Self-Critique})
+    };
+    \draw[tree_line] (planning.west) |- (p_decomp.east);
+    \draw[tree_line] (planning.west) |- (p_critics.east);
+
+    % 3. Trụ cột CÔNG CỤ (Bên phải)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (tools) at (3.6, 0) {
+        CÔNG CỤ\\
+        \scriptsize (\textit{Tools})
+    };
+    \draw[arrowstyle] (agent.east) -- (tools.west);
+
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t1) at (7.5, 1.35) {
+        \footnotesize \textbf{HybridSearch()}
+    };
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t2) at (7.5, 0.45) {
+        \footnotesize \textbf{GraphTraversal()}
+    };
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t3) at (7.5, -0.45) {
+        \footnotesize \textbf{ResolveDOI()}
+    };
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t4) at (7.5, -1.35) {
+        \footnotesize \textbf{SandboxExecution()}
+    };
+    \draw[tree_line] (tools.east) |- (t1.west);
+    \draw[tree_line] (tools.east) |- (t2.west);
+    \draw[tree_line] (tools.east) |- (t3.west);
+    \draw[tree_line] (tools.east) |- (t4.west);
+
+    % 4. Trụ cột HÀNH ĐỘNG (Phía dưới)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (action) at (0, -1.8) {
+        HÀNH ĐỘNG\\
+        \scriptsize (\textit{Action})
+    };
+    \draw[arrowstyle] (agent.south) -- (action.north);
+
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_stream) at (-2.6, -3.2) {
+        \textbf{Phản hồi luồng SSE}\\
+        \scriptsize (\textit{Real-time Scholar Stream})
+    };
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_verify) at (2.6, -3.2) {
+        \textbf{Kiểm định trích dẫn}\\
+        \scriptsize (\textit{Citation Integrity Proof})
+    };
+    \draw[tree_line] (action.south) |- (a_stream.north);
+    \draw[tree_line] (action.south) |- (a_verify.north);
+\end{tikzpicture}
+\caption{Kiến trúc Tác nhân AI Độc lập (LLM-Powered Autonomous Agent)}
+\label{fig:react_agent_loop}
+\end{figure}
+
+Để hiện thực hóa các năng lực tự chủ trên, cộng đồng khoa học đã chuẩn hóa thành 6 mẫu thiết kế tác nhân (\textit{Agent Design Patterns}): (1) Lập kế hoạch (\textit{Planning}), (2) Sử dụng công cụ (\textit{Tool Use}), (3) Suy luận \& Hành động (\textit{ReAct}), (4) Phản tư (\textit{Reflection}), (5) Đa tác nhân (\textit{Multi-Agent}), và (6) Người trong vòng lặp (\textit{Human-in-the-Loop}).
+\clearpage
+
+\subsection{Mẫu kiến trúc Lập kế hoạch (Planning Pattern)}
+\label{subsec:planning_pattern}
+Khi tiếp nhận một yêu cầu nghiên cứu học thuật phức tạp (ví dụ: ``Tổng quan các phương pháp GraphRAG trong 3 năm qua và so sánh hiệu năng trên tập dữ liệu chuẩn''), mô hình ngôn ngữ không thể đưa ra lời giải thấu đáo trong một lượt suy luận duy nhất. Mẫu kiến trúc Lập kế hoạch (\textit{Planning Pattern}) giải quyết thách thức này bằng cách mô phỏng tư duy giải quyết vấn đề của các học giả: phân tích yêu cầu, phân rã mục tiêu lớn thành các tác vụ con khả thi, thiết lập trật tự phụ thuộc và điều phối thực thi từng bước.
+
+Quy trình phân rã và điều phối kế hoạch tác nhân được mô hình hóa trong Hình~\ref{fig:planning_pattern}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.75, transform shape,
+    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_analyze/.style={draw=orange!85!black, fill=yellow!20, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_decompose/.style={draw=green!70!black, fill=green!15, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_sequence/.style={draw=purple!70!black, fill=purple!15, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_execute/.style={draw=red!70!black, fill=red!15, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_sub/.style={draw=cyan!80!black, fill=cyan!15, rounded corners=5pt, line width=1.0pt, text width=3.0cm, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
+    box_result/.style={draw=cyan!85!black, fill=cyan!25, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85}
+]
+    % Header
+    \node[font=\bfseries\Large, text=black!90] at (0.4, 5.4) {Planning Pattern};
+
+    % Nhánh trái: Chuỗi lập kế hoạch
+    \node[box_analyze] (analyze) at (-2.6, 3.8) {
+        ANALYZE\\[2pt]
+        \scriptsize Understand Requirements\\[1pt]
+        \tiny (Phân tích yêu cầu bài toán)
+    };
+
+    \node[box_decompose] (decompose) at (-2.6, 1.9) {
+        DECOMPOSE\\[2pt]
+        \scriptsize Break Into Subtasks\\[1pt]
+        \tiny (Phân rã thành các tác vụ con)
+    };
+
+    \node[box_sequence] (sequence) at (-2.6, 0.0) {
+        SEQUENCE\\[2pt]
+        \scriptsize Order \& Dependencies\\[1pt]
+        \tiny (Xác định thứ tự \& phụ thuộc)
+    };
+
+    \node[box_execute] (execute) at (-2.6, -1.9) {
+        EXECUTE PLAN\\[2pt]
+        \scriptsize (Thực thi chuỗi kế hoạch)
+    };
+
+    % Đầu vào bài toán: Complex Task (Phía trên bên phải)
+    \node[box_task] (complex) at (3.4, 3.8) {
+        Complex Task\\[2pt]
+        \scriptsize (Nhiệm vụ phức tạp)
+    };
+
+    % Nhánh phải: Các tác vụ con thực thi tuần tự
+    \node[box_sub] (sub1) at (3.4, 0.2) {
+        Subtask 1\\[1pt]
+        \scriptsize (Tác vụ con 1)
+    };
+
+    \node[box_sub] (sub2) at (3.4, -1.2) {
+        Subtask 2\\[1pt]
+        \scriptsize (Tác vụ con 2)
+    };
+
+    \node[box_sub] (sub3) at (3.4, -2.6) {
+        Subtask 3\\[1pt]
+        \scriptsize (Tác vụ con 3)
+    };
+
+    \node[box_result] (result) at (3.4, -4.3) {
+        Complete Result\\[1pt]
+        \scriptsize (Kết quả hoàn chỉnh)
+    };
+
+    % Đường kết nối luồng
+    \draw[arrowstyle] (complex.west) -- (analyze.east);
+    \draw[arrowstyle] (analyze.south) -- (decompose.north);
+    \draw[arrowstyle] (decompose.south) -- (sequence.north);
+    \draw[arrowstyle] (sequence.south) -- (execute.north);
+
+    % Phân nhánh từ EXECUTE PLAN sang các Subtasks
+    \draw[arrowstyle] (execute.east) -- ++(1.0, 0) |- (sub1.west);
+    \draw[arrowstyle] (execute.east) -- (sub2.west);
+    \draw[arrowstyle] (execute.east) -- ++(1.0, 0) |- (sub3.west);
+
+    % Luồng tuần tự giữa các Subtasks dẫn tới Complete Result
+    \draw[arrowstyle] (sub1.south) -- (sub2.north);
+    \draw[arrowstyle] (sub2.south) -- (sub3.north);
+    \draw[arrowstyle] (sub3.south) -- (result.north);
+\end{tikzpicture}
+\caption{Mẫu kiến trúc Lập kế hoạch và Phân rã nhiệm vụ (Planning Pattern)}
+\label{fig:planning_pattern}
+\end{figure}
+
+Quy trình vận hành chi tiết của mẫu thiết kế bao gồm:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item \textbf{Phân tích (\textit{Analyze}):} Giải mã yêu cầu, nhận diện phạm vi tri thức, các ràng buộc học thuật và tiêu chí đầu ra mong đợi.
+    \item \textbf{Phân rã (\textit{Decompose}):} Tách nhiệm vụ thành các bài toán con nguyên tử (\textit{atomic subtasks}) độc lập hoặc có thể kiểm thử riêng biệt.
+    \item \textbf{Sắp đặt thứ tự (\textit{Sequence}):} Xác định đồ thị quan hệ phụ thuộc giữa các bài toán con, bảo đảm dữ liệu đầu ra của tác vụ trước cung cấp chính xác đầu vào cho tác vụ sau.
+    \item \textbf{Thực thi kế hoạch (\textit{Execute Plan}):} Điều phối thực thi tuần tự qua từng bước (\textit{Subtask 1} $\rightarrow$ \textit{Subtask 2} $\rightarrow$ \textit{Subtask 3}) để tổng hợp nên kết quả nghiên cứu toàn diện (\textit{Complete Result}).
+\end{itemize}
+\clearpage
+
+\subsection{Mẫu kiến trúc Sử dụng Công cụ (Tool Use Pattern)}
+\label{subsec:tool_use_pattern}
+Mặc dù sở hữu năng lực ngôn ngữ mạnh mẽ, các mô hình ngôn ngữ lớn (LLM) thuần túy hoàn toàn bị giới hạn bởi: (1) tri thức tĩnh không cập nhật dữ liệu mới phát sinh, (2) không có khả năng thực hiện các phép tính số học phức tạp chính xác, và (3) không thể trực tiếp thao tác với hệ thống tệp tin hoặc cơ sở dữ liệu. Mẫu kiến trúc Sử dụng Công cụ (\textit{Tool Use Pattern}) \cite{schick2023toolformer} trao cho LLM vai trò của một ``Bộ não ra quyết định'' (\textit{Decision Maker}) kết nối với hệ sinh thái công cụ thực thi chuyên biệt.
+
+Mô hình tương tác giữa tác nhân AI và tập công cụ ngoại vi được thể hiện trong Hình~\ref{fig:tool_use_pattern}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.70, transform shape,
+    box_query/.style={draw=orange!80!black, fill=yellow!20, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_resp/.style={draw=cyan!80!black, fill=cyan!20, rounded corners=6pt, line width=1.05pt, text width=3.6cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    agent_oval/.style={ellipse, draw=blue!75!black, fill=blue!10, line width=1.1pt, text width=4.0cm, align=center, inner sep=5pt, font=\linespread{1.05}\selectfont\bfseries\small},
+    tool_box/.style={draw=green!70!black, fill=green!15, rounded corners=6pt, line width=1.0pt, text width=2.8cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85},
+    botharrow/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1.05pt, draw=black!85}
+]
+    % Header
+    \node[font=\bfseries\Large, text=black!90] at (0, 4.6) {Tool Use Pattern};
+
+    % Node Trung tâm: AI AGENT Decision Maker
+    \node[agent_oval] (agent) at (0, 0) {
+        AI AGENT\\[2pt]
+        Decision Maker\\[2pt]
+        \scriptsize (Tác nhân AI ra quyết định)
+    };
+
+    % Đỉnh trên: User Query
+    \node[box_query] (query) at (0, 3.1) {
+        User Query\\[2pt]
+        \scriptsize (Truy vấn của học giả)
+    };
+
+    % Đáy dưới: Enriched Response
+    \node[box_resp] (resp) at (0, -3.1) {
+        Enriched Response\\[2pt]
+        \scriptsize (Phản hồi giàu ngữ cảnh)
+    };
+
+    % Nhánh công cụ bên trái (CSDL, API, Sandbox Python)
+    \node[tool_box] (dbq) at (-5.0, 0) {
+        Database Query\\[2pt]
+        \scriptsize (Truy vấn CSDL)
+    };
+    \node[tool_box] (api) at (-5.0, 2.3) {
+        API Call\\[2pt]
+        \scriptsize (Gọi dịch vụ API)
+    };
+    \node[tool_box] (py) at (-5.0, -2.3) {
+        Python Script\\[2pt]
+        \scriptsize (Thực thi Sandbox)
+    };
+
+    % Nhánh công cụ bên phải (Tệp tin, Tìm kiếm, Hệ thống ngoài)
+    \node[tool_box] (fileop) at (5.0, 0) {
+        File Operations\\[2pt]
+        \scriptsize (Thao tác tệp PDF)
+    };
+    \node[tool_box] (web) at (5.0, 2.3) {
+        Web Search\\[2pt]
+        \scriptsize (Tìm kiếm học thuật)
+    };
+    \node[tool_box] (ext) at (5.0, -2.3) {
+        External System\\[2pt]
+        \scriptsize (Hệ thống ngoại vi)
+    };
+
+    % Kết nối luồng câu hỏi và phản hồi
+    \draw[arrowstyle] (query.south) -- (agent.north);
+    \draw[arrowstyle] (agent.south) -- (resp.north);
+
+    % Kết nối hai chiều giữa Agent và các nhóm công cụ
+    \draw[botharrow] (agent.west) -- (dbq.east);
+    \draw[botharrow] (dbq.north) -- (api.south);
+    \draw[botharrow] (dbq.south) -- (py.north);
+
+    \draw[botharrow] (agent.east) -- (fileop.west);
+    \draw[botharrow] (fileop.north) -- (web.south);
+    \draw[botharrow] (fileop.south) -- (ext.north);
+\end{tikzpicture}
+\caption{Mẫu kiến trúc Tác nhân sử dụng công cụ ngoại vi (Tool Use Pattern)}
+\label{fig:tool_use_pattern}
+\end{figure}
+
+Trong mẫu kiến trúc này, tác nhân AI vận hành như một thực thể điều phối trung tâm:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item Khi nhận truy vấn (\textit{User Query}), tác nhân phân tích xem câu trả lời có đòi hỏi dữ liệu chính xác hay tính toán đặc thù hay không.
+    \item Tác nhân phát sinh lệnh gọi hàm chuẩn hóa (\textit{Function Calling}) gửi tới các công cụ phù hợp: nhánh dữ liệu (\textit{Database Query, API Call, Python Script}) hoặc nhánh tệp và tìm kiếm (\textit{File Operations, Web Search, External System}).
+    \item Dữ liệu thực nghiệm thu được từ môi trường ngoại vi được tích hợp ngược trở lại ngữ cảnh để LLM sinh ra phản hồi chuẩn xác, giàu dẫn chứng (\textit{Enriched Response}).
+\end{itemize}
+\clearpage
+
+\subsection{Mẫu kiến trúc Suy luận và Hành động ReAct (ReAct Pattern)}
+\label{subsec:react_pattern}
+ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc tác nhân kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research đề xuất năm 2022 \cite{yao2022}. Trước ReAct, các nghiên cứu thường tách biệt hai hướng: hoặc chỉ tập trung vào suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought}) \cite{wei2022cot}, hoặc chỉ tập trung vào hành động gọi API độc lập (\textit{Toolformer}) \cite{schick2023toolformer}. ReAct kết hợp đồng thời hai cơ chế này theo một vòng lặp nhịp nhàng:
+\begin{equation}
+\label{eq:react_cycle}
+\text{Thought} \longrightarrow \text{Action} \longrightarrow \text{Observation} \longrightarrow \text{Thought} \dots
+\end{equation}
+
+Mô hình chu trình suy luận và hành động ReAct được thể hiện trong Hình~\ref{fig:react_pattern_loop}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.72, transform shape,
+    box_query/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.0pt, text width=3.2cm, align=center, inner sep=4pt, font=\bfseries\small},
+    box_reason/.style={draw=orange!85!black, fill=yellow!18, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_action/.style={draw=green!65!black, fill=green!12, rounded corners=6pt, line width=1.0pt, text width=3.2cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_obs/.style={draw=purple!75!black, fill=purple!12, rounded corners=6pt, line width=1.0pt, text width=3.2cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_final/.style={draw=cyan!80!black, fill=cyan!15, rounded corners=6pt, line width=1.1pt, text width=3.0cm, align=center, inner sep=5pt, font=\bfseries\small},
+    decision_node/.style={diamond, draw=red!75!black, fill=red!10, aspect=1.0, line width=1.1pt, text width=1.4cm, align=center, inner sep=1pt, font=\bfseries\tiny},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85}
+]
+    % 1. User Query (Đỉnh trên cùng)
+    \node[box_query] (query) at (0, 4.0) {
+        User Query\\[2pt]
+        \scriptsize (Truy vấn của học giả)
+    };
+
+    % 2. REASON: Analyze & Decide (Ở giữa)
+    \node[box_reason] (reason) at (0, 1.9) {
+        REASON\\[2pt]
+        \scriptsize Analyze \& Decide\\[1pt]
+        \tiny (Phân tích \& Ra quyết định)
+    };
+
+    % 3. Task Complete? (Nút điều kiện dạng thoi ở giữa dưới)
+    \node[decision_node] (cond) at (0, -0.8) {
+        Task Complete?\\[1pt]
+        \scriptsize (Xong?)
+    };
+
+    % 4. Final Answer (Nhánh Yes - Phía bên phải)
+    \node[box_final] (final) at (5.4, -0.8) {
+        Final Answer\\[2pt]
+        \scriptsize (Câu trả lời cuối)
+    };
+
+    % 5. ACTION (Nhánh No - Phía bên trái dưới)
+    \node[box_action] (action) at (-5.4, -0.8) {
+        ACTION\\[2pt]
+        \scriptsize Use Tool / Execute\\[1pt]
+        \tiny (Kích hoạt công cụ)
+    };
+
+    % 6. OBSERVATION (Phía trên ACTION)
+    \node[box_obs] (obs) at (-5.4, 1.9) {
+        OBSERVATION\\[2pt]
+        \scriptsize Review \& Save\\[1pt]
+        \tiny (Đọc kết quả công cụ)
+    };
+
+    % Kết nối các luồng ReAct
+    \draw[arrowstyle] (query.south) -- (reason.north);
+    \draw[arrowstyle] (reason.south) -- (cond.north);
+
+    % Nhánh Yes -> Final Answer
+    \draw[arrowstyle] (cond.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Xong)} (final.west);
+
+    % Nhánh No -> ACTION
+    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (action.east);
+
+    % ACTION -> OBSERVATION
+    \draw[arrowstyle] (action.north) -- (obs.south);
+
+    % OBSERVATION -> REASON (Khép kín vòng lặp)
+    \draw[arrowstyle] (obs.east) -- (reason.west);
+\end{tikzpicture}
+\caption{Mẫu kiến trúc suy luận và hành động ReAct (Reasoning and Acting Pattern)}
+\label{fig:react_pattern_loop}
+\end{figure}
+
+Mỗi chu trình ReAct bao gồm ba pha nối tiếp nhau:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item \textbf{Suy nghĩ (\textit{Thought / Reason}):} Tác nhân tự sinh ra lập luận bằng văn bản để phân tích tình hình hiện tại, nhận diện khoảng trống dữ liệu và lựa chọn công cụ cần gọi tiếp theo.
+    \item \textbf{Hành động (\textit{Action}):} Tác nhân phát ra lệnh có cấu trúc cụ thể (gọi hàm tra cứu ấn phẩm, tính toán dữ liệu hoặc truy vấn đồ thị).
+    \item \textbf{Quan sát (\textit{Observation}):} Hệ thống thực thi công cụ và trả về dữ liệu thực tế. Tác nhân đọc kết quả quan sát này để tiếp tục chu trình tư duy kế tiếp cho đến khi hoàn thành mục tiêu.
+\end{itemize}
+\clearpage
+
+\subsection{Cơ chế Phản tư và Tự sửa sai Reflexion (Reflection Pattern)}
+\label{subsec:reflexion_mechanism}
+Reflexion (\textit{Language Agents with Verbal Reinforcement Learning}) là một khuôn khổ mở rộng được phát triển bởi Noah Shinn và các đồng nghiệp \cite{shinn2023}, cung cấp cho tác nhân AI khả năng tự phản tư học hỏi từ những sai lầm mà không đòi hỏi phải cập nhật trọng số mô hình.
+
+Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số trang, nhầm lẫn tác giả hoặc ảo giác dữ liệu thực nghiệm là tối kỵ. Khung chu trình tự phản tư và hiệu chỉnh của Reflexion được thể hiện trong Hình~\ref{fig:reflection_pattern_loop}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.75, transform shape,
+    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.0pt, text width=3.2cm, align=center, inner sep=4pt, font=\bfseries\small},
+    box_generate/.style={draw=green!65!black, fill=green!12, rounded corners=6pt, line width=1.1pt, text width=3.6cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_critique/.style={draw=orange!85!black, fill=yellow!18, rounded corners=6pt, line width=1.1pt, text width=3.6cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_revise/.style={draw=purple!75!black, fill=purple!12, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\bfseries\small},
+    box_final/.style={draw=cyan!80!black, fill=cyan!15, rounded corners=6pt, line width=1.1pt, text width=3.2cm, align=center, inner sep=5pt, font=\bfseries\small},
+    decision_node/.style={diamond, draw=red!75!black, fill=red!10, aspect=1.35, line width=1.1pt, text width=2.2cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85}
+]
+    % 1. Task (Đỉnh trên cùng)
+    \node[box_task] (task) at (0, 5.4) {
+        Task\\[2pt]
+        \scriptsize (Nhiệm vụ học thuật)
+    };
+
+    % 2. GENERATE: Create Initial Output
+    \node[box_generate] (generate) at (0, 3.6) {
+        GENERATE\\[2pt]
+        \scriptsize Create Initial Output\\[1pt]
+        \tiny (Tạo sinh bản thảo đầu)
+    };
+
+    % 3. CRITIQUE: Evaluate Quality
+    \node[box_critique] (critique) at (0, 1.6) {
+        CRITIQUE\\[2pt]
+        \scriptsize Evaluate Quality\\[1pt]
+        \tiny (Tự đánh giá \& Phản tư)
+    };
+
+    % 4. Meets Standards? (Nút điều kiện dạng thoi ở giữa dưới)
+    \node[decision_node] (cond) at (0, -0.9) {
+        Meets Standards?\\[1pt]
+        \tiny (Đạt chuẩn?)
+    };
+
+    % 5. Final Output (Nhánh Yes - Phía bên phải)
+    \node[box_final] (final) at (5.6, -0.9) {
+        Final Output\\[2pt]
+        \scriptsize (Bản thảo chuẩn xác)
+    };
+
+    % 6. REVISE (Nhánh No - Phía bên trái dưới)
+    \node[box_revise] (revise) at (-5.6, -0.9) {
+        REVISE\\[2pt]
+        \scriptsize Improve on Feedback\\[1pt]
+        \tiny (Sửa đổi theo phản tư)
+    };
+
+    % Các kết nối luồng
+    \draw[arrowstyle] (task.south) -- (generate.north);
+    \draw[arrowstyle] (generate.south) -- (critique.north);
+    \draw[arrowstyle] (critique.south) -- (cond.north);
+
+    % Nhánh Yes -> Final Output
+    \draw[arrowstyle] (cond.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Đạt)} (final.west);
+
+    % Nhánh No -> REVISE
+    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (revise.east);
+
+    % Vòng lặp phản tư: REVISE đi lên và nạp ngược lại vào GENERATE
+    \draw[arrowstyle] (revise.north) |- ([yshift=0pt]generate.west);
+\end{tikzpicture}
+\caption{Cơ chế phản tư và tự sửa sai Reflexion (Reflection Pattern)}
+\label{fig:reflection_pattern_loop}
+\end{figure}
+
+Cơ chế Reflexion vận hành thông qua ba thành phần phối hợp chặt chẽ:
+\begin{enumerate}[label=\textbf{(\arabic*)}, noitemsep, topsep=1pt]
+    \item \textbf{Bộ đánh giá (\textit{Evaluator}):} Chấm điểm kết quả đầu ra của tác nhân dựa trên tiêu chí liêm chính học thuật (ví dụ: độ phủ trích dẫn có trùng khớp 100\% với văn bản gốc hay không).
+    \item \textbf{Bộ phản tư ngôn từ (\textit{Self-Reflection}):} Nếu bộ đánh giá phát hiện lỗi sai, mô hình sẽ tự sinh ra một đoạn tự phê bình bằng lời văn (\textit{verbal critique}), phân tích nguyên nhân vì sao bước lập luận trước bị lỗi và đề xuất hướng sửa đổi cụ thể.
+    \item \textbf{Bộ nhớ phản tư (\textit{Memory Buffer}):} Lưu trữ bản tự phê bình vào ngữ cảnh hoạt động. Ở lượt thực thi tiếp theo, tác nhân đọc lại kinh nghiệm sai sót này để không lặp lại sai lầm cũ, bảo đảm bản thảo học thuật đạt độ chính xác tối đa.
+\end{enumerate}
+\clearpage
+
+\subsection{Mẫu kiến trúc Phối hợp Đa tác nhân (Multi-Agent Pattern)}
+\label{subsec:multi_agent_pattern}
+Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một tác nhân đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa tác nhân (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một nhóm nghiên cứu khoa học gồm các chuyên gia đảm nhiệm từng khâu riêng biệt.
+
+Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể hiện trong Hình~\ref{fig:multi_agent_pattern}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.75, transform shape,
+    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    coord_oval/.style={ellipse, draw=orange!85!black, fill=yellow!25, line width=1.1pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.05}\selectfont\bfseries\small},
+    agent_box/.style={rounded corners=6pt, line width=1.05pt, text width=2.8cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
+    sub_box/.style={draw=purple!75!black, fill=purple!15, rounded corners=3pt, line width=0.85pt, text width=1.4cm, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
+    box_comp/.style={draw=blue!80!black, fill=cyan!25, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.05}\selectfont\bfseries\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85},
+    botharrow/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1.05pt, draw=black!85},
+    dashline/.style={dashed, line width=0.9pt, draw=black!70}
+]
+    % Header
+    \node[font=\bfseries\Large, text=black!90] at (0, 5.5) {Multi-Agent Pattern Example};
+
+    % Complex Task ở trên cùng
+    \node[box_task] (task) at (0, 4.0) {
+        Complex Task\\[2pt]
+        \scriptsize (Nhiệm vụ phức tạp)
+    };
+
+    % COORDINATOR ở giữa
+    \node[coord_oval] (coord) at (0, 1.8) {
+        COORDINATOR\\[2pt]
+        Routes \& Synthesizes\\[2pt]
+        \scriptsize (Tác nhân Điều phối)
+    };
+
+    % 4 Tác nhân chuyên trách
+    \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-5.7, -0.9) {
+        Data Agent\\[2pt]
+        Queries \& Retrieves\\[2pt]
+        \tiny (Truy xuất dữ liệu)
+    };
+    \node[sub_box] (db_tool) at (-5.7, -2.2) {DB};
+    \draw[dashline] (data_ag.south) -- (db_tool.north);
+
+    \node[agent_box, draw=purple!70!black, fill=purple!15] (ana_ag) at (-2.0, -0.9) {
+        Analysis Agent\\[2pt]
+        Processes \& Computes\\[2pt]
+        \tiny (Xử lý \& Tính toán)
+    };
+    \node[sub_box] (api_tool) at (-2.0, -2.2) {API};
+    \draw[dashline] (ana_ag.south) -- (api_tool.north);
+
+    \node[agent_box, draw=red!70!black, fill=red!15] (write_ag) at (2.0, -0.9) {
+        Writing Agent\\[2pt]
+        Formats \& Documents\\[2pt]
+        \tiny (Soạn thảo học thuật)
+    };
+    \node[sub_box] (code_tool) at (2.0, -2.2) {Code};
+    \draw[dashline] (write_ag.south) -- (code_tool.north);
+
+    \node[agent_box, draw=cyan!80!black, fill=cyan!15] (rev_ag) at (5.7, -0.9) {
+        Review Agent\\[2pt]
+        Validates \& Critiques\\[2pt]
+        \tiny (Thẩm định \& Đánh giá)
+    };
+    \node[sub_box] (rule_tool) at (5.7, -2.2) {Rules};
+    \draw[dashline] (rev_ag.south) -- (rule_tool.north);
+
+    % Comprehensive Result ở đáy dưới
+    \node[box_comp] (result) at (0, -3.8) {
+        Comprehensive Result\\[2pt]
+        \scriptsize (Kết quả nghiên cứu toàn diện)
+    };
+
+    % Kết nối luồng đầu vào
+    \draw[arrowstyle] (task.south) -- (coord.north);
+
+    % Giao tiếp hai chiều thông thoáng giữa Coordinator và 4 Tác nhân
+    \draw[botharrow] (coord.west) -| (data_ag.north);
+    \draw[botharrow] ([xshift=-20pt]coord.south) -- (ana_ag.north);
+    \draw[botharrow] ([xshift=20pt]coord.south) -- (write_ag.north);
+    \draw[botharrow] (coord.east) -| (rev_ag.north);
+
+    % Luồng tổng hợp thẳng từ Coordinator xuống Comprehensive Result
+    \draw[arrowstyle] (coord.south) -- (result.north);
+\end{tikzpicture}
+\caption{Mẫu kiến trúc phối hợp đa tác nhân chuyên trách (Multi-Agent Collaboration Pattern)}
+\label{fig:multi_agent_pattern}
+\end{figure}
+
+Cấu trúc phối hợp đa tác nhân gồm hai tầng nhận thức:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item \textbf{Tác nhân Điều phối (\textit{Coordinator}):} Tiếp nhận nhiệm vụ lớn, lập kế hoạch phân bổ, định tuyến yêu cầu tới các tác nhân chuyên trách và chịu trách nhiệm tổng hợp các kết quả riêng lẻ thành báo cáo khoa học hoàn chỉnh.
+    \item \textbf{Các tác nhân chuyên trách (\textit{Specialized Agents}):} Mỗi tác nhân được tinh chỉnh hệ thống chỉ dẫn (\textit{system prompt}) và cấp quyền truy cập tập công cụ riêng biệt: \textit{Data Agent} kết nối CSDL tri thức, \textit{Analysis Agent} xử lý dữ liệu và thuật toán, \textit{Writing Agent} định dạng văn bản học thuật theo chuẩn quốc tế, và \textit{Review Agent} đối soát quy chế và tiêu chí liêm chính.
+\end{itemize}
+\clearpage
+
+\subsection{Mẫu tương tác Người trong vòng lặp (Human-in-the-Loop Pattern)}
+\label{subsec:hitl_pattern}
+Trong các hệ sinh thái nghiên cứu khoa học chuyên sâu, việc trao toàn quyền tự quyết không kiểm soát cho các tác nhân AI tiềm ẩn nhiều rủi ro học thuật (như trích dẫn sai sự thật, diễn giải sai lệch số liệu thực nghiệm hoặc kích hoạt các mã lệnh không an toàn). Mẫu tương tác Người trong vòng lặp (\textit{Human-in-the-Loop -- HITL Pattern}) thiết lập các điểm kiểm soát an toàn (\textit{Checkpoints}) nhằm bảo đảm các quyết định trọng yếu luôn có sự giám sát và phê duyệt của học giả con người.
+
+Cơ chế kiểm soát và phản hồi tương tác HITL được mô hình hóa trong Hình~\ref{fig:hitl_pattern}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.72, transform shape,
+    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.05pt, text width=4.0cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    box_agent/.style={draw=green!70!black, fill=green!15, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    box_check/.style={draw=orange!80!black, fill=yellow!20, rounded corners=6pt, line width=1.05pt, text width=4.6cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    box_human/.style={draw=purple!70!black, fill=purple!15, rounded corners=6pt, line width=1.05pt, text width=5.4cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    decision_node/.style={diamond, draw=red!75!black, fill=red!10, aspect=1.4, line width=1.05pt, text width=1.8cm, align=center, inner sep=1pt, font=\linespread{0.95}\selectfont\bfseries\scriptsize},
+    box_exec/.style={draw=teal!80!black, fill=cyan!20, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    box_revise/.style={draw=red!70!black, fill=red!15, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=2.5pt, font=\linespread{0.95}\selectfont\bfseries\small},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85}
+]
+    % Header
+    \node[font=\bfseries\Large, text=black!90] at (0, 6.7) {Human-in-the-Loop Pattern};
+
+    % 1. High-Stakes Task (Đỉnh trên cùng)
+    \node[box_task] (task) at (0, 5.5) {
+        \textbf{High-Stakes Task}\\[1pt]
+        \scriptsize (Nhiệm vụ nghiên cứu trọng yếu)
+    };
+
+    % 2. AGENT: Process & Generate
+    \node[box_agent] (agent) at (0, 3.7) {
+        \textbf{AGENT}\\[1pt]
+        \scriptsize Xử lý \& Tạo sinh bản thảo
+    };
+
+    % 3. CHECKPOINT: Pause for Review
+    \node[box_check] (check) at (0, 1.9) {
+        \textbf{CHECKPOINT}\\[1pt]
+        \scriptsize Điểm dừng kiểm duyệt an toàn
+    };
+
+    % 4. HUMAN: Review & Decide
+    \node[box_human] (human) at (0, 0.1) {
+        \textbf{HUMAN}\\[1pt]
+        \scriptsize Học giả thẩm định \& Quyết định
+    };
+
+    % 5. Approved? (Nút điều kiện dạng thoi)
+    \node[decision_node] (cond) at (0, -2.1) {
+        \textbf{Phê duyệt?}\\[1pt]
+        \tiny (Approved?)
+    };
+
+    % 6. EXECUTE: Take Action (Nhánh Yes - Phía bên phải)
+    \node[box_exec] (exec) at (4.6, -2.1) {
+        \textbf{EXECUTE}\\[1pt]
+        \scriptsize Thực thi \& Công bố
+    };
+
+    % 7. REVISE: Apply Feedback (Nhánh No - Phía bên trái)
+    \node[box_revise] (revise) at (-4.6, -2.1) {
+        \textbf{REVISE}\\[1pt]
+        \scriptsize Tiếp thu phản hồi chỉnh sửa
+    };
+
+    % Kết nối luồng chính
+    \draw[arrowstyle] (task.south) -- (agent.north);
+    \draw[arrowstyle] (agent.south) -- (check.north);
+    \draw[arrowstyle] (check.south) -- (human.north);
+    \draw[arrowstyle] (human.south) -- (cond.north);
+
+    % Nhánh Yes -> EXECUTE
+    \draw[arrowstyle] (cond.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Duyệt)} (exec.west);
+
+    % Nhánh No -> REVISE
+    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (revise.east);
+
+    % Vòng lặp phản hồi: REVISE đi lên và nạp ngược lại vào AGENT
+    \draw[arrowstyle] (revise.north) |- node[pos=0.25, left=3pt, font=\scriptsize\bfseries, text=red!80!black] {Feedback Loop (Phản hồi sửa đổi)} (agent.west);
+\end{tikzpicture}
+\caption{Mẫu tương tác người trong vòng lặp (Human-in-the-Loop Pattern)}
+\label{fig:hitl_pattern}
+\end{figure}
+
+Cơ chế vận hành của mô hình HITL bao gồm:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item \textbf{Nhận diện tác vụ trọng yếu (\textit{High-Stakes Task}):} Hệ thống tự động xác định các hành vi có nguy cơ ảnh hưởng lớn (thay đổi trạng thái đồ thị tri thức, xuất bản bài tổng quan, hoặc thực thi mã lệnh Python trong hộp cát).
+    \item \textbf{Điểm dừng an toàn (\textit{Checkpoint}):} Tác nhân tạm dừng quy trình tự động, khóa trạng thái luồng làm việc và gửi thông báo kèm ngữ cảnh tóm tắt tới người dùng.
+    \item \textbf{Đánh giá và Quyết định (\textit{Review \& Decide}):} Học giả xem xét bản thảo hoặc mã lệnh. Nếu được chấp thuận (\textit{Approved = Yes}), hệ thống tiến hành thực thi (\textit{Execute}). Nếu bị từ chối (\textit{Approved = No}), học giả cung cấp chỉ dẫn sửa đổi; tác nhân tiếp thu phản hồi (\textit{Revise}) để tái tạo sinh kết quả cho đến khi đạt chuẩn.
+\end{itemize}
+\clearpage

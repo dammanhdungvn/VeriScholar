@@ -95,4 +95,30 @@ describe("PaperInspectionDrawer Component (Wiki Peek Sheet)", () => {
     );
     expect(container.firstChild).toBeNull();
   });
+
+  it("does not render 'Open in Deep Reader' button for non-Paper entity nodes", () => {
+    const conceptNode: LibraryGraphNode = {
+      id: "concept-attention",
+      label: "Self-Attention Mechanism",
+      type: "Method",
+      group: "method",
+      degree: 8,
+      citation_count: 0,
+      community_id: 1,
+      metadata: {},
+    };
+
+    render(
+      <PaperInspectionDrawer
+        isOpen={true}
+        node={conceptNode}
+        allNodes={[conceptNode]}
+        allEdges={[]}
+        onClose={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("button", { name: /Open in Deep Reader/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Ask AI About Paper/i })).toBeInTheDocument();
+  });
 });

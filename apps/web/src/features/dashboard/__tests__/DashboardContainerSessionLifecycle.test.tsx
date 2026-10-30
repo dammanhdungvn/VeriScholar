@@ -58,6 +58,8 @@ vi.mock("@/features/reader/components/AbstractOnlyViewer", () => ({
   AbstractOnlyViewer: () => <div data-testid="mock-abstract-only-viewer" />,
 }));
 
+const mockLoadExistingSession = vi.fn();
+
 vi.mock("../hooks/useStreamingChat", () => ({
   useStreamingChat: () => ({
     messages: [],
@@ -67,7 +69,7 @@ vi.mock("../hooks/useStreamingChat", () => ({
     sendMessage: vi.fn(),
     stopGeneration: vi.fn(),
     resetChat: vi.fn(),
-    loadExistingSession: vi.fn(),
+    loadExistingSession: mockLoadExistingSession,
   }),
 }));
 
@@ -159,5 +161,21 @@ describe("DashboardContainer Session Document Lifecycle", () => {
     expect(useReaderStore.getState().openDocumentIds).toEqual([]);
     expect(useReaderStore.getState().activeDocumentId).toBeNull();
     expect(useWorkspaceStore.getState().activeDocumentId).toBeNull();
+  });
+
+  it("loads existing session messages via loadExistingSession when routeSessionId is mounted", async () => {
+    mockLoadExistingSession.mockClear();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={["/dashboard/session-switch-target"]}>
+          <Routes>
+            <Route path="/dashboard/:sessionId" element={<DashboardContainer />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
+
+    expect(mockLoadExistingSession).toHaveBeenCalledWith("session-switch-target");
   });
 });

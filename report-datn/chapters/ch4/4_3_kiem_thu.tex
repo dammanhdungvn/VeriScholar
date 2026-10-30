@@ -1,9 +1,8 @@
 % !TEX root = ../../main.tex
-\section{Kết quả kiểm thử tự động hệ thống qua 4 Cổng xác minh}
-\label{sec:kiem_thu_4_gate}
-\subsection{Quy trình kiểm thử 4 Cổng bắt buộc}
-\label{subsec:quy_trinh_gate}
-Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
+\subsection{Xây dựng các ca kiểm thử tự động hệ thống qua 4 Cổng xác minh}
+\label{subsec:kiem_thu_4_gate}
+
+Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm, triệt tiêu hồi quy và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
 \begin{itemize}
     \item \textbf{Cổng 1 (Linter \& Formatter Python):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{uv run ruff check .} và \texttt{uv run ruff format --check .}.
     \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 101 bài kiểm thử đơn vị và tích hợp \texttt{pytest} bao phủ toàn diện ranh giới kiến trúc lục giác, mô hình CSDL và tài liệu báo cáo.
@@ -11,8 +10,6 @@ Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giả
     \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{npm --prefix apps/web run build}.
 \end{itemize}
 
-\subsection{Kết quả kiểm tra độ tin cậy}
-\label{subsec:ket_qua_gate}
 Kết quả kiểm tra thực tế trên hệ thống được tổng hợp trong Bảng~\ref{tab:gate_results}:
 
 \begin{table}[htbp]
@@ -33,4 +30,4 @@ Kết quả kiểm tra thực tế trên hệ thống được tổng hợp tron
 \end{tabular}
 \end{table}
 
-Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong tổng thời gian thực thi chưa đầy 5 giây.
+Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong tổng thời gian thực thi chưa đầy 5 giây, bảo đảm độ tin cậy và tính ổn định cơ học cho toàn bộ hệ thống.

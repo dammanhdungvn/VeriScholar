@@ -717,3 +717,7 @@ class AITracingService:
                 "ai_tracing_shutdown_failed",
                 error=scrub_sensitive_text(str(ex)),
             )
+
+
+# Alias for case-insensitive import conventions
+AiTracingService = AITracingService

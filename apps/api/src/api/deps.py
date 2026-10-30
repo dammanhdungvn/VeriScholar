@@ -23,6 +23,7 @@ from api.db.models.user import UserModel
 from api.db.session import get_db
 from api.services.ai_tracing_service import AITracingService
 from api.services.auth_service import AuthService
+from api.services.benchmark_runner_service import BenchmarkRunnerService
 from api.services.document_service import DocumentService
 from api.services.draft_service import DraftService
 from api.services.embedding_service import EmbeddingService
@@ -33,6 +34,7 @@ from api.services.library_synthesis_service import LibrarySynthesisService
 from api.services.note_service import NoteService
 from api.services.session_chat_service import SessionChatService
 from api.services.session_service import SessionService
+from api.services.wiki_service import WikiService
 
 DEFAULT_DEV_USER_ID = UUID("00000000-0000-0000-0000-000000000001")
 
@@ -186,7 +188,19 @@ def get_draft_service(
     ai_tracing: AITracingService = Depends(get_ai_tracing_service),
 ) -> DraftService:
     """Dependency providing DraftService bound to request database session."""
-    return DraftService(db=db, ai_tracing=ai_tracing)
+    openai_client = None
+    if settings.OPENAI_API_KEY and settings.ENVIRONMENT != "test":
+        from api.agents.latex_agent import OpenAIChatCompletionsAdapter
+
+        openai_client = OpenAIChatCompletionsAdapter(
+            api_key=settings.OPENAI_API_KEY,
+            base_url=settings.OPENAI_BASE_URL,
+        )
+    return DraftService(
+        db=db,
+        ai_tracing=ai_tracing,
+        openai_client=openai_client,
+    )
 
 
 def get_folder_service(
@@ -194,6 +208,13 @@ def get_folder_service(
 ) -> FolderService:
     """Dependency providing FolderService bound to request database session."""
     return FolderService(db=db)
+
+
+def get_wiki_service(
+    db: AsyncSession = Depends(get_db),
+) -> WikiService:
+    """Dependency providing WikiService bound to request database session."""
+    return WikiService(db=db)
 
 
 def get_library_synthesis_service(
@@ -352,3 +373,24 @@ async def get_current_user(
         },
         headers={"WWW-Authenticate": "Bearer"},
     )
+
+
+async def get_current_active_user(
+    current_user: UserModel = Depends(get_current_user),
+) -> UserModel:
+    """Retrieve current active authenticated user."""
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail={
+                "code": "USER_INACTIVE",
+                "message": "Tài khoản người dùng đã bị vô hiệu hóa.",
+            },
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return current_user
+
+
+def get_benchmark_runner_service() -> BenchmarkRunnerService:
+    """Dependency providing BenchmarkRunnerService instance."""
+    return BenchmarkRunnerService()

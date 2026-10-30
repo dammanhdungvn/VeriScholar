@@ -27,7 +27,7 @@ export interface KnowledgeGraphCanvasProps {
   isLoading?: boolean;
   focusNodeId?: string | null;
   onSelectDocument?: (doc: { id: string; title?: string; filename: string }) => void;
-  onSelectNode?: (node: LibraryGraphNode) => void;
+  onSelectNode?: (node: LibraryGraphNode | null) => void;
   onSelectCommunity?: (community: LibraryCommunity) => void;
   className?: string;
 }
@@ -64,12 +64,27 @@ const COMMUNITY_PALETTE = [
   "#2563eb", // Blue
 ];
 
-const NODE_TYPE_COLORS: Record<string, string> = {
+export const NODE_TYPE_COLORS: Record<string, string> = {
   Paper: "#4f46e5",
   Method: "#059669",
   Dataset: "#d97706",
   MetricResult: "#c15f3e",
 };
+
+export const ENTITY_ICONS: Record<string, string> = {
+  Paper: "📄",
+  Method: "⚡",
+  Dataset: "📊",
+  MetricResult: "🎯",
+};
+
+const ENTITY_TYPE_FILTERS = [
+  { id: "all", label: "Tất cả" },
+  { id: "Paper", label: "Bài báo" },
+  { id: "Method", label: "Phương pháp" },
+  { id: "Dataset", label: "Tập dữ liệu" },
+  { id: "MetricResult", label: "Chỉ số" },
+];
 
 export function KnowledgeGraphCanvas({
   graphData,
@@ -86,6 +101,7 @@ export function KnowledgeGraphCanvas({
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedEntityType, setSelectedEntityType] = useState<string>("all");
   const [selectedCommunityId, setSelectedCommunityId] = useState<number | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -105,6 +121,27 @@ export function KnowledgeGraphCanvas({
   const rawNodes = useMemo(() => graphData?.nodes || [], [graphData]);
   const rawEdges = useMemo(() => graphData?.edges || [], [graphData]);
   const communities = useMemo(() => graphData?.communities || [], [graphData]);
+
+  const entityCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      all: rawNodes.length,
+      Paper: 0,
+      Method: 0,
+      Dataset: 0,
+      MetricResult: 0,
+    };
+    rawNodes.forEach((n) => {
+      if (counts[n.type] !== undefined) {
+        counts[n.type]++;
+      }
+    });
+    return counts;
+  }, [rawNodes]);
+
+  const focusNode = useMemo(() => {
+    if (!focusNodeId) return null;
+    return rawNodes.find((n) => n.id === focusNodeId) || null;
+  }, [focusNodeId, rawNodes]);
 
   // Compute 1-hop adjacency for spotlight highlighting
   const adjacencyMap = useMemo(() => {
@@ -181,18 +218,18 @@ export function KnowledgeGraphCanvas({
         "link",
         forceLink<SimNode, SimLink>(simLinks)
           .id((d) => d.id)
-          .distance(75)
-          .strength(0.4)
+          .distance(90)
+          .strength(0.35)
       )
-      .force("charge", forceManyBody().strength(-200))
-      .force("center", forceCenter(width / 2, height / 2).strength(0.1))
+      .force("charge", forceManyBody().strength(-280))
+      .force("center", forceCenter(width / 2, height / 2).strength(0.08))
       .force(
         "collision",
         forceCollide<SimNode>()
-          .radius((d) => d.radius + 8)
-          .iterations(2)
+          .radius((d) => d.radius + 14)
+          .iterations(3)
       )
-      .alphaDecay(0.028);
+      .alphaDecay(0.024);
 
     simulationRef.current = sim;
 
@@ -253,14 +290,22 @@ export function KnowledgeGraphCanvas({
       const nodes = simNodesRef.current;
       nodes.forEach((n) => {
         if (n.x === undefined || n.y === undefined) return;
+        const nodeColor =
+          selectedCommunityId !== null && n.community_id !== undefined && n.community_id !== null
+            ? COMMUNITY_PALETTE[Math.abs(n.community_id) % COMMUNITY_PALETTE.length]
+            : NODE_TYPE_COLORS[n.type] || "#4f46e5";
+
+        const matchesEntity =
+          selectedEntityType === "all" || n.type === selectedEntityType;
         const isDimmed =
+          !matchesEntity ||
           (selectedCommunityId !== null && n.community_id !== selectedCommunityId) ||
           (activeHoverId && activeHoverId !== n.id && !spotlightNeighbors?.has(n.id));
 
         if (!isDimmed) {
           ctx.beginPath();
           ctx.arc(n.x, n.y, n.radius * 1.8, 0, 2 * Math.PI);
-          ctx.fillStyle = `${n.color}15`; // Translucent halo
+          ctx.fillStyle = `${nodeColor}15`; // Translucent halo
           ctx.fill();
         }
       });
@@ -273,10 +318,16 @@ export function KnowledgeGraphCanvas({
         if (s.x === undefined || s.y === undefined || t.x === undefined || t.y === undefined)
           return;
 
+        const sMatches = selectedEntityType === "all" || s.type === selectedEntityType;
+        const tMatches = selectedEntityType === "all" || t.type === selectedEntityType;
         const isLinkActive =
           activeHoverId && (s.id === activeHoverId || t.id === activeHoverId);
         const isDimmed =
-          activeHoverId && !isLinkActive;
+          (!sMatches && !tMatches) || (activeHoverId && !isLinkActive);
+
+        const isDark =
+          typeof document !== "undefined" &&
+          document.documentElement.classList.contains("dark");
 
         ctx.save();
         ctx.beginPath();
@@ -285,8 +336,12 @@ export function KnowledgeGraphCanvas({
         ctx.strokeStyle = isLinkActive
           ? "#4f46e5"
           : isDimmed
-          ? "#e5e7eb40"
-          : "#d1d5db80";
+          ? isDark
+            ? "#37415125"
+            : "#e5e7eb25"
+          : isDark
+          ? "#4b556360"
+          : "#d1d5db70";
         ctx.lineWidth = isLinkActive ? 2.0 : 1.2;
         ctx.stroke();
 
@@ -295,7 +350,7 @@ export function KnowledgeGraphCanvas({
           const midX = (s.x + t.x) / 2;
           const midY = (s.y + t.y) / 2;
           ctx.font = "9px 'Anthropic Mono', ui-monospace, monospace";
-          ctx.fillStyle = "#6b7280";
+          ctx.fillStyle = isDark ? "#9ca3af" : "#6b7280";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText(link.label || link.relation, midX, midY - 6);
@@ -304,47 +359,88 @@ export function KnowledgeGraphCanvas({
       });
 
       // 3. Render Nodes
+      const isDark =
+        typeof document !== "undefined" &&
+        document.documentElement.classList.contains("dark");
+
       nodes.forEach((n) => {
         if (n.x === undefined || n.y === undefined) return;
+
+        const nodeColor =
+          selectedCommunityId !== null && n.community_id !== undefined && n.community_id !== null
+            ? COMMUNITY_PALETTE[Math.abs(n.community_id) % COMMUNITY_PALETTE.length]
+            : NODE_TYPE_COLORS[n.type] || "#4f46e5";
 
         const isFocus = n.id === focusNodeId;
         const isHovered = n.id === hoveredNodeId;
         const isNeighbor = activeHoverId ? spotlightNeighbors?.has(n.id) : false;
-        const isDimmed =
-          (selectedCommunityId !== null && n.community_id !== selectedCommunityId) ||
-          (activeHoverId && !isHovered && !isFocus && !isNeighbor);
+        const matchesEntity =
+          selectedEntityType === "all" || n.type === selectedEntityType;
+        const matchesCommunity =
+          selectedCommunityId === null || n.community_id === selectedCommunityId;
+        const matchesSpotlight =
+          !activeHoverId || isHovered || isFocus || isNeighbor;
 
-        const alpha = isDimmed ? 0.25 : 1.0;
+        // Visual prominence logic:
+        let alpha = 1.0;
+        if (!matchesEntity) {
+          alpha = 0.08;
+        } else if (!matchesCommunity) {
+          alpha = 0.15;
+        } else if (!matchesSpotlight) {
+          alpha = 0.2;
+        }
+
         ctx.save();
         ctx.globalAlpha = alpha;
 
         // Outer stroke ring
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
-        ctx.fillStyle = isHovered || isFocus ? n.color : `${n.color}22`;
+        ctx.fillStyle = isHovered || isFocus ? nodeColor : `${nodeColor}22`;
         ctx.fill();
         ctx.lineWidth = isHovered || isFocus ? 2.5 : 1.5;
-        ctx.strokeStyle = n.color;
+        ctx.strokeStyle = nodeColor;
         ctx.stroke();
 
-        // Node Label
+        // Node Label with Entity Icon Prefix
         const query = searchQuery.trim().toLowerCase();
         const matchesSearch = query && n.label.toLowerCase().includes(query);
 
         ctx.font = `${
           isHovered || isFocus ? "bold 11px" : "10px"
         } 'Anthropic Sans', system-ui, sans-serif`;
+
+        const icon = ENTITY_ICONS[n.type] || "•";
+        const truncatedText =
+          n.label.length > 22 ? `${n.label.slice(0, 20)}…` : n.label;
+        const displayLabel = `${icon} ${truncatedText}`;
+        const textMetrics = ctx.measureText(displayLabel);
+        const textWidth = textMetrics.width;
+
+        // Adaptive background pill for crystal clear text readability over edges
+        ctx.fillStyle = isDark
+          ? "rgba(24, 23, 21, 0.88)"
+          : "rgba(253, 252, 249, 0.92)";
+        ctx.fillRect(
+          n.x - textWidth / 2 - 4,
+          n.y + n.radius + 3,
+          textWidth + 8,
+          14
+        );
+
         ctx.fillStyle = matchesSearch
           ? "#c15f3e"
           : isHovered || isFocus
-          ? "#111827"
-          : "#4b5563";
+          ? isDark
+            ? "#ffffff"
+            : "#111827"
+          : isDark
+          ? "#d1d5db"
+          : "#374151";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-
-        const truncatedLabel =
-          n.label.length > 22 ? `${n.label.slice(0, 20)}…` : n.label;
-        ctx.fillText(truncatedLabel, n.x, n.y + n.radius + 4);
+        ctx.fillText(displayLabel, n.x, n.y + n.radius + 4);
 
         ctx.restore();
       });
@@ -359,7 +455,7 @@ export function KnowledgeGraphCanvas({
     return () => {
       cancelAnimationFrame(animationFrameId);
     };
-  }, [hoveredNodeId, focusNodeId, selectedCommunityId, searchQuery, adjacencyMap]);
+  }, [hoveredNodeId, focusNodeId, selectedCommunityId, selectedEntityType, searchQuery, adjacencyMap]);
 
   // Coordinate conversion helper: client pos -> simulation graph pos
   const clientToGraphPos = useCallback(
@@ -465,14 +561,21 @@ export function KnowledgeGraphCanvas({
           if (fullNode.type === "Paper") {
             const filename =
               (fullNode.metadata?.filename as string) || `${fullNode.label}.pdf`;
+            const docId =
+              (fullNode.metadata?.paper_id as string) ||
+              (fullNode.metadata?.document_id as string) ||
+              fullNode.id;
             onSelectDocument?.({
-              id: fullNode.id,
+              id: docId,
               title: fullNode.label,
               filename,
             });
           }
         }
       }
+    } else if (isPanningRef.current && !hasMovedSignificantlyRef.current) {
+      // Empty background click without drag: clear focus selection
+      onSelectNode?.(null);
     }
 
     isPanningRef.current = false;
@@ -483,11 +586,65 @@ export function KnowledgeGraphCanvas({
     }
   };
 
-  // Zoom via wheel
+  // Smooth touchpad pan and zoom
   const handleWheel = (e: React.WheelEvent<HTMLCanvasElement>) => {
     e.preventDefault();
-    const zoomFactor = e.deltaY < 0 ? 1.1 : 0.9;
-    setZoom((prev) => Math.max(0.3, Math.min(3.5, prev * zoomFactor)));
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // 1. Pinch-to-zoom on touchpad OR Ctrl + Mouse Wheel
+    if (e.ctrlKey) {
+      const zoomDelta = -e.deltaY * 0.006;
+      const zoomFactor = Math.min(Math.max(Math.exp(zoomDelta), 0.94), 1.06);
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.max(0.3, Math.min(3.5, prevZoom * zoomFactor));
+        setPan((prevPan) => {
+          const graphX = (mouseX - prevPan.x) / prevZoom;
+          const graphY = (mouseY - prevPan.y) / prevZoom;
+          return {
+            x: mouseX - graphX * nextZoom,
+            y: mouseY - graphY * nextZoom,
+          };
+        });
+        return nextZoom;
+      });
+      return;
+    }
+
+    // 2. Touchpad two-finger scroll vs physical mouse wheel
+    const isTrackpadScroll =
+      Math.abs(e.deltaX) > 0 ||
+      !Number.isInteger(e.deltaY) ||
+      Math.abs(e.deltaY) < 35;
+
+    if (isTrackpadScroll) {
+      // Gentle, dampened touchpad panning (0.65x factor)
+      setPan((prev) => ({
+        x: prev.x - e.deltaX * 0.65,
+        y: prev.y - e.deltaY * 0.65,
+      }));
+    } else {
+      // Physical mouse wheel notch: smooth zoom centered at pointer
+      const zoomDelta = -e.deltaY * 0.0012;
+      const zoomFactor = Math.min(Math.max(Math.exp(zoomDelta), 0.88), 1.14);
+
+      setZoom((prevZoom) => {
+        const nextZoom = Math.max(0.3, Math.min(3.5, prevZoom * zoomFactor));
+        setPan((prevPan) => {
+          const graphX = (mouseX - prevPan.x) / prevZoom;
+          const graphY = (mouseY - prevPan.y) / prevZoom;
+          return {
+            x: mouseX - graphX * nextZoom,
+            y: mouseY - graphY * nextZoom,
+          };
+        });
+        return nextZoom;
+      });
+    }
   };
 
   // Toolbar Actions
@@ -508,10 +665,10 @@ export function KnowledgeGraphCanvas({
         className
       )}
     >
-      {/* Top Bar: Search, Community Filter Ribbon, and Controls */}
+      {/* Top Bar: Search, Entity Filter Tabs, Community Dropdown, and Node/Edge Counter */}
       <div className="px-3 py-2 border-b border-[#e8e4dc] dark:border-[#2e2b26] bg-[#fdfcf9] dark:bg-[#1c1b18] flex flex-wrap items-center justify-between gap-2 shrink-0 z-10">
-        <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-          <div className="relative flex-1 max-w-xs">
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[200px]">
+          <div className="relative flex-1 max-w-xs min-w-[140px]">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
             <input
               type="text"
@@ -522,86 +679,78 @@ export function KnowledgeGraphCanvas({
             />
           </div>
 
-          <span className="text-[11px] text-muted font-mono whitespace-nowrap">
-            {rawNodes.length} đỉnh • {rawEdges.length} cạnh
-          </span>
-        </div>
+          {/* Entity Type Filter Tabs */}
+          <div className="flex items-center gap-0.5 bg-[#ede8df]/60 dark:bg-[#252320] p-0.5 rounded-lg border border-[#e2dcd2]/70 dark:border-[#322f2a]">
+            {ENTITY_TYPE_FILTERS.map((f) => {
+              const count = entityCounts[f.id] ?? 0;
+              return (
+                <button
+                  key={f.id}
+                  type="button"
+                  onClick={() => setSelectedEntityType(f.id)}
+                  className={cn(
+                    "px-2.5 py-0.5 rounded-md text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1",
+                    selectedEntityType === f.id
+                      ? "bg-[#c15f3e] text-white shadow-2xs font-semibold"
+                      : "text-muted hover:text-ink dark:text-zinc-400 dark:hover:text-zinc-200"
+                  )}
+                >
+                  <span>{f.label}</span>
+                  <span
+                    className={cn(
+                      "text-[9px] px-1 py-0.2 rounded-full font-mono",
+                      selectedEntityType === f.id
+                        ? "bg-white/20 text-white"
+                        : "bg-black/5 dark:bg-white/10 text-muted"
+                    )}
+                  >
+                    {count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
 
-        {/* Zoom & Reset Controls */}
-        <div className="flex items-center gap-1 bg-surface dark:bg-[#201e1b] rounded-md border border-border/80 p-0.5">
-          <button
-            type="button"
-            onClick={handleZoomIn}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Phóng to"
-          >
-            <ZoomIn className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleZoomOut}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Thu nhỏ"
-          >
-            <ZoomOut className="w-3.5 h-3.5" />
-          </button>
-          <button
-            type="button"
-            onClick={handleReset}
-            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink cursor-pointer"
-            title="Đặt lại khung nhìn"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-          </button>
-        </div>
-      </div>
-
-      {/* Community Ribbon Filter */}
-      {communities.length > 0 && (
-        <div className="px-3 py-1.5 border-b border-[#e8e4dc]/70 dark:border-[#2e2b26]/70 bg-[#fbf9f5] dark:bg-[#181715] flex items-center gap-1.5 overflow-x-auto text-[11px] scrollbar-none shrink-0 z-10">
-          <Filter className="w-3 h-3 text-muted shrink-0" />
-          <button
-            type="button"
-            onClick={() => setSelectedCommunityId(null)}
-            className={cn(
-              "px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer shrink-0",
-              selectedCommunityId === null
-                ? "bg-primary text-white"
-                : "bg-surface dark:bg-[#252320] text-muted hover:text-ink"
-            )}
-          >
-            Tất cả cộng đồng
-          </button>
-          {communities.map((c) => {
-            const isSelected = selectedCommunityId === c.id;
-            const dotColor =
-              COMMUNITY_PALETTE[Math.abs(c.id) % COMMUNITY_PALETTE.length];
-            return (
-              <button
-                key={c.id}
-                type="button"
-                onClick={() => {
-                  setSelectedCommunityId(isSelected ? null : c.id);
-                  onSelectCommunity?.(c);
+          {/* Compact Community Selector Dropdown */}
+          {communities.length > 0 && (
+            <div className="flex items-center gap-1 bg-[#ede8df]/60 dark:bg-[#252320] px-2 py-0.5 rounded-lg border border-[#e2dcd2]/70 dark:border-[#322f2a] text-[11px]">
+              <Filter className="w-3 h-3 text-muted shrink-0" />
+              <select
+                aria-label="Lọc theo cụm cộng đồng"
+                value={selectedCommunityId === null ? "all" : String(selectedCommunityId)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const commId = val === "all" ? null : Number(val);
+                  setSelectedCommunityId(commId);
+                  if (commId !== null) {
+                    const match = communities.find((c) => c.id === commId);
+                    if (match) onSelectCommunity?.(match);
+                  }
                 }}
-                className={cn(
-                  "flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors cursor-pointer shrink-0 border",
-                  isSelected
-                    ? "bg-primary/10 border-primary text-primary dark:text-zinc-100"
-                    : "border-border/60 bg-white/60 dark:bg-[#201e1b] text-muted hover:text-ink"
-                )}
+                className="bg-transparent text-ink dark:text-zinc-200 outline-none cursor-pointer text-[11px] font-medium"
               >
-                <span
-                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                  style={{ backgroundColor: dotColor }}
-                />
-                <span className="truncate max-w-[120px]">{c.label}</span>
-                <span className="text-[9px] opacity-70 font-mono">({c.paper_count})</span>
-              </button>
-            );
-          })}
+                <option value="all" className="bg-white dark:bg-[#201e1b] text-ink dark:text-zinc-200">
+                  Tất cả cộng đồng ({communities.length})
+                </option>
+                {communities.map((c) => (
+                  <option
+                    key={c.id}
+                    value={c.id}
+                    className="bg-white dark:bg-[#201e1b] text-ink dark:text-zinc-200"
+                  >
+                    {c.label} ({c.paper_count} bài)
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Counter */}
+        <span className="text-[11px] text-muted font-mono whitespace-nowrap">
+          {rawNodes.length} đỉnh • {rawEdges.length} liên kết
+        </span>
+      </div>
 
       {/* Simulation HTML5 Canvas */}
       <div className="relative flex-1 w-full h-full min-h-[300px]">
@@ -612,6 +761,25 @@ export function KnowledgeGraphCanvas({
             </span>
           </div>
         )}
+
+        {/* Focus Spotlight Active Banner */}
+        {focusNode && (
+          <div className="absolute top-3 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 dark:bg-[#201e1b]/95 backdrop-blur-md border border-[#c15f3e]/40 shadow-sm text-xs z-20 text-ink dark:text-zinc-200 animate-in fade-in">
+            <span className="w-2 h-2 rounded-full bg-[#c15f3e] animate-ping shrink-0" />
+            <span className="truncate max-w-[280px]">
+              Tiêu điểm: <strong>{focusNode.label}</strong>
+            </span>
+            <button
+              type="button"
+              onClick={() => onSelectNode?.(null)}
+              className="text-[11px] text-[#c15f3e] hover:underline cursor-pointer font-medium ml-1 shrink-0"
+              title="Bỏ tiêu điểm (bấm vào vùng trống canvas)"
+            >
+              Xem tất cả
+            </button>
+          </div>
+        )}
+
         <canvas
           ref={canvasRef}
           data-testid="knowledge-graph-canvas"
@@ -621,6 +789,55 @@ export function KnowledgeGraphCanvas({
           onWheel={handleWheel}
           className="w-full h-full cursor-grab active:cursor-grabbing block"
         />
+
+        {/* Floating Entity Color Legend (Bottom-Left) */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-surface/90 dark:bg-[#1f1d1a]/90 backdrop-blur-xs border border-border/70 text-[11px] shadow-xs pointer-events-none z-10">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#4f46e5] inline-block shrink-0" />
+            <span className="text-muted">📄 Bài báo</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#059669] inline-block shrink-0" />
+            <span className="text-muted">⚡ Phương pháp</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#d97706] inline-block shrink-0" />
+            <span className="text-muted">📊 Tập dữ liệu</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-[#c15f3e] inline-block shrink-0" />
+            <span className="text-muted">🎯 Chỉ số</span>
+          </div>
+        </div>
+
+        {/* Floating Viewport Navigation Dock (Bottom-Right) */}
+        <div className="absolute bottom-3 right-3 flex items-center gap-0.5 bg-surface/90 dark:bg-[#1f1d1a]/90 backdrop-blur-md rounded-lg border border-[#e2dcd2] dark:border-[#322f2a] shadow-xs p-1 z-10">
+          <button
+            type="button"
+            onClick={handleZoomIn}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Phóng to"
+          >
+            <ZoomIn className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleZoomOut}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Thu nhỏ"
+          >
+            <ZoomOut className="w-3.5 h-3.5" />
+          </button>
+          <div className="w-px h-3.5 bg-border mx-0.5" />
+          <button
+            type="button"
+            onClick={handleReset}
+            className="p-1 rounded hover:bg-black/5 dark:hover:bg-white/5 text-muted hover:text-ink dark:hover:text-zinc-100 cursor-pointer"
+            title="Đặt lại khung nhìn (về giữa)"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </div>
   );

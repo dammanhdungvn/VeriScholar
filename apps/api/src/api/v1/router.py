@@ -5,10 +5,12 @@ from api.v1.endpoints import (
     discovery,
     documents,
     drafts,
+    evaluations,
     folders,
     library,
     notes,
     sessions,
+    wiki,
 )
 from fastapi import APIRouter
 
@@ -21,3 +23,5 @@ api_v1_router.include_router(notes.router)
 api_v1_router.include_router(drafts.router)
 api_v1_router.include_router(folders.router)
 api_v1_router.include_router(library.router)
+api_v1_router.include_router(wiki.router)
+api_v1_router.include_router(evaluations.router, prefix="/evaluations", tags=["evaluations"])

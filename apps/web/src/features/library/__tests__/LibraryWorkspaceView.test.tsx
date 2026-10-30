@@ -6,6 +6,15 @@ import { MemoryRouter } from "react-router-dom";
 import { LibraryWorkspaceView } from "../components/LibraryWorkspaceView";
 import { documentsApi } from "@/features/documents/api/documentsApi";
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return {
+    ...actual,
+    useNavigate: () => mockNavigate,
+  };
+});
+
 function renderWithProviders(ui: React.ReactElement) {
   const queryClient = new QueryClient({
     defaultOptions: {
@@ -206,21 +215,18 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
 
     renderWithProviders(<LibraryWorkspaceView />);
 
-    // Primary 3 ribbon tabs exist in English
+    // Primary ribbon tabs exist in English
     expect(screen.getByRole("button", { name: /All Papers/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /Folders/i })).toBeInTheDocument();
-    const graphTabBtn = screen.getByRole("button", { name: /Knowledge Graph/i });
-    expect(graphTabBtn).toBeInTheDocument();
 
     // FAB exists
     expect(screen.getByRole("button", { name: /Trợ lý GraphRAG/i })).toBeInTheDocument();
 
-    // Clicking Knowledge Graph tab switches active view
-    fireEvent.click(graphTabBtn);
-    expect(graphTabBtn).toHaveClass("font-semibold");
+    // Header has Graph Hub navigation button
+    expect(screen.getByTitle("Mở Không gian Graph & Wiki")).toBeInTheDocument();
   });
 
-  it("toggles Wiki Graph right sidebar and focuses paper on graph button click", async () => {
+  it("navigates to Graph workspace on header button click and document focus click", async () => {
     vi.spyOn(documentsApi, "listDocuments").mockResolvedValue({
       data: [
         {
@@ -249,20 +255,53 @@ describe("LibraryWorkspaceView Persistence & Minimalist Icons (Task 5)", () => {
       expect(screen.getByText("Attention Is All You Need")).toBeInTheDocument();
     });
 
-    // Sidebar initially closed
-    expect(screen.queryByTestId("library-graph-sidebar")).toBeNull();
+    // Header Graph Hub button navigates to /graph
+    const graphHubBtn = screen.getByTitle("Mở Không gian Graph & Wiki");
+    fireEvent.click(graphHubBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/graph");
 
-    // Toggle button in header
-    const toggleBtn = screen.getByTitle("Toggle Wiki Graph Sidebar");
-    fireEvent.click(toggleBtn);
-
-    // Sidebar should open
-    expect(screen.getByTestId("library-graph-sidebar")).toBeInTheDocument();
-
-    // Clicking document graph button focuses document in sidebar
+    // Clicking document graph button navigates to /graph with focus query
     const docGraphBtn = screen.getByTestId("doc-graph-btn-doc-1");
     fireEvent.click(docGraphBtn);
+    expect(mockNavigate).toHaveBeenCalledWith("/graph?focus=doc-1");
+  });
 
-    expect(screen.getByTestId("library-graph-sidebar")).toBeInTheDocument();
+  it("renders long paper titles with multiline break-words without truncate max-w-xs clamp", async () => {
+    const longTitle =
+      "A Super Long Scholarly Paper Title That Should Wrap Onto Multiple Lines Without Being Clamped By Truncate";
+    vi.spyOn(documentsApi, "listDocuments").mockResolvedValueOnce({
+      data: [
+        {
+          id: "doc-long-1",
+          filename: "long_title.pdf",
+          title: longTitle,
+          status: "completed",
+          created_at: "2026-10-25T10:00:00Z",
+          is_persistent: true,
+        },
+      ],
+      meta: {
+        total: 1,
+        page: 1,
+        per_page: 24,
+        total_pages: 1,
+        request_id: "req-long",
+        timestamp: "2026-10-25T10:00:00Z",
+      },
+      links: mockLinks,
+    });
+
+    renderWithProviders(<LibraryWorkspaceView />);
+
+    // Switch to List view
+    const listBtn = screen.getByTitle("List");
+    fireEvent.click(listBtn);
+
+    await waitFor(() => {
+      const titleSpan = screen.getByText(longTitle);
+      expect(titleSpan).toBeInTheDocument();
+      expect(titleSpan.className).toContain("break-words");
+      expect(titleSpan.className).not.toContain("truncate");
+    });
   });
 });

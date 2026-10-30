@@ -1,0 +1,188 @@
+% !TEX root = ../../main.tex
+\section{Tổng quan về GraphRAG, Knowledge Graph và Graph Wiki}
+\label{sec:knowledge_graph_wiki}
+
+\subsection{GraphRAG là gì?}
+\label{subsec:graphrag_la_gi}
+GraphRAG (\textit{Graph-based Retrieval-Augmented Generation}) là bước tiến hóa mang tính đột phá kết hợp giữa Đồ thị tri thức (\textit{Knowledge Graph}) và quy trình tạo sinh tăng cường truy xuất (RAG), do nhóm nghiên cứu của Darren Edge tại Microsoft Research đề xuất năm 2024 \cite{edge2024}. Hạn chế lớn nhất của RAG vector truyền thống là việc xử lý các đoạn văn bản rời rạc, hoàn toàn bất lực trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn như: \textit{''Những phương pháp nào đã được thử nghiệm trên bộ dữ liệu ImageNet và đạt độ chính xác trên 90\%?''}). Khi đó, thông tin bị phân mảnh ở nhiều bài báo khác nhau khiến cơ chế tìm kiếm tương đồng vector đơn lẻ bỏ sót phần lớn các mối liên hệ ngữ nghĩa chéo.
+
+GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đổi toàn bộ kho tài liệu khoa học thành đồ thị thực thể, sau đó kết hợp sức mạnh truy xuất cấu trúc đồ thị với tìm kiếm vector đa chiều. Mô hình kiến trúc toàn trình của GraphRAG được mô phỏng chi tiết trong Hình~\ref{fig:graphrag_arch}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.70, transform shape,
+    user_node/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=2.1cm, minimum height=2.1cm, align=center},
+    pill_node/.style={draw=blue!65!black, fill=blue!6, rounded corners=10pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    ret_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=4.0cm, minimum height=4.8cm, align=center},
+    prompt_container/.style={draw=black!75, fill=white, rounded corners=8pt, line width=1.0pt, minimum width=3.6cm, minimum height=4.4cm, align=center},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85}
+]
+    % 1. User ở bên trái
+    \node[user_node] (user) at (-8.0, 0.6) {
+        \tikz{\draw[line width=1.4pt, draw=blue!80!black] (0, 0.30) circle (0.26);
+              \draw[line width=1.4pt, draw=blue!80!black] (-0.38, -0.32) arc (180:0:0.38);}\\[3pt]
+        \textbf{User}\\[1pt]
+        \scriptsize (Học giả)
+    };
+
+    % 2. Question (Hàng trên)
+    \node[pill_node, minimum width=2.6cm, minimum height=0.85cm] (question) at (-3.8, 2.4) {
+        \textbf{Question}\\[1pt]
+        \scriptsize (Truy vấn học thuật)
+    };
+
+    % 3. Graph Extraction (Hàng trên, ở giữa)
+    \node[pill_node, minimum width=3.2cm, minimum height=0.85cm] (graphex) at (0.7, 2.4) {
+        \textbf{Graph Extraction}\\[1pt]
+        \scriptsize (Trích xuất đồ thị tri thức)
+    };
+
+    % 4. Retrieval Container (Hàng trên, bên phải)
+    \node[ret_container] (retrieval_box) at (5.8, 0.6) {};
+    \node[font=\bfseries\normalsize, align=center] at (5.8, 2.4) {Retrieval};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (5.8, 1.95) {(Bộ truy xuất tích hợp)};
+    \node[pill_node, fill=blue!10, minimum width=3.4cm] (ret_kg) at (5.8, 1.1) {
+        \textbf{Knowledge Graphs}\\[1pt]
+        \scriptsize (Đồ thị tri thức)
+    };
+    \node[font=\bfseries\normalsize, text=blue!85!black] at (5.8, 0.35) {\textbf{+}};
+    \node[pill_node, fill=blue!10, minimum width=3.4cm] (ret_vec) at (5.8, -0.4) {
+        \textbf{Vector Database}\\[1pt]
+        \scriptsize (Kho dữ liệu Vector)
+    };
+
+    % 5. Retrieved Context (Giữa Retrieval và Prompt Augmentation)
+    \node[pill_node, minimum width=2.5cm, minimum height=0.85cm] (ret_context) at (2.0, -1.4) {
+        \textbf{Retrieved Context}\\[1pt]
+        \scriptsize (Ngữ cảnh trích xuất)
+    };
+
+    % 6. Prompt Augmentation Container
+    \node[prompt_container, minimum width=3.3cm] (prompt_box) at (-1.9, -1.4) {};
+    \node[font=\bfseries\small, align=center] at (-1.9, 0.35) {Prompt Augmentation};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (-1.9, -0.05) {(Tăng cường Prompt)};
+    \node[pill_node, fill=blue!10, minimum width=2.6cm] (p_q) at (-1.9, -1.0) {
+        \textbf{Question}\\[1pt]
+        \scriptsize (Câu hỏi gốc)
+    };
+    \node[pill_node, fill=blue!10, minimum width=2.6cm] (p_c) at (-1.9, -2.1) {
+        \textbf{Context}\\[1pt]
+        \scriptsize (Ngữ cảnh tri thức)
+    };
+
+    % 7. Answer (Nằm giữa Prompt Augmentation và User)
+    \node[pill_node, minimum width=2.2cm, minimum height=0.85cm] (answer) at (-5.2, -1.4) {
+        \textbf{Answer}\\[1pt]
+        \scriptsize (Câu trả lời)
+    };
+
+    % Các mũi tên kết nối luồng
+    \draw[arrowstyle] (user.north) |- (question.west);
+    \draw[arrowstyle] (question.east) -- (graphex.west);
+    \draw[arrowstyle] (graphex.east) -- ([yshift=1.8cm]retrieval_box.west);
+    \draw[arrowstyle] ([yshift=-2.0cm]retrieval_box.west) -- (ret_context.east);
+    \draw[arrowstyle] (ret_context.west) -- (prompt_box.east);
+    \draw[arrowstyle] (prompt_box.west) -- (answer.east);
+    \draw[arrowstyle] (answer.west) -| (user.south);
+\end{tikzpicture}
+\caption{Mô hình kiến trúc tạo sinh tăng cường truy xuất dựa trên đồ thị tri thức (GraphRAG)}
+\label{fig:graphrag_arch}
+\end{figure}
+
+Nhờ sự kết hợp này, hệ thống hỗ trợ cơ chế truy xuất hai cấp độ bổ trợ nhau:
+\begin{itemize}
+    \item \textbf{Truy xuất mức cục bộ (\textit{Low-Level / Local Retrieval}):} Khai thác các liên kết láng giềng trực tiếp của thực thể trong đồ thị để đối soát chính xác chỉ số thực nghiệm, công thức toán học hoặc tọa độ trích dẫn trong từng bài báo.
+    \item \textbf{Truy xuất mức toàn cục (\textit{High-Level / Global Retrieval}):} Áp dụng thuật toán phân cụm cộng đồng phân tầng (\textit{Leiden}) \cite{traag2019leiden} để tổng hợp các báo cáo tóm tắt vĩ mô, cho phép trả lời các câu hỏi so sánh liên ngành, phân tích xu hướng và phát hiện khoảng trống nghiên cứu (\textit{Research Gaps}).
+\end{itemize}
+
+\subsection{Knowledge Graph là gì? (Đồ thị tri thức)}
+\label{subsec:knowledge_graph}
+Đồ thị tri thức (\textit{Knowledge Graph}) là mô hình toán học biểu diễn mạng lưới tri thức dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}, trong đó tập đỉnh $V$ đại diện cho các thực thể thế giới thực (\textit{Entities}) và tập cạnh $E$ đại diện cho các mối quan hệ ngữ nghĩa kết nối giữa các thực thể đó (\textit{Semantic Relations}). Tri thức trong đồ thị thường được tổ chức theo cấu trúc bộ ba vị ngữ chuẩn (\textit{Subject -- Predicate -- Object Triples}), ví dụ: $(\text{Transformer}) \xrightarrow{\text{được đề xuất bởi}} (\text{Vaswani et al.})$ \cite{vaswani2017}.
+
+So với các dạng lưu trữ dữ liệu văn bản phi cấu trúc hoặc cơ sở dữ liệu quan hệ bảng phẳng, Knowledge Graph sở hữu ba ưu thế vượt trội:
+\begin{itemize}
+    \item \textbf{Khả năng suy luận bắc cầu (\textit{Multi-hop Reasoning}):} Đồ thị cho phép lần theo chuỗi các cạnh liên kết để khám phá ra các mối liên hệ gián tiếp giữa các công trình khoa học mà không cần chúng phải xuất hiện cùng nhau trong một văn bản.
+    \item \textbf{Định danh và khử nhập nhằng thực thể (\textit{Entity Disambiguation}):} Mỗi khái niệm, phương pháp hoặc tác giả được định danh duy nhất thông qua một nút mạng, giải quyết triệt để hiện tượng trùng tên hoặc đồng âm khác nghĩa.
+    \item \textbf{Cấu trúc tri thức toàn cục (\textit{Global Structural Context}):} Cung cấp bức tranh toàn cảnh về sự phát triển của các trường phái học thuật, sơ đồ phả hệ của các mô hình và mạng lưới hợp tác nghiên cứu.
+\end{itemize}
+
+Mạng lưới đồ thị tri thức thực thể học thuật liên kết và cơ chế biên dịch trang bách khoa được mô hình hóa trong Hình~\ref{fig:academic_kg_wiki}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    scale=0.64, transform shape,
+    paper_node/.style={circle, draw=black!90, fill=black!85, text=white, line width=1.1pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.7cm},
+    author_node/.style={circle, draw=orange!85!black, fill=orange!15, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
+    method_node/.style={circle, draw=purple!80!black, fill=purple!10, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.7cm},
+    dataset_node/.style={circle, draw=teal!85!black, fill=teal!10, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
+    metric_node/.style={circle, draw=gray!75!black, fill=gray!12, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
+    wiki_box/.style={draw=purple!70!black, fill=purple!2, dashed, rounded corners=12pt, line width=1.0pt},
+    bench_box/.style={draw=teal!70!black, fill=teal!2, dashed, rounded corners=12pt, line width=1.0pt},
+    edge_style/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!80}
+]
+    % Vùng biên dịch Wiki 1: Method Wiki Page (Bao bọc riêng cụm Phương pháp)
+    \node[wiki_box, minimum width=7.6cm, minimum height=5.6cm] at (2.0, 0.4) {};
+    \node[font=\footnotesize\bfseries, text=purple!90!black] at (2.0, 3.8) {Method Wiki Page};
+    \node[font=\scriptsize\itshape, text=purple!80!black] at (2.0, 3.4) {(Trang Bách khoa Phương pháp)};
+
+    % Vùng biên dịch Wiki 2: Benchmark Leaderboard (Bao bọc cụm Benchmark & Metric)
+    \node[bench_box, minimum width=6.8cm, minimum height=5.6cm] at (10.2, 0.4) {};
+    \node[font=\footnotesize\bfseries, text=teal!90!black] at (10.2, 3.8) {Benchmark Leaderboard Page};
+    \node[font=\scriptsize\itshape, text=teal!80!black] at (10.2, 3.4) {(Trang Bảng xếp hạng SOTA)};
+
+    % 1. Các Nút Bài báo (Paper Nodes)
+    \node[paper_node] (p1) at (-6.6, 1.6) {Paper [1]\\[1pt]\scriptsize (Gốc)};
+    \node[paper_node] (p2) at (-6.6, -0.8) {Paper [2]\\[1pt]\scriptsize (Mở rộng)};
+
+    % 2. Các Nút Tác giả (Author Nodes - Nằm bên ngoài Wiki Container)
+    \node[author_node] (a1) at (-3.8, 2.6) {Author A\\[1pt]\scriptsize (Tác giả)};
+    \node[author_node] (a2) at (-3.8, -1.8) {Author B\\[1pt]\scriptsize (Tác giả)};
+
+    % 3. Các Nút Phương pháp (Method Nodes - Nằm trọn vẹn trong Method Wiki Page)
+    \node[method_node] (m1) at (0.0, 0.4) {Method A\\[1pt]\scriptsize Transformer};
+    \node[method_node] (m2) at (3.8, 1.4) {Method B\\[1pt]\scriptsize Self-Attention};
+    \node[method_node] (m3) at (3.8, -0.6) {Method C\\[1pt]\scriptsize Self-RAG};
+
+    % 4. Các Nút Bộ dữ liệu (Dataset Nodes)
+    \node[dataset_node] (d1) at (8.2, 1.4) {Dataset 1\\[1pt]\scriptsize HotpotQA};
+    \node[dataset_node] (d2) at (8.2, -0.6) {Dataset 2\\[1pt]\scriptsize SQuAD};
+
+    % 5. Các Nút Kết quả / Chỉ số (Metric Nodes)
+    \node[metric_node] (met1) at (12.0, 1.4) {Metric 1\\[1pt]\scriptsize $\text{F1} = 91{,}2\%$};
+    \node[metric_node] (met2) at (12.0, -0.6) {Metric 2\\[1pt]\scriptsize $\text{EM} = 84{,}5\%$};
+
+    % Các Cạnh liên kết ngữ nghĩa & Nhãn sloped
+    \draw[edge_style] (a1) -- node[above=1pt, sloped, font=\tiny\bfseries] {TÁC GIẢ} (p1);
+    \draw[edge_style] (a2) -- node[above=1pt, sloped, font=\tiny\bfseries] {TÁC GIẢ} (p2);
+
+    \draw[edge_style] (p1) -- node[above=1pt, sloped, font=\tiny\bfseries] {ĐỀ XUẤT} (m1);
+    \draw[edge_style] (p2) -- node[above=1pt, sloped, font=\tiny\bfseries] {ĐỀ XUẤT} (m3);
+    \draw[edge_style] (m1) -- node[above=1pt, sloped, font=\tiny\bfseries] {PHÁT TRIỂN} (m2);
+    \draw[edge_style] (m3) -- node[above=1pt, sloped, font=\tiny\bfseries] {KẾ THỪA} (m1);
+
+    \draw[edge_style] (m2) -- node[above=1pt, font=\tiny\bfseries] {ĐÁNH GIÁ} (d1);
+    \draw[edge_style] (m3) -- node[above=1pt, font=\tiny\bfseries] {ĐÁNH GIÁ} (d2);
+
+    \draw[edge_style] (d1) -- node[above=1pt, font=\tiny\bfseries] {ĐO LƯỜNG} (met1);
+    \draw[edge_style] (d2) -- node[above=1pt, font=\tiny\bfseries] {ĐO LƯỜNG} (met2);
+\end{tikzpicture}
+\caption{Cấu trúc Đồ thị tri thức học thuật (Academic Knowledge Graph) và cơ chế biên dịch trang bách khoa (Graph Wiki)}
+\label{fig:academic_kg_wiki}
+\end{figure}
+\clearpage
+
+\subsection{Graph Wiki là gì? (Compiled Academic Wiki)}
+\label{subsec:graph_wiki_la_gi}
+Graph Wiki (\textit{Compiled Academic Wiki} -- Hệ tri thức bách khoa học thuật biên dịch sẵn) là mô hình tổ chức tri thức chuyên sâu được thiết kế để chuyển đổi toàn bộ đồ thị tri thức và mạng trích dẫn thành các trang tài liệu bách khoa có cấu trúc liên kết chéo tương tự như Wikipedia học thuật.
+
+Thay vì chỉ lưu trữ các đỉnh và cạnh trừu tượng phân tán trong cơ sở dữ liệu, Graph Wiki tự động gom cụm và biên dịch mạng lưới tri thức thành các danh mục trang chuyên đề hoàn chỉnh (như minh họa tại Hình~\ref{fig:academic_kg_wiki}):
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Trang chuyên đề Phương pháp (\textit{Method Pages}):} Trình bày toàn diện nguyên lý thuật toán, bảng so sánh hiệu năng qua từng thời kỳ, danh sách các bài báo gốc đề xuất và các biến thể kế thừa.
+    \item \textbf{Trang chuẩn đánh giá (\textit{Benchmark Pages}):} Liệt kê các bộ dữ liệu tiêu chuẩn cùng bảng xếp hạng (\textit{Leaderboards}) các phương pháp tiên tiến nhất (\textit{State-of-the-Art -- SOTA}).
+    \item \textbf{Liên kết hai chiều (\textit{Bidirectional Hyperlinks}):} Cho phép học giả điều hướng mượt mà giữa các bài báo có cùng nền tảng lý thuyết, giúp việc tổng quan y văn (\textit{Literature Review}) trở nên mạch lạc và trực quan.
+\end{enumerate}
+
+Nhờ Graph Wiki, tác nhân AI có thể ngay lập tức nạp vào ngữ cảnh bức tranh tri thức đã được tổng hợp sẵn, loại bỏ hoàn toàn chi phí duyệt đồ thị đắt đỏ trong thời gian thực, đồng thời đảm bảo độ chính xác tuyệt đối khi hỗ trợ học giả phân tích và trích dẫn bài báo khoa học.
+\clearpage

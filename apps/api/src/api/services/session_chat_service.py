@@ -28,6 +28,7 @@ from api.schemas.session import (
 )
 from api.services.ai_tracing_service import AITracingService
 from api.services.embedding_service import EmbeddingService
+from api.services.semantic_reranker_service import SemanticRerankerService
 from core.domain.value_objects.reasoning_effort import map_reasoning_effort_to_provider
 from core.services.citation_parser import extract_citation_markers
 from core.services.guardrails import AIGuardrailsService
@@ -69,9 +70,11 @@ class SessionChatService:
         db: AsyncSession,
         ai_tracing: AITracingService | None = None,
         embedding_service: EmbeddingService | None = None,
+        reranker_service: SemanticRerankerService | None = None,
     ) -> None:
         self.db = db
         self.ai_tracing = ai_tracing or AITracingService()
+        self.reranker_service = reranker_service or SemanticRerankerService()
         if embedding_service is not None:
             self.embedding_service = embedding_service
         else:
@@ -2159,128 +2162,41 @@ class SessionChatService:
         )
 
     def _score_and_rank_chunks(self, chunks: list[Any], question: str) -> list[tuple[Any, float]]:
-        """Rank document chunks dynamically based on query lexical and concept overlap.
+        """Rank document chunks dynamically using SemanticRerankerService (FlashRank ONNX).
 
         Returns list of (chunk_item, normalized_score) tuples, sorted by score descending.
         """
         if not chunks:
             return []
 
-        stopwords = {
-            "của",
-            "và",
-            "là",
-            "trong",
-            "có",
-            "cho",
-            "với",
-            "các",
-            "những",
-            "này",
-            "thế",
-            "nào",
-            "gì",
-            "ở",
-            "tại",
-            "theo",
-            "được",
-            "bài",
-            "báo",
-            "tôi",
-            "muốn",
-            "bạn",
-            "hãy",
-            "cho",
-            "biết",
-            "the",
-            "and",
-            "is",
-            "in",
-            "to",
-            "of",
-            "what",
-            "how",
-            "can",
-            "does",
-            "with",
-            "from",
-            "on",
-            "for",
-            "a",
-            "an",
-        }
-        raw_tokens = re.findall(r"[a-zA-Z0-9_\-]+", question.lower())
-        q_terms = [t for t in raw_tokens if len(t) >= 2 and t not in stopwords]
-
-        key_terms = {
-            "table",
-            "bảng",
-            "encoder",
-            "decoder",
-            "d_model",
-            "bleu",
-            "complexity",
-            "recurrent",
-            "layer",
-            "layers",
-            "attention",
-            "transformer",
-            "rag",
-            "chunking",
-            "positional",
-            "encoding",
-            "multi-head",
-            "dot-product",
-            "self-attention",
-        }
-
-        synonyms: dict[str, list[str]] = {
-            "transformer": ["transformer", "attention"],
-            "attention": ["attention", "self-attention", "dot-product"],
-            "rnn": ["recurrent", "lstm", "rnn"],
-            "đệ quy": ["recurrent", "recurrence"],
-            "mã hoá": ["encoding", "encoder"],
-            "bảng": ["table"],
-            "độ phức tạp": ["complexity", "o("],
-            "chuỗi": ["sequence", "path length"],
-            "equation": ["formula", "=", "loss", "objective"],
-            "formula": ["equation", "=", "loss", "objective"],
-            "loss": ["loss", "objective", "formula", "equation", "="],
-            "công thức": ["formula", "equation", "loss", "objective", "="],
-        }
-
-        expanded_terms = set(q_terms)
-        for term in q_terms:
-            for k, syns in synonyms.items():
-                if k in term:
-                    expanded_terms.update(syns)
-
-        total_weight = sum(3.0 if t in key_terms else 1.0 for t in expanded_terms) or 1.0
-
         def get_chunk_obj(item: Any) -> Any:
             return item[0] if hasattr(item, "__getitem__") else item
 
-        def get_chunk_score(item: Any) -> float:
-            chunk = get_chunk_obj(item)
-            content_lower = (getattr(chunk, "content", "") or "").lower()
-            if not content_lower:
-                return 0.0
+        candidate_dicts: list[dict[str, Any]] = []
+        for idx, item in enumerate(chunks):
+            chk = get_chunk_obj(item)
+            cnt = getattr(chk, "content", "") or (
+                chk.get("content", "") if isinstance(chk, dict) else ""
+            )
+            cid = str(
+                getattr(chk, "id", "")
+                or (chk.get("id", "") if isinstance(chk, dict) else f"c_{idx}")
+            )
+            candidate_dicts.append(
+                {
+                    "id": cid,
+                    "content": cnt,
+                    "_original_item": item,
+                }
+            )
 
-            matched_weight = 0.0
-            for term in expanded_terms:
-                if term in content_lower:
-                    matched_weight += 3.0 if term in key_terms else 1.0
+        ranked, _ = self.reranker_service.rerank(
+            query=question,
+            candidates=candidate_dicts,
+            top_k=len(candidate_dicts),
+        )
 
-            norm_score = min(1.0, matched_weight / total_weight)
-            return round(norm_score, 4)
-
-        def get_chunk_idx(item: Any) -> int:
-            chunk = get_chunk_obj(item)
-            return getattr(chunk, "chunk_index", 0) or 0
-
-        scored_chunks = [(it, get_chunk_score(it)) for it in chunks]
-        scored_chunks.sort(key=lambda pair: (pair[1], -get_chunk_idx(pair[0])), reverse=True)
-        return scored_chunks
+        return [(cand["_original_item"], cand.get("rerank_score", 0.0)) for cand in ranked]
 
     def _classify_intent_and_ambiguity(
         self,

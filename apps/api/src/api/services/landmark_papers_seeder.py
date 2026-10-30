@@ -13,35 +13,141 @@ from api.db.models.chunk import DocumentChunkModel
 from api.db.models.document import DocumentModel
 from api.db.models.graph import GraphEdgeModel, GraphNodeModel
 from api.db.models.reference import ReferenceItemModel
+from api.db.models.wiki import WikiPageModel
+from api.services.landmark_wiki_data import LANDMARK_WIKI_PAGES
+from core.services.graph_extractor import normalize_canonical_name
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = structlog.get_logger("api.services.landmark_papers_seeder")
 
 
-def generate_minimal_pdf(title: str) -> bytes:
-    """Generate minimal valid 1-page PDF binary with text stream."""
-    escaped = title.replace("(", "").replace(")", "").replace("\\", "")
-    stream_content = f"BT /F1 12 Tf 72 712 Td ({escaped}) Tj ET\n".encode("ascii", errors="replace")
-    return (
-        b"%PDF-1.4\n"
-        b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
-        b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
-        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R"
-        b"/Contents 4 0 R/Resources<<>>>>endobj\n"
-        b"4 0 obj<</Length "
-        + str(len(stream_content)).encode("ascii")
-        + b">>stream\n"
-        + stream_content
-        + b"endstream\nendobj\n"
-        b"xref\n0 5\n"
-        b"0000000000 65535 f \n"
-        b"0000000010 00000 n \n"
-        b"0000000053 00000 n \n"
-        b"0000000102 00000 n \n"
-        b"0000000195 00000 n \n"
-        b"trailer<</Size 5/Root 1 0 R>>\nstartxref\n320\n%%EOF\n"
+def generate_scholarly_pdf(
+    title: str,
+    authors: list[str] | None = None,
+    abstract: str | None = None,
+) -> bytes:
+    """Generate valid formatted scholarly PDF binary with title, authors, abstract, and sections."""
+
+    def wrap_text(text: str, max_chars: int = 75) -> list[str]:
+        words = text.split()
+        lines: list[str] = []
+        cur = ""
+        for w in words:
+            if len(cur) + len(w) + 1 <= max_chars:
+                cur = f"{cur} {w}".strip()
+            else:
+                if cur:
+                    lines.append(cur)
+                cur = w
+        if cur:
+            lines.append(cur)
+        return lines
+
+    safe_title = title.replace("(", "").replace(")", "").replace("\\", "")
+    author_str = ", ".join(authors) if authors else "VeriScholar Research Team"
+    safe_authors = author_str.replace("(", "").replace(")", "").replace("\\", "")
+    safe_abstract = (
+        (abstract or "A comprehensive foundational study and empirical evaluation.")
+        .replace("(", "")
+        .replace(")", "")
+        .replace("\\", "")
     )
+
+    p1_lines = ["BT", "/F1 16 Tf", "72 720 Td"]
+    for i, tl in enumerate(wrap_text(safe_title, 55)):
+        if i > 0:
+            p1_lines.append("0 -20 Td")
+        p1_lines.append(f"({tl}) Tj")
+
+    p1_lines.append("/F1 10 Tf")
+    p1_lines.append("0 -26 Td")
+    for i, al in enumerate(wrap_text(safe_authors, 70)):
+        if i > 0:
+            p1_lines.append("0 -14 Td")
+        p1_lines.append(f"({al}) Tj")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -30 Td")
+    p1_lines.append("(Abstract) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    for al in wrap_text(safe_abstract, 80):
+        p1_lines.append(f"({al}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -20 Td")
+    p1_lines.append("(1. Introduction & Background) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    intro = (
+        "This seminal scholarly paper presents key foundational contributions to the field of AI "
+        "and natural language processing. The research provides comprehensive mathematical "
+        "formulations, empirical evaluations, and rigorous comparative baselines."
+    )
+    for il in wrap_text(intro, 80):
+        p1_lines.append(f"({il}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("/F1 12 Tf")
+    p1_lines.append("0 -20 Td")
+    p1_lines.append("(2. Methodology & Architecture) Tj")
+    p1_lines.append("/F1 9 Tf")
+    p1_lines.append("0 -15 Td")
+    method = (
+        "The core methodology leverages deep semantic representations, contextual embeddings, "
+        "and parameter-efficient adaptations. Comprehensive ablation experiments demonstrate "
+        "superior performance across scholarly benchmarks."
+    )
+    for ml in wrap_text(method, 80):
+        p1_lines.append(f"({ml}) Tj")
+        p1_lines.append("0 -12 Td")
+
+    p1_lines.append("ET\n")
+    stream1 = "\n".join(p1_lines).encode("latin1", errors="replace")
+
+    obj1 = b"1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n"
+    obj2 = b"2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n"
+    obj3 = (
+        b"3 0 obj<</Type/Page/MediaBox[0 0 612 792]/Parent 2 0 R"
+        b"/Resources<</Font<</F1 5 0 R>>>>/Contents 4 0 R>>endobj\n"
+    )
+    obj4 = (
+        b"4 0 obj<</Length "
+        + str(len(stream1)).encode("ascii")
+        + b">>stream\n"
+        + stream1
+        + b"endstream\nendobj\n"
+    )
+    obj5 = b"5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\n"
+
+    header = b"%PDF-1.4\n"
+    o1 = len(header)
+    o2 = o1 + len(obj1)
+    o3 = o2 + len(obj2)
+    o4 = o3 + len(obj3)
+    o5 = o4 + len(obj4)
+    xref_offset = o5 + len(obj5)
+
+    xref = (
+        f"xref\n0 6\n"
+        f"0000000000 65535 f \n"
+        f"{o1:010d} 00000 n \n"
+        f"{o2:010d} 00000 n \n"
+        f"{o3:010d} 00000 n \n"
+        f"{o4:010d} 00000 n \n"
+        f"{o5:010d} 00000 n \n"
+    ).encode("ascii")
+
+    trailer = f"trailer<</Size 6/Root 1 0 R>>\nstartxref\n{xref_offset}\n%%EOF\n".encode("ascii")
+
+    return header + obj1 + obj2 + obj3 + obj4 + obj5 + xref + trailer
+
+
+def generate_minimal_pdf(title: str) -> bytes:
+    """Generate minimal valid 1-page PDF binary with text stream (backward compatibility)."""
+    return generate_scholarly_pdf(title)
 
 
 LANDMARK_PAPERS: list[dict[str, Any]] = [
@@ -68,6 +174,63 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "and convolutions entirely."
         ),
         "cites": [],
+        "methods": [
+            {
+                "name": "Transformer",
+                "description": (
+                    "Sequence transduction model architecture based entirely on self-attention "
+                    "mechanisms, dispensing with recurrence and convolutions entirely."
+                ),
+            },
+            {
+                "name": "Scaled Dot-Product Attention",
+                "description": (
+                    "Attention mechanism computing dot products of queries and keys scaled by "
+                    "the square root of the head dimension followed by softmax."
+                ),
+            },
+            {
+                "name": "Multi-Head Attention",
+                "description": (
+                    "Mechanism projecting queries, keys, and values into multiple representation "
+                    "subspaces to attend jointly to information from different positions."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "WMT 2014 English-to-German",
+                "description": (
+                    "Standard machine translation benchmark dataset consisting of 4.5 million "
+                    "sentence pairs."
+                ),
+            },
+            {
+                "name": "WMT 2014 English-to-French",
+                "description": (
+                    "Large-scale machine translation benchmark consisting of 36 million sentence "
+                    "pairs."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "BLEU 28.4 (WMT 2014 En-De)",
+                "method": "Transformer",
+                "dataset": "WMT 2014 English-to-German",
+                "metric_name": "BLEU",
+                "value": 28.4,
+                "unit": "BLEU",
+            },
+            {
+                "name": "BLEU 41.8 (WMT 2014 En-Fr)",
+                "method": "Transformer",
+                "dataset": "WMT 2014 English-to-French",
+                "metric_name": "BLEU",
+                "value": 41.8,
+                "unit": "BLEU",
+            },
+        ],
     },
     {
         "id_key": "bert",
@@ -84,6 +247,56 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "which stands for Bidirectional Encoder Representations from Transformers."
         ),
         "cites": ["attention"],
+        "methods": [
+            {
+                "name": "BERT",
+                "description": (
+                    "Bidirectional Encoder Representations from Transformers pre-trained on "
+                    "masked language modeling and next sentence prediction objectives."
+                ),
+            },
+            {
+                "name": "Masked Language Modeling",
+                "description": (
+                    "Pre-training objective masking random input tokens and predicting them "
+                    "bidirectionally using deep Transformer encoder representations."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "GLUE",
+                "description": (
+                    "General Language Understanding Evaluation benchmark collection of nine "
+                    "diverse natural language understanding tasks."
+                ),
+            },
+            {
+                "name": "SQuAD 1.1",
+                "description": (
+                    "Stanford Question Answering Dataset consisting of reading comprehension "
+                    "questions posed over Wikipedia passages."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "GLUE Score 80.5",
+                "method": "BERT",
+                "dataset": "GLUE",
+                "metric_name": "Average Score",
+                "value": 80.5,
+                "unit": "Score",
+            },
+            {
+                "name": "SQuAD F1 93.2",
+                "method": "BERT",
+                "dataset": "SQuAD 1.1",
+                "metric_name": "F1",
+                "value": 93.2,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "gpt3",
@@ -104,6 +317,56 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "task-agnostic, few-shot performance on diverse NLP benchmarks."
         ),
         "cites": ["attention"],
+        "methods": [
+            {
+                "name": "GPT-3",
+                "description": (
+                    "Autoregressive foundation language model with 175 billion parameters "
+                    "evaluated across zero-shot, one-shot, and few-shot settings."
+                ),
+            },
+            {
+                "name": "In-Context Learning",
+                "description": (
+                    "Prompt conditioning on task demonstrations during inference without "
+                    "updating model gradient weights."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "SuperGLUE",
+                "description": (
+                    "Challenging benchmark suite designed to succeed GLUE with more rigorous "
+                    "linguistic and reasoning tasks."
+                ),
+            },
+            {
+                "name": "LAMBADA",
+                "description": (
+                    "Broad-context word prediction benchmark evaluating long-range narrative "
+                    "modeling and discourse understanding."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "LAMBADA Accuracy 76.2%",
+                "method": "GPT-3",
+                "dataset": "LAMBADA",
+                "metric_name": "Accuracy",
+                "value": 76.2,
+                "unit": "%",
+            },
+            {
+                "name": "SuperGLUE Few-Shot 71.8",
+                "method": "GPT-3",
+                "dataset": "SuperGLUE",
+                "metric_name": "Score",
+                "value": 71.8,
+                "unit": "Score",
+            },
+        ],
     },
     {
         "id_key": "lora",
@@ -124,6 +387,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "model weights and injects trainable rank decomposition matrices."
         ),
         "cites": ["attention", "gpt3"],
+        "methods": [
+            {
+                "name": "LoRA",
+                "description": (
+                    "Parameter-efficient fine-tuning freezing pre-trained model weights and "
+                    "injecting trainable rank decomposition matrices into Transformer layers."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "GLUE",
+                "description": (
+                    "General Language Understanding Evaluation benchmark collection of nine "
+                    "diverse natural language understanding tasks."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "GLUE LoRA Average 88.5%",
+                "method": "LoRA",
+                "dataset": "GLUE",
+                "metric_name": "Accuracy",
+                "value": 88.5,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "cot",
@@ -138,6 +429,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "the ability of large language models to perform complex reasoning."
         ),
         "cites": ["attention", "gpt3"],
+        "methods": [
+            {
+                "name": "Chain-of-Thought Prompting",
+                "description": (
+                    "Prompting strategy prompting language models to generate step-by-step "
+                    "intermediate reasoning chains prior to answering complex questions."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "GSM8K",
+                "description": (
+                    "Grade school math benchmark consisting of 8,500 diverse multi-step "
+                    "mathematical word reasoning problems."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "GSM8K Accuracy 60.1%",
+                "method": "Chain-of-Thought Prompting",
+                "dataset": "GSM8K",
+                "metric_name": "Accuracy",
+                "value": 60.1,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "react",
@@ -159,6 +478,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "task-specific actions in an interleaved manner."
         ),
         "cites": ["gpt3", "cot"],
+        "methods": [
+            {
+                "name": "ReAct",
+                "description": (
+                    "Paradigm synergizing reasoning traces and task-specific external actions "
+                    "in an interleaved loop for interactive decision making."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "HotpotQA",
+                "description": (
+                    "Multi-hop question answering benchmark requiring reasoning over multiple "
+                    "supporting Wikipedia articles."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "HotpotQA Success Rate 34.0%",
+                "method": "ReAct",
+                "dataset": "HotpotQA",
+                "metric_name": "Success Rate",
+                "value": 34.0,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "rag",
@@ -179,6 +526,41 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "generation (RAG) combining parametric memory with non-parametric retrieval."
         ),
         "cites": ["attention", "bert"],
+        "methods": [
+            {
+                "name": "RAG",
+                "description": (
+                    "General-purpose fine-tuning recipe combining pre-trained parametric "
+                    "generator with non-parametric dense vector retriever."
+                ),
+            },
+            {
+                "name": "DPR Dense Retrieval",
+                "description": (
+                    "Dense passage retrieval architecture encoding passages and questions into "
+                    "dense vector embeddings for semantic similarity lookup."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "Natural Questions",
+                "description": (
+                    "Benchmark based on real Google search queries paired with human-annotated "
+                    "Wikipedia answer paragraphs."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "Natural Questions Exact Match 44.5%",
+                "method": "RAG",
+                "dataset": "Natural Questions",
+                "metric_name": "Exact Match",
+                "value": 44.5,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "graphrag",
@@ -199,6 +581,41 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "community detection, and summarization to answer global queries over corpora."
         ),
         "cites": ["attention", "gpt3", "rag"],
+        "methods": [
+            {
+                "name": "Graph RAG",
+                "description": (
+                    "Holistic framework combining knowledge graph generation, community "
+                    "detection, and hierarchic summarization for global sensemaking queries."
+                ),
+            },
+            {
+                "name": "Hierarchical Community Summarization",
+                "description": (
+                    "Summarizing clustered graph communities at varying modularity levels to "
+                    "support global query-focused corpus summarization."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "MultiHop-RAG Benchmark",
+                "description": (
+                    "Multi-hop question answering and synthesis benchmark across extensive "
+                    "unstructured document corpora."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "Comprehensiveness Win Rate 72.0%",
+                "method": "Graph RAG",
+                "dataset": "MultiHop-RAG Benchmark",
+                "metric_name": "Win Rate",
+                "value": 72.0,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "toolformer",
@@ -213,6 +630,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "simple APIs, achieving the best of both worlds."
         ),
         "cites": ["attention", "gpt3", "react"],
+        "methods": [
+            {
+                "name": "Toolformer",
+                "description": (
+                    "Self-supervised model learning to decide which external tools to call, "
+                    "when to call them, and how to incorporate tool execution outputs."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "GSM8K",
+                "description": (
+                    "Grade school math benchmark consisting of 8,500 diverse multi-step "
+                    "mathematical word reasoning problems."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "GSM8K Toolformer Accuracy 54.7%",
+                "method": "Toolformer",
+                "dataset": "GSM8K",
+                "metric_name": "Accuracy",
+                "value": 54.7,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "llama",
@@ -227,6 +672,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "from 7B to 65B parameters trained on trillions of tokens."
         ),
         "cites": ["attention", "gpt3", "lora"],
+        "methods": [
+            {
+                "name": "LLaMA",
+                "description": (
+                    "Collection of open foundation language models from 7B to 65B parameters "
+                    "trained exclusively on publicly available data tokens."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "MMLU",
+                "description": (
+                    "Massive Multitask Language Understanding benchmark covering 57 subjects "
+                    "across STEM, humanities, and social sciences."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "MMLU 65B Accuracy 63.4%",
+                "method": "LLaMA",
+                "dataset": "MMLU",
+                "metric_name": "Accuracy",
+                "value": 63.4,
+                "unit": "%",
+            },
+        ],
     },
     {
         "id_key": "ragas",
@@ -241,6 +714,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "based on faithfulness, answer relevance, and context precision."
         ),
         "cites": ["attention", "rag"],
+        "methods": [
+            {
+                "name": "RAGAS",
+                "description": (
+                    "Reference-free automated evaluation framework assessing RAG pipelines along "
+                    "faithfulness, answer relevance, context precision, and recall."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "WikiEval",
+                "description": (
+                    "Evaluation dataset for RAG pipelines comprising question-context-answer "
+                    "triplets annotated for factual consistency."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "Faithfulness Harmonic Mean 0.88",
+                "method": "RAGAS",
+                "dataset": "WikiEval",
+                "metric_name": "F1 Score",
+                "value": 0.88,
+                "unit": "F1",
+            },
+        ],
     },
     {
         "id_key": "dpo",
@@ -261,6 +762,34 @@ LANDMARK_PAPERS: list[dict[str, Any]] = [
             "implicitly optimizes the same objective as RLHF without training a reward model."
         ),
         "cites": ["attention", "gpt3", "llama"],
+        "methods": [
+            {
+                "name": "Direct Preference Optimization",
+                "description": (
+                    "Direct policy optimization algorithm implicitly satisfying Bradley-Terry "
+                    "preference models via binary cross-entropy loss without reward modeling."
+                ),
+            },
+        ],
+        "datasets": [
+            {
+                "name": "Anthropic HH-RLHF",
+                "description": (
+                    "Helpful and Harmless human preference conversation dataset evaluating "
+                    "AI safety and alignment."
+                ),
+            },
+        ],
+        "metrics": [
+            {
+                "name": "HH-RLHF Win Rate 61.2%",
+                "method": "Direct Preference Optimization",
+                "dataset": "Anthropic HH-RLHF",
+                "metric_name": "Win Rate",
+                "value": 61.2,
+                "unit": "%",
+            },
+        ],
     },
 ]
 
@@ -275,12 +804,89 @@ def _ensure_cas_blob(content_bytes: bytes, blobs_dir: Path) -> tuple[str, str, i
     return content_hash, str(storage_subpath), len(content_bytes)
 
 
+async def _get_or_create_node(
+    db: AsyncSession,
+    user_id: UUID,
+    doc_id: UUID | None,
+    node_type: str,
+    name: str,
+    description: str | None = None,
+    metadata_json: dict[str, Any] | None = None,
+    cache: dict[tuple[str, str], UUID] | None = None,
+) -> UUID:
+    """Retrieve existing canonical node or create a new node.
+
+    Maintains user-type deduplication based on uq_graph_nodes_user_type_canonical.
+    """
+    canonical_name = normalize_canonical_name(name)
+    cache_key = (node_type, canonical_name)
+    if cache is not None and cache_key in cache:
+        return cache[cache_key]
+
+    stmt = select(GraphNodeModel).where(
+        GraphNodeModel.user_id == user_id,
+        GraphNodeModel.node_type == node_type,
+        GraphNodeModel.canonical_name == canonical_name,
+    )
+    res = await db.execute(stmt)
+    node = res.scalars().first()
+    if not node:
+        node = GraphNodeModel(
+            id=uuid4(),
+            user_id=user_id,
+            document_id=doc_id,
+            node_type=node_type,
+            canonical_name=canonical_name,
+            display_name=name,
+            description=description,
+            metadata_json=metadata_json or {},
+        )
+        db.add(node)
+        await db.flush()
+
+    if cache is not None:
+        cache[cache_key] = node.id
+    return node.id
+
+
+async def _ensure_edge(
+    db: AsyncSession,
+    user_id: UUID,
+    doc_id: UUID | None,
+    source_id: UUID,
+    target_id: UUID,
+    edge_type: str,
+    metadata_json: dict[str, Any] | None = None,
+) -> None:
+    """Ensure a typed directed edge exists between source and target nodes."""
+    edge_stmt = select(GraphEdgeModel).where(
+        GraphEdgeModel.user_id == user_id,
+        GraphEdgeModel.source_node_id == source_id,
+        GraphEdgeModel.target_node_id == target_id,
+        GraphEdgeModel.edge_type == edge_type,
+    )
+    res = await db.execute(edge_stmt)
+    if not res.scalars().first():
+        edge = GraphEdgeModel(
+            id=uuid4(),
+            user_id=user_id,
+            document_id=doc_id,
+            source_node_id=source_id,
+            target_node_id=target_id,
+            edge_type=edge_type,
+            weight=1.0,
+            metadata_json=metadata_json or {"label": edge_type.lower()},
+        )
+        db.add(edge)
+        await db.flush()
+
+
 async def seed_landmark_papers_for_user(
     db: AsyncSession,
     user_id: UUID,
     blobs_dir: Path | None = None,
 ) -> int:
-    """Seed the 12 landmark LLM papers and interconnected citation graph for a user."""
+    """Seed the 12 landmark LLM papers and interconnected 4-entity knowledge graph for a user."""
     if blobs_dir is None:
         root = Path(__file__).resolve().parent.parent.parent.parent.parent
         blobs_dir = root / "storage" / "blobs"
@@ -289,12 +895,13 @@ async def seed_landmark_papers_for_user(
     key_to_doc_id: dict[str, UUID] = {}
     key_to_doc: dict[str, DocumentModel] = {}
     key_to_gnode_id: dict[str, UUID] = {}
+    node_cache: dict[tuple[str, str], UUID] = {}
 
-    # 1. Seed or retrieve each landmark paper
+    # 1. Seed or retrieve each landmark paper and its ontology
     for paper in LANDMARK_PAPERS:
         key = paper["id_key"]
         title = paper["title"]
-        pdf_bytes = generate_minimal_pdf(title)
+        pdf_bytes = generate_scholarly_pdf(title, paper.get("authors"), paper.get("abstract"))
 
         chash, spath, fsize = _ensure_cas_blob(pdf_bytes, blobs_dir)
 
@@ -365,33 +972,130 @@ async def seed_landmark_papers_for_user(
             doc.stage = "completed"
             await db.flush()
 
-        # Check or create GraphNodeModel for paper
-        node_stmt = select(GraphNodeModel).where(
-            GraphNodeModel.user_id == user_id,
-            GraphNodeModel.node_type == "Paper",
-            GraphNodeModel.canonical_name == title.lower(),
+        # Check or create GraphNodeModel for Paper
+        paper_gnode_id = await _get_or_create_node(
+            db=db,
+            user_id=user_id,
+            doc_id=doc.id,
+            node_type="Paper",
+            name=title,
+            description=paper["abstract"],
+            metadata_json={"year": paper["publication_year"]},
+            cache=node_cache,
         )
-        node_res = await db.execute(node_stmt)
-        gnode = node_res.scalars().first()
-        if not gnode:
-            gnode = GraphNodeModel(
-                id=uuid4(),
-                user_id=user_id,
-                document_id=doc.id,
-                node_type="Paper",
-                canonical_name=title.lower(),
-                display_name=title,
-                description=paper["abstract"],
-                metadata_json={"year": paper["publication_year"]},
-            )
-            db.add(gnode)
-            await db.flush()
 
         key_to_doc_id[key] = doc.id
         key_to_doc[key] = doc
-        key_to_gnode_id[key] = gnode.id
+        key_to_gnode_id[key] = paper_gnode_id
 
-    # 2. Seed cross-paper citations in reference_items and graph_edges
+        # Seed Method entities and PROPOSES edges
+        method_name_to_id: dict[str, UUID] = {}
+        for method_info in paper.get("methods", []):
+            method_id = await _get_or_create_node(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                node_type="Method",
+                name=method_info["name"],
+                description=method_info.get("description"),
+                metadata_json={"proposed_by": title},
+                cache=node_cache,
+            )
+            method_name_to_id[method_info["name"]] = method_id
+            method_name_to_id[normalize_canonical_name(method_info["name"])] = method_id
+
+            await _ensure_edge(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                source_id=paper_gnode_id,
+                target_id=method_id,
+                edge_type="PROPOSES",
+                metadata_json={"label": "proposes"},
+            )
+
+        primary_method_id = list(method_name_to_id.values())[0] if method_name_to_id else None
+
+        # Seed Dataset entities and EVALUATED_ON edges
+        for dataset_info in paper.get("datasets", []):
+            dataset_id = await _get_or_create_node(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                node_type="Dataset",
+                name=dataset_info["name"],
+                description=dataset_info.get("description"),
+                metadata_json={"introduced_in": title},
+                cache=node_cache,
+            )
+
+            # Connect Method -> Dataset
+            if primary_method_id:
+                await _ensure_edge(
+                    db=db,
+                    user_id=user_id,
+                    doc_id=doc.id,
+                    source_id=primary_method_id,
+                    target_id=dataset_id,
+                    edge_type="EVALUATED_ON",
+                    metadata_json={"label": "evaluated_on"},
+                )
+
+            # Also connect Paper -> Dataset
+            await _ensure_edge(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                source_id=paper_gnode_id,
+                target_id=dataset_id,
+                edge_type="EVALUATED_ON",
+                metadata_json={"label": "evaluated_on"},
+            )
+
+        # Seed MetricResult entities and ACHIEVES edges
+        for metric_info in paper.get("metrics", []):
+            metric_meta = {
+                "metric_name": metric_info.get("metric_name"),
+                "value": metric_info.get("value"),
+                "unit": metric_info.get("unit"),
+                "dataset": metric_info.get("dataset"),
+            }
+            metric_id = await _get_or_create_node(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                node_type="MetricResult",
+                name=metric_info["name"],
+                description=metric_info.get(
+                    "description", f"{metric_info['name']} benchmark result"
+                ),
+                metadata_json=metric_meta,
+                cache=node_cache,
+            )
+
+            target_method = metric_info.get("method")
+            method_source_id = (
+                method_name_to_id.get(target_method or "")
+                or method_name_to_id.get(normalize_canonical_name(target_method or ""))
+                or primary_method_id
+                or paper_gnode_id
+            )
+
+            await _ensure_edge(
+                db=db,
+                user_id=user_id,
+                doc_id=doc.id,
+                source_id=method_source_id,
+                target_id=metric_id,
+                edge_type="ACHIEVES",
+                metadata_json={
+                    "label": "achieves",
+                    "value": metric_info.get("value"),
+                    "unit": metric_info.get("unit"),
+                },
+            )
+
+    # 2. Seed cross-paper citations in reference_items and graph_edges (CITES)
     for paper in LANDMARK_PAPERS:
         src_key = paper["id_key"]
         src_doc = key_to_doc[src_key]
@@ -405,13 +1109,17 @@ async def seed_landmark_papers_for_user(
                 continue
 
             ref_idx += 1
-            # Check if reference item exists
+            # Check if reference item exists by resolved_document_id or ref_index
             ref_stmt = select(ReferenceItemModel).where(
                 ReferenceItemModel.document_id == src_doc.id,
-                ReferenceItemModel.resolved_document_id == target_doc.id,
+                (ReferenceItemModel.resolved_document_id == target_doc.id)
+                | (ReferenceItemModel.ref_index == ref_idx),
             )
             ref_res = await db.execute(ref_stmt)
-            if not ref_res.scalars().first():
+            existing_ref = ref_res.scalars().first()
+            if existing_ref:
+                existing_ref.resolved_document_id = target_doc.id
+            else:
                 ref_item = ReferenceItemModel(
                     id=uuid4(),
                     user_id=user_id,
@@ -429,29 +1137,65 @@ async def seed_landmark_papers_for_user(
                 db.add(ref_item)
 
             # Check graph edge
-            edge_stmt = select(GraphEdgeModel).where(
-                GraphEdgeModel.user_id == user_id,
-                GraphEdgeModel.source_node_id == src_gnode_id,
-                GraphEdgeModel.target_node_id == target_gnode_id,
+            await _ensure_edge(
+                db=db,
+                user_id=user_id,
+                doc_id=src_doc.id,
+                source_id=src_gnode_id,
+                target_id=target_gnode_id,
+                edge_type="CITES",
+                metadata_json={"label": "cites"},
             )
-            edge_res = await db.execute(edge_stmt)
-            if not edge_res.scalars().first():
-                graph_edge = GraphEdgeModel(
-                    id=uuid4(),
-                    user_id=user_id,
-                    document_id=src_doc.id,
-                    source_node_id=src_gnode_id,
-                    target_node_id=target_gnode_id,
-                    edge_type="CITES",
-                    weight=1.0,
-                    metadata_json={"label": "cites"},
-                )
-                db.add(graph_edge)
 
     await db.commit()
     logger.info(
-        "Successfully seeded landmark LLM papers",
+        "Successfully seeded landmark LLM papers and 4-entity graph",
         user_id=str(user_id),
         count=len(LANDMARK_PAPERS),
     )
+
+    # 3. Seed compiled academic wiki pages
+    await seed_landmark_wiki_pages_for_user(db, user_id)
+
     return len(LANDMARK_PAPERS)
+
+
+async def seed_landmark_wiki_pages_for_user(
+    db: AsyncSession,
+    user_id: UUID,
+) -> int:
+    """Seed compiled academic wiki pages and research gaps for a user."""
+    seeded = 0
+    for page_data in LANDMARK_WIKI_PAGES:
+        slug = page_data["slug"]
+        stmt = select(WikiPageModel).where(
+            WikiPageModel.user_id == user_id,
+            WikiPageModel.slug == slug,
+        )
+        existing = (await db.execute(stmt)).scalar_one_or_none()
+        if existing:
+            existing.title = page_data["title"]
+            existing.page_type = page_data["page_type"]
+            existing.markdown_content = page_data["markdown_content"]
+            existing.yaml_metadata = page_data["yaml_metadata"]
+            existing.wikilinks = page_data["wikilinks"]
+        else:
+            new_page = WikiPageModel(
+                user_id=user_id,
+                slug=slug,
+                title=page_data["title"],
+                page_type=page_data["page_type"],
+                markdown_content=page_data["markdown_content"],
+                yaml_metadata=page_data["yaml_metadata"],
+                wikilinks=page_data["wikilinks"],
+            )
+            db.add(new_page)
+            seeded += 1
+    await db.commit()
+    logger.info(
+        "Successfully seeded landmark wiki pages",
+        user_id=str(user_id),
+        total=len(LANDMARK_WIKI_PAGES),
+        new=seeded,
+    )
+    return len(LANDMARK_WIKI_PAGES)

@@ -1,0 +1,62 @@
+% !TEX root = ../../main.tex
+\section{Các công cụ và ngôn ngữ phát triển hệ thống}
+\label{sec:tools_languages}
+
+\subsection{Python và FastAPI}
+\label{subsec:python_fastapi}
+Để hiện thực hóa tầng logic nghiệp vụ và các thuật toán tác nhân AI, đề tài lựa chọn ngôn ngữ lập trình Python kết hợp với web framework FastAPI:
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[height=2.9cm]{figures/logos/python.png}
+    \caption{Python}
+    \label{fig:logo_python}
+\end{minipage}
+\hfill
+\begin{minipage}{0.45\textwidth}
+    \centering
+    \includegraphics[height=2.9cm]{figures/logos/fastapi.png}
+    \caption{FastAPI}
+    \label{fig:logo_fastapi}
+\end{minipage}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Ngôn ngữ lập trình Python:} Python là ngôn ngữ lập trình tiêu chuẩn thực tế (\textit{de facto standard}) của cộng đồng nghiên cứu trí tuệ nhân tạo và khoa học dữ liệu toàn cầu. Python cung cấp hệ thống thư viện tính toán khoa học vượt trội, khả năng tích hợp bản địa với các mô hình học sâu, cùng cú pháp gợi ý kiểu dữ liệu tĩnh chặt chẽ (\textit{Type Hinting}) và cơ chế lập trình bất đồng bộ (\textit{async/await}) giúp tối ưu hóa hiệu năng xử lý tác vụ I/O.
+    \item \textbf{FastAPI Framework:} FastAPI là một trong những khung phát triển web bằng Python có tốc độ thực thi nhanh nhất hiện nay \cite{tiangolo2024fastapi}, được xây dựng trên nền tảng máy chủ bất đồng bộ ASGI (\textit{Starlette}) và thư viện xác thực dữ liệu \texttt{pydantic}. FastAPI tự động thẩm định dữ liệu đầu vào, tự sinh tài liệu giao diện lập trình OpenAPI chuẩn quốc tế, và hỗ trợ xuất sắc giao thức truyền phát luồng sự kiện máy chủ (\textit{Server-Sent Events -- SSE}) phục vụ việc hiển thị câu trả lời AI theo thời gian thực cho học giả.
+\end{itemize}
+
+\subsection{TypeScript và React}
+\label{subsec:typescript_react}
+Ở tầng giao diện người dùng, hệ thống sử dụng ngôn ngữ TypeScript kết hợp cùng thư viện React để tạo nên trải nghiệm nghiên cứu tương tác trực quan và hiện đại:
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/react.png}
+\caption{React}
+\label{fig:logo_react}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Ngôn ngữ TypeScript:} TypeScript là phần mở rộng có kiểu tĩnh chặt chẽ của JavaScript do Microsoft phát triển. Việc áp dụng TypeScript giúp hệ thống phát hiện sớm các xung đột kiểu dữ liệu ngay từ giai đoạn biên dịch, tăng cường độ tin cậy và khả năng tái cấu trúc của các mô hình dữ liệu phức tạp (như tọa độ vùng bao chữ nhật trên trang PDF, siêu dữ liệu bài báo và trạng thái luồng SSE).
+    \item \textbf{Thư viện React:} React là thư viện phát triển giao diện người dùng khai báo (\textit{Declarative UI}) dựa trên kiến trúc thành phần tái sử dụng (\textit{Component-Based Architecture}). Cơ chế Document Object Model ảo (\textit{Virtual DOM}) của React giúp tối ưu hóa việc kết xuất đồ họa, duy trì tốc độ khung hình mượt mà ngay cả khi người dùng đồng thời cuộn văn bản PDF nhiều trang, hiển thị khung viền dẫn chứng và trò chuyện trực tiếp cùng tác nhân AI.
+\end{itemize}
+
+\subsection{Docker, Pytest và Vitest}
+\label{subsec:docker_pytest_vitest}
+Quy trình phát triển và kiểm thử chất lượng phần mềm được chuẩn hóa thông qua bộ công cụ hiện đại:
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/docker.png}
+\caption{Docker}
+\label{fig:logo_docker}
+\end{figure}
+
+\begin{itemize}
+    \item \textbf{Docker:} Nền tảng ảo hóa cấp hệ điều hành (\textit{Containerization}) cho phép đóng gói toàn bộ ứng dụng, thư viện phụ thuộc và môi trường chạy vào các vùng chứa biệt lập (\textit{Containers}). Nhờ Docker, hệ thống bảo đảm tính nhất quán hoạt động tuyệt đối giữa máy phát triển của sinh viên và máy chủ triển khai thực tế của nhà trường.
+    \item \textbf{Khung kiểm thử Pytest:} Công cụ kiểm định chất lượng mã nguồn backend tiêu chuẩn của Python, hỗ trợ cơ chế nạp bối cảnh dùng chung (\textit{Fixtures}), tự động dọn dẹp dữ liệu kiểm thử và kiểm tra tính toàn vẹn của các ranh giới kiến trúc Lục giác.
+    \item \textbf{Khung kiểm thử Vitest:} Bộ công cụ kiểm thử đơn vị siêu tốc dành cho giao diện TypeScript/React, cho phép mô phỏng hành vi tương tác của người dùng, xác nhận tính chính xác của các thành phần đồ họa trước khi xuất xưởng phần mềm.
+\end{itemize}

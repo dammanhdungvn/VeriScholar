@@ -270,6 +270,12 @@ async def ensure_database_schema(conn: AsyncConnection) -> None:
         )
         await conn.execute(
             text(
+                "CREATE INDEX IF NOT EXISTS idx_wiki_pages_embedding_hnsw "
+                "ON wiki_pages USING hnsw (embedding vector_cosine_ops);"
+            )
+        )
+        await conn.execute(
+            text(
                 "CREATE INDEX IF NOT EXISTS idx_document_chunks_tsv "
                 "ON document_chunks USING gin (content_tsv);"
             )

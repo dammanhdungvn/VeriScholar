@@ -31,7 +31,9 @@ logger = structlog.get_logger("core.services.asset_security")
 class DraftAssetSecurityValidator:
     """Security validator for research draft asset uploads and archives."""
 
-    ALLOWED_EXTENSIONS: frozenset[str] = frozenset({".png", ".pdf", ".cls", ".sty", ".bib"})
+    ALLOWED_EXTENSIONS: frozenset[str] = frozenset(
+        {".png", ".jpg", ".jpeg", ".webp", ".pdf", ".cls", ".sty", ".bib"}
+    )
     TEXT_EXTENSIONS: frozenset[str] = frozenset({".cls", ".sty", ".bib"})
 
     MAX_SINGLE_FILE_BYTES: int = 15 * 1024 * 1024  # 15 MB
@@ -50,6 +52,7 @@ class DraftAssetSecurityValidator:
     )
 
     PNG_MAGIC: bytes = b"\x89PNG\r\n\x1a\n"
+    JPEG_MAGIC: bytes = b"\xff\xd8\xff"
     PDF_MAGIC: bytes = b"%PDF-"
 
     def validate_path_security(self, filename: str) -> None:
@@ -105,10 +108,28 @@ class DraftAssetSecurityValidator:
             self._validate_text_asset(clean_name, content, ext)
         elif ext == ".png":
             self._validate_png_asset(clean_name, content)
+        elif ext in (".jpg", ".jpeg"):
+            self._validate_jpeg_asset(clean_name, content)
+        elif ext == ".webp":
+            self._validate_webp_asset(clean_name, content)
         elif ext == ".pdf":
             self._validate_pdf_asset(clean_name, content)
 
         return ext
+
+    def _validate_jpeg_asset(self, filename: str, content: bytes) -> None:
+        """Validate JPEG magic header."""
+        if len(content) < 3 or not content.startswith(self.JPEG_MAGIC):
+            raise MaliciousAssetContentError(
+                f"Asset '{filename}' does not have a valid JPEG image header"
+            )
+
+    def _validate_webp_asset(self, filename: str, content: bytes) -> None:
+        """Validate WebP magic header."""
+        if len(content) < 12 or not (content.startswith(b"RIFF") and content[8:12] == b"WEBP"):
+            raise MaliciousAssetContentError(
+                f"Asset '{filename}' does not have a valid WebP image header"
+            )
 
     def _validate_text_asset(self, filename: str, content: bytes, ext: str) -> None:
         """Verify text assets (.cls, .sty, .bib) are clean UTF-8 text without shell escapes."""

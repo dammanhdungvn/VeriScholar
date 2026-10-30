@@ -4,6 +4,8 @@ import type {
   GraphQueryResponseData,
   BibliometricsResponseData,
   LibraryGraphResponseData,
+  WikiPageItem,
+  ResearchGapsResponseData,
 } from "../types";
 
 export const libraryApi = {
@@ -38,6 +40,54 @@ export const libraryApi = {
     const params = folderId ? `?folder_id=${encodeURIComponent(folderId)}` : "";
     return apiClient<LibraryGraphResponseData>(`/library/graph${params}`, {
       method: "GET",
+    });
+  },
+
+  /**
+   * List compiled academic wiki pages
+   */
+  async listWikiPages(): Promise<WikiPageItem[]> {
+    const res = await apiClient<{ total: number; pages: WikiPageItem[] } | WikiPageItem[]>("/library/wiki", {
+      method: "GET",
+    });
+    if (Array.isArray(res)) {
+      return res;
+    }
+    return (res as { total: number; pages: WikiPageItem[] })?.pages ?? [];
+  },
+
+  /**
+   * Get a compiled academic wiki page by slug
+   */
+  async getWikiPage(slug: string): Promise<WikiPageItem> {
+    return apiClient<WikiPageItem>(`/library/wiki/${encodeURIComponent(slug)}`, {
+      method: "GET",
+    });
+  },
+
+  /**
+   * Compile or seed academic wiki pages from user library
+   */
+  async compileWikiPages(): Promise<WikiPageItem[]> {
+    const res = await apiClient<{ total: number; pages: WikiPageItem[] } | WikiPageItem[]>("/library/wiki:compile", {
+      method: "POST",
+    });
+    if (Array.isArray(res)) {
+      return res;
+    }
+    return (res as { total: number; pages: WikiPageItem[] })?.pages ?? [];
+  },
+
+  /**
+   * Synthesize research gaps across library papers
+   */
+  async getResearchGaps(folderId?: string | null, topK: number = 5): Promise<ResearchGapsResponseData> {
+    return apiClient<ResearchGapsResponseData>("/library/research-gaps", {
+      method: "POST",
+      body: JSON.stringify({
+        folder_id: folderId || null,
+        top_k: topK,
+      }),
     });
   },
 };

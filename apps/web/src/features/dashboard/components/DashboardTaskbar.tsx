@@ -5,6 +5,7 @@ import {
   MessageSquare,
   Library,
   PenTool,
+  Network,
   PanelLeftClose,
   PanelLeft,
   Search,
@@ -283,6 +284,7 @@ export function DashboardTaskbar({
   const pathname = location.pathname;
   const isLibrary = pathname.startsWith("/library");
   const isWriting = pathname.startsWith("/writing");
+  const isGraph = pathname.startsWith("/graph") || pathname.startsWith("/wiki-graph");
 
   const navItems = [
     {
@@ -303,6 +305,14 @@ export function DashboardTaskbar({
       icon: PenTool,
       isActive: isWriting,
       onClick: () => navigate("/writing"),
+    },
+    {
+      id: "graph",
+      label: "Graph",
+      title: "Graph",
+      icon: Network,
+      isActive: isGraph,
+      onClick: () => navigate("/graph"),
     },
   ];
 

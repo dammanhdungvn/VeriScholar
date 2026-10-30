@@ -40,6 +40,7 @@ from core.services.socratic_roadmap import (
     extract_and_strip_bridge_hint,
     extract_scholarly_identifiers,
 )
+from core.services.wiki_compiler import WikiCompiler
 
 __all__ = [
     "AcademicPaperValidator",
@@ -60,6 +61,7 @@ __all__ = [
     "SandboxedLatexCompiler",
     "VALID_EDGE_TYPES",
     "VALID_NODE_TYPES",
+    "WikiCompiler",
     "ZipSlipSecurityError",
     "detect_folder_cycle",
     "escape_bibtex_value",

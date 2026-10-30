@@ -1,4 +1,4 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import { LandingPageContainer } from "@/features/landing/components/LandingPageContainer";
 import { AuthLayout } from "@/features/auth/components/AuthLayout";
 import { LoginForm } from "@/features/auth/components/LoginForm";
@@ -10,6 +10,7 @@ import { ProfilePage } from "@/features/auth/components/ProfilePage";
 import { SettingsPage } from "@/features/auth/components/SettingsPage";
 import { LibraryPage } from "@/features/library/components/LibraryPage";
 import { DiscoveryPage } from "@/features/discovery/components/DiscoveryPage";
+import { WikiGraphPage } from "@/features/wiki/components/WikiGraphPage";
 
 export const router = createBrowserRouter([
   {
@@ -43,6 +44,14 @@ export const router = createBrowserRouter([
       {
         path: "/library",
         element: <LibraryPage />,
+      },
+      {
+        path: "/graph",
+        element: <WikiGraphPage />,
+      },
+      {
+        path: "/wiki-graph",
+        element: <Navigate to="/graph" replace />,
       },
       {
         path: "/writing",

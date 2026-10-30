@@ -221,9 +221,11 @@ class DraftService:
         ai_tracing: AITracingService | None = None,
         latex_compiler: SandboxedLatexCompiler | None = None,
         clsi_compiler: CLSILatexCompiler | None = None,
+        openai_client: Any | None = None,
     ) -> None:
         self.db = db
         self.ai_tracing = ai_tracing or AITracingService()
+        self.openai_client = openai_client
         self._draft_pdf_cache = _draft_pdf_cache
         self._draft_assets_cache = _draft_assets_cache
         self._draft_share_cache = _draft_share_cache
@@ -931,7 +933,10 @@ class DraftService:
             }
 
         assets = _draft_assets_cache.get(draft_id, [])
-        agent = LatexCoauthorAgent(compiler=self.clsi_compiler)
+        agent = LatexCoauthorAgent(
+            compiler=self.clsi_compiler,
+            openai_client=self.openai_client,
+        )
 
         final_main_tex = draft.content
         final_bib_content = draft.bib_content
@@ -1220,7 +1225,7 @@ class DraftService:
                     ext = Path(leaf_name).suffix.lower()
                     sub_type = (
                         "image"
-                        if ext == ".png"
+                        if ext in (".png", ".jpg", ".jpeg", ".webp")
                         else "bibtex"
                         if ext == ".bib"
                         else "style"

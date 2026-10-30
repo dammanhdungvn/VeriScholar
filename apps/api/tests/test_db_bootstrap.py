@@ -42,6 +42,7 @@ async def test_ensure_database_schema_runs_idempotently():
             "drafts",
             "draft_assets",
             "draft_messages",
+            "wiki_pages",
         }
         missing = required_tables - tables
         assert not missing, f"Missing required tables in schema: {missing}"

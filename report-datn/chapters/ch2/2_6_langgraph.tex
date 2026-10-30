@@ -1,0 +1,40 @@
+% !TEX root = ../../main.tex
+\section{Tổng quan về LangGraph}
+\label{sec:langgraph}
+
+\subsection{LangGraph là gì?}
+\label{subsec:langgraph_la_gi}
+LangGraph là một thư viện điều phối tác nhân trí tuệ nhân tạo thế hệ mới được phát triển bởi tổ chức LangChain, chuyên biệt cho việc thiết kế các hệ thống tác nhân phức tạp, có trạng thái (\textit{stateful}) và hỗ trợ cấu trúc đồ thị có chu trình lặp (\textit{cyclic graphs}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/langgraph.png}
+\caption{LangGraph}
+\label{fig:logo_langgraph}
+\end{figure}
+
+Trước khi LangGraph ra đời, phần lớn các khung phát triển ứng dụng LLM chỉ hỗ trợ các đường ống xử lý theo đồ thị có hướng không chu trình tuyến tính (\textit{Directed Acyclic Graph -- DAG}), trong đó dữ liệu chỉ chảy một chiều từ nút bắt đầu đến nút kết thúc ($A \to B \to C$). Tuy nhiên, các bài toán học thuật phức tạp đòi hỏi tác nhân phải có khả năng:
+\begin{itemize}
+    \item Thực hiện các vòng lặp phản tư (\textit{Reflexion loops}): Nếu bước kiểm tra trích dẫn phát hiện dữ liệu không chính xác, hệ thống phải quay lui lại bước truy xuất để tìm kiếm tài liệu mới.
+    \item Hợp tác đa tác nhân (\textit{Multi-Agent Collaboration}): Phân chia trách nhiệm cho nhiều tác nhân chuyên môn hóa (tác nhân lập kế hoạch, tác nhân tra cứu, tác nhân phản biện) cùng trao đổi và hội tụ về một kết quả tối ưu.
+    \item Lưu trữ trạng thái bền vững (\textit{Persistence \& Checkpointing}): Ghi nhớ toàn bộ cây trạng thái sau mỗi bước thực thi, cho phép tạm dừng, khôi phục hoặc phát lại luồng suy luận tại bất kỳ thời điểm nào.
+\end{itemize}
+
+LangGraph cung cấp nền tảng chuẩn mực giải quyết hoàn hảo các yêu cầu trên, biến quy trình suy luận của AI thành một máy trạng thái hữu hạn (\textit{Finite State Machine}) có thể kiểm soát và đo lường chặt chẽ.
+
+\subsection{Kiến trúc StateGraph điều phối Agent}
+\label{subsec:stategraph_dieu_phoi}
+Cốt lõi kiến trúc của LangGraph được xây dựng xung quanh khái niệm \texttt{StateGraph} -- một đồ thị toán học trong đó mọi nút đều đọc và ghi dữ liệu vào một lược đồ trạng thái chia sẻ chung (\textit{Shared State Schema}).
+
+Một đồ thị \texttt{StateGraph} bao gồm ba thành phần cấu thành cơ bản:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Tập các nút (\textit{Nodes}):} Đại diện cho các đơn vị tính toán độc lập. Mỗi nút nhận trạng thái hiện tại của hệ thống, thực hiện một tác vụ cụ thể (chẳng hạn như phân tích câu hỏi của học giả, gọi công cụ tìm kiếm lai, hoặc thẩm định trích dẫn) và trả về dữ liệu cập nhật.
+    \item \textbf{Lược đồ trạng thái và hàm thu gọn (\textit{State Schema \& Reducers}):} Định nghĩa cấu trúc dữ liệu tổng thể của phiên làm việc. Hàm thu gọn quy định cách thức tích hợp dữ liệu mới từ các nút vào trạng thái chung (ví dụ: nối thêm thông điệp mới vào lịch sử hội thoại thay vì ghi đè).
+    \item \textbf{Tập các cạnh điều hướng (\textit{Edges}):} Xác định quy tắc chuyển dịch giữa các nút:
+    \begin{itemize}
+        \item \textit{Cạnh cố định (\textit{Normal Edges}):} Luôn chuyển tiếp vô điều kiện từ nút này sang nút khác sau khi tác vụ hoàn tất.
+        \item \textit{Cạnh rẽ nhánh có điều kiện (\textit{Conditional Edges}):} Vận hành dựa trên một hàm đánh giá logic để quyết định nút tiếp theo. Ví dụ: sau nút Thẩm định trích dẫn, nếu độ trùng khớp đạt yêu cầu thì chuyển đến nút Kết thúc (\texttt{END}), nếu chưa đạt thì rẽ nhánh quay lại nút Mở rộng truy vấn.
+    \end{itemize}
+\end{enumerate}
+
+Bên cạnh đó, kiến trúc \texttt{StateGraph} tích hợp sẵn cơ chế can thiệp của con người vào quy trình (\textit{Human-in-the-Loop}), cho phép tác nhân dừng lại xin ý kiến của học giả trước khi thực thi các quyết định quan trọng (như xác nhận nội dung bản thảo hoặc tải tài liệu lớn), tạo nên sự phối hợp tin cậy giữa con người và trí tuệ nhân tạo.

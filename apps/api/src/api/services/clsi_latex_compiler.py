@@ -119,10 +119,16 @@ class CLSILatexCompiler:
                 except OSError:
                     pass
 
-        # Write main.tex
+        # Write main.tex (bridging .webp extensions to .png for LaTeX engine compatibility)
+        sanitized_main_tex = re.sub(
+            r"(\\includegraphics(?:\[[^\]]*\])?\{[^}]*?)\.webp\}",
+            r"\1.png}",
+            main_tex,
+            flags=re.IGNORECASE,
+        )
         main_tex_path = os.path.join(draft_dir, "main.tex")
         with open(main_tex_path, "w", encoding="utf-8") as f:
-            f.write(main_tex)
+            f.write(sanitized_main_tex)
 
         # Write references.bib
         bib_path = os.path.join(draft_dir, "references.bib")
@@ -189,6 +195,22 @@ class CLSILatexCompiler:
                                 f.write(content)
                     elif storage_path and os.path.isfile(storage_path):
                         shutil.copyfile(storage_path, target_path)
+
+                    if target_path.lower().endswith(".webp"):
+                        try:
+                            import pymupdf
+
+                            png_target = os.path.splitext(target_path)[0] + ".png"
+                            pix = pymupdf.Pixmap(target_path)
+                            if pix.n >= 5:
+                                pix = pymupdf.Pixmap(pymupdf.csRGB, pix)
+                            pix.save(png_target)
+                        except Exception as exc:
+                            logger.warning(
+                                "Failed to auto-convert WebP asset to PNG",
+                                target=target_path,
+                                error=str(exc),
+                            )
                 except (OSError, IOError) as exc:
                     logger.warning(
                         "Failed to write asset file",

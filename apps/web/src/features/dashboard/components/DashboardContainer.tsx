@@ -79,19 +79,25 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
   // Query session detail when routeSessionId is present
   const { data: sessionDetailRes } = useSessionDetail(routeSessionId);
 
+  // Track currently loaded session ID to guarantee messages are fetched on route changes
+  const loadedSessionIdRef = useRef<string | null>(null);
+
   // Sync routeSessionId with active session state
   useEffect(() => {
     if (routeSessionId) {
-      if (routeSessionId !== activeSessionId) {
+      if (loadedSessionIdRef.current !== routeSessionId) {
+        loadedSessionIdRef.current = routeSessionId;
         selectSession(routeSessionId);
         setSession(routeSessionId);
         setStatus("completed", 100);
         loadExistingSession(routeSessionId);
       }
-    } else if (activeSessionId) {
-      // Navigated to /dashboard without session ID
+    } else {
+      loadedSessionIdRef.current = null;
+      if (activeSessionId) {
+        setActiveSessionId(undefined);
+      }
       initNewStandbyChat();
-      setActiveSessionId(undefined);
       setActiveBbox(null);
       resetChat();
     }
@@ -139,16 +145,18 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
 
   // Synchronize document details if activeSession from cached list has documents
   useEffect(() => {
-    if (activeSession && activeSession.document_ids && activeSession.document_ids.length > 0) {
-      useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
-      const activeDocId = activeSession.document_ids[0];
-      setDocument(activeDocId, activeSession.title);
-    } else if (activeSession && activeSession.document_ids?.length === 0) {
-      useReaderStore.getState().setOpenDocumentIds([]);
-      useReaderStore.getState().setActiveDocumentId(null);
-      useWorkspaceStore.getState().setDocument(null, "");
+    if (activeSession && (!effectiveSessionId || activeSession.id === effectiveSessionId)) {
+      if (activeSession.document_ids && activeSession.document_ids.length > 0) {
+        useReaderStore.getState().setOpenDocumentIds(activeSession.document_ids);
+        const activeDocId = activeSession.document_ids[0];
+        setDocument(activeDocId, activeSession.title);
+      } else if (activeSession.document_ids?.length === 0) {
+        useReaderStore.getState().setOpenDocumentIds([]);
+        useReaderStore.getState().setActiveDocumentId(null);
+        useWorkspaceStore.getState().setDocument(null, "");
+      }
     }
-  }, [activeSession, setDocument]);
+  }, [activeSession, effectiveSessionId, setDocument]);
 
   /**
    * BẤT BIẾN 1 (Zero DB Junk):
@@ -360,7 +368,7 @@ export function DashboardContainer({ hideTaskbar = false }: { hideTaskbar?: bool
   const showStandbyHero =
     isProcessing ||
     documentStatus === "error" ||
-    (!routeSessionId && isStandby && messages.length === 0 && !activeDocumentId);
+    (!routeSessionId && isStandby);
 
 
 

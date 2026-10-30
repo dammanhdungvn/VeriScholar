@@ -1,4 +1,4 @@
-"""Database models re-export (19 PostgreSQL 16 + pgvector models)."""
+"""Database models re-export (20 PostgreSQL 16 + pgvector models)."""
 
 from api.db.models.base import Base, IdentifiableTimestampedModel
 from api.db.models.blob import DocumentStorageBlobModel
@@ -24,6 +24,7 @@ from api.db.models.session import (
 from api.db.models.summary import DocumentSummaryModel
 from api.db.models.user import UserModel
 from api.db.models.user_api_key import UserApiKeyModel
+from api.db.models.wiki import WikiPageModel
 
 __all__ = [
     "Base",
@@ -47,4 +48,5 @@ __all__ = [
     "DraftModel",
     "DraftAssetModel",
     "DraftMessageModel",
+    "WikiPageModel",
 ]

@@ -1,0 +1,53 @@
+% !TEX root = ../../main.tex
+\section{Tìm hiểu về Azure OpenAI và E2B Sandbox}
+\label{sec:azure_openai_e2b}
+
+\subsection{Azure OpenAI Service là gì?}
+\label{subsec:azure_openai}
+Azure OpenAI Service là nền tảng điện toán đám mây cấp doanh nghiệp do tập đoàn Microsoft hợp tác chiến lược cùng OpenAI phát triển, cung cấp giao diện lập trình truy cập vào các mô hình ngôn ngữ lớn và mô hình biểu diễn vector hàng đầu thế giới (như GPT-4o, GPT-4o-mini và chuỗi mô hình text-embedding).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/azure.png}
+\caption{Microsoft Azure}
+\label{fig:logo_azure}
+\end{figure}
+
+Khác biệt căn bản giữa Azure OpenAI và các dịch vụ API thương mại công cộng nằm ở các tiêu chuẩn bảo mật và vận hành khắt khe:
+\begin{itemize}
+    \item \textbf{Cam kết bảo vệ dữ liệu học thuật tuyệt đối:} Dữ liệu văn bản, tài liệu nghiên cứu và câu hỏi của học giả không bao giờ được sử dụng để tái huấn luyện hoặc cải tiến bất kỳ mô hình cơ sở nào của Microsoft hay OpenAI.
+    \item \textbf{Hạ tầng mạng cô lập cấp doanh nghiệp:} Hỗ trợ triển khai trên mạng riêng ảo (\textit{Virtual Network -- VNet}), các điểm cuối riêng tư (\textit{Private Endpoints}) và mã hóa đường truyền nghiêm ngặt theo chuẩn TLS 1.3, đáp ứng các tiêu chuẩn chứng nhận quốc tế như ISO/IEC 27001, SOC 2 Type II và GDPR.
+    \item \textbf{Độ sẵn sàng và độ ổn định cao (High Availability SLA):} Cung cấp hạn ngạch xử lý chuyên dụng (\textit{Provisioned Throughput Units -- PTU}), bảo đảm thời gian phản hồi đồng đều và triệt tiêu nguy cơ tắc nghẽn dịch vụ vào giờ cao điểm.
+\end{itemize}
+
+\subsection{E2B Sandbox là gì?}
+\label{subsec:e2b_sandbox}
+E2B Sandbox là nền tảng môi trường thực thi ảo hóa cô lập chuyên biệt cho các tác nhân AI, cho phép mô hình ngôn ngữ thực thi mã nguồn tự sinh trong một không gian an toàn tuyệt đối.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[height=3.2cm]{figures/logos/e2b.png}
+\caption{E2B Sandbox}
+\label{fig:logo_e2b}
+\end{figure}
+
+Công nghệ nền tảng của E2B dựa trên kiến trúc máy ảo siêu nhỏ (\textit{MicroVM}) được phát triển từ công nghệ ảo hóa AWS Firecracker \cite{agache2020firecracker}:
+\begin{enumerate}[label=\textbf{(\arabic*)}]
+    \item \textbf{Khởi động siêu tốc:} Mỗi môi trường MicroVM có thể khởi tạo hoàn tất trong thời gian chưa đầy 200 mili-giây, cung cấp đầy đủ một nhân Linux hoàn chỉnh với hệ điều hành và tài nguyên tính toán độc lập.
+    \item \textbf{Cô lập ranh giới hạt nhân (Kernel-level Isolation):} Mọi đoạn mã lập trình (chẳng hạn như kịch bản phân tích số liệu Python, trích xuất biểu đồ hoặc lệnh biên dịch tài liệu \LaTeX) đều chạy bên trong ranh giới máy ảo riêng. Nếu kịch bản chứa mã độc hoặc gặp sự cố tràn bộ nhớ, sự cố hoàn toàn bị giới hạn bên trong MicroVM mà không thể lan truyền hay gây hại đến máy chủ chính của hệ thống, loại bỏ hoàn toàn nguy cơ tấn công thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
+    \item \textbf{Môi trường trạng thái linh hoạt:} Hỗ trợ tương tác hai chiều, truyền tệp nhị phân và thu nhận kết quả tính toán tức thời để nạp ngược lại vào chu trình suy luận của tác nhân.
+\end{enumerate}
+
+\subsection{Mô hình bảo mật BYOK (Bring Your Own Key)}
+\label{subsec:byok_security}
+Mô hình Mang theo khóa cá nhân (\textit{Bring Your Own Key -- BYOK}) là giải pháp kiến trúc bảo đảm quyền tự chủ tài nguyên và an toàn riêng tư tối đa cho các nhà khoa học. Trong mô hình này, học giả cung cấp khóa API cá nhân của riêng mình từ nhà cung cấp dịch vụ trí tuệ nhân tạo để trực tiếp thanh toán và kiểm soát hạn ngạch sử dụng, máy chủ của đề tài không đứng ra thu phí hay lưu trữ khóa dưới dạng văn bản thô.
+
+Để bảo vệ tuyệt đối khóa API của học giả trước các nguy cơ tấn công mạng hoặc lộ lọt dữ liệu từ cơ sở dữ liệu, đề tài triển khai chuẩn mã hóa đối xứng xác thực AEAD (\textit{Authenticated Encryption with Associated Data}) theo chế độ GCM (\textit{Galois/Counter Mode}) \cite{dworkin2007}:
+
+Thuật toán sử dụng khóa bí mật 256 bits ($K$) và vectơ khởi tạo ngẫu nhiên 96 bits ($\text{IV}$) riêng biệt cho mỗi lần mã hóa. Bản rõ khóa API được mã hóa bằng chế độ CTR (\textit{Counter}), đồng thời hàm băm vạn năng $\text{GHASH}$ kết hợp dữ liệu bổ sung không bảo mật ($\text{AAD}$) để tạo ra thẻ xác thực toàn vẹn 128 bits ($T$):
+\begin{equation}
+\label{eq:aes_gcm}
+C = \text{AES-CTR}_K(\text{Plaintext}), \quad T = \text{GHASH}_H(\text{AAD}, C) \oplus \text{AES}_K(\text{IV})
+\end{equation}
+
+Quy trình giải mã tuân thủ nguyên tắc không lưu vết trên RAM (\textit{RAM Zero-Retention}): Khóa giải mã chỉ tồn tại tạm thời trong bộ nhớ RAM trong đúng thời gian thực thi lời gọi hàm AI và bị xóa sạch khỏi bộ nhớ ngay sau khi kết thúc yêu cầu, bảo đảm tính an mật tuyệt đối cho người dùng.

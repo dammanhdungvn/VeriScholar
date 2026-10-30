@@ -1,15 +1,30 @@
 % !TEX root = ../../main.tex
-\section[Kiến trúc phần mềm lục giác (Hexagonal Architecture)]{Kiến trúc phần mềm lục giác\\(Hexagonal Architecture)}
+\section{Tổng quan về Hexagonal Architecture}
 \label{sec:hexagonal}
 
-\subsection{Nguyên lý phân tầng Ports and Adapters}
-\label{subsec:ports_and_adapters}
-Kiến trúc Lục giác (\textit{Hexagonal Architecture}), còn được biết đến với tên gọi mẫu thiết kế Cổng và Bộ điều hợp (\textit{Ports and Adapters}), do Alistair Cockburn khởi xướng năm 2005 \cite{cockburn2005}. Trọng tâm của kiến trúc này là giải quyết triệt để bài toán phụ thuộc chặt chẽ (\textit{tight coupling}) giữa logic nghiệp vụ cốt lõi của phần mềm với các công nghệ giao vận bên ngoài như hệ quản trị cơ sở dữ liệu, giao thức mạng, và giao diện người dùng.
+\subsection{Hexagonal Architecture là gì?}
+\label{subsec:hexagonal_la_gi}
+Kiến trúc Lục giác (\textit{Hexagonal Architecture}), còn được gọi là mẫu kiến trúc Cổng và Bộ điều hợp (\textit{Ports and Adapters Pattern}), do chuyên gia phần mềm Alistair Cockburn khởi xướng vào năm 2005 \cite{cockburn2005}. Mục tiêu cốt lõi của kiến trúc này là giải quyết triệt để bài toán phụ thuộc chặt chẽ (\textit{tight coupling}) giữa logic nghiệp vụ trung tâm của phần mềm với các công nghệ giao vận bên ngoài như hệ quản trị cơ sở dữ liệu, giao thức mạng, và giao diện người dùng.
 
-Hệ thống theo Kiến trúc Lục giác được cấu trúc thành ba phân vùng độc lập theo nguyên lý đảo ngược phụ thuộc (\textit{Dependency Inversion Principle}):
+Trong các kiến trúc phân tầng truyền thống (như mô hình 3 tầng Presentation - Business Logic - Data Access), mã nguồn nghiệp vụ thường bị phụ thuộc trực tiếp vào cơ sở dữ liệu hoặc khung giao diện. Ngược lại, Hexagonal Architecture thiết lập một ranh giới bảo vệ nghiêm ngặt: logic nghiệp vụ học thuật nằm tại trung tâm và hoàn toàn cô lập, không mang bất kỳ sự ràng buộc nào với các thư viện ngoại vi, hệ quản trị cơ sở dữ liệu hay giao thức mạng.
+
+Các lợi ích nền tảng của Hexagonal Architecture bao gồm:
+\begin{itemize}
+    \item \textbf{Độc lập công nghệ:} Cho phép thay thế hệ quản trị cơ sở dữ liệu, chuyển đổi nhà cung cấp mô hình trí tuệ nhân tạo (LLM), hoặc đổi mới giao diện người dùng mà không cần sửa đổi bất kỳ dòng mã logic nghiệp vụ nào.
+    \item \textbf{Kiểm thử tự động dễ dàng (Testability):} Logic nghiệp vụ có thể được kiểm thử hoàn toàn độc lập với các cổng giả lập (\textit{Mock Ports}) trong bộ nhớ mà không cần kết nối mạng hay khởi động cơ sở dữ liệu thực tế.
+    \item \textbf{Khả năng bảo trì và tiến hóa bền vững:} Ranh giới phân định rõ ràng giúp kiến trúc thích ứng linh hoạt trước sự thay đổi công nghệ nhanh chóng của các nền tảng AI.
+\end{itemize}
+
+\subsection{Kiến trúc Ports and Adapters}
+\label{subsec:ports_and_adapters}
+Hệ thống theo Kiến trúc Lục giác được cấu trúc thành ba phân vùng độc lập tuân thủ nghiêm ngặt nguyên lý đảo ngược phụ thuộc (\textit{Dependency Inversion Principle}):
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Tầng lõi miền nghiệp vụ thuần khiết (\textit{Pure Core Domain}):} Nằm tại trung tâm của hệ thống, chỉ chứa các thực thể nghiệp vụ (\textit{Entities}), quy tắc logic và các thuật toán tính toán học thuật. Vùng này tuân thủ nguyên tắc cô lập tuyệt đối: chỉ sử dụng các cấu trúc dữ liệu bản địa của ngôn ngữ lập trình, hoàn toàn không phụ thuộc vào bất kỳ thư viện giao tiếp mạng, web framework hay hệ quản trị cơ sở dữ liệu nào.
-    \item \textbf{Tầng các cổng giao tiếp trừu tượng (\textit{Ports}):} Là các giao diện trừu tượng (\textit{Interfaces}) nằm trong tầng lõi nghiệp vụ. Cổng quy định hợp đồng giao tiếp chuẩn mà các thành phần bên ngoài bắt buộc phải tuân thủ để phục vụ nghiệp vụ (chẳng hạn như: cổng phân giải ấn phẩm học thuật, cổng bóc tách tài liệu PDF, hay cổng lưu trữ dữ liệu).
+    \item \textbf{Tầng các cổng giao tiếp trừu tượng (\textit{Ports}):} Là các giao diện trừu tượng (\textit{Interfaces}) nằm trong tầng lõi nghiệp vụ. Cổng quy định hợp đồng giao tiếp chuẩn mà các thành phần bên ngoài bắt buộc phải tuân thủ để phục vụ nghiệp vụ (chẳng hạn như: cổng phân giải ấn phẩm học thuật, cổng bóc tách tài liệu PDF, hay cổng lưu trữ dữ liệu). Có hai loại cổng chính:
+    \begin{itemize}
+        \item \textit{Cổng phía nhập (Inbound/Driving Ports):} Định nghĩa các phương thức cho phép tác nhân bên ngoài kích hoạt quy trình nghiệp vụ của hệ thống.
+        \item \textit{Cổng phía xuất (Outbound/Driven Ports):} Định nghĩa các giao diện cho phép lõi nghiệp vụ yêu cầu tài nguyên hoặc lưu trữ từ hạ tầng bên ngoài.
+    \end{itemize}
     \item \textbf{Tầng các bộ điều hợp kỹ thuật (\textit{Adapters}):} Nằm ở lớp ngoài cùng của hệ thống, hiện thực hóa các Cổng trừu tượng để kết nối với các công nghệ thực tế (chẳng hạn như bộ điều hợp cơ sở dữ liệu quan hệ, bộ điều hợp dịch vụ tìm kiếm học thuật trực tuyến, hoặc bộ điều hợp mô hình trí tuệ nhân tạo).
 \end{enumerate}
 
@@ -110,13 +125,4 @@ Mô hình phân tầng kiến trúc và ranh giới phân tách trừu tượng 
 \label{fig:hexagonal_arch}
 \end{figure}
 
-Luồng phụ thuộc trong hệ thống luôn có chiều hướng tâm: các bộ điều hợp kỹ thuật bên ngoài phụ thuộc vào các Cổng trong lõi, trong khi logic nghiệp vụ học thuật ở trung tâm hoàn toàn không biết gì về cơ sở hạ tầng thực tế bên dưới.
-
-\subsection{Luận giải lựa chọn Kiến trúc Lục giác cho VeriScholar}
-\label{subsec:luan_giai_hexagonal}
-Trong nghiên cứu khoa học và phát triển phần mềm trợ lý AI, việc áp dụng Kiến trúc Lục giác mang lại ba lợi thế chiến lược cốt lõi:
-\begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Khả năng thay thế linh hoạt các nhà cung cấp trí tuệ nhân tạo (\textit{Hot-swappable AI Providers}):} Trong lĩnh vực AI, các mô hình ngôn ngữ lớn (OpenAI, Anthropic, Google) và các dịch vụ chỉ mục học thuật liên tục cải tiến và thay đổi giao diện lập trình. Nhờ sự phân tách của Kiến trúc Lục giác, khi hệ thống cần chuyển đổi nhà cung cấp mô hình ngôn ngữ hoặc công cụ tìm kiếm, lập trình viên chỉ cần xây dựng thêm bộ điều hợp mới mà không phải sửa đổi bất kỳ dòng mã logic nghiệp vụ nào trong tầng lõi.
-    \item \textbf{Kiểm thử đơn vị độc lập và siêu tốc (\textit{Deterministic Unit Testing}):} Do lõi nghiệp vụ không phụ thuộc vào cơ sở dữ liệu hay mạng Internet, toàn bộ các quy tắc nghiệp vụ (xác thực tệp, kiểm tra mã định danh học giả, thuật toán mã hóa) đều có thể kiểm thử tự động với các Cổng giả lập (\textit{Mock Ports}) trong bộ nhớ. Toàn bộ các bài kiểm thử của hệ thống chạy hoàn tất trong vòng chưa đầy 3 giây mà không cần khởi động máy chủ cơ sở dữ liệu thực tế.
-    \item \textbf{Bảo toàn tính toàn vẹn nghiệp vụ học thuật:} Ngăn ngừa triệt để hiện tượng rò rỉ các ràng buộc kỹ thuật của cơ sở dữ liệu (như khóa ngoại, kiểu dữ liệu riêng biệt của từng hệ quản trị) vào trong quy trình suy luận học thuật của AI.
-\end{enumerate}
+Luồng phụ thuộc trong hệ thống luôn có chiều hướng tâm: các bộ điều hợp kỹ thuật bên ngoài phụ thuộc vào các Cổng trong lõi, trong khi logic nghiệp vụ học thuật ở trung tâm hoàn toàn không biết gì về cơ sở hạ tầng thực tế bên dưới. Điều này bảo đảm tính liêm chính và sự ổn định cao độ cho toàn bộ nền tảng.
