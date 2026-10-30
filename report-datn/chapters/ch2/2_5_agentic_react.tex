@@ -19,8 +19,8 @@ Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thu�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.75, transform shape,
-    centerbox/.style={draw=black!85, fill=red!10, rounded corners=5pt, line width=1.1pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    scale=0.72, transform shape,
+    centerbox/.style={draw=black!85, fill=red!10, rounded corners=6pt, line width=1.1pt, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
     pillar/.style={draw=black!80, fill=gray!15, rounded corners=4pt, line width=0.95pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\bfseries\footnotesize},
     leaf/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\small},
     leaf_code/.style={draw=black!75, fill=white, rounded corners=3pt, line width=0.75pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\ttfamily\small},
@@ -28,83 +28,84 @@ Mô hình kiến trúc tổng thể của tác nhân AI nghiên cứu học thu�
     tree_line/.style={draw=black!80, line width=0.95pt}
 ]
     % Khối Tác nhân AI ở Trung tâm
-    \node[centerbox, minimum width=2.8cm, minimum height=1.2cm] (agent) at (0, 0) {
+    \node[centerbox, minimum width=3.0cm, minimum height=1.2cm] (agent) at (0, 0) {
         TÁC NHÂN AI\\
         \footnotesize (\textit{LLM Agent Brain})
     };
 
-    % 1. Trụ cột BỘ NHỚ (Phía trên)
-    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (memory) at (0, 1.8) {
+    % 1. Trụ cột BỘ NHỚ (Phía trên, dãn cách 2.1cm)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (memory) at (0, 2.1) {
         BỘ NHỚ\\
         \scriptsize (\textit{Memory})
     };
     \draw[arrowstyle] (agent.north) -- (memory.south);
 
-    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_short) at (-2.6, 3.2) {
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_short) at (-2.6, 3.5) {
         \textbf{Bộ nhớ ngắn hạn}\\
         \scriptsize (\textit{Context / Lịch sử suy luận})
     };
-    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_long) at (2.6, 3.2) {
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (m_long) at (2.6, 3.5) {
         \textbf{Bộ nhớ dài hạn}\\
         \scriptsize (\textit{GraphRAG \& Vector HNSW})
     };
     \draw[tree_line] (memory.north) |- (m_short.south);
     \draw[tree_line] (memory.north) |- (m_long.south);
 
-    % 2. Trụ cột LẬP KẾ HOẠCH (Bên trái)
-    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (planning) at (-3.6, 0) {
+    % 2. Trụ cột LẬP KẾ HOẠCH (Bên trái, dãn cách rộng rãi)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (planning) at (-3.8, 0) {
         KẾ HOẠCH\\
         \scriptsize (\textit{Planning})
     };
     \draw[arrowstyle] (agent.west) -- (planning.east);
 
-    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_decomp) at (-7.3, 0.9) {
+    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_decomp) at (-7.5, 1.0) {
         \textbf{Phân rã mục tiêu}\\
         \scriptsize (\textit{Subgoal Decomposition})
     };
-    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_critics) at (-7.3, -0.9) {
+    \node[leaf, minimum width=3.6cm, minimum height=0.7cm] (p_critics) at (-7.5, -1.0) {
         \textbf{Phản tư \& Sửa sai}\\
         \scriptsize (\textit{Reflexion \& Self-Critique})
     };
     \draw[tree_line] (planning.west) |- (p_decomp.east);
     \draw[tree_line] (planning.west) |- (p_critics.east);
 
-    % 3. Trụ cột CÔNG CỤ (Bên phải)
-    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (tools) at (3.6, 0) {
+    % 3. Trụ cột CÔNG CỤ (Bên phải, dãn cách rộng rãi)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (tools) at (3.8, 0) {
         CÔNG CỤ\\
         \scriptsize (\textit{Tools})
     };
     \draw[arrowstyle] (agent.east) -- (tools.west);
 
-    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t1) at (7.5, 1.35) {
+    % 4 công cụ dãn khoảng cách thoáng 1.05cm, không còn ríu rít
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t1) at (7.8, 1.55) {
         \footnotesize \textbf{HybridSearch()}
     };
-    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t2) at (7.5, 0.45) {
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t2) at (7.8, 0.50) {
         \footnotesize \textbf{GraphTraversal()}
     };
-    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t3) at (7.5, -0.45) {
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t3) at (7.8, -0.50) {
         \footnotesize \textbf{ResolveDOI()}
     };
-    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t4) at (7.5, -1.35) {
+    \node[leaf_code, minimum width=3.4cm, minimum height=0.55cm] (t4) at (7.8, -1.55) {
         \footnotesize \textbf{SandboxExecution()}
     };
-    \draw[tree_line] (tools.east) |- (t1.west);
-    \draw[tree_line] (tools.east) |- (t2.west);
-    \draw[tree_line] (tools.east) |- (t3.west);
-    \draw[tree_line] (tools.east) |- (t4.west);
+    \draw[tree_line] (tools.east) -- ++(0.6, 0) |- (t1.west);
+    \draw[tree_line] (tools.east) -- ++(0.6, 0) |- (t2.west);
+    \draw[tree_line] (tools.east) -- ++(0.6, 0) |- (t3.west);
+    \draw[tree_line] (tools.east) -- ++(0.6, 0) |- (t4.west);
 
-    % 4. Trụ cột HÀNH ĐỘNG (Phía dưới)
-    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (action) at (0, -1.8) {
+    % 4. Trụ cột HÀNH ĐỘNG (Phía dưới, dãn cách 2.1cm)
+    \node[pillar, minimum width=2.6cm, minimum height=0.8cm] (action) at (0, -2.1) {
         HÀNH ĐỘNG\\
         \scriptsize (\textit{Action})
     };
     \draw[arrowstyle] (agent.south) -- (action.north);
 
-    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_stream) at (-2.6, -3.2) {
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_stream) at (-2.6, -3.5) {
         \textbf{Phản hồi luồng SSE}\\
         \scriptsize (\textit{Real-time Scholar Stream})
     };
-    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_verify) at (2.6, -3.2) {
+    \node[leaf, minimum width=3.8cm, minimum height=0.7cm] (a_verify) at (2.6, -3.5) {
         \textbf{Kiểm định trích dẫn}\\
         \scriptsize (\textit{Citation Integrity Proof})
     };
@@ -410,67 +411,79 @@ Trong môi trường nghiên cứu học thuật, rủi ro trích dẫn sai số
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.75, transform shape,
-    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.0pt, text width=3.2cm, align=center, inner sep=4pt, font=\bfseries\small},
-    box_generate/.style={draw=green!65!black, fill=green!12, rounded corners=6pt, line width=1.1pt, text width=3.6cm, align=center, inner sep=5pt, font=\bfseries\small},
-    box_critique/.style={draw=orange!85!black, fill=yellow!18, rounded corners=6pt, line width=1.1pt, text width=3.6cm, align=center, inner sep=5pt, font=\bfseries\small},
-    box_revise/.style={draw=purple!75!black, fill=purple!12, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\bfseries\small},
-    box_final/.style={draw=cyan!80!black, fill=cyan!15, rounded corners=6pt, line width=1.1pt, text width=3.2cm, align=center, inner sep=5pt, font=\bfseries\small},
-    decision_node/.style={diamond, draw=red!75!black, fill=red!10, aspect=1.35, line width=1.1pt, text width=2.2cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85}
+    scale=0.74, transform shape,
+    box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_generate/.style={draw=green!65!black, fill=green!12, rounded corners=6pt, line width=1.1pt, text width=3.8cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_critique/.style={draw=orange!85!black, fill=yellow!18, rounded corners=6pt, line width=1.1pt, text width=3.8cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_reflect/.style={draw=purple!75!black, fill=purple!12, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_memory/.style={draw=blue!80!black, fill=blue!12, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    box_final/.style={draw=cyan!80!black, fill=cyan!15, rounded corners=6pt, line width=1.1pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
+    decision_node/.style={diamond, draw=red!75!black, fill=red!10, aspect=1.2, line width=1.05pt, text width=1.8cm, align=center, inner sep=2pt, font=\linespread{0.9}\selectfont\bfseries\scriptsize},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85}
 ]
-    % 1. Task (Đỉnh trên cùng)
-    \node[box_task] (task) at (0, 5.4) {
+    % 1. Task (Đỉnh trên cùng trục giữa)
+    \node[box_task] (task) at (0, 5.2) {
         Task\\[2pt]
         \scriptsize (Nhiệm vụ học thuật)
     };
 
-    % 2. GENERATE: Create Initial Output
-    \node[box_generate] (generate) at (0, 3.6) {
+    % 2. GENERATE: Create Initial / Revised Output
+    \node[box_generate] (generate) at (0, 3.3) {
         GENERATE\\[2pt]
-        \scriptsize Create Initial Output\\[1pt]
-        \tiny (Tạo sinh bản thảo đầu)
+        \scriptsize Initial Draft / Refinement\\[1pt]
+        \tiny (Tạo sinh / Cải tiến bản thảo)
     };
 
-    % 3. CRITIQUE: Evaluate Quality
-    \node[box_critique] (critique) at (0, 1.6) {
-        CRITIQUE\\[2pt]
-        \scriptsize Evaluate Quality\\[1pt]
-        \tiny (Tự đánh giá \& Phản tư)
+    % 3. CRITIQUE & EVALUATE
+    \node[box_critique] (critique) at (0, 1.3) {
+        CRITIQUE \& EVALUATE\\[2pt]
+        \scriptsize Assess Academic Rigor\\[1pt]
+        \tiny (Thẩm định \& Tự phê bình)
     };
 
     % 4. Meets Standards? (Nút điều kiện dạng thoi ở giữa dưới)
-    \node[decision_node] (cond) at (0, -0.9) {
-        Meets Standards?\\[1pt]
+    \node[decision_node] (cond) at (0, -1.0) {
+        Meets\\Standards?\\[1pt]
         \tiny (Đạt chuẩn?)
     };
 
     % 5. Final Output (Nhánh Yes - Phía bên phải)
-    \node[box_final] (final) at (5.6, -0.9) {
+    \node[box_final] (final) at (5.4, -1.0) {
         Final Output\\[2pt]
-        \scriptsize (Bản thảo chuẩn xác)
+        \scriptsize Rigorous Manuscript\\[1pt]
+        \tiny (Bản thảo chuẩn xác)
     };
 
-    % 6. REVISE (Nhánh No - Phía bên trái dưới)
-    \node[box_revise] (revise) at (-5.6, -0.9) {
-        REVISE\\[2pt]
-        \scriptsize Improve on Feedback\\[1pt]
-        \tiny (Sửa đổi theo phản tư)
+    % 6. SELF-REFLECTION (Nhánh No - Phía bên trái dưới)
+    \node[box_reflect] (reflect) at (-5.4, -1.0) {
+        SELF-REFLECTION\\[2pt]
+        \scriptsize Generate Verbal Feedback\\[1pt]
+        \tiny (Sinh tự phê bình ngôn từ)
     };
 
-    % Các kết nối luồng
+    % 7. REFLEXION MEMORY (Bộ nhớ phản tư - Phía trên Reflect, cân đối đối xứng)
+    \node[box_memory] (memory) at (-5.4, 1.3) {
+        REFLEXION MEMORY\\[2pt]
+        \scriptsize Episodic Error Buffer\\[1pt]
+        \tiny (Bộ nhớ phản tư tích lũy)
+    };
+
+    % Các kết nối luồng chính (Thân mũi tên dài, rõ nét)
     \draw[arrowstyle] (task.south) -- (generate.north);
     \draw[arrowstyle] (generate.south) -- (critique.north);
     \draw[arrowstyle] (critique.south) -- (cond.north);
 
-    % Nhánh Yes -> Final Output
-    \draw[arrowstyle] (cond.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Đạt)} (final.west);
+    % Nhánh Yes -> Final Output (Nhãn đặt phía trên, thân mũi tên dài thẳng)
+    \draw[arrowstyle] (cond.east) -- node[above=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Đạt)} (final.west);
 
-    % Nhánh No -> REVISE
-    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (revise.east);
+    % Nhánh No -> SELF-REFLECTION (Nhãn đặt phía trên, thân mũi tên dài thẳng)
+    \draw[arrowstyle] (cond.west) -- node[above=2pt, font=\scriptsize\bfseries, text=red!85!black] {No (Chưa)} (reflect.east);
 
-    % Vòng lặp phản tư: REVISE đi lên và nạp ngược lại vào GENERATE
-    \draw[arrowstyle] (revise.north) |- ([yshift=0pt]generate.west);
+    % Hồi tiếp học tập: REFLECT nạp vào REFLEXION MEMORY
+    \draw[arrowstyle] (reflect.north) -- node[left=2pt, font=\tiny\bfseries, text=purple!90!black, align=right] {Store Error\\Lessons} (memory.south);
+
+    % Hồi tiếp bộ nhớ: MEMORY nạp vào GENERATE cho lượt sinh kế tiếp
+    \draw[arrowstyle] (memory.north) |- node[pos=0.75, above=2pt, font=\tiny\bfseries, text=blue!85!black] {Augment with Memory Buffer} (generate.west);
 \end{tikzpicture}
 \caption{Cơ chế phản tư và tự sửa sai Reflexion (Reflection Pattern)}
 \label{fig:reflection_pattern_loop}
@@ -495,65 +508,62 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
 \begin{tikzpicture}[
     scale=0.75, transform shape,
     box_task/.style={draw=blue!75!black, fill=blue!10, rounded corners=6pt, line width=1.05pt, text width=3.4cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\small},
-    coord_oval/.style={ellipse, draw=orange!85!black, fill=yellow!25, line width=1.1pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.05}\selectfont\bfseries\small},
+    coord_oval/.style={ellipse, draw=orange!85!black, fill=yellow!25, line width=1.15pt, text width=4.8cm, align=center, inner sep=6pt, font=\linespread{1.05}\selectfont\bfseries\small},
     agent_box/.style={rounded corners=6pt, line width=1.05pt, text width=2.8cm, align=center, inner sep=5pt, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
-    sub_box/.style={draw=purple!75!black, fill=purple!15, rounded corners=3pt, line width=0.85pt, text width=1.4cm, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
-    box_comp/.style={draw=blue!80!black, fill=cyan!25, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=5pt, font=\linespread{1.05}\selectfont\bfseries\small},
+    sub_box/.style={draw=purple!75!black, fill=purple!15, rounded corners=3pt, line width=0.85pt, text width=1.5cm, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
+    box_comp/.style={draw=blue!80!black, fill=cyan!25, rounded corners=6pt, line width=1.1pt, text width=4.8cm, align=center, inner sep=6pt, font=\linespread{1.05}\selectfont\bfseries\small},
     arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!85},
     botharrow/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=1.05pt, draw=black!85},
     dashline/.style={dashed, line width=0.9pt, draw=black!70}
 ]
-    % Header
-    \node[font=\bfseries\Large, text=black!90] at (0, 5.5) {Multi-Agent Pattern Example};
-
-    % Complex Task ở trên cùng
-    \node[box_task] (task) at (0, 4.0) {
+    % Complex Task ở trên cùng (Cách Coordinator 2.0cm, mũi tên dài)
+    \node[box_task] (task) at (0, 4.4) {
         Complex Task\\[2pt]
         \scriptsize (Nhiệm vụ phức tạp)
     };
 
     % COORDINATOR ở giữa
-    \node[coord_oval] (coord) at (0, 1.8) {
+    \node[coord_oval] (coord) at (0, 2.0) {
         COORDINATOR\\[2pt]
         Routes \& Synthesizes\\[2pt]
-        \scriptsize (Tác nhân Điều phối)
+        \scriptsize (Tác nhân Điều phối \& Tổng hợp)
     };
 
     % 4 Tác nhân chuyên trách
-    \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-5.7, -0.9) {
+    \node[agent_box, draw=green!70!black, fill=green!15] (data_ag) at (-5.8, -0.6) {
         Data Agent\\[2pt]
         Queries \& Retrieves\\[2pt]
         \tiny (Truy xuất dữ liệu)
     };
-    \node[sub_box] (db_tool) at (-5.7, -2.2) {DB};
+    \node[sub_box] (db_tool) at (-5.8, -2.3) {DB};
     \draw[dashline] (data_ag.south) -- (db_tool.north);
 
-    \node[agent_box, draw=purple!70!black, fill=purple!15] (ana_ag) at (-2.0, -0.9) {
+    \node[agent_box, draw=purple!70!black, fill=purple!15] (ana_ag) at (-2.0, -0.6) {
         Analysis Agent\\[2pt]
         Processes \& Computes\\[2pt]
         \tiny (Xử lý \& Tính toán)
     };
-    \node[sub_box] (api_tool) at (-2.0, -2.2) {API};
+    \node[sub_box] (api_tool) at (-2.0, -2.3) {API};
     \draw[dashline] (ana_ag.south) -- (api_tool.north);
 
-    \node[agent_box, draw=red!70!black, fill=red!15] (write_ag) at (2.0, -0.9) {
+    \node[agent_box, draw=red!70!black, fill=red!15] (write_ag) at (2.0, -0.6) {
         Writing Agent\\[2pt]
         Formats \& Documents\\[2pt]
         \tiny (Soạn thảo học thuật)
     };
-    \node[sub_box] (code_tool) at (2.0, -2.2) {Code};
+    \node[sub_box] (code_tool) at (2.0, -2.3) {Code};
     \draw[dashline] (write_ag.south) -- (code_tool.north);
 
-    \node[agent_box, draw=cyan!80!black, fill=cyan!15] (rev_ag) at (5.7, -0.9) {
+    \node[agent_box, draw=cyan!80!black, fill=cyan!15] (rev_ag) at (5.8, -0.6) {
         Review Agent\\[2pt]
         Validates \& Critiques\\[2pt]
         \tiny (Thẩm định \& Đánh giá)
     };
-    \node[sub_box] (rule_tool) at (5.7, -2.2) {Rules};
+    \node[sub_box] (rule_tool) at (5.8, -2.3) {Rules};
     \draw[dashline] (rev_ag.south) -- (rule_tool.north);
 
-    % Comprehensive Result ở đáy dưới
-    \node[box_comp] (result) at (0, -3.8) {
+    % Comprehensive Result ở đáy dưới (cách đều, thoáng đãng)
+    \node[box_comp] (result) at (0, -4.0) {
         Comprehensive Result\\[2pt]
         \scriptsize (Kết quả nghiên cứu toàn diện)
     };
@@ -561,14 +571,14 @@ Mô hình kiến trúc đa tác nhân điều phối phân cấp được thể 
     % Kết nối luồng đầu vào
     \draw[arrowstyle] (task.south) -- (coord.north);
 
-    % Giao tiếp hai chiều thông thoáng giữa Coordinator và 4 Tác nhân
+    % Giao tiếp hai chiều điều phối - tổng hợp giữa Coordinator và 4 Tác nhân
     \draw[botharrow] (coord.west) -| (data_ag.north);
-    \draw[botharrow] ([xshift=-20pt]coord.south) -- (ana_ag.north);
-    \draw[botharrow] ([xshift=20pt]coord.south) -- (write_ag.north);
+    \draw[botharrow] ([xshift=-22pt]coord.south) -- (ana_ag.north);
+    \draw[botharrow] ([xshift=22pt]coord.south) -- (write_ag.north);
     \draw[botharrow] (coord.east) -| (rev_ag.north);
 
-    % Luồng tổng hợp thẳng từ Coordinator xuống Comprehensive Result
-    \draw[arrowstyle] (coord.south) -- (result.north);
+    % Luồng tổng hợp kết quả: Coordinator thu nhận kết quả từ 4 Agent và xuất ra báo cáo
+    \draw[arrowstyle] (coord.south) -- node[fill=white, inner sep=2pt, font=\tiny\bfseries, text=blue!90!black] {Aggregate Sub-Results} (result.north);
 \end{tikzpicture}
 \caption{Mẫu kiến trúc phối hợp đa tác nhân chuyên trách (Multi-Agent Collaboration Pattern)}
 \label{fig:multi_agent_pattern}
