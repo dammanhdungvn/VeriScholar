@@ -30,30 +30,30 @@ Toàn bộ các bảng cơ sở dữ liệu của hệ thống \VS\ được t�
 \hline
 \textbf{STT} & \centering\textbf{Tên bảng} & \centering\textbf{Ý nghĩa nghiệp vụ} \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{I. Phân hệ Định danh \& Bảo mật Khóa (Auth \& BYOK)}} \tabularnewline \hline
-1 & \texttt{users} & Thông tin tài khoản học giả, vai trò và mã định danh ORCID \tabularnewline \hline
-2 & \texttt{user\_api\_keys} & Kho mã hóa lưu trữ khóa API cá nhân (BYOK) của học giả \tabularnewline \hline
-3 & \texttt{scholar\_profiles} & Hồ sơ học thuật mở rộng, cơ quan công tác và hướng nghiên cứu \tabularnewline \hline
+1 & users & Thông tin tài khoản học giả, vai trò và mã định danh ORCID \tabularnewline \hline
+2 & user\_api\_keys & Kho mã hóa lưu trữ khóa API cá nhân (BYOK) của học giả \tabularnewline \hline
+3 & scholar\_profiles & Hồ sơ học thuật mở rộng, cơ quan công tác và hướng nghiên cứu \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{II. Phân hệ Lưu trữ CAS \& Thư viện Tài liệu (CAS Storage \& Library)}} \tabularnewline \hline
-4 & \texttt{document\_storage\_blobs} & Khối tệp nhị phân PDF lưu trữ theo mã Hash SHA-256 (Deduplication CAS) \tabularnewline \hline
-5 & \texttt{folders} & Cây thư mục phân cấp tổ chức tài liệu nghiên cứu cá nhân \tabularnewline \hline
-6 & \texttt{documents} & Hồ sơ bài báo khoa học, tiêu đề chuẩn hóa và siêu dữ liệu tài liệu \tabularnewline \hline
-7 & \texttt{document\_summaries} & Bản tóm tắt bài báo 3 phần (Bài toán, Đóng góp, Hạn chế) \tabularnewline \hline
+4 & document\_storage\_blobs & Khối tệp nhị phân PDF lưu trữ theo mã Hash SHA-256 (Deduplication CAS) \tabularnewline \hline
+5 & folders & Cây thư mục phân cấp tổ chức tài liệu nghiên cứu cá nhân \tabularnewline \hline
+6 & documents & Hồ sơ bài báo khoa học, tiêu đề chuẩn hóa và siêu dữ liệu tài liệu \tabularnewline \hline
+7 & document\_summaries & Bản tóm tắt bài báo 3 phần (Bài toán, Đóng góp, Hạn chế) \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{III. Phân hệ Trích xuất Tri thức \& Trích dẫn (Chunks \& Citations)}} \tabularnewline \hline
-8 & \texttt{document\_chunks} & Phân đoạn văn bản trích xuất kèm vector Embedding và tọa độ BBox \tabularnewline \hline
-9 & \texttt{reference\_items} & Danh mục tài liệu tham khảo trích xuất từ bài báo và đối chiếu chéo \tabularnewline \hline
-10 & \texttt{extracted\_figures} & Danh mục hình ảnh và đồ thị trích xuất tự động từ tệp PDF \tabularnewline \hline
-11 & \texttt{extracted\_tables} & Danh mục bảng biểu dữ liệu trích xuất từ bài báo khoa học \tabularnewline \hline
+8 & document\_chunks & Phân đoạn văn bản trích xuất kèm vector Embedding và tọa độ BBox \tabularnewline \hline
+9 & reference\_items & Danh mục tài liệu tham khảo trích xuất từ bài báo và đối chiếu chéo \tabularnewline \hline
+10 & extracted\_figures & Danh mục hình ảnh và đồ thị trích xuất tự động từ tệp PDF \tabularnewline \hline
+11 & extracted\_tables & Danh mục bảng biểu dữ liệu trích xuất từ bài báo khoa học \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{IV. Phân hệ Hội thoại Nghiên cứu \& Đọc sâu (Research Sessions)}} \tabularnewline \hline
-12 & \texttt{research\_sessions} & Phiên nghiên cứu đa tài liệu, quản lý trạng thái hiển thị Reader \tabularnewline \hline
-13 & \texttt{session\_documents} & Bảng liên kết nhiều--nhiều (N--N) giữa phiên nghiên cứu và bài báo \tabularnewline \hline
-14 & \texttt{session\_turns} & Lịch sử các lượt hỏi đáp nghiên cứu kèm trích dẫn chứng minh \tabularnewline \hline
-15 & \texttt{research\_notes} & Ghi chú học thuật có neo giữ tọa độ trên trang PDF (Anchor Memory) \tabularnewline \hline
+12 & research\_sessions & Phiên nghiên cứu đa tài liệu, quản lý trạng thái hiển thị Reader \tabularnewline \hline
+13 & session\_documents & Bảng liên kết nhiều--nhiều (N--N) giữa phiên nghiên cứu và bài báo \tabularnewline \hline
+14 & session\_turns & Lịch sử các lượt hỏi đáp nghiên cứu kèm trích dẫn chứng minh \tabularnewline \hline
+15 & research\_notes & Ghi chú học thuật có neo giữ tọa độ trên trang PDF (Anchor Memory) \tabularnewline \hline
 \multicolumn{3}{|l|}{\textbf{V. Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Agentic Writing)}} \tabularnewline \hline
-16 & \texttt{drafts} & Bản thảo bài báo khoa học định dạng \LaTeX\ chuẩn hội nghị \tabularnewline \hline
-17 & \texttt{draft\_sections} & Các đề mục và phân đoạn cấu trúc nội dung bản thảo bài báo \tabularnewline \hline
-18 & \texttt{draft\_assets} & Các tệp tài nguyên, hình ảnh và đồ thị chèn vào bản thảo \LaTeX \tabularnewline \hline
-19 & \texttt{draft\_messages} & Nhật ký hội thoại giữa học giả và AI Agent đồng tác giả \tabularnewline \hline
-20 & \texttt{latex\_compilations} & Lịch sử các lần biên dịch \LaTeX, mã lỗi cú pháp và bản vá ReAct \tabularnewline \hline
+16 & drafts & Bản thảo bài báo khoa học định dạng \LaTeX\ chuẩn hội nghị \tabularnewline \hline
+17 & draft\_sections & Các đề mục và phân đoạn cấu trúc nội dung bản thảo bài báo \tabularnewline \hline
+18 & draft\_assets & Các tệp tài nguyên, hình ảnh và đồ thị chèn vào bản thảo \LaTeX \tabularnewline \hline
+19 & draft\_messages & Nhật ký hội thoại giữa học giả và AI Agent đồng tác giả \tabularnewline \hline
+20 & latex\_compilations & Lịch sử các lần biên dịch \LaTeX, mã lỗi cú pháp và bản vá ReAct \tabularnewline \hline
 \end{tabular}
 \end{table}
 \clearpage
@@ -64,292 +64,292 @@ Toàn bộ các bảng cơ sở dữ liệu của hệ thống \VS\ được t�
 Nhằm làm rõ cấu trúc vật lý, kiểu dữ liệu và các ràng buộc toàn vẹn, tiểu mục này trình bày đặc tả chi tiết 12 bảng cơ sở dữ liệu cốt lõi của hệ thống, tương ứng trực tiếp với các thực thể trong Lược đồ quan hệ ERD.
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{users}}
-Bảng \texttt{users} lưu trữ định danh cá nhân của học giả, hỗ trợ đăng nhập và liên kết với mã định danh quốc tế ORCID iD (Bảng~\ref{tab:spec_users}).
+\subsubsection{Đặc tả bảng users}
+Bảng users lưu trữ định danh cá nhân của học giả, hỗ trợ đăng nhập và liên kết với mã định danh quốc tế ORCID iD (Bảng~\ref{tab:spec_users}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{users}}
+\caption{Đặc tả bảng users}
 \label{tab:spec_users}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh duy nhất người dùng \tabularnewline \hline
-2 & \texttt{email} & VARCHAR(255) & Unique, Not Null & Địa chỉ email đăng nhập hệ thống \tabularnewline \hline
-3 & \texttt{full\_name} & VARCHAR(128) & Not Null & Họ và tên của học giả \tabularnewline \hline
-4 & \texttt{orcid\_id} & VARCHAR(19) & Unique, Null & Mã định danh học giả quốc tế ORCID iD \tabularnewline \hline
-5 & \texttt{role} & VARCHAR(32) & Default 'scholar' & Vai trò tài khoản (scholar / admin) \tabularnewline \hline
-6 & \texttt{is\_active} & BOOLEAN & Default TRUE & Trạng thái hoạt động của tài khoản \tabularnewline \hline
-7 & \texttt{created\_at} & TIMESTAMPTZ & Default NOW() & Thời điểm khởi tạo tài khoản \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh duy nhất người dùng \tabularnewline \hline
+2 & email & VARCHAR(255) & Unique, Not Null & Địa chỉ email đăng nhập hệ thống \tabularnewline \hline
+3 & full\_name & VARCHAR(128) & Not Null & Họ và tên của học giả \tabularnewline \hline
+4 & orcid\_id & VARCHAR(19) & Unique, Null & Mã định danh học giả quốc tế ORCID iD \tabularnewline \hline
+5 & role & VARCHAR(32) & Default 'scholar' & Vai trò tài khoản (scholar / admin) \tabularnewline \hline
+6 & is\_active & BOOLEAN & Default TRUE & Trạng thái hoạt động của tài khoản \tabularnewline \hline
+7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm khởi tạo tài khoản \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{user\_api\_keys}}
-Bảng \texttt{user\_api\_keys} bảo vệ khóa API cá nhân của học giả theo cơ chế BYOK, sử dụng thuật toán mã hóa đối xứng phân tầng (Bảng~\ref{tab:spec_api_keys}).
+\subsubsection{Đặc tả bảng user\_api\_keys}
+Bảng user\_api\_keys bảo vệ khóa API cá nhân của học giả theo cơ chế BYOK, sử dụng thuật toán mã hóa đối xứng phân tầng (Bảng~\ref{tab:spec_api_keys}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{user\_api\_keys}}
+\caption{Đặc tả bảng user\_api\_keys}
 \label{tab:spec_api_keys}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh bản ghi khóa \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với người dùng sở hữu \tabularnewline \hline
-3 & \texttt{provider} & VARCHAR(32) & Not Null & Nhà cung cấp dịch vụ (OpenAI, Gemini) \tabularnewline \hline
-4 & \texttt{encrypted\_key} & TEXT & Not Null & Bản mã khóa API được mã hóa an toàn \tabularnewline \hline
-5 & \texttt{key\_hint} & VARCHAR(8) & Not Null & 4 ký tự cuối nhận diện khóa trên giao diện \tabularnewline \hline
-6 & \texttt{is\_active} & BOOLEAN & Default TRUE & Trạng thái kích hoạt sử dụng \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh bản ghi khóa \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với người dùng sở hữu \tabularnewline \hline
+3 & provider & VARCHAR(32) & Not Null & Nhà cung cấp dịch vụ (OpenAI, Gemini) \tabularnewline \hline
+4 & encrypted\_key & TEXT & Not Null & Bản mã khóa API được mã hóa an toàn \tabularnewline \hline
+5 & key\_hint & VARCHAR(8) & Not Null & 4 ký tự cuối nhận diện khóa trên giao diện \tabularnewline \hline
+6 & is\_active & BOOLEAN & Default TRUE & Trạng thái kích hoạt sử dụng \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{scholar\_profiles}}
-Bảng \texttt{scholar\_profiles} lưu trữ thông tin hồ sơ học thuật chuyên sâu, cơ quan công tác và tiểu sử nghiên cứu của học giả (Bảng~\ref{tab:spec_scholar_profiles}).
+\subsubsection{Đặc tả bảng scholar\_profiles}
+Bảng scholar\_profiles lưu trữ thông tin hồ sơ học thuật chuyên sâu, cơ quan công tác và tiểu sử nghiên cứu của học giả (Bảng~\ref{tab:spec_scholar_profiles}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{scholar\_profiles}}
+\caption{Đặc tả bảng scholar\_profiles}
 \label{tab:spec_scholar_profiles}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh hồ sơ học thuật \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id), 1:1 & Khóa ngoại tương ứng duy nhất với tài khoản \tabularnewline \hline
-3 & \texttt{institution} & VARCHAR(255) & Null & Cơ quan công tác, trường đại học \tabularnewline \hline
-4 & \texttt{department} & VARCHAR(128) & Null & Khoa, phòng ban hoặc viện nghiên cứu \tabularnewline \hline
-5 & \texttt{academic\_rank} & VARCHAR(64) & Null & Chức danh học thuật (GS, PGS, TS) \tabularnewline \hline
-6 & \texttt{bio} & TEXT & Null & Tóm tắt tiểu sử học thuật và thành tựu \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh hồ sơ học thuật \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id), 1:1 & Khóa ngoại tương ứng duy nhất với tài khoản \tabularnewline \hline
+3 & institution & VARCHAR(255) & Null & Cơ quan công tác, trường đại học \tabularnewline \hline
+4 & department & VARCHAR(128) & Null & Khoa, phòng ban hoặc viện nghiên cứu \tabularnewline \hline
+5 & academic\_rank & VARCHAR(64) & Null & Chức danh học thuật (GS, PGS, TS) \tabularnewline \hline
+6 & bio & TEXT & Null & Tóm tắt tiểu sử học thuật và thành tựu \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{folders}}
-Bảng \texttt{folders} tổ chức cây thư mục phân cấp phục vụ sắp xếp tài liệu khoa học của từng học giả (Bảng~\ref{tab:spec_folders}).
+\subsubsection{Đặc tả bảng folders}
+Bảng folders tổ chức cây thư mục phân cấp phục vụ sắp xếp tài liệu khoa học của từng học giả (Bảng~\ref{tab:spec_folders}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{folders}}
+\caption{Đặc tả bảng folders}
 \label{tab:spec_folders}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh thư mục tài liệu \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết học giả sở hữu \tabularnewline \hline
-3 & \texttt{parent\_id} & UUID & FK $\to$ folders(id), Null & Khóa ngoại tự quy chiếu thư mục cha \tabularnewline \hline
-4 & \texttt{name} & VARCHAR(128) & Not Null & Tên thư mục nghiên cứu \tabularnewline \hline
-5 & \texttt{color} & VARCHAR(16) & Default '\#3B82F6' & Mã màu hiển thị thư mục trên giao diện \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh thư mục tài liệu \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết học giả sở hữu \tabularnewline \hline
+3 & parent\_id & UUID & FK $\to$ folders(id), Null & Khóa ngoại tự quy chiếu thư mục cha \tabularnewline \hline
+4 & name & VARCHAR(128) & Not Null & Tên thư mục nghiên cứu \tabularnewline \hline
+5 & color & VARCHAR(16) & Default '\#3B82F6' & Mã màu hiển thị thư mục trên giao diện \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{documents}}
-Bảng \texttt{documents} quản lý thông tin thư mục, tác giả, năm xuất bản và liên kết với khối tệp nhị phân CAS (Bảng~\ref{tab:spec_documents}).
+\subsubsection{Đặc tả bảng documents}
+Bảng documents quản lý thông tin thư mục, tác giả, năm xuất bản và liên kết với khối tệp nhị phân CAS (Bảng~\ref{tab:spec_documents}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{documents}}
+\caption{Đặc tả bảng documents}
 \label{tab:spec_documents}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh tài liệu học thuật \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với học giả sở hữu \tabularnewline \hline
-3 & \texttt{blob\_id} & UUID & FK $\to$ blobs(id) & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
-4 & \texttt{folder\_id} & UUID & FK $\to$ folders(id), Null & Khóa ngoại liên kết thư mục chứa \tabularnewline \hline
-5 & \texttt{title} & TEXT & Not Null & Tiêu đề bài báo khoa học đã chuẩn hóa \tabularnewline \hline
-6 & \texttt{doi} & VARCHAR(128) & Index, Null & Mã định danh đối tượng số (DOI) quốc tế \tabularnewline \hline
-7 & \texttt{page\_count} & INTEGER & Default 0 & Tổng số trang giấy của tài liệu PDF \tabularnewline \hline
-8 & \texttt{status} & VARCHAR(32) & Default 'ready' & Trạng thái trích xuất nội dung tài liệu \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh tài liệu học thuật \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với học giả sở hữu \tabularnewline \hline
+3 & blob\_id & UUID & FK $\to$ blobs(id) & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
+4 & folder\_id & UUID & FK $\to$ folders(id), Null & Khóa ngoại liên kết thư mục chứa \tabularnewline \hline
+5 & title & TEXT & Not Null & Tiêu đề bài báo khoa học đã chuẩn hóa \tabularnewline \hline
+6 & doi & VARCHAR(128) & Index, Null & Mã định danh đối tượng số (DOI) quốc tế \tabularnewline \hline
+7 & page\_count & INTEGER & Default 0 & Tổng số trang giấy của tài liệu PDF \tabularnewline \hline
+8 & status & VARCHAR(32) & Default 'ready' & Trạng thái trích xuất nội dung tài liệu \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{document\_storage\_blobs}}
-Bảng \texttt{document\_storage\_blobs} quản lý các khối tệp nhị phân trên hệ thống tệp đĩa cứng, áp dụng cơ chế định danh theo nội dung SHA-256 (Bảng~\ref{tab:spec_cas}).
+\subsubsection{Đặc tả bảng document\_storage\_blobs}
+Bảng document\_storage\_blobs quản lý các khối tệp nhị phân trên hệ thống tệp đĩa cứng, áp dụng cơ chế định danh theo nội dung SHA-256 (Bảng~\ref{tab:spec_cas}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{document\_storage\_blobs}}
+\caption{Đặc tả bảng document\_storage\_blobs}
 \label{tab:spec_cas}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh khối tệp vật lý \tabularnewline \hline
-2 & \texttt{content\_hash} & VARCHAR(64) & Unique, Not Null & Mã băm SHA-256 nội dung nhị phân tệp PDF \tabularnewline \hline
-3 & \texttt{storage\_path} & TEXT & Not Null & Đường dẫn lưu trữ tệp phân cấp trên đĩa \tabularnewline \hline
-4 & \texttt{file\_}\allowbreak\texttt{size\_}\allowbreak\texttt{bytes}& BIGINT & Not Null & Dung lượng vật lý của tệp tin (bytes) \tabularnewline \hline
-5 & \texttt{ref\_count} & INTEGER & Default 1 & Biến đếm số tài liệu đang dùng chung tệp \tabularnewline \hline
-6 & \texttt{status} & VARCHAR(32) & Default 'ready' & Trạng thái khả dụng của khối dữ liệu \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh khối tệp vật lý \tabularnewline \hline
+2 & content\_hash & VARCHAR(64) & Unique, Not Null & Mã băm SHA-256 nội dung nhị phân tệp PDF \tabularnewline \hline
+3 & storage\_path & TEXT & Not Null & Đường dẫn lưu trữ tệp phân cấp trên đĩa \tabularnewline \hline
+4 & file\_size\_bytes & BIGINT & Not Null & Dung lượng vật lý của tệp tin (bytes) \tabularnewline \hline
+5 & ref\_count & INTEGER & Default 1 & Biến đếm số tài liệu đang dùng chung tệp \tabularnewline \hline
+6 & status & VARCHAR(32) & Default 'ready' & Trạng thái khả dụng của khối dữ liệu \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{document\_chunks}}
-Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản trích xuất từ tài liệu PDF, số trang và tọa độ Bounding Box (Bảng~\ref{tab:spec_chunks}).
+\subsubsection{Đặc tả bảng document\_chunks}
+Bảng document\_chunks lưu trữ các phân đoạn văn bản trích xuất từ tài liệu PDF, số trang và tọa độ Bounding Box (Bảng~\ref{tab:spec_chunks}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{document\_chunks}}
+\caption{Đặc tả bảng document\_chunks}
 \label{tab:spec_chunks}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh phân đoạn văn bản \tabularnewline \hline
-2 & \texttt{document\_id} & UUID & FK $\to$ documents(id) & Khóa ngoại liên kết tới tài liệu gốc \tabularnewline \hline
-3 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại phân vùng bảo mật học giả \tabularnewline \hline
-4 & \texttt{chunk\_index} & INTEGER & Not Null & Vị trí thứ tự phân đoạn trong tài liệu \tabularnewline \hline
-5 & \texttt{page\_number} & INTEGER & Not Null, Index & Số thứ tự trang giấy trong bản PDF gốc \tabularnewline \hline
-6 & \texttt{content} & TEXT & Not Null & Nội dung văn bản phục vụ truy xuất từ khóa \tabularnewline \hline
-7 & \texttt{bounding\_}\allowbreak\texttt{boxes}& JSONB & Not Null & Danh sách tọa độ hình chữ nhật Bounding Box \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh phân đoạn văn bản \tabularnewline \hline
+2 & document\_id & UUID & FK $\to$ documents(id) & Khóa ngoại liên kết tới tài liệu gốc \tabularnewline \hline
+3 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại phân vùng bảo mật học giả \tabularnewline \hline
+4 & chunk\_index & INTEGER & Not Null & Vị trí thứ tự phân đoạn trong tài liệu \tabularnewline \hline
+5 & page\_number & INTEGER & Not Null, Index & Số thứ tự trang giấy trong bản PDF gốc \tabularnewline \hline
+6 & content & TEXT & Not Null & Nội dung văn bản phục vụ truy xuất từ khóa \tabularnewline \hline
+7 & bounding\_boxes & JSONB & Not Null & Danh sách tọa độ hình chữ nhật Bounding Box \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{reference\_items}}
-Bảng \texttt{reference\_items} lưu trữ danh mục tài liệu tham khảo trích xuất từ bài báo và kết quả đối chiếu tự động (Bảng~\ref{tab:spec_references}).
+\subsubsection{Đặc tả bảng reference\_items}
+Bảng reference\_items lưu trữ danh mục tài liệu tham khảo trích xuất từ bài báo và kết quả đối chiếu tự động (Bảng~\ref{tab:spec_references}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{reference\_items}}
+\caption{Đặc tả bảng reference\_items}
 \label{tab:spec_references}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh mục tài liệu trích dẫn \tabularnewline \hline
-2 & \texttt{document\_id} & UUID & FK $\to$ documents(id) & Khóa ngoại tới bài báo trích dẫn \tabularnewline \hline
-3 & \texttt{resolved\_}\allowbreak\texttt{document\_id} & UUID & FK $\to$ documents(id), Null & Khóa ngoại tới bài báo trong kho đối chiếu trúng \tabularnewline \hline
-4 & \texttt{ref\_index} & INTEGER & Not Null & Chỉ số thứ tự tham khảo trong bài $[i]$ \tabularnewline \hline
-5 & \texttt{parsed\_title} & TEXT & Not Null & Tiêu đề bài báo trích dẫn đã trích xuất \tabularnewline \hline
-6 & \texttt{doi} & VARCHAR(128) & Index, Null & Mã số định danh DOI trích dẫn \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh mục tài liệu trích dẫn \tabularnewline \hline
+2 & document\_id & UUID & FK $\to$ documents(id) & Khóa ngoại tới bài báo trích dẫn \tabularnewline \hline
+3 & resolved\_\allowbreak document\_id & UUID & FK $\to$ documents(id), Null & Khóa ngoại tới bài báo trong kho đối chiếu trúng \tabularnewline \hline
+4 & ref\_index & INTEGER & Not Null & Chỉ số thứ tự tham khảo trong bài $[i]$ \tabularnewline \hline
+5 & parsed\_title & TEXT & Not Null & Tiêu đề bài báo trích dẫn đã trích xuất \tabularnewline \hline
+6 & doi & VARCHAR(128) & Index, Null & Mã số định danh DOI trích dẫn \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{research\_sessions}}
-Bảng \texttt{research\_sessions} quản lý không gian làm việc nghiên cứu, tài liệu đang mở và thẻ chức năng đang thao tác (Bảng~\ref{tab:spec_sessions}).
+\subsubsection{Đặc tả bảng research\_sessions}
+Bảng research\_sessions quản lý không gian làm việc nghiên cứu, tài liệu đang mở và thẻ chức năng đang thao tác (Bảng~\ref{tab:spec_sessions}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{research\_sessions}}
+\caption{Đặc tả bảng research\_sessions}
 \label{tab:spec_sessions}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh phiên nghiên cứu \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết học giả sở hữu \tabularnewline \hline
-3 & \texttt{active\_doc\_id} & UUID & FK $\to$ documents(id), Null & Khóa ngoại tới bài báo đang đọc trên Reader \tabularnewline \hline
-4 & \texttt{title} & VARCHAR(255) & Not Null & Tên chủ đề phiên nghiên cứu \tabularnewline \hline
-5 & \texttt{active\_tab} & VARCHAR(32) & Default 'chat' & Thẻ giao diện đang mở (chat / wiki / draft) \tabularnewline \hline
-6 & \texttt{is\_archived} & BOOLEAN & Default FALSE & Cờ đánh dấu phiên đã lưu trữ \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh phiên nghiên cứu \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết học giả sở hữu \tabularnewline \hline
+3 & active\_doc\_id & UUID & FK $\to$ documents(id), Null & Khóa ngoại tới bài báo đang đọc trên Reader \tabularnewline \hline
+4 & title & VARCHAR(255) & Not Null & Tên chủ đề phiên nghiên cứu \tabularnewline \hline
+5 & active\_tab & VARCHAR(32) & Default 'chat' & Thẻ giao diện đang mở (chat / wiki / draft) \tabularnewline \hline
+6 & is\_archived & BOOLEAN & Default FALSE & Cờ đánh dấu phiên đã lưu trữ \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{session\_turns}}
-Bảng \texttt{session\_turns} lưu trữ toàn bộ lịch sử các lượt hỏi đáp, câu trả lời sinh ra từ Hybrid RAG và mảng trích dẫn có neo giữ tọa độ (Bảng~\ref{tab:spec_turns}).
+\subsubsection{Đặc tả bảng session\_turns}
+Bảng session\_turns lưu trữ toàn bộ lịch sử các lượt hỏi đáp, câu trả lời sinh ra từ Hybrid RAG và mảng trích dẫn có neo giữ tọa độ (Bảng~\ref{tab:spec_turns}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{session\_turns}}
+\caption{Đặc tả bảng session\_turns}
 \label{tab:spec_turns}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh lượt hỏi đáp \tabularnewline \hline
-2 & \texttt{session\_id} & UUID & FK $\to$ sessions(id) & Khóa ngoại liên kết phiên nghiên cứu \tabularnewline \hline
-3 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại phân quyền học giả \tabularnewline \hline
-4 & \texttt{question} & TEXT & Not Null & Câu hỏi nghiên cứu do học giả nhập \tabularnewline \hline
-5 & \texttt{answer} & TEXT & Not Null & Câu trả lời tổng hợp kèm thẻ dẫn nguồn \tabularnewline \hline
-6 & \texttt{citations} & JSONB & Default '[]' & Mảng đối tượng trích dẫn kèm tọa độ BBox \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh lượt hỏi đáp \tabularnewline \hline
+2 & session\_id & UUID & FK $\to$ sessions(id) & Khóa ngoại liên kết phiên nghiên cứu \tabularnewline \hline
+3 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại phân quyền học giả \tabularnewline \hline
+4 & question & TEXT & Not Null & Câu hỏi nghiên cứu do học giả nhập \tabularnewline \hline
+5 & answer & TEXT & Not Null & Câu trả lời tổng hợp kèm thẻ dẫn nguồn \tabularnewline \hline
+6 & citations & JSONB & Default '[]' & Mảng đối tượng trích dẫn kèm tọa độ BBox \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{drafts}}
-Bảng \texttt{drafts} lưu trữ các bản thảo bài báo khoa học định dạng \LaTeX, phiên bản tài liệu và liên kết phiên nghiên cứu nguồn (Bảng~\ref{tab:spec_drafts}).
+\subsubsection{Đặc tả bảng drafts}
+Bảng drafts lưu trữ các bản thảo bài báo khoa học định dạng \LaTeX, phiên bản tài liệu và liên kết phiên nghiên cứu nguồn (Bảng~\ref{tab:spec_drafts}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{drafts}}
+\caption{Đặc tả bảng drafts}
 \label{tab:spec_drafts}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh bản thảo khoa học \tabularnewline \hline
-2 & \texttt{user\_id} & UUID & FK $\to$ users(id) & Khóa ngoại liên kết tác giả chính \tabularnewline \hline
-3 & \texttt{source\_}\allowbreak\texttt{session\_id} & UUID & FK $\to$ sessions(id), Null & Khóa ngoại tới phiên nghiên cứu khởi tạo \tabularnewline \hline
-4 & \texttt{title} & VARCHAR(255) & Not Null & Tiêu đề bản thảo bài báo \tabularnewline \hline
-5 & \texttt{format} & VARCHAR(32) & Default 'latex' & Định dạng xuất bản (latex / markdown) \tabularnewline \hline
-6 & \texttt{version} & INTEGER & Default 1 & Phiên bản cập nhật của bản thảo \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh bản thảo khoa học \tabularnewline \hline
+2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết tác giả chính \tabularnewline \hline
+3 & source\_\allowbreak session\_id & UUID & FK $\to$ sessions(id), Null & Khóa ngoại tới phiên nghiên cứu khởi tạo \tabularnewline \hline
+4 & title & VARCHAR(255) & Not Null & Tiêu đề bản thảo bài báo \tabularnewline \hline
+5 & format & VARCHAR(32) & Default 'latex' & Định dạng xuất bản (latex / markdown) \tabularnewline \hline
+6 & version & INTEGER & Default 1 & Phiên bản cập nhật của bản thảo \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{24\baselineskip}
-\subsubsection{Đặc tả bảng \texttt{draft\_messages}}
-Bảng \texttt{draft\_messages} lưu trữ nhật ký trao đổi đồng tác giả giữa học giả và AI Agent trong quá trình biên soạn và tự sửa lỗi biên dịch (Bảng~\ref{tab:spec_draft_messages}).
+\subsubsection{Đặc tả bảng draft\_messages}
+Bảng draft\_messages lưu trữ nhật ký trao đổi đồng tác giả giữa học giả và AI Agent trong quá trình biên soạn và tự sửa lỗi biên dịch (Bảng~\ref{tab:spec_draft_messages}).
 
 \begin{table}[H]
 \centering
 \singlespacing
 \small
-\caption{Đặc tả bảng \texttt{draft\_messages}}
+\caption{Đặc tả bảng draft\_messages}
 \label{tab:spec_draft_messages}
 \setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.9cm}|>{\raggedright\arraybackslash}p{2.5cm}|>{\raggedright\arraybackslash}p{4.6cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & \texttt{id} & UUID & PK, Not Null & Khóa chính định danh tin nhắn đồng tác giả \tabularnewline \hline
-2 & \texttt{draft\_id} & UUID & FK $\to$ drafts(id) & Khóa ngoại liên kết bản thảo bài báo \tabularnewline \hline
-3 & \texttt{role} & VARCHAR(16) & Not Null & Vai trò gửi (user / assistant / system) \tabularnewline \hline
-4 & \texttt{content} & TEXT & Not Null & Nội dung trao đổi hoặc chỉ dẫn viết bài \tabularnewline \hline
-5 & \texttt{compile\_}\allowbreak\texttt{attempts} & INTEGER & Default 0 & Số lượt Agent ReAct tự động sửa lỗi \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh tin nhắn đồng tác giả \tabularnewline \hline
+2 & draft\_id & UUID & FK $\to$ drafts(id) & Khóa ngoại liên kết bản thảo bài báo \tabularnewline \hline
+3 & role & VARCHAR(16) & Not Null & Vai trò gửi (user / assistant / system) \tabularnewline \hline
+4 & content & TEXT & Not Null & Nội dung trao đổi hoặc chỉ dẫn viết bài \tabularnewline \hline
+5 & compile\_\allowbreak attempts & INTEGER & Default 0 & Số lượt Agent ReAct tự động sửa lỗi \tabularnewline \hline
 \end{tabular}
 \end{table}
 

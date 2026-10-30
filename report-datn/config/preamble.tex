@@ -25,15 +25,33 @@
 % Chú thích chân trang (Footnote) đúng cỡ 10pt
 \renewcommand{\footnotesize}{\fontsize{10}{13}\selectfont}
 
-% 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa
+% 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa: 100% Times New Roman chuẩn
 \usepackage{fontspec}
-\setmainfont{Liberation Serif}[
-    Path = /usr/share/fonts/truetype/liberation/,
-    UprightFont = LiberationSerif-Regular.ttf,
-    BoldFont = LiberationSerif-Bold.ttf,
-    ItalicFont = LiberationSerif-Italic.ttf,
-    BoldItalicFont = LiberationSerif-BoldItalic.ttf
+\setmainfont{Times New Roman}[
+    Path = fonts/,
+    Extension = .ttf,
+    UprightFont = times,
+    BoldFont = timesbd,
+    ItalicFont = timesi,
+    BoldItalicFont = timesbi
 ]
+\setsansfont{Times New Roman}[
+    Path = fonts/,
+    Extension = .ttf,
+    UprightFont = times,
+    BoldFont = timesbd,
+    ItalicFont = timesi,
+    BoldItalicFont = timesbi
+]
+\setmonofont{Times New Roman}[
+    Path = fonts/,
+    Extension = .ttf,
+    UprightFont = times,
+    BoldFont = timesbd,
+    ItalicFont = timesi,
+    BoldItalicFont = timesbi
+]
+\renewcommand{\ttdefault}{\rmdefault}
 \usepackage[provide=*,vietnamese]{babel}
 \addto\captionsvietnamese{%
     \renewcommand{\contentsname}{MỤC LỤC}%

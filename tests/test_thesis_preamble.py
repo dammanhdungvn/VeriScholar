@@ -12,5 +12,5 @@ def test_preamble_configuration():
     assert "left=3.5cm" in content
     assert "right=2.5cm" in content
     assert "fontsize=13pt" in content
-    assert "Liberation Serif" in content
+    assert "Times New Roman" in content
     assert "Đàm Mạnh Dũng" in content
