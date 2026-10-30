@@ -1,0 +1,48 @@
+% !TEX root = ../main.tex
+% ==============================================================================
+% TRANG BÌA CHÍNH (Phụ lục 1 HUMG - Bìa cứng ngoài)
+% ==============================================================================
+\begin{titlepage}
+\begin{tikzpicture}[remember picture, overlay]
+  % Khung viền kép chuẩn đồ án tốt nghiệp HUMG
+  \draw[line width=2.6pt] 
+    ([xshift=3.3cm, yshift=-1.8cm]current page.north west) 
+    rectangle 
+    ([xshift=-1.8cm, yshift=1.8cm]current page.south east);
+  \draw[line width=0.8pt] 
+    ([xshift=3.45cm, yshift=-1.95cm]current page.north west) 
+    rectangle 
+    ([xshift=-1.95cm, yshift=1.95cm]current page.south east);
+
+  % Chữ gáy sách (Spine text) nằm ở lề trái ngoài khung viền kép
+  \node[anchor=north west, rotate=-90, font=\fontsize{14pt}{18pt}\selectfont\bfseries] 
+    at ([xshift=2.6cm, yshift=-4.4cm]current page.north west) {ĐÀM MẠNH DŨNG};
+  \node[anchor=north west, rotate=-90, font=\fontsize{14pt}{18pt}\selectfont\bfseries] 
+    at ([xshift=2.6cm, yshift=-14.4cm]current page.north west) {HỆ THỐNG THÔNG TIN};
+  \node[anchor=north west, rotate=-90, font=\fontsize{14pt}{18pt}\selectfont\bfseries] 
+    at ([xshift=2.6cm, yshift=-23.5cm]current page.north west) {KHOÁ 67};
+\end{tikzpicture}
+
+\vspace*{0.2cm}
+\begin{center}
+  {\fontsize{15pt}{19pt}\selectfont \textbf{BỘ GIÁO DỤC VÀ ĐÀO TẠO}} \\[0.25cm]
+  {\fontsize{15pt}{19pt}\selectfont \textbf{TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT}} \\[0.2cm]
+  {\fontsize{12pt}{14pt}\selectfont \textbf{---------------------------------------}} \\[0.7cm]
+
+  \includegraphics[width=3.8cm, height=3.8cm, keepaspectratio]{figures/logos/logo_humg.png} \\[0.8cm]
+
+  {\fontsize{16pt}{20pt}\selectfont \textbf{ĐÀM MẠNH DŨNG}} \\[1.2cm]
+
+  {\fontsize{36pt}{42pt}\selectfont \textbf{ĐỒ ÁN TỐT NGHIỆP}} \\[1.3cm]
+
+  {\fontsize{15pt}{19pt}\selectfont \textbf{NGÀNH CÔNG NGHỆ THÔNG TIN}} \\[1.1cm]
+
+  {\fontsize{15pt}{19pt}\selectfont \textbf{TÊN ĐỀ TÀI:}} \\[0.4cm]
+  \parbox{13.2cm}{\centering \fontsize{15pt}{21pt}\selectfont \textbf{XÂY DỰNG NỀN TẢNG AI HỖ TRỢ NGHIÊN CỨU VÀ VIẾT BÀI BÁO KHOA HỌC VINUNI DỰA TRÊN AGENTIC RAG, TRUY XUẤT TRI THỨC HỌC THUẬT VÀ KIỂM CHỨNG TRÍCH DẪN}}
+
+  \vfill
+
+  {\fontsize{15pt}{19pt}\selectfont \textbf{Hà Nội - Năm 2026}}
+  \vspace*{0.5cm}
+\end{center}
+\end{titlepage}

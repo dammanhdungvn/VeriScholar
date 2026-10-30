@@ -13,20 +13,24 @@
 \input{config/preamble}
 \input{config/commands}
 
-% Cờ điều khiển hiển thị trang bìa phụ (Phục vụ nộp bản mềm PDF)
-% Đặt \showcoverfalse để xuất bản in ấn ruột (bắt đầu từ Lời cảm ơn/Mục lục)
-% Đặt \showcovertrue khi cần nộp file PDF đầy đủ có trang bìa phụ cho bộ môn
+% Cờ điều khiển hiển thị trang bìa (Phục vụ xuất bản PDF đồ án hoàn chỉnh)
+% Đặt \showcovertrue để nộp bản PDF đầy đủ gồm Bìa chính (Bìa 1) và Bìa phụ (Bìa 2)
+% Đặt \showcoverfalse khi chỉ xuất ruột in ấn (bắt đầu từ Mục lục)
 \newif\ifshowcover
-\showcoverfalse
+\showcovertrue
 
 \begin{document}
 
 % ------------------------------------------------------------------------------
-% 0. TRANG BÌA PHỤ (Tùy chọn cho bản mềm lưu trữ)
+% 0. TRANG BÌA CHÍNH & TRANG BÌA PHỤ (Bản đồ án hoàn chỉnh)
 % ------------------------------------------------------------------------------
 \ifshowcover
+    \newgeometry{left=3.3cm, right=1.8cm, top=1.8cm, bottom=1.8cm}
+    \input{frontmatter/bia_chinh}
+    \cleardoublepage
     \input{frontmatter/bia_phu}
     \cleardoublepage
+    \restoregeometry
 \fi
 
 % ------------------------------------------------------------------------------
