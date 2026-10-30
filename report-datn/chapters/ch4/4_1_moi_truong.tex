@@ -12,7 +12,7 @@ Visual Studio Code (kết hợp môi trường lập trình trợ lực trí tu�
 \begin{itemize}
     \item \textbf{Khả năng quản trị Monorepo linh hoạt:} Cho phép làm việc đồng thời trên nhiều gói mã nguồn (\texttt{packages/core}, \texttt{apps/api}, \texttt{apps/web}) trong cùng một không gian làm việc (\textit{Workspace}), hỗ trợ tự động nhận diện môi trường ảo hóa độc lập cho từng phân vùng.
     \item \textbf{Hệ sinh thái tiện ích lập trình phong phú:} Tích hợp chặt chẽ với tiện ích mở rộng Ruff (linter và formatter siêu tốc cho Python 3.12), Tailwind CSS IntelliSense, ESLint, Python Test Explorer (cho \texttt{pytest}) và LaTeX Workshop hỗ trợ biên dịch và kiểm tra tài liệu học thuật theo thời gian thực.
-    \item \textbf{Quản lý mã nguồn phân tán với Git/GitHub:} Hỗ trợ trực quan hóa lịch sử cam kết (\textit{Git Commits}), quản lý nhánh tính năng và đối chiếu xung đột mã nguồn thuận tiện, đảm bảo tuân thủ nghiêm ngặt quy trình kiểm thử trước khi bàn giao.
+    \item \textbf{Quản lý mã nguồn phân tán với Git/GitHub:} Toàn bộ lịch sử phát triển, các nhánh tính năng và mã nguồn hoàn chỉnh của dự án được quản trị và công khai tại kho lưu trữ GitHub chính thức \url{https://github.com/dammanhdungvn/VeriScholar}, hỗ trợ trực quan hóa lịch sử cam kết (\textit{Git Commits}) và đối chiếu xung đột mã nguồn thuận tiện, đảm bảo tuân thủ nghiêm ngặt quy trình kiểm thử trước khi bàn giao.
 \end{itemize}
 
 Quy trình thiết lập môi trường phát triển cục bộ được thực hiện qua các bước:
@@ -72,5 +72,10 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
     \item \textbf{Nền tảng quan sát và kiểm chứng thực nghiệm Langfuse Cloud:}
     \begin{itemize}
         \item Hệ thống tích hợp toàn diện với nền tảng Langfuse Cloud nhằm giám sát luồng suy luận của mô hình ngôn ngữ lớn, ghi vết độ trễ từng bước suy nghĩ (Thought), hành động (Action) và định lượng lượng token cùng chi phí vận hành theo thời gian thực.
+    \end{itemize}
+    \item \textbf{Kho lưu trữ mã nguồn mở dự án trên GitHub:}
+    \begin{itemize}
+        \item Toàn bộ mã nguồn hoàn chỉnh của dự án \VS\ được công khai và quản lý phiên bản tại kho lưu trữ GitHub chính thức: \url{https://github.com/dammanhdungvn/VeriScholar}.
+        \item Kho lưu trữ bao gồm cấu trúc Monorepo phân tách Lục giác (\texttt{packages/core}, \texttt{apps/api}, \texttt{apps/web}), tài liệu đặc tả nghiệp vụ, kịch bản triển khai tự động hóa và toàn bộ bộ kiểm thử 4 Cổng xác minh.
     \end{itemize}
 \end{enumerate}

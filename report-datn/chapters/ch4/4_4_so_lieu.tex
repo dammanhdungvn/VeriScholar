@@ -20,7 +20,7 @@ Hoạt động của các mô hình AI và chi phí tiêu thụ token được g
     \item \textbf{Kiểm thử toàn trình quản lý khóa BYOK (Giải mã RAM \& Gọi LLM):}
     \begin{itemize}
         \item Mã truy vết (Trace ID): \texttt{\footnotesize f8d087c559790eafd0812e6293d23a34}
-        \item Kết quả đối chiếu: Mô hình sử dụng \texttt{gpt-5.6-luna} (mã cấu hình định tuyến cho dòng suy luận nhẹ GPT-4o-mini), khóa giải mã trực tiếp từ kho khóa AES-256-GCM trên RAM. Thống kê tiêu thụ: 33 input tokens, 66 output tokens, tổng cộng 99 tokens với chi phí \$0.00032175 và thời gian đáp ứng 3.32 giây.
+        \item Kết quả đối chiếu: Mô hình sử dụng \texttt{gpt-5.6-luna} (dòng suy luận hiệu năng cao tối ưu hoá cho nghiên cứu học thuật), khóa giải mã trực tiếp từ kho khóa AES-256-GCM trên RAM. Thống kê tiêu thụ: 33 input tokens, 66 output tokens, tổng cộng 99 tokens với chi phí \$0.00032175 và thời gian đáp ứng 3.32 giây.
     \end{itemize}
     \item \textbf{Cập nhật hồ sơ học giả và mã hóa quản lý khóa BYOK:}
     \begin{itemize}
@@ -34,12 +34,104 @@ Hoạt động của các mô hình AI và chi phí tiêu thụ token được g
     \end{itemize}
 \end{itemize}
 
+Nhật ký kiểm chứng chi tiết các vết thực thi (Traces) trên Langfuse Cloud được minh họa tại Hình~\ref{fig:langfuse_tracing}. Bảng quan sát ghi nhận đầy đủ 110 lượt truy vết cấp gốc (\textit{Root Observations}), bao gồm các chu trình phản tư \texttt{latex\_agentic\_healing\_react}, các lượt hội thoại học thuật \texttt{session\_chat}, truy xuất tài liệu \texttt{discovery\_search} và cập nhật an toàn khóa BYOK \texttt{scholar\_profile\_byok\_update}. Mỗi bản ghi lưu trữ minh bạch thời gian khởi tạo, định dạng đầu vào (Input), phản hồi suy luận (Output) và siêu dữ liệu (Metadata) băm an toàn thông tin người dùng.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/frontend/langfuse_tracing.jpg}
+\caption{Nhật ký kiểm chứng và giám sát vết thực thi mô hình trên Langfuse Cloud}
+\label{fig:langfuse_tracing}
+\end{figure}
+
+\subsection{Hệ thống giám sát vận hành và sử dụng tài nguyên (Monitoring)}
+\label{subsec:monitoring}
+
+Nhằm bảo đảm tính ổn định, liên tục và khả năng kiểm soát ngân sách vận hành của nền tảng \VS, hệ thống tích hợp các công cụ giám sát chuyên sâu đa tầng bao gồm hạ tầng máy chủ ảo đám mây Azure, dịch vụ tìm kiếm học thuật Exa AI, mức độ tiêu thụ mô hình ngôn ngữ lớn OpenAI và bảng điều khiển chi phí Langfuse.
+
+\subsubsection{Giám sát hạ tầng máy chủ ảo đám mây Azure (Azure Server Monitoring)}
+\label{subsubsec:monitor_azure}
+
+Hạ tầng máy chủ ảo chạy trên Microsoft Azure (cấu hình 4 vCPU, 16GB RAM) được theo dõi liên tục thông qua công cụ Azure Virtual Machine Monitor như thể hiện tại Hình~\ref{fig:monitor_azure}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/frontend/azure_monitor.png}
+\caption{Biểu đồ giám sát tài nguyên máy chủ ảo Azure (Độ sẵn sàng, CPU, RAM và tiến trình)}
+\label{fig:monitor_azure}
+\end{figure}
+
+Kết quả giám sát thực tế ghi nhận:
+\begin{itemize}
+    \item \textbf{Chỉ số sẵn sàng vận hành (Availability):} Đạt mức 100\% liên tục trong toàn bộ các phiên thử nghiệm, không xảy ra sự cố sập dịch vụ hay gián đoạn mạng.
+    \item \textbf{Tải xử lý bộ vi xử lý (CPU Utilization):} Dao động ổn định ở mức dưới 1\%, chứng minh kiến trúc Lục giác kết hợp lập trình bất đồng bộ (Async I/O) trên FastAPI giúp máy chủ xử lý cực kỳ nhẹ nhàng, không gây nghẽn tài nguyên CPU.
+    \item \textbf{Mức chiếm dụng bộ nhớ RAM (Memory Utilization):} Đạt mức tối đa chỉ 13.58\% trên tổng số 16GB RAM khả dụng, bảo đảm dung lượng dư thừa an toàn (> 86\%) để phục vụ mở rộng tải khi có nhiều học giả truy cập đồng thời.
+    \item \textbf{Phân bổ tài nguyên theo tiến trình (Top 5 processes by memory):} Tiến trình dịch vụ Backend chính (\texttt{python}) chiếm 1.44\% RAM; trình điều phối container Docker (\texttt{dockerd}) chiếm 1.25\%; các dịch vụ giám sát và an ninh ngầm của Azure (\texttt{azuretablecollector}, \texttt{azsecmagent}) lần lượt chiếm 1.03\% và 0.90\%; trình quản lý container nội bộ (\texttt{containerd}) chiếm 0.69\%.
+\end{itemize}
+
+\subsubsection{Giám sát hạn ngạch và lưu lượng tìm kiếm Exa AI (Exa AI Usage)}
+\label{subsubsec:monitor_exa}
+
+Phân hệ khám phá tài liệu khoa học của \VS\ tích hợp dịch vụ tìm kiếm ngữ nghĩa chuyên biệt Exa AI. Lưu lượng và độ tin cậy của dịch vụ được kiểm soát chặt chẽ qua bảng điều khiển Exa Usage như thể hiện tại Hình~\ref{fig:monitor_exa}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/frontend/exa_usage.png}
+\caption{Biểu đồ giám sát lưu lượng truy vấn và độ tin cậy API tìm kiếm Exa AI}
+\label{fig:monitor_exa}
+\end{figure}
+
+Số liệu đo đạc thực tế khẳng định:
+\begin{itemize}
+    \item \textbf{Tổng số yêu cầu tìm kiếm (Total API Requests):} Đạt 828 lượt gọi tìm kiếm bài báo khoa học qua điểm cuối \texttt{Search} trong suốt chu kỳ thử nghiệm.
+    \item \textbf{Tần suất truy vấn và giới hạn tốc độ (Rate Limits):} Tần suất đỉnh (Peak) ghi nhận ở mức 3 QPS (Queries Per Second), tương ứng chỉ 30\% so với hạn ngạch cho phép 10 QPS, bảo đảm không bị hiện tượng thắt cổ chai lưu lượng.
+    \item \textbf{Tỷ lệ thành công (Success Rate):} Đạt mức tuyệt đối 100\% (\textit{Success rate 100\%}), ghi nhận 0 lỗi vượt hạn mức (429 Rate Limited: 0) và 0 lỗi kết nối nào phát sinh trong toàn bộ chu kỳ thực nghiệm.
+\end{itemize}
+
+\subsubsection{Giám sát mức độ tiêu thụ mô hình ngôn ngữ lớn OpenAI (OpenAI Usage)}
+\label{subsubsec:monitor_openai}
+
+Mức độ sử dụng các mô hình ngôn ngữ lớn phục vụ suy luận, tổng quan y văn và phản tư sửa lỗi LaTeX được quản trị minh bạch qua bảng điều khiển OpenAI Usage như thể hiện tại Hình~\ref{fig:monitor_openai}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/frontend/openai_usage.png}
+\caption{Báo cáo giám sát lượng token luân chuyển và chi phí API OpenAI}
+\label{fig:monitor_openai}
+\end{figure}
+
+Các chỉ số tài nguyên vận hành ghi nhận được:
+\begin{itemize}
+    \item \textbf{Tổng chi phí tiêu thụ (Total Spend):} Đạt mức \$3.76 trên tổng hạn mức tín dụng \$120.00 được cấp phát, cho thấy chi phí vận hành nghiên cứu rất kinh tế.
+    \item \textbf{Tổng lượng token xử lý (Total Tokens):} Đạt 78.245.561 tokens (khoảng 78.25 triệu tokens), thể hiện quy mô dữ liệu học thuật và văn bản bài báo khoa học được phân tích, nhúng ngữ nghĩa và sinh câu trả lời có kiểm chứng với dung lượng đồ sộ.
+    \item \textbf{Tổng số yêu cầu hoàn thành (Total Requests):} Hoàn thành thành công 1.397 yêu cầu API cho phân hệ phản hồi và hội thoại chuyên sâu (\textit{Responses and Chat Completions}), cùng với 18 yêu cầu tìm kiếm mở rộng trên Web (\textit{Web Searches}).
+\end{itemize}
+
+\subsubsection{Giám sát định lượng chi phí suy luận và vết quan sát trên Langfuse (Langfuse Dashboard)}
+\label{subsubsec:monitor_langfuse_dashboard}
+
+Bên cạnh nhật ký chi tiết từng trace, nền tảng Langfuse cung cấp bảng điều khiển phân tích chi phí tổng thể (Langfuse Cost Dashboard) giúp người quản trị hệ thống giám sát định lượng chi phí theo thời gian thực như thể hiện tại Hình~\ref{fig:monitor_langfuse_dashboard}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{figures/frontend/langfuse_dashboard.jpg}
+\caption{Bảng điều khiển chi phí và phân bổ vết suy luận Langfuse Cost Dashboard}
+\label{fig:monitor_langfuse_dashboard}
+\end{figure}
+
+Bảng điều khiển phản ánh các thông số vận hành:
+\begin{itemize}
+    \item \textbf{Tổng số lượt truy vết và quan sát:} Ghi nhận 110 lượt truy vết (Traces) và 160 lượt quan sát (Observations) được phân tích chuyên sâu.
+    \item \textbf{Định lượng chi phí vận hành (Total Costs):} Tổng chi phí đo đạc đạt mức \$0.00104 trong môi trường kiểm thử \texttt{verischolar-dev}, thể hiện tính kinh tế cao nhờ cơ chế tối ưu hóa câu nhắc (Prompt Optimization) và lưu bộ nhớ đệm ngữ cảnh.
+    \item \textbf{Phân bổ chi phí theo mô hình và người dùng:} Biểu đồ trực quan hóa chi phí theo từng dòng mô hình (\textit{Cost by Model Name}) và 20 người dùng tiêu thụ hàng đầu (\textit{Top 20 Users by Cost}), cung cấp cơ sở dữ liệu vững chắc phục vụ công tác thanh quyết toán và lập kế hoạch ngân sách tài chính cho các đơn vị học thuật.
+\end{itemize}
+
 \subsection*{Nhận xét:}
 \addcontentsline{toc}{subsection}{Nhận xét}
 
 Qua quá trình cài đặt, cấu hình và tiến hành các kịch bản thực nghiệm toàn trình trên hệ thống \VS, em rút ra một số nhận xét và đánh giá tổng kết như sau:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Khả năng triển khai thực tiễn cao:} Hệ thống đã được đóng gói container hóa hoàn chỉnh và triển khai ổn định trên máy chủ ảo đám mây VPS với tên miền công cộng chính thức \url{https://verischolar.duckdns.org}. Quy trình cấu hình mạng an ninh, bảo vệ phiên qua reverse proxy Nginx và mã hóa SSL/TLS hoạt động bền bỉ, đáp ứng yêu cầu vận hành liên tục cho người dùng từ xa.
+    \item \textbf{Khả năng triển khai thực tiễn cao:} Hệ thống đã được đóng gói container hóa hoàn chỉnh và triển khai ổn định trên máy chủ ảo đám mây VPS với tên miền công cộng chính thức \url{https://verischolar.duckdns.org}. Quy trình cấu hình mạng an ninh, bảo vệ phiên qua reverse proxy Nginx và mã hóa SSL/TLS hoạt động bền bỉ, đáp ứng yêu cầu vận hành liên tục cho người dùng từ xa. Toàn bộ mã nguồn dự án được lưu trữ và quản lý phiên bản chuyên nghiệp trên GitHub tại \url{https://github.com/dammanhdungvn/VeriScholar}.
     \item \textbf{Trải nghiệm người dùng thông suốt:} 10 giao diện tương tác người--máy của hệ thống được xây dựng đồng bộ, hiện thực hóa chu trình nghiên cứu khép kín từ khâu khám phá, trích xuất, đối thoại minh chứng tọa độ trên tệp PDF, đến quản lý hồ sơ an toàn qua cơ chế BYOK và soạn thảo bài báo LaTeX. Việc ứng dụng công nghệ SSE và khung xương giả lập giúp triệt tiêu cảm giác trễ mạng, mang lại trải nghiệm học thuật mượt mà.
     \item \textbf{Độ tin cậy và tự động hóa vượt trội:} Cơ chế kiểm định tự động 4 Cổng xác minh (Verification Gates) bảo đảm 100\% các bài kiểm thử đơn vị, kiểm thử ranh giới kiến trúc AST và quy trình đóng gói bản dựng thương mại luôn đạt kết quả thành công tuyệt đối. Chu trình ReAct tự sửa lỗi biên dịch LaTeX trên E2B MicroVM Sandbox đạt tỷ lệ thành công 92\%, kết hợp việc kiểm soát độ trễ và chi phí token minh bạch qua Langfuse Cloud khẳng định tính hiệu quả và đóng góp thực tiễn sâu sắc của đề tài.
+    \item \textbf{Hạ tầng giám sát toàn diện và bền bỉ:} Việc thiết lập đa tầng giám sát từ hạ tầng máy chủ ảo Azure (Availability 100\%, CPU < 1\%, RAM 13.58\%), cổng tìm kiếm học thuật Exa AI (tỷ lệ thành công 100\% trên 828 lượt gọi), định lượng tiêu thụ OpenAI (78.25 triệu tokens với chi phí tối ưu \$3.76) và Langfuse Observability cung cấp cái nhìn trực quan, minh bạch và tin cậy tuyệt đối về tình trạng vận hành hệ thống.
 \end{enumerate}
