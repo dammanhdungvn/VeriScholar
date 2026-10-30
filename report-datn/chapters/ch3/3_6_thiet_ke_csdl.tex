@@ -63,10 +63,11 @@ Toàn bộ các bảng cơ sở dữ liệu của hệ thống \VS\ được t�
 
 Nhằm làm rõ cấu trúc vật lý, kiểu dữ liệu và các ràng buộc toàn vẹn, tiểu mục này trình bày đặc tả chi tiết 12 bảng cơ sở dữ liệu cốt lõi của hệ thống, tương ứng trực tiếp với các thực thể trong Lược đồ quan hệ ERD.
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{users}}
 Bảng \texttt{users} lưu trữ định danh cá nhân của học giả, hỗ trợ đăng nhập và liên kết với mã định danh quốc tế ORCID iD (Bảng~\ref{tab:spec_users}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -87,10 +88,11 @@ Bảng \texttt{users} lưu trữ định danh cá nhân của học giả, hỗ 
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{user\_api\_keys}}
 Bảng \texttt{user\_api\_keys} bảo vệ khóa API cá nhân của học giả theo cơ chế BYOK, sử dụng thuật toán mã hóa đối xứng phân tầng (Bảng~\ref{tab:spec_api_keys}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -110,10 +112,11 @@ Bảng \texttt{user\_api\_keys} bảo vệ khóa API cá nhân của học giả
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{scholar\_profiles}}
 Bảng \texttt{scholar\_profiles} lưu trữ thông tin hồ sơ học thuật chuyên sâu, cơ quan công tác và tiểu sử nghiên cứu của học giả (Bảng~\ref{tab:spec_scholar_profiles}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -133,10 +136,11 @@ Bảng \texttt{scholar\_profiles} lưu trữ thông tin hồ sơ học thuật c
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{folders}}
 Bảng \texttt{folders} tổ chức cây thư mục phân cấp phục vụ sắp xếp tài liệu khoa học của từng học giả (Bảng~\ref{tab:spec_folders}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -155,10 +159,11 @@ Bảng \texttt{folders} tổ chức cây thư mục phân cấp phục vụ sắ
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{documents}}
 Bảng \texttt{documents} quản lý thông tin thư mục, tác giả, năm xuất bản và liên kết với khối tệp nhị phân CAS (Bảng~\ref{tab:spec_documents}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -180,10 +185,11 @@ Bảng \texttt{documents} quản lý thông tin thư mục, tác giả, năm xu�
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{document\_storage\_blobs}}
 Bảng \texttt{document\_storage\_blobs} quản lý các khối tệp nhị phân trên hệ thống tệp đĩa cứng, áp dụng cơ chế định danh theo nội dung SHA-256 (Bảng~\ref{tab:spec_cas}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -203,10 +209,11 @@ Bảng \texttt{document\_storage\_blobs} quản lý các khối tệp nhị phâ
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{document\_chunks}}
 Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản bóc tách từ tài liệu PDF, số trang và tọa độ Bounding Box (Bảng~\ref{tab:spec_chunks}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -227,10 +234,11 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản bóc t
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{reference\_items}}
 Bảng \texttt{reference\_items} lưu trữ danh mục tài liệu tham khảo bóc tách từ bài báo và kết quả đối soát tự động (Bảng~\ref{tab:spec_references}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -250,10 +258,11 @@ Bảng \texttt{reference\_items} lưu trữ danh mục tài liệu tham khảo b
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{research\_sessions}}
 Bảng \texttt{research\_sessions} quản lý không gian làm việc nghiên cứu, tài liệu đang mở và thẻ chức năng đang thao tác (Bảng~\ref{tab:spec_sessions}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -273,10 +282,11 @@ Bảng \texttt{research\_sessions} quản lý không gian làm việc nghiên c�
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{session\_turns}}
 Bảng \texttt{session\_turns} lưu trữ toàn bộ lịch sử các lượt hỏi đáp, câu trả lời sinh ra từ Hybrid RAG và mảng trích dẫn có neo giữ tọa độ (Bảng~\ref{tab:spec_turns}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -296,10 +306,11 @@ Bảng \texttt{session\_turns} lưu trữ toàn bộ lịch sử các lượt h�
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{drafts}}
 Bảng \texttt{drafts} lưu trữ các bản thảo bài báo khoa học định dạng \LaTeX, phiên bản tài liệu và liên kết phiên nghiên cứu nguồn (Bảng~\ref{tab:spec_drafts}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small
@@ -319,10 +330,11 @@ Bảng \texttt{drafts} lưu trữ các bản thảo bài báo khoa học định
 \end{tabular}
 \end{table}
 
+\Needspace{24\baselineskip}
 \subsubsection{Đặc tả bảng \texttt{draft\_messages}}
 Bảng \texttt{draft\_messages} lưu trữ nhật ký trao đổi đồng tác giả giữa học giả và tác nhân AI trong quá trình biên soạn và tự sửa lỗi biên dịch (Bảng~\ref{tab:spec_draft_messages}).
 
-\begin{table}[htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \small

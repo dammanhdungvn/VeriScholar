@@ -53,7 +53,7 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
     };
 
     % 5. Retrieved Context (Dãn thoáng tách biệt, cách Prompt Augmentation 2.0cm)
-    \node[pill_node, minimum width=2.5cm, minimum height=0.85cm] (ret_context) at (2.0, -1.4) {
+    \node[pill_node, minimum width=2.5cm, minimum height=0.85cm] (ret_context) at (2.0, -2.8) {
         \textbf{Retrieved Context}\\[1pt]
         \scriptsize (Ngữ cảnh trích xuất)
     };
@@ -81,8 +81,8 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
     \draw[arrowstyle] (user.north) |- (question.west);
     \draw[arrowstyle] (question.east) -- (graphex.west);
     \draw[arrowstyle] (graphex.east) -- ([yshift=1.8cm]retrieval_box.west);
-    \draw[arrowstyle] ([yshift=-1.8cm]retrieval_box.west) -| (ret_context.north);
-    \draw[arrowstyle] (ret_context.west) -- (prompt_box.east);
+    \draw[arrowstyle] (retrieval_box.south) |- (ret_context.east);
+    \draw[arrowstyle] (ret_context.west) -- (prompt_box.east |- ret_context.west);
     \draw[arrowstyle] (prompt_box.west) -- (answer.east);
     \draw[arrowstyle] (answer.west) -| (user.south);
 \end{tikzpicture}
