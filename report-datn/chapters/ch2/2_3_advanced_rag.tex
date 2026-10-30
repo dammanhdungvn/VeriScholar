@@ -94,78 +94,78 @@ Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối được m�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.68, transform shape,
-    circle_node/.style={circle, draw=blue!75!black, fill=blue!8, line width=1.05pt, align=center, inner sep=2pt, font=\linespread{0.95}\selectfont\bfseries\scriptsize, minimum size=1.65cm},
-    box_node/.style={rectangle, draw=black!85, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize},
-    store_node/.style={rectangle, draw=black!85, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\footnotesize, minimum width=2.9cm, minimum height=1.5cm},
-    diamond_node/.style={diamond, draw=black!85, fill=white, line width=1.0pt, align=center, inner sep=1.5pt, font=\linespread{0.95}\selectfont\bfseries\scriptsize, aspect=1.2, minimum width=1.9cm, minimum height=1.45cm},
-    cylinder_node/.style={cylinder, shape border rotate=90, draw=blue!80!black, fill=blue!5, line width=1.05pt, aspect=0.32, minimum width=2.6cm, minimum height=1.3cm, align=center, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
-    agent_card/.style={draw=blue!45, fill=blue!3, rounded corners=9pt, line width=0.95pt},
-    arrowstyle/.style={-{Stealth[length=2.6mm]}, line width=1.0pt, draw=black!85},
-    bluearrow/.style={-{Stealth[length=2.6mm]}, line width=1.0pt, draw=blue!80!black}
+    scale=0.70, transform shape,
+    circle_node/.style={circle, draw=blue!75!black, fill=blue!8, line width=1.05pt, align=center, inner sep=2pt, font=\linespread{0.95}\selectfont\bfseries\scriptsize, minimum size=1.55cm},
+    box_node/.style={rectangle, draw=black!85, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    store_node/.style={rectangle, draw=black!85, fill=white, rounded corners=5pt, line width=1.0pt, align=center, inner sep=3.5pt, font=\linespread{1.0}\selectfont\footnotesize, minimum width=2.7cm, minimum height=1.35cm},
+    diamond_node/.style={diamond, draw=black!85, fill=white, line width=1.0pt, align=center, inner sep=0.5pt, font=\linespread{0.90}\selectfont\bfseries\tiny, aspect=1.1, text width=1.3cm},
+    cylinder_node/.style={cylinder, shape border rotate=90, draw=blue!80!black, fill=blue!5, line width=1.05pt, aspect=0.32, minimum width=2.5cm, minimum height=1.2cm, align=center, font=\linespread{1.0}\selectfont\bfseries\scriptsize},
+    agent_card/.style={draw=blue!45, fill=blue!3, rounded corners=8pt, line width=0.95pt},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85},
+    bluearrow/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=blue!80!black}
 ]
     % Header
-    \node[font=\bfseries\Large, text=black!90] at (1.5, 6.7) {Advanced RAG};
+    \node[font=\bfseries\Large, text=black!90] at (1.5, 6.4) {Advanced RAG};
 
     % Khung bao Agents (Agentic Query Orchestration)
-    \node[agent_card, minimum width=6.5cm, minimum height=3.6cm] (c_agent) at (-3.3, 0.8) {};
-    \node[font=\bfseries\small, text=blue!85!black] at (-3.3, 2.35) {Agents};
+    \node[agent_card, minimum width=5.6cm, minimum height=3.3cm] (c_agent) at (-3.2, 0.5) {};
+    \node[font=\bfseries\small, text=blue!85!black] at (-3.2, 1.95) {Agents};
 
-    % Các node bên trong Agents (tách rộng nhau 1.1cm)
-    \node[box_node, text width=2.3cm, minimum height=1.3cm] (q_trans) at (-4.9, 0.8) {
-        \textbf{Query}\\[2pt]
-        \textbf{Transformation}\\[2pt]
+    % Các node bên trong Agents (tách rộng nhau 1.2cm)
+    \node[box_node, text width=2.1cm, minimum height=1.15cm] (q_trans) at (-4.6, 0.5) {
+        \textbf{Query}\\[1pt]
+        \textbf{Transformation}\\[1pt]
         \scriptsize (Biến đổi truy vấn)
     };
-    \node[diamond_node] (q_route) at (-1.6, 0.8) {Query\\[2pt]Routing\\[2pt]\tiny(Định tuyến)};
+    \node[diamond_node] (q_route) at (-1.8, 0.5) {Query\\[1pt]Routing\\[1pt](Định tuyến)};
 
     % Query bên ngoài Agents
-    \node[circle_node] (query) at (-7.7, 0.8) {Query\\[2pt]\scriptsize(Truy vấn)};
+    \node[circle_node] (query) at (-7.5, 0.5) {Query\\[2pt]\scriptsize(Truy vấn)};
 
     % Fusion Retrieval (Phía trên Agents)
-    \node[box_node, text width=2.4cm, minimum height=1.25cm] (fusion) at (-4.9, 4.6) {
-        \textbf{Fusion}\\[2pt]
-        \textbf{Retrieval}\\[2pt]
+    \node[box_node, text width=2.3cm, minimum height=1.15cm] (fusion) at (-4.6, 4.3) {
+        \textbf{Fusion}\\[1pt]
+        \textbf{Retrieval}\\[1pt]
         \scriptsize (Truy xuất hợp nhất)
     };
 
-    % DB Storage (Phía trên ở giữa tại y = 4.6)
-    \node[cylinder_node] (db) at (2.5, 4.6) {DB Storage\\[2pt]\tiny(Kho lưu trữ dữ liệu)};
+    % DB Storage (Phía trên ở giữa tại y = 4.3)
+    \node[cylinder_node] (db) at (2.6, 4.3) {DB Storage\\[2pt]\tiny(Kho lưu trữ dữ liệu)};
 
-    % Vector Store Index (tại y = 1.9, cách đáy DB 1.4cm)
-    \node[store_node] (vstore) at (2.5, 1.9) {
-        \textbf{Vector Store Index}\\[2pt]
-        \scriptsize (Kho chỉ mục Vector)\\[4pt]
-        {\color{blue!35}\rule{2.0cm}{1.8pt}}\\[2.5pt]
-        {\color{blue!35}\rule{2.0cm}{1.8pt}}\\[2.5pt]
-        {\color{blue!35}\rule{1.4cm}{1.8pt}}
+    % Vector Store Index (tại y = 1.7, cách đáy DB 1.45cm)
+    \node[store_node] (vstore) at (2.6, 1.7) {
+        \textbf{Vector Store Index}\\[1pt]
+        \scriptsize (Kho chỉ mục Vector)\\[3pt]
+        {\color{blue!35}\rule{1.8cm}{1.5pt}}\\[2pt]
+        {\color{blue!35}\rule{1.8cm}{1.5pt}}\\[2pt]
+        {\color{blue!35}\rule{1.2cm}{1.5pt}}
     };
 
-    % Summary Index (tại y = -1.0, cách đáy Vector Store 1.2cm)
-    \node[store_node] (sstore) at (2.5, -1.0) {
-        \textbf{Summary Index}\\[2pt]
-        \scriptsize (Kho chỉ mục Tóm tắt)\\[4pt]
-        {\color{blue!35}\rule{2.0cm}{1.8pt}}\\[2.5pt]
-        {\color{blue!35}\rule{2.0cm}{1.8pt}}\\[2.5pt]
-        {\color{blue!35}\rule{1.4cm}{1.8pt}}
+    % Summary Index (tại y = -0.9, cách đáy Vector Store 1.25cm)
+    \node[store_node] (sstore) at (2.6, -0.9) {
+        \textbf{Summary Index}\\[1pt]
+        \scriptsize (Kho chỉ mục Tóm tắt)\\[3pt]
+        {\color{blue!35}\rule{1.8cm}{1.5pt}}\\[2pt]
+        {\color{blue!35}\rule{1.8cm}{1.5pt}}\\[2pt]
+        {\color{blue!35}\rule{1.2cm}{1.5pt}}
     };
 
-    % Reranking Postprocessing (Phía trên bên phải tại y = 4.6)
-    \node[box_node, text width=2.7cm, minimum height=1.25cm] (rerank) at (7.8, 4.6) {
-        \textbf{Reranking}\\[2pt]
-        \textbf{Postprocessing}\\[2pt]
+    % Reranking Postprocessing (Phía trên bên phải tại y = 4.3)
+    \node[box_node, text width=2.6cm, minimum height=1.15cm] (rerank) at (7.6, 4.3) {
+        \textbf{Reranking}\\[1pt]
+        \textbf{Postprocessing}\\[1pt]
         \scriptsize (Tái xếp hạng \& Hậu xử lý)
     };
 
     % Retrieval Context
-    \node[circle_node] (context) at (7.8, 0.8) {Retrieval\\[2pt]Context\\[2pt]\scriptsize(Ngữ cảnh)};
+    \node[circle_node] (context) at (7.6, 0.5) {Retrieval\\[2pt]Context\\[2pt]\scriptsize(Ngữ cảnh)};
 
     % LLM & Answer (Phía dưới bên phải)
-    \node[box_node, text width=2.4cm, minimum height=1.25cm] (llm) at (7.8, -3.2) {
-        \textbf{LLM}\\[2pt]
+    \node[box_node, text width=2.3cm, minimum height=1.15cm] (llm) at (7.6, -3.1) {
+        \textbf{LLM}\\[1pt]
         \scriptsize (Language Model)
     };
-    \node[circle_node] (answer) at (10.8, -3.2) {Answer\\[2pt]\scriptsize(Câu trả lời)};
+    \node[circle_node] (answer) at (10.5, -3.1) {Answer\\[2pt]\scriptsize(Câu trả lời)};
 
     % --- Các đường kết nối luồng chính ---
     \draw[arrowstyle] (query) -- (q_trans);
@@ -175,12 +175,12 @@ Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối được m�
 
     % Query routing đến DB Storage và các Indices
     \draw[arrowstyle] (q_route.north) |- ([yshift=-4pt]db.west);
-    \draw[arrowstyle] (q_route.east) -- ++(0.9, 0) |- (vstore.west);
-    \draw[arrowstyle] (q_route.east) -- ++(0.9, 0) |- (sstore.west);
+    \draw[arrowstyle] (q_route.east) -- ++(0.7, 0) |- (vstore.west);
+    \draw[arrowstyle] (q_route.east) -- ++(0.7, 0) |- (sstore.west);
 
-    % Indices trả về DB Storage (Mũi tên đứng thẳng thoáng đãng dài 1.4cm)
+    % Indices trả về DB Storage
     \draw[arrowstyle] (vstore.north) -- (db.south);
-    \draw[arrowstyle] (sstore.east) -- ++(1.3, 0) |- ([yshift=-4pt]db.east);
+    \draw[arrowstyle] (sstore.east) -- ++(1.1, 0) |- ([yshift=-4pt]db.east);
 
     % DB Storage qua Rerank -> Context -> LLM
     \draw[arrowstyle] ([yshift=3pt]db.east) -- (rerank.west);
@@ -191,18 +191,18 @@ Kiến trúc Advanced RAG phối hợp đa tác nhân điều phối được m�
     \draw[arrowstyle] (llm) -- (answer);
 
     % --- Các đường điều khiển và truy vấn chạy hoàn toàn ngang vào LLM ---
-    % 1. Đường Tool Choice từ Query Routing (vào đỉnh LLM.west tại y = -2.85)
-    \draw[bluearrow] ([xshift=4pt]q_route.south) -- (-1.4, -2.85) 
+    % 1. Đường Tool Choice từ Query Routing (vào đỉnh LLM.west tại y = -2.75)
+    \draw[bluearrow] ([xshift=2pt]q_route.south) -- (-1.6, -2.75) 
         node[pos=0.45, right=3pt, font=\scriptsize\bfseries, text=blue!85!black] {Tool Choice} 
         -- ([yshift=7pt]llm.west);
 
-    % 2. Đường Transformed query từ Query Transformation (vào giữa LLM.west tại y = -3.20)
-    \draw[bluearrow] (q_trans.south) -- (-4.9, -3.20) 
+    % 2. Đường Transformed query từ Query Transformation (vào giữa LLM.west tại y = -3.10)
+    \draw[bluearrow] (q_trans.south) -- (-4.6, -3.10) 
         node[pos=0.45, left=3pt, align=right, font=\scriptsize\bfseries, text=blue!85!black] {Transformed query,\\list of queries} 
         -- (llm.west);
 
-    % 3. Đường Query gốc từ Query circle (vào đáy dưới LLM.west tại y = -3.55)
-    \draw[arrowstyle] (query.south) -- (-7.7, -3.55) 
+    % 3. Đường Query gốc từ Query circle (vào đáy dưới LLM.west tại y = -3.45)
+    \draw[arrowstyle] (query.south) -- (-7.5, -3.45) 
         -- ([yshift=-7pt]llm.west);
 
 \end{tikzpicture}

@@ -53,26 +53,26 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
     };
 
     % 5. Retrieved Context (Giữa Retrieval và Prompt Augmentation)
-    \node[pill_node, minimum width=2.8cm, minimum height=0.85cm] (ret_context) at (1.8, -1.6) {
+    \node[pill_node, minimum width=2.5cm, minimum height=0.85cm] (ret_context) at (2.0, -1.4) {
         \textbf{Retrieved Context}\\[1pt]
         \scriptsize (Ngữ cảnh trích xuất)
     };
 
     % 6. Prompt Augmentation Container
-    \node[prompt_container] (prompt_box) at (-2.2, -1.4) {};
-    \node[font=\bfseries\small, align=center] at (-2.2, 0.35) {Prompt Augmentation};
-    \node[font=\scriptsize\itshape, text=black!75, align=center] at (-2.2, -0.05) {(Tăng cường Prompt)};
-    \node[pill_node, fill=blue!10, minimum width=2.8cm] (p_q) at (-2.2, -1.0) {
+    \node[prompt_container, minimum width=3.3cm] (prompt_box) at (-1.9, -1.4) {};
+    \node[font=\bfseries\small, align=center] at (-1.9, 0.35) {Prompt Augmentation};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (-1.9, -0.05) {(Tăng cường Prompt)};
+    \node[pill_node, fill=blue!10, minimum width=2.6cm] (p_q) at (-1.9, -1.0) {
         \textbf{Question}\\[1pt]
         \scriptsize (Câu hỏi gốc)
     };
-    \node[pill_node, fill=blue!10, minimum width=2.8cm] (p_c) at (-2.2, -2.1) {
+    \node[pill_node, fill=blue!10, minimum width=2.6cm] (p_c) at (-1.9, -2.1) {
         \textbf{Context}\\[1pt]
         \scriptsize (Ngữ cảnh tri thức)
     };
 
     % 7. Answer (Nằm giữa Prompt Augmentation và User)
-    \node[pill_node, minimum width=2.3cm, minimum height=0.85cm] (answer) at (-5.6, -1.6) {
+    \node[pill_node, minimum width=2.2cm, minimum height=0.85cm] (answer) at (-5.2, -1.4) {
         \textbf{Answer}\\[1pt]
         \scriptsize (Câu trả lời)
     };
@@ -81,7 +81,7 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
     \draw[arrowstyle] (user.north) |- (question.west);
     \draw[arrowstyle] (question.east) -- (graphex.west);
     \draw[arrowstyle] (graphex.east) -- ([yshift=1.8cm]retrieval_box.west);
-    \draw[arrowstyle] ([yshift=-1.4cm]retrieval_box.west) -- (ret_context.east);
+    \draw[arrowstyle] ([yshift=-2.0cm]retrieval_box.west) -- (ret_context.east);
     \draw[arrowstyle] (ret_context.west) -- (prompt_box.east);
     \draw[arrowstyle] (prompt_box.west) -- (answer.east);
     \draw[arrowstyle] (answer.west) -| (user.south);

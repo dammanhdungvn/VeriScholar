@@ -30,7 +30,7 @@ Nhằm đảm bảo tính nhất quán tuyệt đối giữa môi trường phá
 \begin{itemize}
     \item \textbf{Hệ quản trị cơ sở dữ liệu quan hệ và vector:} Triển khai cụm container PostgreSQL 16.2 tích hợp tiện ích mở rộng \texttt{pgvector} v0.7.0. CSDL được cấu hình bảng mã ký tự UTF-8, kích hoạt chỉ mục HNSW phục vụ tính toán khoảng cách vector Cosine 1536 chiều và chỉ mục văn bản toàn văn BM25, bảo đảm trọn vẹn các thuộc tính giao dịch ACID.
     \item \textbf{Hệ thống lưu trữ bộ đệm và điều phối phiên:} Triển khai cụm dịch vụ Redis 7.0 (bản phân phối siêu nhẹ Alpine), vận hành tại cổng nội bộ 6379 nhằm quản lý bộ đệm kết quả tìm kiếm học thuật, mã hóa phiên làm việc và kiểm soát tần suất truy cập (\textit{Rate Limiting}).
-    \item \textbf{Cấu hình dịch vụ Backend và Frontend:} Tầng Backend sử dụng Python 3.12, khung dịch vụ bất đồng bộ FastAPI và thư viện ánh xạ quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg}. Tầng Frontend được xây dựng trên nền tảng React 19, hệ thống tạo kiểu Tailwind CSS, thư viện quản lý trạng thái Zustand và công cụ đóng gói siêu tốc Vite.
+    \item \textbf{Cấu hình dịch vụ Backend và Frontend:} Tầng Backend sử dụng ngôn ngữ Python 3.12, khung FastAPI và thư viện ánh xạ quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg}. Tầng Frontend được xây dựng trên nền tảng React 19, hệ thống tạo kiểu Tailwind CSS, thư viện quản lý trạng thái Zustand và công cụ đóng gói siêu tốc Vite.
 \end{itemize}
 
 Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt qua 3 phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ bằng rào chắn kiểm thử tự động cây cú pháp trừu tượng AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc kiểm thử ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
@@ -61,7 +61,7 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
     \item \textbf{Cấu hình máy chủ ảo VPS và tên miền công cộng:}
     \begin{itemize}
         \item Hệ thống được đóng gói và triển khai trên máy chủ ảo Azure Ubuntu 24.04 LTS cấu hình 4 vCPU, 16GB RAM, ổ cứng SSD NVMe tốc độ cao.
-        \item Hệ thống gắn kết với tên miền công cộng chính thức: \url{https://verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới dịch vụ giao diện và chuyển tiếp các tuyến API/SSE tới cổng dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}).
+        \item Hệ thống được gắn kết với tên miền công cộng chính thức: \url{https://verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới dịch vụ giao diện và chuyển tiếp các tuyến API/SSE tới cổng dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}).
         \item Toàn bộ lưu lượng truyền tải được mã hóa đầu--cuối bằng chứng chỉ số SSL/TLS tự động qua Let's Encrypt Certbot. Nhóm an ninh mạng (NSG) cô lập tuyệt đối các cổng CSDL và Redis tại mạng nội bộ.
     \end{itemize}
     \item \textbf{Môi trường thực thi hộp cát đám mây E2B Sandbox MicroVM:}

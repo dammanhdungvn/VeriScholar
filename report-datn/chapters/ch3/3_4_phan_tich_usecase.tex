@@ -69,7 +69,7 @@ Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên c
 \caption{Đặc tả ca sử dụng ``Tra cứu và nạp ấn phẩm nghiên cứu''}
 \label{tab:uc_kham_pha_spec}
 \label{tab:uc_01_spec}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Tra cứu và nạp ấn phẩm nghiên cứu} \tabularnewline \hline
@@ -78,7 +78,7 @@ Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên c
 \textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập vào hệ thống \VS. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Tài liệu được nạp vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
-\begin{enumerate}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI vào thanh tìm kiếm.
     \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (\textit{Skeleton Loading}); hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard (\textit{Jaccard Token Overlap} ngưỡng $\ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
     \item Học giả có thể kích hoạt nút gạt ``Đã bình duyệt'' (\textit{Peer-reviewed}) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
@@ -86,7 +86,7 @@ Ca sử dụng này cho phép học giả tìm kiếm các ấn phẩm nghiên c
     \item Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra khử trùng lặp trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu tệp PDF đã tồn tại trong kho lưu trữ chung: Hệ thống tái sử dụng khối tệp vật lý sẵn có và tăng biến đếm tham chiếu (\texttt{ref\_count}), rút ngắn thời gian nạp xuống mức tức thời.
     \item Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (\textit{Abstract}) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính.
 \end{itemize} \tabularnewline \hline
@@ -105,7 +105,7 @@ Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung b
 \caption{Đặc tả ca sử dụng ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{tab:uc_doc_sau_spec}
 \label{tab:uc_03_spec}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
@@ -114,7 +114,7 @@ Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung b
 \textbf{Điều kiện tiên quyết} & Học giả đã mở một tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số $[1]$, $[2]$ liên kết với tọa độ BBox. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
-\begin{enumerate}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập câu hỏi nghiên cứu vào khung hội thoại (ví dụ: ``Độ chính xác phân loại của mô hình trên ImageNet là bao nhiêu?'').
     \item Tác nhân AI kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) để trích xuất các phân đoạn văn bản liên quan nhất.
     \item Tác nhân kiểm định liêm chính trích dẫn và tổng hợp câu trả lời.
@@ -122,7 +122,7 @@ Ca sử dụng này hỗ trợ học giả phân tích chuyên sâu nội dung b
     \item Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc ($\text{IoU} \ge 0{,}85$).
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu câu hỏi nằm ngoài phạm vi tri thức của tài liệu: Hệ thống thông báo rõ ràng ``Tài liệu không cung cấp thông tin về nội dung này'', tuyệt đối không tự suy đoán số liệu.
     \item Nếu học giả chưa nạp khóa API cá nhân (BYOK): Hệ thống điều hướng mở hộp thoại cài đặt khóa.
 \end{itemize} \tabularnewline \hline
@@ -140,7 +140,7 @@ Ca sử dụng này hỗ trợ học giả soạn thảo trực tuyến bài bá
 \small
 \caption{Đặc tả ca sử dụng ``Biên soạn bản thảo và tự phục hồi lỗi \LaTeX''}
 \label{tab:uc_bien_soan_spec}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi \LaTeX} \tabularnewline \hline
@@ -149,14 +149,14 @@ Ca sử dụng này hỗ trợ học giả soạn thảo trực tuyến bài bá
 \textbf{Điều kiện tiên quyết} & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
-\begin{enumerate}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả chỉnh sửa mã nguồn \LaTeX\ trên trình biên tập Monaco Editor.
     \item Học giả nhấp nút ``Biên dịch bản thảo''.
     \item Hệ thống chuyển mã nguồn vào máy ảo vi mô E2B MicroVM cách ly an toàn và kích hoạt lệnh \texttt{xelatex}.
     \item Nếu biên dịch thành công ($\text{ExitCode} == 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):
     \begin{enumerate}[label=\alph*., noitemsep, topsep=1pt]
         \item Hệ thống bóc tách tệp nhật ký lỗi \texttt{main.log}.
@@ -180,7 +180,7 @@ Ca sử dụng cho phép Quản trị viên theo dõi danh sách học giả tha
 \small
 \caption{Đặc tả ca sử dụng ``Quản trị người dùng và chính sách bảo mật BYOK''}
 \label{tab:uc_admin_users}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Quản trị người dùng và chính sách bảo mật BYOK} \tabularnewline \hline
@@ -189,14 +189,14 @@ Ca sử dụng cho phép Quản trị viên theo dõi danh sách học giả tha
 \textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập với quyền hạn cao nhất. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Thông tin tài khoản và cấu hình hạn ngạch được cập nhật chính xác. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
-\begin{enumerate}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Quản trị viên truy cập bảng điều khiển quản trị.
     \item Hệ thống hiển thị danh sách người dùng, trạng thái kích hoạt và định danh ORCID.
     \item Quản trị viên điều chỉnh hạn ngạch tài nguyên máy ảo MicroVM hoặc đặt lại phiên đăng nhập.
     \item Hệ thống lưu cấu hình và ghi nhật ký kiểm toán.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng ngoại lệ} & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu phát hiện phiên làm việc bất thường: Hệ thống tự động thu hồi phiên và gửi thông báo cảnh báo bảo mật.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
@@ -211,7 +211,7 @@ Ca sử dụng cho phép Quản trị viên theo dõi các chỉ số hoạt đ�
 \small
 \caption{Đặc tả ca sử dụng ``Giám sát hệ thống và vết thực thi mô hình''}
 \label{tab:uc_admin_logs}
-\renewcommand{\arraystretch}{1.2}
+\renewcommand{\arraystretch}{1.12}
 \begin{tabular}{|>{\raggedright\arraybackslash}p{3.8cm}|>{\raggedright\arraybackslash}p{10.2cm}|}
 \hline
 \textbf{Tên Use Case} & \textbf{Giám sát hệ thống và vết thực thi mô hình} \tabularnewline \hline
@@ -220,14 +220,14 @@ Ca sử dụng cho phép Quản trị viên theo dõi các chỉ số hoạt đ�
 \textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập; dịch vụ Langfuse đang hoạt động bình thường. \tabularnewline \hline
 \textbf{Điều kiện kết thúc} & Báo cáo số liệu hiệu năng và danh sách vết thực thi được hiển thị đầy đủ. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
-\begin{enumerate}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Quản trị viên chọn phân hệ ``Giám sát hệ thống''.
     \item Hệ thống truy xuất dữ liệu từ dịch vụ giám sát Langfuse và cơ sở dữ liệu.
     \item Hiển thị biểu đồ đo lường: độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi \LaTeX, và tổng số lượng Token đã tiêu thụ.
     \item Quản trị viên xem xét các phiên có độ trễ cao để tối ưu hóa chỉ mục HNSW.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng ngoại lệ} & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu dịch vụ giám sát bên ngoài bị ngắt kết nối: Hệ thống chuyển sang đọc nhật ký nội bộ lưu trên cơ sở dữ liệu.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
