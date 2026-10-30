@@ -157,26 +157,33 @@ rsync -avz \
     --exclude='report-datn' \
     . "$SSH_USER@$SSH_HOST:$REMOTE_DIR/"
 
-# 5. Database Synchronization (Local Dev DB -> VPS)
-if [[ "$SYNC_DB" == "true" ]]; then
-    echo "-> Synchronizing local Dev PostgreSQL database to VPS container ($REMOTE_CONTAINER)..."
-    uv run python scripts/sync_db_to_vps.py
-fi
-
-# 6. Remote Environment Sync & Service Restart
-echo "-> Updating remote dependencies and restarting verischolar-api.service..."
+# 5. Remote Environment Sync & Schema Migrations
+echo "-> Updating remote dependencies and ensuring schema migrations..."
 ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" bash <<REMOTE_SCRIPT
 set -euo pipefail
 export PATH="\$HOME/.local/bin:\$PATH"
 cd "$REMOTE_DIR"
 uv sync --all-packages --frozen
+uv run python -m api.db.init_db
+REMOTE_SCRIPT
+
+# 6. Database Synchronization (Local Dev DB -> VPS)
+if [[ "$SYNC_DB" == "true" ]]; then
+    echo "-> Synchronizing local Dev PostgreSQL database to VPS container ($REMOTE_CONTAINER)..."
+    uv run python scripts/sync_db_to_vps.py
+fi
+
+# 7. Remote Service Restart & Nginx Reload
+echo "-> Restarting verischolar-api.service and reloading nginx..."
+ssh -i "$SSH_KEY" -o StrictHostKeyChecking=accept-new "$SSH_USER@$SSH_HOST" bash <<REMOTE_SCRIPT
+set -euo pipefail
 sudo systemctl restart verischolar-api.service
 if command -v nginx >/dev/null 2>&1; then
     sudo systemctl reload nginx.service || true
 fi
 REMOTE_SCRIPT
 
-# 6. Post-Deployment Live Verification Probe
+# 8. Post-Deployment Live Verification Probe
 echo "-> Probing live health check at $PUBLIC_URL/health..."
 MAX_ATTEMPTS=10
 ATTEMPT=1

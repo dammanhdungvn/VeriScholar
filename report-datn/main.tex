@@ -34,21 +34,34 @@
 \fi
 
 % ------------------------------------------------------------------------------
-% I. PHẦN MỤC LỤC & DANH MỤC (FRONTMATTER - Đánh số trang La Mã thường i, ii, iii...)
+% I. PHẦN HỒ SƠ ĐỒ ÁN & MỤC LỤC (FRONTMATTER - Đánh số trang La Mã thường iii, iv, v...)
+% Thứ tự chuẩn HUMG: Bìa ngoài - Bìa trong - Phiếu giao đề tài - Đề cương ĐATN - Mục lục...
 % ------------------------------------------------------------------------------
 \pagenumbering{roman}
-\setcounter{page}{1}
+\setcounter{page}{3}
+\pagestyle{adminform}
 
-% 1. Mục lục tự động (Bắt đầu từ trang i)
+% 1. Phiếu giao đề tài tốt nghiệp (Bắt đầu từ trang iii theo mẫu Hieu.pdf)
+\input{frontmatter/phieu_giao_de_tai}
+\cleardoublepage
+
+% 2. Đề cương đồ án tốt nghiệp đại học
+\input{frontmatter/de_cuong_datn}
+\cleardoublepage
+
+% Kích hoạt lại fancy headers từ Mục lục trở đi
+\pagestyle{fancy}
+
+% 3. Mục lục tự động
 \input{frontmatter/muc_luc}
 
-% 2. Danh mục hình ảnh
+% 4. Danh mục hình ảnh
 \input{frontmatter/danh_muc_hinh}
 
-% 3. Danh mục bảng biểu
+% 5. Danh mục bảng biểu
 \input{frontmatter/danh_muc_bang}
 
-% 4. Danh mục các ký hiệu và chữ viết tắt
+% 6. Danh mục các ký hiệu và chữ viết tắt
 \input{frontmatter/danh_muc_viet_tat}
 
 % ------------------------------------------------------------------------------

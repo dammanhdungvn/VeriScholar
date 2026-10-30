@@ -1,0 +1,122 @@
+% !TEX root = ../main.tex
+% ==============================================================================
+% PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP
+% Chuẩn Khoa CNTT - Bộ môn Hệ thống Thông tin (HUMG)
+% Trình bày chính xác theo mẫu Hieu.pdf (3 trang: iii, iv, v)
+% ==============================================================================
+
+\thispagestyle{adminform}
+\phantomsection
+\addcontentsline{toc}{chapter}{PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP}
+
+{\setstretch{1.15}
+
+% ------------------------------------------------------------------------------
+% TRANG 1 / 3 (Trang iii): Tiêu đề, Thông tin chung & Mục tiêu (phần đầu)
+% ------------------------------------------------------------------------------
+\begin{center}
+    {\fontsize{16pt}{20pt}\selectfont \textbf{PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP}}
+\end{center}
+
+\vspace{0.25cm}
+
+\noindent \textbf{1. Thông tin chung}
+\vspace{0.15cm}
+
+\noindent
+\begin{tabular}{@{}p{5.5cm} p{10.2cm}@{}}
+\textbf{Tên đề tài:} & \textbf{Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn} \\[0.25cm]
+\textbf{Họ và tên sinh viên:} & Đàm Mạnh Dũng \\[0.12cm]
+\textbf{Mã sinh viên:} & 2221050359 \\[0.12cm]
+\textbf{Điện thoại liên lạc:} & 0398686955 \\[0.12cm]
+\textbf{Email:} & dammanhdungvn@gmail.com \\[0.12cm]
+\textbf{Lớp:} & DCCTCT67\_09B \\[0.12cm]
+\textbf{Hệ đào tạo:} & Đại học chính quy \\[0.12cm]
+\textbf{Đồ án tốt nghiệp thực hiện tại:} & Trường Đại học Mỏ -- Địa chất \\[0.12cm]
+\textbf{Thời gian làm ĐATN:} & Năm 2026 \\
+\end{tabular}
+
+\vspace{0.3cm}
+\noindent \textbf{2. Mục tiêu của ĐATN}
+\vspace{0.15cm}
+
+\noindent \textbf{Mục tiêu tổng quát:}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+    \item Xây dựng thành công nền tảng Trợ lý AI nghiên cứu khoa học và biên soạn bài báo học thuật chuyên sâu (VeriScholar) phục vụ học giả tại VinUni.
+    \item Bảo đảm tính liêm chính học thuật qua quy trình truy xuất tri thức lai (Hybrid RAG), đồ thị tri thức (GraphRAG) và kiểm chứng trích dẫn tọa độ trực quan (Bounding Box) trên PDF gốc.
+    \item Cung cấp công cụ quản lý bản thảo, biên dịch LaTeX cách ly trong máy ảo (E2B Sandbox) và bảo mật tuyệt đối dữ liệu nghiên cứu (BYOK, Zero Data Retention).
+\end{itemize}
+
+\vspace{0.15cm}
+\noindent \textbf{Mục tiêu cụ thể:}
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+    \item[\textbf{--}] \textbf{Về sản phẩm:}
+    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+        \item Xây dựng hệ thống Backend hoàn chỉnh cung cấp các API (RESTful \& SSE) theo Kiến trúc Lục giác, phân tách độc lập giữa lõi nghiệp vụ (\texttt{packages/core}) và hạ tầng (\texttt{apps/api}).
+        \item Xây dựng phân hệ tìm kiếm tri thức kết hợp véc-tơ ngữ nghĩa Dense (pgvector HNSW) và từ khóa Sparse (BM25) dung hợp theo thuật toán RRF, tích hợp Cross-Encoder Reranker.
+        \item Xây dựng phân hệ Đồ thị tri thức học thuật (Scholarly Knowledge Graph) tự động trích xuất thực thể khoa học và phát hiện cộng đồng nghiên cứu.
+    \end{itemize}
+\end{itemize}
+
+\newpage
+\thispagestyle{adminform}
+
+% ------------------------------------------------------------------------------
+% TRANG 2 / 3 (Trang iv): Mục tiêu (tiếp) & Các nhiệm vụ cụ thể
+% ------------------------------------------------------------------------------
+\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+    \item[\textbf{--}] \textbf{Về sản phẩm (tiếp theo):}
+    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+        \item Xây dựng phân hệ Soạn thảo trực tuyến tích hợp máy ảo cách ly E2B MicroVM và tác nhân AI ReAct tự động sửa lỗi cú pháp biên dịch LaTeX.
+        \item Xây dựng giao diện web khoa học (React 19, TypeScript) với trình hiển thị PDF đa luồng, hỗ trợ cơ chế tô sáng khung tọa độ Bounding Box thời gian thực.
+    \end{itemize}
+    \item[\textbf{--}] \textbf{Về kiến thức và kỹ năng:}
+    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+        \item Vận dụng kiến thức chuyên ngành: Kỹ nghệ phần mềm, CSDL nâng cao, Kiến trúc hệ thống, Học máy và Xử lý ngôn ngữ tự nhiên.
+        \item Nắm vững quy trình phát triển phần mềm theo phương pháp TDD, bảo đảm 100\% các cổng xác minh chất lượng vượt qua trước khi bàn giao.
+        \item Làm chủ kỹ thuật RAG nâng cao, thiết kế tác nhân AI tự chủ và tối ưu hóa hệ thống dữ liệu lớn.
+        \item Rèn luyện năng lực nghiên cứu độc lập, phân tích tài liệu quốc tế và tư duy giải quyết bài toán liêm chính học thuật.
+    \end{itemize}
+\end{itemize}
+
+\vspace{0.3cm}
+\noindent \textbf{3. Các nhiệm vụ cụ thể của ĐATN}
+\vspace{0.12cm}
+
+Để hoàn thành các mục tiêu đề ra, sinh viên thực hiện các nhiệm vụ cụ thể sau:
+\begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt]
+    \item Khảo sát thực trạng quy trình nghiên cứu, viết và duyệt bài báo khoa học chuẩn quốc tế tại VinUni; xác định các khó khăn về liêm chính học thuật và định dạng văn bản.
+    \item Phân tích và đặc tả chi tiết yêu cầu chức năng và phi chức năng (bảo mật khóa BYOK, Zero Data Retention, độ trễ RAG $\le 1{,}5\text{s}$, độ chính xác kiểm chứng $\text{IoU} \ge 0{,}85$).
+    \item Thiết kế kiến trúc Lục giác (Hexagonal Architecture), mô hình CSDL quan hệ kết hợp pgvector; mô hình hóa các Use Case và biểu đồ tuần tự trọng tâm.
+    \item Cài đặt và hiện thực hóa các dịch vụ Backend bằng Python (FastAPI, pgvector, Langfuse, LiteLLM) và giao diện Frontend bằng TypeScript/React 19.
+    \item Tích hợp máy ảo E2B MicroVM để biên dịch LaTeX cô lập an toàn, ngăn chặn thực thi mã độc hại từ mã nguồn văn bản.
+    \item Triển khai toàn bộ quy trình kiểm thử tự động (TDD) với hơn 330 kịch bản kiểm thử bao phủ toàn bộ các tầng nghiệp vụ và giao diện.
+    \item Đánh giá thực nghiệm hệ thống trên các bài báo thực tế, đo lường độ trễ truy xuất RAG, độ chính xác trích dẫn tọa độ và tỷ lệ tự phục hồi lỗi LaTeX.
+    \item Viết báo cáo tổng kết đồ án tốt nghiệp, chuẩn bị slide thuyết trình và đóng gói sản phẩm hoàn chỉnh để bảo vệ trước Hội đồng.
+\end{enumerate}
+
+\newpage
+\thispagestyle{adminform}
+
+% ------------------------------------------------------------------------------
+% TRANG 3 / 3 (Trang v): Cam đoan của sinh viên & Chữ ký
+% ------------------------------------------------------------------------------
+\vspace*{0.8cm}
+\noindent \textbf{4. Lời cam đoan của sinh viên:}
+\vspace{0.3cm}
+
+Em -- Đàm Mạnh Dũng -- cam kết ĐATN là công trình nghiên cứu của bản thân em, làm dưới sự hướng dẫn của cô TS. Vũ Lan Phương. Các kết quả nêu trên đồ án hoàn toàn là trung thực, không phải là sao chép toàn văn của bất kì công trình nào khác.
+
+\vspace{2.5cm}
+\hfill \textit{Hà Nội, ngày\dots\dots tháng\dots\dots năm 2026}
+\vspace{0.6cm}
+
+\begin{center}
+\begin{tabular}{>{\centering\arraybackslash}p{7.0cm} >{\centering\arraybackslash}p{7.0cm}}
+  \textbf{Xác nhận của GVHD} & \textbf{Tác giả ĐATN} \\[0.3cm]
+  \textit{(Chữ ký)} & \textit{(Chữ ký)} \\[2.8cm]
+  \textbf{TS. Vũ Lan Phương} & \textbf{Đàm Mạnh Dũng} \\
+\end{tabular}
+\end{center}
+
+} % kết thúc setstretch

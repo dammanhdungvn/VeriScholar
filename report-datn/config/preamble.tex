@@ -130,6 +130,15 @@
     }
 }
 
+% Phong cách trang dành cho hồ sơ hành chính đầu khóa (Phiếu giao đề tài, Đề cương)
+% Chỉ hiển thị số trang La Mã ở chân trang góc phải, không có đường kẻ header/footer
+\fancypagestyle{adminform}{
+    \fancyhf{}
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}
+    \renewcommand{\headrule}{}
+    \renewcommand{\footrule}{}
+}
+
 % 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
 \usepackage[titles]{tocloft}
 
