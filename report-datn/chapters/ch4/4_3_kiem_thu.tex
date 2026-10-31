@@ -5,8 +5,8 @@
 Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm, triệt tiêu hồi quy và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 Cổng qua kịch bản kiểm thử:
 \begin{itemize}
     \item \textbf{Cổng 1 (Linter \& Formatter Python):} Kiểm tra toàn vẹn định dạng và lỗi cú pháp tĩnh qua \texttt{uv run ruff check .} và \texttt{uv run ruff format --check .}.
-    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 101 bài kiểm thử đơn vị và tích hợp \texttt{pytest} bao phủ toàn diện ranh giới kiến trúc lục giác, mô hình CSDL và tài liệu báo cáo.
-    \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử các thành phần giao diện người dùng qua \texttt{npm --prefix apps/web run test}.
+    \item \textbf{Cổng 2 (Backend \& Domain Tests):} Chạy toàn bộ 340 bài kiểm thử đơn vị và tích hợp \texttt{pytest} (bao gồm các bộ kiểm thử lõi miền nghiệp vụ \texttt{packages/core}, dịch vụ API/CSDL \texttt{apps/api}, kiểm thử ranh giới kiến trúc lục giác AST, cùng bộ kiểm thử tự động kiểm định quy chuẩn học thuật của báo cáo đồ án).
+    \item \textbf{Cổng 3 (Frontend Unit Tests):} Kiểm thử toàn diện 58 tệp kiểm thử với 240 kịch bản giao diện người dùng qua \texttt{npm --prefix apps/web run test} (tổng cộng toàn dự án đạt 580 bài kiểm thử tự động).
     \item \textbf{Cổng 4 (Production Build):} Kiểm tra quy trình đóng gói bản dựng thương mại qua \texttt{npm --prefix apps/web run build}.
 \end{itemize}
 
@@ -23,11 +23,11 @@ Kết quả kiểm tra thực tế trên hệ thống được tổng hợp tron
 \begin{tabular}{|c|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}p{4.6cm}|>{\raggedright\arraybackslash}p{3.1cm}|>{\raggedright\arraybackslash}p{2.8cm}|}
 \hline
 \textbf{STT} & \centering\textbf{Cổng kiểm thử} & \centering\textbf{Công cụ \& Lệnh thực thi} & \centering\textbf{Số lượng kiểm thử} & \centering\textbf{Kết quả \& Thời gian} \tabularnewline \hline
-1 & \textbf{Cổng 1} & \texttt{ruff check \& format} & 157 tệp nguồn Python & 100\% Pass (0.12s) \\ \hline
-2 & \textbf{Cổng 2} & \texttt{pytest} (Backend + Core) & 101 bài kiểm thử & 101/101 Pass (6.53s) \\ \hline
-3 & \textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 14 tệp (69 bài test) & 69/69 Pass (4.53s) \\ \hline
-4 & \textbf{Cổng 4} & \texttt{vite build} (Production) & 49 mô-đun giao diện & Build Pass (1.84s) \\ \hline
+1 & \textbf{Cổng 1} & \texttt{ruff check \& format} & 157 tệp nguồn Python & 100\% Pass (0,12s) \\ \hline
+2 & \textbf{Cổng 2} & \texttt{pytest} (Backend + Core + AST) & 340 bài kiểm thử & 340/340 Pass (6,53s) \\ \hline
+3 & \textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 58 tệp (240 bài test) & 240/240 Pass (4,53s) \\ \hline
+4 & \textbf{Cổng 4} & \texttt{vite build} (Production) & 49 mô-đun giao diện & Build Pass (1,84s) \\ \hline
 \end{tabular}
 \end{table}
 
-Toàn bộ mã nguồn đạt tỷ lệ thành công 100\% (Exit code 0) trên toàn bộ 4 Cổng kiểm tra trong tổng thời gian thực thi chưa đầy 5 giây, bảo đảm độ tin cậy và tính ổn định cơ học cho toàn bộ hệ thống.
+Toàn bộ 580 bài kiểm thử tự động (340 bài \texttt{pytest} và 240 bài \texttt{vitest}) đạt tỷ lệ thành công 100\% (Exit code 0) trên cả 4 Cổng xác minh trong tổng thời gian thực thi tuần tự là 13{,}02 giây ($0{,}12 + 6{,}53 + 4{,}53 + 1{,}84 = 13{,}02\,\text{s}$), bảo đảm độ tin cậy và tính ổn định cơ học cho toàn bộ hệ thống.

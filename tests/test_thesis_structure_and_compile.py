@@ -214,3 +214,33 @@ def test_thesis_ch4_section_4_2_ui_subsystems():
     ]
     for kw in required_keywords:
         assert kw in content, f"Missing core technical keyword in 4.2: {kw}"
+
+
+def test_thesis_ch4_sections_4_3_and_4_4_remediation():
+    """Kiểm tra chuẩn hóa Chương 4 (Task 6):
+    - ch4_thuc_nghiem.tex cập nhật tiêu đề chương \\chapter{CÀI ĐẶT VÀ KẾT QUẢ THỰC NGHIỆM}.
+    - 4_2_giao_dien.tex loại bỏ '(BYOK) (BYOK)', 'retracted papers', và mô tả sai về lưu trữ BYOK.
+    - 4_3_kiem_thu.tex cập nhật 340 pytest, 240 vitest (tổng 580 test), tổng thời gian 13,02s,
+      loại bỏ 'chưa đầy 5 giây'.
+    - 4_4_so_lieu.tex loại bỏ 'gpt-5.6-luna', bổ sung 2 bảng thực nghiệm đối chứng
+      \\label{tab:ablation_retrieval} và \\label{tab:ablation_latex_healing}.
+    """
+    ch4_main = Path("report-datn/chapters/ch4_thuc_nghiem.tex").read_text(encoding="utf-8")
+    assert "\\chapter{CÀI ĐẶT VÀ KẾT QUẢ THỰC NGHIỆM}" in ch4_main
+
+    sec4_2 = Path("report-datn/chapters/ch4/4_2_giao_dien.tex").read_text(encoding="utf-8")
+    assert "(BYOK) (BYOK)" not in sec4_2
+    assert "retracted papers" not in sec4_2
+    assert "tuyệt đối không bao giờ được ghi xuống cơ sở dữ liệu đĩa cứng" not in sec4_2
+
+    sec4_3 = Path("report-datn/chapters/ch4/4_3_kiem_thu.tex").read_text(encoding="utf-8")
+    assert "13{,}02" in sec4_3 or "13.02" in sec4_3
+    assert "340" in sec4_3
+    assert "240" in sec4_3
+    assert "580" in sec4_3
+    assert "chưa đầy 5 giây" not in sec4_3
+
+    sec4_4 = Path("report-datn/chapters/ch4/4_4_so_lieu.tex").read_text(encoding="utf-8")
+    assert "gpt-5.6-luna" not in sec4_4
+    assert "\\label{tab:ablation_retrieval}" in sec4_4
+    assert "\\label{tab:ablation_latex_healing}" in sec4_4
