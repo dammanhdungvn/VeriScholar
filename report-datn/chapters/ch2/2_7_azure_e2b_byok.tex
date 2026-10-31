@@ -47,7 +47,10 @@ Mô hình Mang theo khóa cá nhân (\textit{Bring Your Own Key -- BYOK}) là gi
 Thuật toán sử dụng khóa bí mật 256 bits ($K$), khóa con băm trường hữu hạn $H = E_K(0^{128})$ và vectơ khởi tạo ngẫu nhiên 96 bits ($\text{IV}$) riêng biệt cho mỗi lần mã hóa. Từ $\text{IV}$ 96 bits, khối bộ đếm khởi đầu 128 bits $J_0$ được xác lập theo đặc tả NIST SP 800-38D là $J_0 = \text{IV} \parallel 0^{31} \parallel 1$. Bản rõ khóa API được mã hóa bằng chế độ bộ đếm GCTR bắt đầu từ $\text{inc}_{32}(J_0)$, đồng thời hàm băm vạn năng $\text{GHASH}_H$ kết hợp dữ liệu xác thực bổ sung ($\text{AAD}$) và bản mã ($C$) rồi thực hiện phép XOR với khối mã hóa $E_K(J_0)$ để tạo ra thẻ xác thực toàn vẹn 128 bits ($T$):
 \begin{equation}
 \label{eq:aes_gcm}
-C = \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad T = \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0), \quad J_0 = \text{IV} \parallel 0^{31} \parallel 1
+\begin{aligned}
+C &= \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad J_0 = \text{IV} \parallel 0^{31} \parallel 1 \\
+T &= \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0)
+\end{aligned}
 \end{equation}
 
 Quy trình giải mã tuân thủ nguyên tắc giải mã tạm thời trong bộ nhớ khả biến (\textit{In-Memory Ephemeral Decryption}): Khóa API bản rõ chỉ được khôi phục cục bộ trong không gian bộ nhớ RAM của tiến trình xử lý ngay tại thời điểm khởi tạo yêu cầu gọi mô hình ngôn ngữ, bị giải phóng ngay sau khi kết thúc phiên suy luận và tuyệt đối không bao giờ được ghi vào nhật ký hệ thống hay các bản ghi giám sát truy vết quan sát (\textit{Observability Traces}).

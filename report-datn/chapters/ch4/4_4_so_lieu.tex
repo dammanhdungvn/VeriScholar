@@ -12,9 +12,17 @@
 
 Nhằm chứng minh tính hiệu quả thực chất của từng thành phần thuật toán thay vì sử dụng hằng số giả lập, dịch vụ \texttt{Benchmark\allowbreak Runner\allowbreak Service} kết hợp bộ chấm điểm \texttt{Okapi\allowbreak BM25\allowbreak Scorer} và hàm hình học \texttt{BoundingBox.\allowbreak compute\_iou} thực hiện hai phép thử nghiệm đối chứng (\textit{Ablation Studies}) xuất kết quả kiểm chứng ra tệp \texttt{docs/\allowbreak benchmarks/\allowbreak thesis\_\allowbreak benchmark\_\allowbreak results.json}.
 
-Trên bộ 36 câu hỏi đối chuẩn vàng (\textit{3-Track Golden Benchmark}), hệ thống đạt tỷ lệ vượt ngưỡng kiểm định 36/36 câu hỏi ($100\%$): nhánh \texttt{advanced\_\allowbreak rag} (12 câu) đạt Groundedness $0{,}9777$, Answer Relevance $0{,}9453$, Citation BBox Precision $0{,}9399$; nhánh \texttt{graph\_\allowbreak rag} (12 câu) đạt Groundedness $0{,}9772$, Answer Relevance $0{,}9463$, Multi-hop Completeness $0{,}9442$; và nhánh \texttt{agentic\_\allowbreak rag} (12 câu) đạt Groundedness $0{,}9776$, Answer Relevance $0{,}9499$, Citation BBox Precision $0{,}9403$. Tính chung toàn bộ 36 câu hỏi, hệ thống đạt Groundedness trung bình $0{,}9775$, Answer Relevance $0{,}9471$, Citation BBox Precision $0{,}9332$ và Multi-hop Completeness $0{,}9208$.
+{\sloppy
+Trên bộ 36 câu hỏi đối chuẩn vàng (\textit{3-Track Golden Benchmark}), hệ thống đạt tỷ lệ vượt ngưỡng kiểm định 36/36 câu hỏi ($100\%$):
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Nhánh \texttt{advanced\_\allowbreak rag} (12 câu): Groundedness $0{,}9777$, Answer Relevance $0{,}9453$, Citation BBox Precision $0{,}9399$.
+    \item Nhánh \texttt{graph\_\allowbreak rag} (12 câu): Groundedness $0{,}9772$, Answer Relevance $0{,}9463$, Multi-hop Completeness $0{,}9442$.
+    \item Nhánh \texttt{agentic\_\allowbreak rag} (12 câu): Groundedness $0{,}9776$, Answer Relevance $0{,}9499$, Citation BBox Precision $0{,}9403$.
+\end{itemize}
+Tính chung toàn bộ 36 câu hỏi, hệ thống đạt Groundedness trung bình $0{,}9775$, Answer Relevance $0{,}9471$, Citation BBox Precision $0{,}9332$ và Multi-hop Completeness $0{,}9208$.
+\par}
 
-Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữa 3 cấu hình truy xuất trên tập 36 truy vấn chuẩn. Kết quả thực nghiệm khẳng định sự kết hợp giữa tìm kiếm dày đặc \texttt{pgvector} HNSW và tìm kiếm từ khóa thưa (\texttt{ts\_rank\_cd} + Okapi BM25) thông qua công thức dung hợp thứ hạng nghịch đảo RRF ($k=60$) cùng bước tái xếp hạng Cross-Encoder giúp nâng chỉ số Recall@5 từ $80{,}56\%$ (Dense-only) và $83{,}33\%$ (Sparse-only) lên mức $94{,}44\%$, đồng thời cải thiện độ chồng lấn hình học trung bình của hộp tọa độ từ $\text{IoU} = 0{,}7865$ lên $\text{IoU} = 0{,}9266 \pm 0{,}0126$ (vượt ngưỡng mục tiêu $\text{IoU} \ge 0{,}85$).
+Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữa 3 cấu hình truy xuất trên tập 36 truy vấn chuẩn. Kết quả thực nghiệm khẳng định sự kết hợp giữa tìm kiếm dày đặc \texttt{pgvector} HNSW và tìm kiếm từ khóa thưa (\texttt{ts\_\allowbreak rank\_\allowbreak cd} + Okapi BM25) thông qua công thức dung hợp thứ hạng nghịch đảo RRF ($k=60$) cùng bước tái xếp hạng Cross-Encoder giúp nâng chỉ số Recall@5 từ $80{,}56\%$ (Dense-only) và $83{,}33\%$ (Sparse-only) lên mức $94{,}44\%$, đồng thời cải thiện độ chồng lấn hình học trung bình của hộp tọa độ từ $\text{IoU} = 0{,}7865$ lên $\text{IoU} = 0{,}9266 \pm 0{,}0126$ (vượt ngưỡng mục tiêu $\text{IoU} \ge 0{,}85$).
 
 \begin{table}[H]
 \centering
@@ -23,8 +31,8 @@ Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữ
 \renewcommand{\arraystretch}{1.22}
 \caption{Kết quả thực nghiệm đối chứng (Ablation Study) giữa các phương pháp truy xuất trên 36 truy vấn chuẩn}
 \label{tab:ablation_retrieval}
-\setlength{\tabcolsep}{2.8pt}
-\begin{tabular}{|>{\raggedright\arraybackslash}p{4.0cm}|c|c|c|c|c|}
+\setlength{\tabcolsep}{2.2pt}
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3.4cm}|c|c|c|c|c|}
 \hline
 \centering\textbf{Cấu hình truy xuất} & \textbf{Recall@5} & \textbf{MRR@10} & \textbf{nDCG@10} & \textbf{Mean BBox IoU} & \textbf{Độ trễ $P_{50}$/$P_{95}$} \tabularnewline \hline
 1. Chỉ Vector dày đặc (\texttt{pgvector} HNSW) & $0{,}8056$ ($80{,}56\%$) & $0{,}7882$ & $0{,}7985$ & $0{,}7865 \pm 0{,}0254$ & $65{,}12$ / $80{,}24\,\text{ms}$ \\ \hline
@@ -33,7 +41,7 @@ Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữ
 \end{tabular}
 \end{table}
 
-Đối với tác tử tự động sửa lỗi biên dịch LaTeX (\texttt{LaTeX\allowbreak SelfHealing\allowbreak Agent}), thực nghiệm đối chứng được tiến hành trên tập kiểm thử gồm $N = 25$ bản thảo LaTeX chứa lỗi thực tế thuộc 5 nhóm: (1) thiếu thẻ đóng hoặc lệch cặp môi trường \texttt{\textbackslash begin}/\texttt{\textbackslash end}, (2) ký tự đặc biệt chưa thoát (\texttt{\%}, \texttt{\_}, \texttt{\&}) trong văn bản và bảng biểu, (3) thiếu dấu \texttt{\$} đóng chế độ toán học hoặc thiếu ngoặc nhọn lệnh \texttt{\textbackslash frac}, (4) thiếu thẻ \texttt{\textbackslash end\{document\}} hoặc thừa ngoặc đóng cấp dòng, và (5) lỗi cấu trúc đa dòng phức hợp trong môi trường \texttt{align}/\texttt{tabular}. Bảng~\ref{tab:ablation_latex_healing} chứng minh sự kết hợp giữa bộ vá lỗi tĩnh (\texttt{\_auto\_patch} + \texttt{apply\_\allowbreak heuristic\_\allowbreak repair}) và bộ sinh bản vá LLM (\texttt{OpenAI\allowbreak ChatCompletions\allowbreak Adapter}) trong đồ thị trạng thái LangGraph ReAct giúp nâng tỷ lệ phục hồi biên dịch thành công từ $44{,}0\%$ (chỉ quy tắc đơn giản) và $84{,}0\%$ (chỉ quy tắc Heuristic) lên mức $96{,}0\%$ ($24/25$ kịch bản) với số vòng lặp sửa lỗi trung bình chỉ $1{,}16$ vòng.
+Đối với tác tử tự động sửa lỗi biên dịch LaTeX (\texttt{LaTeX\allowbreak SelfHealing\allowbreak Agent}), thực nghiệm đối chứng được tiến hành trên tập kiểm thử gồm $N = 25$ bản thảo LaTeX chứa lỗi thực tế thuộc 5 nhóm chuẩn hóa (mỗi nhóm 5 kịch bản): (1) thiếu thẻ đóng hoặc lệch cặp môi trường \texttt{\textbackslash begin}/\texttt{\textbackslash end} (\texttt{UNCLOSED\_\allowbreak ENV}), (2) thiếu ngoặc nhọn đóng hoặc thiếu dấu \texttt{\$} đóng chế độ toán học (\texttt{UNCLOSED\_\allowbreak BRACE\_\allowbreak OR\_\allowbreak MATH}), (3) ký tự đặc biệt chưa thoát (\texttt{\_}, \texttt{\%}, \texttt{\&}) hoặc thiếu chế độ toán học cho chỉ số dưới (\texttt{UNESCAPED\_\allowbreak UNDERSCORE\_\allowbreak OR\_\allowbreak MATH}), (4) lệnh điều khiển chưa định nghĩa (\textit{Undefined control sequence} như \texttt{\textbackslash bold}, \texttt{\textbackslash RR}, \texttt{\textbackslash argmax} -- \texttt{UNDEFINED\_\allowbreak CONTROL\_\allowbreak SEQUENCE}), và (5) thiếu gói lệnh mở rộng (\textit{File `...sty' not found} như \texttt{amsmath}, \texttt{booktabs}, \texttt{graphicx}) hoặc lỗi cấu trúc đa dòng liên hoàn (\texttt{MISSING\_\allowbreak PACKAGE\_\allowbreak OR\_\allowbreak CASCADING}). Bảng~\ref{tab:ablation_latex_healing} chứng minh sự kết hợp giữa bộ vá lỗi tĩnh (\texttt{\_auto\_patch} + \texttt{apply\_\allowbreak heuristic\_\allowbreak repair}) và bộ sinh bản vá LLM (\texttt{OpenAI\allowbreak ChatCompletions\allowbreak Adapter}) trong đồ thị trạng thái LangGraph ReAct giúp nâng tỷ lệ phục hồi biên dịch thành công từ $44{,}0\%$ (chỉ quy tắc đơn giản) và $84{,}0\%$ (chỉ quy tắc Heuristic) lên mức $96{,}0\%$ ($24/25$ kịch bản) với số vòng lặp sửa lỗi trung bình chỉ $1{,}16$ vòng.
 
 \begin{table}[H]
 \centering

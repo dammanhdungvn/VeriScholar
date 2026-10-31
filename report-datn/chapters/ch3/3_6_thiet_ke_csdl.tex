@@ -12,8 +12,8 @@ Cơ sở dữ liệu của hệ thống \VS\ được thiết kế bám sát đ�
     \item \textbf{Phân hệ Định danh \& Bảo mật Khóa (Module 1 -- Auth \& BYOK):} Quản lý tài khoản học giả, mật khẩu băm, mã định danh ORCID iD, hồ sơ chuyên môn và kho khóa API cá nhân (BYOK) mã hóa đối xứng phân tầng AES-256-GCM.
     \item \textbf{Phân hệ Lưu trữ CAS, Thư viện \& Trích xuất Tài liệu (Module 2 -- CAS Storage, Library \& Chunks):} Quản lý khối tệp nhị phân theo mã băm SHA-256 Deduplication, tổ chức cây thư mục cá nhân, hồ sơ siêu dữ liệu bài báo, bản tóm tắt cấu trúc, phân đoạn văn bản kèm tọa độ Bounding Box, vector nhúng và danh mục tài liệu tham khảo đối chiếu chéo.
     \item \textbf{Phân hệ Hội thoại Nghiên cứu \& Đọc sâu (Module 3 -- Research Sessions \& Notes):} Quản lý phiên làm việc đa tài liệu, bảng liên kết tài liệu trong phiên, lịch sử hỏi đáp tăng cường truy xuất Hybrid RAG và ghi chú học thuật có neo giữ tọa độ.
-    \item \textbf{Phân hệ Đồ thị Tri thức Học thuật \& Wiki Liên kết (Module 4 -- GraphRAG \& Academic Wiki):} Lưu trữ mạng lưới đồ thị tri thức 4 thực thể (\texttt{graph\_nodes}, \texttt{graph\_edges}), bản tóm tắt phân cụm cộng đồng Louvain theo thư mục (\texttt{folder\_community\_summaries}) và các trang Wiki học thuật liên kết hai chiều (\texttt{wiki\_pages}).
-    \item \textbf{Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Module 5 -- Agentic Writing):} Lưu trữ bản thảo LaTeX chuẩn hội nghị IEEE/ACM (\texttt{drafts}), tài nguyên hình ảnh đính kèm (\texttt{draft\_assets}) và nhật ký tương tác với Agent tự động sửa lỗi biên dịch (\texttt{draft\_messages}).
+    \item \textbf{Phân hệ Đồ thị Tri thức \& Wiki Liên kết (GraphRAG):} Lưu trữ mạng lưới đồ thị 4 thực thể (\texttt{graph\_\allowbreak nodes}, \texttt{graph\_\allowbreak edges}), phân cụm Louvain (\texttt{folder\_\allowbreak community\_\allowbreak summaries}) và các trang Wiki học thuật liên kết (\texttt{wiki\_\allowbreak pages}).
+    \item \textbf{Phân hệ Soạn thảo Học thuật \& Đồng tác giả AI (Module 5 -- Agentic Writing):} Lưu trữ bản thảo LaTeX chuẩn hội nghị IEEE/ACM (\texttt{drafts}), tài nguyên hình ảnh đính kèm (\texttt{draft\_\allowbreak assets}) và nhật ký tương tác với Agent tự động sửa lỗi biên dịch (\texttt{draft\_\allowbreak messages}).
 \end{enumerate}
 
 Toàn bộ 20 bảng cơ sở dữ liệu thực tế của hệ thống \VS\ được tổng hợp chi tiết theo 5 phân hệ trong Bảng~\ref{tab:db_tables_summary}.
@@ -177,7 +177,7 @@ Bảng documents quản lý thông tin thư mục, tác giả, năm xuất bản
 \textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh tài liệu học thuật \tabularnewline \hline
 2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại liên kết với học giả sở hữu \tabularnewline \hline
-3 & blob\_id & UUID & FK $\to$ document\_\allowbreak storage\_blobs(id) & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
+3 & blob\_id & UUID & FK $\to$ document\_\allowbreak storage\_\allowbreak blobs(id) & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
 4 & folder\_id & UUID & FK $\to$ folders(id), Null & Khóa ngoại liên kết thư mục chứa \tabularnewline \hline
 5 & title & TEXT & Not Null & Tiêu đề bài báo khoa học đã chuẩn hóa \tabularnewline \hline
 6 & doi & VARCHAR(128) & Index, Null & Mã định danh đối tượng số (DOI) quốc tế \tabularnewline \hline
@@ -355,8 +355,8 @@ Bảng graph\_edges lưu trữ các cạnh quan hệ có hướng giữa các th
 1 & id & UUID & PK, Not Null & Khóa chính định danh cạnh quan hệ \tabularnewline \hline
 2 & user\_id & UUID & FK $\to$ users(id) & Khóa ngoại phân vùng học giả sở hữu \tabularnewline \hline
 3 & document\_id & UUID & FK $\to$ documents(id), Null & Khóa ngoại tới bài báo chứa quan hệ \tabularnewline \hline
-4 & source\_node\_id & UUID & FK $\to$ graph\_nodes(id) & Khóa ngoại trỏ tới nút thực thể nguồn \tabularnewline \hline
-5 & target\_node\_id & UUID & FK $\to$ graph\_nodes(id) & Khóa ngoại trỏ tới nút thực thể đích \tabularnewline \hline
+4 & source\_node\_id & UUID & FK $\to$ graph\_\allowbreak nodes(id) & Khóa ngoại trỏ tới nút thực thể nguồn \tabularnewline \hline
+5 & target\_node\_id & UUID & FK $\to$ graph\_\allowbreak nodes(id) & Khóa ngoại trỏ tới nút thực thể đích \tabularnewline \hline
 6 & edge\_type & VARCHAR(30) & Check, Not Null & Loại quan hệ (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}) \tabularnewline \hline
 7 & weight & FLOAT & Default 1.0 & Trọng số tin cậy của liên kết học thuật \tabularnewline \hline
 8 & evidence\_\allowbreak chunk\_id & UUID & FK $\to$ document\_\allowbreak chunks(id), Null & Khóa ngoại tới phân đoạn văn bản bằng chứng \tabularnewline \hline
@@ -409,7 +409,7 @@ Bảng wiki\_pages lưu trữ các trang tri thức học thuật biên dịch t
 4 & slug & VARCHAR(255) & Not Null & Định danh đường dẫn tĩnh duy nhất theo người dùng \tabularnewline \hline
 5 & title & VARCHAR(255) & Not Null & Tiêu đề trang tri thức học thuật \tabularnewline \hline
 6 & page\_type & VARCHAR(50) & Default 'topic' & Phân loại trang (\texttt{method}, \texttt{dataset}, \texttt{topic}, \texttt{comparison}) \tabularnewline \hline
-7 & markdown\_content & TEXT & Not Null & Nội dung bài tổng hợp định dạng Markdown \tabularnewline \hline
+7 & markdown\_\allowbreak content & TEXT & Not Null & Nội dung bài tổng hợp định dạng Markdown \tabularnewline \hline
 8 & yaml\_metadata & JSONB & Not Null & Siêu dữ liệu cấu trúc YAML đầu trang \tabularnewline \hline
 9 & wikilinks & JSONB & Not Null & Danh sách liên kết chéo hai chiều \texttt{[[wikilinks]]} \tabularnewline \hline
 10 & embedding & VECTOR(1536) & Null & Vector nhúng ngữ nghĩa của trang Wiki \tabularnewline \hline
@@ -682,7 +682,9 @@ Từ các bảng cơ sở dữ liệu và các ràng buộc toàn vẹn khóa ch
 
 Bên cạnh lược đồ thực thể quan hệ RDBMS chuẩn mực nêu trên, để hỗ trợ năng lực suy luận ngữ nghĩa của AI Agent và khám phá mạng lưới học thuật ngay trong cùng một không gian giao dịch ACID, hệ thống tích hợp trực tiếp hai cơ chế chỉ mục và truy vấn đồ thị chuyên biệt trên PostgreSQL 16:
 
+{\sloppy
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Chỉ mục Không gian Vector và Từ vựng Toàn văn (Hybrid Vector \& Lexical Store):} Nhằm phục vụ truy xuất tương đồng ngữ nghĩa kết hợp từ khóa trong kiến trúc Hybrid Search, cột \texttt{embedding} (1536 chiều) của bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được quản lý thông qua tiện ích mở rộng \texttt{pgvector} với chỉ mục phân cấp \texttt{HNSW} (\texttt{vector\_cosine\_ops}), song hành cùng chỉ mục đảo \texttt{GIN} trên cột \texttt{content\_tsv} (\texttt{TSVECTOR}).
-    \item \textbf{Mô hình Đồ thị Tri thức Đa thực thể (Graph Knowledge Store):} Phục vụ cho tính năng GraphRAG, các thực thể thuộc 4 nhóm (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và 4 loại cạnh quan hệ (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}) được trích xuất tự động bằng cơ chế ép kiểu lược đồ đầu ra \texttt{OpenAI Structured Outputs} (kết hợp bộ quy tắc dự phòng \texttt{Rule Fallback}) và lưu trữ trực tiếp vào hai bảng \texttt{graph\_nodes}, \texttt{graph\_edges}. Trên cấu trúc lưu trữ này, các truy vấn lan truyền đa bước nhảy (2-hop Graph Traversal) được thực thi thông qua biểu thức bảng chung \texttt{SQL CTE} (\textit{Common Table Expressions}), kết hợp cùng thuật toán phân cụm cộng đồng Louvain lưu vào \texttt{folder\_community\_summaries} và \texttt{wiki\_pages}, cho phép học giả đối chiếu liên tài liệu tức thời.
+    \item \textbf{Chỉ mục Không gian Vector và Từ vựng Toàn văn (Hybrid Vector \& Lexical Store):} Nhằm phục vụ truy xuất tương đồng ngữ nghĩa kết hợp từ khóa trong kiến trúc Hybrid Search, cột \texttt{embedding} (1536 chiều) của bảng \texttt{document\_\allowbreak chunks}, \texttt{graph\_\allowbreak nodes}, \texttt{folder\_\allowbreak community\_\allowbreak summaries} và \texttt{wiki\_\allowbreak pages} được quản lý bằng tiện ích mở rộng \texttt{pgvector} với chỉ mục phân cấp \texttt{HNSW} (\texttt{vector\_\allowbreak cosine\_\allowbreak ops}), song hành cùng chỉ mục đảo \texttt{GIN} trên cột \texttt{content\_\allowbreak tsv} (\texttt{TSVECTOR}).
+    \item \textbf{Mô hình Đồ thị Tri thức Đa thực thể (Graph Knowledge Store):} Phục vụ cho tính năng GraphRAG, các thực thể thuộc 4 nhóm (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{Metric\allowbreak Result}) và 4 loại cạnh quan hệ (\texttt{PROPOSES}, \texttt{EVALUATED\_\allowbreak ON}, \texttt{ACHIEVES}, \texttt{CITES}) được trích xuất tự động bằng cơ chế ép kiểu lược đồ đầu ra \texttt{OpenAI Structured Outputs} (kết hợp bộ quy tắc dự phòng \texttt{Rule Fallback}) và lưu trữ trực tiếp vào hai bảng \texttt{graph\_\allowbreak nodes}, \texttt{graph\_\allowbreak edges}. Trên cấu trúc lưu trữ này, các truy vấn lan truyền đa bước nhảy (2-hop Graph Traversal) được thực thi qua biểu thức bảng chung \texttt{SQL CTE} (\textit{Common Table Expressions}), kết hợp phân cụm Louvain lưu vào \texttt{folder\_\allowbreak community\_\allowbreak summaries} và \texttt{wiki\_\allowbreak pages}, cho phép học giả đối chiếu liên tài liệu tức thời.
 \end{enumerate}
+\par}

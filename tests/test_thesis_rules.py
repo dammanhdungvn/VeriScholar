@@ -317,7 +317,7 @@ def test_chapter3_database_and_analysis_remediation():
     assert "nhóm nghiên cứu" not in ch3_1
     assert "nhóm nghiên cứu" not in ch3_2
 
-    ch3_2_norm = ch3_2.replace("\\_", "_")
+    ch3_2_norm = ch3_2.replace("\\allowbreak ", "").replace("\\allowbreak", "").replace("\\_", "_")
     for algo_token in [
         "mid_x",
         "250",

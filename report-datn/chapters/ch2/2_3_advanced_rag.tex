@@ -231,7 +231,7 @@ Trong hệ thống truy xuất tài liệu khoa học, hai phương pháp tìm k
     \label{eq:bm25}
     \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
     \end{equation}
-    trong đó $f(q_i, D)$ là tần suất từ $q_i$ trong tài liệu $D$, $|D|$ là độ dài tài liệu, $\text{avgdl}$ là độ dài trung bình, $k_1 = 1.2$ và $b = 0.75$. \\
+    trong đó $f(q_i, D)$ là tần suất từ $q_i$ trong tài liệu $D$, $|D|$ là độ dài tài liệu, $\text{avgdl}$ là độ dài trung bình, $k_1 = 1{,}5$ (trong dải tiêu chuẩn $[1{,}2;\, 2{,}0]$) và $b = 0{,}75$. \\
     \textit{Ưu điểm:} Khớp chính xác tuyệt đối các mã định danh, số hiệu phương trình và thuật ngữ riêng biệt. \\
     \textit{Nhược điểm:} Hoàn toàn bất lực trước hiện tượng đồng nghĩa hoặc câu hỏi diễn giải bằng ngôn từ khác.
 \end{enumerate}

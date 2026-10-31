@@ -837,6 +837,9 @@ class BenchmarkRunnerService:
 
     def _build_corpus_documents(self) -> list[str]:
         """Build deterministic scholarly corpus from Landmark Papers and Golden Rubrics."""
+        cached = getattr(self, "_cached_corpus_docs", None)
+        if cached is not None:
+            return cached
         docs: list[str] = []
         for q in GOLDEN_BENCHMARK_QUESTIONS:
             docs.append(
@@ -859,6 +862,7 @@ class BenchmarkRunnerService:
                 f"{' '.join(paper.get('authors', []))} "
                 f"{paper.get('abstract', '')} {methods_str} {datasets_str} {metrics_str}"
             )
+        self._cached_corpus_docs = docs
         return docs
 
     @staticmethod
@@ -1032,16 +1036,25 @@ class BenchmarkRunnerService:
         baseline: dict[str, float] | None = None,
     ) -> BenchmarkScores:
         """Call LLM judge to evaluate candidate answer or delegate to algorithmic scorer."""
-        if self.openai_client is not None:
+        client = self.openai_client
+        if client is None and settings.OPENAI_API_KEY and settings.ENVIRONMENT != "test":
+            try:
+                from openai import AsyncOpenAI
+
+                client = AsyncOpenAI(api_key=settings.OPENAI_API_KEY)
+            except Exception:
+                client = None
+
+        if client is not None:
             create_fn = None
             if (
-                hasattr(self.openai_client, "chat")
-                and hasattr(self.openai_client.chat, "completions")
-                and hasattr(self.openai_client.chat.completions, "create")
+                hasattr(client, "chat")
+                and hasattr(client.chat, "completions")
+                and hasattr(client.chat.completions, "create")
             ):
-                create_fn = self.openai_client.chat.completions.create
-            elif hasattr(self.openai_client, "chat_completions_create"):
-                create_fn = self.openai_client.chat_completions_create
+                create_fn = client.chat.completions.create
+            elif hasattr(client, "chat_completions_create"):
+                create_fn = client.chat_completions_create
 
             if create_fn is not None:
                 model_name = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
@@ -1076,7 +1089,11 @@ class BenchmarkRunnerService:
                         msg.get("content") if isinstance(msg, dict) else None
                     )
                     if isinstance(content, str) and content.strip():
-                        parsed = json.loads(content.strip())
+                        cleaned = content.strip()
+                        if cleaned.startswith("```"):
+                            cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned)
+                            cleaned = re.sub(r"\s*```$", "", cleaned)
+                        parsed = json.loads(cleaned.strip())
                         if isinstance(parsed, dict) and all(
                             k in parsed
                             for k in (
