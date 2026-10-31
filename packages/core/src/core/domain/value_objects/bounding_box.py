@@ -86,3 +86,17 @@ class BoundingBox(BaseModel):
         return not (
             self.x1 <= other.x0 or self.x0 >= other.x1 or self.y1 <= other.y0 or self.y0 >= other.y1
         )
+
+    def compute_iou(self, other: "BoundingBox") -> float:
+        """Compute geometric Intersection over Union (IoU) with another box on the same page."""
+        if not self.intersects(other):
+            return 0.0
+        inter_x0 = max(self.x0, other.x0)
+        inter_y0 = max(self.y0, other.y0)
+        inter_x1 = min(self.x1, other.x1)
+        inter_y1 = min(self.y1, other.y1)
+        inter_area = max(0.0, inter_x1 - inter_x0) * max(0.0, inter_y1 - inter_y0)
+        union_area = self.area + other.area - inter_area
+        if union_area <= 0.0:
+            return 0.0
+        return inter_area / union_area
