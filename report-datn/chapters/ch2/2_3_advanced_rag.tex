@@ -82,11 +82,11 @@ Kiến trúc RAG truyền thống (\textit{Naive RAG}) vận hành qua ba pha tu
 \label{subsec:advanced_rag_la_gi}
 Mặc dù Naive RAG giải quyết được vấn đề cập nhật thông tin, mô hình này bộc lộ nhiều điểm nghẽn khi áp dụng vào tài liệu học thuật: việc cắt đoạn cố định làm đứt gãy ngữ cảnh, tìm kiếm vector đơn lẻ bỏ sót thuật ngữ chuyên ngành, và câu trả lời dễ lẫn tạp thông tin nhiễu.
 
-Advanced RAG (RAG Nâng cao) ra đời nhằm khắc phục triệt để các hạn chế trên thông qua việc tái cấu trúc toàn diện quy trình truy xuất tri thức thành ba giai đoạn tinh chỉnh chuyên sâu \cite{asai2023selfrag, yan2024crag}:
+Theo phân loại chuẩn tắc của Gao và cộng sự \cite{gao2023rag}, Advanced RAG (RAG Nâng cao) ra đời nhằm khắc phục triệt để các hạn chế của Naive RAG thông qua việc tái cấu trúc toàn diện quy trình truy xuất tri thức thành ba giai đoạn tinh chỉnh chuyên sâu \cite{gao2023rag, asai2023selfrag, yan2024crag}:
 \begin{enumerate}[label=\textbf{(\arabic*)}, noitemsep, topsep=1pt]
-    \item \textbf{Tiền truy xuất (\textit{Pre-Retrieval}):} Viết lại truy vấn (\textit{Query Rewriting}), phân rã câu hỏi phụ (\textit{Sub-queries}) và phân đoạn văn bản theo cấu trúc hai cột.
-    \item \textbf{Truy xuất (\textit{Retrieval}):} Tìm kiếm lai (\textit{Hybrid Search}) kết hợp vector đa chiều và từ khóa BM25 để tối ưu hóa độ phủ tri thức.
-    \item \textbf{Hậu truy xuất (\textit{Post-Retrieval}):} Tái xếp hạng (\textit{Re-ranking}), nén chọn lọc ngữ cảnh và kiểm chứng trích dẫn tọa độ Bounding Box.
+    \item \textbf{Tiền truy xuất (\textit{Pre-Retrieval}):} Viết lại truy vấn (\textit{Query Rewriting}), phân rã câu hỏi phụ (\textit{Sub-queries}), phân tích bố cục tài liệu khoa học hai cột (\textit{Two-Column PDF Layout Analysis}) bằng cách phân tách ranh giới hình học cột trái/phải theo ngưỡng hoành độ tâm khối để tránh trộn dòng ngang, và chuẩn hóa tọa độ khung bao (\textit{Bounding Box Normalization}) về miền tỷ lệ không thứ nguyên $[0, 1]$ thông qua phép biến đổi $(x_0/W, y_0/H, x_1/W, y_1/H)$ theo chiều rộng $W$ và chiều cao $H$ của trang PDF.
+    \item \textbf{Truy xuất (\textit{Retrieval}):} Tìm kiếm lai (\textit{Hybrid Search}) kết hợp vector đa chiều và từ khóa thưa để tối ưu hóa độ phủ tri thức.
+    \item \textbf{Hậu truy xuất (\textit{Post-Retrieval}):} Tái xếp hạng chéo (\textit{Cross-Encoder Reranking}) chấm điểm tương tác toàn phần giữa cặp truy vấn -- đoạn văn nhằm lọc nhiễu ngữ nghĩa, nén chọn lọc ngữ cảnh và kiểm chứng trích dẫn tọa độ Bounding Box.
 \end{enumerate}
 
 Kiến trúc Advanced RAG phối hợp đa Agent điều phối được mô hình hóa trong Hình~\ref{fig:advanced_rag}.
@@ -225,8 +225,8 @@ Trong hệ thống truy xuất tài liệu khoa học, hai phương pháp tìm k
     \textit{Ưu điểm:} Bắt trọn được ngữ nghĩa khái quát, các khái niệm tương đương và từ đồng nghĩa mà không cần trùng khớp mặt chữ chính xác. \\
     \textit{Nhược điểm:} Thường hoạt động kém hiệu quả đối với các thuật ngữ chuyên ngành hiếm gặp, tên riêng tác giả, mã số DOI, hoặc các công thức toán học đặc thù.
 
-    \item \textbf{Truy xuất từ khóa thưa (\textit{Sparse Keyword Retrieval -- BM25}):}
-    Dựa trên tần suất xuất hiện của từ khóa ($TF$) kết hợp với nghịch đảo tần suất xuất hiện trong toàn bộ kho tài liệu ($IDF$) theo thuật toán chuẩn hóa BM25 \cite{robertson1995}:
+    \item \textbf{Truy xuất từ khóa thưa hai pha (\textit{Two-Stage Sparse Keyword Retrieval -- GIN \texttt{ts\_rank\_cd} \& Okapi BM25}):}
+    Trong cơ sở dữ liệu PostgreSQL, việc truy xuất từ khóa thưa được thực hiện qua cơ chế hai pha bổ trợ: pha đầu tiên sử dụng chỉ mục đảo tổng quát GIN trên kiểu dữ liệu \texttt{tsvector} kết hợp hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để lọc nhanh tập ứng viên tiềm năng; pha thứ hai tái chấm điểm chính xác tập ứng viên dựa trên tần suất từ khóa ($TF$) và nghịch đảo tần suất tài liệu ($IDF$) theo công thức chuẩn hóa Okapi BM25 \cite{robertson1995}:
     \begin{equation}
     \label{eq:bm25}
     \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
@@ -247,13 +247,13 @@ Bảng~\ref{tab:search_comparison} so sánh đối chiếu đặc tính vận h�
 \hline
 \textbf{Tiêu chí so sánh} & \textbf{Dense Vector (Cosine HNSW)} & \textbf{Sparse Keyword (BM25 GIN)} \\
 \hline
-\textbf{Không gian biểu diễn} & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc \\
+\textbf{Không gian biểu diễn} & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc (\texttt{tsvector}) \\
 \hline
 \textbf{Khả năng hiểu ngữ nghĩa} & Xuất sắc: Bắt được từ đồng nghĩa, ẩn dụ & Kém: Chỉ dựa trên trùng khớp ký tự \\
 \hline
 \textbf{Độ chính xác thuật ngữ} & Trung bình: Dễ bị nhiễu với từ viết tắt & Xuất sắc: Khớp tuyệt đối DOI, tên riêng \\
 \hline
-\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng HNSW & Danh sách nghịch đảo (Inverted Index) \\
+\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng HNSW & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + tái chấm điểm BM25 \\
 \hline
 \end{tabular}
 \caption{So sánh đặc tính giữa tìm kiếm ngữ nghĩa Dense Vector và từ khóa BM25}
@@ -265,7 +265,7 @@ Bảng~\ref{tab:search_comparison} so sánh đối chiếu đặc tính vận h�
 \label{eq:rrf_calc}
 \text{RRF\_Score}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
 \end{equation}
-trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ hạng nguyên của tài liệu $d$ trong danh sách trả về từ phương pháp $m$ ($r_m(d) \ge 1$), và $k = 60$ là hằng số làm mịn chuẩn hóa học thuật giúp cân bằng điểm số giữa các vị trí dẫn đầu. 
+trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ hạng nguyên của tài liệu $d$ trong danh sách trả về từ phương pháp $m$ ($r_m(d) \ge 1$), và $k = 60$ là hằng số làm mịn chuẩn hóa học thuật giúp cân bằng điểm số giữa các vị trí dẫn đầu. Sau bước hợp nhất RRF, danh sách ứng viên hội tụ tiếp tục được đưa qua mô hình tái xếp hạng chéo (\textit{Cross-Encoder}) hoặc hàm điều chỉnh mật độ từ khóa để xác lập thứ tự ưu tiên cuối cùng trước khi nạp vào cửa sổ ngữ cảnh của mô hình ngôn ngữ.
 
 Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính điểm định lượng phân hạng được thể hiện trực quan trong Hình~\ref{fig:hybrid_search_rrf}.
 
@@ -307,7 +307,7 @@ Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính đi
     % Thành phần 2: Sparse Search (Phía bên phải của Khung Hybrid Search)
     \node[box_sparse, text width=6.0cm, align=center, inner sep=5pt] (card_sparse) at (3.7, 3.4) {
         {\bfseries\footnotesize\color{blue!90!black} (2) Sparse Keyword Search (Từ khóa)}\\[1pt]
-        {\scriptsize\color{blue!80!black} Danh sách nghịch đảo, thuật toán chuẩn hóa BM25 GIN}\\[6pt]
+        {\scriptsize\color{blue!80!black} Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + tái chấm điểm BM25}\\[6pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\text{BM25} = 14{,}2$)};}\\[3pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 2: $\text{BM25} = 11{,}8$)};}\\[3pt]
         \tikz{\node[item_box, text width=5.4cm] {\textbf{Chunk 4} \hfill \scriptsize (Hạng 3: $\text{BM25} = 9{,}5$)};}\\[3pt]
@@ -323,12 +323,12 @@ Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính đi
     % 3. TẦNG 2: ĐỘNG CƠ HỢP NHẤT XẾP HẠNG RRF (RRF SCORES ENGINE - Ở GIỮA)
     \node[box_rrf, text width=14.2cm, align=center, inner sep=6pt] (card_rrf) at (0, -1.8) {
         {\bfseries\normalsize Động cơ Hợp nhất Xếp hạng (RRF Scores Engine)}\\[2pt]
-        {\scriptsize Công thức Reciprocal Rank Fusion: $\displaystyle \text{Score}_{\text{RRF}}(d) = \sum_{m \in \{\text{Dense},\, \text{Sparse}\}} \frac{1}{k + r_m(d)} \quad (k = 0 \text{ dùng để minh họa})$}\\[6pt]
+        {\scriptsize Công thức Reciprocal Rank Fusion: $\displaystyle \text{Score}_{\text{RRF}}(d) = \sum_{m \in \{\text{Dense},\, \text{Sparse}\}} \frac{1}{k + r_m(d)} \quad (k = 60)$}\\[6pt]
         \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
-            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 1}\\[2pt] $\frac{1}{1} + \frac{1}{1} = \mathbf{2{,}00}$};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 2}\\[2pt] $\frac{1}{3} + \frac{1}{2} = \mathbf{0{,}83}$};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 3}\\[2pt] $\frac{1}{2} + \frac{1}{4} = \mathbf{0{,}75}$};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 4}\\[2pt] $\frac{1}{4} + \frac{1}{3} = \mathbf{0{,}58}$};}
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 1}\\[2pt] $\frac{1}{60+1} + \frac{1}{60+1} = \mathbf{0{,}0328}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 2}\\[2pt] $\frac{1}{60+3} + \frac{1}{60+2} = \mathbf{0{,}0320}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 3}\\[2pt] $\frac{1}{60+2} + \frac{1}{60+4} = \mathbf{0{,}0318}$};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white] {\textbf{Chunk 4}\\[2pt] $\frac{1}{60+4} + \frac{1}{60+3} = \mathbf{0{,}0315}$};}
         \end{tabular}
     };
 
@@ -343,10 +343,10 @@ Quy trình tìm kiếm lai kết hợp thuật toán RRF và cơ chế tính đi
         {\bfseries\normalsize\color{teal!90!black} Thứ hạng Lai Hợp nhất Tối ưu (Optimal Hybrid Rank)}\\[2pt]
         {\scriptsize Danh sách các đoạn trích dẫn khoa học có trọng số hội tụ cao nhất nạp vào mô hình LLM}\\[6pt]
         \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
-            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 1] Chunk 1}\\[2pt]\scriptsize Điểm RRF: \textbf{2{,}00}};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 2] Chunk 2}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}83}};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 3] Chunk 3}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}75}};} &
-            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 4] Chunk 4}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}58}};}
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 1] Chunk 1}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}0328}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 2] Chunk 2}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}0320}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 3] Chunk 3}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}0318}};} &
+            \tikz{\node[item_box, text width=2.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 4] Chunk 4}\\[2pt]\scriptsize Điểm RRF: \textbf{0{,}0315}};}
         \end{tabular}
     };
 

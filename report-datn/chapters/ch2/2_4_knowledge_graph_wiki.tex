@@ -4,7 +4,7 @@
 
 \subsection{GraphRAG là gì?}
 \label{subsec:graphrag_la_gi}
-GraphRAG (\textit{Graph-based Retrieval-Augmented Generation}) là bước tiến hóa mang tính đột phá kết hợp giữa Đồ thị tri thức (\textit{Knowledge Graph}) và quy trình tạo sinh tăng cường truy xuất (RAG), do nhóm nghiên cứu của Darren Edge tại Microsoft Research đề xuất năm 2024 \cite{edge2024}. Hạn chế lớn nhất của RAG vector truyền thống là việc xử lý các đoạn văn bản rời rạc, hoàn toàn bất lực trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn như: \textit{''Những phương pháp nào đã được thử nghiệm trên bộ dữ liệu ImageNet và đạt độ chính xác trên 90\%?''}). Khi đó, thông tin bị phân mảnh ở nhiều bài báo khác nhau khiến cơ chế tìm kiếm tương đồng vector đơn lẻ bỏ sót phần lớn các mối liên hệ ngữ nghĩa chéo.
+GraphRAG (\textit{Graph-based Retrieval-Augmented Generation}) là bước tiến hóa mang tính đột phá kết hợp giữa Đồ thị tri thức (\textit{Knowledge Graph}) và quy trình tạo sinh tăng cường truy xuất (RAG), do Darren Edge và cộng sự tại Microsoft Research đề xuất năm 2024 \cite{edge2024}. Hạn chế lớn nhất của RAG vector truyền thống là việc xử lý các đoạn văn bản rời rạc, hoàn toàn bất lực trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn như: \textit{''Những phương pháp nào đã được thử nghiệm trên bộ dữ liệu ImageNet và đạt độ chính xác trên 90\%?''}). Khi đó, thông tin bị phân mảnh ở nhiều bài báo khác nhau khiến cơ chế tìm kiếm tương đồng vector đơn lẻ bỏ sót phần lớn các mối liên hệ ngữ nghĩa chéo.
 
 GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đổi toàn bộ kho tài liệu khoa học thành đồ thị thực thể, sau đó kết hợp sức mạnh truy xuất cấu trúc đồ thị với tìm kiếm vector đa chiều. Mô hình kiến trúc toàn trình của GraphRAG được mô phỏng chi tiết trong Hình~\ref{fig:graphrag_arch}.
 
@@ -93,28 +93,27 @@ GraphRAG giải quyết triệt để bài toán này bằng cách chuyển đ�
 Nhờ sự kết hợp này, hệ thống hỗ trợ cơ chế truy xuất hai cấp độ bổ trợ nhau:
 \begin{itemize}
     \item \textbf{Truy xuất mức cục bộ (\textit{Low-Level / Local Retrieval}):} Khai thác các liên kết láng giềng trực tiếp của thực thể trong đồ thị để đối chiếu chính xác chỉ số thực nghiệm, công thức toán học hoặc tọa độ trích dẫn trong từng bài báo.
-    \item \textbf{Truy xuất mức toàn cục (\textit{High-Level / Global Retrieval}):} Áp dụng thuật toán phân cụm cộng đồng phân tầng (\textit{Leiden}) \cite{traag2019leiden} để tổng hợp các báo cáo tóm tắt vĩ mô, cho phép trả lời các câu hỏi so sánh liên ngành, phân tích xu hướng và phát hiện khoảng trống nghiên cứu (\textit{Research Gaps}).
+    \item \textbf{Truy xuất mức toàn cục (\textit{High-Level / Global Retrieval}):} Áp dụng thuật toán phát hiện cộng đồng bằng tối ưu hóa độ mô-đun Louvain (\textit{Louvain Modularity Optimization}) \cite{blondel2008louvain} (cùng hướng mở rộng lý thuyết sang thuật toán phân cụm cộng đồng phân tầng Leiden \cite{traag2019leiden}) để gom nhóm các thực thể có mật độ liên kết cao và biên dịch các bản tóm tắt cộng đồng vĩ mô, cho phép trả lời các câu hỏi so sánh liên ngành, phân tích xu hướng và phát hiện khoảng trống nghiên cứu (\textit{Research Gaps}).
 \end{itemize}
 
 \subsection{Knowledge Graph là gì? (Đồ thị tri thức)}
 \label{subsec:knowledge_graph}
-Đồ thị tri thức (\textit{Knowledge Graph}) là mô hình toán học biểu diễn mạng lưới tri thức dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}, trong đó tập đỉnh $V$ đại diện cho các thực thể thế giới thực (\textit{Entities}) và tập cạnh $E$ đại diện cho các mối quan hệ ngữ nghĩa kết nối giữa các thực thể đó (\textit{Semantic Relations}). Tri thức trong đồ thị thường được tổ chức theo cấu trúc bộ ba vị ngữ chuẩn (\textit{Subject -- Predicate -- Object Triples}), ví dụ: $(\text{Transformer}) \xrightarrow{\text{được đề xuất bởi}} (\text{Vaswani et al.})$ \cite{vaswani2017}.
+Đồ thị tri thức (\textit{Knowledge Graph}) là mô hình toán học biểu diễn mạng lưới tri thức dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}, trong đó tập đỉnh $V$ đại diện cho các thực thể thế giới thực (\textit{Entities}) và tập cạnh $E$ đại diện cho các mối quan hệ ngữ nghĩa kết nối giữa các thực thể đó (\textit{Semantic Relations}). Tri thức trong đồ thị thường được tổ chức theo cấu trúc bộ ba vị ngữ chuẩn (\textit{Subject -- Predicate -- Object Triples}), ví dụ: $(\text{Paper [1]}) \xrightarrow{\text{ĐỀ XUẤT}} (\text{Transformer})$ \cite{vaswani2017}.
 
 So với các dạng lưu trữ dữ liệu văn bản phi cấu trúc hoặc cơ sở dữ liệu quan hệ bảng phẳng, Knowledge Graph sở hữu ba ưu thế vượt trội:
 \begin{itemize}
     \item \textbf{Khả năng suy luận bắc cầu (\textit{Multi-hop Reasoning}):} Đồ thị cho phép lần theo chuỗi các cạnh liên kết để khám phá ra các mối liên hệ gián tiếp giữa các công trình khoa học mà không cần chúng phải xuất hiện cùng nhau trong một văn bản.
-    \item \textbf{Định danh và khử nhập nhằng thực thể (\textit{Entity Disambiguation}):} Mỗi khái niệm, phương pháp hoặc tác giả được định danh duy nhất thông qua một nút mạng, giải quyết triệt để hiện tượng trùng tên hoặc đồng âm khác nghĩa.
-    \item \textbf{Cấu trúc tri thức toàn cục (\textit{Global Structural Context}):} Cung cấp bức tranh toàn cảnh về sự phát triển của các trường phái học thuật, sơ đồ phả hệ của các mô hình và mạng lưới hợp tác nghiên cứu.
+    \item \textbf{Định danh và khử nhập nhằng thực thể (\textit{Entity Disambiguation}):} Mỗi bài báo, phương pháp, tập dữ liệu hoặc chỉ số thực nghiệm được định danh duy nhất thông qua một nút mạng chuẩn hóa, hạn chế hiện tượng trùng tên hoặc đồng âm khác nghĩa.
+    \item \textbf{Cấu trúc tri thức toàn cục (\textit{Global Structural Context}):} Cung cấp bức tranh toàn cảnh về sự phát triển của các trường phái học thuật, sơ đồ kế thừa giữa các mô hình và chuẩn đánh giá thực nghiệm.
 \end{itemize}
 
-Mạng lưới đồ thị tri thức thực thể học thuật liên kết và cơ chế biên dịch trang bách khoa được mô hình hóa trong Hình~\ref{fig:academic_kg_wiki}.
+Mạng lưới đồ thị tri thức học thuật gồm bốn loại đỉnh cốt lõi (\textit{Paper Nodes, Method Nodes, Dataset Nodes, Metric Nodes}) và cơ chế biên dịch trang bách khoa cộng đồng được mô hình hóa trong Hình~\ref{fig:academic_kg_wiki}.
 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.64, transform shape,
+    scale=0.68, transform shape,
     paper_node/.style={circle, draw=black!90, fill=black!85, text=white, line width=1.1pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.7cm},
-    author_node/.style={circle, draw=orange!85!black, fill=orange!15, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
     method_node/.style={circle, draw=purple!80!black, fill=purple!10, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.7cm},
     dataset_node/.style={circle, draw=teal!85!black, fill=teal!10, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
     metric_node/.style={circle, draw=gray!75!black, fill=gray!12, text=black!90, line width=1.0pt, align=center, inner sep=2pt, font=\bfseries\footnotesize, minimum size=1.6cm},
@@ -133,32 +132,25 @@ Mạng lưới đồ thị tri thức thực thể học thuật liên kết và
     \node[font=\scriptsize\itshape, text=teal!80!black] at (10.2, 3.4) {(Trang Bảng xếp hạng SOTA)};
 
     % 1. Các Nút Bài báo (Paper Nodes)
-    \node[paper_node] (p1) at (-6.6, 1.6) {Paper [1]\\[1pt]\scriptsize (Gốc)};
-    \node[paper_node] (p2) at (-6.6, -0.8) {Paper [2]\\[1pt]\scriptsize (Mở rộng)};
+    \node[paper_node] (p1) at (-4.2, 1.4) {Paper [1]\\[1pt]\scriptsize (Gốc)};
+    \node[paper_node] (p2) at (-4.2, -0.6) {Paper [2]\\[1pt]\scriptsize (Mở rộng)};
 
-    % 2. Các Nút Tác giả (Author Nodes - Nằm bên ngoài Wiki Container)
-    \node[author_node] (a1) at (-3.8, 2.6) {Author A\\[1pt]\scriptsize (Tác giả)};
-    \node[author_node] (a2) at (-3.8, -1.8) {Author B\\[1pt]\scriptsize (Tác giả)};
-
-    % 3. Các Nút Phương pháp (Method Nodes - Nằm trọn vẹn trong Method Wiki Page)
+    % 2. Các Nút Phương pháp (Method Nodes - Nằm trọn vẹn trong Method Wiki Page)
     \node[method_node] (m1) at (0.0, 0.4) {Method A\\[1pt]\scriptsize Transformer};
     \node[method_node] (m2) at (3.8, 1.4) {Method B\\[1pt]\scriptsize Self-Attention};
     \node[method_node] (m3) at (3.8, -0.6) {Method C\\[1pt]\scriptsize Self-RAG};
 
-    % 4. Các Nút Bộ dữ liệu (Dataset Nodes)
+    % 3. Các Nút Bộ dữ liệu (Dataset Nodes)
     \node[dataset_node] (d1) at (8.2, 1.4) {Dataset 1\\[1pt]\scriptsize HotpotQA};
     \node[dataset_node] (d2) at (8.2, -0.6) {Dataset 2\\[1pt]\scriptsize SQuAD};
 
-    % 5. Các Nút Kết quả / Chỉ số (Metric Nodes)
+    % 4. Các Nút Kết quả / Chỉ số (Metric Nodes)
     \node[metric_node] (met1) at (12.0, 1.4) {Metric 1\\[1pt]\scriptsize $\text{F1} = 91{,}2\%$};
     \node[metric_node] (met2) at (12.0, -0.6) {Metric 2\\[1pt]\scriptsize $\text{EM} = 84{,}5\%$};
 
     % Các Cạnh liên kết ngữ nghĩa & Nhãn sloped
-    \draw[edge_style] (a1) -- node[above=1pt, sloped, font=\tiny\bfseries] {TÁC GIẢ} (p1);
-    \draw[edge_style] (a2) -- node[above=1pt, sloped, font=\tiny\bfseries] {TÁC GIẢ} (p2);
-
     \draw[edge_style] (p1) -- node[above=1pt, sloped, font=\tiny\bfseries] {ĐỀ XUẤT} (m1);
-    \draw[edge_style] (p2) -- node[above=1pt, sloped, font=\tiny\bfseries] {ĐỀ XUẤT} (m3);
+    \draw[edge_style] (p2) -- node[below=1pt, sloped, font=\tiny\bfseries] {ĐỀ XUẤT} (m3);
     \draw[edge_style] (m1) -- node[above=1pt, sloped, font=\tiny\bfseries] {PHÁT TRIỂN} (m2);
     \draw[edge_style] (m3) -- node[above=1pt, sloped, font=\tiny\bfseries] {KẾ THỪA} (m1);
 
@@ -173,16 +165,16 @@ Mạng lưới đồ thị tri thức thực thể học thuật liên kết và
 \end{figure}
 \clearpage
 
-\subsection{Graph Wiki là gì? (Compiled Academic Wiki)}
+\subsection{Graph Wiki là gì? (Pre-compiled Community Wiki)}
 \label{subsec:graph_wiki_la_gi}
-Graph Wiki (\textit{Compiled Academic Wiki} -- Hệ tri thức bách khoa học thuật biên dịch sẵn) là mô hình tổ chức tri thức chuyên sâu được thiết kế để chuyển đổi toàn bộ đồ thị tri thức và mạng trích dẫn thành các trang tài liệu bách khoa có cấu trúc liên kết chéo tương tự như Wikipedia học thuật.
+Graph Wiki (\textit{Pre-compiled Community Wiki} -- Trang bách khoa cộng đồng biên dịch sẵn) là mô hình tổ chức tri thức kết tinh từ thuật toán phân cụm cộng đồng Louvain \cite{blondel2008louvain}, chuyển đổi các cụm thực thể và liên kết trích dẫn trong đồ thị tri thức thành các trang tài liệu tổng hợp có cấu trúc liên kết hai chiều.
 
-Thay vì chỉ lưu trữ các đỉnh và cạnh trừu tượng phân tán trong cơ sở dữ liệu, Graph Wiki tự động gom cụm và biên dịch mạng lưới tri thức thành các danh mục trang chuyên đề hoàn chỉnh (như minh họa tại Hình~\ref{fig:academic_kg_wiki}):
+Thay vì chỉ lưu trữ các đỉnh và cạnh rời rạc trong cơ sở dữ liệu rồi mới tổng hợp lại từ đầu ở mỗi lượt hỏi đáp, cơ chế Graph Wiki biên dịch trước mạng lưới tri thức theo từng cộng đồng chủ đề thành các trang chuyên đề có cấu trúc (như minh họa tại Hình~\ref{fig:academic_kg_wiki}):
 \begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Trang chuyên đề Phương pháp (\textit{Method Pages}):} Trình bày toàn diện nguyên lý thuật toán, bảng so sánh hiệu năng qua từng thời kỳ, danh sách các bài báo gốc đề xuất và các biến thể kế thừa.
-    \item \textbf{Trang chuẩn đánh giá (\textit{Benchmark Pages}):} Liệt kê các bộ dữ liệu tiêu chuẩn cùng bảng xếp hạng (\textit{Leaderboards}) các phương pháp tiên tiến nhất (\textit{State-of-the-Art -- SOTA}).
-    \item \textbf{Liên kết hai chiều (\textit{Bidirectional Hyperlinks}):} Cho phép học giả điều hướng mượt mà giữa các bài báo có cùng nền tảng lý thuyết, giúp việc tổng quan y văn (\textit{Literature Review}) trở nên mạch lạc và trực quan.
+    \item \textbf{Trang chuyên đề Phương pháp (\textit{Method Pages}):} Tổng hợp nguyên lý thuật toán, danh sách các bài báo đề xuất gốc cùng các biến thể kế thừa trong cùng cụm cộng đồng.
+    \item \textbf{Trang chuẩn đánh giá (\textit{Benchmark Pages}):} Liệt kê các bộ dữ liệu tiêu chuẩn cùng bảng đối chiếu kết quả thực nghiệm (\textit{Metric Results}) trích xuất từ các công trình trong kho tài liệu.
+    \item \textbf{Liên kết hai chiều (\textit{Bidirectional Hyperlinks}):} Cho phép học giả điều hướng trực tiếp giữa các trang khái niệm và các bài báo nguồn có cùng nền tảng lý thuyết, hỗ trợ quá trình tổng quan tài liệu (\textit{Literature Review}) mạch lạc và có dẫn chứng.
 \end{enumerate}
 
-Nhờ Graph Wiki, AI Agent có thể ngay lập tức đưa vào ngữ cảnh bức tranh tri thức đã được tổng hợp sẵn, loại bỏ hoàn toàn chi phí duyệt đồ thị đắt đỏ trong thời gian thực, đồng thời đảm bảo độ chính xác tuyệt đối khi hỗ trợ học giả phân tích và trích dẫn bài báo khoa học.
+Nhờ cơ chế biên dịch trước các trang cộng đồng Graph Wiki, tác tử suy luận có thể truy xuất nhanh ngữ cảnh tổng quan cấp cộng đồng kết hợp với truy vấn đồ thị cục bộ, giảm thiểu độ trễ duyệt đồ thị nhiều bước trong thời gian thực và duy trì tính nhất quán của các dẫn chứng khoa học.
 \clearpage

@@ -256,3 +256,43 @@ def test_frontmatter_ch1_and_bibliography_remediation():
         encoding="utf-8"
     )
     assert "\\label{tab:related_systems_comparison}" in ch1_2_content
+
+
+def test_chapter2_theoretical_rigor_remediation():
+    """Kiểm tra chuẩn hóa cơ sở lý thuyết Chương 2 (Task 4):
+    - 2_1_postgresql_redis.tex: sửa MVCC đọc không chặn ghi, bỏ 'không gây khóa chết'
+      và 'Dedicated Vector Database'.
+    - 2_3_advanced_rag.tex: trích dẫn \\cite{gao2023rag}, nêu cơ chế ts_rank_cd + BM25
+      và Cross-Encoder, ví dụ RRF dùng k = 60 (bỏ 'k = 0 dùng để minh họa').
+    - 2_4_knowledge_graph_wiki.tex: trích dẫn \\cite{blondel2008louvain} (Louvain) và
+      loại bỏ 'Author Nodes' khỏi sơ đồ đồ thị tri thức (đồng bộ 4 loại nút).
+    - 2_5_agentic_react.tex: không chứa trích dẫn thừa hong2023metagpt / wang2023planandsolve,
+      đồng bộ biên độ cài đặt ReAct + Tool Use đơn tác tử.
+    - 2_7_azure_e2b_byok.tex: bỏ 'GPT-5.6-luna', cập nhật công thức eq:aes_gcm chứa J_0.
+    """
+    ch2_dir = Path("report-datn/chapters/ch2")
+
+    ch2_1 = (ch2_dir / "2_1_postgresql_redis.tex").read_text(encoding="utf-8")
+    assert "không gây khóa chết" not in ch2_1
+    assert "Dedicated Vector Database" not in ch2_1
+    assert "đọc không chặn ghi" in ch2_1
+
+    ch2_3 = (ch2_dir / "2_3_advanced_rag.tex").read_text(encoding="utf-8")
+    assert "\\cite{gao2023rag}" in ch2_3
+    assert "ts\\_rank\\_cd" in ch2_3 or "ts_rank_cd" in ch2_3
+    assert "Cross-Encoder" in ch2_3
+    assert "k = 0 \\text{ dùng để minh họa}" not in ch2_3
+    assert "k = 0 dùng để minh họa" not in ch2_3
+
+    ch2_4 = (ch2_dir / "2_4_knowledge_graph_wiki.tex").read_text(encoding="utf-8")
+    assert "\\cite{blondel2008louvain}" in ch2_4
+    assert "Author Nodes" not in ch2_4
+
+    ch2_5 = (ch2_dir / "2_5_agentic_react.tex").read_text(encoding="utf-8")
+    assert "\\cite{hong2023metagpt}" not in ch2_5
+    assert "\\cite{wang2023planandsolve}" not in ch2_5
+
+    ch2_7 = (ch2_dir / "2_7_azure_e2b_byok.tex").read_text(encoding="utf-8")
+    assert "GPT-5.6-luna" not in ch2_7
+    assert "gpt-4o-mini" in ch2_7
+    assert "J_0" in ch2_7

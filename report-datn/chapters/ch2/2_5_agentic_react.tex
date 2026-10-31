@@ -219,6 +219,8 @@ Quy trình vận hành chi tiết của mẫu thiết kế bao gồm:
     \item \textbf{Sắp đặt thứ tự (\textit{Sequence}):} Xác định đồ thị quan hệ phụ thuộc giữa các bài toán con, bảo đảm dữ liệu đầu ra của tác vụ trước cung cấp chính xác đầu vào cho tác vụ sau.
     \item \textbf{Thực thi kế hoạch (\textit{Execute Plan}):} Điều phối thực thi tuần tự qua từng bước (\textit{Subtask 1} $\rightarrow$ \textit{Subtask 2} $\rightarrow$ \textit{Subtask 3}) để tổng hợp nên kết quả nghiên cứu toàn diện (\textit{Complete Result}).
 \end{itemize}
+
+Trong khuôn khổ cài đặt thực tế của đề tài VeriScholar, tư duy lập kế hoạch được tích hợp trực tiếp vào pha suy luận (\textit{Thought}) của tác tử đơn lẻ theo chu trình ReAct kết hợp gọi công cụ (\textit{Tool Use}), giúp phân rã truy vấn học thuật phức tạp mà không phát sinh độ trễ của một tầng lập kế hoạch tách rời.
 \clearpage
 
 \subsection{Mẫu kiến trúc Sử dụng Công cụ (Tool Use Pattern)}
@@ -315,7 +317,7 @@ Trong mẫu kiến trúc này, AI Agent vận hành như một thực thể đi�
 
 \subsection{Mẫu kiến trúc Suy luận và Hành động ReAct (ReAct Pattern)}
 \label{subsec:react_pattern}
-ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc Agent kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research đề xuất năm 2022 \cite{yao2022}. Trước ReAct, các nghiên cứu thường tách biệt hai hướng: hoặc chỉ tập trung vào suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought}) \cite{wei2022cot}, hoặc chỉ tập trung vào hành động gọi API độc lập (\textit{Toolformer}) \cite{schick2023toolformer}. ReAct kết hợp đồng thời hai cơ chế này theo một vòng lặp nhịp nhàng:
+ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc Agent kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research công bố vào tháng 10 năm 2022 \cite{yao2022}. Trong tiến trình phát triển các mô hình ngôn ngữ lớn có khả năng giải quyết bài toán đa bước, các hướng tiếp cận đơn lẻ thường tách biệt giữa suy luận chuỗi tư duy nội tại (\textit{Chain-of-Thought}, công bố đầu năm 2022) \cite{wei2022cot} và cơ chế tự học gọi hàm API ngoại vi độc lập (tiêu biểu là \textit{Toolformer}, công bố tháng 2 năm 2023) \cite{schick2023toolformer}. ReAct đặt nền móng hợp nhất đồng thời cả hai năng lực suy luận và hành động theo một vòng lặp đan xen nhịp nhàng:
 \begin{equation}
 \label{eq:react_cycle}
 \text{Thought} \longrightarrow \text{Action} \longrightarrow \text{Observation} \longrightarrow \text{Thought} \dots
@@ -495,11 +497,13 @@ Cơ chế Reflexion vận hành thông qua ba thành phần phối hợp chặt 
     \item \textbf{Bộ phản hồi ngôn từ (\textit{Self-Reflection}):} Nếu bộ đánh giá phát hiện lỗi sai, mô hình sẽ tự sinh ra một đoạn tự phê bình bằng lời văn (\textit{verbal critique}), phân tích nguyên nhân vì sao bước lập luận trước bị lỗi và đề xuất hướng sửa đổi cụ thể.
     \item \textbf{Bộ nhớ Reflexion (\textit{Memory Buffer}):} Lưu trữ bản tự phê bình vào ngữ cảnh hoạt động. Ở lượt thực thi tiếp theo, Agent đọc lại kinh nghiệm sai sót này để không lặp lại sai lầm cũ, bảo đảm bản thảo học thuật đạt độ chính xác tối đa.
 \end{enumerate}
+
+Trong kiến trúc hiện tại của VeriScholar, thay vì kích hoạt một vòng lặp LLM tự phê bình đa lượt tốn kém chi phí mã thông báo, nguyên lý kiểm định đầu ra được hiện thực hóa bằng các rào chắn xác định (\textit{Deterministic Guardrails}) kết hợp kiểm chứng độ trùng khớp trích dẫn (\textit{Citation Grounding Verification}) và cơ chế tự phục hồi truy vấn ngay trong vòng lặp ReAct đơn tác tử.
 \clearpage
 
 \subsection{Mẫu kiến trúc Phối hợp Đa Agent (Multi-Agent Pattern)}
 \label{subsec:multi_agent_pattern}
-Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một Agent đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa Agent (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một nhóm nghiên cứu khoa học gồm các chuyên gia đảm nhiệm từng khâu riêng biệt.
+Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một Agent đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa Agent (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một hội đồng chuyên gia khoa học đảm nhiệm từng khâu riêng biệt.
 
 Mô hình kiến trúc đa Agent điều phối phân cấp được thể hiện trong Hình~\ref{fig:multi_agent_pattern}.
 
@@ -589,6 +593,8 @@ Cấu trúc phối hợp đa Agent gồm hai tầng nhận thức:
     \item \textbf{Agent Điều phối (\textit{Coordinator}):} Tiếp nhận nhiệm vụ lớn, lập kế hoạch phân bổ, định tuyến yêu cầu tới các Agent chuyên trách và chịu trách nhiệm tổng hợp các kết quả riêng lẻ thành báo cáo khoa học hoàn chỉnh.
     \item \textbf{Các Agent chuyên trách (\textit{Specialized Agents}):} Mỗi Agent được tinh chỉnh hệ thống chỉ dẫn (\textit{system prompt}) và cấp quyền truy cập tập công cụ riêng biệt: \textit{Data Agent} kết nối CSDL tri thức, \textit{Analysis Agent} xử lý dữ liệu và thuật toán, \textit{Writing Agent} định dạng văn bản học thuật theo chuẩn quốc tế, và \textit{Review Agent} đối chiếu quy chế và tiêu chí liêm chính.
 \end{itemize}
+
+Trong phạm vi thực nghiệm hiện tại, VeriScholar triển khai kiến trúc tác tử đơn điều phối trung tâm (\textit{Single-Agent ReAct Orchestrator}) kết hợp tập công cụ chuyên biệt (\textit{Tool Use}) nhằm tối ưu hóa độ trễ truyền phát thời gian thực; mô hình phối hợp đa tác tử phân cấp đóng vai trò là nền tảng lý thuyết định hướng cho giai đoạn mở rộng tiếp theo của hệ thống.
 \clearpage
 
 \subsection{Mẫu tương tác Người trong vòng lặp (Human-in-the-Loop Pattern)}
@@ -680,4 +686,6 @@ Cơ chế vận hành của mô hình HITL bao gồm:
     \item \textbf{Điểm dừng an toàn (\textit{Checkpoint}):} Agent tạm dừng quy trình tự động, khóa trạng thái luồng làm việc và gửi thông báo kèm ngữ cảnh tóm tắt tới người dùng.
     \item \textbf{Đánh giá và Quyết định (\textit{Review \& Decide}):} Học giả xem xét bản thảo hoặc mã lệnh. Nếu được chấp thuận (\textit{Approved = Yes}), hệ thống tiến hành thực thi (\textit{Execute}). Nếu bị từ chối (\textit{Approved = No}), học giả cung cấp chỉ dẫn sửa đổi; Agent tiếp thu phản hồi (\textit{Revise}) để tái tạo sinh kết quả cho đến khi đạt chuẩn.
 \end{itemize}
+
+Trên hệ thống VeriScholar hiện hành, triết lý kiểm chứng bởi con người được thực hiện thông qua cơ chế đối chiếu trực quan tọa độ trích dẫn (\textit{Visual Bounding-Box Verification}) trên trình đọc PDF hai khung nhìn và kiểm soát giới hạn thực thi tất định; cơ chế điểm dừng tạm khóa luồng thực thi (\textit{Interrupt Checkpoints}) là hướng mở rộng tương tác nâng cao trong tương lai.
 \clearpage
