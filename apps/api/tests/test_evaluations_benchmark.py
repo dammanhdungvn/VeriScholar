@@ -163,3 +163,106 @@ async def test_benchmark_runner_service_tracing_recording(db_session: AsyncSessi
     assert mock_tracing.record_score.called
     # Check that record_score was called at least 4 times (for the 4 metrics)
     assert mock_tracing.record_score.call_count >= 4
+
+
+@pytest.mark.asyncio
+async def test_benchmark_runner_does_not_return_hardcoded_baseline_verbatim():
+    """Verify _evaluate_question computes real algorithmic scores instead of echoing baseline."""
+    from api.services.benchmark_runner_service import BenchmarkRunnerService
+
+    service = BenchmarkRunnerService()
+    question = service.get_golden_questions("advanced_rag")[0]
+    sentinel_baseline = {
+        "groundedness": 0.1234,
+        "relevance": 0.2345,
+        "bbox_precision": 0.3456,
+        "multihop_completeness": 0.4567,
+    }
+
+    scores = await service._evaluate_question(question=question, baseline=sentinel_baseline)
+
+    assert scores.groundedness != 0.1234
+    assert scores.relevance != 0.2345
+    assert scores.bbox_precision != 0.3456
+    assert scores.multihop_completeness != 0.4567
+    for val in (
+        scores.groundedness,
+        scores.relevance,
+        scores.bbox_precision,
+        scores.multihop_completeness,
+    ):
+        assert 0.75 <= val <= 0.99
+
+
+def test_benchmark_runner_ablation_study_metrics():
+    """Verify run_ablation_study evaluates retrieval and LaTeX self-healing modes."""
+    from api.services.benchmark_runner_service import BenchmarkRunnerService
+
+    service = BenchmarkRunnerService()
+    ablation = service.run_ablation_study()
+
+    assert "retrieval_ablation" in ablation
+    retrieval = ablation["retrieval_ablation"]
+    for key in ("dense_only", "sparse_only", "hybrid_rrf"):
+        assert key in retrieval
+        for metric in (
+            "recall_at_5",
+            "mrr_at_10",
+            "ndcg_at_10",
+            "mean_iou",
+            "std_iou",
+            "p50_latency_ms",
+            "p95_latency_ms",
+        ):
+            assert metric in retrieval[key]
+
+    assert retrieval["hybrid_rrf"]["recall_at_5"] > retrieval["dense_only"]["recall_at_5"]
+    assert retrieval["hybrid_rrf"]["mean_iou"] >= 0.85
+
+    assert "latex_healing_ablation" in ablation
+    healing = ablation["latex_healing_ablation"]
+    for key in ("ast_regex_only", "heuristic_repair", "agentic_react_combined"):
+        assert key in healing
+        assert healing[key]["total_cases"] == 25
+        for metric in (
+            "repaired_count",
+            "total_cases",
+            "success_rate",
+            "semantic_preservation_rate",
+            "mean_attempts",
+        ):
+            assert metric in healing[key]
+
+
+@pytest.mark.asyncio
+async def test_openai_adapter_has_generate_patch_method():
+    """Verify OpenAIChatCompletionsAdapter implements generate_patch with heuristic fallback."""
+    from api.agents.latex_agent import OpenAIChatCompletionsAdapter
+
+    adapter = OpenAIChatCompletionsAdapter(
+        api_key="test-key",
+        base_url="http://127.0.0.1:9/v1",
+    )
+    assert hasattr(adapter, "generate_patch")
+
+    broken_tex = (
+        "\\documentclass{article}\n\\begin{document}\nHello \\undefinedmacro world\n\\end{document}"
+    )
+    diagnostics = [
+        {
+            "file": "main.tex",
+            "line": 3,
+            "column": 7,
+            "severity": "error",
+            "message": "Undefined control sequence \\undefinedmacro",
+            "context": "\\undefinedmacro",
+            "hint": "Remove or define macro",
+        }
+    ]
+    patched = await adapter.generate_patch(
+        draft_id=uuid4(),
+        main_tex=broken_tex,
+        diagnostics=diagnostics,
+    )
+    assert isinstance(patched, str)
+    assert "\\undefinedmacro" not in patched

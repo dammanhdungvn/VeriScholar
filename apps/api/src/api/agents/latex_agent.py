@@ -68,6 +68,65 @@ class OpenAIChatCompletionsAdapter:
             resp.raise_for_status()
             return resp.json()
 
+    async def generate_patch(
+        self,
+        draft_id: UUID | None,
+        main_tex: str,
+        diagnostics: list[LatexDiagnostic],
+    ) -> str:
+        """Request an LLM-generated LaTeX repair patch or fall back to heuristic repair."""
+        model_name = getattr(settings, "OPENAI_MODEL", "gpt-4o-mini")
+        diag_summary = json.dumps(diagnostics, ensure_ascii=False)
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are an autonomous LaTeX compiler repair specialist. "
+                    "Return ONLY the repaired complete LaTeX document without markdown fences."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    f"Draft ID: {draft_id}\n"
+                    f"Diagnostics:\n{diag_summary}\n\n"
+                    f"Source LaTeX:\n{main_tex}"
+                ),
+            },
+        ]
+        try:
+            resp = await self.chat_completions_create(
+                model=model_name,
+                messages=messages,
+            )
+            choices = getattr(resp, "choices", None) or (
+                resp.get("choices") if isinstance(resp, dict) else []
+            )
+            if choices:
+                first_choice = choices[0]
+                msg = getattr(first_choice, "message", None) or (
+                    first_choice.get("message") if isinstance(first_choice, dict) else None
+                )
+                content = getattr(msg, "content", None) or (
+                    msg.get("content") if isinstance(msg, dict) else None
+                )
+                if isinstance(content, str) and content.strip():
+                    cleaned = re.sub(
+                        r"^```(?:latex|tex)?\s*|\s*```$",
+                        "",
+                        content.strip(),
+                        flags=re.IGNORECASE,
+                    ).strip()
+                    if cleaned:
+                        return cleaned
+        except Exception as exc:
+            logger.warning(
+                "openai_generate_patch_failed_fallback_heuristic",
+                draft_id=str(draft_id) if draft_id else None,
+                error=str(exc),
+            )
+        return apply_heuristic_repair(main_tex, diagnostics)
+
 
 LATEX_AGENT_TOOLS: list[dict[str, Any]] = [
     {
