@@ -296,3 +296,105 @@ def test_chapter2_theoretical_rigor_remediation():
     assert "GPT-5.6-luna" not in ch2_7
     assert "gpt-4o-mini" in ch2_7
     assert "J_0" in ch2_7
+
+
+def test_chapter3_database_and_analysis_remediation():
+    """Kiểm tra chuẩn hóa phân tích hệ thống, thuật toán và thiết kế CSDL 20 bảng Chương 3 (Task 5):
+    - 3_1_mo_ta_bai_toan.tex và 3_2_khao_sat_nghiep_vu.tex không chứa 'nhóm nghiên cứu'.
+    - 3_2_khao_sat_nghiep_vu.tex bổ sung thiết kế thuật toán cho 4 pipeline cốt lõi.
+    - 3_4_phan_tich_usecase.tex và 3_5_bieu_do_tuan_tu.tex đồng bộ CRAG, verify_output_grounding,
+      bộ lọc Jaccard >= 3 từ khóa và cơ chế vận hành quản trị viên.
+    - 3_6_thiet_ke_csdl.tex chứa đủ 20 bảng SQLAlchemy thực tế (bao gồm graph_nodes, graph_edges,
+      folder_community_summaries, wiki_pages), loại bỏ 4 bảng ảo (extracted_figures,
+      extracted_tables, draft_sections, latex_compilations), bổ sung hashed_password vào users,
+      embedding và content_tsv vào document_chunks, sửa khóa ngoại blobs(id)/sessions(id)
+      và xóa văn bản thừa 'mũi tên cụt trực quan'.
+    """
+    ch3_dir = Path("report-datn/chapters/ch3")
+
+    ch3_1 = (ch3_dir / "3_1_mo_ta_bai_toan.tex").read_text(encoding="utf-8")
+    ch3_2 = (ch3_dir / "3_2_khao_sat_nghiep_vu.tex").read_text(encoding="utf-8")
+    assert "nhóm nghiên cứu" not in ch3_1
+    assert "nhóm nghiên cứu" not in ch3_2
+
+    ch3_2_norm = ch3_2.replace("\\_", "_")
+    for algo_token in [
+        "mid_x",
+        "250",
+        "HNSW",
+        "ts_rank_cd",
+        "0{,}35",
+        "0{,}20",
+        "reason_and_plan",
+        "healing_router",
+        "_auto_patch",
+        "apply_heuristic_repair",
+        "OpenAI Structured Outputs",
+        "0{,}90",
+        "Louvain",
+    ]:
+        assert algo_token in ch3_2_norm, (
+            f"3_2_khao_sat_nghiep_vu.tex must specify algorithm token '{algo_token}'"
+        )
+
+    ch3_4_norm = (
+        (ch3_dir / "3_4_phan_tich_usecase.tex").read_text(encoding="utf-8").replace("\\_", "_")
+    )
+    ch3_5_norm = (
+        (ch3_dir / "3_5_bieu_do_tuan_tu.tex").read_text(encoding="utf-8").replace("\\_", "_")
+    )
+    assert "verify_output_grounding" in ch3_4_norm
+    assert "verify_output_grounding" in ch3_5_norm
+    assert "/api/v1/evaluations/run-benchmark" in ch3_4_norm
+    assert "Langfuse Cloud" in ch3_4_norm
+
+    ch3_6_raw = (ch3_dir / "3_6_thiet_ke_csdl.tex").read_text(encoding="utf-8")
+    ch3_6_norm = (
+        ch3_6_raw.replace("\\allowbreak ", "")
+        .replace("\\allowbreak", "")
+        .replace("\\_", "_")
+        .replace("$\\to$", "->")
+    )
+
+    required_20_tables = [
+        "users",
+        "scholar_profiles",
+        "user_api_keys",
+        "document_storage_blobs",
+        "documents",
+        "document_chunks",
+        "document_summaries",
+        "reference_items",
+        "folders",
+        "research_sessions",
+        "session_documents",
+        "session_turns",
+        "research_notes",
+        "graph_nodes",
+        "graph_edges",
+        "folder_community_summaries",
+        "wiki_pages",
+        "drafts",
+        "draft_assets",
+        "draft_messages",
+    ]
+    for tbl in required_20_tables:
+        assert tbl in ch3_6_norm, f"3_6_thiet_ke_csdl.tex must include real table '{tbl}'"
+
+    forbidden_fake_tables = [
+        "extracted_figures",
+        "extracted_tables",
+        "draft_sections",
+        "latex_compilations",
+    ]
+    for tbl in forbidden_fake_tables:
+        assert tbl not in ch3_6_norm, f"3_6_thiet_ke_csdl.tex must not include fake table '{tbl}'"
+
+    assert "hashed_password" in ch3_6_norm
+    assert "embedding" in ch3_6_norm
+    assert "content_tsv" in ch3_6_norm
+    assert "FK -> blobs(id)" not in ch3_6_norm
+    assert "FK -> sessions(id)" not in ch3_6_norm
+    assert "FK -> document_storage_blobs(id)" in ch3_6_norm
+    assert "FK -> research_sessions(id)" in ch3_6_norm
+    assert "mũi tên cụt trực quan" not in ch3_6_raw

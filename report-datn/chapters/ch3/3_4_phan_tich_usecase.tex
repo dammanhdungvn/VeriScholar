@@ -80,8 +80,8 @@ Use Case này cho phép học giả tìm kiếm các tài liệu nghiên cứu k
 \textbf{Điều kiện kết thúc} & Tài liệu được tải vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI vào thanh tìm kiếm.
-    \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (\textit{Skeleton Loading}); hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard (\textit{Jaccard Token Overlap} ngưỡng $\ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
+    \item Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI/arXiv vào thanh tìm kiếm.
+    \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (\textit{Skeleton Loading}); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard (\textit{Jaccard Token Overlap} ngưỡng $\ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề (trong khi truy vấn trực tiếp theo mã định danh DOI/arXiv ID và nhánh tìm kiếm ngữ nghĩa Exa bỏ qua lọc từ vựng này), đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
     \item Học giả có thể kích hoạt nút gạt ``Đã bình duyệt'' (\textit{Peer-reviewed}) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
     \item Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
     \item Hệ thống tải tệp PDF toàn văn, tính mã Hash SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
@@ -94,12 +94,12 @@ Use Case này cho phép học giả tìm kiếm các tài liệu nghiên cứu k
 \end{tabular}
 \end{table}
 
-Độ tương đồng giữa truy vấn của học giả và tiêu đề bài báo được chuẩn hóa thông qua hệ số tương đồng Jaccard giữa tập từ vựng truy vấn $Q$ và tập từ vựng tiêu đề ứng viên $T$:
+Đối với các truy vấn từ khóa thông thường có độ dài từ 3 từ khóa trở lên ($\lvert Q \rvert \ge 3$), độ tương đồng giữa truy vấn của học giả và tiêu đề bài báo từ các kho mở (OpenAlex, Semantic Scholar, CrossRef, arXiv) được chuẩn hóa thông qua hệ số tương đồng Jaccard giữa tập từ vựng truy vấn $Q$ và tập từ vựng tiêu đề ứng viên $T$:
 \begin{equation}
 \label{eq:jaccard_def}
 J(Q, T) = \frac{|Q \cap T|}{|Q \cup T|}
 \end{equation}
-Hệ thống thiết lập ngưỡng $J(Q, T) \ge 0{,}2$ để tự động lọc bỏ các tài liệu trùng lặp ngẫu nhiên hoặc lạc đề từ các cổng học thuật mở mà không làm suy giảm độ bao phủ của kết quả tìm kiếm.
+Hệ thống thiết lập ngưỡng $J(Q, T) \ge 0{,}2$ đối với các truy vấn từ khóa ($\lvert Q \rvert \ge 3$) để tự động lọc bỏ các tài liệu trùng lặp ngẫu nhiên hoặc lạc đề, trong khi các truy vấn tra cứu chính xác theo mã định danh DOI/arXiv ID hoặc nhánh tìm kiếm ngữ nghĩa chuyên sâu (Exa Neural Search) được miễn trừ bước lọc từ vựng này nhằm bảo toàn độ phủ ngữ nghĩa tối đa.
 
 \Needspace{18\baselineskip}
 \subsubsection{Phân tích Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
@@ -125,25 +125,25 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập câu hỏi nghiên cứu vào khung hội thoại (ví dụ: ``Độ chính xác phân loại của mô hình trên ImageNet là bao nhiêu?'').
-    \item AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) để trích xuất các phân đoạn văn bản liên quan nhất.
-    \item Agent kiểm định liêm chính trích dẫn và tổng hợp câu trả lời.
-    \item Trợ lý AI truyền luồng phản hồi theo thời gian thực về giao diện người dùng.
-    \item Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc ($\text{IoU} \ge 0{,}85$).
+    \item AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
+    \item Cổng kiểm định tiền sinh văn bản CRAG đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn vòng hai; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn $[i]$ khớp với phân đoạn nguồn.
+    \item Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
+    \item Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Nếu câu hỏi nằm ngoài phạm vi tri thức của tài liệu: Hệ thống thông báo rõ ràng ``Tài liệu không cung cấp thông tin về nội dung này'', tuyệt đối không tự suy đoán số liệu.
+    \item Nếu điểm tự tin CRAG $\tau < 0{,}20$ (trạng thái \texttt{ACTIVE\_ABSTENTION}): Hệ thống chủ động từ chối suy diễn và thông báo rõ tài liệu không cung cấp đủ bằng chứng, tuyệt đối không tự bịa đặt số liệu.
     \item Nếu học giả chưa nhập khóa API cá nhân (BYOK): Hệ thống điều hướng mở hộp thoại cài đặt khóa.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}
 
-Cơ chế kiểm chứng tọa độ trực quan được đo lường thông qua chỉ số diện tích giao trên diện tích hợp (\textit{Intersection over Union -- IoU}) giữa hộp bao được mô hình định vị $B_{\text{pred}}$ và hộp bao vùng văn bản nguồn $B_{\text{src}}$ trên trang PDF gốc:
+Trong thời gian chạy (\textit{Runtime}), bộ giải mã tài liệu và trình kết xuất giao diện kiểm soát bất biến hình học của mọi khung tọa độ chuẩn hóa $\hat{B} = (\hat{x}_0, \hat{y}_0, \hat{x}_1, \hat{y}_1)$ trong miền đơn vị $0 \le \hat{x}_0 \le \hat{x}_1 \le 1$ và $0 \le \hat{y}_0 \le \hat{y}_1 \le 1$. Trong quy trình đánh giá chất lượng ngoại tuyến (\textit{Offline Benchmark Evaluation}), độ chính xác định vị tọa độ trực quan được đo lường thông qua chỉ số diện tích giao trên diện tích hợp (\textit{Intersection over Union -- IoU}) giữa hộp bao được hệ thống trích xuất $B_{\text{pred}}$ và hộp bao vùng văn bản chuẩn $B_{\text{src}}$ trên trang PDF gốc:
 \begin{equation}
 \label{eq:iou_def}
 \text{IoU}(B_{\text{pred}}, B_{\text{src}}) = \frac{\text{Area}(B_{\text{pred}} \cap B_{\text{src}})}{\text{Area}(B_{\text{pred}} \cup B_{\text{src}})}
 \end{equation}
-Hệ thống thiết lập ngưỡng kiểm định $\text{IoU} \ge 0{,}85$ nhằm bảo đảm khung viền vàng chỉ tô sáng chính xác câu văn chứa dẫn chứng khoa học mà không bị lệch dòng hay cắt ngang công thức toán học.
+Bộ tiêu chuẩn kiểm thử của đề tài thiết lập ngưỡng chấp nhận thực nghiệm $\text{IoU} \ge 0{,}85$ nhằm bảo đảm khung viền vàng chỉ tô sáng chính xác câu văn chứa dẫn chứng khoa học mà không bị lệch dòng hay cắt ngang công thức toán học.
 
 \Needspace{18\baselineskip}
 \subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
@@ -188,9 +188,11 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \subsection{Phân tích các Use Case phía Quản trị viên}
 \label{subsec:uc_admin}
 
+Theo quy chuẩn tối giản hóa sản phẩm 80/20, các tác vụ quản trị vận hành (UC-09 đến UC-12) không tách thành một trang giao diện quản trị độc lập cồng kềnh mà được thực thi trực tiếp thông qua hệ thống điểm cuối REST vận hành chuyên biệt (\texttt{/api/v1/evaluations/run-benchmark}), cơ chế khóa bảo vệ tự động cùng bộ đếm tham chiếu (\texttt{ref\_count}) ngay trong tầng cơ sở dữ liệu PostgreSQL, kết hợp với bảng điều khiển giám sát từ xa trên Langfuse Cloud và Azure Portal.
+
 \Needspace{18\baselineskip}
 \subsubsection{Phân tích Use Case ``Quản trị người dùng và chính sách bảo mật BYOK''}
-Use Case cho phép Quản trị viên theo dõi danh sách học giả tham gia hệ thống, quản lý hạn ngạch phiên làm việc, cấp quyền sử dụng máy ảo MicroVM và đảm bảo các chính sách khóa API mã hóa tuân thủ chuẩn an toàn thông tin (Bảng~\ref{tab:uc_admin_users}).
+Use Case cho phép Quản trị viên kiểm soát vòng đời tài khoản học giả, thực thi cơ chế tự động tạm khóa bảo vệ khi đăng nhập sai liên tiếp, quản lý bộ đếm tham chiếu lưu trữ CAS và đảm bảo các chính sách khóa API mã hóa tuân thủ chuẩn an toàn thông tin (Bảng~\ref{tab:uc_admin_users}).
 
 \begin{table}[H]
 \centering
@@ -203,26 +205,26 @@ Use Case cho phép Quản trị viên theo dõi danh sách học giả tham gia 
 \hline
 \textbf{Tên Use Case} & \textbf{Quản trị người dùng và chính sách bảo mật BYOK} \tabularnewline \hline
 \textbf{Actor} & Quản trị viên (Administrator) \tabularnewline \hline
-\textbf{Mục tiêu} & Giám sát tài khoản học giả, quản lý hạn ngạch tài nguyên và đảm bảo tính an toàn của kho khóa API cá nhân. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập với quyền hạn cao nhất. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Thông tin tài khoản và cấu hình hạn ngạch được cập nhật chính xác. \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tài khoản học giả, quản lý hạn ngạch tài nguyên và đảm bảo tính an toàn của kho khóa API cá nhân qua cơ chế bảo vệ tự động. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Quản trị viên có quyền truy cập hệ thống vận hành và cơ sở dữ liệu quản trị. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Chính sách bảo mật tài khoản, hạn ngạch và bộ đếm tham chiếu CAS được đồng bộ chính xác. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Quản trị viên truy cập bảng điều khiển quản trị.
-    \item Hệ thống hiển thị danh sách người dùng, trạng thái kích hoạt và định danh ORCID.
-    \item Quản trị viên điều chỉnh hạn ngạch tài nguyên máy ảo MicroVM hoặc đặt lại phiên đăng nhập.
-    \item Hệ thống lưu cấu hình và ghi nhật ký kiểm toán.
+    \item Quản trị viên kiểm tra trạng thái tài khoản, định danh ORCID và cấu hình bảo mật qua giao diện lập trình vận hành hoặc trình quản trị cơ sở dữ liệu.
+    \item Hệ thống tự động kiểm tra ngưỡng thử mật khẩu sai (tạm khóa $15$ phút sau $5$ lần thất bại liên tiếp) và duy trì tính toàn vẹn của kho khóa BYOK mã hóa AES-256-GCM.
+    \item Khi tài liệu được thêm mới hoặc gỡ bỏ, cơ chế đếm tham chiếu (\texttt{ref\_count}) trong bảng \texttt{document\_storage\_blobs} tự động cập nhật để thu hồi khối tệp mồ côi.
+    \item Hệ thống lưu cấu hình và ghi nhật ký kiểm toán vận hành.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Nếu phát hiện phiên làm việc bất thường: Hệ thống tự động thu hồi phiên và gửi thông báo cảnh báo bảo mật.
+    \item Nếu phát hiện phiên làm việc bất thường hoặc vượt ngưỡng xác thực: Hệ thống tự động thu hồi phiên và kích hoạt khóa tạm thời để bảo vệ tài khoản.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}
 
 \Needspace{18\baselineskip}
 \subsubsection{Phân tích Use Case ``Giám sát hệ thống và Trace mô hình''}
-Use Case cho phép Quản trị viên theo dõi các chỉ số hoạt động của hệ thống, thời gian phản hồi API, chi phí Token sử dụng và các \textit{Trace Logs} phục vụ kiểm định chất lượng (Bảng~\ref{tab:uc_admin_logs}).
+Use Case cho phép Quản trị viên kích hoạt bộ kiểm định thực nghiệm tự động qua điểm cuối \texttt{/api/v1/evaluations/run-benchmark}, đồng thời theo dõi các chỉ số hoạt động hạ tầng trên Azure Portal, thời gian phản hồi API, chi phí Token sử dụng và các \textit{Trace Logs} suy luận trên nền tảng Langfuse Cloud (Bảng~\ref{tab:uc_admin_logs}).
 
 \begin{table}[H]
 \centering
@@ -235,19 +237,19 @@ Use Case cho phép Quản trị viên theo dõi các chỉ số hoạt động c
 \hline
 \textbf{Tên Use Case} & \textbf{Giám sát hệ thống và Trace mô hình} \tabularnewline \hline
 \textbf{Actor} & Quản trị viên (Administrator) \tabularnewline \hline
-\textbf{Mục tiêu} & Giám sát tình trạng vận hành, hiệu năng truy xuất RAG và theo dõi chi tiết Trace suy luận của AI Agent. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Quản trị viên đã đăng nhập; dịch vụ Langfuse đang hoạt động bình thường. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Báo cáo số liệu hiệu năng và danh sách Trace được hiển thị đầy đủ. \tabularnewline \hline
+\textbf{Mục tiêu} & Giám sát tình trạng vận hành hạ tầng, đánh giá định lượng hiệu năng RAG/Agent và theo dõi chi tiết Trace suy luận trên Langfuse Cloud. \tabularnewline \hline
+\textbf{Điều kiện tiên quyết} & Quản trị viên đã xác thực quyền vận hành; kết nối telemetry tới Langfuse Cloud và Azure Portal hoạt động bình thường. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Báo cáo đánh giá chuẩn hóa (JSON/Markdown) và chuỗi Trace suy luận được ghi nhận đầy đủ. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Quản trị viên chọn phân hệ ``Giám sát hệ thống''.
-    \item Hệ thống truy xuất dữ liệu từ dịch vụ giám sát Langfuse và cơ sở dữ liệu.
-    \item Hiển thị biểu đồ đo lường: độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi LaTeX, và tổng số lượng Token đã tiêu thụ.
-    \item Quản trị viên xem xét các phiên có độ trễ cao để tối ưu hóa chỉ mục HNSW.
+    \item Quản trị viên gọi điểm cuối vận hành \texttt{/api/v1/evaluations/run-benchmark} hoặc truy cập bảng điều khiển Langfuse Cloud / Azure Portal.
+    \item Hệ thống thu thập dữ liệu đo lường từ tập kiểm thử chuẩn cùng nhật ký telemetry thời gian thực.
+    \item Hiển thị các chỉ số định lượng: độ trung thực trích dẫn, độ trễ truy xuất Hybrid RAG, tỷ lệ tự sửa lỗi LaTeX và lượng Token tiêu thụ theo từng bước suy luận.
+    \item Quản trị viên phân tích các phiên có độ trễ cao để tinh chỉnh tham số chỉ mục HNSW và ngưỡng tự tin CRAG.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
-    \item Nếu dịch vụ giám sát bên ngoài bị ngắt kết nối: Hệ thống chuyển sang đọc nhật ký nội bộ lưu trên cơ sở dữ liệu.
+    \item Nếu kết nối tới dịch vụ Langfuse bên ngoài bị gián đoạn: Hệ thống tự động bỏ qua bước đẩy telemetry bất đồng bộ và ghi nhận vào nhật ký cục bộ mà không làm gián đoạn luồng phản hồi của học giả.
 \end{itemize} \tabularnewline \hline
 \end{tabular}
 \end{table}

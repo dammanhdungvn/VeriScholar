@@ -70,7 +70,7 @@ Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã H
 \subsection{Biểu đồ tuần tự Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsec:seq_doc_sau}
 
-Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
+Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF), cổng kiểm định độ tự tin tiền sinh văn bản CRAG ($\tau \in \{0{,}20,\, 0{,}35\}$), xác thực trích dẫn hậu sinh (\texttt{verify\_output\_grounding}), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
 
 \begin{figure}[H]
 \centering
@@ -86,7 +86,7 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     % Các thực thể tham gia
     \node[entity] (user) at (0, 0) {Học giả};
     \node[entity] (canvas) at (3.2, 0) {PDF Canvas\\UI};
-    \node[entity] (agent) at (6.8, 0) {AI\\Agent};
+    \node[entity] (agent) at (6.8, 0) {AI Agent\\(CRAG Gate)};
     \node[entity] (retriever) at (10.4, 0) {Hybrid\\Retriever};
     \node[entity] (llm) at (14.0, 0) {Mô hình\\LLM};
 
@@ -107,16 +107,16 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     % Luồng thông điệp
     \draw[msg] (0, -1.0) -- node[lbl, above] {1: Nhập câu hỏi nghiên cứu} (3.1, -1.0);
     \draw[msg] (3.3, -1.6) -- node[lbl, above] {2: Khởi tạo luồng SSE} (6.7, -1.6);
-    \draw[msg] (6.9, -2.2) -- node[lbl, above] {3: Tìm kiếm lai (HNSW + BM25)} (10.3, -2.2);
-    \draw[retmsg] (10.3, -2.8) -- node[lbl, above] {4: Trả về $k$ đoạn trích + BBox} (6.9, -2.8);
-    \draw[msg] (6.9, -3.5) -- node[lbl, above] {5: Soạn prompt ngữ cảnh} (13.9, -3.5);
+    \draw[msg] (6.9, -2.2) -- node[lbl, above] {3: Tìm kiếm lai (HNSW + BM25 + RRF)} (10.3, -2.2);
+    \draw[retmsg] (10.3, -2.8) -- node[lbl, above] {4: Trả về $k$ đoạn trích + BBox + điểm $\tau$} (6.9, -2.8);
+    \draw[msg] (6.9, -3.5) -- node[lbl, above] {5: Kiểm định CRAG ($\tau \ge 0{,}20$) \& Gửi prompt} (13.9, -3.5);
 
     % Khung vòng lặp truyền luồng SSE (Mở rộng lề thoáng)
     \draw[draw=teal!70!black, dashed, line width=0.6pt, rounded corners=2pt, fill=teal!2] (2.5, -3.95) rectangle (14.6, -5.1);
-    \node[font=\tiny\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (2.5, -3.95) {loop [Truyền phát từng Token qua SSE]};
+    \node[font=\tiny\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2pt, rounded corners=1pt] at (2.5, -3.95) {loop [Truyền phát SSE \& Xác thực trích dẫn verify\_output\_grounding]};
 
     \draw[retmsg] (13.9, -4.3) -- node[lbl, above] {6: Truyền phát token trả lời} (6.9, -4.3);
-    \draw[retmsg] (6.7, -4.8) -- node[lbl, above] {7: Đẩy luồng SSE kèm thẻ $[1]$} (3.3, -4.8);
+    \draw[retmsg] (6.7, -4.8) -- node[lbl, above] {7: Kiểm chứng thẻ $[1]$ \& Đẩy luồng SSE} (3.3, -4.8);
 
     \draw[retmsg] (3.1, -5.7) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -5.7);
 

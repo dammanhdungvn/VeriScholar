@@ -2,7 +2,7 @@
 \section{Khảo sát nghiệp vụ và quy trình xử lý tài liệu nghiên cứu}
 \label{sec:khao_sat_nghiep_vu}
 
-Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, nhóm nghiên cứu đã tiến hành khảo sát thực tế tại các nhóm nghiên cứu khoa học và phòng thí nghiệm trí tuệ nhân tạo tại VinUniversity. Việc khảo sát tập trung vào các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên tham gia làm đồ án tốt nghiệp, làm rõ các khó khăn, bất cập trong quy trình nghiên cứu truyền thống và các yêu cầu nghiệp vụ mới.
+Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, đề tài tiến hành phân tích quy trình làm việc học thuật quốc tế (\textit{Academic Research Workflow}) cùng thực trạng vận hành của các công cụ quản lý tài liệu và trợ lý AI hiện hành. Việc phân tích tập trung vào chu trình nghiên cứu tiêu chuẩn của các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp tại các đại học định hướng nghiên cứu (như VinUniversity), qua đó làm rõ các điểm nghẽn kỹ thuật trong quy trình truyền thống và xác lập các yêu cầu nghiệp vụ cũng như thiết kế thuật toán cốt lõi cho hệ thống.
 
 \subsection{Khảo sát quy trình tìm kiếm và thu thập tài liệu nghiên cứu}
 \label{subsec:khao_sat_tim_kiem}
@@ -97,7 +97,7 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     };
     \node[box_tobe] (b4) at (4.4, -3.6) {
         \textbf{4. Agent tự phục hồi bản thảo LaTeX}\\
-        \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $> 90\%$
+        \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $96{,}0\%$
     };
 
     % Mũi tên tuần tự dọc
@@ -120,3 +120,31 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
 \caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
 \label{fig:workflow_as_is_to_be}
 \end{figure}
+
+\subsection{Thiết kế chi tiết các thuật toán xử lý cốt lõi của hệ thống}
+\label{subsec:thiet_ke_thuat_toan_cot_loi}
+
+Để hiện thực hóa quá trình chuyển đổi từ quy trình AS-IS sang TO-BE nêu trên, hệ thống \VS\ thiết kế và cài đặt bốn đường ống thuật toán cốt lõi xử lý xuyên suốt từ bước bóc tách hình học tài liệu, truy xuất lai tự kiểm định, tự phục hồi mã nguồn LaTeX đến tổng hợp đồ thị tri thức học thuật:
+
+\begin{enumerate}[label=\textbf{(\alph*)}]
+    \item \textbf{Thuật toán sắp xếp khối văn bản PDF hai cột và phân đoạn cửa sổ trượt bảo toàn tọa độ:}
+    Với mỗi trang tài liệu có kích thước vật lý $(W, H)$, bộ giải mã bố cục trích xuất tập các khối văn bản thô kèm hình chữ nhật bao quanh $(x_0, y_0, x_1, y_1)$. Thuật toán trước tiên loại bỏ các phần tử nhiễu đầu trang và chân trang thỏa mãn điều kiện $y_0 < 0{,}06 \times H$ hoặc $y_1 > 0{,}93 \times H$ có độ dài dưới $80$ ký tự. Tiếp theo, đường trung tuyến dọc $\text{mid\_x} = 0{,}5 \times W$ được thiết lập để phân loại từng khối văn bản theo ba vùng bố cục: khối trải rộng toàn trang (khi $x_0 < 0{,}35 \times W$ và $x_1 > 0{,}65 \times W$, như tiêu đề hoặc tóm tắt), khối thuộc cột trái ($x_{\text{center}} < \text{mid\_x}$) và khối thuộc cột phải ($x_{\text{center}} \ge \text{mid\_x}$). Các khối được sắp xếp tất định theo khóa bộ bốn $(\text{band}, \text{col}, y_0, x_0)$, bảo đảm luồng văn bản đọc hoàn chỉnh hết cột trái trước khi chuyển sang cột phải. Trên chuỗi từ đã sắp xếp, thuật toán áp dụng cửa sổ trượt kích thước tối đa $\text{max\_words} = 250$ từ với độ gối lấp ngữ cảnh $\text{overlap\_words} = 50$ từ, đồng thời chiếu chuẩn hóa mọi khung bao hình học về không gian đơn vị bất biến độ phân giải $[0, 1]^4$:
+    \begin{equation}
+    \label{eq:bbox_unit_projection}
+    \hat{B} = \left(\frac{x_0}{W},\, \frac{y_0}{H},\, \frac{x_1}{W},\, \frac{y_1}{H}\right) \in [0, 1]^4
+    \end{equation}
+
+    \item \textbf{Thuật toán truy xuất lai SQL CTE Hybrid Retrieval và cổng kiểm định độ tự tin CRAG:}
+    Khi tiếp nhận truy vấn của học giả, hệ thống thực thi truy vấn hợp nhất ngay trong PostgreSQL thông qua biểu thức bảng chung (\texttt{CTE}) gồm hai nhánh song song: nhánh ngữ nghĩa \texttt{dense\_search} quét chỉ mục đồ thị phân cấp \texttt{HNSW} với toán tử khoảng cách Cosine (\texttt{embedding <=> query\_vec}), và nhánh từ vựng \texttt{sparse\_search} quét chỉ mục đảo \texttt{GIN} trên cột \texttt{content\_tsv} bằng hàm mật độ bao phủ \texttt{ts\_rank\_cd} kết hợp tái chấm điểm Okapi BM25 ($k_1 = 1{,}5,\ b = 0{,}75$). Hai danh sách ứng viên được hợp nhất thứ hạng bằng công thức Reciprocal Rank Fusion (RRF) với hằng số làm trơn $k = 60$, sau đó đi qua tầng tái xếp hạng chéo (\texttt{Cross-Encoder Reranking}) để tính điểm hội tụ $\tau \in [0, 1]$. Trước khi gọi mô hình sinh câu trả lời, cổng kiểm định tiền sinh văn bản (\textit{CRAG Confidence Gating}) đối chiếu $\tau$ với hai ngưỡng quyết định:
+    \begin{itemize}[noitemsep, topsep=2pt]
+        \item Khi $\tau \ge 0{,}35$ (\texttt{CORRECT}): Ngữ cảnh đạt độ tin cậy cao, cho phép tổng hợp câu trả lời trực tiếp kèm thẻ dẫn nguồn.
+        \item Khi $0{,}20 \le \tau < 0{,}35$ (\texttt{AMBIGUOUS\_EXPANDED}): Hệ thống tự động kích hoạt hàm mở rộng truy vấn học thuật đa chiều (\texttt{expand\_academic\_query}) và thực hiện truy xuất bổ sung vòng hai trước khi tổng hợp.
+        \item Khi $\tau < 0{,}20$ (\texttt{ACTIVE\_ABSTENTION}): Hệ thống chủ động từ chối suy diễn nhằm triệt tiêu hoàn toàn nguy cơ ảo giác ngoại suy.
+    \end{itemize}
+
+    \item \textbf{Thuật toán máy trạng thái hữu hạn tự phục hồi mã nguồn LaTeX (LangGraph 4-Node State Machine):}
+    Quá trình biên dịch và tự sửa lỗi bản thảo được điều phối bởi đồ thị trạng thái hữu hạn gồm 4 nút chức năng: \texttt{reason\_and\_plan} (phân tích trạng thái và lập kế hoạch), \texttt{tool\_execution} (thực thi biên dịch trong hộp cát cô lập hoặc trích xuất ngữ cảnh), \texttt{healing\_router} (đánh giá mã thoát và điều phối chu trình tự vá lỗi với giới hạn tối đa $N_{\max} = 3$ vòng lặp), và \texttt{generate\_final\_answer} (kết xuất phản hồi). Khi phát hiện lỗi biên dịch ($\text{ExitCode} \ne 0$), hệ thống áp dụng cơ chế sửa lỗi hai tầng: (i) bộ vá lỗi tất định tốc độ cao (\texttt{\_auto\_patch} và \texttt{apply\_heuristic\_repair}) tự động nạp các gói lệnh bị thiếu (\texttt{amsmath}, \texttt{graphicx}, \texttt{booktabs}), thoát mã các ký tự đặc biệt (\texttt{\_}, \texttt{\%}, \texttt{\&}) ngoài môi trường toán và đóng các khối \texttt{\textbackslash begin\{...\}} bị khuyết; (ii) bộ sinh bản vá vi phẫu bằng mô hình ngôn ngữ (\texttt{generate\_patch}) phân tích tệp nhật ký \texttt{.log} để sửa các xung đột cú pháp phức tạp. Đặc biệt, chốt chặn chống dao động tuần hoàn (\textit{SHA-256 Anti-Oscillation Guard}) tính mã băm \texttt{SHA-256} của mã nguồn sau mỗi lần vá và đối chiếu với tập lịch sử \texttt{seen\_source\_hashes}; nếu phát hiện mã băm lặp lại hoặc mức độ lỗi không giảm, \texttt{healing\_router} lập tức dừng vòng lặp và khôi phục phiên bản tốt nhất (\texttt{best\_latex\_source}).
+
+    \item \textbf{Thuật toán trích xuất đồ thị tri thức 4 thực thể, hợp nhất ngữ nghĩa và phân cụm Louvain (GraphRAG):}
+    Đối với mỗi tài liệu trong thư viện nghiên cứu, đường ống GraphRAG sử dụng cơ chế ép kiểu lược đồ đầu ra \texttt{OpenAI Structured Outputs} (kết hợp bộ quy tắc biểu thức chính quy dự phòng \texttt{Rule Fallback}) để bóc tách 4 loại nút thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) cùng 4 loại cạnh quan hệ có hướng (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}). Để ngăn chặn sự phân mảnh đỉnh giữa các bài báo khác nhau, thuật toán chuẩn hóa tên thực thể (\texttt{canonical\_name}) và tính độ tương đồng Cosine giữa các vector nhúng thực thể; các nút cùng loại có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về một thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}. Cuối cùng, thuật toán phân cụm cộng đồng Louvain được thực thi trên đồ thị quy đổi vô hướng nhằm tối ưu hóa độ mô-đun hóa $Q$, từ đó tổng hợp bản tóm tắt cộng đồng theo thư mục (\texttt{folder\_community\_summaries}) và biên dịch hệ thống trang tri thức liên kết hai chiều (\texttt{wiki\_pages}).
+\end{enumerate}

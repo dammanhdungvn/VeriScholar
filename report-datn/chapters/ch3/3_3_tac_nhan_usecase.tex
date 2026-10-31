@@ -7,7 +7,7 @@ Từ việc khảo sát nghiệp vụ và quy trình nghiên cứu khoa học th
 Dựa trên yêu cầu bài toán và quy trình vận hành hệ thống, đề tài đề xuất hệ thống được thiết kế với \textbf{2 Actor chính}:
 \begin{enumerate}[label=\textbf{(\arabic*)}]
     \item \textbf{Học giả (Scholar / Researcher):} Là Actor trung tâm của hệ thống (bao gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với các phân hệ của nền tảng: tra cứu và tải tài liệu nghiên cứu từ các kho học thuật mở, đọc sâu tài liệu với sự trợ giúp của AI kèm định vị khung viền Bounding Box, khai phá đồ thị tri thức đa thực thể, quản lý kho lưu trữ tài liệu cá nhân và biên soạn bản thảo bài báo LaTeX.
-    \item \textbf{Quản trị viên hệ thống (Administrator):} Chịu trách nhiệm quản lý người dùng, cấu hình chính sách bảo mật kho khóa API cá nhân (BYOK), theo dõi các luồng sự kiện Trace mô hình ngôn ngữ lớn (\textit{Trace Logs}) trên nền tảng Langfuse, và giám sát hạ tầng máy ảo Sandbox cách ly.
+    \item \textbf{Quản trị viên hệ thống (Administrator / DevOps):} Chịu trách nhiệm vận hành kỹ thuật, thực thi kiểm định thực nghiệm qua các điểm cuối REST vận hành chuyên biệt (như \texttt{/api/v1/evaluations/run-benchmark}), giám sát cơ chế khóa bảo vệ tài khoản tự động và bộ đếm tham chiếu cơ sở dữ liệu, theo dõi các luồng sự kiện suy luận mô hình ngôn ngữ lớn (\textit{Trace Logs}) trên bảng điều khiển Langfuse Cloud, cũng như giám sát hạ tầng đám mây Azure Portal và hộp cát MicroVM cách ly.
 \end{enumerate}
 
 Các Use Case chính đối với mỗi Actor được tổng hợp và liệt kê trong Bảng~\ref{tab:actors_usecases}.
