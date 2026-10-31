@@ -53,11 +53,11 @@ Thời gian làm ĐATN: & Năm 2026 \\
 \begin{itemize}[leftmargin=*, noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt]
     \item[\textbf{--}] \textbf{Về sản phẩm:}
     \begin{itemize}[leftmargin=*, noitemsep, topsep=0pt, parsep=0pt, partopsep=0pt]
-        \item Phân hệ Khám phá tri thức \& Thu thập đa nguồn: Tích hợp tìm kiếm học thuật hai tầng (Exa AI, Semantic Scholar, CrossRef, arXiv) với bộ lọc ngữ nghĩa nghiêm ngặt.
-        \item Phân hệ Đọc sâu \& Bảo chứng trích dẫn tọa độ: Trình đọc đa tài liệu PDF Canvas kết hợp tìm kiếm lai (pgvector HNSW + BM25, dung hợp RRF) và trực quan hóa khung viền tọa độ (Bounding Box).
-        \item Phân hệ Đồ thị tri thức học thuật (GraphRAG): Mô hình hóa 4 loại thực thể khoa học (Khái niệm, Phương pháp, Tiêu chuẩn đối chuẩn, Tác giả) và phát hiện cụm tri thức cộng đồng.
+        \item Phân hệ Khám phá tri thức \& Thu thập đa nguồn: Tích hợp tìm kiếm học thuật hai tầng (Exa AI, arXiv, Semantic Scholar, CrossRef) với bộ lọc từ vựng và ngữ nghĩa.
+        \item Phân hệ Đọc sâu \& Đối chiếu trích dẫn tọa độ: Trình đọc đa tài liệu PDF Canvas kết hợp tìm kiếm lai (pgvector HNSW + BM25, dung hợp RRF) và trực quan hóa khung viền tọa độ (Bounding Box).
+        \item Phân hệ Đồ thị tri thức học thuật (GraphRAG): Mô hình hóa 4 thực thể khoa học gồm Bài báo, Phương pháp, Tập dữ liệu, Chỉ số thực nghiệm (Paper, Method, Dataset, MetricResult) và phân cụm cộng đồng.
         \item Phân hệ Biên soạn trực tuyến \& Tác nhân AI sửa lỗi: Môi trường soạn thảo bài báo LaTeX chuẩn IEEE/ACM tích hợp sandbox máy ảo cô lập E2B và tác nhân ReAct tự động sửa lỗi biên dịch.
-        \item Phân hệ Bảo mật chủ quyền \& Liêm chính nghiên cứu: Cơ chế mã hóa khóa riêng BYOK phía máy khách và nguyên tắc không lưu trữ dữ liệu (Zero Data Retention) bảo vệ tuyệt đối ý tưởng học thuật.
+        \item Phân hệ Bảo mật khóa \& Quyền riêng tư nghiên cứu: Cơ chế mã hóa khóa API cá nhân BYOK bằng AES-256-GCM phía máy chủ kết hợp giải mã tạm thời trên bộ nhớ khả biến (RAM).
     \end{itemize}
 \end{itemize}
 
@@ -86,7 +86,7 @@ Thời gian làm ĐATN: & Năm 2026 \\
     \item Khảo sát thực trạng quy trình nghiên cứu, viết và duyệt bài báo khoa học chuẩn quốc tế tại VinUni; xác định các khó khăn về liêm chính học thuật và định dạng văn bản.
     \item Phân tích và đặc tả chi tiết yêu cầu chức năng và phi chức năng (bảo mật khóa BYOK, Zero Data Retention, độ trễ RAG $\le 1{,}5\,\text{s}$, độ chính xác kiểm chứng $\text{IoU} \ge 0{,}85$).
     \item Thiết kế kiến trúc Lục giác (Hexagonal Architecture), mô hình CSDL quan hệ kết hợp pgvector; mô hình hóa các Use Case và biểu đồ tuần tự trọng tâm.
-    \item Cài đặt và hiện thực hóa các dịch vụ Backend bằng Python (FastAPI, pgvector, Langfuse, LiteLLM) và giao diện Frontend bằng TypeScript/React 19.
+    \item Cài đặt và hiện thực hóa các dịch vụ Backend bằng Python (FastAPI, pgvector, Langfuse, LangGraph) và giao diện Frontend bằng TypeScript/React 19.
     \item Tích hợp máy ảo E2B MicroVM để biên dịch LaTeX cô lập an toàn, ngăn chặn thực thi mã độc hại từ mã nguồn văn bản.
     \item Triển khai toàn bộ quy trình kiểm thử tự động (TDD) với hơn 330 kịch bản kiểm thử bao phủ toàn bộ các tầng nghiệp vụ và giao diện.
     \item Đánh giá thực nghiệm hệ thống trên các bài báo thực tế, đo lường độ trễ truy xuất RAG, độ chính xác trích dẫn tọa độ và tỷ lệ tự phục hồi lỗi LaTeX.

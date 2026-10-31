@@ -212,3 +212,47 @@ def test_no_subjective_pronouns_in_body_chapters():
             f"File {tex_file.relative_to(chapters_dir)} vi phạm Mục 3.1: "
             f"chứa đại từ nhân xưng bị cấm '{subj_matches[0]}'"
         )
+
+
+def test_frontmatter_ch1_and_bibliography_remediation():
+    """Kiểm tra chuẩn hóa phần mở đầu (Frontmatter), Chương 1, Kết luận và Tài liệu tham khảo:
+    - tai_lieu_tham_khao.tex sửa đúng tiêu đề & số trang bài báo RRF (Cormack et al., 2009),
+      bổ sung gao2023rag và blondel2008louvain, tổng số \\bibitem <= 20.
+    - phieu_giao_de_tai.tex đồng bộ 4 thực thể GraphRAG (Paper, Method, Dataset, MetricResult),
+      không chứa LiteLLM hoặc mã hóa phía máy khách.
+    - loi_cam_on.tex đồng bộ đại từ xưng hô, không trộn lẫn 'con xin' và 'em xin'.
+    - 1_2_tinh_cap_thiet.tex có bảng đối chiếu tab:related_systems_comparison.
+    """
+    import re
+
+    ref_content = Path("report-datn/chapters/tai_lieu_tham_khao.tex").read_text(encoding="utf-8")
+    assert (
+        "Reciprocal rank fusion outperforms condorcet and individual rank learning methods"
+        in ref_content
+    )
+    assert "758--759" in ref_content
+    assert "cite space algorithms" not in ref_content
+    assert "\\bibitem{gao2023rag}" in ref_content
+    assert "\\bibitem{blondel2008louvain}" in ref_content
+    bibitems = re.findall(r"\\bibitem\{([^}]+)\}", ref_content)
+    assert 0 < len(bibitems) <= 20
+
+    phieu_content = Path("report-datn/frontmatter/phieu_giao_de_tai.tex").read_text(
+        encoding="utf-8"
+    )
+    assert "LiteLLM" not in phieu_content
+    assert "phía máy khách" not in phieu_content
+    assert "Paper, Method, Dataset, MetricResult" in phieu_content or (
+        "Bài báo" in phieu_content
+        and "Phương pháp" in phieu_content
+        and "Tập dữ liệu" in phieu_content
+        and "Chỉ số thực nghiệm" in phieu_content
+    )
+
+    loi_cam_on_content = Path("report-datn/frontmatter/loi_cam_on.tex").read_text(encoding="utf-8")
+    assert "con xin" not in loi_cam_on_content
+
+    ch1_2_content = Path("report-datn/chapters/ch1/1_2_tinh_cap_thiet.tex").read_text(
+        encoding="utf-8"
+    )
+    assert "\\label{tab:related_systems_comparison}" in ch1_2_content

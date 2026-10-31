@@ -113,10 +113,10 @@ Vì vậy, việc nghiên cứu và xây dựng nền tảng \textbf{VeriScholar
 \noindent \textbf{-- Về sản phẩm:}
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item Hệ thống Backend: REST API và 5 luồng SSE theo Kiến trúc Lục giác.
-    \item Phân hệ Khám phá tài liệu: Tìm kiếm lai pgvector Dense và BM25 Sparse.
-    \item Phân hệ Đọc sâu PDF: Phân tích 2 cột, hỏi đáp và tô sáng Bounding Box.
-    \item Phân hệ GraphRAG: Trích xuất thực thể khoa học, phát hiện cộng đồng.
-    \item Phân hệ Soạn thảo: Tích hợp sandbox E2B và AI ReAct tự sửa cú pháp LaTeX.
+    \item Phân hệ Khám phá tài liệu: Tìm kiếm đa nguồn (Exa AI, arXiv, Semantic Scholar, CrossRef) kết hợp truy xuất lai pgvector Dense và BM25 Sparse.
+    \item Phân hệ Đọc sâu PDF: Phân tích 2 cột, hỏi đáp và đối chiếu tọa độ Bounding Box.
+    \item Phân hệ GraphRAG: Trích xuất 4 thực thể Bài báo, Phương pháp, Tập dữ liệu, Chỉ số thực nghiệm (Paper, Method, Dataset, MetricResult) và phân cụm Louvain.
+    \item Phân hệ Soạn thảo \& Bảo mật: Tích hợp sandbox E2B, tác nhân LangGraph ReAct tự sửa cú pháp LaTeX và mã hóa khóa BYOK bằng AES-256-GCM phía máy chủ (giải mã tạm thời trên RAM).
     \item Giao diện Web: Phát triển trên React 19, TypeScript, Tailwind và Monaco.
 \end{itemize}
 

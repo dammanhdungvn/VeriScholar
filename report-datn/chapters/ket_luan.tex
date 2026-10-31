@@ -4,34 +4,36 @@
 \chapter*{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 \addcontentsline{toc}{chapter}{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 
-{\setstretch{1.12}
+{\setstretch{1.15}
 
 \subsection*{1. Kết quả đạt được của đồ án}
-Sau thời gian nghiên cứu và thực hiện nghiêm túc, đồ án đã hoàn thành trọn vẹn các mục tiêu đề ra ban đầu:
-\begin{itemize}[itemsep=1pt, topsep=1pt, parsep=0pt]
-    \item Xây dựng thành công nền tảng \VS\ với kiến trúc lục giác mô-đun hóa, phân tách rạch ròi giữa miền nghiệp vụ và hạ tầng giao vận.
-    \item Giải quyết dứt điểm vấn đề ảo giác của mô hình ngôn ngữ lớn trong nghiên cứu khoa học thông qua cơ chế tìm kiếm lai Hybrid RAG (RRF $k=60$) kết hợp đối chiếu tọa độ hộp chữ $[0..1000]$ trên bản PDF gốc.
-    \item Hiện thực hóa mô hình mạng tri thức 4 thực thể học thuật (GraphRAG) trực tiếp trên PostgreSQL 16 và \texttt{pgvector}, đảm bảo tính nhất quán giao dịch ACID tuyệt đối.
-    \item Triển khai AI Agent LangGraph ReAct tích hợp môi trường đám mây cô lập E2B Sandbox, có khả năng tự động sửa lỗi biên dịch LaTeX đạt tỷ lệ thành công 92\%.
-    \item Thiết lập hệ thống kiểm thử tự động 4 Cổng nghiêm ngặt và đo đạc thực nghiệm định lượng trên máy chủ Azure Ubuntu.
-    \item Đóng gói và công bố toàn bộ mã nguồn của dự án trên nền tảng GitHub tại địa chỉ: \url{https://github.com/dammanhdungvn/VeriScholar}, bảo đảm tính mở, khả năng kiểm chứng độc lập và tái hiện thực nghiệm.
+Qua quá trình phân tích, thiết kế, hiện thực hóa và kiểm định thực nghiệm, đồ án tốt nghiệp đã hoàn thành các mục tiêu khoa học và kỹ thuật đề ra ban đầu:
+\begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
+    \item \textbf{Về kiến trúc phần mềm và cơ sở dữ liệu:} Thiết kế và hiện thực hóa nền tảng \VS\ tuân thủ nguyên lý Kiến trúc Lục giác (\textit{Hexagonal Architecture}) phân tách giữa lõi miền nghiệp vụ học thuật thuần khiết và các bộ điều hợp hạ tầng giao vận. Hệ thống tích hợp đồng bộ 20 bảng cơ sở dữ liệu vật lý thuộc 5 phân hệ chức năng trên hệ quản trị PostgreSQL 16 kết hợp tiện ích mở rộng \texttt{pgvector}, đảm bảo tính toàn vẹn tham chiếu và tính nhất quán giao dịch ACID giữa siêu dữ liệu bài báo, chỉ mục vector 1536 chiều và đồ thị tri thức.
+    \item \textbf{Về truy xuất thông tin lai và đối chiếu tọa độ trực quan:} Xây dựng thành công quy trình Agentic Hybrid RAG kết hợp tìm kiếm vector ngữ nghĩa (HNSW Cosine), tìm kiếm từ vựng hai tầng (chỉ mục ngược GIN \texttt{tsvector} \texttt{ts\_rank\_cd} kết hợp tái chấm điểm Okapi BM25), dung hợp thứ hạng RRF ($k=60$) và tái xếp hạng Cross-Encoder. Trên bộ dữ liệu đối chuẩn \textit{Golden Benchmark} gồm 36 câu hỏi học thuật trên 12 ấn phẩm kinh điển, cấu hình Hybrid RRF đạt độ thu hồi $\text{Recall@5} = 94{,}44\%$ (vượt qua phương pháp chỉ dùng Dense $80{,}56\%$ và chỉ dùng Sparse $83{,}33\%$), điểm bám sát bằng chứng $\text{Groundedness} = 0{,}9775$, độ liên quan $\text{Relevance} = 0{,}9471$, đồng thời ánh xạ chính xác các thẻ trích dẫn về khung viền tọa độ chuẩn hóa trên trang PDF gốc với chỉ số giao trên hợp trung bình $\text{IoU} = 0{,}9266 \pm 0{,}0126$ (vượt ngưỡng mục tiêu $\ge 0{,}85$).
+    \item \textbf{Về mạng lưới đồ thị tri thức học thuật (GraphRAG \& Graph Wiki):} Hiện thực hóa mô hình trích xuất và liên kết 4 thực thể khoa học cốt lõi (\textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}), kết hợp khử trùng lặp thực thể bằng độ tương đồng Cosine ($\ge 0{,}90$), phân cụm cộng đồng theo thuật toán tối ưu hóa độ mô-đun Louvain và biên dịch tự động các trang tổng hợp tri thức cộng đồng (\textit{Graph Wiki}), hỗ trợ học giả trả lời các câu hỏi tổng hợp liên tài liệu với điểm hoàn chỉnh đa bước đạt $0{,}9442$ trên nhánh đánh giá GraphRAG.
+    \item \textbf{Về biên soạn bản thảo và tự phục hồi lỗi biên dịch LaTeX:} Tích hợp trình soạn thảo học thuật trực tuyến kết nối máy trạng thái LangGraph ReAct (4 nút xử lý kèm cơ chế kiểm tra mã băm SHA-256 chống lặp vô hạn) và môi trường thực thi cô lập E2B MicroVM Sandbox. Kết quả thực nghiệm đối chứng (Ablation Study) trên 25 ca kiểm thử lỗi biên dịch thuộc 5 nhóm lỗi cú pháp phổ biến cho thấy chu trình Agentic ReAct kết hợp đạt tỷ lệ tự sửa lỗi thành công $96\%$ ($24/25$ ca), cải thiện đáng kể so với phương pháp Heuristic ($84\%$, $21/25$ ca) và chỉ dùng biểu thức chính quy AST/Regex ($44\%$, $11/25$ ca).
+    \item \textbf{Về kiểm định chất lượng và công khai mã nguồn:} Thiết lập quy trình kiểm thử tự động 4 Cổng xác minh với tổng cộng \textbf{580 kịch bản kiểm thử} (340 kiểm thử Backend \texttt{pytest} và 240 kiểm thử Frontend \texttt{vitest} trên 58 tệp, tổng thời gian thực thi $13{,}02\,\text{giây}$). Toàn bộ mã nguồn, kịch bản thực nghiệm tái lập và bộ dữ liệu đối chuẩn của dự án được đóng gói và công bố tại địa chỉ \url{https://github.com/dammanhdungvn/VeriScholar} nhằm phục vụ việc kiểm chứng độc lập.
 \end{itemize}
 
-\vspace{-0.15cm}
+\vspace{0.15cm}
 \subsection*{2. Hạn chế hiện tại của đề tài}
-Bên cạnh những kết quả đạt được, đề tài vẫn còn tồn tại một số hạn chế khách quan:
-\begin{itemize}[itemsep=1pt, topsep=1pt, parsep=0pt]
-    \item Hệ thống giới hạn tối đa 5 bài báo mở đồng thời trong một phiên đọc sâu nhằm tối ưu hóa dung lượng bộ nhớ RAM trên trình duyệt của người dùng.
-    \item Quy trình biên dịch các gói LaTeX ngoại cỡ còn phụ thuộc vào đường truyền mạng internet tới hạ tầng đám mây E2B Sandbox.
+Bên cạnh những kết quả đã đạt được, hệ thống \VS\ trong phạm vi đồ án tốt nghiệp vẫn còn tồn tại một số hạn chế kỹ thuật khách quan cần được nhìn nhận thẳng thắn:
+\begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
+    \item \textbf{Sự phụ thuộc vào các dịch vụ đám mây bên thứ ba:} Hoạt động suy luận ngôn ngữ, tạo vector nhúng, tìm kiếm ngữ nghĩa học thuật và biên dịch đám mây cô lập hiện phụ thuộc vào kết nối mạng tới các giao diện lập trình bên ngoài (OpenAI API, Exa AI, Semantic Scholar, E2B Sandbox và Langfuse Cloud). Khi đường truyền mạng bị gián đoạn hoặc dịch vụ đám mây gặp sự cố giới hạn tần suất (\textit{rate limit}), hệ thống phải chuyển sang các cơ chế dự phòng cục bộ với năng lực suy luận hạn chế hơn.
+    \item \textbf{Phạm vi khử trùng lặp của kho lưu trữ CAS:} Cơ chế định danh theo nội dung CAS (SHA-256) hiện mới thực hiện khử trùng lặp ở tầng tệp nhị phân vật lý (\texttt{document\_storage\_blobs}). Trong khi đó, các phân đoạn văn bản và vector nhúng trong bảng \texttt{document\_chunks} vẫn được phân lập theo từng định danh người dùng (\texttt{user\_id}) để bảo đảm quyền riêng tư dữ liệu, dẫn đến việc chưa tái sử dụng chung bộ chỉ mục vector khi nhiều học giả cùng nạp một bài báo công khai.
+    \item \textbf{Quy mô bộ dữ liệu đối chuẩn và ngôn ngữ tài liệu đánh giá:} Bộ dữ liệu thực nghiệm \textit{Golden Benchmark} hiện có quy mô vừa phải (12 ấn phẩm kinh điển, 36 câu hỏi đánh giá và 25 ca lỗi LaTeX) và tập trung chủ yếu vào các bài báo khoa học tiếng Anh bố cục 1--2 cột thuộc lĩnh vực Khoa học Máy tính và Trí tuệ nhân tạo; hệ thống chưa được kiểm định rộng rãi trên các tài liệu bản quét ảnh mờ (\textit{scanned PDF}) cần nhận dạng ký tự quang học (OCR) hoặc các bài báo đa ngôn ngữ có bố cục bảng biểu phức tạp.
+    \item \textbf{Giới hạn phiên làm việc đồng thời trên trình duyệt:} Trình đọc sâu trên giao diện người dùng hiện giới hạn mở đồng thời tối đa 5 tài liệu PDF trong một phiên làm việc nhằm kiểm soát mức tiêu thụ bộ nhớ khả biến (RAM) của trình duyệt khi kết xuất đồ họa hai chiều.
 \end{itemize}
 
-\vspace{-0.15cm}
+\vspace{0.15cm}
 \subsection*{3. Hướng phát triển tiếp theo}
-Trong thời gian tới, tác giả dự kiến tiếp tục mở rộng đề tài theo các định hướng:
-\begin{itemize}[itemsep=1pt, topsep=1pt, parsep=0pt]
-    \item Tích hợp cơ chế cộng tác thời gian thực nhiều tác giả dựa trên cấu trúc dữ liệu không xung đột CRDT (Yjs) trên trình soạn thảo LaTeX.
-    \item Mở rộng mô hình GraphRAG với các mô hình thị giác máy tính đa phương thức để phân tích sâu các biểu đồ, đồ thị hình ảnh trong bài báo.
-    \item Triển khai cụm worker phân tán xử lý song song để hỗ trợ các viện nghiên cứu có quy mô thư viện lên tới hàng chục nghìn bài báo.
+Từ các hạn chế kỹ thuật nêu trên, tác giả đề xuất bốn định hướng nghiên cứu và mở rộng hệ thống trong thời gian tới:
+\begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
+    \item \textbf{Hỗ trợ mô hình ngôn ngữ cục bộ và biên dịch LaTeX tự chủ:} Tích hợp các động cơ suy luận và tạo vector nhúng chạy trực tiếp trên hạ tầng nội bộ (như vLLM, Ollama kết hợp mô hình mã nguồn mở BGE-M3, Qwen hoặc Llama) cùng cụm container TeX Live cục bộ cô lập bằng \texttt{gVisor}, giúp hệ thống vận hành độc lập ngay cả trong mạng nội bộ không có kết nối Internet của các viện nghiên cứu.
+    \item \textbf{Chia sẻ chỉ mục vector liên người dùng cho các ấn phẩm công khai:} Nâng cấp kiến trúc bảng \texttt{document\_chunks} theo hướng tách biệt giữa kho chỉ mục vector dùng chung cho các bài báo truy cập mở (\textit{Canonical Public Paper Index} gắn với \texttt{blob\_hash}) và lớp chú thích cá nhân của từng học giả, giúp tiết kiệm chi phí tính toán vector nhúng trên quy mô toàn trường đại học.
+    \item \textbf{Mở rộng GraphRAG đa phương thức và cộng tác bản thảo thời gian thực:} Kết hợp các mô hình ngôn ngữ -- thị giác (\textit{Vision-Language Models}) và nhận dạng công thức/bảng biểu để trích xuất trực tiếp số liệu từ hình ảnh biểu đồ vào đồ thị tri thức; đồng thời tích hợp cấu trúc dữ liệu đồng bộ không xung đột CRDT (Yjs) vào trình soạn thảo Monaco để hỗ trợ nhiều đồng tác giả cùng biên tập một bản thảo LaTeX theo thời gian thực.
+    \item \textbf{Mở rộng quy mô tập dữ liệu đối chuẩn đa ngành:} Phối hợp với các đơn vị học thuật thuộc nhiều lĩnh vực khác nhau (Y sinh học, Khoa học vật liệu, Kinh tế lượng) để mở rộng bộ dữ liệu đối chuẩn lên quy mô hàng trăm ấn phẩm tiếng Anh và tiếng Việt, nâng cao độ tin cậy thống kê của các phép kiểm định thực nghiệm.
 \end{itemize}
 
 } % kết thúc setstretch
