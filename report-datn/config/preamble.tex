@@ -98,22 +98,17 @@
 \renewcommand{\thetable}{\thechapter-\arabic{table}}
 \renewcommand{\thefigure}{\thechapter-\arabic{figure}}
 
-% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) với đường kẻ đôi chuẩn HUMG
+% 6. Cấu hình tiêu đề chân trang (Footer) và đầu trang (Header) chuẩn HUMG
+% Bỏ toàn bộ header và footer thông tin, chỉ giữ số trang không in nghiêng ở góc dưới bên phải
 \usepackage{fancyhdr}
 
 \newcommand{\setupdatnheaders}{%
     \fancyhf{}%
-    \fancyhead[L]{\fontsize{10}{12}\selectfont\textbf{Đồ án tốt nghiệp ngành Công nghệ thông tin}}%
-    \renewcommand{\headrule}{%
-        \hrule width \headwidth height 1.2pt \vspace{1.5pt}%
-        \hrule width \headwidth height 0.4pt%
-    }%
-    \fancyfoot[L]{\fontsize{10}{12}\selectfont\textit{SVTH: Đàm Mạnh Dũng - 2221050359 -- Lớp: DCCTCT67\_09B}}%
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}%
-    \renewcommand{\footrule}{%
-        \hrule width \headwidth height 0.4pt \vspace{1.5pt}%
-        \hrule width \headwidth height 1.2pt%
-    }%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}%
+    \renewcommand{\headrulewidth}{0pt}%
+    \renewcommand{\footrulewidth}{0pt}%
+    \renewcommand{\headrule}{}%
+    \renewcommand{\footrule}{}%
 }
 
 \pagestyle{fancy}
@@ -129,48 +124,48 @@
 }
 
 % Phong cách trang dành cho hồ sơ hành chính đầu khóa (Phiếu giao đề tài, Đề cương)
-% Chỉ hiển thị số trang La Mã ở chân trang góc phải, không có đường kẻ header/footer
+% Chỉ hiển thị số trang La Mã ở chân trang góc phải, đứng (không in nghiêng)
 \fancypagestyle{adminform}{%
     \fancyhf{}%
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\textit{\thepage}}%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}%
     \renewcommand{\headrulewidth}{0pt}%
     \renewcommand{\footrulewidth}{0pt}%
     \renewcommand{\headrule}{}%
     \renewcommand{\footrule}{}%
 }
 
-% 7. Định dạng Mục lục chuẩn xác 100% theo mẫu đồ án xuất sắc HUMG (Hình 2 & 3)
+% 7. Định dạng Mục lục chuẩn xác theo góp ý GVHD
 \usepackage[titles]{tocloft}
 
-% Dấu chấm dẫn trang (leader dots) dày mịn, mật độ cao chuẩn MS Word (Ảnh 2)
+% Dấu chấm dẫn trang (leader dots) dày mịn, mật độ cao chuẩn MS Word
 \renewcommand{\cftdotfill}[1]{\leaders\hbox to 0.33em{\hss.\hss}\hfill}
 \renewcommand{\cftchapleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
 
-% Tiền tố "CHƯƠNG " cho các chương có đánh số
+% Tiền tố "CHƯƠNG " cho các chương có đánh số (bỏ dấu hai chấm sau số chương)
 \renewcommand{\cftchappresnum}{CHƯƠNG }
-\renewcommand{\cftchapaftersnum}{:\ }
+\renewcommand{\cftchapaftersnum}{\ }
 \newlength{\cftchaplen}
-\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1:\ }
+\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1\ }
 \setlength{\cftchapnumwidth}{\cftchaplen}
 \cftsetindents{chapter}{0pt}{\cftchaplen}
 
-% Dấu chấm sau số thứ tự section, subsection và subsubsection (1.1., 2.1.1., 4.2.1.1.)
-\renewcommand{\cftsecaftersnum}{.}
+% Bỏ dấu chấm sau số thứ tự section và subsection trong Mục lục (2.1 thay vì 2.1.)
+\renewcommand{\cftsecaftersnum}{}
 \newlength{\cftseclen}
-\settowidth{\cftseclen}{1.1.\ }
+\settowidth{\cftseclen}{1.1\ }
 \cftsetindents{section}{0.65cm}{\cftseclen}
 
-\renewcommand{\cftsubsecaftersnum}{.}
+\renewcommand{\cftsubsecaftersnum}{}
 \newlength{\cftsubseclen}
-\settowidth{\cftsubseclen}{2.1.1.\ }
+\settowidth{\cftsubseclen}{2.1.1\ }
 \cftsetindents{subsection}{1.3cm}{\cftsubseclen}
 
-\renewcommand{\cftsubsubsecaftersnum}{.}
+\renewcommand{\cftsubsubsecaftersnum}{}
 \newlength{\cftsubsubseclen}
-\settowidth{\cftsubsubseclen}{4.2.1.12.\ }
+\settowidth{\cftsubsubseclen}{4.2.1.1\ }
 \cftsetindents{subsubsection}{1.95cm}{\cftsubsubseclen}
 
 % Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương
@@ -179,7 +174,7 @@
 \setlength{\cftbeforesubsecskip}{0.8pt}
 \setlength{\cftbeforesubsubsecskip}{0.8pt}
 
-% Phông chữ trong mục lục: Tiêu đề chương in đậm chuẩn theo Ảnh 1, số trang nét thường
+% Phông chữ trong mục lục: Tiêu đề chương in đậm, số trang nét thường
 \renewcommand{\cftchapfont}{\bfseries}
 \renewcommand{\cftchappagefont}{\normalfont}
 \renewcommand{\cftsecfont}{\normalfont}
@@ -189,28 +184,28 @@
 \renewcommand{\cftsubsubsecfont}{\normalfont}
 \renewcommand{\cftsubsubsecpagefont}{\normalfont}
 
-% --- Cấu hình Danh mục Bảng biểu (LoT) chuẩn HUMG (Ảnh 1) ---
-\renewcommand{\cfttabpresnum}{\bfseries Bảng~}
-\renewcommand{\cfttabaftersnum}{:}
+% --- Cấu hình Danh mục Bảng biểu (LoT): Chữ Bảng và STT không in đậm, bỏ dấu hai chấm ---
+\renewcommand{\cfttabpresnum}{Bảng~}
+\renewcommand{\cfttabaftersnum}{\ }
 \newlength{\cfttablen}
-\settowidth{\cfttablen}{\bfseries Bảng~9-99:~}
+\settowidth{\cfttablen}{Bảng~9-99\ }
 \setlength{\cfttabnumwidth}{\cfttablen}
 \cftsetindents{table}{0pt}{\cfttablen}
 \renewcommand{\cfttableader}{\cftdotfill{\cftdotsep}}
 
-% --- Cấu hình Danh mục Hình ảnh (LoF) chuẩn HUMG ---
-\renewcommand{\cftfigpresnum}{\bfseries Hình~}
-\renewcommand{\cftfigaftersnum}{:}
+% --- Cấu hình Danh mục Hình ảnh (LoF): Chữ Hình và STT không in đậm, bỏ dấu hai chấm ---
+\renewcommand{\cftfigpresnum}{Hình~}
+\renewcommand{\cftfigaftersnum}{\ }
 \newlength{\cftfiglen}
-\settowidth{\cftfiglen}{\bfseries Hình~9-99:~}
+\settowidth{\cftfiglen}{Hình~9-99\ }
 \setlength{\cftfignumwidth}{\cftfiglen}
 \cftsetindents{figure}{0pt}{\cftfiglen}
 \renewcommand{\cftfigleader}{\cftdotfill{\cftdotsep}}
 
-% 7. Phân cấp đề mục và độ sâu mục lục (Tối đa 4 cấp)
+% 7. Phân cấp đề mục và độ sâu mục lục (Mục lục tối đa 3 cấp: Chapter, Section, Subsection)
 \usepackage{titlesec}
 \setcounter{secnumdepth}{4}
-\setcounter{tocdepth}{3}
+\setcounter{tocdepth}{2}
 
 % Định dạng tiêu đề chương chuẩn 16pt in hoa đậm căn giữa
 % Dạng block: CHƯƠNG X: TÊN CHƯƠNG (chương có số) hoặc TÊN CHƯƠNG (chương không số)
