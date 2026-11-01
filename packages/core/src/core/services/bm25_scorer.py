@@ -13,7 +13,7 @@ from collections import Counter
 class OkapiBM25Scorer:
     """Deterministic Okapi BM25 lexical scorer for scholarly passages."""
 
-    def __init__(self, k1: float = 1.2, b: float = 0.75) -> None:
+    def __init__(self, k1: float = 1.5, b: float = 0.75) -> None:
         self.k1 = k1
         self.b = b
 
