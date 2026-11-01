@@ -13,5 +13,15 @@ def test_preamble():
     assert "Đồ án tốt nghiệp ngành Công nghệ thông tin" not in content, "Header cũ vẫn tồn tại"
     print("test_preamble PASSED")
 
+def test_phieu_giao_de_tai():
+    content = Path("report-datn/frontmatter/phieu_giao_de_tai.tex").read_text(encoding="utf-8")
+    assert "\\begin{enumerate}" not in content, "Vẫn còn enumerate trong phiếu giao đề tài"
+    assert "cụ thể sau:" in content, "Thiếu câu dẫn nhiệm vụ cụ thể sau:"
+    assert "\nsau:\n" not in content, "Chữ 'sau:' vẫn bị rơi đơn độc một dòng"
+    assert "\\setstretch{1.10}" not in content, "Vẫn còn ép giãn dòng setstretch{1.10}"
+    assert "\\item[--]" in content, "Thiếu gạch đầu dòng item[--] cho nhiệm vụ cụ thể"
+    print("test_phieu_giao_de_tai PASSED")
+
 if __name__ == "__main__":
     test_preamble()
+    test_phieu_giao_de_tai()
