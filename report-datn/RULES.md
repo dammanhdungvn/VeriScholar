@@ -267,11 +267,9 @@ Khi xây dựng các sơ đồ phân tích và thiết kế hệ thống (đặc
 ### 4.6. Quy Chuẩn Kỹ Nghệ Bảng Biểu Nâng Cao (Advanced Tabular Engineering)
 Để ngăn chặn hoàn toàn lỗi bảng đâm thủng lề trang và đảm bảo tính thẩm mỹ chuẩn mực:
 * **Bắt buộc dùng `tabularx` cho văn bản dài:** Mọi bảng có chứa nội dung mô tả, luồng nghiệp vụ hoặc từ điển dữ liệu bắt buộc phải dùng môi trường `tabularx` với độ rộng `\textwidth` (`\begin{tabularx}{\textwidth}{...}`). Sử dụng cột loại `X` (hoặc `>{\raggedright\arraybackslash}X`) để bảng tự động tính toán ngắt dòng chữ, tuyệt đối không dùng `tabular` với toàn cột `l` hay `c` khiến dòng chữ kéo dài vô tận qua mép giấy bên phải.
-* **Quy cách kẻ bảng chuẩn mực học thuật (`booktabs`):**
-  * Sử dụng đường kẻ ngang dày ở mép trên: `\toprule`.
-  * Sử dụng đường kẻ ngang phân cách tiêu đề cột: `\midrule`.
-  * Sử dụng đường kẻ ngang dày ở đáy bảng: `\bottomrule`.
-  * **Nghiêm cấm lạm dụng đường kẻ dọc (`|c|l|`):** Trong các ấn phẩm khoa học quốc tế, các đường kẻ dọc làm rối mắt và cản trở luồng đọc ngang của mắt; chỉ sử dụng đường kẻ dọc khi thực sự cần thiết trong bảng phân tách Use Case 2 cột (`|p{3.5cm}|X|`).
+* **Quy cách kẻ bảng chuẩn mực đồ án tốt nghiệp:**
+  * Bảng phải có khung viền khép kín 4 góc ngoài (`|...|`) và các đường kẻ ngang `\hline` phân cách từng dòng theo đúng quy định đồ án tốt nghiệp của Nhà trường (không dùng bảng hở cạnh `booktabs` như `\toprule`, `\midrule`, `\bottomrule`).
+  * Các ô bên trong sử dụng vạch kẻ dọc `|` để phân tách cột rõ ràng. Đối với các bảng có văn bản dài, sử dụng `tabularx` hoặc cột `p{...}` kết hợp `\arraybackslash` để bảo đảm dòng chữ tự động ngắt dòng, không đâm thủng lề trang.
 * **Bảng Đặc tả Ca Sử dụng Chuẩn BA:** Cấu trúc bảng Use Case bắt buộc gồm 2 cột cố định: Cột trái `p{3.5cm}` in đậm danh mục (Mã UC, Tên ca sử dụng, Tác nhân, Tiền điều kiện, Hậu điều kiện, Luồng chính, Luồng ngoại lệ), Cột phải `X` ghi nội dung chi tiết dạng danh sách gạch đầu dòng có thứ tự.
 
 ### 4.7. Quy Chuẩn Ký Hiệu Toán Học & Trình Bày Độ Đo (Mathematical Rigor & Typography)
