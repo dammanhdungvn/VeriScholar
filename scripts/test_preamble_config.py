@@ -22,6 +22,16 @@ def test_phieu_giao_de_tai():
     assert "\\item[--]" in content, "Thiếu gạch đầu dòng item[--] cho nhiệm vụ cụ thể"
     print("test_phieu_giao_de_tai PASSED")
 
+def test_de_cuong_datn():
+    content = Path("report-datn/frontmatter/de_cuong_datn.tex").read_text(encoding="utf-8")
+    assert "\\textbf{BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC}" in content, "Tiêu ngữ chưa đúng BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC"
+    assert "Bộ môn Hệ thống thông tin và Tri thức" in content or "Bộ môn Hệ thống Thông tin và Tri Thức" in content, "Kế hoạch tuần 10 thiếu tên Bộ môn đầy đủ"
+    assert "\\setstretch{1.06}" not in content, "Vẫn còn setstretch{1.06}"
+    assert "\\setstretch{1.05}" not in content, "Vẫn còn setstretch{1.05}"
+    assert "\\setstretch{1.12}" not in content, "Vẫn còn setstretch{1.12}"
+    print("test_de_cuong_datn PASSED")
+
 if __name__ == "__main__":
     test_preamble()
     test_phieu_giao_de_tai()
+    test_de_cuong_datn()
