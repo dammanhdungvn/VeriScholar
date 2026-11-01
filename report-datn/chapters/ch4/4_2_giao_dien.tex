@@ -36,7 +36,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
             \node[card] (c1) {$\bullet$ \textbf{Tìm kiếm hợp nhất:} arXiv, Semantic Scholar, Exa AI};
-            \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [\textbf{Đã bình duyệt}]; Ưu tiên xếp hạng};
+            \node[card, below=of c1] (c2) {$\bullet$ \textbf{Nút gạt lọc:} [Tất cả] / [''Đã bình duyệt'']; Ưu tiên xếp hạng};
             \node[card, below=of c2] (c3) {$\bullet$ \textbf{Hiệu ứng tải mượt:} 3 thẻ khung xương (\texttt{animate-pulse})};
             \node[card, below=of c3] (c4) {$\bullet$ \textbf{Thẻ chống tràn:} Lọc mã LaTeX, rút gọn tác giả, co giãn tóm tắt};
         \end{tikzpicture}
@@ -67,7 +67,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \begin{tikzpicture}[node distance=3pt]
             \node[card] (p1) {$\bullet$ \textbf{Tải tệp kéo--thả:} Hỗ trợ đa tệp PDF tiện lợi};
             \node[card, below=of p1] (p2) {$\bullet$ \textbf{Deduplication CAS:} Định danh SHA-256 (khử trùng lặp tệp tải lên)};
-            \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết quốc tế \textbf{ORCID} iD 16 chữ số};
+            \node[card, below=of p2] (p3) {$\bullet$ \textbf{Định danh học giả:} Liên kết quốc tế ORCID iD 16 chữ số};
             \node[card, below=of p3] (p4) {$\bullet$ \textbf{Quản lý khóa BYOK:} Mã hóa an toàn cá nhân (bảo vệ quyền riêng tư)};
         \end{tikzpicture}
     };
@@ -81,7 +81,7 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
         \vspace{-3pt}
         \begin{tikzpicture}[node distance=3pt]
             \node[card] (w1) {$\bullet$ \textbf{Trình soạn thảo Monaco:} Cây thư mục đa tệp, tô màu LaTeX};
-            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} MicroVM \textbf{E2B} biên dịch cô lập};
+            \node[card, below=of w1] (w2) {$\bullet$ \textbf{Sandbox an toàn:} MicroVM E2B biên dịch cô lập};
             \node[card, below=of w2] (w3) {$\bullet$ \textbf{Chu trình ReAct:} Đọc log lỗi $\to$ Lập luận $\to$ Vá lỗi vi phẫu};
             \node[card, below=of w3] (w4) {$\bullet$ \textbf{Tự phục hồi bản thảo:} Tái biên dịch tự động đạt tỷ lệ $> 90\%$};
         \end{tikzpicture}
@@ -164,7 +164,7 @@ Bảng điều khiển trung tâm (Dashboard) đóng vai trò là trạm điều
 Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, hỗ trợ học giả tìm kiếm hợp nhất qua 4 nguồn tri thức học thuật lớn (arXiv, Semantic Scholar, CrossRef, Exa AI) (Hình~\ref{fig:ui_search_paper}):
 \begin{itemize}
     \item \textbf{Hiệu ứng chờ tải mượt mà với khung xương giả lập (\texttt{animate-pulse}):} Để triệt tiêu hiện tượng giật chuyển layout (Cumulative Layout Shift) trong khi chờ dữ liệu phân tán từ các API bên ngoài, giao diện hiển thị 3 thẻ khung xương (\textit{Skeleton Cards}) áp dụng lớp hiệu ứng \texttt{animate-pulse} của Tailwind CSS, giúp giảm thiểu đáng kể nhận thức về độ trễ mạng của học giả.
-    \item \textbf{Bộ lọc phân loại dạng viên nhộng (\textit{Pill Toggle}) và Ưu tiên bình duyệt:} Cho phép chuyển đổi linh hoạt giữa chế độ \textit{Tất cả} và \textbf{Đã bình duyệt} (\textit{Peer-Reviewed}). Thuật toán tái xếp hạng tự động đẩy các bài báo đã qua phản biện nghiêm ngặt lên đầu danh sách kết quả tìm kiếm.
+    \item \textbf{Bộ lọc phân loại dạng viên nhộng (\textit{Pill Toggle}) và Ưu tiên bình duyệt:} Cho phép chuyển đổi linh hoạt giữa chế độ \textit{Tất cả} và \textit{Đã bình duyệt} (\textit{Peer-Reviewed}). Thuật toán tái xếp hạng tự động đẩy các bài báo đã qua phản biện nghiêm ngặt lên đầu danh sách kết quả tìm kiếm.
     \item \textbf{Thẻ bài báo chống tràn bố cục (\textit{Anti-Overflow Scholarly Card}):} Tự động làm sạch mã LaTeX thô trong tiêu đề bài báo, rút gọn danh sách tác giả theo quy tắc học thuật (tối đa 2 tác giả kèm hậu tố ``và cộng sự''), và áp dụng \texttt{line-clamp-2} cho phần tóm tắt để người dùng quét nhanh tài liệu.
     \item \textbf{Nạp trực tiếp vào Reader:} Đối với các bài báo có tệp toàn văn mở (\textit{Open Access PDF}), giao diện hiển thị chấm xanh lục và nút tải tức thì tài liệu vào Phân hệ Đọc sâu.
 \end{itemize}

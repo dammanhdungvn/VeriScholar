@@ -46,3 +46,6 @@ if __name__ == "__main__":
     test_phieu_giao_de_tai()
     test_de_cuong_datn()
     test_frontmatter_bolds()
+    from scan_inline_bolds import find_casual_bolds
+    assert len(find_casual_bolds()) == 0, "Vẫn còn casual inline bolds trong chapters"
+    print("test_chapters_bolds PASSED")
