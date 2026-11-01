@@ -267,14 +267,14 @@
 }
 
 % Định dạng số thứ tự chuẩn trên PDF Outline (Bookmarks):
-% - Cấp 0 (Chapter có số): "CHƯƠNG X: "
-% - Cấp con (Section, Subsection...): "X.Y. ", "X.Y.Z. "
+% - Cấp 0 (Chapter có số): "CHƯƠNG X " (không dấu hai chấm)
+% - Cấp con (Section, Subsection...): "X.Y ", "X.Y.Z " (không dấu chấm)
 \makeatletter
 \renewcommand{\Hy@numberline}[1]{%
   \ifnum\BKM@level=0
-    CHƯƠNG #1:\ %
+    CHƯƠNG #1\ %
   \else
-    #1.\ %
+    #1\ %
   \fi
 }
 \makeatother

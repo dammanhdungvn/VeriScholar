@@ -4,8 +4,6 @@
 \chapter*{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 \addcontentsline{toc}{chapter}{KẾT LUẬN VÀ HƯỚNG PHÁT TRIỂN}
 
-{\setstretch{1.15}
-
 \subsection*{1. Kết quả đạt được của đồ án}
 Qua quá trình phân tích, thiết kế, hiện thực hóa và kiểm định thực nghiệm, đồ án tốt nghiệp đã hoàn thành các mục tiêu khoa học và kỹ thuật đề ra ban đầu:
 \begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
@@ -16,7 +14,6 @@ Qua quá trình phân tích, thiết kế, hiện thực hóa và kiểm định
     \item \textbf{Về kiểm định chất lượng và công khai mã nguồn:} Thiết lập quy trình kiểm thử tự động 4 Cổng xác minh với tổng cộng 580 kịch bản kiểm thử (340 kiểm thử Backend \texttt{pytest} và 240 kiểm thử Frontend \texttt{vitest} trên 58 tệp, tổng thời gian thực thi $13{,}02\,\text{giây}$). Toàn bộ mã nguồn, kịch bản thực nghiệm tái lập và bộ dữ liệu đối chuẩn của dự án được đóng gói và công bố tại địa chỉ \url{https://github.com/dammanhdungvn/VeriScholar} nhằm phục vụ việc kiểm chứng độc lập.
 \end{itemize}
 
-\vspace{0.15cm}
 \subsection*{2. Hạn chế hiện tại của đề tài}
 Bên cạnh những kết quả đã đạt được, hệ thống \VS\ trong phạm vi đồ án tốt nghiệp vẫn còn tồn tại một số hạn chế kỹ thuật khách quan cần được nhìn nhận thẳng thắn:
 \begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
@@ -26,7 +23,6 @@ Bên cạnh những kết quả đã đạt được, hệ thống \VS\ trong ph
     \item \textbf{Giới hạn phiên làm việc đồng thời trên trình duyệt:} Trình đọc sâu trên giao diện người dùng hiện giới hạn mở đồng thời tối đa 5 tài liệu PDF trong một phiên làm việc nhằm kiểm soát mức tiêu thụ bộ nhớ khả biến (RAM) của trình duyệt khi kết xuất đồ họa hai chiều.
 \end{itemize}
 
-\vspace{0.15cm}
 \subsection*{3. Hướng phát triển tiếp theo}
 Từ các hạn chế kỹ thuật nêu trên, tác giả đề xuất bốn định hướng nghiên cứu và mở rộng hệ thống trong thời gian tới:
 \begin{itemize}[itemsep=3pt, topsep=3pt, parsep=0pt]
@@ -35,5 +31,3 @@ Từ các hạn chế kỹ thuật nêu trên, tác giả đề xuất bốn đ�
     \item \textbf{Mở rộng GraphRAG đa phương thức và cộng tác bản thảo thời gian thực:} Kết hợp các mô hình ngôn ngữ -- thị giác (\textit{Vision-Language Models}) và nhận dạng công thức/bảng biểu để trích xuất trực tiếp số liệu từ hình ảnh biểu đồ vào đồ thị tri thức; đồng thời tích hợp cấu trúc dữ liệu đồng bộ không xung đột CRDT (Yjs) vào trình soạn thảo Monaco để hỗ trợ nhiều đồng tác giả cùng biên tập một bản thảo LaTeX theo thời gian thực.
     \item \textbf{Mở rộng quy mô tập dữ liệu đối chuẩn đa ngành:} Phối hợp với các đơn vị học thuật thuộc nhiều lĩnh vực khác nhau (Y sinh học, Khoa học vật liệu, Kinh tế lượng) để mở rộng bộ dữ liệu đối chuẩn lên quy mô hàng trăm ấn phẩm tiếng Anh và tiếng Việt, nâng cao độ tin cậy thống kê của các phép kiểm định thực nghiệm.
 \end{itemize}
-
-} % kết thúc setstretch

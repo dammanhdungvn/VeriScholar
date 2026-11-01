@@ -22,10 +22,15 @@ def test_phieu_giao_de_tai():
     assert "\\item[--]" in content, "Thiếu gạch đầu dòng item[--] cho nhiệm vụ cụ thể"
     print("test_phieu_giao_de_tai PASSED")
 
+def test_ket_luan_spacing():
+    content = Path("report-datn/chapters/ket_luan.tex").read_text(encoding="utf-8")
+    assert "\\setstretch" not in content, "Vẫn còn lệnh setstretch trong ket_luan.tex"
+    print("test_ket_luan_spacing PASSED")
+
 def test_de_cuong_datn():
     content = Path("report-datn/frontmatter/de_cuong_datn.tex").read_text(encoding="utf-8")
     assert "\\textbf{BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC}" in content, "Tiêu ngữ chưa đúng BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC"
-    assert "Bộ môn Hệ thống thông tin và Tri thức" in content or "Bộ môn Hệ thống Thông tin và Tri Thức" in content, "Kế hoạch tuần 10 thiếu tên Bộ môn đầy đủ"
+    assert "Bộ môn Hệ thống thông tin và Tri thức" in content, "Kế hoạch tuần 10 thiếu tên Bộ môn đầy đủ chuẩn chính tả"
     assert "\\setstretch{1.06}" not in content, "Vẫn còn setstretch{1.06}"
     assert "\\setstretch{1.05}" not in content, "Vẫn còn setstretch{1.05}"
     assert "\\setstretch{1.12}" not in content, "Vẫn còn setstretch{1.12}"
@@ -46,6 +51,7 @@ if __name__ == "__main__":
     test_phieu_giao_de_tai()
     test_de_cuong_datn()
     test_frontmatter_bolds()
+    test_ket_luan_spacing()
     from scan_inline_bolds import find_casual_bolds
     assert len(find_casual_bolds()) == 0, "Vẫn còn casual inline bolds trong chapters"
     print("test_chapters_bolds PASSED")
