@@ -18,24 +18,17 @@ Mặc dù sự xuất hiện của các mô hình ngôn ngữ lớn (LLM) cùng 
 \caption{Đối chiếu năng lực kỹ thuật giữa các công cụ hỗ trợ nghiên cứu học thuật hiện có và hệ thống VeriScholar}
 \label{tab:related_systems_comparison}
 \footnotesize
-\setlength{\tabcolsep}{4pt}
+\setlength{\tabcolsep}{3.5pt}
 \renewcommand{\arraystretch}{1.22}
-\begin{tabularx}{\textwidth}{>{\bfseries\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X >{\raggedright\arraybackslash}X}
-\toprule
-\textbf{Nền tảng} & \textbf{Định vị tọa độ PDF 2 cột} & \textbf{Truy xuất lai Hybrid RRF \& Cross-Encoder} & \textbf{Đồ thị tri thức 4 thực thể \& Wiki} & \textbf{Tự sửa lỗi biên dịch LaTeX (ReAct)} & \textbf{Quản lý khóa BYOK AES-256-GCM} \\
-\midrule
-ChatPDF & Chỉ dẫn chiếu mức số trang, mất cấu trúc 2 cột & Chỉ dùng tìm kiếm vector đơn luồng & Không hỗ trợ & Không hỗ trợ soạn thảo LaTeX & Không hỗ trợ khóa riêng \\
-\addlinespace[2pt]
-NotebookLM & Trích dẫn đoạn văn bản phẳng, không tô sáng hộp tọa độ PDF & Truy xuất ngữ cảnh dài độc quyền (đóng) & Bản đồ khái niệm tóm tắt cơ bản & Không hỗ trợ biên dịch LaTeX & Không hỗ trợ khóa riêng \\
-\addlinespace[2pt]
-Elicit & Trích xuất bảng tóm tắt, thiếu khung tọa độ hình học trên trang & Tìm kiếm ngữ nghĩa kết hợp lọc siêu dữ liệu & Ma trận khái niệm theo cột, không có đồ thị liên kết & Không hỗ trợ soạn thảo LaTeX & Không hỗ trợ khóa riêng \\
-\addlinespace[2pt]
-SciSpace & Hỗ trợ quét vùng chọn thủ công trên trang PDF & Tìm kiếm lai cơ bản trên kho công khai & Liên kết trích dẫn bài báo, chưa tách 4 thực thể & Có mẫu văn bản, không tự sửa lỗi biên dịch & Không hỗ trợ khóa riêng \\
-\addlinespace[2pt]
-Overleaf & Không tích hợp trình đọc hỏi đáp tài liệu RAG & Không có phân hệ truy xuất tri thức học thuật & Không hỗ trợ đồ thị tri thức & Báo lỗi dòng nhật ký thô, gợi ý thủ công & Không hỗ trợ BYOK \\
-\midrule
-\VS\ (Đề tài) & Ánh xạ tọa độ chuẩn hóa trên PDF 2 cột ($\text{IoU} = 0{,}9266$) & Hybrid RRF ($k=60$) kết hợp Cross-Encoder & Đồ thị 4 thực thể trên PostgreSQL \& Wiki cộng đồng & Agentic ReAct tự sửa lỗi trong E2B Sandbox ($96\%$) & Mã hóa AES-256-GCM, giải mã tạm thời trên RAM \\
-\bottomrule
+\begin{tabularx}{\textwidth}{|>{\bfseries\raggedright\arraybackslash}p{2.3cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{Nền tảng} & \textbf{Định vị tọa độ PDF 2 cột} & \textbf{Truy xuất lai Hybrid RRF \& Cross-Encoder} & \textbf{Đồ thị tri thức 4 thực thể \& Wiki} & \textbf{Tự sửa lỗi biên dịch LaTeX (ReAct)} & \textbf{Quản lý khóa BYOK AES-256-GCM} \tabularnewline \hline
+ChatPDF & Chỉ dẫn chiếu mức số trang, mất cấu trúc 2 cột & Chỉ dùng tìm kiếm vector đơn luồng & Không hỗ trợ & Không hỗ trợ soạn thảo LaTeX & Không hỗ trợ khóa riêng \tabularnewline \hline
+NotebookLM & Trích dẫn đoạn văn bản phẳng, không tô sáng hộp tọa độ PDF & Truy xuất ngữ cảnh dài độc quyền (đóng) & Bản đồ khái niệm tóm tắt cơ bản & Không hỗ trợ biên dịch LaTeX & Không hỗ trợ khóa riêng \tabularnewline \hline
+Elicit & Trích xuất bảng tóm tắt, thiếu khung tọa độ hình học trên trang & Tìm kiếm ngữ nghĩa kết hợp lọc siêu dữ liệu & Ma trận khái niệm theo cột, không có đồ thị liên kết & Không hỗ trợ soạn thảo LaTeX & Không hỗ trợ khóa riêng \tabularnewline \hline
+SciSpace & Hỗ trợ quét vùng chọn thủ công trên trang PDF & Tìm kiếm lai cơ bản trên kho công khai & Liên kết trích dẫn bài báo, chưa tách 4 thực thể & Có mẫu văn bản, không tự sửa lỗi biên dịch & Không hỗ trợ khóa riêng \tabularnewline \hline
+Overleaf & Không tích hợp trình đọc hỏi đáp tài liệu RAG & Không có phân hệ truy xuất tri thức học thuật & Không hỗ trợ đồ thị tri thức & Báo lỗi dòng nhật ký thô, gợi ý thủ công & Không hỗ trợ BYOK \tabularnewline \hline
+\VS\ (Đề tài) & Ánh xạ tọa độ chuẩn hóa trên PDF 2 cột ($\text{IoU} = 0{,}9266$) & Hybrid RRF ($k=60$) kết hợp Cross-Encoder & Đồ thị 4 thực thể trên PostgreSQL \& Wiki cộng đồng & Agentic ReAct tự sửa lỗi trong E2B Sandbox ($96\%$) & Mã hóa AES-256-GCM, giải mã tạm thời trên RAM \tabularnewline \hline
 \end{tabularx}
 \end{table}
 
