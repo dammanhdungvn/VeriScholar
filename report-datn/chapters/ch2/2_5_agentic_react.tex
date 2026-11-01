@@ -117,8 +117,8 @@ Mô hình kiến trúc tổng thể của AI Agent nghiên cứu học thuật �
 \end{figure}
 
 Để hiện thực hóa các năng lực tự chủ trên, cộng đồng khoa học đã chuẩn hóa thành 6 mẫu thiết kế Agent (\textit{Agent Design Patterns}): (1) Lập kế hoạch (\textit{Planning}), (2) Sử dụng công cụ (\textit{Tool Use}), (3) Suy luận \& Hành động (\textit{ReAct}), (4) Tự đánh giá (\textit{Reflection}), (5) Đa Agent (\textit{Multi-Agent}), và (6) Người trong vòng lặp (\textit{Human-in-the-Loop}).
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Mẫu kiến trúc Lập kế hoạch (Planning Pattern)}
 \label{subsec:planning_pattern}
 Khi tiếp nhận một yêu cầu nghiên cứu học thuật phức tạp (ví dụ: ``Tổng quan các phương pháp GraphRAG trong 3 năm qua và so sánh hiệu năng trên tập dữ liệu chuẩn''), mô hình ngôn ngữ không thể đưa ra lời giải thấu đáo trong một lượt suy luận duy nhất. Mẫu kiến trúc Lập kế hoạch (\textit{Planning Pattern}) giải quyết thách thức này bằng cách mô phỏng tư duy giải quyết vấn đề của các học giả: phân tích yêu cầu, phân rã mục tiêu lớn thành các tác vụ con khả thi, thiết lập trật tự phụ thuộc và điều phối thực thi từng bước.
@@ -221,8 +221,8 @@ Quy trình vận hành chi tiết của mẫu thiết kế bao gồm:
 \end{itemize}
 
 Trong khuôn khổ cài đặt thực tế của đề tài VeriScholar, tư duy lập kế hoạch được tích hợp trực tiếp vào pha suy luận (\textit{Thought}) của tác tử đơn lẻ theo chu trình ReAct kết hợp gọi công cụ (\textit{Tool Use}), giúp phân rã truy vấn học thuật phức tạp mà không phát sinh độ trễ của một tầng lập kế hoạch tách rời.
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Mẫu kiến trúc Sử dụng Công cụ (Tool Use Pattern)}
 \label{subsec:tool_use_pattern}
 Mặc dù sở hữu năng lực ngôn ngữ mạnh mẽ, các mô hình ngôn ngữ lớn (LLM) thuần túy hoàn toàn bị giới hạn bởi: (1) tri thức tĩnh không cập nhật dữ liệu mới phát sinh, (2) không có khả năng thực hiện các phép tính số học phức tạp chính xác, và (3) không thể trực tiếp thao tác với hệ thống tệp tin hoặc cơ sở dữ liệu. Mẫu kiến trúc Sử dụng Công cụ (\textit{Tool Use Pattern}) \cite{schick2023toolformer} trao cho LLM vai trò của một ``Bộ não ra quyết định'' (\textit{Decision Maker}) kết nối với hệ sinh thái công cụ thực thi chuyên biệt.
@@ -313,8 +313,8 @@ Trong mẫu kiến trúc này, AI Agent vận hành như một thực thể đi�
     \item Agent phát sinh lệnh gọi hàm chuẩn hóa (\textit{Function Calling}) gửi tới các công cụ phù hợp: nhánh dữ liệu (\textit{Database Query, API Call, Python Script}) hoặc nhánh tệp và tìm kiếm (\textit{File Operations, Web Search, External System}).
     \item Dữ liệu thực nghiệm thu được từ môi trường ngoại vi được tích hợp ngược trở lại ngữ cảnh để LLM sinh ra phản hồi chuẩn xác, giàu dẫn chứng (\textit{Enriched Response}).
 \end{itemize}
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Mẫu kiến trúc Suy luận và Hành động ReAct (ReAct Pattern)}
 \label{subsec:react_pattern}
 ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) là mẫu kiến trúc Agent kinh điển do Shunyu Yao và các cộng sự tại Đại học Princeton và Google Research công bố vào tháng 10 năm 2022 \cite{yao2022}. Trong tiến trình phát triển các mô hình ngôn ngữ lớn có khả năng giải quyết bài toán đa bước, các hướng tiếp cận đơn lẻ thường tách biệt giữa suy luận chuỗi tư duy nội tại (\textit{Chain-of-Thought}, công bố đầu năm 2022) \cite{wei2022cot} và cơ chế tự học gọi hàm API ngoại vi độc lập (tiêu biểu là \textit{Toolformer}, công bố tháng 2 năm 2023) \cite{schick2023toolformer}. ReAct đặt nền móng hợp nhất đồng thời cả hai năng lực suy luận và hành động theo một vòng lặp đan xen nhịp nhàng:
@@ -402,8 +402,8 @@ Mỗi chu trình ReAct bao gồm ba pha nối tiếp nhau:
     \item \textbf{Hành động (\textit{Action}):} Agent phát ra lệnh có cấu trúc cụ thể (gọi hàm tra cứu tài liệu, tính toán dữ liệu hoặc truy vấn đồ thị).
     \item \textbf{Quan sát (\textit{Observation}):} Hệ thống thực thi công cụ và trả về dữ liệu thực tế. Agent đọc kết quả quan sát này để tiếp tục chu trình tư duy kế tiếp cho đến khi hoàn thành mục tiêu.
 \end{itemize}
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Cơ chế Reflection và Tự sửa sai Reflexion (Reflection Pattern)}
 \label{subsec:reflexion_mechanism}
 Reflexion (\textit{Language Agents with Verbal Reinforcement Learning}) là một khuôn khổ mở rộng được phát triển bởi Noah Shinn và các đồng nghiệp \cite{shinn2023}, cung cấp cho AI Agent khả năng tự đánh giá học hỏi từ những sai lầm mà không đòi hỏi phải cập nhật trọng số mô hình.
@@ -499,8 +499,8 @@ Cơ chế Reflexion vận hành thông qua ba thành phần phối hợp chặt 
 \end{enumerate}
 
 Trong kiến trúc hiện tại của VeriScholar, thay vì kích hoạt một vòng lặp LLM tự phê bình đa lượt tốn kém chi phí mã thông báo, nguyên lý kiểm định đầu ra được hiện thực hóa bằng các rào chắn xác định (\textit{Deterministic Guardrails}) kết hợp kiểm chứng độ trùng khớp trích dẫn (\textit{Citation Grounding Verification}) và cơ chế tự phục hồi truy vấn ngay trong vòng lặp ReAct đơn tác tử.
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Mẫu kiến trúc Phối hợp Đa Agent (Multi-Agent Pattern)}
 \label{subsec:multi_agent_pattern}
 Khi độ phức tạp của bài toán vượt quá năng lực xử lý của một Agent đơn lẻ trong một cửa sổ ngữ cảnh, mô hình Phối hợp Đa Agent (\textit{Multi-Agent Collaboration Pattern}) trở thành giải pháp kiến trúc tất yếu. Nguyên lý thiết kế của mẫu này dựa trên sự chuyên môn hóa vai trò (\textit{Role Specialization}) và phân chia trách nhiệm rõ ràng (\textit{Separation of Concerns}), tương tự như một hội đồng chuyên gia khoa học đảm nhiệm từng khâu riêng biệt.
@@ -595,8 +595,8 @@ Cấu trúc phối hợp đa Agent gồm hai tầng nhận thức:
 \end{itemize}
 
 Trong phạm vi thực nghiệm hiện tại, VeriScholar triển khai kiến trúc tác tử đơn điều phối trung tâm (\textit{Single-Agent ReAct Orchestrator}) kết hợp tập công cụ chuyên biệt (\textit{Tool Use}) nhằm tối ưu hóa độ trễ truyền phát thời gian thực; mô hình phối hợp đa tác tử phân cấp đóng vai trò là nền tảng lý thuyết định hướng cho giai đoạn mở rộng tiếp theo của hệ thống.
-\clearpage
 
+\Needspace{5\baselineskip}
 \subsection{Mẫu tương tác Người trong vòng lặp (Human-in-the-Loop Pattern)}
 \label{subsec:hitl_pattern}
 Trong các hệ sinh thái nghiên cứu khoa học chuyên sâu, việc trao toàn quyền tự quyết không kiểm soát cho các AI Agent tiềm ẩn nhiều rủi ro học thuật (như trích dẫn sai sự thật, diễn giải sai lệch số liệu thực nghiệm hoặc kích hoạt các mã lệnh không an toàn). Mẫu tương tác Người trong vòng lặp (\textit{Human-in-the-Loop -- HITL Pattern}) thiết lập các điểm kiểm soát an toàn (\textit{Checkpoints}) nhằm bảo đảm các quyết định trọng yếu luôn có sự giám sát và phê duyệt của học giả con người.
@@ -688,4 +688,3 @@ Cơ chế vận hành của mô hình HITL bao gồm:
 \end{itemize}
 
 Trên hệ thống VeriScholar hiện hành, triết lý kiểm chứng bởi con người được thực hiện thông qua cơ chế đối chiếu trực quan tọa độ trích dẫn (\textit{Visual Bounding-Box Verification}) trên trình đọc PDF hai khung nhìn và kiểm soát giới hạn thực thi tất định; cơ chế điểm dừng tạm khóa luồng thực thi (\textit{Interrupt Checkpoints}) là hướng mở rộng tương tác nâng cao trong tương lai.
-\clearpage
