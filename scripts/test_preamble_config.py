@@ -31,7 +31,18 @@ def test_de_cuong_datn():
     assert "\\setstretch{1.12}" not in content, "Vẫn còn setstretch{1.12}"
     print("test_de_cuong_datn PASSED")
 
+def test_frontmatter_bolds():
+    cam_on = Path("report-datn/frontmatter/loi_cam_on.tex").read_text(encoding="utf-8")
+    assert "\\textbf{Vũ Lan Phương}" not in cam_on, "Tên GVHD trong lời cảm ơn vẫn bị in đậm"
+    assert "\\textbf{VeriScholar}" not in cam_on, "Tên VeriScholar trong lời cảm ơn vẫn bị in đậm"
+    assert "Bộ môn Hệ thống thông tin và Tri thức" in cam_on, "Tên Bộ môn trong lời cảm ơn chưa chuẩn"
+
+    mo_dau = Path("report-datn/frontmatter/loi_mo_dau.tex").read_text(encoding="utf-8")
+    assert "\\textbf{hiện tượng ảo giác" not in mo_dau, "Cụm hiện tượng ảo giác trong lời mở đầu vẫn bị in đậm"
+    print("test_frontmatter_bolds PASSED")
+
 if __name__ == "__main__":
     test_preamble()
     test_phieu_giao_de_tai()
     test_de_cuong_datn()
+    test_frontmatter_bolds()
