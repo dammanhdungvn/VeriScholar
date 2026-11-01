@@ -1,5 +1,13 @@
 # BỘ QUY TẮC BẤT BIẾN BIÊN SOẠN BÁO CÁO ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR (RULES.md)
 
+Yêu cầu bắt buộc:
+1.	Định dạng văn bản
+Đồ án sử dụng chữ Time New Roman cỡ 13 của hệ soạn thảo Word hoăc tương đương; mật độ chữ bình thường, không được nén hoặc kéo dãn khoảng cách giữa các chữ; dãn dòng đặt ở chế độ 1,5 lines; lề trên 2,5 cm; lề dưới 2,5 cm; lề trái 3,5 cm; lề phải 2,5 cm. Số trang được đánh dưới, phía bên phải mỗi trang giấy. Nếu có bảng biểu, hình vẽ trình bày theo chiều ngang khổ giấy thì đầu bảng là lề trái của trang, nhưng nên hạn chế trình bày theo cách này.
+Đồ án được in trên một mặt giấy trắng khổ A4 (210 x 297 mm).
+2.	Cách đánh số mục và tiểu mục
+Các tiểu mục của đồ án được trình bày và đánh số thành nhóm số, nhiều nhất gồm bốn chữ số với số thứ nhất chỉ số chương (ví dụ 4.1.2.1 chỉ tiểu mục 1 nhóm tiểu mục 2 mục 1 chương 4). Tại mỗi nhóm tiểu mục phải có ít nhất hai tiểu mục, nghĩa là không thể có tiểu mục 2.1.1 mà không có tiểu mục 2.1.2 tiếp theo.
+
+
 > **Cơ sở pháp lý & Học thuật:** Tuân thủ 100% tài liệu hướng dẫn [`Huong-dan-viet-DATN.md`](./guide/Huong-dan-viet-DATN.md) của Trường Đại học Mỏ - Địa chất (HUMG) và kế thừa chuẩn mực văn phong từ 2 đồ án mẫu xuất sắc ([`Nguyễn Trung Hiếu`](./guide/2121050196_NguyenTrungHieu_BaoCaoDATN.md) và [`Nguyễn Quang Bắc`](./guide/NguyenQuangBac_Báo%20cáo%20DATN_final.md)).
 > **Đề tài chính thức:** *Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn*
 > **Tác giả:** Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B, Khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất
