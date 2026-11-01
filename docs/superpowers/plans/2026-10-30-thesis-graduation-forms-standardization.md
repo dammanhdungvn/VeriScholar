@@ -98,7 +98,7 @@
   - Tuần 7 (05/10/2026 -- 11/10/2026): Hiện thực hóa phân hệ Đồ thị tri thức (GraphRAG) và Tác nhân AI ReAct tự sửa lỗi LaTeX trong sandbox E2B.
   - Tuần 8 (12/10/2026 -- 18/10/2026): Xây dựng giao diện Frontend (React 19): Monaco Editor, trình hiển thị PDF Canvas và luồng streaming SSE.
   - Tuần 9 (19/10/2026 -- 25/10/2026): Tích hợp toàn diện hệ thống, kiểm thử tự động TDD (4 Cổng xác minh) và đo đạc thực nghiệm trên VPS.
-  - Tuần 10 (26/10/2026 -- 02/11/2026): Hoàn thiện báo cáo ĐATN, slide thuyết trình, đóng gói sản phẩm và nộp báo cáo về Bộ môn Hệ thống Thông tin ngày 02/11/2026.
+  - Tuần 10 (26/10/2026 -- 02/11/2026): Hoàn thiện báo cáo ĐATN, slide thuyết trình, đóng gói sản phẩm và nộp báo cáo về Bộ môn Hệ thống Thông tin và Tri Thức ngày 02/11/2026.
   - Preserve exact 5-page budget (`vi, vii, viii, ix, x`).
 - [ ] **Step 4: Run pytest and XeLaTeX compilation**
   Run `uv run pytest tests/test_thesis_rules.py`

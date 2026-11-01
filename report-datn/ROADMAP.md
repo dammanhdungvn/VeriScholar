@@ -1,8 +1,8 @@
 # BẢN ĐỒ CẤU TRÚC VI MÔ ĐỒ ÁN TỐT NGHIỆP VERISCHOLAR
 > **Đề tài:** Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn
 > **Tác giả:** Đàm Mạnh Dũng - 2221050359 – Lớp: DCCTCT67_09B
-> **Ngành:** Công nghệ thông tin | **Chuyên ngành:** Hệ thống thông tin
-> **GVHD:** Cô Vũ Lan Phương – Trường Đại học Mỏ - Địa chất (HUMG)
+> **Ngành:** Công nghệ thông tin | **Chuyên ngành:** Hệ thống thông tin và Tri Thức
+> **GVHD:** Cô ThS.Vũ Lan Phương – Trường Đại học Mỏ - Địa chất (HUMG)
 
 ---
 

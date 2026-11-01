@@ -16,13 +16,13 @@ NGÀNH CÔNG NGHỆ THÔNG TIN CHUYÊN NGÀNH HỆ THỐNG THÔNG TIN
 
 NGÀNH CÔNG NGHỆ THÔNG TIN 
 
-CHUYÊN NGÀNH HỆ THỐNG THÔNG TIN 
+CHUYÊN NGÀNH HỆ THỐNG THÔNG TIN VÀ TRI THỨC
 
 **THIẾT KẾ VÀ KHAI TRIỂN HỆ THỐNG CHATBOT TÌM KIẾM NGỮ NGHĨA TÀI LIỆU NỘI BỘ DOANH NGHIỆP DỰA TRÊN KIẾN TRÚC RAG VÀ MÔ HÌNH NGÔN NGỮ LỚN** 
 
 **Sinh viên thực tập :     Đàm Mạnh Dũng Mã sinh viên :     2221050459 Công ty thực tập :     DC-STRUCTURES VIETNAM Người phụ trách :     Ngô Quang Đại** 
 
-**Giảng viên hướng dẫn :     Vũ Lan Phương** 
+**Giảng viên hướng dẫn :     ThS. Vũ Lan Phương** 
 
 **HÀ NỘI, 05/2026** 
 
@@ -30,7 +30,7 @@ _Báo cáo thực tập doanh nghiệp chuyên ngành Công nghệ thông tin_
 
 ## **LỜI CẢM ƠN** 
 
-Em xin gửi lời cảm ơn cô **Vũ Lan Phương** – giảng viên khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất, người đã trực tiếp hướng dẫn và định hướng em trong suốt quá trình thực hiện báo cáo thực tập doanh nghiệp. Những đóng góp quý báu của cô về mặt chuyên môn, phương pháp nghiên cứu và xây dựng hệ thống đã giúp em tiếp cận đề tài một cách logic, khoa học và hiệu quả hơn, đồng thời hoàn thiện được sản phẩm mang tính ứng dụng thực tiễn trong môi trường doanh nghiệp. 
+Em xin gửi lời cảm ơn cô **ThS. Vũ Lan Phương** – giảng viên khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất, người đã trực tiếp hướng dẫn và định hướng em trong suốt quá trình thực hiện báo cáo thực tập doanh nghiệp. Những đóng góp quý báu của cô về mặt chuyên môn, phương pháp nghiên cứu và xây dựng hệ thống đã giúp em tiếp cận đề tài một cách logic, khoa học và hiệu quả hơn, đồng thời hoàn thiện được sản phẩm mang tính ứng dụng thực tiễn trong môi trường doanh nghiệp. 
 
 Em cũng xin gửi lời cảm ơn chân thành tới các thầy cô trong khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất đã giúp đỡ em trong quá trình học tập, nghiên cứu và hoàn thiện báo cáo thực tập doanh nghiệp. 
 
