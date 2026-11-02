@@ -4,7 +4,7 @@
 **Mã tài liệu:** `DESIGN-THESIS-CH4-CH3-SYNC`  
 **Ngày thiết kế:** 2026-10-26  
 **Vai trò:** Lead Academic Architect & Systems Engineer  
-**Tài liệu tham chiếu:** [`docs/PRD/02-discovery-and-documents-crud.md`](../../PRD/02-discovery-and-documents-crud.md), [`docs/specs/02-discovery-and-documents-spec.md`](../../specs/02-discovery-and-documents-spec.md), [`report-datn/RULES.md`](../../../report-datn/RULES.md)  
+**Tài liệu tham chiếu:** [`docs/PRD/02-discovery-and-documents-crud.md`](../../PRD/02-discovery-and-documents-crud.md), [`docs/specs/02-discovery-and-documents-spec.md`](../../specs/02-discovery-and-documents-spec.md), [`report-datn/INFORMATION.md`](../../../report-datn/INFORMATION.md)  
 **Trạng thái:** DRAFT DESIGN (Chờ Builder Check & Người dùng phê duyệt)
 
 ---

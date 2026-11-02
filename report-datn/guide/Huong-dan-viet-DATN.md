@@ -48,6 +48,8 @@ tốt nghiệp và xử lý đình chỉ việc bảo vệ đồ án đối vớ
 
    - GVHD đánh giá đồ án không đạt yêu cầu. 
 
+1 
+
 #### **III. QUY ĐỊNH VỀ LƯU TRỮ ĐỒ ÁN TỐT NGHIỆP** 
 
 Các sản phẩm của đồ án tốt nghiệp được lưu trữ bằng bản cứng và bản mềm: 
@@ -73,6 +75,8 @@ Sinh viên nộp cho bộ môn để lưu trữ:
 - Code nguồn chương trình. 
 
 Các file để trong cùng một thư mục, đặt tên thư mục là “MãSinhViên_HọTên_Khóa”. Ví dụ “1821050189_NguyenVanAnh_K63” 
+
+2 
 
 ### **B. HƯỚNG DẪN QUY CÁCH TRÌNH BẦY QUYỂN ĐỒ ÁN TỐT NGHIỆP** 
 
@@ -124,6 +128,8 @@ Trình bày lý do chọn đề tài, mục tiêu của đề tài, đối tư�
 
    - Trình bày cơ sở lý thuyết, lý luận, giả thuyết khoa học, phương pháp kỹ thuật và công nghệ liên quan để thực hiện đề tài. 
 
+3 
+
    - Lưu ý có những đánh giá, nhận định để đi đến kết luận tại sao lại chọn công nghệ/ ngôn ngữ lập trình/framework đó để thực hiện đề tài. 
 
 - **Chương 3: Phương pháp, quy trình thực hiện giải quyết bài toán** Trình bày các bước thực hiện giải quyết bài toán như: phân tích các yêu cầu, thiết kế, cài đặt, kiểm thử và hiệu chỉnh. 
@@ -156,11 +162,29 @@ Trình bày chi tiết các kết quả thực nghiệm, kèm theo các chú th�
 
 Các tiểu mục của đồ án được trình bày và đánh số thành nhóm số, nhiều nhất gồm bốn chữ số với số thứ nhất chỉ số chương (ví dụ 4.1.2.1 chỉ tiểu mục 1 nhóm tiểu mục 2 mục 1 chương 4). Tại mỗi nhóm tiểu mục phải có ít nhất hai tiểu mục, nghĩa là không thể có tiểu mục 2.1.1 mà không có tiểu mục 2.1.2 tiếp theo. 
 
+4 
+
 ### **3. Bảng biểu, hình vẽ, công thức** 
 
 Việc đánh số bảng biểu, hình vẽ, công thức phải gắn với số chương, ví dụ “Hình 3.4” có nghĩa là hình thứ 4 trong chương 3. Đầu đề của bảng biểu ghi phía trên bảng, đầu đề của hình vẽ ghi phía dưới hình. Thông thường, những bảng ngắn và đồ thị nhỏ phải đi liền với phần nội dung đề cập tới các bảng và đồ thị này ở lần thứ nhất. Các bảng dài có thể để ở những trang riêng nhưng cũng phải tiếp theo ngay phần nội dung đề cập tới bảng này ở lần đầu tiên. 
 
 Dưới đây là ví dụ trình bầy công thức, hình vẽ, bảng biểu trong báo cáo: Công thức: 
+
+
+
+### Hình vẽ: 
+
+
+
+<!-- Start of picture text -->
+TimesNew~ 14 ~ A a” Aye<br>BIEY-A-#iE-<br>& | cut<br>Paste<br>Edit Field...<br>Toggle Field Codes<br><!-- End of picture text -->
+
+
+
+<!-- Start of picture text -->
+Update Table of Contents 2X<br>Word is updating the table of contents. Select one of<br>the Following options:<br>© Update page numbers only<br>© Updateentire tabie}<br><!-- End of picture text -->
+
+Hình Tài liệu tiếng Anh-1 Thao tác cập nhật mục lục 
 
 ### Bảng biểu: 
 
@@ -169,6 +193,11 @@ Bảng Tài liệu tiếng Anh‑1 Danh sách sinh viên
 |**STT**|**Họ và tên**|**Mã sinh viên**|
 |---|---|---|
 |1|Nguyễn Hoài An|1821050895|
+
+
+
+5 
+
 |2|Bùi Minh Hà|1821050812|
 |---|---|---|
 |3|Trần Mạnh Thắng|1821050756|
@@ -191,37 +220,16 @@ Hình 3 là ví dụ minh họa bố cục của đồ án qua trang mục lục
 
 ### **MỤC LỤC** 
 
-MỤC LỤC
-	
-```
-MỤC LỤC
-	
-Lời cảm ơn………………………………………………….	i
-Mục lục……………………………………………………..	1
-Danh mục các ký hiệu, các chữ viết tắt.................................	2
-Danh mục các bảng................................................................	3
-Danh mục các hình vẽ, đồ thị................................................	4
-MỞ ĐẦU…………………………………………………...	5
-Chương1 - TỔNG QUAN………………………………….	6
-  1.1 .....	
-  1.2 .....	
-Chương 2 - ...	
-  2.1 .....	
-     2.1.1 .....	
-     2.1.2 .....	
-  2.2 .....	
-.....	
-Chương 4 - …	
-  KẾT LUẬN VÀ KIẾN NGHỊ	
-  TÀI LIỆU THAM KHẢO	
-  PHỤ LỤC	
+|Lời cảm ơn………………………………………………….|i|
+|---|---|
+|Mục lục……………………………………………………..|1|
+|Danh mục các ký hiệu, các chữ viết tắt.................................|2|
 
-```
 
-Chương 4 -
-  KẾT LUẬN VÀ KIẾN NGHỊ	
-  TÀI LIỆU THAM KHẢO	
-  PHỤ LỤC	
+
+6 
+
+Danh mục các bảng................................................................ 3 Danh mục các hình vẽ, đồ thị................................................ 4 MỞ ĐẦU…………………………………………………... 5 Chương1 - TỔNG QUAN…………………………………. 6 1.1 ..... 1.2 ..... Chương 2 - ... 2.1 ..... 2.1.1 ..... 2.1.2 ..... 2.2 ..... **.....** Chương 4 - … 
 
 KẾT LUẬN VÀ KIẾN NGHỊ TÀI LIỆU THAM KHẢO PHỤ LỤC 
 
@@ -230,6 +238,8 @@ _Hình 3. Ví dụ về trang mục lục của đồ án_
 ### **7. Phụ lục của đồ án** 
 
 Phần này bao gồm những nội dung cần thiết nhằm minh họa hoặc bổ trợ cho nội dung đồ án như mã nguồn chương trình, số liệu, mẫu biểu, tranh ảnh ... Phụ lục không được dày hơn phần chính của đồ án. 
+
+7 
 
 **_Phụ lục 1: Mẫu trang bìa chính của đồ án (In chữ nhũ, khổ 210 x 297 mm)_** 
 
@@ -250,6 +260,8 @@ Phần này bao gồm những nội dung cần thiết nhằm minh họa hoặc 
 
 **Hà Nội - Năm (16)** 
 
+8 
+
 **_Phụ lục 2: Mẫu trang bìa phụ_** 
 
 **BỘ GIÁO DỤC VÀ ĐÀO TẠO TRƯỜNG ĐẠI HỌC MỎ - ĐỊA CHẤT(16)** 
@@ -266,6 +278,7 @@ _(Chữ ký)                                                     (Chữ ký)_
 
 **Hà Nội – Năm 20…** 
 
+9 
 
 ## **_Phụ lục 3:_ Hướng dẫn sắp xếp tài liệu tham khảo** 
 
@@ -309,6 +322,8 @@ Tài liệu tham khảo là bài báo trong tạp chí, bài trong một cuốn 
 
 - Các số trang. (gạch ngang giữa hai chữ số, dấu chấm kết thúc) 
 
+10 
+
 Cần chú ý những chi tiết về trình bày nêu trên. Nếu tài liệu dài hơn một dòng thì nên trình bày sao cho từ dòng thứ hai lùi vào so với dòng thứ nhất 1cm để phần tài liệu tham khảo được rõ ràng và dễ theo dõi. 
 
 Ví dụ về cách trình bày trang tài liệu tham khảo: 
@@ -328,3 +343,6 @@ Ví dụ về cách trình bày trang tài liệu tham khảo:
 - [4]. Fayyad, Gregory Piatetsky, Shapiro, Padhraic Smith, (1996), From Data mining to Knowledge Discovery: An overview. 
 
 - [5]. Gero J. S., Kazakov V., and Schinier T., (1997), “Genetic engineering and design problems”, _In Evolutionary Algorithms in Engineering Applications_ , 
+
+11 
+

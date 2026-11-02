@@ -21,14 +21,18 @@ def test_adversarial_actor_boxes_no_rectangular_exceptions():
     assert "CẤM" in agents_text and "hình hộp chữ nhật" in agents_text
     assert "TUYỆT ĐỐI CẤM" in agents_text
 
-    # 3. Adversarial negative check: ensure AGENTS.md contains no permissive phrases for boxes as actors
+    # 3. Adversarial negative check: ensure AGENTS.md contains no permissive phrases
     permissive_patterns = [
-        re.compile(r"(cho phép|chấp nhận|có thể dùng|được phép).*(hộp chữ nhật|hình hộp)", re.IGNORECASE),
+        re.compile(
+            r"(cho phép|chấp nhận|có thể dùng|được phép).*(hộp chữ nhật|hình hộp)", re.IGNORECASE
+        ),
         re.compile(r"actor.*(có thể là|được là|vẽ bằng|dùng).*(hộp|rectangle|box)", re.IGNORECASE),
     ]
     for pat in permissive_patterns:
         match_agents = pat.search(agents_text)
-        assert not match_agents, f"AGENTS.md contains permissive actor box phrasing: {match_agents.group(0)}"
+        assert not match_agents, (
+            f"AGENTS.md contains permissive actor box phrasing: {match_agents.group(0)}"
+        )
 
     # 4. Check actual LaTeX Use Case diagrams in 3_4_phan_tich_usecase.tex
     uc_file = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
@@ -39,11 +43,15 @@ def test_adversarial_actor_boxes_no_rectangular_exceptions():
     assert "umlactor/.pic" in uc_content
     # There are 6 TikZ Use Case figures: 1 overview + 5 sub-usecase diagrams
     assert uc_content.count("umlactor/.pic") == 6
-    assert uc_content.count("{umlactor}") == 7  # 2 in overview (scholar + admin) + 1 each in 5 sub-use cases
+    assert (
+        uc_content.count("{umlactor}") == 7
+    )  # 2 in overview (scholar + admin) + 1 each in 5 sub-use cases
 
     # Verify no actor node is styled as a rectangle or box
     for line in uc_content.splitlines():
-        if "node" in line and ("Học giả" in line or "Quản trị viên" in line or "Scholar" in line or "Admin" in line):
+        if "node" in line and (
+            "Học giả" in line or "Quản trị viên" in line or "Scholar" in line or "Admin" in line
+        ):
             assert "draw" not in line and "rectangle" not in line, (
                 f"Actor label node styled with draw/rectangle: {line}"
             )
@@ -58,7 +66,10 @@ def test_adversarial_domain_class_diagram_placement():
     agents_text = Path("report-datn/AGENTS.md").read_text(encoding="utf-8")
 
     # 1. Authoring standard check in AGENTS.md
-    assert "đặt ở vị trí ngay trước các bảng dữ liệu" in agents_text.lower() or "đặt trước các bảng dữ liệu" in agents_text.lower()
+    assert (
+        "đặt ở vị trí ngay trước các bảng dữ liệu" in agents_text.lower()
+        or "đặt trước các bảng dữ liệu" in agents_text.lower()
+    )
     assert "mục 3.6" in agents_text.lower()
 
     # 2. LaTeX code check in 3_6_thiet_ke_csdl.tex
@@ -81,14 +92,17 @@ def test_adversarial_domain_class_diagram_placement():
 
     # Strict ordering assertions: Class diagram MUST precede CSDL overview, tables, and ERD
     assert pos_class_fig < pos_class_tab, "Class diagram figure must precede class analysis table"
-    assert pos_class_tab < pos_csdl_overview, "Class analysis table must precede subsec:csdl_tong_quan"
+    assert pos_class_tab < pos_csdl_overview, (
+        "Class analysis table must precede subsec:csdl_tong_quan"
+    )
     assert pos_csdl_overview < pos_table_users, "subsec:csdl_tong_quan must precede DB tables"
     assert pos_class_fig < pos_table_users, "Class diagram figure must precede DB tables"
 
 
 def test_adversarial_sub_usecase_diagrams_precede_specs():
     """Adversarial check:
-    Verify that all sub-use case diagrams are placed strictly before their respective BA specifications.
+    Verify that all sub-use case diagrams are placed strictly before
+    their respective BA specifications.
     """
     uc_file = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
     content = uc_file.read_text(encoding="utf-8")
@@ -132,6 +146,7 @@ def test_adversarial_negative_constraints_enforceable():
 
     # 2. Casual bolding check using scan_inline_bolds
     from scan_inline_bolds import find_casual_bolds
+
     casual_bolds = find_casual_bolds()
     assert len(casual_bolds) == 0, f"Found {len(casual_bolds)} casual bolds: {casual_bolds}"
 
@@ -163,7 +178,16 @@ def test_adversarial_negative_constraints_enforceable():
                 continue
 
             # Check headings: \chapter, \section, \subsection, \subsubsection, \caption
-            if any(h in s for h in ["\\chapter{", "\\section{", "\\subsection{", "\\subsubsection{", "\\caption{"]):
+            if any(
+                h in s
+                for h in [
+                    "\\chapter{",
+                    "\\section{",
+                    "\\subsection{",
+                    "\\subsubsection{",
+                    "\\caption{",
+                ]
+            ):
                 assert "&" not in s and "\\&" not in s, (
                     f"Heading in {tex_file.name}:{idx} contains '&': {s}"
                 )
@@ -209,17 +233,25 @@ def test_adversarial_faculty_regulations_accuracy():
 
     # 4 dismissal/suspension conditions in AGENTS.md
     for condition_kw in ["chưa thanh toán", "không gặp GVHD", "không nộp", "không đạt yêu cầu"]:
-        assert condition_kw in agents_text, f"AGENTS.md missing dismissal condition keyword: {condition_kw}"
+        assert condition_kw in agents_text, (
+            f"AGENTS.md missing dismissal condition keyword: {condition_kw}"
+        )
 
     # 3 core questions in AGENTS.md
-    assert "Làm gì?" in agents_text and "Làm như thế nào?" in agents_text and "Kết quả ra sao?" in agents_text
+    assert (
+        "Làm gì?" in agents_text
+        and "Làm như thế nào?" in agents_text
+        and "Kết quả ra sao?" in agents_text
+    )
 
 
 def test_adversarial_rules_agents_no_conflicts():
     """Adversarial check:
-    Verify that INFORMATION.md and AGENTS.md agree completely on all quantitative and formal criteria:
-    - Formal typography in AGENTS.md: 13pt Times New Roman, line spacing 1.5, margins 2.5/3.5, usable 15.0cm, page budget 50-65
-    - Ground truth benchmarks in INFORMATION.md: 580 tests, 13.02s, DB latency 1.66ms, IoU 0.85, 20 tables & 20 refs
+    Verify that INFORMATION.md and AGENTS.md agree completely on all criteria:
+    - Formal typography in AGENTS.md: 13pt Times New Roman, line spacing 1.5,
+      margins 2.5/3.5, usable 15.0cm, page budget 50-65
+    - Ground truth benchmarks in INFORMATION.md: 580 tests, 13.02s,
+      DB latency 1.66ms, IoU 0.85, 20 tables & 20 refs
     - Both agree on eliminating 4 fake tables
     """
     info_text = Path("report-datn/INFORMATION.md").read_text(encoding="utf-8")
@@ -248,7 +280,9 @@ def test_adversarial_rules_agents_no_conflicts():
     for token in benchmark_tokens:
         assert token in info_text, f"INFORMATION.md missing expected benchmark token: {token}"
 
-    assert ("30%" in agents_text or "30\\%" in agents_text) and ("70%" in agents_text or "70\\%" in agents_text)
+    assert ("30%" in agents_text or "30\\%" in agents_text) and (
+        "70%" in agents_text or "70\\%" in agents_text
+    )
 
     # Verify both acknowledge the same 4 eliminated fake tables
     fake_tables = ["extracted_figures", "extracted_tables", "draft_sections", "latex_compilations"]
@@ -273,11 +307,26 @@ def test_adversarial_format_scripts_pass_without_false_positives():
     Execute existing format verification scripts and confirm clean exit code 0.
     """
     import subprocess
-    res_format = subprocess.run([sys.executable, "scripts/verify_thesis_format.py"], capture_output=True, text=True)
-    assert res_format.returncode == 0, f"verify_thesis_format.py failed:\n{res_format.stderr}\n{res_format.stdout}"
 
-    res_tables = subprocess.run([sys.executable, "report-datn/scripts/test_tables_and_spacing.py"], capture_output=True, text=True)
-    assert res_tables.returncode == 0, f"test_tables_and_spacing.py failed:\n{res_tables.stderr}\n{res_tables.stdout}"
+    res_format = subprocess.run(
+        [sys.executable, "scripts/verify_thesis_format.py"], capture_output=True, text=True
+    )
+    assert res_format.returncode == 0, (
+        f"verify_thesis_format.py failed:\n{res_format.stderr}\n{res_format.stdout}"
+    )
 
-    res_preamble = subprocess.run([sys.executable, "scripts/test_preamble_config.py"], capture_output=True, text=True)
-    assert res_preamble.returncode == 0, f"test_preamble_config.py failed:\n{res_preamble.stderr}\n{res_preamble.stdout}"
+    res_tables = subprocess.run(
+        [sys.executable, "report-datn/scripts/test_tables_and_spacing.py"],
+        capture_output=True,
+        text=True,
+    )
+    assert res_tables.returncode == 0, (
+        f"test_tables_and_spacing.py failed:\n{res_tables.stderr}\n{res_tables.stdout}"
+    )
+
+    res_preamble = subprocess.run(
+        [sys.executable, "scripts/test_preamble_config.py"], capture_output=True, text=True
+    )
+    assert res_preamble.returncode == 0, (
+        f"test_preamble_config.py failed:\n{res_preamble.stderr}\n{res_preamble.stdout}"
+    )

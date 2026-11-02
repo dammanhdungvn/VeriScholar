@@ -6,7 +6,8 @@ def test_thesis_rules_file_exists_and_valid():
     assert info_path.exists(), "report-datn/INFORMATION.md must exist"
     content = info_path.read_text(encoding="utf-8")
 
-    # Kiểm tra các phần cốt lõi bắt buộc của INFORMATION.md (Hồ sơ sinh viên, Đề tài, Mục lục Docs, Benchmarks)
+    # Kiểm tra các phần cốt lõi bắt buộc của INFORMATION.md
+    # (Hồ sơ sinh viên, Đề tài, Mục lục Docs, Benchmarks)
     required_info_sections = [
         "HỒ SƠ ĐỊNH DANH SINH VIÊN VÀ CÁN BỘ HƯỚNG DẪN",
         "ĐẶC TẢ ĐỀ TÀI NGHIÊN CỨU VÀ TÍNH CẤP THIẾT",
@@ -32,7 +33,8 @@ def test_thesis_rules_file_exists_and_valid():
         "report-datn/INFORMATION.md must reference report-datn/AGENTS.md for authoring standards"
     )
 
-    # Kiểm tra các phần cốt lõi bắt buộc của AGENTS.md (Cẩm nang biên soạn, XeLaTeX và Chiến lược chắt lọc)
+    # Kiểm tra các phần cốt lõi bắt buộc của AGENTS.md
+    # (Cẩm nang biên soạn, XeLaTeX và Chiến lược chắt lọc)
     required_agents_sections = [
         "MỤC TIÊU CỐT LÕI, QUY TRÌNH HỌC THUẬT VÀ KỶ LUẬT ĐATN",
         "BỐ CỤC TOÀN VĂN VÀ QUY CHUẨN ĐỊNH DẠNG XELATEX",
@@ -77,7 +79,8 @@ def test_thesis_rules_academic_architecture_paradigm():
     """Kiểm tra Mục 2.5 trong report-datn/AGENTS.md và Phần 4-5 trong INFORMATION.md:
     Bắt buộc phải có quy chuẩn kiến trúc hệ thống chuẩn paper khoa học
     hướng người đọc (Human-Centric Paper Architecture), quy chuẩn TikZ và bảng biểu trong AGENTS.md.
-    Kiểm tra INFORMATION.md chứa mục lục specs kiến trúc Lục giác và CSDL 20 bảng của đề tài VeriScholar.
+    Kiểm tra INFORMATION.md chứa mục lục specs kiến trúc Lục giác
+    và CSDL 20 bảng của đề tài VeriScholar.
     """
     agents_path = Path("report-datn/AGENTS.md")
     info_path = Path("report-datn/INFORMATION.md")
@@ -92,7 +95,8 @@ def test_thesis_rules_academic_architecture_paradigm():
         "report-datn/AGENTS.md must contain Human-Centric Academic Paper Architecture"
     )
     assert (
-        "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế" in agents_content
+        "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế"
+        in agents_content
     ), "AGENTS.md must contain Section on Academic Paper Architecture Paradigm"
     assert "Quy Chuẩn Kỹ Nghệ Sơ Đồ TikZ Chống Chồng Đè" in agents_content, (
         "AGENTS.md must contain Section on TikZ Anti-Crowding Standard"
@@ -103,9 +107,7 @@ def test_thesis_rules_academic_architecture_paradigm():
     assert "Kiến trúc Lục giác" in info_content or "Hexagonal Architecture" in info_content, (
         "INFORMATION.md must contain Hexagonal Architecture specification in docs catalog"
     )
-    assert "20 bảng" in info_content, (
-        "INFORMATION.md must specify exact 20 database tables"
-    )
+    assert "20 bảng" in info_content, "INFORMATION.md must specify exact 20 database tables"
 
 
 def test_thesis_reference_count_within_cap():
