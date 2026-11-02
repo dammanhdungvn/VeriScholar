@@ -2,23 +2,48 @@ from pathlib import Path
 
 
 def test_thesis_rules_file_exists_and_valid():
-    rules_path = Path("report-datn/RULES.md")
-    assert rules_path.exists(), "report-datn/RULES.md must exist"
-    content = rules_path.read_text(encoding="utf-8")
+    info_path = Path("report-datn/INFORMATION.md")
+    assert info_path.exists(), "report-datn/INFORMATION.md must exist"
+    content = info_path.read_text(encoding="utf-8")
 
-    # Kiểm tra các phần cốt lõi bắt buộc
-    required_sections = [
-        "KIẾN TRÚC & CẤU HÌNH KỸ THUẬT XELATEX",
-        "QUY CHUẨN ĐỊNH DẠNG TRANG & HÌNH THỨC",
-        "VĂN PHONG & QUY TẮC HÀNH VĂN BẤT BIẾN",
-        "QUY TẮC BẢNG BIỂU, HÌNH VẼ & DẪN CHIẾU CHÉO",
-        "CHIẾN LƯỢC CHẮT LỌC NỘI DUNG TỪ DOCS",
+    # Kiểm tra các phần cốt lõi bắt buộc của INFORMATION.md (Hồ sơ sinh viên, Đề tài, Mục lục Docs, Benchmarks)
+    required_info_sections = [
+        "HỒ SƠ ĐỊNH DANH SINH VIÊN VÀ CÁN BỘ HƯỚNG DẪN",
+        "ĐẶC TẢ ĐỀ TÀI NGHIÊN CỨU VÀ TÍNH CẤP THIẾT",
+        "KẾ HOẠCH THỰC HIỆN 10 TUẦN CHI TIẾT",
+        "MỤC LỤC VÀ BẢN ĐỒ TRA CỨU ĐẶC TẢ KỸ THUẬT",
+        "BẢNG THAM SỐ ĐỊNH LƯỢNG VÀ BENCHMARKS KHÓA CỨNG",
+        "DANH MỤC 20 TÀI LIỆU THAM KHẢO CHÍNH THỨC CỦA ĐỀ TÀI",
     ]
-    for section in required_sections:
-        assert section in content, f"Missing required section: {section}"
+    for section in required_info_sections:
+        assert section in content, f"Missing required section in INFORMATION.md: {section}"
 
     # Kiểm tra không chứa URL tuyệt đối (Quy tắc 5 AGENTS.md)
-    assert "file://" not in content, "RULES.md must not contain file:// links"
+    assert "file://" not in content, "INFORMATION.md must not contain file:// links"
+
+    # Kiểm tra AGENTS.md và INFORMATION.md viện dẫn lẫn nhau theo giao ước phân định
+    agents_path = Path("report-datn/AGENTS.md")
+    assert agents_path.exists(), "report-datn/AGENTS.md must exist"
+    agents_content = agents_path.read_text(encoding="utf-8")
+    assert "report-datn/INFORMATION.md" in agents_content, (
+        "report-datn/AGENTS.md must reference report-datn/INFORMATION.md as normative authority"
+    )
+    assert "report-datn/AGENTS.md" in content, (
+        "report-datn/INFORMATION.md must reference report-datn/AGENTS.md for authoring standards"
+    )
+
+    # Kiểm tra các phần cốt lõi bắt buộc của AGENTS.md (Cẩm nang biên soạn, XeLaTeX và Chiến lược chắt lọc)
+    required_agents_sections = [
+        "MỤC TIÊU CỐT LÕI, QUY TRÌNH HỌC THUẬT VÀ KỶ LUẬT ĐATN",
+        "BỐ CỤC TOÀN VĂN VÀ QUY CHUẨN ĐỊNH DẠNG XELATEX",
+        "NGUYÊN TẮC VẬN HÀNH CHO AI AGENT VÀ HÀNG RÀO PHÒNG NGỪA 7 ANTI-PATTERNS",
+        "CHIẾN LƯỢC CHẮT LỌC NỘI DUNG TỪ DOCS",
+        "HỆ THỐNG 6 PERSONA CHUYÊN BIỆT CHO AI AGENT",
+        "GIAO THỨC TƯƠNG TÁC TỆP AN TOÀN VÀ QUY TRÌNH PHỐI HỢP",
+        "BẢNG KIỂM TỰ ĐÁNH GIÁ TRƯỚC KHI BÀN GIAO",
+    ]
+    for section in required_agents_sections:
+        assert section in agents_content, f"Missing required section in AGENTS.md: {section}"
 
 
 def test_thesis_chapter2_academic_purity():
@@ -49,30 +74,37 @@ def test_thesis_chapter2_academic_purity():
 
 
 def test_thesis_rules_academic_architecture_paradigm():
-    """Kiểm tra Quy tắc 8 trong AGENTS.md và Mục 3.7 trong RULES.md:
+    """Kiểm tra Mục 2.5 trong report-datn/AGENTS.md và Phần 4-5 trong INFORMATION.md:
     Bắt buộc phải có quy chuẩn kiến trúc hệ thống chuẩn paper khoa học
-    hướng người đọc (Human-Centric Paper Architecture).
+    hướng người đọc (Human-Centric Paper Architecture), quy chuẩn TikZ và bảng biểu trong AGENTS.md.
+    Kiểm tra INFORMATION.md chứa mục lục specs kiến trúc Lục giác và CSDL 20 bảng của đề tài VeriScholar.
     """
-    agents_path = Path(".agents/AGENTS.md")
-    rules_path = Path("report-datn/RULES.md")
+    agents_path = Path("report-datn/AGENTS.md")
+    info_path = Path("report-datn/INFORMATION.md")
 
-    assert agents_path.exists(), ".agents/AGENTS.md must exist"
-    assert rules_path.exists(), "report-datn/RULES.md must exist"
+    assert agents_path.exists(), "report-datn/AGENTS.md must exist"
+    assert info_path.exists(), "report-datn/INFORMATION.md must exist"
 
     agents_content = agents_path.read_text(encoding="utf-8")
-    rules_content = rules_path.read_text(encoding="utf-8")
+    info_content = info_path.read_text(encoding="utf-8")
 
     assert "Human-Centric Academic Paper Architecture" in agents_content, (
-        "AGENTS.md must contain Rule 8 about Human-Centric Academic Paper Architecture"
+        "report-datn/AGENTS.md must contain Human-Centric Academic Paper Architecture"
     )
     assert (
-        "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế" in rules_content
-    ), "RULES.md must contain Section 3.7 on Academic Paper Architecture Paradigm"
-    assert "Quy Chuẩn Kỹ Nghệ Sơ Đồ TikZ Chống Chồng Đè & Ríu Rít" in rules_content, (
-        "RULES.md must contain Section 3.8 on TikZ Anti-Crowding Standard"
+        "Quy Chuẩn Biểu Diễn Sơ Đồ Kiến Trúc Hệ Thống Chuẩn Paper Khoa Học Quốc Tế" in agents_content
+    ), "AGENTS.md must contain Section on Academic Paper Architecture Paradigm"
+    assert "Quy Chuẩn Kỹ Nghệ Sơ Đồ TikZ Chống Chồng Đè" in agents_content, (
+        "AGENTS.md must contain Section on TikZ Anti-Crowding Standard"
     )
-    assert "Quy Chuẩn Kỹ Nghệ Bảng Biểu Nâng Cao" in rules_content, (
-        "RULES.md must contain Section 4.6 on Advanced Tabular Engineering"
+    assert "Quy Chuẩn Kỹ Nghệ Bảng Biểu Nâng Cao" in agents_content, (
+        "AGENTS.md must contain Section on Advanced Tabular Engineering"
+    )
+    assert "Kiến trúc Lục giác" in info_content or "Hexagonal Architecture" in info_content, (
+        "INFORMATION.md must contain Hexagonal Architecture specification in docs catalog"
+    )
+    assert "20 bảng" in info_content, (
+        "INFORMATION.md must specify exact 20 database tables"
     )
 
 
@@ -93,11 +125,11 @@ def test_thesis_reference_count_within_cap():
         f"Bắt buộc: 0 < N_refs <= 20."
     )
 
-    # Kiểm tra quy tắc đã được thể chế hóa trong RULES.md và AGENTS.md
-    rules_content = Path("report-datn/RULES.md").read_text(encoding="utf-8")
-    agents_content = Path(".agents/AGENTS.md").read_text(encoding="utf-8")
+    # Kiểm tra quy tắc đã được thể chế hóa trong INFORMATION.md và AGENTS.md
+    info_content = Path("report-datn/INFORMATION.md").read_text(encoding="utf-8")
+    agents_content = Path("report-datn/AGENTS.md").read_text(encoding="utf-8")
 
-    assert "20" in rules_content and "tài liệu tham khảo" in rules_content
+    assert "20" in info_content and "tài liệu tham khảo" in info_content
     assert "20" in agents_content and "tài liệu tham khảo" in agents_content
 
 
@@ -180,7 +212,7 @@ def test_graduation_forms_compliance():
 
 
 def test_no_subjective_pronouns_in_body_chapters():
-    """Kiểm tra Mục 3.1 trong RULES.md: Ngôi văn khách quan chuẩn mực.
+    """Kiểm tra Mục 3.1 trong AGENTS.md: Ngôi văn khách quan chuẩn mực.
     Tuyệt đối cấm sử dụng đại từ nhân xưng ngôi thứ nhất (em, tôi, chúng tôi, chúng em)
     trong toàn bộ các chương nội dung báo cáo (Chương 1 - Chương 4, Kết luận).
     Ngoại lệ kỹ thuật: chữ viết tắt metric học thuật Exact Match (EM).
@@ -398,3 +430,68 @@ def test_chapter3_database_and_analysis_remediation():
     assert "FK -> document_storage_blobs(id)" in ch3_6_norm
     assert "FK -> research_sessions(id)" in ch3_6_norm
     assert "mũi tên cụt trực quan" not in ch3_6_raw
+
+
+def test_root_agents_isolated_from_thesis_reporting():
+    """Kiểm tra mọi AGENTS.md bên ngoài thư mục report-datn/
+    không chứa bất kỳ quy tắc hay nội dung nào về viết báo cáo đồ án tốt nghiệp,
+    đồng thời đảm bảo các quy chuẩn kỹ nghệ nền tảng không liên quan đến ĐATN
+    được bảo toàn trọn vẹn.
+    """
+    repo_root = Path(__file__).resolve().parent.parent
+    agents_files = [
+        p
+        for p in repo_root.rglob("*AGENTS.md*")
+        if p.is_file()
+        and "report-datn" not in p.parts
+        and "node_modules" not in p.parts
+        and ".venv" not in p.parts
+        and ".git" not in p.parts
+        and "temp" not in p.parts
+        and "teamwork" not in p.parts
+        and "runtime" not in p.parts
+    ]
+    assert agents_files, "Must find at least one AGENTS.md outside report-datn"
+
+    thesis_terms = [
+        "đồ án tốt nghiệp",
+        "báo cáo đồ án",
+        "viết báo cáo",
+        "liêm chính học thuật đồ án",
+        "reference cap invariant",
+        "đatn",
+        "luận văn",
+        "khóa luận",
+        "báo cáo tốt nghiệp",
+    ]
+
+    for agent_file in agents_files:
+        assert agent_file.stat().st_size > 0, (
+            f"{agent_file} rỗng: file AGENTS.md không còn giá trị phải được xóa bỏ"
+        )
+        content = agent_file.read_text(encoding="utf-8").lower()
+        for term in thesis_terms:
+            assert term not in content, (
+                f"{agent_file} vi phạm: cấm chứa nội dung viết báo cáo ĐATN ('{term}')"
+            )
+
+    # Đảm bảo toàn bộ quy chuẩn kỹ nghệ nền tảng được bảo toàn nguyên vẹn trong .agents/AGENTS.md
+    canonical_agents = repo_root / ".agents" / "AGENTS.md"
+    assert canonical_agents.exists(), ".agents/AGENTS.md must exist"
+    canonical_text = canonical_agents.read_text(encoding="utf-8")
+
+    preserved_invariants = [
+        "Lập Trình Hướng Kiểm Thử (TDD Bắt Buộc)",
+        "Kiến Trúc Lục Giác (Hexagonal Isolation)",
+        "Tháp Thẩm Quyền (Authority Hierarchy)",
+        "Co-Location Commit Rule",
+        "Quy Chuẩn Liên Kết Markdown",
+        "Quy Chuẩn Ngôn Từ & Bố Cục Tối Giản 80/20",
+        "Quy Chuẩn Đồng Bộ VPS Tự Động Sau Mỗi Task",
+        "Bộ Định Tuyến Kỹ Năng",
+        "Bốn Cổng Xác Minh Bắt Buộc",
+    ]
+    for invariant in preserved_invariants:
+        assert invariant in canonical_text, (
+            f".agents/AGENTS.md must preserve non-thesis invariant: '{invariant}'"
+        )

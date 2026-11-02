@@ -1,5 +1,5 @@
-import re
 from pathlib import Path
+
 
 def test_preamble():
     content = Path("report-datn/config/preamble.tex").read_text(encoding="utf-8")
@@ -13,6 +13,7 @@ def test_preamble():
     assert "Đồ án tốt nghiệp ngành Công nghệ thông tin" not in content, "Header cũ vẫn tồn tại"
     print("test_preamble PASSED")
 
+
 def test_phieu_giao_de_tai():
     content = Path("report-datn/frontmatter/phieu_giao_de_tai.tex").read_text(encoding="utf-8")
     assert "\\begin{enumerate}" not in content, "Vẫn còn enumerate trong phiếu giao đề tài"
@@ -22,29 +23,41 @@ def test_phieu_giao_de_tai():
     assert "\\item[--]" in content, "Thiếu gạch đầu dòng item[--] cho nhiệm vụ cụ thể"
     print("test_phieu_giao_de_tai PASSED")
 
+
 def test_ket_luan_spacing():
     content = Path("report-datn/chapters/ket_luan.tex").read_text(encoding="utf-8")
     assert "\\setstretch" not in content, "Vẫn còn lệnh setstretch trong ket_luan.tex"
     print("test_ket_luan_spacing PASSED")
 
+
 def test_de_cuong_datn():
     content = Path("report-datn/frontmatter/de_cuong_datn.tex").read_text(encoding="utf-8")
-    assert "\\textbf{BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC}" in content, "Tiêu ngữ chưa đúng BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC"
-    assert "Bộ môn Hệ thống thông tin và Tri thức" in content, "Kế hoạch tuần 10 thiếu tên Bộ môn đầy đủ chuẩn chính tả"
+    assert "\\textbf{BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC}" in content, (
+        "Tiêu ngữ chưa đúng BỘ MÔN HỆ THỐNG THÔNG TIN VÀ TRI THỨC"
+    )
+    assert "Bộ môn Hệ thống thông tin và Tri thức" in content, (
+        "Kế hoạch tuần 10 thiếu tên Bộ môn đầy đủ chuẩn chính tả"
+    )
     assert "\\setstretch{1.06}" not in content, "Vẫn còn setstretch{1.06}"
     assert "\\setstretch{1.05}" not in content, "Vẫn còn setstretch{1.05}"
     assert "\\setstretch{1.12}" not in content, "Vẫn còn setstretch{1.12}"
     print("test_de_cuong_datn PASSED")
 
+
 def test_frontmatter_bolds():
     cam_on = Path("report-datn/frontmatter/loi_cam_on.tex").read_text(encoding="utf-8")
     assert "\\textbf{Vũ Lan Phương}" not in cam_on, "Tên GVHD trong lời cảm ơn vẫn bị in đậm"
     assert "\\textbf{VeriScholar}" not in cam_on, "Tên VeriScholar trong lời cảm ơn vẫn bị in đậm"
-    assert "Bộ môn Hệ thống thông tin và Tri thức" in cam_on, "Tên Bộ môn trong lời cảm ơn chưa chuẩn"
+    assert "Bộ môn Hệ thống thông tin và Tri thức" in cam_on, (
+        "Tên Bộ môn trong lời cảm ơn chưa chuẩn"
+    )
 
     mo_dau = Path("report-datn/frontmatter/loi_mo_dau.tex").read_text(encoding="utf-8")
-    assert "\\textbf{hiện tượng ảo giác" not in mo_dau, "Cụm hiện tượng ảo giác trong lời mở đầu vẫn bị in đậm"
+    assert "\\textbf{hiện tượng ảo giác" not in mo_dau, (
+        "Cụm hiện tượng ảo giác trong lời mở đầu vẫn bị in đậm"
+    )
     print("test_frontmatter_bolds PASSED")
+
 
 if __name__ == "__main__":
     test_preamble()
@@ -53,5 +66,6 @@ if __name__ == "__main__":
     test_frontmatter_bolds()
     test_ket_luan_spacing()
     from scan_inline_bolds import find_casual_bolds
+
     assert len(find_casual_bolds()) == 0, "Vẫn còn casual inline bolds trong chapters"
     print("test_chapters_bolds PASSED")

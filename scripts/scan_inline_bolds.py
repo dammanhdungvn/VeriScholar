@@ -3,6 +3,7 @@ from pathlib import Path
 
 CHAPTERS_DIR = Path("report-datn/chapters")
 
+
 def find_casual_bolds():
     findings = []
     for tex_file in sorted(CHAPTERS_DIR.rglob("*.tex")):
@@ -53,14 +54,17 @@ def find_casual_bolds():
                     continue
 
                 # It is a casual in-sentence bold!
-                findings.append({
-                    "file": str(tex_file),
-                    "line_num": idx,
-                    "text": m.group(0),
-                    "inner": inner_text,
-                    "line": stripped
-                })
+                findings.append(
+                    {
+                        "file": str(tex_file),
+                        "line_num": idx,
+                        "text": m.group(0),
+                        "inner": inner_text,
+                        "line": stripped,
+                    }
+                )
     return findings
+
 
 if __name__ == "__main__":
     findings = find_casual_bolds()
