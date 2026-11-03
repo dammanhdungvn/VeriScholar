@@ -277,3 +277,90 @@ def test_toc_three_pages_no_orphan_line():
         assert "TÀI LIỆU THAM KHẢO" not in pages[11], (
             "Trang 12 (xii) không được chứa dòng lẻ 'TÀI LIỆU THAM KHẢO'!"
         )
+
+
+def test_lof_single_page_and_no_orphan_spillover():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+
+    # Trang 12 (xii) chứa toàn bộ 21 hình trong Danh mục hình ảnh
+    assert "DANH MỤC HÌNH ẢNH" in pages[11], "Trang 12 phải là Danh mục hình ảnh"
+    assert "Hình 4-9" in pages[11], (
+        "Hình 4-9 phải nằm trọn vẹn trên trang 12 (xii), không tràn sang trang mới!"
+    )
+    # Trang 13 (xiii) phải là Danh mục bảng biểu
+    assert "DANH MỤC BẢNG BIỂU" in pages[12], "Trang 13 phải là Danh mục bảng biểu"
+
+
+def test_ch3_database_tables_flow_and_no_orphan_page():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+
+    # Tìm trang chứa Bảng 3-8 và Bảng 3-9
+    p_tab_3_8 = next((i + 1 for i, p in enumerate(pages) if "Bảng 3-8:" in p), None)
+    p_tab_3_9 = next((i + 1 for i, p in enumerate(pages) if "Bảng 3-9:" in p), None)
+    assert p_tab_3_8 is not None and p_tab_3_9 is not None
+    assert p_tab_3_8 == p_tab_3_9, (
+        f"Bảng 3-8 (trang {p_tab_3_8}) và Bảng 3-9 (trang {p_tab_3_9}) "
+        "phải cùng nằm trên trang 40 để triệt tiêu khoảng trắng!"
+    )
+
+    # Tìm trang chứa Bảng 3-10 và Mục 3.6.4 (bỏ qua mục lục ở phần đầu)
+    p_tab_3_10 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Bảng 3-10:" in p), None)
+    p_sec_3_6_4 = next(
+        (i + 1 for i, p in enumerate(pages) if i >= 18 and "3.6.4 Thiết kế hạ tầng" in p),
+        None,
+    )
+    assert p_tab_3_10 is not None and p_sec_3_6_4 is not None
+    assert p_tab_3_10 == p_sec_3_6_4, (
+        f"Bảng 3-10 (trang {p_tab_3_10}) và Mục 3.6.4 (trang {p_sec_3_6_4}) "
+        "phải cùng nằm trên trang 41!"
+    )
+
+    # Đảm bảo toàn bộ nội dung Mục 3.6.4 nằm gọn trong cùng trang với Bảng 3-10
+    sec_3_6_4_page_text = pages[p_sec_3_6_4 - 1]
+    assert "Mô hình đồ thị tri thức đa thực thể" in sec_3_6_4_page_text, (
+        "Nội dung Mục 3.6.4 bị tràn sang trang mới!"
+    )
+
+
+def test_no_pages_with_few_lines_in_document():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+
+    roman_numerals = {
+        "iii",
+        "iv",
+        "v",
+        "vi",
+        "vii",
+        "viii",
+        "ix",
+        "x",
+        "xi",
+        "xii",
+        "xiii",
+        "xiv",
+        "xv",
+        "xvi",
+        "xvii",
+    }
+    # Bỏ qua bìa 1 và 2 (trang 1, 2)
+    for i in range(2, len(pages) - 1):
+        p_text = pages[i]
+        lines = [line.strip() for line in p_text.splitlines() if line.strip()]
+        # Lọc bỏ số trang ở chân trang
+        body_lines = [ln for ln in lines if ln not in roman_numerals and not ln.isdigit()]
+        assert len(body_lines) >= 15, (
+            f"Trang {i + 1} chỉ có {len(body_lines)} dòng văn bản (< 15 dòng): "
+            f"'{lines[0] if lines else ''}'!"
+        )
