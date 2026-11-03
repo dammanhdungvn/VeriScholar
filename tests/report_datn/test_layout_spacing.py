@@ -2,16 +2,45 @@ import subprocess
 from pathlib import Path
 
 
-def test_clearpage_before_section_3_5():
+def test_section_3_5_flow_and_no_clearpage():
     tex_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
     content = tex_path.read_text(encoding="utf-8")
 
-    # Kiểm tra có \clearpage trước \section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
+    # Kiểm tra KHÔNG có \clearpage trước \section{...}
     sec_pos = content.find("\\section{Phân tích một số biểu đồ tuần tự chính của hệ thống}")
     clearpage_pos = content.find("\\clearpage")
-    assert clearpage_pos != -1 and clearpage_pos < sec_pos, (
-        "Bắt buộc có \\clearpage trước Section 3.5 để chuyển toàn bộ Mục 3.5 sang đầu trang mới"
+    assert clearpage_pos == -1 or clearpage_pos > sec_pos, (
+        "Không được có \\clearpage trước Section 3.5 để kéo nội dung 3.5 lên trang trước"
     )
+
+
+def test_ch1_no_orphan_line():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+
+    # Kiểm tra không có trang nào chỉ chứa duy nhất 'rộng hệ thống.'
+    for i, p in enumerate(pages):
+        lines = [line.strip() for line in p.split("\n") if line.strip()]
+        assert "rộng hệ thống." not in lines, f"Trang {i + 1} chứa dòng mồ côi 'rộng hệ thống.'!"
+
+
+def test_no_raw_latex_macros_in_pdf():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+
+    # Đảm bảo không còn ký tự backslash trong văn bản xuất bản
+    assert "\\" not in res.stdout, (
+        "Phát hiện ký tự gạch chéo ngược '\\' chưa thoát hoặc rò rỉ mã nguồn trong PDF"
+    )
+
+    # Đảm bảo không còn macro rò rỉ
+    for word in ["bold", "RR", "argmax"]:
+        assert f"\\{word}" not in res.stdout, f"Phát hiện macro thô \\{word} trong PDF"
 
 
 def test_section_3_5_and_fig3_8_on_same_page():
