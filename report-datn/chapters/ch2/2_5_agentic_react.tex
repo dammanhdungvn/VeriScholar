@@ -44,9 +44,9 @@ Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các 
     \item Cô lập mức nhân hệ điều hành (\textit{Kernel-level Isolation}): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
 \end{itemize}
 
-Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để tự động biên dịch và phục hồi lỗi cú pháp LaTeX được thể hiện trong Hình~\ref{fig:react_e2b_sandbox}.
+Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để tự động biên dịch và phục hồi lỗi cú pháp LaTeX được thể hiện trong Hình~\ref{fig:react_e2b_sandbox}. Khi bản thảo gặp lỗi cú pháp (như thiếu gói lệnh, quên đóng môi trường toán học, hoặc ký tự chưa được thoát), quy trình tự phục hồi diễn ra hoàn toàn tự động: Trước hết, tác nhân gửi mã nguồn sang E2B MicroVM Sandbox để biên dịch thử nghiệm (\textit{Action}). Tiếp theo, môi trường MicroVM ghi nhận nhật ký lỗi biên dịch (\textit{Observation}) và gửi ngược lại cho tác nhân. Sau đó, tác nhân suy luận vị trí dòng lỗi và nguyên nhân cú pháp (\textit{Thought}), rồi tự động vá mã nguồn và kích hoạt vòng lặp biên dịch lại cho đến khi tài liệu kết xuất thành công với mã thoát bằng 0.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.76, transform shape,
@@ -111,8 +111,8 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     \draw[arrowstyle] (action.south) -- node[midway, right=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Thực thi} (sandbox.north);
     \draw[arrowstyle] (sandbox.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {Trả kết quả} (cond.east);
     
-    % Nhánh thành công: khoảng cách nới rộng hoàn hảo, nhãn đặt bên phải thoáng đãng
-    \draw[arrowstyle] (cond.south) -- node[midway, right=6pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
+    % Nhánh thành công: nới khoảng cách thẳng đứng và đặt nhãn bên phải mũi tên
+    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
     \draw[arrowstyle] (cond.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=2pt] {No (Lỗi)} (obs.east);
@@ -123,8 +123,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \label{fig:react_e2b_sandbox}
 \end{figure}
 
-Khi bản thảo gặp lỗi cú pháp (như thiếu gói lệnh, quên đóng môi trường toán học, hoặc ký tự chưa được thoát), quy trình tự phục hồi diễn ra hoàn toàn tự động: Trước hết, tác nhân gửi mã nguồn sang E2B MicroVM Sandbox để biên dịch thử nghiệm (\textit{Action}). Tiếp theo, môi trường MicroVM ghi nhận nhật ký lỗi biên dịch (\textit{Observation}) và gửi ngược lại cho tác nhân. Sau đó, tác nhân suy luận vị trí dòng lỗi và nguyên nhân cú pháp (\textit{Thought}), rồi tự động vá mã nguồn và kích hoạt vòng lặp biên dịch lại cho đến khi tài liệu kết xuất thành công với mã thoát bằng 0.
-
+\FloatBarrier
 \subsection{Mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (BYOK) và chuẩn mã hóa AES-256-GCM}
 \label{subsec:byok_aes_gcm}
 Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính cho học giả, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (\textit{Bring Your Own Key -- BYOK}). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.

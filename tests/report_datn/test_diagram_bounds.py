@@ -50,9 +50,9 @@ def test_fig2_4_loop_and_label_styling():
     )
 
     # Kiểm tra nhãn Yes (Exit 0) đặt lệch sườn phải không đè lên mũi tên hay viền hộp
-    assert "Yes (Exit 0)" in content and "right=6pt" in content, (
-        "Nhãn Yes (Exit 0) cần đặt lệch phải (right=6pt) để thoáng đãng không đè nét"
-    )
+    assert "Yes (Exit 0)" in content and (
+        "right=10pt" in content or "right=8pt" in content
+    ), "Nhãn Yes (Exit 0) cần đặt lệch phải (right=10pt) để thoáng đãng không đè nét"
 
 
 def test_fig3_12_class_diagram_styling():
