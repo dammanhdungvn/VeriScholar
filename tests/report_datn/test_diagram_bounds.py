@@ -95,14 +95,17 @@ def test_sequence_diagrams_spacing_and_float_padding():
     seq_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
     seq_content = seq_path.read_text(encoding="utf-8")
 
-    # Kiểm tra Hình 3-9, 3-10, 3-11 có lifeline mở rộng để chứa các thông điệp giãn dòng
-    has_extended_lifeline = (
-        "-- (0, -10.5)" in seq_content
-        or "-- (0, -10.2)" in seq_content
-        or "-- (0, -10.4)" in seq_content
-    )
-    assert has_extended_lifeline, (
-        "Lifeline trong biểu đồ tuần tự cần kéo dài đến y <= -10.2cm để chứa các bước giãn dòng"
+    # Kiểm tra cả 4 hình sử dụng style stage_card và stage_arrow
+    assert "stage_card" in seq_content, "Các sơ đồ Mục 3.5 phải sử dụng style stage_card chuẩn hóa"
+    assert "stage_arrow" in seq_content, "Các sơ đồ Mục 3.5 phải sử dụng style stage_arrow chuẩn hóa"
+
+    # Kiểm tra không còn lifeline kéo dài quá -10cm
+    assert "-- (0, -10.5)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"
+    assert "-- (0, -10.4)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"
+
+    # Kiểm tra cả 4 hình sử dụng định vị [H]
+    assert seq_content.count("\\begin{figure}[H]") >= 4, (
+        "Cả 4 sơ đồ Mục 3.5 cần sử dụng [H] để định vị chắc chắn, tránh khoảng trống đáy trang"
     )
 
     # Kiểm tra float spacing trong main.tex được tăng thêm 0.5 dòng (~10pt)
