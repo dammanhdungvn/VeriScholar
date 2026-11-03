@@ -650,7 +650,7 @@ Toàn bộ 20 bảng cơ sở dữ liệu thực tế của hệ thống \VS đ�
 \subsection{Đặc tả các bảng cơ sở dữ liệu hạt nhân của hệ thống}
 \label{subsec:csdl_dac_ta}
 
-Nhằm làm nổi bật các đóng góp kỹ thuật cốt lõi và tối ưu hóa dung lượng báo cáo, tiểu mục này trình bày đặc tả chi tiết 5 bảng cơ sở dữ liệu hạt nhân của hệ thống: \texttt{documents}, \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{user\_api\_keys} và \texttt{drafts}. Các bảng phân hệ định danh (bao gồm bảng \texttt{users}\label{tab:spec_users} và \texttt{scholar\_profiles}), phân hệ phiên nghiên cứu (\texttt{session\_documents} với ràng buộc $\text{FK} \to \texttt{research\_sessions(id)}$), cùng 11 bảng cơ sở dữ liệu còn lại được trình bày đầy đủ tại Phụ lục~A (Từ điển Cơ sở Dữ liệu Chi tiết) ở cuối tài liệu.
+Nhằm làm nổi bật các đóng góp kỹ thuật cốt lõi và tối ưu hóa dung lượng báo cáo, tiểu mục này trình bày đặc tả chi tiết 5 bảng cơ sở dữ liệu hạt nhân của hệ thống: \texttt{documents}, \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{user\_api\_keys} và \texttt{drafts}. Các bảng phân hệ định danh (bao gồm bảng \texttt{users}\label{tab:spec_users} và \texttt{scholar\_profiles}), phân hệ phiên nghiên cứu (\texttt{session\_documents} với ràng buộc FK $\to$ research\_sessions(id)), cùng 11 bảng cơ sở dữ liệu còn lại được trình bày đầy đủ tại Phụ lục~A (Từ điển Cơ sở Dữ liệu Chi tiết) ở cuối tài liệu.
 
 \noindent\textbf{Đặc tả bảng documents:} Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}).
 
