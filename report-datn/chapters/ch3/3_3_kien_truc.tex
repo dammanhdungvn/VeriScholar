@@ -39,85 +39,90 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.68, transform shape,
+    scale=0.74, transform shape,
     % Styles cho các khối kiến trúc
-    corebox/.style={draw=blue!80!black, fill=blue!4, rounded corners=8pt, line width=1.1pt, inner sep=8pt},
-    spacebox/.style={draw=blue!70!black, fill=white, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=3.3cm, minimum height=1.5cm},
-    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=2.6cm, minimum height=0.75cm},
-    adapterbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=3.0cm, minimum height=1.1cm},
-    extbox/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=3.0cm, minimum height=1.0cm},
+    corebox/.style={draw=blue!85!black, fill=blue!4, rounded corners=8pt, line width=1.1pt, inner sep=8pt},
+    spacebox/.style={draw=blue!70!black, fill=white, rounded corners=5pt, line width=0.85pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=4.1cm, minimum height=1.5cm},
+    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=2.7cm, minimum height=0.75cm},
+    adapterbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=3.2cm, minimum height=1.1cm},
+    extbox/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=3.2cm, minimum height=1.0cm},
     arrow_flow/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!75},
     arrow_bidir/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=0.9pt, draw=teal!80!black}
 ]
     % =========================================================================
     % 1. LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (CORE DOMAIN - packages/core)
     % =========================================================================
-    \draw[corebox] (-4.0, -3.8) rectangle (4.0, 4.1);
-    \node[font=\bfseries\small, text=blue!90!black, anchor=north] at (0, 3.85) {LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (\texttt{packages/core})};
-    \node[font=\scriptsize\itshape, text=black!65, anchor=north] at (0, 3.35) {Domain Entities $\bullet$ Value Objects $\bullet$ Pure Business Logic (No I/O Dependencies)};
+    % Mở rộng khung lõi miền ra x = [-4.7, 4.7] (rộng 9.4cm) và y = [-3.8, 4.3] (cao 8.1cm) để triệt tiêu hoàn toàn clipping
+    \draw[corebox] (-4.7, -3.8) rectangle (4.7, 4.3);
+    \node[font=\bfseries\footnotesize, text=blue!90!black, anchor=north] at (0, 4.15) {LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (\texttt{packages/core})};
+    \node[font=\scriptsize\itshape, text=black!65, anchor=north] at (0, 3.70) {Domain Entities $\bullet$ Value Objects $\bullet$ Pure Business Logic (No I/O Dependencies)};
 
-    % 4 Không gian nghiên cứu bên trong Core
-    \node[spacebox] (sp_disc) at (-1.9, 1.8) {
-        \textbf{\textcolor{blue!90!black}{Discovery Space}}\\
-        \scriptsize Khám phá tài liệu mở\\Deduplication CAS SHA-256
+    % 4 Không gian nghiên cứu bên trong Core (nới rộng bề ngang để hiển thị trọn vẹn SHA-256)
+    \node[spacebox] (sp_disc) at (-2.3, 2.0) {
+        \textbf{\textcolor{blue!90!black}{Discovery Space}}\\[1pt]
+        {\scriptsize Khám phá tài liệu mở}\\[1pt]
+        {\scriptsize Deduplication CAS SHA-256}
     };
-    \node[spacebox] (sp_deep) at (1.9, 1.8) {
-        \textbf{\textcolor{teal!90!black}{Deep Reading Space}}\\
-        \scriptsize Hybrid RAG $\bullet$ CRAG Gate\\Minh chứng BBox ($\text{IoU} \ge 0{,}85$)
+    \node[spacebox] (sp_deep) at (2.3, 2.0) {
+        \textbf{\textcolor{teal!90!black}{Deep Reading Space}}\\[1pt]
+        {\scriptsize Hybrid RAG $\bullet$ CRAG Gate}\\[1pt]
+        {\scriptsize Minh chứng BBox ($\text{IoU} \ge 0{,}85$)}
     };
-    \node[spacebox] (sp_graph) at (-1.9, -0.6) {
-        \textbf{\textcolor{purple!90!black}{Knowledge Library}}\\
-        \scriptsize GraphRAG 4 thực thể\\Phân cụm Louvain $\bullet$ Wiki
+    \node[spacebox] (sp_graph) at (-2.3, -0.6) {
+        \textbf{\textcolor{purple!90!black}{Knowledge Library}}\\[1pt]
+        {\scriptsize GraphRAG 4 thực thể}\\[1pt]
+        {\scriptsize Phân cụm Louvain $\bullet$ Wiki}
     };
-    \node[spacebox] (sp_write) at (1.9, -0.6) {
-        \textbf{\textcolor{orange!90!black}{Writing Studio}}\\
-        \scriptsize Đồng tác giả AI $\bullet$ Monaco\\ReAct Agent tự phục hồi lỗi
+    \node[spacebox] (sp_write) at (2.3, -0.6) {
+        \textbf{\textcolor{orange!90!black}{Writing Studio}}\\[1pt]
+        {\scriptsize Đồng tác giả AI $\bullet$ Monaco}\\[1pt]
+        {\scriptsize ReAct Agent tự phục hồi lỗi}
     };
 
-    \node[draw=blue!40, fill=blue!10, rounded corners=3pt, font=\scriptsize\bfseries, text=blue!90!black, minimum width=7.2cm, inner sep=3pt] at (0, -2.6) {
+    \node[draw=blue!40, fill=blue!10, rounded corners=3pt, font=\scriptsize\bfseries, text=blue!90!black, minimum width=8.6cm, inner sep=3.5pt] at (0, -2.6) {
         Quy tắc nghiệp vụ miền $\bullet$ Quản trị phiên $\bullet$ Két khóa BYOK Envelope
     };
 
     % =========================================================================
     % 2. TẦNG CỔNG (PORTS)
     % =========================================================================
-    % Driving Ports (Phía trên & Phía trái)
-    \node[portbox] (p_drive_api) at (-6.2, 2.0) {Driving Port:\\\texttt{API Controllers}};
-    \node[portbox] (p_drive_ui) at (-6.2, -1.0) {Driving Port:\\\texttt{Event Streams}};
+    % Driving Ports (Phía trái)
+    \node[portbox] (p_drive_api) at (-6.8, 2.0) {Driving Port:\\\texttt{API Controllers}};
+    \node[portbox] (p_drive_ui) at (-6.8, -1.0) {Driving Port:\\\texttt{Event Streams}};
 
     % Driven Ports (Phía phải)
-    \node[portbox] (p_driven_db) at (6.2, 2.5) {Driven Port:\\\texttt{RepositoryPort}};
-    \node[portbox] (p_driven_llm) at (6.2, 0.9) {Driven Port:\\\texttt{InferencePort}};
-    \node[portbox] (p_driven_sandbox) at (6.2, -0.7) {Driven Port:\\\texttt{CompilerSandboxPort}};
-    \node[portbox] (p_driven_ext) at (6.2, -2.3) {Driven Port:\\\texttt{ScholarlyGatewayPort}};
+    \node[portbox] (p_driven_db) at (6.8, 2.5) {Driven Port:\\\texttt{RepositoryPort}};
+    \node[portbox] (p_driven_llm) at (6.8, 0.9) {Driven Port:\\\texttt{InferencePort}};
+    \node[portbox] (p_driven_sandbox) at (6.8, -0.7) {Driven Port:\\\texttt{CompilerSandboxPort}};
+    \node[portbox] (p_driven_ext) at (6.8, -2.3) {Driven Port:\\\texttt{ScholarlyGatewayPort}};
 
     % =========================================================================
     % 3. TẦNG BỘ ĐIỀU HỢP (ADAPTERS)
     % =========================================================================
     % Driving Adapters (Trái)
-    \node[adapterbox] (ad_fastapi) at (-9.8, 2.0) {
+    \node[adapterbox] (ad_fastapi) at (-10.4, 2.0) {
         \textbf{FastAPI REST}\\
         \scriptsize \texttt{apps/api} Controllers\\SSE Streaming Routes
     };
-    \node[adapterbox] (ad_webui) at (-9.8, -1.0) {
+    \node[adapterbox] (ad_webui) at (-10.4, -1.0) {
         \textbf{React 19 / TS}\\
         \scriptsize \texttt{apps/web} UI\\PDF Canvas Viewer
     };
 
     % Driven Adapters (Phải)
-    \node[adapterbox] (ad_postgres) at (9.8, 2.5) {
+    \node[adapterbox] (ad_postgres) at (10.4, 2.5) {
         \textbf{Database Adapter}\\
         \scriptsize PostgreSQL 16 \texttt{pgvector}\\SQLAlchemy 2.0 Async
     };
-    \node[adapterbox] (ad_llm) at (9.8, 0.9) {
+    \node[adapterbox] (ad_llm) at (10.4, 0.9) {
         \textbf{AI Inference Adapter}\\
         \scriptsize Azure OpenAI / BYOK\\Envelope AES-256-GCM
     };
-    \node[adapterbox] (ad_e2b) at (9.8, -0.7) {
+    \node[adapterbox] (ad_e2b) at (10.4, -0.7) {
         \textbf{Sandbox Adapter}\\
         \scriptsize E2B MicroVM / Firecracker\\Cô lập môi trường biên dịch
     };
-    \node[adapterbox] (ad_scholar) at (9.8, -2.3) {
+    \node[adapterbox] (ad_scholar) at (10.4, -2.3) {
         \textbf{External Scholar}\\
         \scriptsize arXiv, CrossRef, Semantic\\Langfuse Telemetry
     };
@@ -125,7 +130,7 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % =========================================================================
     % 4. TẦNG TÁC NHÂN VÀ HẠ TẦNG BÊN NGOÀI (EXTERNAL)
     % =========================================================================
-    \node[extbox] (actor_scholar) at (-9.8, -3.2) {
+    \node[extbox] (actor_scholar) at (-10.4, -3.2) {
         \textcolor{purple!90!black}{Học giả (Scholar)}\\
         \scriptsize Nghiên cứu sinh / Giảng viên
     };
@@ -140,14 +145,14 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     \draw[arrow_flow] (ad_webui) -- (p_drive_ui);
 
     % Ports -> Core
-    \draw[arrow_flow] (p_drive_api.east) -- (-4.0, 2.0);
-    \draw[arrow_flow] (p_drive_ui.east) -- (-4.0, -1.0);
+    \draw[arrow_flow] (p_drive_api.east) -- (-4.7, 2.0);
+    \draw[arrow_flow] (p_drive_ui.east) -- (-4.7, -1.0);
 
     % Core -> Driven Ports
-    \draw[arrow_flow] (4.0, 2.5) -- (p_driven_db.west);
-    \draw[arrow_flow] (4.0, 0.9) -- (p_driven_llm.west);
-    \draw[arrow_flow] (4.0, -0.7) -- (p_driven_sandbox.west);
-    \draw[arrow_flow] (4.0, -2.3) -- (p_driven_ext.west);
+    \draw[arrow_flow] (4.7, 2.5) -- (p_driven_db.west);
+    \draw[arrow_flow] (4.7, 0.9) -- (p_driven_llm.west);
+    \draw[arrow_flow] (4.7, -0.7) -- (p_driven_sandbox.west);
+    \draw[arrow_flow] (4.7, -2.3) -- (p_driven_ext.west);
 
     % Driven Ports -> Driven Adapters
     \draw[arrow_flow] (p_driven_db) -- (ad_postgres);
@@ -155,9 +160,9 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     \draw[arrow_flow] (p_driven_sandbox) -- (ad_e2b);
     \draw[arrow_flow] (p_driven_ext) -- (ad_scholar);
 
-    % Nhãn chỉ dẫn nguyên lý phụ thuộc
-    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (-6.2, 3.4) {Driving (Primary)};
-    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (6.2, 3.4) {Driven (Secondary)};
+    % Nhãn chỉ dẫn nguyên lý phụ thuộc (Tách riêng khỏi viền)
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (-6.8, 3.6) {Driving (Primary)};
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (6.8, 3.6) {Driven (Secondary)};
 \end{tikzpicture}
 \caption{Kiến trúc Lục giác phân tầng và mô hình 4 Không gian nghiên cứu của hệ thống VeriScholar}
 \label{fig:hexagonal_architecture}
