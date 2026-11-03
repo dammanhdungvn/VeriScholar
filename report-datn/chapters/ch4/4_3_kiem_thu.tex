@@ -2,7 +2,7 @@
 \section{Kết quả kiểm thử tự động qua bốn cổng xác minh}
 \label{sec:kiem_thu_tu_dong}
 
-\subsection{Xây dựng kịch bản kiểm thử tự động hệ thống qua 4 cổng xác minh}
+\subsection{Kịch bản kiểm thử tích hợp và kiểm thử hệ thống}
 \label{subsec:kiem_thu_4_gate}
 
 Nhằm đảm bảo chất lượng phần mềm không bao giờ bị suy giảm, triệt tiêu hồi quy và tuân thủ tuyệt đối quy tắc vận hành, hệ thống tích hợp chu trình kiểm thử tự động 4 cổng qua kịch bản kiểm thử:
@@ -32,5 +32,9 @@ Kết quả kiểm tra thực tế trên hệ thống được tổng hợp tron
 \end{tabularx}
 \end{table}
 
+\subsection{Đánh giá kết quả kiểm thử và độ tin cậy}
+\label{subsec:danh_gia_kiem_thu_tin_cay}
+
 Toàn bộ 580 bài kiểm thử tự động (340 bài \texttt{pytest} backend và 240 bài \texttt{vitest} frontend) đạt tỷ lệ thành công 100\% (Exit code 0) trên cả 4 cổng xác minh trong tổng thời gian thực thi tuần tự là 13{,}02 giây ($0{,}12 + 6{,}53 + 4{,}53 + 1{,}84 = 13{,}02\,\text{s}$), bảo đảm độ tin cậy và độ ổn định vững chắc cho toàn bộ hệ thống \VS.
 
+Quy trình xác minh 4 cổng được kích hoạt tự động theo mô hình tích hợp liên tục (Continuous Integration -- CI), ngăn chặn triệt để hiện tượng suy thoái chất lượng mã nguồn hoặc vi phạm các ràng buộc ranh giới kiến trúc lục giác. Việc kết hợp chặt chẽ giữa kiểm thử đơn vị, kiểm thử tích hợp giao dịch cơ sở dữ liệu và kiểm thử giao diện người dùng đầu cuối bảo đảm hệ thống vận hành ổn định, chính xác và có khả năng phục hồi cao trong môi trường thực tế. Kết quả phân tích đối chứng (Ablation Study) và độ tin cậy vận hành chi tiết đối với từng thành phần thuật toán được trình bày sâu hơn tại Mục~\ref{sec:danh_gia_thuc_nghiem}.

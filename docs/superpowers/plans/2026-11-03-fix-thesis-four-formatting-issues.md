@@ -37,28 +37,28 @@
 - Consumes: Cột Khóa ngoại của Bảng 3-5 (`table:blob_storage`).
 - Produces: Chuỗi `FK -> \texttt{document\_}\allowbreak\texttt{storage\_}\allowbreak\texttt{blobs}\allowbreak\texttt{(id)}` có điểm ngắt hợp lệ, triệt tiêu `Overfull \hbox (25.87pt)`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Thêm test `test_table_3_5_no_overfull_hbox()` vào `tests/report_datn/test_diagram_bounds.py` kiểm tra:
 1. `3_6_thiet_ke_csdl.tex` tại Bảng 3-5 chứa điểm ngắt dòng `\allowbreak` cho chuỗi định danh bảng khóa ngoại `document_storage_blobs`.
 2. Khi biên dịch hoặc đọc log, không xuất hiện cảnh báo Overfull `\hbox` liên quan đến `document_storage_blobs`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Chạy `uv run pytest tests/report_datn/test_diagram_bounds.py -k test_table_3_5_no_overfull_hbox` để xác nhận test đỏ (FAIL).
 
-- [ ] **Step 3: Implement fix in `3_6_thiet_ke_csdl.tex`**
+- [x] **Step 3: Implement fix in `3_6_thiet_ke_csdl.tex`**
 
 Chỉnh sửa dòng định nghĩa cột Khóa ngoại của trường `blob_id` trong Bảng 3-5 (`report-datn/chapters/ch3/3_6_thiet_ke_csdl.tex`):
 ```latex
 FK $\to$ \allowbreak\texttt{document\_}\allowbreak\texttt{storage\_}\allowbreak\texttt{blobs}\allowbreak\texttt{(id)}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Chạy lại test để xác nhận xanh (PASS).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fast`.
 
@@ -77,18 +77,18 @@ Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fas
   - Mục 4.2 gồm 6 subsection cân đối từ `\subsection{4.2.1 ...}` đến `\subsection{4.2.6 ...}`, xóa bỏ từ cấm `"dưới đây"`.
   - Mục 4.3 gồm 2 subsection cân đối `\subsection{4.3.1 ...}` và `\subsection{4.3.2 ...}`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Tạo mới hoặc bổ sung vào `tests/report_datn/test_section_hierarchy.py`:
 1. Kiểm tra không có singleton subsection trong Chương 4 (mọi `\subsection` có con `X.Y.1` thì phải có `X.Y.2`).
 2. Kiểm tra `4_2_giao_dien.tex` có 6 `\subsection` (4.2.1 đến 4.2.6) và không chứa từ cấm `"dưới đây"`.
 3. Kiểm tra `4_3_kiem_thu.tex` có cả `4.3.1` và `4.3.2`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Chạy `uv run pytest tests/report_datn/test_section_hierarchy.py` để xác nhận test đỏ (FAIL).
 
-- [ ] **Step 3: Implement section hierarchy restructuring**
+- [x] **Step 3: Implement section hierarchy restructuring**
 
 - Trong `report-datn/chapters/ch4/4_2_giao_dien.tex`:
   - Nâng các `\subsubsection{4.2.1.1 ...}` thành `\subsection{4.2.1 ...}` đến `\subsection{4.2.6 ...}`.
@@ -96,11 +96,11 @@ Chạy `uv run pytest tests/report_datn/test_section_hierarchy.py` để xác nh
 - Trong `report-datn/chapters/ch4/4_3_kiem_thu.tex`:
   - Tách nội dung thành `\subsection{4.3.1 Kịch bản kiểm thử tích hợp và kiểm thử hệ thống}` và `\subsection{4.3.2 Đánh giá kết quả kiểm thử và độ tin cậy}`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Chạy lại test để xác nhận xanh (PASS).
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fast`.
 
