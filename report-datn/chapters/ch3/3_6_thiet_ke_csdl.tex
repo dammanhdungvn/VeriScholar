@@ -1,6 +1,5 @@
 % !TEX root = ../../main.tex
 \FloatBarrier
-\clearpage
 \section{Thiết kế cơ sở dữ liệu cho hệ thống}
 \label{sec:thiet_ke_csdl}
 
@@ -280,7 +279,7 @@ Nhằm làm nổi bật các đóng góp kỹ thuật cốt lõi và tối ưu h
 \subsubsection{Đặc tả bảng documents (Phân hệ Thư viện và Lưu trữ CAS)}
 Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} (ràng buộc FK $\to$ document\_storage\_blobs(id)) và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}).
 
-\begin{table}[!htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \footnotesize
@@ -305,16 +304,17 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 \end{table}
 
 \subsubsection{Đặc tả bảng document\_chunks (Phân hệ Đọc sâu và Kiểm chứng Bounding Box)}
-Bảng \texttt{document\_chunks} là bảng dữ liệu trọng tâm phục vụ quy trình đọc sâu và kiểm chứng trích dẫn Bounding Box, lưu trữ phân đoạn văn bản kèm tọa độ hình học chuẩn hóa và vector nhúng 1536 chiều (Bảng~\ref{tab:spec_chunks}).
+Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục vụ đọc sâu và kiểm chứng trích dẫn Bounding Box, tích hợp vector nhúng 1536 chiều (Bảng~\ref{tab:spec_chunks}).
 
-\begin{table}[!htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \footnotesize
 \caption{Đặc tả bảng document\_chunks}
 \label{tab:spec_chunks}
 \captionsetup{skip=2pt}
-\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{0.96}
 \begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
@@ -330,16 +330,17 @@ Bảng \texttt{document\_chunks} là bảng dữ liệu trọng tâm phục vụ
 \end{table}
 
 \subsubsection{Đặc tả bảng graph\_nodes (Phân hệ Đồ thị Tri thức GraphRAG)}
-Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thuật 4 loại phục vụ tính năng GraphRAG, hỗ trợ hợp nhất đỉnh theo độ tương đồng Cosine (Bảng~\ref{tab:spec_graph_nodes}).
+Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thuật 4 loại phục vụ GraphRAG, hỗ trợ hợp nhất đỉnh theo độ tương đồng Cosine (Bảng~\ref{tab:spec_graph_nodes}).
 
-\begin{table}[!htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \footnotesize
 \caption{Đặc tả bảng graph\_nodes}
 \label{tab:spec_graph_nodes}
 \captionsetup{skip=2pt}
-\renewcommand{\arraystretch}{1.15}
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{0.96}
 \begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
@@ -356,14 +357,14 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 \subsubsection{Đặc tả bảng drafts (Phân hệ Soạn thảo Học thuật và Đồng tác giả AI)}
 Bảng \texttt{drafts} lưu trữ bản thảo bài báo khoa học định dạng mã nguồn LaTeX, liên kết trực tiếp với môi trường máy ảo biên dịch và AI Agent đồng tác giả (Bảng~\ref{tab:spec_drafts}).
 
-\begin{table}[!htbp]
+\begin{table}[H]
 \centering
 \singlespacing
 \footnotesize
 \caption{Đặc tả bảng drafts}
 \label{tab:spec_drafts}
 \captionsetup{skip=2pt}
-\renewcommand{\arraystretch}{1.15}
+\renewcommand{\arraystretch}{1.0}
 \begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
@@ -382,11 +383,11 @@ Bảng \texttt{drafts} lưu trữ bản thảo bài báo khoa học định dạ
 \subsection{Thiết kế hạ tầng lưu trữ vector và đồ thị tri thức phụ trợ}
 \label{subsec:csdl_vector_graph}
 
-Bên cạnh mô hình quan hệ cấu trúc giữa các thực thể được phân tích trong Bảng~\ref{tab:class_relationships_analysis}, để hỗ trợ năng lực suy luận ngữ nghĩa của AI Agent và khám phá mạng lưới học thuật ngay trong cùng một không gian giao dịch ACID, hệ thống tích hợp trực tiếp hai cơ chế chỉ mục và truy vấn đồ thị chuyên biệt trên PostgreSQL 16:
+Nhằm hỗ trợ năng lực suy luận ngữ nghĩa của AI Agent và khai phá mạng lưới học thuật trong cùng không gian giao dịch ACID, hệ thống tích hợp trực tiếp hai cơ chế chỉ mục và truy vấn đồ thị trên PostgreSQL 16:
 
 {\sloppy
-\begin{itemize}[noitemsep, topsep=2pt]
-    \item \textbf{Chỉ mục không gian vector và từ vựng toàn văn (Hybrid Vector và Lexical Store):} Nhằm phục vụ truy xuất tương đồng ngữ nghĩa kết hợp từ khóa trong kiến trúc Hybrid Search, cột \texttt{embedding} (1536 chiều) của bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được quản lý bằng tiện ích mở rộng \texttt{pgvector} với chỉ mục phân cấp HNSW~\cite{malkov2018} (\texttt{vector\_cosine\_ops}), song hành cùng chỉ mục đảo GIN trên cột \texttt{content\_tsv} (\texttt{TSVECTOR}).
-    \item \textbf{Mô hình đồ thị tri thức đa thực thể (Graph Knowledge Store):} Phục vụ cho tính năng GraphRAG~\cite{edge2024, hogan2021kg}, các thực thể thuộc 4 nhóm (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và 4 loại cạnh quan hệ (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}) được trích xuất tự động bằng cơ chế ép kiểu lược đồ đầu ra \texttt{OpenAI Structured Outputs} (kết hợp bộ quy tắc dự phòng \texttt{Rule Fallback}) và lưu trữ trực tiếp vào hai bảng \texttt{graph\_nodes}, \texttt{graph\_edges}. Trên cấu trúc lưu trữ này, các truy vấn lan truyền đa bước nhảy (2-hop Graph Traversal) được thực thi qua biểu thức bảng chung SQL CTE, kết hợp phân cụm Louvain~\cite{blondel2008louvain} lưu vào \texttt{folder\_community\_summaries} và \texttt{wiki\_pages}, cho phép học giả đối chiếu liên tài liệu tức thời.
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item \textbf{Chỉ mục không gian vector và từ vựng toàn văn (Hybrid Store):} Cột \texttt{embedding} (1536 chiều) của các bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được đánh chỉ mục phân cấp HNSW~\cite{malkov2018} (\texttt{vector\_cosine\_ops}) qua tiện ích \texttt{pgvector}, song hành chỉ mục đảo GIN trên cột \texttt{content\_tsv} phục vụ Hybrid Search.
+    \item \textbf{Mô hình đồ thị tri thức đa thực thể (Graph Store):} Phục vụ GraphRAG~\cite{edge2024, hogan2021kg}, 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và 4 loại cạnh (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}) được trích xuất qua \texttt{OpenAI Structured Outputs} và lưu vào bảng \texttt{graph\_nodes}, \texttt{graph\_edges}. Truy vấn bắc cầu 2-hop được thực thi qua SQL CTE kết hợp phân cụm Louvain~\cite{blondel2008louvain}, hỗ trợ học giả đối chiếu liên tài liệu tức thời.
 \end{itemize}
 \par}
