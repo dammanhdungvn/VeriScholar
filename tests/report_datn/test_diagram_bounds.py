@@ -116,3 +116,34 @@ def test_sequence_diagrams_spacing_and_float_padding():
         or "\\setlength{\\intextsep}{11pt" in main_content
         or "\\setlength{\\intextsep}{12pt" in main_content
     ), "Cần tăng \\intextsep lên khoảng 10-12pt để có đệm 0.5 dòng với text"
+
+
+def test_table_3_5_no_overfull_hbox():
+    tex_path = Path("report-datn/chapters/ch3/3_6_thiet_ke_csdl.tex")
+    content = tex_path.read_text(encoding="utf-8")
+
+    # 1. Kiểm tra Bảng 3-5 có điểm ngắt dòng allowbreak cho chuỗi document_storage_blobs
+    assert "\\allowbreak" in content, (
+        "Bảng 3-5 cần bổ sung \\allowbreak để ngắt dòng chuỗi định danh dài trong cột 3.2cm"
+    )
+    expected_pattern = (
+        "\\allowbreak\\texttt{document\\_}"
+        "\\allowbreak\\texttt{storage\\_}"
+        "\\allowbreak\\texttt{blobs}"
+        "\\allowbreak\\texttt{(id)}"
+    )
+    assert expected_pattern in content, (
+        "Bảng 3-5 cần phân rã chuỗi document_storage_blobs(id) thành các phần tử ngắt dòng"
+    )
+
+    # 2. Kiểm tra nếu log biên dịch tồn tại thì không còn lỗi Overfull \\hbox
+    log_path = Path("report-datn/main.log")
+    if log_path.exists():
+        log_content = log_path.read_text(encoding="utf-8", errors="ignore")
+        overfull_found = any(
+            "Overfull \\hbox" in block and "document_storage_blobs" in block
+            for block in log_content.split("\n\n")
+        )
+        assert not overfull_found, (
+            "File report-datn/main.log vẫn còn Overfull \\hbox với document_storage_blobs"
+        )

@@ -107,13 +107,9 @@ Kiến trúc không gian tương tác người--máy và luồng luân chuyển 
 \label{fig:ui_layout_architecture}
 \end{figure}
 
-\subsection{Giao diện người dùng các phân hệ chức năng}
-\label{subsec:giao_dien_chuc_nang}
+Nhằm trực quan hóa quá trình vận hành thực tế của hệ thống, các giao diện ứng dụng web được triển khai trên môi trường sản xuất của hệ thống \VS được trình bày chi tiết theo từng không gian làm việc chuyên sâu. Quy trình xác thực học giả được bảo vệ bằng cơ chế JWT phân tán kết hợp HTTP-only Cookie và mã hóa mật khẩu Argon2id tại phía máy chủ, đảm bảo an toàn truy cập trước khi chuyển hướng vào các phân hệ nghiệp vụ.
 
-Nhằm trực quan hóa quá trình vận hành thực tế của hệ thống, mục này trình bày các giao diện ứng dụng web được triển khai trên môi trường sản xuất của hệ thống \VS. Quy trình xác thực học giả được bảo vệ bằng cơ chế JWT phân tán kết hợp HTTP-only Cookie và mã hóa mật khẩu Argon2id tại phía máy chủ, đảm bảo an toàn truy cập trước khi chuyển hướng vào các không gian làm việc chuyên sâu dưới đây.
-
-
-\subsubsection{Giao diện tìm kiếm và khám phá tài liệu học thuật}
+\subsection{Giao diện tìm kiếm và khám phá tài liệu học thuật}
 \label{subsec:ui_discovery}
 
 Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế theo tư duy tối giản triệt để, hỗ trợ học giả tìm kiếm hợp nhất qua 4 nguồn tri thức học thuật lớn (arXiv, Semantic Scholar, CrossRef, Exa AI) (Hình~\ref{fig:ui_search_paper}):
@@ -134,7 +130,7 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
 \end{figure}
 \FloatBarrier
 
-\subsubsection{Giao diện quản lý thư viện nghiên cứu cá nhân}
+\subsection{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{subsubsec:ui_my_library}
 
 Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học giả tổ chức, phân loại và lưu trữ hàng nghìn tài liệu khoa học một cách khoa học (Hình~\ref{fig:ui_my_library}):
@@ -152,7 +148,7 @@ Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học gi�
 \end{figure}
 \FloatBarrier
 
-\subsubsection{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
+\subsection{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
 \label{subsec:ui_deep_reading}
 
 Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học giả phân tích, đối thoại và kiểm chứng trực tiếp từng luận điểm của bài báo khoa học (Hình~\ref{fig:ui_deep_read_paper}):
@@ -170,7 +166,7 @@ Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học
 \end{figure}
 \FloatBarrier
 
-\subsubsection{Giao diện mạng đồ thị tri thức 4 thực thể GraphRAG}
+\subsection{Giao diện mạng đồ thị tri thức 4 thực thể GraphRAG}
 \label{subsubsec:ui_graph}
 
 Giao diện mạng đồ thị tri thức học thuật trực quan hóa không gian liên kết ngữ nghĩa giữa các công trình khoa học (Hình~\ref{fig:ui_graph}). Mạng lưới đồ thị thể hiện 4 loại thực thể cốt lõi theo mã màu học thuật chuyên biệt: \textit{Bài báo (Paper)}, \textit{Phương pháp (Method)}, \textit{Tập dữ liệu (Dataset)}, và \textit{Kết quả độ đo thực nghiệm (MetricResult)}. Để hỗ trợ học giả đối chiếu ngay với các công trình nền tảng của lĩnh vực trí tuệ nhân tạo khi khởi tạo không gian làm việc, hệ thống nạp sẵn tập dữ liệu hạt giống gồm 12 bài báo kinh điển (\textit{12 Landmark Papers Seed Corpus}, bao gồm 58 đỉnh thực thể, 111 cạnh quan hệ và 15 trang tóm tắt tổng quan Graph Wiki biên dịch sẵn \cite{edge2024}) kết hợp cùng các tài liệu PDF do người dùng tải lên trong thư viện cá nhân. Học giả có thể tương tác trực quan bằng cách phóng to, thu nhỏ, kéo thả các đỉnh để khám phá các cụm chuyên đề phân hoạch bằng thuật toán Louvain \cite{blondel2008louvain}, nhận diện khoảng trống nghiên cứu (\textit{Research Gaps}) và thực hiện các truy vấn so sánh liên tài liệu tức thời.
@@ -183,7 +179,7 @@ Giao diện mạng đồ thị tri thức học thuật trực quan hóa không 
 \end{figure}
 \FloatBarrier
 
-\subsubsection{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
+\subsection{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
 \label{subsec:ui_profile}
 
 Giao diện Quản lý hồ sơ học giả và Kho khóa API cá nhân bảo đảm quyền tự chủ dữ liệu và tính an toàn thông tin tuyệt đối cho nhà nghiên cứu (Hình~\ref{fig:ui_byok}):
@@ -200,7 +196,7 @@ Giao diện Quản lý hồ sơ học giả và Kho khóa API cá nhân bảo đ
 \end{figure}
 \FloatBarrier
 
-\subsubsection{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
+\subsection{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
 \label{subsec:ui_writing}
 
 Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối cùng trong chu trình nghiên cứu khoa học của VeriScholar (Hình~\ref{fig:ui_writing_paper}):
