@@ -114,16 +114,12 @@ def test_page_budget():
 
     # Chương 1 bắt đầu bằng số trang 1 Ả Rập
     ch1_idx = next(
-        (
-            i
-            for i, p in enumerate(pages)
-            if "CHƯƠNG 1" in p and p.strip().splitlines()[-1] == "1"
-        ),
+        (i for i, p in enumerate(pages) if "CHƯƠNG 1" in p and p.strip().splitlines()[-1] == "1"),
         None,
     )
     assert ch1_idx is not None, "Không tìm thấy trang bắt đầu Chương 1 (số trang 1) trong PDF"
     assert "TỔNG QUAN VỀ ĐỀ TÀI" in pages[ch1_idx], (
-        f"Trang {ch1_idx+1} không chứa tiêu đề Chương 1"
+        f"Trang {ch1_idx + 1} không chứa tiêu đề Chương 1"
     )
 
     print(
