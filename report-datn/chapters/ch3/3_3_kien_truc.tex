@@ -79,8 +79,8 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
         {\scriptsize ReAct Agent tự phục hồi lỗi}
     };
 
-    \node[draw=blue!40, fill=blue!10, rounded corners=3pt, font=\scriptsize\bfseries, text=blue!90!black, minimum width=8.5cm, inner sep=3.5pt] at (0, -2.6) {
-        Quy tắc nghiệp vụ miền $\bullet$ Quản trị phiên $\bullet$ Quản lý khóa BYOK Envelope
+    \node[draw=blue!40, fill=blue!10, rounded corners=3pt, font=\fontsize{6.5pt}{7.5pt}\selectfont\bfseries, text=blue!90!black, text width=7.8cm, align=center, inner sep=3.0pt] at (0, -2.6) {
+        Quy tắc nghiệp vụ miền $\bullet$ Quản trị phiên $\bullet$ Khóa BYOK Envelope
     };
 
     % =========================================================================
@@ -120,11 +120,11 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     };
     \node[adapterbox] (ad_e2b) at (8.8, -0.7) {
         \textbf{Sandbox Adapter}\\
-        \scriptsize E2B MicroVM / Firecracker\\Cô lập môi trường biên dịch
+        \scriptsize E2B MicroVM Sandbox\\Cô lập biên dịch Linux
     };
     \node[adapterbox] (ad_scholar) at (8.8, -2.3) {
         \textbf{External Scholar}\\
-        \scriptsize arXiv, CrossRef, Semantic\\Langfuse Telemetry
+        \scriptsize arXiv $\bullet$ CrossRef\\Langfuse Telemetry
     };
 
     % =========================================================================

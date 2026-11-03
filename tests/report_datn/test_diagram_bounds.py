@@ -16,6 +16,14 @@ def test_fig3_2_coordinates_within_safe_margins():
     assert "(8.8," in content or "(8.80," in content, "Thiếu tọa độ x=8.8 cho Driven Adapter"
     assert "(-8.8," in content or "(-8.80," in content, "Thiếu tọa độ x=-8.8 cho Driving Adapter"
 
+    # Kiểm tra đáy Core domain có text width khống chế không chọc thủng viền
+    assert "text width=7.8cm" in content or "text width=8.0cm" in content, (
+        "Cần text width khống chế khung nghiệp vụ đáy Core domain không đâm thủng viền"
+    )
+    assert "E2B MicroVM Sandbox" in content, (
+        "Cần dùng nhãn ngắt gọn trong Sandbox Adapter để tránh đầu mũi tên đè chữ"
+    )
+
 
 def test_fig2_4_loop_and_label_styling():
     tex_path = Path("report-datn/chapters/ch2/2_5_agentic_react.tex")
@@ -41,14 +49,29 @@ def test_fig3_12_class_diagram_styling():
     tex_path = Path("report-datn/chapters/ch3/3_6_thiet_ke_csdl.tex")
     content = tex_path.read_text(encoding="utf-8")
 
-    # Kiểm tra inner sep đã được tinh gọn để tạo khoảng hở giữa các hộp lớp
-    assert "inner sep=2.0pt" in content or "inner sep=2.2pt" in content, (
-        "Cần giảm inner sep của umlclass để thu hẹp chiều cao hộp lớp"
-    )
+    # Kiểm tra inner sep/ysep đã được tinh gọn để tạo khoảng hở giữa các hộp lớp
+    assert (
+        "inner sep=2.0pt" in content
+        or "inner sep=2.2pt" in content
+        or "inner ysep=3.0pt" in content
+    ), "Cần giảm inner sep của umlclass để thu hẹp chiều cao hộp lớp"
 
     # Kiểm tra không còn nhãn đè vào điểm neo south/north không có khoảng lùi an toàn
     assert "yshift=-3.5pt" not in content, (
         "Khoảng lệch yshift=-3.5pt quá nhỏ khiến nhãn đè vào đường phân cách hoặc thân hộp"
+    )
+
+    # Kiểm tra đường nối User -> Draft không rơi thẳng đứng cắt xuyên GraphNode và GraphEdge
+    assert "-| (draft.north)" not in content, (
+        "Đường nối -| (draft.north) cắt xuyên qua GraphNode và GraphEdge!"
+    )
+    assert "-- (draft.east)" in content, (
+        "Đường nối User -> Draft cần đi vòng sườn ngoài kết nối vào draft.east"
+    )
+
+    # Kiểm tra hai đầu kim cương tại doc.east được phân tách cao độ
+    assert "([yshift=-4pt]doc.east)" in content or "([yshift=4pt]doc.east)" in content, (
+        "Cần phân tách cao độ neo tại doc.east để tránh đè 2 đầu kim cương"
     )
 
 

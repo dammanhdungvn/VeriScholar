@@ -17,7 +17,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     scale=0.68, transform shape,
     umlclass/.style={
         draw=black!85, fill=white, rounded corners=3pt, line width=0.85pt,
-        align=left, inner sep=2.0pt, text width=3.6cm, font=\fontsize{7pt}{8.2pt}\selectfont
+        align=left, inner ysep=3.0pt, inner xsep=2.5pt, text width=3.6cm, font=\fontsize{7pt}{8.2pt}\selectfont
     },
     assoc/.style={line width=0.85pt, draw=black!80},
     comp/.style={{Diamond[fill=black, length=2.4mm]}-, line width=0.85pt, draw=black!85},
@@ -201,8 +201,8 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     \draw[comp] (doc.south) -- (chunk.north) 
         node[card, pos=0.30, right=3pt] {1} 
         node[card, pos=0.70, right=3pt] {N};
-    \draw[comp] (doc.east) -- ++(0.55, 0) |- (summary.east) 
-        node[card, anchor=south west] at ([xshift=10pt]doc.east) {1} 
+    \draw[comp] ([yshift=-4pt]doc.east) -- ++(0.55, 0) |- (summary.east) 
+        node[card, anchor=south west] at ([xshift=10pt, yshift=-4pt]doc.east) {1} 
         node[card, anchor=north west] at ([xshift=6pt]summary.east) {1};
 
     % Cột 3
@@ -217,14 +217,14 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     \draw[aggr] (user.east) -- ++(0.60, 0) |- ([yshift=6pt]doc.west) 
         node[card, anchor=south west] at ([xshift=10pt]user.east) {1} 
         node[card, anchor=south east] at ([xshift=-6pt, yshift=6pt]doc.west) {N};
-    \draw[aggr] (doc.east) -- ++(0.60, 0) |- (node.west) 
+    \draw[aggr] ([yshift=4pt]doc.east) -- ++(0.60, 0) |- (node.west) 
         node[card, anchor=south east] at ([xshift=-6pt]node.west) {N};
     \draw[assoc] (session.east) -- ++(0.60, 0) |- ([yshift=-6pt]doc.west) 
         node[card, anchor=south west] at ([xshift=6pt]session.east) {N} 
         node[card, anchor=north east] at ([xshift=-6pt, yshift=-6pt]doc.west) {N};
-    \draw[comp] (user.north) -- ++(0, 0.45) -| (draft.north) 
+    \draw[comp] (user.north) -- ++(0, 0.45) -| (7.7, -1.4) -- (draft.east) 
         node[card, anchor=south east] at ([xshift=-4pt, yshift=6pt]user.north) {1} 
-        node[card, anchor=south west] at ([xshift=4pt, yshift=6pt]draft.north) {N};
+        node[card, anchor=south west] at ([xshift=4pt, yshift=2pt]draft.east) {N};
 \end{tikzpicture}
 \caption{Biểu đồ lớp (Class Diagram) mô tả cấu trúc các thực thể miền và quan hệ nghiệp vụ}
 \label{fig:class_diagram_model}
