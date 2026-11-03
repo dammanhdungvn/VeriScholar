@@ -14,7 +14,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.55, transform shape,
+    scale=0.57, transform shape,
     umlclass/.style={
         draw=black!85, fill=white, rounded corners=2pt, line width=0.8pt,
         align=left, inner sep=3.5pt, text width=3.8cm, font=\linespread{1.0}\selectfont
@@ -22,10 +22,10 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     assoc/.style={line width=0.85pt, draw=black!80},
     comp/.style={{Diamond[fill=black, length=3.0mm]}-, line width=0.85pt, draw=black!85},
     aggr/.style={{Diamond[fill=white, length=3.0mm]}-, line width=0.85pt, draw=black!85},
-    card/.style={font=\tiny\bfseries, fill=white, inner sep=1.2pt}
+    card/.style={font=\tiny\bfseries, fill=white, inner sep=1.8pt, rounded corners=1pt}
 ]
-    % CỘT 1: PHÂN HỆ ĐỊNH DANH VÀ PHIÊN NGHIÊN CỨU (x = -5.4)
-    \node[umlclass] (user) at (-5.4, 4.4) {
+    % CỘT 1: PHÂN HỆ ĐỊNH DANH VÀ PHIÊN NGHIÊN CỨU (x = -5.8)
+    \node[umlclass] (user) at (-5.8, 4.4) {
         {\centering\textbf{\scriptsize User}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -43,7 +43,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + is\_admin(): bool
     };
 
-    \node[umlclass] (profile) at (-5.4, 0.8) {
+    \node[umlclass] (profile) at (-5.8, 0.8) {
         {\centering\textbf{\scriptsize ScholarProfile}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -58,7 +58,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + get\_summary(): str
     };
 
-    \node[umlclass] (apikey) at (-5.4, -2.4) {
+    \node[umlclass] (apikey) at (-5.8, -2.4) {
         {\centering\textbf{\scriptsize UserApiKey}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -74,7 +74,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + is\_valid(): bool
     };
 
-    \node[umlclass] (session) at (-5.4, -5.6) {
+    \node[umlclass] (session) at (-5.8, -5.6) {
         {\centering\textbf{\scriptsize ResearchSession}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -88,7 +88,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + set\_active\_document(id): void
     };
 
-    \node[umlclass] (turn) at (-5.4, -8.6) {
+    \node[umlclass] (turn) at (-5.8, -8.6) {
         {\centering\textbf{\scriptsize SessionTurn}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -170,8 +170,8 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + get\_excerpt(n): str
     };
 
-    % CỘT 3: PHÂN HỆ GRAPHRAG VÀ SOẠN THẢO BẢN THẢO (x = 5.4)
-    \node[umlclass] (node) at (5.4, 4.4) {
+    % CỘT 3: PHÂN HỆ GRAPHRAG VÀ SOẠN THẢO BẢN THẢO (x = 5.8)
+    \node[umlclass] (node) at (5.8, 4.4) {
         {\centering\textbf{\scriptsize GraphNode}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -187,7 +187,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + is\_same\_entity(other): bool
     };
 
-    \node[umlclass] (edge) at (5.4, 1.0) {
+    \node[umlclass] (edge) at (5.8, 1.0) {
         {\centering\textbf{\scriptsize GraphEdge}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -202,7 +202,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + get\_direction(): tuple
     };
 
-    \node[umlclass] (draft) at (5.4, -2.6) {
+    \node[umlclass] (draft) at (5.8, -2.6) {
         {\centering\textbf{\scriptsize Draft}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -217,7 +217,7 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
         + set\_template(t): void
     };
 
-    \node[umlclass] (draftmsg) at (5.4, -6.0) {
+    \node[umlclass] (draftmsg) at (5.8, -6.0) {
         {\centering\textbf{\scriptsize DraftMessage}\par}\vspace{1.5pt}
         \hrule\vspace{2pt}
         \tiny
@@ -246,10 +246,11 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     \draw[comp] (node.south) -- (edge.north) node[card, near start, right] {1} node[card, near end, right] {N};
     \draw[comp] (draft.south) -- (draftmsg.north) node[card, near start, right] {1} node[card, near end, right] {N};
 
-    \draw[aggr] (user.east) -- (doc.west) node[card, near start, above] {1} node[card, near end, above] {N};
-    \draw[aggr] (doc.east) -- (node.west) node[card, near start, above] {1} node[card, near end, above] {N};
-    \draw[assoc] (session.east) -- (doc.south west) node[card, near start, above] {N} node[card, near end, above] {N};
-    \draw[comp] (user.east) -- ++(0.8, -0.4) |- (draft.west) node[card, near start, above] {1} node[card, near end, below] {N};
+    % Quan hệ liên cột được định tuyến góc vuông gọn gàng, tránh cắt xuyên tâm khối
+    \draw[aggr] (user.east) -- ++(0.6, 0) |- (doc.west) node[card, near start, above] {1} node[card, near end, above] {N};
+    \draw[aggr] (doc.east) -- ++(0.6, 0) |- (node.west) node[card, near start, above] {1} node[card, near end, above] {N};
+    \draw[assoc] (session.east) -- ++(0.6, 0) |- ([yshift=-6pt]doc.west) node[card, near start, above] {N} node[card, near end, below] {N};
+    \draw[comp] (user.north) -- ++(0, 0.7) -| ([xshift=0.5cm]node.east) |- (draft.east) node[card, near start, left] {1} node[card, near end, above] {N};
 \end{tikzpicture}
 \caption{Biểu đồ lớp (Class Diagram) mô tả cấu trúc các thực thể miền và quan hệ nghiệp vụ}
 \label{fig:class_diagram_model}

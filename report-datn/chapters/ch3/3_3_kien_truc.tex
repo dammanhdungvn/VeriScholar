@@ -39,11 +39,11 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.58, transform shape,
+    scale=0.68, transform shape,
     % Styles cho các khối kiến trúc
     corebox/.style={draw=blue!80!black, fill=blue!4, rounded corners=8pt, line width=1.1pt, inner sep=8pt},
     spacebox/.style={draw=blue!70!black, fill=white, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=3.3cm, minimum height=1.5cm},
-    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\tiny\bfseries, minimum width=2.6cm, minimum height=0.75cm},
+    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=3pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=2.6cm, minimum height=0.75cm},
     adapterbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=3.0cm, minimum height=1.1cm},
     extbox/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize\bfseries, minimum width=3.0cm, minimum height=1.0cm},
     arrow_flow/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!75},
@@ -52,26 +52,26 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % =========================================================================
     % 1. LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (CORE DOMAIN - packages/core)
     % =========================================================================
-    \draw[corebox] (-4.0, -3.8) rectangle (4.0, 3.8);
-    \node[font=\bfseries\small, text=blue!90!black, anchor=north] at (0, 3.65) {LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (\texttt{packages/core})};
-    \node[font=\tiny\itshape, text=black!60, anchor=north] at (0, 3.2) {Domain Entities $\bullet$ Value Objects $\bullet$ Pure Business Logic (No I/O Dependencies)};
+    \draw[corebox] (-4.0, -3.8) rectangle (4.0, 4.1);
+    \node[font=\bfseries\small, text=blue!90!black, anchor=north] at (0, 3.85) {LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (\texttt{packages/core})};
+    \node[font=\scriptsize\itshape, text=black!65, anchor=north] at (0, 3.35) {Domain Entities $\bullet$ Value Objects $\bullet$ Pure Business Logic (No I/O Dependencies)};
 
     % 4 Không gian nghiên cứu bên trong Core
     \node[spacebox] (sp_disc) at (-1.9, 1.8) {
         \textbf{\textcolor{blue!90!black}{Discovery Space}}\\
-        \tiny Khám phá tài liệu mở\\Deduplication CAS SHA-256
+        \scriptsize Khám phá tài liệu mở\\Deduplication CAS SHA-256
     };
     \node[spacebox] (sp_deep) at (1.9, 1.8) {
         \textbf{\textcolor{teal!90!black}{Deep Reading Space}}\\
-        \tiny Hybrid RAG $\bullet$ CRAG Gate\\Minh chứng BBox ($\text{IoU} \ge 0{,}85$)
+        \scriptsize Hybrid RAG $\bullet$ CRAG Gate\\Minh chứng BBox ($\text{IoU} \ge 0{,}85$)
     };
     \node[spacebox] (sp_graph) at (-1.9, -0.6) {
         \textbf{\textcolor{purple!90!black}{Knowledge Library}}\\
-        \tiny GraphRAG 4 thực thể\\Phân cụm Louvain $\bullet$ Wiki
+        \scriptsize GraphRAG 4 thực thể\\Phân cụm Louvain $\bullet$ Wiki
     };
     \node[spacebox] (sp_write) at (1.9, -0.6) {
         \textbf{\textcolor{orange!90!black}{Writing Studio}}\\
-        \tiny Đồng tác giả AI $\bullet$ Monaco\\ReAct Agent tự phục hồi lỗi
+        \scriptsize Đồng tác giả AI $\bullet$ Monaco\\ReAct Agent tự phục hồi lỗi
     };
 
     \node[draw=blue!40, fill=blue!10, rounded corners=3pt, font=\scriptsize\bfseries, text=blue!90!black, minimum width=7.2cm, inner sep=3pt] at (0, -2.6) {
@@ -97,29 +97,29 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % Driving Adapters (Trái)
     \node[adapterbox] (ad_fastapi) at (-9.8, 2.0) {
         \textbf{FastAPI REST}\\
-        \tiny \texttt{apps/api} Controllers\\SSE Streaming Routes
+        \scriptsize \texttt{apps/api} Controllers\\SSE Streaming Routes
     };
     \node[adapterbox] (ad_webui) at (-9.8, -1.0) {
         \textbf{React 19 / TS}\\
-        \tiny \texttt{apps/web} UI\\PDF Canvas Viewer
+        \scriptsize \texttt{apps/web} UI\\PDF Canvas Viewer
     };
 
     % Driven Adapters (Phải)
     \node[adapterbox] (ad_postgres) at (9.8, 2.5) {
         \textbf{Database Adapter}\\
-        \tiny PostgreSQL 16 \texttt{pgvector}\\SQLAlchemy 2.0 Async
+        \scriptsize PostgreSQL 16 \texttt{pgvector}\\SQLAlchemy 2.0 Async
     };
     \node[adapterbox] (ad_llm) at (9.8, 0.9) {
         \textbf{AI Inference Adapter}\\
-        \tiny Azure OpenAI / BYOK\\Envelope AES-256-GCM
+        \scriptsize Azure OpenAI / BYOK\\Envelope AES-256-GCM
     };
     \node[adapterbox] (ad_e2b) at (9.8, -0.7) {
         \textbf{Sandbox Adapter}\\
-        \tiny E2B MicroVM / Firecracker\\Cô lập môi trường biên dịch
+        \scriptsize E2B MicroVM / Firecracker\\Cô lập môi trường biên dịch
     };
     \node[adapterbox] (ad_scholar) at (9.8, -2.3) {
         \textbf{External Scholar}\\
-        \tiny arXiv, CrossRef, Semantic\\Langfuse Telemetry
+        \scriptsize arXiv, CrossRef, Semantic\\Langfuse Telemetry
     };
 
     % =========================================================================
@@ -127,7 +127,7 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % =========================================================================
     \node[extbox] (actor_scholar) at (-9.8, -3.2) {
         \textcolor{purple!90!black}{Học giả (Scholar)}\\
-        \tiny Nghiên cứu sinh / Giảng viên
+        \scriptsize Nghiên cứu sinh / Giảng viên
     };
 
     % =========================================================================
@@ -156,8 +156,8 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     \draw[arrow_flow] (p_driven_ext) -- (ad_scholar);
 
     % Nhãn chỉ dẫn nguyên lý phụ thuộc
-    \node[font=\tiny\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2pt] at (-5.1, 3.6) {Driving (Primary)};
-    \node[font=\tiny\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2pt] at (5.1, 3.6) {Driven (Secondary)};
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (-6.2, 3.4) {Driving (Primary)};
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (6.2, 3.4) {Driven (Secondary)};
 \end{tikzpicture}
 \caption{Kiến trúc Lục giác phân tầng và mô hình 4 Không gian nghiên cứu của hệ thống VeriScholar}
 \label{fig:hexagonal_architecture}

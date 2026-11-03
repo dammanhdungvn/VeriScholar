@@ -55,7 +55,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
     box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
     box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.5cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.2, line width=1pt, text width=1.8cm, align=center, inner sep=1pt, font=\bfseries\scriptsize},
+    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.35, line width=1pt, text width=2.1cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
     box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=4.8cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
     arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
     looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
@@ -100,7 +100,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     };
 
     % 7. Kết quả hoàn thành (Final Answer)
-    \node[box_final] (final) at (0, -3.6) {
+    \node[box_final] (final) at (0, -3.8) {
         Tài liệu PDF hoàn chỉnh\\[1pt]
         \scriptsize\normalfont Kết xuất thành công $\text{exit}=0$ (Hiển thị bản in)
     };
@@ -112,11 +112,11 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     \draw[arrowstyle] (sandbox.west) -- node[midway, above=1pt, font=\scriptsize\bfseries] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=6pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
     \draw[arrowstyle] (cond.west) -- node[midway, above=1pt, font=\scriptsize\bfseries, text=red!85!black] {No (Lỗi)} (obs.east);
-    \draw[looparrow] (obs.north) to[out=110, in=250] node[midway, left=4pt, align=right, font=\scriptsize\bfseries, text=red!85!black] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
+    \draw[looparrow] (obs.north) to[out=120, in=240] node[midway, left=8pt, align=right, font=\scriptsize\bfseries, text=red!85!black] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
 \end{tikzpicture}
 \caption{Cơ chế tác nhân ReAct điều phối môi trường E2B MicroVM Sandbox tự động phục hồi lỗi cú pháp LaTeX}
 \label{fig:react_e2b_sandbox}
