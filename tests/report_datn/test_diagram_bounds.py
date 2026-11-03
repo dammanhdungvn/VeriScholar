@@ -10,11 +10,17 @@ def test_fig3_2_coordinates_within_safe_margins():
         "Hình 3-2 phải sử dụng scale <= 0.68 để vừa vặn lề in textwidth=16cm"
     )
 
-    # Kiểm tra tọa độ Adapter không vượt quá +- 8.8 (trước đây là 10.4)
-    assert "(10.4," not in content, "Tọa độ x của Driven Adapter vẫn còn 10.4 gây tràn lề phải!"
-    assert "(-10.4," not in content, "Tọa độ x của Driving Adapter vẫn còn -10.4!"
-    assert "(8.8," in content or "(8.80," in content, "Thiếu tọa độ x=8.8 cho Driven Adapter"
-    assert "(-8.8," in content or "(-8.80," in content, "Thiếu tọa độ x=-8.8 cho Driving Adapter"
+    # Kiểm tra chiều rộng portbox đã thu nhỏ <= 2.2cm để tạo khe hở cho thân mũi tên
+    assert "minimum width=2.1cm" in content or "minimum width=2.0cm" in content, (
+        "Cần thu hẹp portbox về <= 2.1cm để tạo khoảng trống cho thân mũi tên -->"
+    )
+
+    # Kiểm tra tọa độ nới rộng: Adapter tại +- 9.2 và Port tại +- 6.1, Core tại +- 4.4
+    assert "(9.2," in content, "Thiếu tọa độ x=9.2 cho Driven Adapter để tạo khe hở thân mũi tên"
+    assert "(-9.2," in content, "Thiếu tọa độ x=-9.2 cho Driving Adapter để tạo khe hở thân mũi tên"
+    assert "(6.1," in content, "Thiếu tọa độ x=6.1 cho Driven Port"
+    assert "(-6.1," in content, "Thiếu tọa độ x=-6.1 cho Driving Port"
+    assert "(-4.4," in content and "(4.4," in content, "Khung Core domain cần điều chỉnh x=+-4.4"
 
     # Kiểm tra đáy Core domain có text width khống chế không chọc thủng viền
     assert "text width=7.8cm" in content or "text width=8.0cm" in content, (

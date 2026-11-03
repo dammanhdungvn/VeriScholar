@@ -36,24 +36,24 @@ Nhằm đáp ứng trọn vẹn chu trình nghiên cứu khoa học của học 
 
 Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghiên cứu của \VS được mô tả trực quan trong Hình~\ref{fig:hexagonal_architecture}.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.65, transform shape,
     % Styles cho các khối kiến trúc
     corebox/.style={draw=blue!85!black, fill=blue!4, rounded corners=8pt, line width=1.1pt, inner sep=8pt},
     spacebox/.style={draw=blue!70!black, fill=white, rounded corners=5pt, line width=0.85pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\scriptsize, minimum width=4.1cm, minimum height=1.5cm},
-    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=2pt, font=\linespread{0.95}\selectfont\fontsize{5.8pt}{6.8pt}\selectfont\bfseries, minimum width=2.4cm, minimum height=0.72cm},
-    adapterbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.85pt, align=center, inner sep=3pt, font=\linespread{0.95}\selectfont\fontsize{6.5pt}{7.8pt}\selectfont, minimum width=3.0cm, minimum height=1.05cm},
-    extbox/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3pt, font=\linespread{0.95}\selectfont\fontsize{6.8pt}{8pt}\selectfont\bfseries, minimum width=3.0cm, minimum height=0.95cm},
+    portbox/.style={draw=teal!80!black, fill=teal!8, rounded corners=3pt, line width=0.8pt, align=center, inner sep=2pt, font=\linespread{0.95}\selectfont\fontsize{5.8pt}{6.8pt}\selectfont\bfseries, minimum width=2.1cm, minimum height=0.72cm},
+    adapterbox/.style={draw=orange!80!black, fill=orange!8, rounded corners=4pt, line width=0.85pt, align=center, inner sep=3pt, font=\linespread{0.95}\selectfont\fontsize{6.5pt}{7.8pt}\selectfont, minimum width=2.9cm, minimum height=1.05cm},
+    extbox/.style={draw=purple!80!black, fill=purple!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3pt, font=\linespread{0.95}\selectfont\fontsize{6.8pt}{8pt}\selectfont\bfseries, minimum width=2.9cm, minimum height=0.95cm},
     arrow_flow/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!75},
     arrow_bidir/.style={{Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}, line width=0.9pt, draw=teal!80!black}
 ]
     % =========================================================================
     % 1. LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (CORE DOMAIN - packages/core)
     % =========================================================================
-    % Khung lõi miền x = [-4.5, 4.5] (rộng 9.0cm) và y = [-3.8, 4.3] (cao 8.1cm)
-    \draw[corebox] (-4.5, -3.8) rectangle (4.5, 4.3);
+    % Khung lõi miền x = [-4.4, 4.4] (rộng 8.8cm) và y = [-3.8, 4.3] (cao 8.1cm)
+    \draw[corebox] (-4.4, -3.8) rectangle (4.4, 4.3);
     \node[font=\bfseries\footnotesize, text=blue!90!black, anchor=north] at (0, 4.15) {LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (\texttt{packages/core})};
     \node[font=\scriptsize\itshape, text=black!65, anchor=north, align=center, text width=8.6cm] at (0, 3.72) {Domain Entities $\bullet$ Value Objects $\bullet$ Pure Business Logic\\[0.5pt](No I/O Dependencies)};
 
@@ -86,43 +86,43 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % =========================================================================
     % 2. TẦNG CỔNG (PORTS)
     % =========================================================================
-    % Driving Ports (Phía trái)
-    \node[portbox] (p_drive_api) at (-5.85, 2.0) {Driving Port:\\\texttt{API Controllers}};
-    \node[portbox] (p_drive_ui) at (-5.85, -1.0) {Driving Port:\\\texttt{Event Streams}};
+    % Driving Ports (Phía trái, x = -6.1)
+    \node[portbox] (p_drive_api) at (-6.1, 2.0) {Driving Port:\\\texttt{API Controllers}};
+    \node[portbox] (p_drive_ui) at (-6.1, -1.0) {Driving Port:\\\texttt{Event Streams}};
 
-    % Driven Ports (Phía phải)
-    \node[portbox] (p_driven_db) at (5.85, 2.5) {Driven Port:\\\texttt{RepositoryPort}};
-    \node[portbox] (p_driven_llm) at (5.85, 0.9) {Driven Port:\\\texttt{InferencePort}};
-    \node[portbox] (p_driven_sandbox) at (5.85, -0.7) {Driven Port:\\\texttt{CompilerSandboxPort}};
-    \node[portbox] (p_driven_ext) at (5.85, -2.3) {Driven Port:\\\texttt{ScholarlyGatewayPort}};
+    % Driven Ports (Phía phải, x = 6.1)
+    \node[portbox] (p_driven_db) at (6.1, 2.5) {Driven Port:\\\texttt{RepositoryPort}};
+    \node[portbox] (p_driven_llm) at (6.1, 0.9) {Driven Port:\\\texttt{InferencePort}};
+    \node[portbox] (p_driven_sandbox) at (6.1, -0.7) {Driven Port:\\\texttt{CompilerSandboxPort}};
+    \node[portbox] (p_driven_ext) at (6.1, -2.3) {Driven Port:\\\texttt{ScholarlyGatewayPort}};
 
     % =========================================================================
     % 3. TẦNG BỘ ĐIỀU HỢP (ADAPTERS)
     % =========================================================================
-    % Driving Adapters (Trái)
-    \node[adapterbox] (ad_fastapi) at (-8.8, 2.0) {
+    % Driving Adapters (Trái, x = -9.2)
+    \node[adapterbox] (ad_fastapi) at (-9.2, 2.0) {
         \textbf{FastAPI REST}\\
         \scriptsize \texttt{apps/api} Controllers\\SSE Streaming Routes
     };
-    \node[adapterbox] (ad_webui) at (-8.8, -1.0) {
+    \node[adapterbox] (ad_webui) at (-9.2, -1.0) {
         \textbf{React 19 / TS}\\
         \scriptsize \texttt{apps/web} UI\\PDF Canvas Viewer
     };
 
-    % Driven Adapters (Phải)
-    \node[adapterbox] (ad_postgres) at (8.8, 2.5) {
+    % Driven Adapters (Phải, x = 9.2)
+    \node[adapterbox] (ad_postgres) at (9.2, 2.5) {
         \textbf{Database Adapter}\\
         \scriptsize PostgreSQL 16 \texttt{pgvector}\\SQLAlchemy 2.0 Async
     };
-    \node[adapterbox] (ad_llm) at (8.8, 0.9) {
+    \node[adapterbox] (ad_llm) at (9.2, 0.9) {
         \textbf{AI Inference Adapter}\\
         \scriptsize Azure OpenAI / BYOK\\Envelope AES-256-GCM
     };
-    \node[adapterbox] (ad_e2b) at (8.8, -0.7) {
+    \node[adapterbox] (ad_e2b) at (9.2, -0.7) {
         \textbf{Sandbox Adapter}\\
         \scriptsize E2B MicroVM Sandbox\\Cô lập biên dịch Linux
     };
-    \node[adapterbox] (ad_scholar) at (8.8, -2.3) {
+    \node[adapterbox] (ad_scholar) at (9.2, -2.3) {
         \textbf{External Scholar}\\
         \scriptsize arXiv $\bullet$ CrossRef\\Langfuse Telemetry
     };
@@ -130,7 +130,7 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     % =========================================================================
     % 4. TẦNG TÁC NHÂN VÀ HẠ TẦNG BÊN NGOÀI (EXTERNAL)
     % =========================================================================
-    \node[extbox] (actor_scholar) at (-8.8, -3.2) {
+    \node[extbox] (actor_scholar) at (-9.2, -3.2) {
         \textcolor{purple!90!black}{Học giả (Scholar)}\\
         \scriptsize Nghiên cứu sinh / Giảng viên
     };
@@ -145,14 +145,14 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     \draw[arrow_flow] (ad_webui) -- (p_drive_ui);
 
     % Ports -> Core
-    \draw[arrow_flow] (p_drive_api.east) -- (-4.5, 2.0);
-    \draw[arrow_flow] (p_drive_ui.east) -- (-4.5, -1.0);
+    \draw[arrow_flow] (p_drive_api.east) -- (-4.4, 2.0);
+    \draw[arrow_flow] (p_drive_ui.east) -- (-4.4, -1.0);
 
     % Core -> Driven Ports
-    \draw[arrow_flow] (4.5, 2.5) -- (p_driven_db.west);
-    \draw[arrow_flow] (4.5, 0.9) -- (p_driven_llm.west);
-    \draw[arrow_flow] (4.5, -0.7) -- (p_driven_sandbox.west);
-    \draw[arrow_flow] (4.5, -2.3) -- (p_driven_ext.west);
+    \draw[arrow_flow] (4.4, 2.5) -- (p_driven_db.west);
+    \draw[arrow_flow] (4.4, 0.9) -- (p_driven_llm.west);
+    \draw[arrow_flow] (4.4, -0.7) -- (p_driven_sandbox.west);
+    \draw[arrow_flow] (4.4, -2.3) -- (p_driven_ext.west);
 
     % Driven Ports -> Driven Adapters
     \draw[arrow_flow] (p_driven_db) -- (ad_postgres);
@@ -161,12 +161,13 @@ Sơ đồ kiến trúc Lục giác tổng thể và mô hình 4 không gian nghi
     \draw[arrow_flow] (p_driven_ext) -- (ad_scholar);
 
     % Nhãn chỉ dẫn nguyên lý phụ thuộc (Tách riêng khỏi viền)
-    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (-5.85, 3.6) {Driving (Primary)};
-    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (5.85, 3.6) {Driven (Secondary)};
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (-6.1, 3.6) {Driving (Primary)};
+    \node[font=\scriptsize\bfseries, fill=white, draw=black!40, rounded corners=2pt, inner sep=2.5pt] at (6.1, 3.6) {Driven (Secondary)};
 \end{tikzpicture}
 \caption{Kiến trúc Lục giác phân tầng và mô hình 4 Không gian nghiên cứu của hệ thống VeriScholar}
 \label{fig:hexagonal_architecture}
 \end{figure}
+\FloatBarrier
 
 \subsection{Thiết kế các đường ống thuật toán xử lý cốt lõi}
 \label{subsec:thiet_ke_thuat_toan_cot_loi}
