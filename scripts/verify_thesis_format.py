@@ -1,5 +1,14 @@
+import shutil
 import subprocess
+import sys
 from pathlib import Path
+
+
+def check_pdftotext_available() -> bool:
+    if not shutil.which("pdftotext"):
+        print("WARNING: pdftotext is not available in PATH. Skipping thesis PDF format checks.")
+        return False
+    return True
 
 
 def test_no_headers_and_footers():
@@ -128,6 +137,8 @@ def test_page_budget():
 
 
 if __name__ == "__main__":
+    if not check_pdftotext_available():
+        sys.exit(0)
     test_no_headers_and_footers()
     test_toc_levels_in_pdf()
     test_lof_lot_format()
