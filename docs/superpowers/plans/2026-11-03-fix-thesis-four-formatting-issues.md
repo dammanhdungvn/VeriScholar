@@ -152,19 +152,19 @@ Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fas
 - Consumes: Cấu hình `\onehalfspacing` trong `main.tex`.
 - Produces: Tài liệu PDF hoàn chỉnh được biên dịch sạch sẽ bằng XeLaTeX, vượt qua 100% kiểm định hình thức luận văn.
 
-- [ ] **Step 1: Update line spacing and heading spacing in `main.tex`**
+- [x] **Step 1: Update line spacing and heading spacing in `main.tex`**
 
 1. Thay `\setstretch{1.02}` thành `\onehalfspacing`.
 2. Xóa 3 dòng nén ép `\titlespacing*` trong `main.tex`.
 
-- [ ] **Step 2: Recompile `main.pdf` with XeLaTeX**
+- [x] **Step 2: Recompile `main.pdf` with XeLaTeX**
 
 Thực thi 2 lượt biên dịch XeLaTeX để cập nhật toàn bộ mục lục, liên kết chéo và số trang:
 ```bash
 cd report-datn && xelatex -interaction=nonstopmode main.tex && xelatex -interaction=nonstopmode main.tex
 ```
 
-- [ ] **Step 3: Run comprehensive verification**
+- [x] **Step 3: Run comprehensive verification**
 
 Chạy các lệnh kiểm thử:
 ```bash
@@ -173,6 +173,6 @@ uv run pytest tests/report_datn/
 ```
 Xác nhận 100% PASS và không có lỗi Overfull `\hbox` nào mới.
 
-- [ ] **Step 4: Commit changes**
+- [x] **Step 4: Commit changes**
 
 Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fast`.

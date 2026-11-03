@@ -34,3 +34,17 @@ def test_loi_mo_dau_included_in_main():
     assert pos_loi_mo_dau < pos_arabic, (
         r"\input{frontmatter/loi_mo_dau} phải nằm trong Frontmatter (trước \pagenumbering{arabic})"
     )
+
+
+def test_loi_mo_dau_added_to_toc():
+    r"""Kiểm tra tệp frontmatter/loi_mo_dau.tex có khai báo
+    \addcontentsline{toc}{chapter}{LỜI MỞ ĐẦU} ngay sau \chapter*{LỜI MỞ ĐẦU}
+    để xuất hiện trong Mục lục luận văn."""
+    loi_mo_dau_path = Path("report-datn/frontmatter/loi_mo_dau.tex")
+    assert loi_mo_dau_path.exists(), "Tệp frontmatter/loi_mo_dau.tex không tồn tại!"
+
+    content = loi_mo_dau_path.read_text(encoding="utf-8")
+    toc_entry = r"\addcontentsline{toc}{chapter}{LỜI MỞ ĐẦU}"
+    assert toc_entry in content, (
+        r"frontmatter/loi_mo_dau.tex chưa có \addcontentsline{toc}{chapter}{LỜI MỞ ĐẦU}!"
+    )
