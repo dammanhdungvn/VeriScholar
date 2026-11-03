@@ -142,3 +142,16 @@ def test_all_figures_no_broken_sentences():
                     )
 
     assert not broken_instances, f"Phát hiện hình ảnh chèn cắt ngang câu văn: {broken_instances}"
+
+
+def test_standard_spacing_and_no_titlespacing_override_in_main():
+    main_tex = Path("report-datn/main.tex").read_text(encoding="utf-8")
+    assert "\\setstretch" not in main_tex, (
+        "main.tex không được chứa \\setstretch nén ép khoảng cách dòng"
+    )
+    assert "\\onehalfspacing" in main_tex, (
+        "main.tex phải thiết lập \\onehalfspacing chuẩn cho phần nội dung chính"
+    )
+    assert "\\titlespacing*" not in main_tex, (
+        "main.tex không được chứa \\titlespacing* ghi đè nén khoảng cách tiêu đề"
+    )
