@@ -109,15 +109,16 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     \draw[arrowstyle] (input.south) -- ++(0, -0.3) -| (agent.north);
     \draw[arrowstyle] (agent.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Sinh lệnh} (action.west);
     \draw[arrowstyle] (action.south) -- node[midway, right=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Thực thi} (sandbox.north);
-    \draw[arrowstyle] (sandbox.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Trả kết quả} (cond.east);
+    \draw[arrowstyle] (sandbox.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=2pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
-    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {No (Lỗi)} (obs.east);
-    \draw[looparrow] (obs.north) to[out=135, in=225] node[midway, left=6pt, align=right, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
+    \draw[arrowstyle] (cond.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=2pt] {No (Lỗi)} (obs.east);
+    \draw[looparrow] (obs.north) to[out=110, in=250] node[midway, left=6pt, align=right, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=2pt] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
 \end{tikzpicture}
+\vspace{4pt}
 \caption{Cơ chế tác nhân ReAct điều phối môi trường E2B MicroVM Sandbox tự động phục hồi lỗi cú pháp LaTeX}
 \label{fig:react_e2b_sandbox}
 \end{figure}
