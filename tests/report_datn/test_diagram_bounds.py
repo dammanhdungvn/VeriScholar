@@ -10,11 +10,17 @@ def test_fig3_2_coordinates_within_safe_margins():
         "Hình 3-2 phải sử dụng scale <= 0.68 để vừa vặn lề in textwidth=16cm"
     )
 
-    # Kiểm tra tọa độ Adapter không vượt quá +- 8.8 (trước đây là 10.4)
-    assert "(10.4," not in content, "Tọa độ x của Driven Adapter vẫn còn 10.4 gây tràn lề phải!"
-    assert "(-10.4," not in content, "Tọa độ x của Driving Adapter vẫn còn -10.4!"
-    assert "(8.8," in content or "(8.80," in content, "Thiếu tọa độ x=8.8 cho Driven Adapter"
-    assert "(-8.8," in content or "(-8.80," in content, "Thiếu tọa độ x=-8.8 cho Driving Adapter"
+    # Kiểm tra chiều rộng portbox đã thu nhỏ <= 2.2cm để tạo khe hở cho thân mũi tên
+    assert "minimum width=2.1cm" in content or "minimum width=2.0cm" in content, (
+        "Cần thu hẹp portbox về <= 2.1cm để tạo khoảng trống cho thân mũi tên -->"
+    )
+
+    # Kiểm tra tọa độ nới rộng: Adapter tại +- 9.2 và Port tại +- 6.1, Core tại +- 4.4
+    assert "(9.2," in content, "Thiếu tọa độ x=9.2 cho Driven Adapter để tạo khe hở thân mũi tên"
+    assert "(-9.2," in content, "Thiếu tọa độ x=-9.2 cho Driving Adapter để tạo khe hở thân mũi tên"
+    assert "(6.1," in content, "Thiếu tọa độ x=6.1 cho Driven Port"
+    assert "(-6.1," in content, "Thiếu tọa độ x=-6.1 cho Driving Port"
+    assert "(-4.4," in content and "(4.4," in content, "Khung Core domain cần điều chỉnh x=+-4.4"
 
     # Kiểm tra đáy Core domain có text width khống chế không chọc thủng viền
     assert "text width=7.8cm" in content or "text width=8.0cm" in content, (
@@ -42,6 +48,16 @@ def test_fig2_4_loop_and_label_styling():
     # Kiểm tra có đệm vspace trước caption
     assert "\\vspace{4pt}" in content or "\\vspace{6pt}" in content, (
         "Cần vspace trước caption để tránh đáy hộp PDF dính sát caption"
+    )
+
+    # Kiểm tra hộp final answer được dời xuống thấp để có đủ khoảng hở cho mũi tên thẳng đứng
+    assert "(final) at (0, -4.5)" in content or "(final) at (0, -4.4)" in content, (
+        "Hộp final answer cần đặt tại y <= -4.4 để tạo khe hở >= 10mm cho mũi tên Yes"
+    )
+
+    # Kiểm tra nhãn Yes (Exit 0) đặt lệch sườn phải không đè lên mũi tên hay viền hộp
+    assert "Yes (Exit 0)" in content and ("right=10pt" in content or "right=8pt" in content), (
+        "Nhãn Yes (Exit 0) cần đặt lệch phải (right=10pt) để thoáng đãng không đè nét"
     )
 
 
@@ -79,14 +95,17 @@ def test_sequence_diagrams_spacing_and_float_padding():
     seq_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
     seq_content = seq_path.read_text(encoding="utf-8")
 
-    # Kiểm tra Hình 3-9, 3-10, 3-11 có lifeline mở rộng để chứa các thông điệp giãn dòng
-    has_extended_lifeline = (
-        "-- (0, -10.5)" in seq_content
-        or "-- (0, -10.2)" in seq_content
-        or "-- (0, -10.4)" in seq_content
-    )
-    assert has_extended_lifeline, (
-        "Lifeline trong biểu đồ tuần tự cần kéo dài đến y <= -10.2cm để chứa các bước giãn dòng"
+    # Kiểm tra cả 4 hình sử dụng style stage_card và stage_arrow
+    assert "stage_card" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_card"
+    assert "stage_arrow" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_arrow"
+
+    # Kiểm tra không còn lifeline kéo dài quá -10cm
+    assert "-- (0, -10.5)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"
+    assert "-- (0, -10.4)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"
+
+    # Kiểm tra cả 4 hình sử dụng định vị [H]
+    assert seq_content.count("\\begin{figure}[H]") >= 4, (
+        "Cả 4 sơ đồ Mục 3.5 cần sử dụng [H] để định vị chắc chắn, tránh khoảng trống đáy trang"
     )
 
     # Kiểm tra float spacing trong main.tex được tăng thêm 0.5 dòng (~10pt)

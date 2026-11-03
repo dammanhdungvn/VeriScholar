@@ -14,7 +14,7 @@ Trong thiết kế hệ thống tương tác người--máy (Human-Computer Inte
 
 Kiến trúc không gian tương tác người--máy và luồng luân chuyển dữ liệu giữa 4 phân hệ chính được mô hình hóa trong Hình~\ref{fig:ui_layout_architecture}.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \begin{tikzpicture}[
     scale=0.58, transform shape,
@@ -126,12 +126,13 @@ Giao diện phân hệ Khám phá tài liệu khoa học được thiết kế t
 \end{itemize}
 \par}
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/search_paper.png}
 \caption{Giao diện tìm kiếm và khám phá tài liệu học thuật}
 \label{fig:ui_search_paper}
 \end{figure}
+\FloatBarrier
 
 \subsubsection{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{subsubsec:ui_my_library}
@@ -143,12 +144,13 @@ Giao diện Thư viện tài liệu nghiên cứu cá nhân cho phép học gi�
     \item Quản lý trạng thái xử lý phân đoạn: Bảng danh sách bài báo hiển thị rõ số trang, số lượng phân đoạn đã trích xuất (\textit{Chunks}), thời điểm tải tệp và tính năng gắn sao đánh dấu các công trình nghiên cứu trọng tâm.
 \end{itemize}
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/my_library.png}
 \caption{Giao diện quản lý thư viện nghiên cứu cá nhân}
 \label{fig:ui_my_library}
 \end{figure}
+\FloatBarrier
 
 \subsubsection{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
 \label{subsec:ui_deep_reading}
@@ -160,24 +162,26 @@ Phân hệ Đọc sâu là không gian làm việc trọng tâm hỗ trợ học
     \item Độ chính xác hình học cao: Khung Bounding Box đạt chỉ số chồng lấn thực nghiệm trung bình $\text{IoU} \ge 0{,}85$ (kết quả đo lường thực tế đạt $0{,}88$), thời gian định vị dưới 1 giây, giảm thiểu đáng kể công sức đọc dò thủ công trên các ấn phẩm nhiều trang.
 \end{itemize}
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/deep_read_paper.png}
 \caption{Giao diện đọc sâu tài liệu PDF hai cột và Bounding Box viền vàng}
 \label{fig:ui_deep_read_paper}
 \end{figure}
+\FloatBarrier
 
 \subsubsection{Giao diện mạng đồ thị tri thức 4 thực thể GraphRAG}
 \label{subsubsec:ui_graph}
 
 Giao diện mạng đồ thị tri thức học thuật trực quan hóa không gian liên kết ngữ nghĩa giữa các công trình khoa học (Hình~\ref{fig:ui_graph}). Mạng lưới đồ thị thể hiện 4 loại thực thể cốt lõi theo mã màu học thuật chuyên biệt: \textit{Bài báo (Paper)}, \textit{Phương pháp (Method)}, \textit{Tập dữ liệu (Dataset)}, và \textit{Kết quả độ đo thực nghiệm (MetricResult)}. Để hỗ trợ học giả đối chiếu ngay với các công trình nền tảng của lĩnh vực trí tuệ nhân tạo khi khởi tạo không gian làm việc, hệ thống nạp sẵn tập dữ liệu hạt giống gồm 12 bài báo kinh điển (\textit{12 Landmark Papers Seed Corpus}, bao gồm 58 đỉnh thực thể, 111 cạnh quan hệ và 15 trang tóm tắt tổng quan Graph Wiki biên dịch sẵn \cite{edge2024}) kết hợp cùng các tài liệu PDF do người dùng tải lên trong thư viện cá nhân. Học giả có thể tương tác trực quan bằng cách phóng to, thu nhỏ, kéo thả các đỉnh để khám phá các cụm chuyên đề phân hoạch bằng thuật toán Louvain \cite{blondel2008louvain}, nhận diện khoảng trống nghiên cứu (\textit{Research Gaps}) và thực hiện các truy vấn so sánh liên tài liệu tức thời.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/graph.png}
 \caption{Giao diện mạng đồ thị tri thức học thuật 4 thực thể GraphRAG}
 \label{fig:ui_graph}
 \end{figure}
+\FloatBarrier
 
 \subsubsection{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
 \label{subsec:ui_profile}
@@ -188,12 +192,13 @@ Giao diện Quản lý hồ sơ học giả và Kho khóa API cá nhân bảo đ
     \item Kho khóa API bảo mật cá nhân (BYOK): Cho phép học giả cấu hình khóa API riêng (OpenAI, Anthropic, Google Gemini) theo cơ chế ``Mang khóa bí mật của chính bạn''. Khóa API được gửi qua kết nối TLS tới máy chủ, mã hóa xác thực ở trạng thái lưu trữ (\textit{at-rest}) bằng thuật toán đối xứng AES-256-GCM \cite{dworkin2007} (chỉ lưu bản mã kèm vector khởi tạo IV vào cột \texttt{encrypted\_key} của bảng \texttt{user\_api\_keys}, trong khi khóa chủ KEK được cô lập trong biến môi trường máy chủ/KMS). Khi phát sinh yêu cầu suy luận, khóa chỉ được giải mã tạm thời trên bộ nhớ khả biến (RAM) trong phạm vi hàm thực thi và giải phóng ngay sau khi đóng luồng SSE, cam kết không bao giờ lưu khóa ở dạng văn bản thuần (\textit{plaintext}) xuống đĩa cứng hay nhật ký hệ thống.
 \end{itemize}
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/byok.png}
 \caption{Giao diện kho khóa API cá nhân (BYOK) và hồ sơ học giả}
 \label{fig:ui_byok}
 \end{figure}
+\FloatBarrier
 
 \subsubsection{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
 \label{subsec:ui_writing}
@@ -205,10 +210,11 @@ Phân hệ Soạn thảo và Tự sửa lỗi là bước hoàn thiện cuối c
     \item Chu trình tự sửa lỗi ReAct (Autonomous Healing Loop): Khi quá trình biên dịch phát sinh lỗi cú pháp, AI Agent tự động kích hoạt chu trình ReAct \cite{yao2022, shinn2023}: đọc nhật ký lỗi $\to$ lập luận suy diễn nguyên nhân $\to$ tạo bản vá vi phẫu (\textit{Surgical Diff}) sửa lỗi mã nguồn, đạt tỷ lệ tự sửa lỗi biên dịch thành công vượt trên 90\%.
 \end{itemize}
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.92\textwidth]{figures/frontend/writing_paper.png}
 \caption{Giao diện soạn thảo bản thảo bài báo LaTeX và tự sửa lỗi biên dịch}
 \label{fig:ui_writing_paper}
 \end{figure}
+\FloatBarrier
 

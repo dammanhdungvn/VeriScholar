@@ -81,12 +81,13 @@ Hoạt động của các mô hình AI và chi phí tiêu thụ token được g
 
 Nhật ký kiểm chứng chi tiết các vết thực thi (Traces) trên Langfuse Cloud được minh họa tại Hình~\ref{fig:langfuse_tracing}. Bảng quan sát ghi nhận đầy đủ 110 lượt truy vết cấp gốc (\textit{Root Observations}), bao gồm các chu trình tự phục hồi bản thảo LaTeX, các phiên hội thoại hỏi đáp học thuật, tác vụ tìm kiếm tài liệu từ xa và cập nhật an toàn khóa BYOK. Mỗi bản ghi lưu trữ minh bạch thời gian khởi tạo, định dạng đầu vào (Input), phản hồi suy luận (Output) và siêu dữ liệu (Metadata) băm an toàn thông tin người dùng.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.88\textwidth]{figures/frontend/langfuse_tracing.jpg}
 \caption{Nhật ký kiểm chứng và giám sát vết thực thi mô hình trên Langfuse Cloud}
 \label{fig:langfuse_tracing}
 \end{figure}
+\FloatBarrier
 
 \subsection{Hệ thống giám sát vận hành và sử dụng tài nguyên}
 \label{subsec:monitoring}
@@ -119,12 +120,13 @@ Phân hệ khám phá tài liệu khoa học của \VS tích hợp dịch vụ t
 
 Mức độ sử dụng các mô hình ngôn ngữ lớn phục vụ suy luận, tổng quan tài liệu và phản tư sửa lỗi LaTeX được quản trị minh bạch qua bảng điều khiển OpenAI Usage như thể hiện tại Hình~\ref{fig:monitor_openai}.
 
-\begin{figure}[!htbp]
+\begin{figure}[H]
 \centering
 \includegraphics[width=0.85\textwidth]{figures/frontend/openai_usage.png}
 \caption{Báo cáo giám sát lượng token luân chuyển và chi phí API OpenAI (lũy kế chu kỳ tháng 10/2026)}
 \label{fig:monitor_openai}
 \end{figure}
+\FloatBarrier
 
 Các chỉ số tài nguyên vận hành ghi nhận trên cửa sổ thống kê lũy kế toàn tháng (\texttt{01/10/2026 -- 31/10/2026}) của tài khoản dự án:
 \begin{itemize}[noitemsep, topsep=1pt]

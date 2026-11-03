@@ -42,3 +42,74 @@ def test_section_3_5_and_fig3_8_on_same_page():
         f"phải cùng nằm trên 1 trang!"
     )
     assert p_sec_3_5 == p_fig_3_8, msg
+
+
+def test_fig2_4_no_sentence_break():
+    preamble_path = Path("report-datn/config/preamble.tex")
+    preamble_content = preamble_path.read_text(encoding="utf-8")
+    assert (
+        "\\usepackage{float}" in preamble_content
+        and "\\usepackage" in preamble_content
+        and "placeins" in preamble_content
+    ), "Cần nạp \\usepackage{float} và \\usepackage{placeins} trong preamble.tex"
+
+    ch2_path = Path("report-datn/chapters/ch2/2_5_agentic_react.tex")
+    ch2_content = ch2_path.read_text(encoding="utf-8")
+    assert "\\FloatBarrier" in ch2_content or "\\begin{figure}[H]" in ch2_content, (
+        "Hình 2-4 hoặc Mục 2.5.4 cần có chốt chặn \\FloatBarrier hoặc [H]"
+    )
+
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+    # Kiểm tra không có trang nào kết thúc bằng câu dở dang về khóa API BYOK bị ngắt bởi Hình 2-4
+    for i, p in enumerate(pages):
+        if "Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như" in p:
+            assert "gpt-4o-mini" in p, f"Câu văn bị cắt đôi ở cuối trang {i + 1} trước Hình 2-4!"
+
+
+def test_all_figures_no_broken_sentences():
+    pdf_path = Path("report-datn/main.pdf")
+    if not pdf_path.exists():
+        return
+    res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+    pages = res.stdout.split("\x0c")
+
+    broken_instances = []
+    # Quét qua các trang nội dung chính (từ trang 18 trở đi)
+    for i in range(17, len(pages) - 1):
+        prev_lines = [line.strip() for line in pages[i].split("\n") if line.strip()]
+        curr_lines = [line.strip() for line in pages[i + 1].split("\n") if line.strip()]
+        if not prev_lines or not curr_lines:
+            continue
+        # Bỏ qua số trang ở cuối
+        last_line = (
+            prev_lines[-2] if len(prev_lines) > 1 and prev_lines[-1].isdigit() else prev_lines[-1]
+        )
+
+        # Kiểm tra xem trang curr có bắt đầu bằng hoặc chứa Hình vẽ ở phần trên không
+        first_few = curr_lines[:10]
+        fig_idx = next(
+            (idx for idx, line in enumerate(first_few) if line.startswith("Hình ")), None
+        )
+        if fig_idx is not None and fig_idx < 6:
+            # Có hình ở phần đầu trang
+            after_fig = curr_lines[fig_idx + 1] if fig_idx + 1 < len(curr_lines) else ""
+            if (
+                after_fig
+                and not after_fig.isdigit()
+                and not after_fig.startswith("Bảng ")
+                and not after_fig.startswith("Hình ")
+                and not after_fig.startswith("3.")
+                and not after_fig.startswith("4.")
+            ):
+                # Nếu trang trước kết thúc bằng một từ dở dang (không phải dấu chấm, hai chấm)
+                if last_line and last_line[-1] not in [".", ":", ";", "!", "?"]:
+                    broken_instances.append(
+                        f"Page {i + 1} -> {i + 2}: '{last_line}' -> "
+                        f"{first_few[fig_idx]} -> '{after_fig}'"
+                    )
+
+    assert not broken_instances, f"Phát hiện hình ảnh chèn cắt ngang câu văn: {broken_instances}"
