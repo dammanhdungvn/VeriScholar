@@ -31,9 +31,9 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
 \renewcommand{\arraystretch}{1.2}
 \caption{Cấu trúc phân vùng kho mã nguồn Monorepo và quy tắc ranh giới kiến trúc}
 \label{tab:monorepo_structure}
-\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
-\textbf{STT} & \centering\textbf{Phân vùng} & \centering\textbf{Vai trò kiến trúc} & \centering\textbf{Công nghệ chủ đạo} & \centering\textbf{Quy tắc ranh giới và AST} \tabularnewline \hline
+\textbf{STT} & \textbf{Phân vùng} & \centering\textbf{Vai trò kiến trúc} & \centering\textbf{Công nghệ chủ đạo} & \centering\textbf{Quy tắc ranh giới và AST} \tabularnewline \hline
 1 & \texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (\textit{Domain and Ports}) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\ \hline
 2 & \texttt{apps/api} & Tầng hạ tầng dịch vụ và Bộ điều hợp (\textit{Adapters}) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\ \hline
 3 & \texttt{apps/web} & Giao diện người dùng học thuật (\textit{Frontend SPA}) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\ \hline

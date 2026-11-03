@@ -40,3 +40,30 @@ def test_tikz_diagram_spacing_refinements():
     # 3. Hình 3-2 Lục giác: scale không được quá bé 0.58
     arch_tex = Path("report-datn/chapters/ch3/3_3_kien_truc.tex").read_text(encoding="utf-8")
     assert "scale=0.58" not in arch_tex
+
+
+def test_tables_center_aligned():
+    # 1. Bảng 1-1: Cột nền tảng căn giữa
+    ch1_tex = Path("report-datn/chapters/ch1/1_2_tinh_cap_thiet.tex").read_text(encoding="utf-8")
+    assert ">{\\bfseries\\centering\\arraybackslash}m{2.3cm}" in ch1_tex
+
+    # 2. Bảng 2-1: Cột tiêu chí căn giữa
+    ch2_tex = Path("report-datn/chapters/ch2/2_1_postgresql_redis.tex").read_text(encoding="utf-8")
+    assert ">{\\centering\\arraybackslash\\bfseries}m{3.0cm}" in ch2_tex
+
+    # 3. Bảng 3-1: Cột tên Actor căn giữa
+    ch3_uc = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex").read_text(encoding="utf-8")
+    assert ">{\\centering\\arraybackslash}m{3.8cm}" in ch3_uc
+
+    # 4. Bảng 4-1: Cột phân vùng Monorepo căn giữa
+    ch4_env = Path("report-datn/chapters/ch4/4_1_moi_truong.tex").read_text(encoding="utf-8")
+    assert ">{\\centering\\arraybackslash}m{2.6cm}" in ch4_env
+
+    # 5. Bảng 4-2: Cột cổng kiểm thử căn giữa
+    ch4_test = Path("report-datn/chapters/ch4/4_3_kiem_thu.tex").read_text(encoding="utf-8")
+    assert ">{\\centering\\arraybackslash}m{2.2cm}" in ch4_test
+
+    # 6. Bảng 4-3 & 4-4: Các cột số liệu thực nghiệm căn giữa
+    ch4_data = Path("report-datn/chapters/ch4/4_4_so_lieu.tex").read_text(encoding="utf-8")
+    assert ">{\\centering\\arraybackslash}m{2.3cm}" in ch4_data
+    assert ">{\\centering\\arraybackslash}m{2.6cm}" in ch4_data

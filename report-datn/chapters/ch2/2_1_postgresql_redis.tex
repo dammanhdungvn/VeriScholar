@@ -45,9 +45,9 @@ Một câu hỏi mang tính then chốt trong thiết kế hệ thống là: \te
 \singlespacing
 \small
 \renewcommand{\arraystretch}{1.08}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{3.0cm}|X|X|}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash\bfseries}m{3.0cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
-\textbf{Tiêu chí} & \textbf{PostgreSQL + pgvector (Đề tài chọn)} & \textbf{Cơ sở dữ liệu Vector chuyên dụng (Milvus, Pinecone, Qdrant)} \\
+\textbf{Tiêu chí} & \centering\textbf{PostgreSQL + pgvector (Đề tài chọn)} & \centering\textbf{Cơ sở dữ liệu Vector chuyên dụng (Milvus, Pinecone, Qdrant)} \tabularnewline
 \hline
 \textbf{Giao dịch ACID} & Tuyệt đối: Cập nhật bản ghi quan hệ và Vector nhúng đồng thời trong một giao dịch duy nhất. & Nhất quán cuối cùng: Rủi ro dữ liệu mồ côi hoặc bất đồng bộ giữa hai hệ thống lưu trữ. \\
 \hline

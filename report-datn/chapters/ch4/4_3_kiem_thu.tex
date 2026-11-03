@@ -22,9 +22,9 @@ Kết quả kiểm tra thực tế trên hệ thống được tổng hợp tron
 \renewcommand{\arraystretch}{1.2}
 \caption{Kết quả kiểm thử tự động hệ thống qua 4 cổng xác minh}
 \label{tab:gate_results}
-\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{2.2cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}p{3.2cm}|>{\centering\arraybackslash}p{3.0cm}|}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.2cm}|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{3.2cm}|>{\centering\arraybackslash}m{3.0cm}|}
 \hline
-\textbf{STT} & \centering\textbf{Cổng kiểm thử} & \centering\textbf{Công cụ và lệnh thực thi} & \centering\textbf{Số lượng kiểm thử} & \centering\textbf{Kết quả và thời gian} \tabularnewline \hline
+\textbf{STT} & \textbf{Cổng kiểm thử} & \centering\textbf{Công cụ và lệnh thực thi} & \centering\textbf{Số lượng kiểm thử} & \centering\textbf{Kết quả và thời gian} \tabularnewline \hline
 1 & \textbf{Cổng 1} & \texttt{ruff check and format} & 157 tệp nguồn Python & 100\% Pass (0,12s) \\ \hline
 2 & \textbf{Cổng 2} & \texttt{pytest} (Backend + Core + AST) & 340 bài kiểm thử & 340/340 Pass (6,53s) \\ \hline
 3 & \textbf{Cổng 3} & \texttt{vitest} (Frontend UI) & 58 tệp (240 bài test) & 240/240 Pass (4,53s) \\ \hline

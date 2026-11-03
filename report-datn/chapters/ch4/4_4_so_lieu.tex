@@ -34,7 +34,7 @@ Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữ
 \renewcommand{\arraystretch}{1.05}
 \caption{Kết quả thực nghiệm đối chứng (Ablation Study) giữa các phương pháp truy xuất trên 36 truy vấn chuẩn}
 \label{tab:ablation_retrieval}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|c|c|c|c|c|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.1cm}|>{\centering\arraybackslash}m{1.7cm}|>{\centering\arraybackslash}m{1.8cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.3cm}|}
 \hline
 \centering\textbf{Cấu hình truy xuất} & \textbf{Recall@5} & \textbf{MRR@10} & \textbf{nDCG@10} & \textbf{Mean BBox IoU} & \textbf{Độ trễ $P_{50}$/$P_{95}$} \tabularnewline \hline
 1. Chỉ Vector dày đặc (\texttt{pgvector} HNSW) & $0{,}8056$ ($80{,}56\%$) & $0{,}7882$ & $0{,}7985$ & $0{,}7865 \pm 0{,}0254$ & $65{,}12$ / $80{,}24\,\text{ms}$ \\ \hline
@@ -60,7 +60,7 @@ Bảng~\ref{tab:ablation_latex_healing} chứng minh sự kết hợp giữa b�
 \renewcommand{\arraystretch}{1.05}
 \caption{Kết quả thực nghiệm đối chứng (Ablation Study) các cơ chế tự sửa lỗi biên dịch LaTeX trên 25 kịch bản lỗi}
 \label{tab:ablation_latex_healing}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|c|c|c|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}X|>{\centering\arraybackslash}m{2.6cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{2.3cm}|}
 \hline
 \centering\textbf{Cấu hình cơ chế tự sửa lỗi LaTeX} & \textbf{Biên dịch thành công} & \textbf{Bảo toàn ngữ nghĩa} & \textbf{Số vòng lặp TB} \tabularnewline \hline
 1. Quy tắc cú pháp cơ bản & $11/25$ ($44{,}0\%$) & $44{,}0\%$ & $1{,}00$ vòng \\ \hline
