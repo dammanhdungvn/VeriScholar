@@ -56,9 +56,9 @@ def test_fig2_4_loop_and_label_styling():
     )
 
     # Kiểm tra nhãn Yes (Exit 0) đặt lệch sườn phải không đè lên mũi tên hay viền hộp
-    assert "Yes (Exit 0)" in content and (
-        "right=10pt" in content or "right=8pt" in content
-    ), "Nhãn Yes (Exit 0) cần đặt lệch phải (right=10pt) để thoáng đãng không đè nét"
+    assert "Yes (Exit 0)" in content and ("right=10pt" in content or "right=8pt" in content), (
+        "Nhãn Yes (Exit 0) cần đặt lệch phải (right=10pt) để thoáng đãng không đè nét"
+    )
 
 
 def test_fig3_12_class_diagram_styling():
@@ -96,8 +96,8 @@ def test_sequence_diagrams_spacing_and_float_padding():
     seq_content = seq_path.read_text(encoding="utf-8")
 
     # Kiểm tra cả 4 hình sử dụng style stage_card và stage_arrow
-    assert "stage_card" in seq_content, "Các sơ đồ Mục 3.5 phải sử dụng style stage_card chuẩn hóa"
-    assert "stage_arrow" in seq_content, "Các sơ đồ Mục 3.5 phải sử dụng style stage_arrow chuẩn hóa"
+    assert "stage_card" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_card"
+    assert "stage_arrow" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_arrow"
 
     # Kiểm tra không còn lifeline kéo dài quá -10cm
     assert "-- (0, -10.5)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"

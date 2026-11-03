@@ -56,7 +56,7 @@ def test_fig2_4_no_sentence_break():
     ch2_path = Path("report-datn/chapters/ch2/2_5_agentic_react.tex")
     ch2_content = ch2_path.read_text(encoding="utf-8")
     assert "\\FloatBarrier" in ch2_content or "\\begin{figure}[H]" in ch2_content, (
-        "Hình 2-4 hoặc Mục 2.5.4 cần có chốt chặn \\FloatBarrier hoặc [H] để tránh tràn sang tiểu mục sau"
+        "Hình 2-4 hoặc Mục 2.5.4 cần có chốt chặn \\FloatBarrier hoặc [H]"
     )
 
     pdf_path = Path("report-datn/main.pdf")
@@ -67,7 +67,7 @@ def test_fig2_4_no_sentence_break():
     # Kiểm tra không có trang nào kết thúc bằng câu dở dang về khóa API BYOK bị ngắt bởi Hình 2-4
     for i, p in enumerate(pages):
         if "Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như" in p:
-            assert "gpt-4o-mini" in p, f"Câu văn bị cắt đôi ở cuối trang {i+1} trước Hình 2-4!"
+            assert "gpt-4o-mini" in p, f"Câu văn bị cắt đôi ở cuối trang {i + 1} trước Hình 2-4!"
 
 
 def test_all_figures_no_broken_sentences():
@@ -80,25 +80,23 @@ def test_all_figures_no_broken_sentences():
     broken_instances = []
     # Quét qua các trang nội dung chính (từ trang 18 trở đi)
     for i in range(17, len(pages) - 1):
-        prev_lines = [l.strip() for l in pages[i].split("\n") if l.strip()]
-        curr_lines = [l.strip() for l in pages[i + 1].split("\n") if l.strip()]
+        prev_lines = [line.strip() for line in pages[i].split("\n") if line.strip()]
+        curr_lines = [line.strip() for line in pages[i + 1].split("\n") if line.strip()]
         if not prev_lines or not curr_lines:
             continue
         # Bỏ qua số trang ở cuối
         last_line = (
-            prev_lines[-2]
-            if len(prev_lines) > 1 and prev_lines[-1].isdigit()
-            else prev_lines[-1]
+            prev_lines[-2] if len(prev_lines) > 1 and prev_lines[-1].isdigit() else prev_lines[-1]
         )
 
         # Kiểm tra xem trang curr có bắt đầu bằng hoặc chứa Hình vẽ ở phần trên không
         first_few = curr_lines[:10]
-        fig_idx = next((idx for idx, l in enumerate(first_few) if l.startswith("Hình ")), None)
+        fig_idx = next(
+            (idx for idx, line in enumerate(first_few) if line.startswith("Hình ")), None
+        )
         if fig_idx is not None and fig_idx < 6:
             # Có hình ở phần đầu trang
-            after_fig = (
-                curr_lines[fig_idx + 1] if fig_idx + 1 < len(curr_lines) else ""
-            )
+            after_fig = curr_lines[fig_idx + 1] if fig_idx + 1 < len(curr_lines) else ""
             if (
                 after_fig
                 and not after_fig.isdigit()
@@ -110,11 +108,8 @@ def test_all_figures_no_broken_sentences():
                 # Nếu trang trước kết thúc bằng một từ dở dang (không phải dấu chấm, hai chấm)
                 if last_line and last_line[-1] not in [".", ":", ";", "!", "?"]:
                     broken_instances.append(
-                        f"Page {i+1} -> {i+2}: '{last_line}' -> {first_few[fig_idx]} -> '{after_fig}'"
+                        f"Page {i + 1} -> {i + 2}: '{last_line}' -> "
+                        f"{first_few[fig_idx]} -> '{after_fig}'"
                     )
 
-    assert not broken_instances, (
-        f"Phát hiện hình ảnh chèn cắt ngang câu văn: {broken_instances}"
-    )
-
-
+    assert not broken_instances, f"Phát hiện hình ảnh chèn cắt ngang câu văn: {broken_instances}"
