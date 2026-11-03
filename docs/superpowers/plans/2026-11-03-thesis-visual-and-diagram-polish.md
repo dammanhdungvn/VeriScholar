@@ -8,7 +8,7 @@
 
 **Tech Stack:** XeLaTeX, TikZ, PGF/TikZ libraries (`arrows.meta`, `positioning`, `shapes.geometric`, `calc`), Poppler Utilities (`pdftoppm`), Python 3.12, FastAPI, React 19.
 
-**Spec:** [`docs/superpowers/specs/2026-11-03-thesis-visual-and-diagram-polish-design.md`](file:///home/dammanhdungvn/Downloads/Workspace/VeriScholar/docs/superpowers/specs/2026-11-03-thesis-visual-and-diagram-polish-design.md)
+**Spec:** [`../specs/2026-11-03-thesis-visual-and-diagram-polish-design.md`](../specs/2026-11-03-thesis-visual-and-diagram-polish-design.md)
 
 ---
 

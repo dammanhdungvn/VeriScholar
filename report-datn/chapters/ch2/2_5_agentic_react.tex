@@ -112,7 +112,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     \draw[arrowstyle] (sandbox.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=6pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
     \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {No (Lỗi)} (obs.east);
