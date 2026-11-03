@@ -25,8 +25,7 @@ def test_byok_terminology_standards():
     assert "Bring Your Own Key (BYOK)" in sec_2_5
     assert (
         "\\subsection{Mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (BYOK) và chuẩn"
-        " mã hóa AES-256-GCM}"
-        in sec_2_5
+        " mã hóa AES-256-GCM}" in sec_2_5
     )
     assert "cô lập hạt nhân" not in sec_2_5
     assert "Môi trường máy ảo MicroVM E2B cô lập cấp hệ điều hành" in sec_2_5
