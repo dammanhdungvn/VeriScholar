@@ -45,11 +45,11 @@ Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữ
 
 Đối với tác nhân tự động sửa lỗi biên dịch LaTeX, thực nghiệm đối chứng được tiến hành trên tập kiểm thử gồm $N = 25$ bản thảo chứa lỗi thực tế thuộc 5 nhóm chuẩn hóa (mỗi nhóm 5 kịch bản), bao gồm:
 \begin{enumerate}[noitemsep, topsep=2pt]
-    \item Sai lệch cặp thẻ môi trường (mở \texttt{\textbackslash begin} nhưng quên đóng \texttt{\textbackslash end} hoặc lồng sai cấu trúc khối văn bản).
-    \item Thiếu dấu ngoặc nhọn hoặc dấu đóng công thức toán học (thiếu dấu \texttt{\$} đóng môi trường toán nội dòng hoặc đa dòng).
-    \item Ký tự đặc biệt chưa được thoát mã hợp lệ (như \texttt{\_}, \texttt{\%}, \texttt{\&} trong văn bản xuôi mà chưa có dấu gạch chéo ngược).
-    \item Lệnh hoặc ký hiệu toán học chưa được định nghĩa (các macro toán học không chuẩn như \texttt{\textbackslash bold}, \texttt{\textbackslash RR}, \texttt{\textbackslash argmax} chưa được khai báo trước).
-    \item Thiếu khai báo gói lệnh mở rộng (thiếu các gói thường dùng như \texttt{amsmath}, \texttt{booktabs}, \texttt{graphicx}) hoặc lỗi cấu trúc liên hoàn nhiều dòng.
+    \item Sai lệch cặp môi trường cú pháp (khai báo mở môi trường định dạng nhưng thiếu lệnh đóng tương ứng hoặc lồng ghép sai thứ tự khối văn bản).
+    \item Thiếu dấu ngoặc nhọn hoặc dấu đóng công thức toán học (thiếu ký tự đóng môi trường toán nội dòng hoặc đa dòng).
+    \item Ký tự đặc biệt chưa được thoát mã hợp lệ (sử dụng các ký tự gạch dưới, phần trăm, dấu và trong văn bản xuôi mà chưa có tiền tố thoát mã).
+    \item Lệnh hoặc ký hiệu toán học chưa được định nghĩa (sử dụng các macro toán học tùy biến như in đậm ký hiệu, tập số thực, toán tử cực trị mà chưa khai báo tiền xử lý).
+    \item Thiếu khai báo gói lệnh mở rộng (chưa nạp các gói thường dùng cho định dạng bảng biểu, đồ họa hoặc công thức mở rộng) hoặc phát sinh lỗi cấu trúc liên hoàn nhiều dòng.
 \end{enumerate}
 Bảng~\ref{tab:ablation_latex_healing} chứng minh sự kết hợp giữa bộ sửa lỗi tĩnh dựa trên luật cú pháp và tác nhân ngôn ngữ lớn ReAct trong đồ thị trạng thái LangGraph \cite{yao2022, shinn2023} giúp nâng tỷ lệ phục hồi biên dịch thành công từ $44{,}0\%$ (chỉ dùng quy tắc đơn giản) và $84{,}0\%$ (chỉ dùng quy tắc phỏng đoán mở rộng) lên mức $96{,}0\%$ ($24/25$ kịch bản) với số vòng lặp sửa lỗi trung bình chỉ $1{,}16$ vòng.
 
