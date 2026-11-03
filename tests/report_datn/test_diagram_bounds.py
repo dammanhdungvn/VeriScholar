@@ -44,3 +44,19 @@ def test_fig2_4_loop_and_label_styling():
         "Cần vspace trước caption để tránh đáy hộp PDF dính sát caption"
     )
 
+
+def test_fig3_12_class_diagram_styling():
+    tex_path = Path("report-datn/chapters/ch3/3_6_thiet_ke_csdl.tex")
+    content = tex_path.read_text(encoding="utf-8")
+
+    # Kiểm tra inner sep đã được tinh gọn để tạo khoảng hở giữa các hộp lớp
+    assert "inner sep=2.0pt" in content or "inner sep=2.2pt" in content, (
+        "Cần giảm inner sep của umlclass để thu hẹp chiều cao hộp lớp"
+    )
+
+    # Kiểm tra không còn nhãn đè vào điểm neo south/north không có khoảng lùi an toàn
+    assert "yshift=-3.5pt" not in content, (
+        "Khoảng lệch yshift=-3.5pt quá nhỏ khiến nhãn đè vào đường phân cách hoặc thân hộp"
+    )
+
+

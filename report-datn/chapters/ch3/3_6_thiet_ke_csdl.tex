@@ -14,193 +14,167 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.74, transform shape,
+    scale=0.68, transform shape,
     umlclass/.style={
         draw=black!85, fill=white, rounded corners=3pt, line width=0.85pt,
-        align=left, inner sep=3.0pt, text width=3.6cm, font=\linespread{1.0}\selectfont
+        align=left, inner sep=2.0pt, text width=3.6cm, font=\fontsize{7pt}{8.2pt}\selectfont
     },
     assoc/.style={line width=0.85pt, draw=black!80},
-    comp/.style={{Diamond[fill=black, length=2.8mm]}-, line width=0.85pt, draw=black!85},
-    aggr/.style={{Diamond[fill=white, length=2.8mm]}-, line width=0.85pt, draw=black!85},
+    comp/.style={{Diamond[fill=black, length=2.4mm]}-, line width=0.85pt, draw=black!85},
+    aggr/.style={{Diamond[fill=white, length=2.4mm]}-, line width=0.85pt, draw=black!85},
     card/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\bfseries, fill=white, inner sep=1.0pt, rounded corners=1pt}
 ]
     % =========================================================================
     % CỘT 1: PHÂN HỆ ĐỊNH DANH VÀ PHIÊN NGHIÊN CỨU (x = -5.4)
     % =========================================================================
-    \node[umlclass] (user) at (-5.4, 3.8) {
-        {\centering\textbf{\small User}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (user) at (-5.4, 4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont User}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + email: string\\
         + full\_name: string\\
         + role: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + authenticate(pwd): bool
     };
 
-    \node[umlclass] (profile) at (-5.4, 1.35) {
-        {\centering\textbf{\small ScholarProfile}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (profile) at (-5.4, 1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont ScholarProfile}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + user\_id: UUID\\
         + institution: string\\
         + h\_index: int
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + get\_summary(): str
     };
 
-    \node[umlclass] (apikey) at (-5.4, -1.15) {
-        {\centering\textbf{\small UserApiKey}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (apikey) at (-5.4, -1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont UserApiKey}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + user\_id: UUID\\
         + provider: string\\
         + key\_name: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + is\_valid(): bool
     };
 
-    \node[umlclass] (session) at (-5.4, -3.65) {
-        {\centering\textbf{\small ResearchSession}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (session) at (-5.4, -4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont ResearchSession}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + user\_id: UUID\\
         + title: string\\
         + active\_doc\_id: UUID
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + set\_active\_doc(id): void
     };
 
-    \node[umlclass] (turn) at (-5.4, -6.15) {
-        {\centering\textbf{\small SessionTurn}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (turn) at (-5.4, -7.0) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont SessionTurn}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + session\_id: UUID\\
         + query: string\\
         + answer: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + get\_citations(): list
     };
 
     % =========================================================================
     % CỘT 2: PHÂN HỆ LƯU TRỮ CAS VÀ TÀI LIỆU (x = 0.0)
     % =========================================================================
-    \node[umlclass] (blob) at (0.0, 3.8) {
-        {\centering\textbf{\small StorageBlob}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (blob) at (0.0, 4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont StorageBlob}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + sha256\_hash: string\\
         + file\_size\_bytes: int\\
         + ref\_count: int
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + increment\_ref(): void
     };
 
-    \node[umlclass] (doc) at (0.0, 1.35) {
-        {\centering\textbf{\small Document}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (doc) at (0.0, 1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont Document}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + user\_id: UUID\\
         + blob\_id: UUID\\
         + title: string\\
         + is\_peer\_reviewed: bool
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + mark\_peer\_reviewed(): void
     };
 
-    \node[umlclass] (chunk) at (0.0, -1.15) {
-        {\centering\textbf{\small DocumentChunk}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (chunk) at (0.0, -1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont DocumentChunk}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + document\_id: UUID\\
         + chunk\_index: int\\
         + page\_number: int\\
         + bbox: list[float]
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + is\_on\_page(p): bool
     };
 
-    \node[umlclass] (summary) at (0.0, -3.65) {
-        {\centering\textbf{\small DocumentSummary}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (summary) at (0.0, -4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont DocumentSummary}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + document\_id: UUID\\
         + summary\_type: string\\
         + content: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + get\_excerpt(n): str
     };
 
     % =========================================================================
     % CỘT 3: PHÂN HỆ GRAPHRAG VÀ SOẠN THẢO BẢN THẢO (x = 5.4)
     % =========================================================================
-    \node[umlclass] (node) at (5.4, 3.8) {
-        {\centering\textbf{\small GraphNode}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (node) at (5.4, 4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont GraphNode}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + document\_id: UUID\\
         + name: string\\
         + entity\_type: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + normalize\_name(): str
     };
 
-    \node[umlclass] (edge) at (5.4, 1.35) {
-        {\centering\textbf{\small GraphEdge}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (edge) at (5.4, 1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont GraphEdge}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + source\_id: UUID\\
         + target\_id: UUID\\
         + relation\_type: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + update\_weight(w): void
     };
 
-    \node[umlclass] (draft) at (5.4, -1.15) {
-        {\centering\textbf{\small Draft}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (draft) at (5.4, -1.4) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont Draft}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + user\_id: UUID\\
         + title: string\\
         + template: string
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + update\_content(t): void
     };
 
-    \node[umlclass] (draftmsg) at (5.4, -3.65) {
-        {\centering\textbf{\small DraftMessage}\par}\vspace{1.5pt}
-        \hrule\vspace{2pt}
-        \scriptsize
+    \node[umlclass] (draftmsg) at (5.4, -4.2) {
+        {\centering\textbf{\fontsize{8pt}{9.5pt}\selectfont DraftMessage}\par}\vspace{0.8pt}
+        \hrule\vspace{1.2pt}
         + id: UUID\\
         + draft\_id: UUID\\
         + role: string\\
         + was\_healed: bool
-        \vspace{1.5pt}\hrule\vspace{2pt}
-        \scriptsize
+        \vspace{0.8pt}\hrule\vspace{1.2pt}
         + mark\_healed(): void
     };
 
@@ -209,48 +183,48 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
     % =========================================================================
     % Cột 1
     \draw[comp] (user.south) -- (profile.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-3.5pt]user.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]profile.north) {1};
-    \draw[comp] (user.west) -- ++(-0.5, 0) |- (apikey.west) 
-        node[card, anchor=south east] at ([xshift=-3pt]user.west) {1} 
-        node[card, anchor=north east] at ([xshift=-3pt]apikey.west) {N};
-    \draw[comp] (user.west) -- ++(-0.85, 0) |- (session.west) 
-        node[card, anchor=north east] at ([xshift=-3pt]session.west) {N};
+        node[card, pos=0.30, right=3pt] {1} 
+        node[card, pos=0.70, right=3pt] {1};
+    \draw[comp] (user.west) -- ++(-0.6, 0) |- (apikey.west) 
+        node[card, anchor=south east] at ([xshift=-10pt]user.west) {1} 
+        node[card, anchor=north east] at ([xshift=-6pt]apikey.west) {N};
+    \draw[comp] (user.west) -- ++(-0.95, 0) |- (session.west) 
+        node[card, anchor=north east] at ([xshift=-6pt]session.west) {N};
     \draw[comp] (session.south) -- (turn.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-3.5pt]session.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]turn.north) {N};
+        node[card, pos=0.30, right=3pt] {1} 
+        node[card, pos=0.70, right=3pt] {N};
 
     % Cột 2
     \draw[assoc] (blob.south) -- (doc.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-2pt]blob.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]doc.north) {N};
+        node[card, pos=0.30, left=3pt] {1} 
+        node[card, pos=0.70, left=3pt] {N};
     \draw[comp] (doc.south) -- (chunk.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-3.5pt]doc.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]chunk.north) {N};
-    \draw[comp] (doc.east) -- ++(0.4, 0) |- (summary.east) 
-        node[card, anchor=south west] at ([xshift=3pt]doc.east) {1} 
-        node[card, anchor=north west] at ([xshift=3pt]summary.east) {1};
+        node[card, pos=0.30, right=3pt] {1} 
+        node[card, pos=0.70, right=3pt] {N};
+    \draw[comp] (doc.east) -- ++(0.55, 0) |- (summary.east) 
+        node[card, anchor=south west] at ([xshift=10pt]doc.east) {1} 
+        node[card, anchor=north west] at ([xshift=6pt]summary.east) {1};
 
     % Cột 3
     \draw[comp] (node.south) -- (edge.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-3.5pt]node.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]edge.north) {N};
+        node[card, pos=0.30, right=3pt] {1} 
+        node[card, pos=0.70, right=3pt] {N};
     \draw[comp] (draft.south) -- (draftmsg.north) 
-        node[card, anchor=north west] at ([xshift=2pt, yshift=-3.5pt]draft.south) {1} 
-        node[card, anchor=south west] at ([xshift=2pt, yshift=2pt]draftmsg.north) {N};
+        node[card, pos=0.30, right=3pt] {1} 
+        node[card, pos=0.70, right=3pt] {N};
 
     % Quan hệ liên cột (Trực giao, không cắt chéo qua thân khối)
-    \draw[aggr] (user.east) -- ++(0.5, 0) |- (doc.west) 
-        node[card, anchor=south west] at ([xshift=3pt]user.east) {1} 
-        node[card, anchor=south east] at ([xshift=-3pt]doc.west) {N};
-    \draw[aggr] (doc.east) -- ++(0.45, 0) |- (node.west) 
-        node[card, anchor=south east] at ([xshift=-3pt]node.west) {N};
-    \draw[assoc] (session.east) -- ++(0.5, 0) |- ([yshift=-4pt]doc.west) 
-        node[card, anchor=south west] at ([xshift=3pt]session.east) {N} 
-        node[card, anchor=north east] at ([xshift=-3pt, yshift=-4pt]doc.west) {N};
+    \draw[aggr] (user.east) -- ++(0.60, 0) |- ([yshift=6pt]doc.west) 
+        node[card, anchor=south west] at ([xshift=10pt]user.east) {1} 
+        node[card, anchor=south east] at ([xshift=-6pt, yshift=6pt]doc.west) {N};
+    \draw[aggr] (doc.east) -- ++(0.60, 0) |- (node.west) 
+        node[card, anchor=south east] at ([xshift=-6pt]node.west) {N};
+    \draw[assoc] (session.east) -- ++(0.60, 0) |- ([yshift=-6pt]doc.west) 
+        node[card, anchor=south west] at ([xshift=6pt]session.east) {N} 
+        node[card, anchor=north east] at ([xshift=-6pt, yshift=-6pt]doc.west) {N};
     \draw[comp] (user.north) -- ++(0, 0.45) -| (draft.north) 
-        node[card, anchor=south east] at ([yshift=2pt]user.north) {1} 
-        node[card, anchor=south west] at ([yshift=2pt]draft.north) {N};
+        node[card, anchor=south east] at ([xshift=-4pt, yshift=6pt]user.north) {1} 
+        node[card, anchor=south west] at ([xshift=4pt, yshift=6pt]draft.north) {N};
 \end{tikzpicture}
 \caption{Biểu đồ lớp (Class Diagram) mô tả cấu trúc các thực thể miền và quan hệ nghiệp vụ}
 \label{fig:class_diagram_model}
