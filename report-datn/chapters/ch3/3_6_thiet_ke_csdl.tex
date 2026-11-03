@@ -278,7 +278,7 @@ Cơ sở dữ liệu của hệ thống \VS được thiết kế bám sát đ�
 Nhằm làm nổi bật các đóng góp kỹ thuật cốt lõi và tối ưu hóa dung lượng báo cáo theo chuẩn 80/20, tiểu mục này trình bày đặc tả chi tiết 4 bảng cơ sở dữ liệu hạt nhân đại diện cho các phân hệ công nghệ trọng tâm của hệ thống: \texttt{documents}, \texttt{document\_chunks}, \texttt{graph\_nodes} và \texttt{drafts}. Các phân hệ bổ trợ như định danh người dùng (bao gồm bảng \texttt{users}\label{tab:spec_users} và \texttt{scholar\_profiles}), quản lý phiên làm việc đa tài liệu (\texttt{session\_documents} với ràng buộc FK $\to$ research\_sessions(id)) được xây dựng tuân thủ đầy đủ chuẩn toàn vẹn giao dịch và mô hình quan hệ đã phân tích.
 
 \subsubsection{Đặc tả bảng documents (Phân hệ Thư viện và Lưu trữ CAS)}
-Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}).
+Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} (ràng buộc FK $\to$ document\_storage\_blobs(id)) và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}).
 
 \begin{table}[!htbp]
 \centering
@@ -294,7 +294,7 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 1 & id & UUID & PK, Not Null & Khóa chính định danh tài liệu bài báo \tabularnewline \hline
 2 & user\_id & UUID & FK users(id), Not Null & Học giả sở hữu tài liệu trong thư viện \tabularnewline \hline
 3 & folder\_id & UUID & FK folders(id), Null & Thư mục nghiên cứu chứa tài liệu \tabularnewline \hline
-4 & blob\_id & UUID & FK $\to$ document\_storage\_blobs(id), Not Null & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
+4 & blob\_id & UUID & FK $\to$ \allowbreak\texttt{document\_}\allowbreak\texttt{storage\_}\allowbreak\texttt{blobs}\allowbreak\texttt{(id)}, Not Null & Khóa ngoại liên kết khối tệp nhị phân CAS \tabularnewline \hline
 5 & title & VARCHAR(500) & Not Null & Tiêu đề chuẩn hóa của công trình nghiên cứu \tabularnewline \hline
 6 & authors & TEXT[] & Null & Danh sách tên các tác giả của bài báo \tabularnewline \hline
 7 & doi & VARCHAR(100) & Null & Mã định danh số đối tượng (DOI) \tabularnewline \hline
