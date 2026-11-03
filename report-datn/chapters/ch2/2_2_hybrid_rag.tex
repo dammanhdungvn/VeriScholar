@@ -81,7 +81,7 @@ trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.52, transform shape,
+    scale=0.72, transform shape,
     box_dense/.style={draw=orange!85!black, fill=yellow!8, rounded corners=6pt, line width=1.0pt},
     box_sparse/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.0pt},
     box_rrf/.style={draw=gray!80, fill=gray!5, rounded corners=8pt, line width=1.0pt},
@@ -92,16 +92,18 @@ trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ
     pipearrow/.style={-{Stealth[length=2.8mm]}, line width=1.2pt, draw=teal!85!black}
 ]
     % 1. Khối Truy vấn đầu vào (Scholar Query)
-    \node[draw=orange!85!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, minimum width=4.8cm, minimum height=0.9cm, align=center, font=\bfseries\small] (query) at (0, 8.2) {
+    \node[draw=orange!85!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, minimum width=5.2cm, minimum height=0.95cm, align=center, font=\bfseries\small] (query) at (0, 8.2) {
         Truy vấn học giả (Scholar Query)
     };
 
     % 2. TẦNG 1: KHUNG TÌM KIẾM LAI (HYBRID SEARCH CONTAINER)
-    \node[container_hybrid, minimum width=14.4cm, minimum height=5.5cm] (box_hybrid_search) at (0, 3.8) {};
+    \node[container_hybrid, minimum width=14.4cm, minimum height=5.6cm] (box_hybrid_search) at (0, 3.8) {};
     
-    % Header của Khung Tìm Kiếm Lai
-    \node[font=\bfseries\normalsize, text=teal!90!black, align=center] at (0, 6.1) {CƠ CHẾ TÌM KIẾM LAI (HYBRID SEARCH)};
-    \node[font=\scriptsize\itshape, text=black!75, align=center] at (0, 5.7) {Không gian tìm kiếm song song bổ trợ ngữ nghĩa và từ khóa};
+    % Header của Khung Tìm Kiếm Lai (Gộp 1 node để triệt tiêu hoàn toàn lỗi chồng đè văn bản)
+    \node[align=center] at (0, 5.95) {
+        {\bfseries\normalsize\color{teal!90!black} CƠ CHẾ TÌM KIẾM LAI (HYBRID SEARCH)}\\[3pt]
+        {\scriptsize\itshape\color{black!75} Không gian tìm kiếm song song bổ trợ ngữ nghĩa và từ khóa}
+    };
 
     % Thành phần 1: Dense Search
     \node[box_dense, text width=5.8cm, align=center, inner sep=4pt] (card_dense) at (-3.6, 3.0) {
@@ -121,11 +123,11 @@ trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ
         \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 4} \hfill \scriptsize (Hạng 3: $\text{BM25} = 9{,}5$)};}
     };
 
-    % Phân nhánh từ Query vào 2 thành phần
+    % Phân nhánh từ Query vào 2 thành phần (Nhãn có nền trắng, không đè nét vẽ)
     \draw[arrowstyle] (query.south) -- ++(0, -0.4) -| (card_dense.north);
     \draw[arrowstyle] (query.south) -- ++(0, -0.4) -| (card_sparse.north);
-    \node[font=\scriptsize\bfseries, text=orange!90!black, above=1pt] at (-2.0, 7.3) {Nhúng Vector};
-    \node[font=\scriptsize\bfseries, text=blue!90!black, above=1pt] at (2.0, 7.3) {Tách từ khóa};
+    \node[font=\scriptsize\bfseries, text=orange!90!black, fill=white, inner sep=2pt, rounded corners=1pt] at (-2.0, 7.35) {Nhúng Vector};
+    \node[font=\scriptsize\bfseries, text=blue!90!black, fill=white, inner sep=2pt, rounded corners=1pt] at (2.0, 7.35) {Tách từ khóa};
 
     % 3. TẦNG 2: ĐỘNG CƠ HỢP NHẤT XẾP HẠNG RRF (RRF SCORES ENGINE)
     \node[box_rrf, text width=14.0cm, align=center, inner sep=5pt] (card_rrf) at (0, -0.6) {
@@ -152,7 +154,7 @@ trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ
     };
 
     % Mũi tên từ RRF Engine xuống Thứ hạng Lai Tối ưu
-    \draw[pipearrow] (card_rrf.south) -- (card_hybrid.north) node[midway, right=4pt, font=\scriptsize\bfseries, text=teal!90!black] {Tái sắp xếp hợp nhất tối ưu};
+    \draw[pipearrow] (card_rrf.south) -- (card_hybrid.north) node[midway, right=4pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Tái sắp xếp hợp nhất tối ưu};
 \end{tikzpicture}
 \caption{Cơ chế tìm kiếm lai (Hybrid Search) kết hợp thuật toán hợp nhất xếp hạng đảo ngược (RRF)}
 \label{fig:hybrid_search_rrf}

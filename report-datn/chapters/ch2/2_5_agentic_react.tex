@@ -49,14 +49,14 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.88, transform shape,
-    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.2cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
-    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.5cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.5cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.35, line width=1pt, text width=2.1cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
-    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=4.8cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
+    scale=0.82, transform shape,
+    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.35, line width=1pt, text width=2.2cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
+    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
     looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
 ]
@@ -67,56 +67,56 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     };
 
     % 2. Tác nhân ReAct
-    \node[box_react] (agent) at (-4.8, 0.9) {
+    \node[box_react] (agent) at (-5.0, 0.9) {
         TÁC NHÂN ReAct (LLM)\\[2pt]
         \scriptsize\normalfont \textbf{Thought:} Phân tích log lỗi chi tiết\\
         Sinh bản vá sửa cú pháp \LaTeX
     };
 
     % 3. Hành động (Action)
-    \node[box_action] (action) at (4.8, 0.9) {
+    \node[box_action] (action) at (5.0, 0.9) {
         HÀNH ĐỘNG (ACTION)\\[2pt]
         \scriptsize\normalfont Gọi công cụ biên dịch\\
         \texttt{compile\_latex(source)}
     };
 
     % 4. E2B MicroVM Sandbox
-    \node[box_sandbox] (sandbox) at (4.8, -1.5) {
+    \node[box_sandbox] (sandbox) at (5.0, -1.6) {
         E2B MicroVM Sandbox\\[2pt]
         \scriptsize\normalfont Môi trường Linux cô lập hạt nhân\\
         Chạy \texttt{xelatex -halt-on-error}
     };
 
     % 5. Quan sát (Observation)
-    \node[box_obs] (obs) at (-4.8, -1.5) {
+    \node[box_obs] (obs) at (-5.0, -1.6) {
         QUAN SÁT (OBSERVATION)\\[2pt]
         \scriptsize\normalfont Thu thập Error Log biên dịch\\
         \texttt{Missing package / Syntax error}
     };
 
     % 6. Nút quyết định (Decision)
-    \node[decision_node] (cond) at (0, -1.5) {
+    \node[decision_node] (cond) at (0, -1.6) {
         Biên dịch\\thành công?\\(Exit 0)
     };
 
     % 7. Kết quả hoàn thành (Final Answer)
-    \node[box_final] (final) at (0, -3.8) {
+    \node[box_final] (final) at (0, -3.9) {
         Tài liệu PDF hoàn chỉnh\\[1pt]
         \scriptsize\normalfont Kết xuất thành công $\text{exit}=0$ (Hiển thị bản in)
     };
 
     % Đường kết nối luồng
     \draw[arrowstyle] (input.south) -- ++(0, -0.3) -| (agent.north);
-    \draw[arrowstyle] (agent.east) -- node[midway, above=1pt, font=\scriptsize\bfseries, text=teal!90!black] {Sinh lệnh} (action.west);
-    \draw[arrowstyle] (action.south) -- node[midway, right=1pt, font=\scriptsize\bfseries] {Thực thi} (sandbox.north);
-    \draw[arrowstyle] (sandbox.west) -- node[midway, above=1pt, font=\scriptsize\bfseries] {Trả kết quả} (cond.east);
+    \draw[arrowstyle] (agent.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Sinh lệnh} (action.west);
+    \draw[arrowstyle] (action.south) -- node[midway, right=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Thực thi} (sandbox.north);
+    \draw[arrowstyle] (sandbox.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=6pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
-    \draw[arrowstyle] (cond.west) -- node[midway, above=1pt, font=\scriptsize\bfseries, text=red!85!black] {No (Lỗi)} (obs.east);
-    \draw[looparrow] (obs.north) to[out=120, in=240] node[midway, left=8pt, align=right, font=\scriptsize\bfseries, text=red!85!black] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
+    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {No (Lỗi)} (obs.east);
+    \draw[looparrow] (obs.north) to[out=135, in=225] node[midway, left=6pt, align=right, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
 \end{tikzpicture}
 \caption{Cơ chế tác nhân ReAct điều phối môi trường E2B MicroVM Sandbox tự động phục hồi lỗi cú pháp LaTeX}
 \label{fig:react_e2b_sandbox}
