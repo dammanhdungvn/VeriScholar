@@ -89,12 +89,12 @@ Tài liệu thiết kế này quy định chi tiết giải pháp tái cấu tr�
 - Hình thoi điều kiện `Biên dịch thành công?`: Nhãn `No (Lỗi)` đặt phía trên đường rẽ trái $0{,}2\,\text{cm}$; nhãn `Yes (Exit 0)` đặt bên dưới đáy thoi $0{,}3\,\text{cm}$.
 - Nâng hệ số scale từ `0.62` lên **`0.75`**, tăng font mô tả microVM lên `\small`.
 
-### 5.4. Hình 3-1: Mô hình AS-IS vs TO-BE (`report-datn/chapters/ch3/3_1_mo_hinh_as_is_to_be.tex`)
+### 5.4. Hình 3-1: Mô hình AS-IS vs TO-BE (`report-datn/chapters/ch3/3_2_khao_sat_nghiep_vu.tex`)
 - Mở rộng chiều rộng các hộp AS-IS và TO-BE: từ $5{,}4\,\text{cm} \rightarrow 6{,}2\,\text{cm}$.
 - 4 badge trung tâm (`Deduplication`, `Minh chứng`, `Tự động`, `Tự sửa`): Đổi thành hình elip/chữ nhật bo tròn viền đậm `draw=teal!80, fill=teal!10`, font `\scriptsize\bfseries`, kích thước vừa vặn dễ đọc.
 - Nâng font mô tả trong hộp lên `\footnotesize`, nâng scale lên **`0.78`**.
 
-### 5.5. Hình 3-2: Kiến trúc Lục giác (`report-datn/chapters/ch3/3_2_kien_truc_tong_the.tex`)
+### 5.5. Hình 3-2: Kiến trúc Lục giác (`report-datn/chapters/ch3/3_3_kien_truc.tex`)
 - Bổ sung padding đỉnh: Mở rộng khung viền bao quanh thêm $0{,}7\,\text{cm}$ ở đỉnh.
 - Tiêu đề `LÕI MIỀN NGHIỆP VỤ THUẦN KHIẾT (packages/core)`: Đặt thụt vào trong khung, căn giữa tuyệt đối, không chạm lề trên hay lề hông.
 - Hộp Discovery Space: Nới rộng bề ngang để chuỗi `Deduplication CAS SHA-256` hiển thị trọn vẹn, không bị mất số 6.
