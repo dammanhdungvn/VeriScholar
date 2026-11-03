@@ -91,45 +91,45 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     \node[entity] (retriever) at (11.0, 0) {Hybrid\\Retriever};
     \node[entity] (llm) at (14.7, 0) {Mô hình\\LLM};
 
-    % Đường thời gian (Lifelines - Gióng phẳng tại y = -9.6)
-    \draw[lifeline] (0, -0.55) -- (0, -9.6);
-    \draw[lifeline] (3.6, -0.55) -- (3.6, -9.6);
-    \draw[lifeline] (7.3, -0.55) -- (7.3, -9.6);
-    \draw[lifeline] (11.0, -0.55) -- (11.0, -9.6);
-    \draw[lifeline] (14.7, -0.55) -- (14.7, -9.6);
+    % Đường thời gian (Lifelines - Gióng phẳng tại y = -10.5)
+    \draw[lifeline] (0, -0.55) -- (0, -10.5);
+    \draw[lifeline] (3.6, -0.55) -- (3.6, -10.5);
+    \draw[lifeline] (7.3, -0.55) -- (7.3, -10.5);
+    \draw[lifeline] (11.0, -0.55) -- (11.0, -10.5);
+    \draw[lifeline] (14.7, -0.55) -- (14.7, -10.5);
 
     % Hộp kích hoạt
-    \draw[activation] (3.5, -1.0) rectangle (3.7, -6.3);
-    \draw[activation] (3.5, -7.0) rectangle (3.7, -9.2);
-    \draw[activation] (7.2, -1.7) rectangle (7.4, -5.7);
-    \draw[activation] (10.9, -2.4) rectangle (11.1, -3.4);
-    \draw[activation] (14.6, -3.9) rectangle (14.8, -5.3);
+    \draw[activation] (3.5, -1.0) rectangle (3.7, -7.0);
+    \draw[activation] (3.5, -7.9) rectangle (3.7, -10.2);
+    \draw[activation] (7.2, -1.8) rectangle (7.4, -6.5);
+    \draw[activation] (10.9, -2.6) rectangle (11.1, -3.8);
+    \draw[activation] (14.6, -4.3) rectangle (14.8, -5.8);
 
     % Luồng thông điệp
     \draw[msg] (0, -1.1) -- node[lbl, above] {1: Nhập câu hỏi nghiên cứu} (3.5, -1.1);
-    \draw[msg] (3.7, -1.8) -- node[lbl, above] {2: Khởi tạo luồng SSE} (7.2, -1.8);
-    \draw[msg] (7.4, -2.5) -- node[lbl, above] {3: Tìm kiếm lai (HNSW + BM25 + RRF)} (10.9, -2.5);
-    \draw[retmsg] (10.9, -3.2) -- node[lbl, above] {4: Trả về $k$ đoạn trích + BBox + điểm $\tau$} (7.4, -3.2);
-    \draw[msg] (7.4, -4.0) -- node[lbl, above] {5: Kiểm định CRAG ($\tau \ge 0{,}35$) và gửi prompt} (14.6, -4.0);
+    \draw[msg] (3.7, -1.95) -- node[lbl, above] {2: Khởi tạo luồng SSE} (7.2, -1.95);
+    \draw[msg] (7.4, -2.80) -- node[lbl, above] {3: Tìm kiếm lai (HNSW + BM25 + RRF)} (10.9, -2.80);
+    \draw[retmsg] (10.9, -3.65) -- node[lbl, above] {4: Trả về $k$ đoạn trích + BBox + điểm $\tau$} (7.4, -3.65);
+    \draw[msg] (7.4, -4.50) -- node[lbl, above] {5: Kiểm định CRAG ($\tau \ge 0{,}35$) và gửi prompt} (14.6, -4.50);
 
     % Khung vòng lặp truyền luồng SSE
-    \draw[draw=teal!70!black, dashed, line width=0.7pt, rounded corners=3pt, fill=teal!3] (2.8, -4.5) rectangle (15.3, -5.9);
-    \node[font=\scriptsize\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (2.8, -4.5) {loop [Truyền phát SSE và xác thực trích dẫn verify\_output\_grounding]};
+    \draw[draw=teal!70!black, dashed, line width=0.7pt, rounded corners=3pt, fill=teal!3] (2.8, -5.0) rectangle (15.3, -6.8);
+    \node[font=\scriptsize\bfseries, fill=teal!15, text=teal!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (2.8, -5.0) {loop [Truyền phát SSE và xác thực trích dẫn verify\_output\_grounding]};
 
-    \draw[retmsg] (14.6, -4.9) -- node[lbl, above] {6: Truyền phát token trả lời} (7.4, -4.9);
-    \draw[retmsg] (7.2, -5.5) -- node[lbl, above] {7: Kiểm chứng thẻ $[1]$ và đẩy luồng SSE} (3.7, -5.5);
+    \draw[retmsg] (14.6, -5.55) -- node[lbl, above] {6: Truyền phát token trả lời} (7.4, -5.55);
+    \draw[retmsg] (7.2, -6.35) -- node[lbl, above] {7: Kiểm chứng thẻ $[1]$ và đẩy luồng SSE} (3.7, -6.35);
 
-    \draw[retmsg] (3.5, -6.5) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -6.5);
+    \draw[retmsg] (3.5, -7.30) -- node[lbl, above] {8: Hiển thị câu trả lời thời gian thực} (0, -7.30);
 
     % Hành động nhấp kiểm chứng trích dẫn
-    \draw[msg] (0, -7.2) -- node[lbl, above] {9: Nhấp vào thẻ trích dẫn $[1]$} (3.5, -7.2);
+    \draw[msg] (0, -8.15) -- node[lbl, above] {9: Nhấp vào thẻ trích dẫn $[1]$} (3.5, -8.15);
 
     % Tự gọi nội bộ Canvas (Nested Activation Box)
-    \draw[activation] (3.7, -7.6) rectangle (3.9, -8.6);
-    \draw[msg] (3.7, -7.7) -- ++(1.0, 0) -- ++(0, -0.6) -- (3.9, -8.3);
-    \node[font=\linespread{1.0}\selectfont\footnotesize, fill=white, inner sep=2pt, anchor=west] at (4.9, -8.0) {10: Cuộn trang và tô sáng BBox ($1\,\text{s}$)};
+    \draw[activation] (3.7, -8.55) rectangle (3.9, -9.55);
+    \draw[msg] (3.7, -8.65) -- ++(1.0, 0) -- ++(0, -0.7) -- (3.9, -9.35);
+    \node[font=\linespread{1.0}\selectfont\footnotesize, fill=white, inner sep=2pt, anchor=west] at (4.9, -9.0) {10: Cuộn trang và tô sáng BBox ($1\,\text{s}$)};
 
-    \draw[retmsg] (3.5, -9.1) -- node[lbl, above] {11: Bằng chứng tọa độ hiển thị trực quan} (0, -9.1);
+    \draw[retmsg] (3.5, -10.10) -- node[lbl, above] {11: Bằng chứng tọa độ hiển thị trực quan} (0, -10.10);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}
 \label{fig:seq_doc_sau}
@@ -159,40 +159,40 @@ Chu trình trích xuất 4 thực thể học thuật (\texttt{Paper}, \texttt{M
     \node[entity] (llm) at (11.0, 0) {LLM Extraction\\(Structured)};
     \node[entity] (db) at (14.7, 0) {PostgreSQL 16\\pgvector / CTE};
 
-    % Lifelines gióng phẳng tại y = -9.8
-    \draw[lifeline] (0, -0.55) -- (0, -9.8);
-    \draw[lifeline] (3.6, -0.55) -- (3.6, -9.8);
-    \draw[lifeline] (7.3, -0.55) -- (7.3, -9.8);
-    \draw[lifeline] (11.0, -0.55) -- (11.0, -9.8);
-    \draw[lifeline] (14.7, -0.55) -- (14.7, -9.8);
+    % Lifelines gióng phẳng tại y = -10.8
+    \draw[lifeline] (0, -0.55) -- (0, -10.8);
+    \draw[lifeline] (3.6, -0.55) -- (3.6, -10.8);
+    \draw[lifeline] (7.3, -0.55) -- (7.3, -10.8);
+    \draw[lifeline] (11.0, -0.55) -- (11.0, -10.8);
+    \draw[lifeline] (14.7, -0.55) -- (14.7, -10.8);
 
     % Hộp kích hoạt
-    \draw[activation] (3.5, -1.0) rectangle (3.7, -9.4);
-    \draw[activation] (7.2, -1.7) rectangle (7.4, -8.7);
-    \draw[activation] (10.9, -2.4) rectangle (11.1, -3.6);
-    \draw[activation] (14.6, -4.4) rectangle (14.8, -5.7);
-    \draw[activation] (14.6, -6.9) rectangle (14.8, -8.1);
+    \draw[activation] (3.5, -1.0) rectangle (3.7, -10.5);
+    \draw[activation] (7.2, -1.8) rectangle (7.4, -9.8);
+    \draw[activation] (10.9, -2.6) rectangle (11.1, -3.9);
+    \draw[activation] (14.6, -4.9) rectangle (14.8, -6.2);
+    \draw[activation] (14.6, -7.8) rectangle (14.8, -9.1);
 
     % Luồng thông điệp
     \draw[msg] (0, -1.1) -- node[lbl, above] {1: Yêu cầu phân tích tri thức thư mục} (3.5, -1.1);
-    \draw[msg] (3.7, -1.8) -- node[lbl, above] {2: Kích hoạt pipeline trích xuất} (7.2, -1.8);
-    \draw[msg] (7.4, -2.5) -- node[lbl, above] {3: Trích xuất 4 thực thể và quan hệ} (10.9, -2.5);
-    \draw[retmsg] (10.9, -3.4) -- node[lbl, above] {4: Trả về JSON thực thể và cạnh} (7.4, -3.4);
+    \draw[msg] (3.7, -1.95) -- node[lbl, above] {2: Kích hoạt pipeline trích xuất} (7.2, -1.95);
+    \draw[msg] (7.4, -2.80) -- node[lbl, above] {3: Trích xuất 4 thực thể và quan hệ} (10.9, -2.80);
+    \draw[retmsg] (10.9, -3.70) -- node[lbl, above] {4: Trả về JSON thực thể và cạnh} (7.4, -3.70);
 
     % Khung xử lý Khử trùng lặp đỉnh & Lưu trữ CSDL
-    \draw[draw=purple!70!black, dashed, line width=0.7pt, rounded corners=3pt, fill=purple!3] (6.5, -4.0) rectangle (15.3, -6.1);
-    \node[font=\scriptsize\bfseries, fill=purple!15, text=purple!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (6.5, -4.0) {opt [Khử trùng lặp Cosine $\ge 0{,}90$ và Phân cụm Louvain]};
+    \draw[draw=purple!70!black, dashed, line width=0.7pt, rounded corners=3pt, fill=purple!3] (6.5, -4.3) rectangle (15.3, -6.7);
+    \node[font=\scriptsize\bfseries, fill=purple!15, text=purple!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (6.5, -4.3) {opt [Khử trùng lặp Cosine $\ge 0{,}90$ và Phân cụm Louvain]};
 
-    \draw[msg] (7.4, -4.7) -- node[lbl, above] {5: Tính Cosine tương đồng và hợp nhất đỉnh} (14.6, -4.7);
-    \draw[msg] (7.4, -5.4) -- node[lbl, above] {6: Lưu cụm Louvain vào \texttt{community\_summaries}} (14.6, -5.4);
+    \draw[msg] (7.4, -5.10) -- node[lbl, above] {5: Tính Cosine tương đồng và hợp nhất đỉnh} (14.6, -5.10);
+    \draw[msg] (7.4, -6.00) -- node[lbl, above] {6: Lưu cụm Louvain vào \texttt{community\_summaries}} (14.6, -6.00);
 
     % Truy vấn bắc cầu 2-hop
-    \draw[msg] (3.7, -6.5) -- node[lbl, above] {7: Yêu cầu truy vấn bắc cầu liên tài liệu} (7.2, -6.5);
-    \draw[msg] (7.4, -7.2) -- node[lbl, above] {8: Truy vấn 2-hop Graph Traversal qua SQL CTE} (14.6, -7.2);
-    \draw[retmsg] (14.6, -7.9) -- node[lbl, above] {9: Trả về đồ thị liên kết con và nút lân cận} (7.4, -7.9);
+    \draw[msg] (3.7, -7.20) -- node[lbl, above] {7: Yêu cầu truy vấn bắc cầu liên tài liệu} (7.2, -7.20);
+    \draw[msg] (7.4, -8.05) -- node[lbl, above] {8: Truy vấn 2-hop Graph Traversal qua SQL CTE} (14.6, -8.05);
+    \draw[retmsg] (14.6, -8.85) -- node[lbl, above] {9: Trả về đồ thị liên kết con và nút lân cận} (7.4, -8.85);
 
-    \draw[retmsg] (7.2, -8.6) -- node[lbl, above] {10: Dữ liệu đồ thị và trang Wiki tương tác} (3.7, -8.6);
-    \draw[retmsg] (3.5, -9.3) -- node[lbl, above] {11: Hiển thị trực quan mạng tri thức học thuật} (0, -9.3);
+    \draw[retmsg] (7.2, -9.65) -- node[lbl, above] {10: Dữ liệu đồ thị và trang Wiki tương tác} (3.7, -9.65);
+    \draw[retmsg] (3.5, -10.40) -- node[lbl, above] {11: Hiển thị trực quan mạng tri thức học thuật} (0, -10.40);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Khai phá Đồ thị tri thức và truy vấn liên tài liệu}
 \label{fig:seq_graphrag}
@@ -222,37 +222,37 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, hộp cát
     \node[entity] (vm) at (11.0, 0) {Máy ảo E2B\\MicroVM};
     \node[entity] (agent) at (14.7, 0) {Agent\\Sửa lỗi ReAct};
 
-    % Đường thời gian (Gióng phẳng tại y = -9.6)
-    \draw[lifeline] (0, -0.55) -- (0, -9.6);
-    \draw[lifeline] (3.6, -0.55) -- (3.6, -9.6);
-    \draw[lifeline] (7.3, -0.55) -- (7.3, -9.6);
-    \draw[lifeline] (11.0, -0.55) -- (11.0, -9.6);
-    \draw[lifeline] (14.7, -0.55) -- (14.7, -9.6);
+    % Đường thời gian (Gióng phẳng tại y = -10.4)
+    \draw[lifeline] (0, -0.55) -- (0, -10.4);
+    \draw[lifeline] (3.6, -0.55) -- (3.6, -10.4);
+    \draw[lifeline] (7.3, -0.55) -- (7.3, -10.4);
+    \draw[lifeline] (11.0, -0.55) -- (11.0, -10.4);
+    \draw[lifeline] (14.7, -0.55) -- (14.7, -10.4);
 
     % Hộp kích hoạt
-    \draw[activation] (3.5, -1.0) rectangle (3.7, -9.1);
-    \draw[activation] (7.2, -1.7) rectangle (7.4, -8.3);
-    \draw[activation] (10.9, -2.4) rectangle (11.1, -4.0);
-    \draw[activation] (10.9, -6.1) rectangle (11.1, -7.2);
-    \draw[activation] (14.6, -4.4) rectangle (14.8, -5.6);
+    \draw[activation] (3.5, -1.0) rectangle (3.7, -10.0);
+    \draw[activation] (7.2, -1.8) rectangle (7.4, -9.2);
+    \draw[activation] (10.9, -2.6) rectangle (11.1, -4.3);
+    \draw[activation] (10.9, -6.7) rectangle (11.1, -8.0);
+    \draw[activation] (14.6, -4.8) rectangle (14.8, -6.1);
 
     % Luồng thông điệp
     \draw[msg] (0, -1.1) -- node[lbl, above] {1: Nhấp nút ``Biên dịch bản thảo''} (3.5, -1.1);
-    \draw[msg] (3.7, -1.8) -- node[lbl, above] {2: Chuyển mã nguồn LaTeX} (7.2, -1.8);
-    \draw[msg] (7.4, -2.5) -- node[lbl, above] {3: Khởi tạo MicroVM và chạy \texttt{xelatex}} (10.9, -2.5);
+    \draw[msg] (3.7, -1.95) -- node[lbl, above] {2: Chuyển mã nguồn LaTeX} (7.2, -1.95);
+    \draw[msg] (7.4, -2.80) -- node[lbl, above] {3: Khởi tạo MicroVM và chạy \texttt{xelatex}} (10.9, -2.80);
 
     % Khung điều kiện xử lý lỗi ReAct
-    \draw[draw=orange!80!black, dashed, line width=0.7pt, rounded corners=3pt, fill=orange!3] (6.5, -3.0) rectangle (15.3, -7.5);
-    \node[font=\scriptsize\bfseries, fill=orange!15, text=orange!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (6.5, -3.0) {alt [Biên dịch phát sinh lỗi cú pháp ($\text{ExitCode} \ne 0$)]};
+    \draw[draw=orange!80!black, dashed, line width=0.7pt, rounded corners=3pt, fill=orange!3] (6.5, -3.3) rectangle (15.3, -8.4);
+    \node[font=\scriptsize\bfseries, fill=orange!15, text=orange!90!black, anchor=south west, inner sep=2.5pt, rounded corners=1.5pt] at (6.5, -3.3) {alt [Biên dịch phát sinh lỗi cú pháp ($\text{ExitCode} \ne 0$)]};
 
-    \draw[retmsg] (10.9, -3.7) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (7.4, -3.7);
-    \draw[msg] (7.4, -4.5) -- node[lbl, above] {5: Chuyển log lỗi cho Agent} (14.6, -4.5);
-    \draw[msg] (14.6, -5.3) -- node[lbl, above] {6: Phân tích log lỗi và sinh bản vá Diff} (7.4, -5.3);
-    \draw[msg] (7.4, -6.2) -- node[lbl, above] {7: Áp bản vá và tái biên dịch trong MicroVM} (10.9, -6.2);
-    \draw[retmsg] (10.9, -7.0) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (7.4, -7.0);
+    \draw[retmsg] (10.9, -4.10) -- node[lbl, above] {4: Biên dịch thất bại ($\text{ExitCode} \ne 0$) + Log} (7.4, -4.10);
+    \draw[msg] (7.4, -5.00) -- node[lbl, above] {5: Chuyển log lỗi cho Agent} (14.6, -5.00);
+    \draw[msg] (14.6, -5.90) -- node[lbl, above] {6: Phân tích log lỗi và sinh bản vá Diff} (7.4, -5.90);
+    \draw[msg] (7.4, -6.90) -- node[lbl, above] {7: Áp bản vá và tái biên dịch trong MicroVM} (10.9, -6.90);
+    \draw[retmsg] (10.9, -7.80) -- node[lbl, above] {8: Tái biên dịch thành công ($\text{ExitCode} = 0$)} (7.4, -7.80);
 
-    \draw[retmsg] (7.2, -8.1) -- node[lbl, above] {9: Cập nhật mã nguồn và trả tệp PDF} (3.7, -8.1);
-    \draw[retmsg] (3.5, -8.9) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -8.9);
+    \draw[retmsg] (7.2, -9.00) -- node[lbl, above] {9: Cập nhật mã nguồn và trả tệp PDF} (3.7, -9.00);
+    \draw[retmsg] (3.5, -9.85) -- node[lbl, above] {10: Hiển thị PDF xem trước trực tiếp} (0, -9.85);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Biên soạn bản thảo và tự phục hồi lỗi LaTeX}
 \label{fig:seq_bien_soan}

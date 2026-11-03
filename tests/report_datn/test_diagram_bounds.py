@@ -11,18 +11,10 @@ def test_fig3_2_coordinates_within_safe_margins():
     )
 
     # Kiểm tra tọa độ Adapter không vượt quá +- 8.8 (trước đây là 10.4)
-    assert "(10.4," not in content, (
-        "Tọa độ x của Driven Adapter vẫn còn 10.4 gây tràn lề phải!"
-    )
-    assert "(-10.4," not in content, (
-        "Tọa độ x của Driving Adapter vẫn còn -10.4!"
-    )
-    assert "(8.8," in content or "(8.80," in content, (
-        "Thiếu tọa độ x=8.8 cho Driven Adapter"
-    )
-    assert "(-8.8," in content or "(-8.80," in content, (
-        "Thiếu tọa độ x=-8.8 cho Driving Adapter"
-    )
+    assert "(10.4," not in content, "Tọa độ x của Driven Adapter vẫn còn 10.4 gây tràn lề phải!"
+    assert "(-10.4," not in content, "Tọa độ x của Driving Adapter vẫn còn -10.4!"
+    assert "(8.8," in content or "(8.80," in content, "Thiếu tọa độ x=8.8 cho Driven Adapter"
+    assert "(-8.8," in content or "(-8.80," in content, "Thiếu tọa độ x=-8.8 cho Driving Adapter"
 
 
 def test_fig2_4_loop_and_label_styling():
@@ -60,3 +52,25 @@ def test_fig3_12_class_diagram_styling():
     )
 
 
+def test_sequence_diagrams_spacing_and_float_padding():
+    seq_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
+    seq_content = seq_path.read_text(encoding="utf-8")
+
+    # Kiểm tra Hình 3-9, 3-10, 3-11 có lifeline mở rộng để chứa các thông điệp giãn dòng
+    has_extended_lifeline = (
+        "-- (0, -10.5)" in seq_content
+        or "-- (0, -10.2)" in seq_content
+        or "-- (0, -10.4)" in seq_content
+    )
+    assert has_extended_lifeline, (
+        "Lifeline trong biểu đồ tuần tự cần kéo dài đến y <= -10.2cm để chứa các bước giãn dòng"
+    )
+
+    # Kiểm tra float spacing trong main.tex được tăng thêm 0.5 dòng (~10pt)
+    main_path = Path("report-datn/main.tex")
+    main_content = main_path.read_text(encoding="utf-8")
+    assert (
+        "\\setlength{\\intextsep}{10pt" in main_content
+        or "\\setlength{\\intextsep}{11pt" in main_content
+        or "\\setlength{\\intextsep}{12pt" in main_content
+    ), "Cần tăng \\intextsep lên khoảng 10-12pt để có đệm 0.5 dòng với text"
