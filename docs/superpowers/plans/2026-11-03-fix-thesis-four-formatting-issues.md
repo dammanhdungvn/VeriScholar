@@ -116,25 +116,25 @@ Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fas
 - Consumes: `report-datn/frontmatter/loi_mo_dau.tex`.
 - Produces: `\input{frontmatter/loi_mo_dau}` được đặt ngay sau `danh_muc_viet_tat.tex` trong `main.tex`, xuất hiện trong Mục lục và Frontmatter.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Thêm test `test_loi_mo_dau_included_in_main()` vào `tests/report_datn/test_thesis_structure.py` kiểm tra:
 1. `report-datn/main.tex` có dòng `\input{frontmatter/loi_mo_dau}`.
 2. Vị trí nạp nằm trong phần Frontmatter (trước `\pagenumbering{arabic}`).
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Chạy `uv run pytest tests/report_datn/test_thesis_structure.py -k test_loi_mo_dau_included_in_main` để xác nhận FAIL.
 
-- [ ] **Step 3: Add `\input{frontmatter/loi_mo_dau}` to `main.tex`**
+- [x] **Step 3: Add `\input{frontmatter/loi_mo_dau}` to `main.tex`**
 
 Chèn `\input{frontmatter/loi_mo_dau}` ngay sau `\input{frontmatter/danh_muc_viet_tat}` trong `report-datn/main.tex`.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Chạy lại test để xác nhận PASS.
 
-- [ ] **Step 5: Commit changes**
+- [x] **Step 5: Commit changes**
 
 Git commit với message chuẩn và chạy `bash scripts/deploy_to_vps.sh --fast`.
 
