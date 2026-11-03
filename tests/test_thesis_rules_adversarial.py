@@ -82,15 +82,13 @@ def test_adversarial_domain_class_diagram_placement():
     pos_class_tab = csdl_content.find("\\label{tab:class_relationships_analysis}")
     pos_csdl_overview = csdl_content.find("\\label{subsec:csdl_tong_quan}")
     pos_table_users = csdl_content.find("\\label{tab:spec_users}")
-    pos_erd_fig = csdl_content.find("\\label{fig:erd_model}")
 
     assert pos_class_fig != -1, "fig:class_diagram_model not found"
     assert pos_class_tab != -1, "tab:class_relationships_analysis not found"
     assert pos_csdl_overview != -1, "subsec:csdl_tong_quan not found"
     assert pos_table_users != -1, "tab:spec_users not found"
-    assert pos_erd_fig != -1, "fig:erd_model not found"
 
-    # Strict ordering assertions: Class diagram MUST precede CSDL overview, tables, and ERD
+    # Strict ordering assertions: Class diagram MUST precede CSDL overview and tables
     assert pos_class_fig < pos_class_tab, "Class diagram figure must precede class analysis table"
     assert pos_class_tab < pos_csdl_overview, (
         "Class analysis table must precede subsec:csdl_tong_quan"
