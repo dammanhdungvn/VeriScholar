@@ -34,14 +34,14 @@ Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy
     \item Cơ chế lưu vết trạng thái bền vững (\textit{Persistence Checkpointing}): Toàn bộ cây trạng thái được lưu tạm sau từng bước thực thi, cho phép hệ thống khôi phục phiên làm việc sau sự cố mà không làm mất dữ liệu nghiên cứu của học giả.
 \end{itemize}
 
-\subsection{Môi trường MicroVM cô lập hạt nhân E2B và vòng lặp tự sửa lỗi LaTeX}
+\subsection{Môi trường máy ảo MicroVM E2B cô lập cấp hệ điều hành và vòng lặp tự sửa lỗi LaTeX}
 \label{subsec:e2b_microvm_latex}
 Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các nhà khoa học soạn thảo ấn phẩm nghiên cứu là việc tự động biên dịch và sửa lỗi mã nguồn LaTeX. Việc cho phép mô hình AI tự sinh và chạy các lệnh hệ điều hành trực tiếp trên máy chủ tiềm ẩn nguy cơ bảo mật nghiêm trọng về thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
 
 Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (\textit{E2B MicroVM Sandbox}) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}:
 \begin{itemize}[noitemsep, topsep=2pt]
     \item Khởi tạo siêu tốc: Mỗi phiên làm việc được cấp phát một máy ảo siêu nhỏ (\textit{MicroVM}) độc lập trong thời gian dưới 200 mili-giây, cung cấp đầy đủ nhân Linux và môi trường TeX Live chuyên dụng.
-    \item Cô lập ranh giới hạt nhân (\textit{Kernel-level Isolation}): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
+    \item Cô lập mức nhân hệ điều hành (\textit{Kernel-level Isolation}): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
 \end{itemize}
 
 Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để tự động biên dịch và phục hồi lỗi cú pháp LaTeX được thể hiện trong Hình~\ref{fig:react_e2b_sandbox}.
@@ -49,14 +49,14 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.88, transform shape,
-    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.2cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
-    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.5cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.2cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.5cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.35, line width=1pt, text width=2.1cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
-    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=4.8cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
+    scale=0.82, transform shape,
+    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.35, line width=1pt, text width=2.2cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
+    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
     looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
 ]
@@ -67,56 +67,56 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     };
 
     % 2. Tác nhân ReAct
-    \node[box_react] (agent) at (-4.8, 0.9) {
+    \node[box_react] (agent) at (-5.0, 0.9) {
         TÁC NHÂN ReAct (LLM)\\[2pt]
         \scriptsize\normalfont \textbf{Thought:} Phân tích log lỗi chi tiết\\
         Sinh bản vá sửa cú pháp \LaTeX
     };
 
     % 3. Hành động (Action)
-    \node[box_action] (action) at (4.8, 0.9) {
+    \node[box_action] (action) at (5.0, 0.9) {
         HÀNH ĐỘNG (ACTION)\\[2pt]
         \scriptsize\normalfont Gọi công cụ biên dịch\\
         \texttt{compile\_latex(source)}
     };
 
     % 4. E2B MicroVM Sandbox
-    \node[box_sandbox] (sandbox) at (4.8, -1.5) {
+    \node[box_sandbox] (sandbox) at (5.0, -1.6) {
         E2B MicroVM Sandbox\\[2pt]
-        \scriptsize\normalfont Môi trường Linux cô lập hạt nhân\\
+        \scriptsize\normalfont Môi trường Linux cô lập cấp nhân\\
         Chạy \texttt{xelatex -halt-on-error}
     };
 
     % 5. Quan sát (Observation)
-    \node[box_obs] (obs) at (-4.8, -1.5) {
+    \node[box_obs] (obs) at (-5.0, -1.6) {
         QUAN SÁT (OBSERVATION)\\[2pt]
         \scriptsize\normalfont Thu thập Error Log biên dịch\\
         \texttt{Missing package / Syntax error}
     };
 
     % 6. Nút quyết định (Decision)
-    \node[decision_node] (cond) at (0, -1.5) {
+    \node[decision_node] (cond) at (0, -1.6) {
         Biên dịch\\thành công?\\(Exit 0)
     };
 
     % 7. Kết quả hoàn thành (Final Answer)
-    \node[box_final] (final) at (0, -3.8) {
+    \node[box_final] (final) at (0, -3.9) {
         Tài liệu PDF hoàn chỉnh\\[1pt]
         \scriptsize\normalfont Kết xuất thành công $\text{exit}=0$ (Hiển thị bản in)
     };
 
     % Đường kết nối luồng
     \draw[arrowstyle] (input.south) -- ++(0, -0.3) -| (agent.north);
-    \draw[arrowstyle] (agent.east) -- node[midway, above=1pt, font=\scriptsize\bfseries, text=teal!90!black] {Sinh lệnh} (action.west);
-    \draw[arrowstyle] (action.south) -- node[midway, right=1pt, font=\scriptsize\bfseries] {Thực thi} (sandbox.north);
-    \draw[arrowstyle] (sandbox.west) -- node[midway, above=1pt, font=\scriptsize\bfseries] {Trả kết quả} (cond.east);
+    \draw[arrowstyle] (agent.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Sinh lệnh} (action.west);
+    \draw[arrowstyle] (action.south) -- node[midway, right=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Thực thi} (sandbox.north);
+    \draw[arrowstyle] (sandbox.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=10pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
-    \draw[arrowstyle] (cond.west) -- node[midway, above=1pt, font=\scriptsize\bfseries, text=red!85!black] {No (Lỗi)} (obs.east);
-    \draw[looparrow] (obs.north) to[out=120, in=240] node[midway, left=8pt, align=right, font=\scriptsize\bfseries, text=red!85!black] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
+    \draw[arrowstyle] (cond.west) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {No (Lỗi)} (obs.east);
+    \draw[looparrow] (obs.north) to[out=135, in=225] node[midway, left=6pt, align=right, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
 \end{tikzpicture}
 \caption{Cơ chế tác nhân ReAct điều phối môi trường E2B MicroVM Sandbox tự động phục hồi lỗi cú pháp LaTeX}
 \label{fig:react_e2b_sandbox}
@@ -124,9 +124,9 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 
 Khi bản thảo gặp lỗi cú pháp (như thiếu gói lệnh, quên đóng môi trường toán học, hoặc ký tự chưa được thoát), quy trình tự phục hồi diễn ra hoàn toàn tự động: Trước hết, tác nhân gửi mã nguồn sang E2B MicroVM Sandbox để biên dịch thử nghiệm (\textit{Action}). Tiếp theo, môi trường MicroVM ghi nhận nhật ký lỗi biên dịch (\textit{Observation}) và gửi ngược lại cho tác nhân. Sau đó, tác nhân suy luận vị trí dòng lỗi và nguyên nhân cú pháp (\textit{Thought}), rồi tự động vá mã nguồn và kích hoạt vòng lặp biên dịch lại cho đến khi tài liệu kết xuất thành công với mã thoát bằng 0.
 
-\subsection{Két an toàn khóa cá nhân BYOK và chuẩn mã hóa xác thực AES-256-GCM}
+\subsection{Mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (BYOK) và chuẩn mã hóa AES-256-GCM}
 \label{subsec:byok_aes_gcm}
-Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính cho học giả, hệ thống áp dụng mô hình mang theo khóa cá nhân (\textit{Bring Your Own Key -- BYOK}). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
+Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính cho học giả, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (\textit{Bring Your Own Key -- BYOK}). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
 
 Khóa API được mã hóa bảo vệ theo chuẩn AEAD với thuật toán AES-256-GCM \cite{dworkin2007}:
 \vspace{-4pt}

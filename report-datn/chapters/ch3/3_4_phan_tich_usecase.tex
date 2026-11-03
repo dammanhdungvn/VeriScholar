@@ -118,6 +118,7 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
+    scale=0.76, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -125,16 +126,16 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
         \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
         \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
     },
-    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=1.5pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.4cm, minimum height=0.62cm},
-    mainuc/.style={draw=blue!80!black, fill=blue!5, line width=0.9pt, ellipse, align=center, inner sep=2pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.0cm, minimum height=0.76cm},
+    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=2pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.6cm, minimum height=0.70cm},
+    mainuc/.style={draw=blue!80!black, fill=blue!5, line width=0.95pt, ellipse, align=center, inner sep=3pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.2cm, minimum height=0.85cm},
     sysbox/.style={draw=black!55, fill=black!1, rounded corners=6pt, line width=0.8pt, dashed},
     line/.style={draw=black!75, line width=0.8pt},
     inc/.style={draw=blue!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
     ext/.style={draw=teal!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
-    rel_lbl/.style={font=\fontsize{6pt}{7pt}\selectfont\itshape, fill=white, inner sep=1.0pt}
+    rel_lbl/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\itshape, fill=white, inner sep=1.2pt}
 ]
-    \draw[sysbox] (1.8, -2.85) rectangle (14.5, 2.85);
-    \node[font=\bfseries\scriptsize, text=blue!85!black] at (8.2, 2.58) {PHÂN HỆ KHÁM PHÁ VÀ LƯU TRỮ CAS};
+    \draw[sysbox] (1.8, -3.3) rectangle (14.5, 3.4);
+    \node[font=\bfseries\scriptsize, text=blue!85!black, fill=white, inner sep=2.5pt, rounded corners=2pt] at (8.2, 3.1) {PHÂN HỆ KHÁM PHÁ VÀ LƯU TRỮ CAS};
 
     \coordinate (scholar) at (0.7, 0.0);
     \pic at (scholar) {umlactor};
@@ -142,11 +143,11 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 
     \node[mainuc] (main) at (4.2, 0.0) {Tra cứu và tải\\tài liệu nghiên cứu};
 
-    \node[usecase] (ext1) at (11.5, 2.20) {Lọc bài báo đã bình duyệt};
-    \node[usecase] (inc1) at (11.5, 1.10) {Nhập từ khóa / Mã DOI/arXiv};
-    \node[usecase] (inc2) at (11.5, 0.00) {Lọc trùng lặp Jaccard ($J \ge 0{,}2$)};
-    \node[usecase] (inc3) at (11.5, -1.10) {Tải PDF và tính băm CAS SHA-256};
-    \node[usecase] (ext2) at (11.5, -2.20) {Tự tải lên PDF (khi có phí)};
+    \node[usecase] (ext1) at (11.5, 2.45) {Lọc bài báo đã bình duyệt};
+    \node[usecase] (inc1) at (11.5, 1.25) {Nhập từ khóa / Mã DOI/arXiv};
+    \node[usecase] (inc2) at (11.5, 0.00) {Lọc trùng lặp Jaccard\\($J \ge 0{,}2$)};
+    \node[usecase] (inc3) at (11.5, -1.25) {Tải PDF và tính băm\\CAS SHA-256};
+    \node[usecase] (ext2) at (11.5, -2.45) {Tự tải lên PDF (khi có phí)};
 
     \draw[line] ([xshift=0.30cm]scholar) -- (main.west);
 
@@ -201,6 +202,7 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
+    scale=0.76, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -208,16 +210,17 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
         \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
         \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
     },
-    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=1.5pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.4cm, minimum height=0.62cm},
-    mainuc/.style={draw=teal!80!black, fill=teal!5, line width=0.9pt, ellipse, align=center, inner sep=2pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.0cm, minimum height=0.76cm},
+    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=2pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.6cm, minimum height=0.70cm},
+    mainuc/.style={draw=teal!80!black, fill=teal!5, line width=0.95pt, ellipse, align=center, inner sep=3pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.2cm, minimum height=0.85cm},
     sysbox/.style={draw=black!55, fill=black!1, rounded corners=6pt, line width=0.8pt, dashed},
     line/.style={draw=black!75, line width=0.8pt},
     inc/.style={draw=blue!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
     ext/.style={draw=teal!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
-    rel_lbl/.style={font=\fontsize{6pt}{7pt}\selectfont\itshape, fill=white, inner sep=1.0pt}
+    rel_lbl/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\itshape, fill=white, inner sep=1.2pt}
 ]
-    \draw[sysbox] (1.8, -2.85) rectangle (14.5, 2.85);
-    \node[font=\bfseries\scriptsize, text=teal!85!black] at (8.2, 2.58) {PHÂN HỆ ĐỌC SÂU VÀ KIỂM CHỨNG TRÍCH DẪN};
+    % Khung bao hệ thống mở rộng theo trục y = [-3.3, 3.4] để triệt tiêu hoàn toàn lỗi chồng đè viền và cắt xén tiêu đề
+    \draw[sysbox] (1.8, -3.3) rectangle (14.5, 3.4);
+    \node[font=\bfseries\scriptsize, text=teal!85!black, fill=white, inner sep=2.5pt, rounded corners=2pt] at (8.2, 3.1) {PHÂN HỆ ĐỌC SÂU VÀ KIỂM CHỨNG TRÍCH DẪN};
 
     \coordinate (scholar) at (0.7, 0.0);
     \pic at (scholar) {umlactor};
@@ -225,11 +228,12 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 
     \node[mainuc] (main) at (4.2, 0.0) {Hỏi đáp đọc sâu và\\kiểm chứng tọa độ};
 
-    \node[usecase] (ext1) at (11.5, 2.20) {Tô sáng viền vàng ($\text{IoU} \ge 0{,}85$)};
-    \node[usecase] (inc1) at (11.5, 1.10) {Truy xuất lai Hybrid RRF};
-    \node[usecase] (inc2) at (11.5, 0.00) {Cổng kiểm định CRAG ($\tau \ge 0{,}35$)};
-    \node[usecase] (inc3) at (11.5, -1.10) {Xác thực dẫn chứng (\texttt{grounding})};
-    \node[usecase] (inc4) at (11.5, -2.20) {Truyền luồng SSE thời gian thực};
+    % 5 Use Case con với khoảng cách y = 1.25cm đảm bảo các oval tách biệt hoàn toàn
+    \node[usecase] (ext1) at (11.5, 2.45) {Tô sáng viền vàng\\($\text{IoU} \ge 0{,}85$)};
+    \node[usecase] (inc1) at (11.5, 1.25) {Truy xuất lai Hybrid RRF};
+    \node[usecase] (inc2) at (11.5, 0.00) {Cổng kiểm định CRAG\\($\tau \ge 0{,}35$)};
+    \node[usecase] (inc3) at (11.5, -1.25) {Xác thực dẫn chứng\\(\texttt{grounding})};
+    \node[usecase] (inc4) at (11.5, -2.45) {Truyền luồng SSE\\thời gian thực};
 
     \draw[line] ([xshift=0.30cm]scholar) -- (main.west);
 
@@ -283,6 +287,7 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
+    scale=0.76, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -290,16 +295,16 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
         \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
         \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
     },
-    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=1.5pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.4cm, minimum height=0.62cm},
-    mainuc/.style={draw=purple!80!black, fill=purple!5, line width=0.9pt, ellipse, align=center, inner sep=2pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.0cm, minimum height=0.76cm},
+    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=2pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.6cm, minimum height=0.70cm},
+    mainuc/.style={draw=purple!80!black, fill=purple!5, line width=0.95pt, ellipse, align=center, inner sep=3pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.2cm, minimum height=0.85cm},
     sysbox/.style={draw=black!55, fill=black!1, rounded corners=6pt, line width=0.8pt, dashed},
     line/.style={draw=black!75, line width=0.8pt},
     inc/.style={draw=blue!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
     ext/.style={draw=teal!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
-    rel_lbl/.style={font=\fontsize{6pt}{7pt}\selectfont\itshape, fill=white, inner sep=1.0pt}
+    rel_lbl/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\itshape, fill=white, inner sep=1.2pt}
 ]
-    \draw[sysbox] (1.8, -2.85) rectangle (14.5, 2.85);
-    \node[font=\bfseries\scriptsize, text=purple!85!black] at (8.2, 2.58) {PHÂN HỆ ĐỒ THỊ TRI THỨC VÀ ACADEMIC WIKI};
+    \draw[sysbox] (1.8, -3.3) rectangle (14.5, 3.4);
+    \node[font=\bfseries\scriptsize, text=purple!85!black, fill=white, inner sep=2.5pt, rounded corners=2pt] at (8.2, 3.1) {PHÂN HỆ ĐỒ THỊ TRI THỨC VÀ ACADEMIC WIKI};
 
     \coordinate (scholar) at (0.7, 0.0);
     \pic at (scholar) {umlactor};
@@ -307,11 +312,11 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 
     \node[mainuc] (main) at (4.2, 0.0) {Khai phá Đồ thị tri thức\\và Wiki học thuật};
 
-    \node[usecase] (ext1) at (11.5, 2.20) {Tự động sinh trang Wiki};
-    \node[usecase] (inc1) at (11.5, 1.10) {Trích xuất 4 loại thực thể};
-    \node[usecase] (inc2) at (11.5, 0.00) {Khử trùng lặp đỉnh ($\text{sim} \ge 0{,}90$)};
-    \node[usecase] (inc3) at (11.5, -1.10) {Phân cụm cộng đồng Louvain};
-    \node[usecase] (inc4) at (11.5, -2.20) {Truy vấn bắc cầu 2-hop CTE};
+    \node[usecase] (ext1) at (11.5, 2.45) {Tự động sinh trang Wiki};
+    \node[usecase] (inc1) at (11.5, 1.25) {Trích xuất 4 loại thực thể};
+    \node[usecase] (inc2) at (11.5, 0.00) {Khử trùng lặp đỉnh\\($\text{sim} \ge 0{,}90$)};
+    \node[usecase] (inc3) at (11.5, -1.25) {Phân cụm cộng đồng Louvain};
+    \node[usecase] (inc4) at (11.5, -2.45) {Truy vấn bắc cầu 2-hop CTE};
 
     \draw[line] ([xshift=0.30cm]scholar) -- (main.west);
 
@@ -365,6 +370,7 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
+    scale=0.76, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -372,16 +378,16 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
         \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
         \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
     },
-    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=1.5pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.4cm, minimum height=0.62cm},
-    mainuc/.style={draw=orange!80!black, fill=orange!5, line width=0.9pt, ellipse, align=center, inner sep=2pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.0cm, minimum height=0.76cm},
+    usecase/.style={draw=black!75, fill=white, line width=0.75pt, ellipse, align=center, inner sep=2pt, font=\fontsize{7.5pt}{9pt}\selectfont, text width=3.6cm, minimum height=0.70cm},
+    mainuc/.style={draw=orange!80!black, fill=orange!5, line width=0.95pt, ellipse, align=center, inner sep=3pt, font=\fontsize{8pt}{10pt}\selectfont\bfseries, text width=3.2cm, minimum height=0.85cm},
     sysbox/.style={draw=black!55, fill=black!1, rounded corners=6pt, line width=0.8pt, dashed},
     line/.style={draw=black!75, line width=0.8pt},
     inc/.style={draw=blue!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
     ext/.style={draw=teal!75!black, dashed, -{Stealth[length=2.0mm]}, line width=0.75pt},
-    rel_lbl/.style={font=\fontsize{6pt}{7pt}\selectfont\itshape, fill=white, inner sep=1.0pt}
+    rel_lbl/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\itshape, fill=white, inner sep=1.2pt}
 ]
-    \draw[sysbox] (1.8, -2.85) rectangle (14.5, 2.85);
-    \node[font=\bfseries\scriptsize, text=orange!85!black] at (8.2, 2.58) {PHÂN HỆ SOẠN THẢO VÀ TỰ PHỤC HỒI LỖI LATEX};
+    \draw[sysbox] (1.8, -3.3) rectangle (14.5, 3.4);
+    \node[font=\bfseries\scriptsize, text=orange!85!black, fill=white, inner sep=2.5pt, rounded corners=2pt] at (8.2, 3.1) {PHÂN HỆ SOẠN THẢO VÀ TỰ PHỤC HỒI LỖI LATEX};
 
     \coordinate (scholar) at (0.7, 0.0);
     \pic at (scholar) {umlactor};
@@ -389,11 +395,11 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 
     \node[mainuc] (main) at (4.2, 0.0) {Biên soạn bản thảo và\\tự phục hồi lỗi \LaTeX};
 
-    \node[usecase] (ext1) at (11.5, 2.20) {Xem trước bản in PDF};
-    \node[usecase] (inc1) at (11.5, 1.10) {Soạn thảo mã Monaco Editor};
-    \node[usecase] (inc2) at (11.5, 0.00) {Biên dịch cô lập E2B MicroVM};
-    \node[usecase] (ext2) at (11.5, -1.10) {Tự sửa lỗi ReAct StateGraph};
-    \node[usecase] (inc3) at (11.5, -2.20) {Vá lỗi vi phẫu Surgical Diff};
+    \node[usecase] (ext1) at (11.5, 2.45) {Xem trước bản in PDF};
+    \node[usecase] (inc1) at (11.5, 1.25) {Soạn thảo mã Monaco};
+    \node[usecase] (inc2) at (11.5, 0.00) {Biên dịch cô lập\\E2B MicroVM};
+    \node[usecase] (ext2) at (11.5, -1.25) {Tự sửa lỗi ReAct\\StateGraph};
+    \node[usecase] (inc3) at (11.5, -2.45) {Vá lỗi vi phẫu Surgical Diff};
 
     \draw[line] ([xshift=0.30cm]scholar) -- (main.west);
 

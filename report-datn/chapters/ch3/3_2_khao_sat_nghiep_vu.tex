@@ -53,50 +53,50 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.72, transform shape,
-    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, text width=7.2cm, minimum width=7.2cm},
-    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, text width=7.2cm, minimum width=7.2cm},
+    scale=0.78, transform shape,
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\footnotesize, text width=6.8cm, minimum width=6.8cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4.5pt, font=\linespread{1.0}\selectfont\footnotesize, text width=6.8cm, minimum width=6.8cm},
     arrow_down/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!60},
     trans_arrow/.style={-{Stealth[length=2.4mm]}, line width=1.1pt, draw=teal!80!black, dashed}
 ]
     % Cột AS-IS (Truyền thống)
-    \node[draw=red!80!black, fill=red!12, rounded corners=4pt, font=\bfseries\scriptsize, minimum width=7.2cm, inner sep=4pt] (h_asis) at (-4.2, 3.8) {QUY TRÌNH TRUYỀN THỐNG (AS-IS)};
+    \node[draw=red!80!black, fill=red!12, rounded corners=4pt, font=\bfseries\footnotesize, minimum width=6.8cm, inner sep=4pt] (h_asis) at (-4.4, 3.8) {QUY TRÌNH TRUYỀN THỐNG (AS-IS)};
     
-    \node[box_asis] (a1) at (-4.2, 2.5) {
-        \textbf{Tìm kiếm phân mảnh thủ công}\\
-        \tiny Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
+    \node[box_asis] (a1) at (-4.4, 2.5) {
+        \textbf{Tìm kiếm phân mảnh thủ công}\\[1pt]
+        {\scriptsize\color{black!80} Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF}
     };
-    \node[box_asis] (a2) at (-4.2, 0.9) {
-        \textbf{Đọc PDF và ghi chép rời rạc}\\
-        \tiny Trích xuất thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
+    \node[box_asis] (a2) at (-4.4, 0.9) {
+        \textbf{Đọc PDF và ghi chép rời rạc}\\[1pt]
+        {\scriptsize\color{black!80} Trích xuất thô mất 2 cột; Ảo giác trích dẫn không bằng chứng}
     };
-    \node[box_asis] (a3) at (-4.2, -0.7) {
-        \textbf{Lập bảng đối chiếu thủ công}\\
-        \tiny Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức
+    \node[box_asis] (a3) at (-4.4, -0.7) {
+        \textbf{Lập bảng đối chiếu thủ công}\\[1pt]
+        {\scriptsize\color{black!80} Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức}
     };
-    \node[box_asis] (a4) at (-4.2, -2.3) {
-        \textbf{Soạn thảo và tự dò lỗi LaTeX}\\
-        \tiny Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công
+    \node[box_asis] (a4) at (-4.4, -2.3) {
+        \textbf{Soạn thảo và tự dò lỗi LaTeX}\\[1pt]
+        {\scriptsize\color{black!80} Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công}
     };
 
     % Cột TO-BE (Đề xuất VeriScholar)
-    \node[draw=blue!80!black, fill=blue!12, rounded corners=4pt, font=\bfseries\scriptsize, minimum width=7.2cm, inner sep=4pt] (h_tobe) at (4.2, 3.8) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=4pt, font=\bfseries\footnotesize, minimum width=6.8cm, inner sep=4pt] (h_tobe) at (4.4, 3.8) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
-    \node[box_tobe] (b1) at (4.2, 2.5) {
-        \textbf{Tìm kiếm đa nguồn và Deduplication CAS}\\
-        \tiny Thu thập đa nguồn; Khử trùng lặp mã băm SHA-256
+    \node[box_tobe] (b1) at (4.4, 2.5) {
+        \textbf{Tìm kiếm đa nguồn và Deduplication CAS}\\[1pt]
+        {\scriptsize\color{black!80} Thu thập đa nguồn; Khử trùng lặp mã băm SHA-256}
     };
-    \node[box_tobe] (b2) at (4.2, 0.9) {
-        \textbf{Đọc sâu có minh chứng tọa độ}\\
-        \tiny Agentic Hybrid RAG; Khung vàng BBox 1s ($\text{IoU} \ge 0{,}85$)
+    \node[box_tobe] (b2) at (4.4, 0.9) {
+        \textbf{Đọc sâu có minh chứng tọa độ}\\[1pt]
+        {\scriptsize\color{black!80} Agentic Hybrid RAG; Khung vàng BBox 1s ($\text{IoU} \ge 0{,}85$)}
     };
-    \node[box_tobe] (b3) at (4.2, -0.7) {
-        \textbf{Mạng tri thức tự động (GraphRAG)}\\
-        \tiny Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
+    \node[box_tobe] (b3) at (4.4, -0.7) {
+        \textbf{Mạng tri thức tự động (GraphRAG)}\\[1pt]
+        {\scriptsize\color{black!80} Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời}
     };
-    \node[box_tobe] (b4) at (4.2, -2.3) {
-        \textbf{Agent tự phục hồi bản thảo LaTeX}\\
-        \tiny Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $96{,}0\%$
+    \node[box_tobe] (b4) at (4.4, -2.3) {
+        \textbf{Agent tự phục hồi bản thảo LaTeX}\\[1pt]
+        {\scriptsize\color{black!80} Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $96{,}0\%$}
     };
 
     % Mũi tên tuần tự dọc
@@ -110,11 +110,11 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     \draw[arrow_down] (b2) -- (b3);
     \draw[arrow_down] (b3) -- (b4);
 
-    % Mũi tên chuyển đổi giữa 2 luồng
-    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Deduplication};
-    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Minh chứng};
-    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Tự động};
-    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Tự sửa};
+    % Mũi tên chuyển đổi giữa 2 luồng (Huy hiệu bo tròn rõ ràng, chữ sắc nét khi in A4)
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=teal!10, draw=teal!80!black, rounded corners=3pt, inner sep=2.5pt, font=\scriptsize\bfseries, text=teal!90!black] {Deduplication};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=teal!10, draw=teal!80!black, rounded corners=3pt, inner sep=2.5pt, font=\scriptsize\bfseries, text=teal!90!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=teal!10, draw=teal!80!black, rounded corners=3pt, inner sep=2.5pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=teal!10, draw=teal!80!black, rounded corners=3pt, inner sep=2.5pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự sửa};
 \end{tikzpicture}
 \caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
 \label{fig:workflow_as_is_to_be}
