@@ -155,3 +155,68 @@ def test_standard_spacing_and_no_titlespacing_override_in_main():
     assert "\\titlespacing*" not in main_tex, (
         "main.tex không được chứa \\titlespacing* ghi đè nén khoảng cách tiêu đề"
     )
+
+
+def test_usecase_3_4_3_2_and_fig_3_5_on_page_32():
+    tex_path = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
+    content = tex_path.read_text(encoding="utf-8")
+
+    # Kiểm tra không có \clearpage trước 3.4.3.2
+    target_heading = (
+        "\\subsubsection{Phân tích Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}"
+    )
+    pos_heading = content.find(target_heading)
+    assert pos_heading != -1, "Không tìm thấy đề mục 3.4.3.2 trong tệp TeX"
+
+    # Vùng 100 ký tự trước heading không được có \clearpage
+    pre_heading = content[max(0, pos_heading - 100) : pos_heading]
+    assert "\\clearpage" not in pre_heading, (
+        "Không được dùng \\clearpage trước đề mục 3.4.3.2 để kéo nội dung lên trang 32"
+    )
+
+    pdf_path = Path("report-datn/main.pdf")
+    if pdf_path.exists():
+        res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+        pages = res.stdout.split("\x0c")
+        # Tìm trang chứa Bảng 3-2 (trong phần thân bài, bỏ qua danh mục bảng biểu ở frontmatter)
+        p_tab_3_2 = next(
+            (
+                i + 1
+                for i, p in enumerate(pages)
+                if i >= 18
+                and (
+                    "Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''" in p
+                    or "Bảng 3-2:" in p
+                )
+            ),
+            None,
+        )
+        assert p_tab_3_2 is not None, "Không tìm thấy Bảng 3-2 trong PDF"
+        page_text = pages[p_tab_3_2 - 1]
+        assert "3.4.3.2" in page_text, "Trang 32 phải chứa đề mục 3.4.3.2"
+        assert "Hình 3-5" in page_text, "Trang 32 phải chứa Hình 3-5"
+
+
+def test_sequence_diagrams_no_newpage_and_flow():
+    tex_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
+    content = tex_path.read_text(encoding="utf-8")
+    assert "\\newpage" not in content, (
+        "Không được dùng \\newpage cưỡng bức trong 3_5_bieu_do_tuan_tu.tex"
+    )
+
+    pdf_path = Path("report-datn/main.pdf")
+    if pdf_path.exists():
+        res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+        pages = res.stdout.split("\x0c")
+        p_fig_3_9 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-9:" in p), None)
+        p_fig_3_10 = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-10:" in p), None
+        )
+        p_fig_3_11 = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-11:" in p), None
+        )
+        assert p_fig_3_9 is not None and p_fig_3_10 is not None and p_fig_3_11 is not None
+        assert p_fig_3_9 == p_fig_3_10 == p_fig_3_11, (
+            f"Hình 3-9 (trang {p_fig_3_9}), Hình 3-10 (trang {p_fig_3_10}), "
+            f"Hình 3-11 (trang {p_fig_3_11}) phải cùng nằm trên trang 37!"
+        )
