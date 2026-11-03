@@ -208,6 +208,7 @@ def test_sequence_diagrams_no_newpage_and_flow():
     if pdf_path.exists():
         res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
         pages = res.stdout.split("\x0c")
+        p_fig_3_8 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-8:" in p), None)
         p_fig_3_9 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-9:" in p), None)
         p_fig_3_10 = next(
             (i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-10:" in p), None
@@ -215,8 +216,64 @@ def test_sequence_diagrams_no_newpage_and_flow():
         p_fig_3_11 = next(
             (i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-11:" in p), None
         )
-        assert p_fig_3_9 is not None and p_fig_3_10 is not None and p_fig_3_11 is not None
-        assert p_fig_3_9 == p_fig_3_10 == p_fig_3_11, (
-            f"Hình 3-9 (trang {p_fig_3_9}), Hình 3-10 (trang {p_fig_3_10}), "
-            f"Hình 3-11 (trang {p_fig_3_11}) phải cùng nằm trên trang 37!"
+        assert p_fig_3_8 is not None and p_fig_3_9 is not None
+        assert p_fig_3_10 is not None and p_fig_3_11 is not None
+        assert p_fig_3_8 == p_fig_3_9, (
+            f"Hình 3-8 (trang {p_fig_3_8}) và Hình 3-9 (trang {p_fig_3_9}) "
+            "phải cùng nằm trên trang 36!"
+        )
+        assert p_fig_3_10 == p_fig_3_11, (
+            f"Hình 3-10 (trang {p_fig_3_10}) và Hình 3-11 (trang {p_fig_3_11}) "
+            "phải cùng nằm trên trang 37!"
+        )
+
+
+def test_usecase_3_4_3_3_and_fig_3_6_on_page_33():
+    tex_path = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
+    content = tex_path.read_text(encoding="utf-8")
+
+    target_heading = (
+        "\\subsubsection{Phân tích Use Case ``Khai phá Đồ thị tri thức và biên soạn tri thức học"
+        " thuật''}"
+    )
+    pos_heading = content.find(target_heading)
+    assert pos_heading != -1, "Không tìm thấy đề mục 3.4.3.3 trong tệp TeX"
+
+    pre_heading = content[max(0, pos_heading - 100) : pos_heading]
+    assert "\\clearpage" not in pre_heading, (
+        "Không được dùng \\clearpage trước đề mục 3.4.3.3 để kéo nội dung lên trang 33"
+    )
+
+    pdf_path = Path("report-datn/main.pdf")
+    if pdf_path.exists():
+        res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+        pages = res.stdout.split("\x0c")
+        p_tab_3_3 = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "Bảng 3-3:" in p),
+            None,
+        )
+        assert p_tab_3_3 is not None, "Không tìm thấy Bảng 3-3 trong PDF"
+        page_text = pages[p_tab_3_3 - 1]
+        assert "3.4.3.3" in page_text, "Trang 33 phải chứa đề mục 3.4.3.3"
+        assert "Hình 3-6" in page_text, "Trang 33 phải chứa Hình 3-6"
+
+
+def test_toc_three_pages_no_orphan_line():
+    pdf_path = Path("report-datn/main.pdf")
+    if pdf_path.exists():
+        res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+        pages = res.stdout.split("\x0c")
+
+        # Trang 9 (ix), 10 (x), 11 (xi) là 3 trang mục lục
+        assert "MỤC LỤC" in pages[8], "Trang 9 (ix) phải là bắt đầu Mục lục"
+        assert "TÀI LIỆU THAM KHẢO" in pages[10], (
+            "Trang 11 (xi) phải chứa 'TÀI LIỆU THAM KHẢO', không để tòi sang trang mới!"
+        )
+
+        # Trang 12 (xii) phải là Danh mục hình ảnh, không chứa dòng lẻ của Mục lục
+        assert "DANH MỤC HÌNH ẢNH" in pages[11], (
+            "Trang 12 (xii) phải là Danh mục hình ảnh, không được chứa dòng lẻ của Mục lục!"
+        )
+        assert "TÀI LIỆU THAM KHẢO" not in pages[11], (
+            "Trang 12 (xii) không được chứa dòng lẻ 'TÀI LIỆU THAM KHẢO'!"
         )
