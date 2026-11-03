@@ -24,7 +24,7 @@ def test_csdl_structure_streamlined():
     assert "\\label{tab:spec_chunks}" in csdl_tex
     assert "\\label{tab:spec_graph_nodes}" in csdl_tex
     assert "\\label{tab:spec_drafts}" in csdl_tex
-    assert "research_sessions(id)" in csdl_tex
+    assert "research\\_sessions(id)" in csdl_tex
     assert "document\\_storage\\_blobs(id)" in csdl_tex
 
 
