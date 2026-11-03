@@ -2,7 +2,7 @@
 \section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
 \label{sec:bieu_do_tuan_tu}
 
-Biểu đồ tuần tự (Sequence Diagram) được sử dụng để mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng và thành phần trong hệ thống khi thực thi một Use Case cụ thể. Nhằm làm rõ cơ chế phối hợp giữa giao diện người dùng, lõi nghiệp vụ và các dịch vụ hạ tầng, tiểu mục này trình bày bốn chuỗi quy trình tuần tự đại diện cho 4 Không gian nghiên cứu của \VS. Mỗi quy trình được trực quan hóa dưới dạng chuỗi các giai đoạn thực thi liên hoàn (\textit{Execution Stage Pipeline}) với tỷ lệ hình học chuẩn mực, các khối chức năng cô đọng và nhãn thông điệp sắc nét, bảo đảm tính tường minh và thẩm mỹ tối đa khi in ấn tài liệu.
+Biểu đồ tuần tự (Sequence Diagram) mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng khi thực thi Use Case. Nhằm làm rõ cơ chế phối hợp giữa giao diện, lõi nghiệp vụ và dịch vụ hạ tầng, tiểu mục này trình bày bốn chuỗi quy trình đại diện cho 4 Không gian nghiên cứu của \VS dưới dạng chuỗi các giai đoạn thực thi liên hoàn (\textit{Execution Stage Pipeline}) chuẩn mực và cô đọng.
 
 \subsection{Biểu đồ tuần tự Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsec:seq_kham_pha}
@@ -12,9 +12,9 @@ Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã b
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.84, transform shape,
-    stage_card/.style={draw=blue!80!black, fill=blue!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.75cm},
-    stage_highlight/.style={draw=blue!90!black, fill=blue!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.75cm},
+    scale=0.80, transform shape,
+    stage_card/.style={draw=blue!80!black, fill=blue!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.60cm},
+    stage_highlight/.style={draw=blue!90!black, fill=blue!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.60cm},
     stage_arrow/.style={-{Stealth[length=2.5mm]}, line width=1.05pt, draw=black!75},
     arrow_lbl/.style={font=\fontsize{5.5pt}{6.5pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=blue!90!black}
 ]
@@ -56,8 +56,6 @@ Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã b
 \end{figure}
 \FloatBarrier
 
-\FloatBarrier
-\newpage
 \subsection{Biểu đồ tuần tự Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsec:seq_doc_sau}
 
