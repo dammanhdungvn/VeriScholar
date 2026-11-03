@@ -2,8 +2,8 @@
 \section{Phân tích các ca sử dụng (Use Case) của hệ thống}
 \label{sec:phan_tich_usecase}
 
-\subsection{Các tác nhân và danh mục ca sử dụng của hệ thống}
-\label{sec:tac_nhan_usecase}
+\subsection{Biểu đồ Use Case tổng quan của hệ thống}
+\label{subsec:uc_tong_quan}
 
 Căn cứ vào khảo sát nghiệp vụ và mô hình kiến trúc Lục giác đã xác lập tại Mục~\ref{sec:khao_sat_nghiep_vu} và Mục~\ref{sec:thiet_ke_kien_truc}, hệ thống \VS được thiết kế phục vụ hai tác nhân chính (Actor):
 \begin{itemize}
@@ -11,40 +11,7 @@ Căn cứ vào khảo sát nghiệp vụ và mô hình kiến trúc Lục giác 
     \item \textbf{Quản trị viên (Administrator / DevOps):} Chịu trách nhiệm giám sát và bảo đảm an toàn hạ tầng: kích hoạt các kịch bản kiểm thử định lượng tự động qua điểm cuối REST vận hành (\texttt{/api/v1/evaluations/run-benchmark}), theo dõi \textit{Trace Logs} và chi phí Token suy luận trên Langfuse Cloud, giám sát tài nguyên máy chủ đám mây và hộp cát MicroVM cách ly.
 \end{itemize}
 
-Danh mục 12 ca sử dụng chính đối với từng tác nhân được tổng hợp trong Bảng~\ref{tab:actors_usecases}.
-
-\begin{table}[!htbp]
-\centering
-\singlespacing
-\small
-\caption{Các Use Case chính đối với mỗi Actor trong hệ thống VeriScholar}
-\label{tab:actors_usecases}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.8cm}|>{\raggedright\arraybackslash}X|}
-\hline
-\textbf{STT} & \textbf{Tên Actor} & \centering\textbf{Use Case} \tabularnewline
-\hline
-1 & \multirow{8}{=}{\centering\textbf{Học giả (Scholar)}} & Đăng ký / Đăng nhập và xác thực tài khoản \\ \cline{3-3}
-2 & & Tìm kiếm và thu thập tài liệu học thuật đa nguồn \\ \cline{3-3}
-3 & & Tải tài liệu cá nhân và Deduplication lưu trữ CAS \\ \cline{3-3}
-4 & & Đọc sâu tài liệu PDF hai cột và Hỏi đáp với AI \\ \cline{3-3}
-5 & & Kiểm chứng trích dẫn tọa độ Bounding Box trực quan \\ \cline{3-3}
-6 & & Khai phá và truy vấn Đồ thị tri thức (GraphRAG) \\ \cline{3-3}
-7 & & Quản lý hồ sơ định danh ORCID và Kho khóa API BYOK \\ \cline{3-3}
-8 & & Biên soạn bản thảo LaTeX và Tự phục hồi lỗi biên dịch \\
-\hline
-9 & \multirow{4}{=}{\centering\textbf{Quản trị viên (Admin)}} & Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
-10 & & Giám sát sức khỏe hạ tầng hộp cát E2B MicroVM \\ \cline{3-3}
-11 & & Theo dõi Trace mô hình ngôn ngữ và Chi phí Token \\ \cline{3-3}
-12 & & Cấu hình chính sách lưu trữ và an toàn dữ liệu \\
-\hline
-\end{tabularx}
-\end{table}
-
-\subsection{Biểu đồ Use Case tổng quan của hệ thống}
-\label{subsec:uc_tong_quan}
-
-Biểu đồ Use Case tổng quan (Use Case Diagram) minh họa mối quan hệ tương tác giữa các tác nhân và các phân hệ của \VS được trình bày trong Hình~\ref{fig:usecase_overview}. Trong đó, toàn bộ các chức năng nghiên cứu và quản lý khóa API cá nhân (BYOK) đều thuộc quyền sở hữu riêng của tác nhân Học giả, trong khi tác nhân Quản trị viên chỉ kết nối với các ca sử dụng giám sát và quản trị vận hành độc lập.
+Mối quan hệ tương tác trực quan giữa các tác nhân và các phân hệ của \VS được mô hình hóa trong Biểu đồ Use Case tổng quan (Hình~\ref{fig:usecase_overview}). Toàn bộ các chức năng nghiên cứu chuyên sâu và quản lý khóa API cá nhân (BYOK) đều thuộc quyền sở hữu riêng của tác nhân Học giả, trong khi tác nhân Quản trị viên chỉ kết nối với các ca sử dụng giám sát và quản trị vận hành độc lập.
 
 \begin{figure}[!htbp]
 \centering
@@ -104,6 +71,39 @@ Biểu đồ Use Case tổng quan (Use Case Diagram) minh họa mối quan hệ 
 \caption{Biểu đồ Use Case tổng quan của hệ thống VeriScholar}
 \label{fig:usecase_overview}
 \end{figure}
+
+\subsection{Các tác nhân và danh mục ca sử dụng của hệ thống}
+\label{sec:tac_nhan_usecase}
+
+Trên cơ sở biểu đồ tổng quan, danh mục 12 ca sử dụng chính đối với từng tác nhân trong hệ thống \VS được tổng hợp và phân loại chi tiết trong Bảng~\ref{tab:actors_usecases}.
+
+\begin{table}[!htbp]
+\centering
+\singlespacing
+\small
+\caption{Các Use Case chính đối với mỗi Actor trong hệ thống VeriScholar}
+\label{tab:actors_usecases}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.8cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \textbf{Tên Actor} & \centering\textbf{Use Case} \tabularnewline
+\hline
+1 & \multirow{8}{=}{\centering\textbf{Học giả (Scholar)}} & Đăng ký / Đăng nhập và xác thực tài khoản \\ \cline{3-3}
+2 & & Tìm kiếm và thu thập tài liệu học thuật đa nguồn \\ \cline{3-3}
+3 & & Tải tài liệu cá nhân và Deduplication lưu trữ CAS \\ \cline{3-3}
+4 & & Đọc sâu tài liệu PDF hai cột và Hỏi đáp với AI \\ \cline{3-3}
+5 & & Kiểm chứng trích dẫn tọa độ Bounding Box trực quan \\ \cline{3-3}
+6 & & Khai phá và truy vấn Đồ thị tri thức (GraphRAG) \\ \cline{3-3}
+7 & & Quản lý hồ sơ định danh ORCID và Kho khóa API BYOK \\ \cline{3-3}
+8 & & Biên soạn bản thảo LaTeX và Tự phục hồi lỗi biên dịch \\
+\hline
+9 & \multirow{4}{=}{\centering\textbf{Quản trị viên (Admin)}} & Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
+10 & & Giám sát sức khỏe hạ tầng hộp cát E2B MicroVM \\ \cline{3-3}
+11 & & Theo dõi Trace mô hình ngôn ngữ và Chi phí Token \\ \cline{3-3}
+12 & & Cấu hình chính sách lưu trữ và an toàn dữ liệu \\
+\hline
+\end{tabularx}
+\end{table}
 
 \subsection{Phân tích các Use Case phía Học giả}
 \label{subsec:uc_scholar}
