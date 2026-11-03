@@ -47,3 +47,5 @@ uv run pytest                                        # Cổng 2: Toàn bộ Back
 npm --prefix apps/web run test                       # Cổng 3: Frontend Unit Tests
 npm --prefix apps/web run build                      # Cổng 4: Production Build Giao Diện
 ```
+## 5. Nhiệm vụ ấn phẩm học thuật
+Mọi tác vụ liên quan đến tài liệu tại thư mục `./report-datn/` tuân thủ hướng dẫn tại `./report-datn/AGENTS.md`.

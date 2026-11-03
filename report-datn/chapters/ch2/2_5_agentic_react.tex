@@ -31,7 +31,7 @@ Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy
     \item Lược đồ trạng thái dùng chung (\textit{Shared State Schema}): Định nghĩa cấu trúc dữ liệu nhất quán của phiên nghiên cứu (mã nguồn tài liệu, lịch sử thông điệp, danh sách dẫn chứng và nhật ký biên dịch).
     \item Tập các nút tính toán (\textit{Nodes}): Mỗi nút thực hiện một đơn nguyên nghiệp vụ độc lập, nhận trạng thái hiện tại và trả về bản ghi biến đổi trạng thái tương ứng.
     \item Cạnh điều hướng có điều kiện (\textit{Conditional Edges}): Đóng vai trò là các bộ định tuyến logic. Sau mỗi bước thực thi, hàm đánh giá điều kiện sẽ quyết định chuyển trạng thái sang bước tiếp theo hoặc quay lui lại vòng lặp để sửa lỗi.
-    \item Cơ chế lưu vết trạng thái bền vững (\textit{Persistence Checkpointing}): Toàn bộ cây trạng thái được lưu tạm sau từng bước thực thi, cho phép hệ thống khôi phục phiên làm việc sau sự cố mà không làm mất dữ liệu nghiên cứu của học giả.
+    \item Lưu vết trạng thái (\textit{Persistence Checkpointing}): Cây trạng thái lưu tạm sau mỗi bước, bảo đảm khôi phục phiên làm việc tức thì khi xảy ra sự cố.
 \end{itemize}
 
 \subsection{Môi trường máy ảo MicroVM E2B cô lập cấp hệ điều hành và vòng lặp tự sửa lỗi LaTeX}
@@ -49,58 +49,58 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.70, transform shape,
-    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=0.9pt, text width=5.2cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
-    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
-    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=0.9pt, text width=4.2cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
-    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=5pt, line width=1pt, text width=4.2cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
-    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=0.9pt, text width=4.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
-    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.45, line width=0.9pt, text width=1.9cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
-    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1pt, text width=4.8cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
-    arrowstyle/.style={-{Stealth[length=2.0mm]}, line width=0.9pt, draw=black!85},
-    looparrow/.style={-{Stealth[length=2.0mm]}, line width=0.9pt, draw=red!80!black, dashed}
+    scale=0.76, transform shape,
+    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.45, line width=1pt, text width=2.0cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
+    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
+    looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
 ]
     % 1. Bản thảo LaTeX đầu vào
-    \node[box_query] (input) at (0, 2.0) {
+    \node[box_query] (input) at (0, 2.7) {
         Bản thảo \LaTeX\ của học giả\\[1pt]
         \scriptsize\normalfont (Mã nguồn gặp lỗi cú pháp)
     };
 
     % 2. Tác nhân ReAct
-    \node[box_react] (agent) at (-4.7, 0.6) {
+    \node[box_react] (agent) at (-5.0, 0.9) {
         TÁC NHÂN ReAct (LLM)\\[2pt]
         \scriptsize\normalfont \textbf{Thought:} Phân tích log lỗi chi tiết\\
         Sinh bản vá sửa cú pháp \LaTeX
     };
 
     % 3. Hành động (Action)
-    \node[box_action] (action) at (4.7, 0.6) {
+    \node[box_action] (action) at (5.0, 0.9) {
         HÀNH ĐỘNG (ACTION)\\[2pt]
         \scriptsize\normalfont Gọi công cụ biên dịch\\
         \texttt{compile\_latex(source)}
     };
 
     % 4. E2B MicroVM Sandbox
-    \node[box_sandbox] (sandbox) at (4.7, -1.1) {
+    \node[box_sandbox] (sandbox) at (5.0, -1.6) {
         E2B MicroVM Sandbox\\[2pt]
         \scriptsize\normalfont Môi trường Linux cô lập cấp nhân\\
         Chạy \texttt{xelatex -halt-on-error}
     };
 
     % 5. Quan sát (Observation)
-    \node[box_obs] (obs) at (-4.7, -1.1) {
+    \node[box_obs] (obs) at (-5.0, -1.6) {
         QUAN SÁT (OBSERVATION)\\[2pt]
         \scriptsize\normalfont Thu thập Error Log biên dịch\\
         \texttt{Missing package / Syntax error}
     };
 
     % 6. Nút quyết định (Decision)
-    \node[decision_node] (cond) at (0, -1.1) {
+    \node[decision_node] (cond) at (0, -1.6) {
         Biên dịch\\thành công?\\(Exit 0)
     };
 
     % 7. Kết quả hoàn thành (Final Answer)
-    \node[box_final] (final) at (0, -2.9) {
+    \node[box_final] (final) at (0, -4.5) {
         Tài liệu PDF hoàn chỉnh\\[1pt]
         \scriptsize\normalfont Kết xuất thành công $\text{exit}=0$ (Hiển thị bản in)
     };
@@ -126,21 +126,21 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \FloatBarrier
 \subsection{Mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (BYOK) và chuẩn mã hóa AES-256-GCM}
 \label{subsec:byok_aes_gcm}
-Nhằm bảo vệ quyền riêng tư và tự chủ tài chính cho học giả, hệ thống áp dụng mô hình quản lý khóa tự cấp Bring Your Own Key (\textit{BYOK}). Người dùng trực tiếp cung cấp khóa API từ nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
+Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp (\textit{BYOK}). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
 
-Khóa API được mã hóa bảo vệ theo chuẩn AEAD với thuật toán AES-256-GCM \cite{dworkin2007}:
-\vspace{-4pt}
+Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM \cite{dworkin2007}:
+\vspace{-6pt}
 \begin{equation}
 \label{eq:aes_gcm}
 C = \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad T = \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0)
 \end{equation}
-\vspace{-4pt}
-trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (\textit{In-Memory Ephemeral Decryption}): khóa chỉ giải mã tạm thời trong RAM khi thực thi và giải phóng tức thì, bảo đảm không lưu vết trên đĩa hay nhật ký máy chủ.
+\vspace{-6pt}
+trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (\textit{In-Memory Ephemeral Decryption}): khóa chỉ giải mã tạm thời trong RAM khi gọi API và giải phóng tức thì, bảo đảm không lưu vết trên đĩa.
 
 \subsection{Nền tảng quan sát vận hành và truy vết suy luận Langfuse}
 \label{subsec:langfuse_tracing}
-Nhằm bảo đảm tính minh bạch và kiểm toán các quyết định suy luận của AI, hệ thống tích hợp nền tảng quan sát vận hành Langfuse:
+Nhằm bảo đảm tính minh bạch và kiểm toán suy luận AI, hệ thống tích hợp nền tảng quan sát vận hành Langfuse:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item Cây truy vết phân tầng (\textit{Hierarchical Tracing}): Phân rã mỗi phiên tương tác thành Dấu vết tổng thể (\textit{Trace}), gọi công cụ (\textit{Spans}) và các lượt tạo sinh (\textit{Generations}) kèm siêu dữ liệu token tiêu thụ, hoàn toàn độc lập với vùng nhớ giải mã khóa BYOK.
-    \item Giám sát độ trễ và chi phí thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (\textit{TTFT}) qua SSE, phân tích chi phí tài chính chi tiết theo từng mô hình giúp học giả chủ động quản lý ngân sách.
+    \item Truy vết phân tầng (\textit{Hierarchical Tracing}): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
+    \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (\textit{TTFT}) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
 \end{itemize}

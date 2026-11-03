@@ -51,11 +51,9 @@ def test_fig2_4_loop_and_label_styling():
     )
 
     # Kiểm tra hộp final answer được dời xuống thấp để có đủ khoảng hở cho mũi tên thẳng đứng
-    assert (
-        "(final) at (0, -4.5)" in content
-        or "(final) at (0, -4.4)" in content
-        or "(final) at (0, -2.9)" in content
-    ), "Hộp final answer cần đặt tại vị trí hợp lệ tạo khe hở cho mũi tên Yes"
+    assert "(final) at (0, -4.5)" in content or "(final) at (0, -4.4)" in content, (
+        "Hộp final answer cần đặt tại vị trí hợp lệ tạo khe hở cho mũi tên Yes"
+    )
 
     # Kiểm tra nhãn Yes (Exit 0) đặt lệch sườn phải không đè lên mũi tên hay viền hộp
     assert "Yes (Exit 0)" in content and ("right=10pt" in content or "right=8pt" in content), (
