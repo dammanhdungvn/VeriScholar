@@ -49,6 +49,10 @@
 \input{frontmatter/de_cuong_datn}
 \cleardoublepage
 
+% Lời cảm ơn (Trang tri ân trang trọng)
+\input{frontmatter/loi_cam_on}
+\cleardoublepage
+
 % Kích hoạt lại fancy headers từ Mục lục trở đi
 \setupdatnheaders
 \pagestyle{fancy}
@@ -67,19 +71,21 @@
 
 % ------------------------------------------------------------------------------
 % II. PHẦN NỘI DUNG (MAIN BODY - Đánh số trang Ả Rập 1, 2, 3...)
-% Bắt đầu từ Lời cảm ơn (trang 1), Lời mở đầu (trang 2), Chương 1 (trang 3)...
+% Bắt đầu từ Chương 1 (trang 1) chuẩn mực theo chỉ đạo của GVHD
 % ------------------------------------------------------------------------------
 \cleardoublepage
 \pagenumbering{arabic}
 \setcounter{page}{1}
+\setstretch{1.02}
+\setlength{\parskip}{2.0pt plus 0.5pt minus 0.5pt}
+\titlespacing*{\section}{0pt}{6pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
+\titlespacing*{\subsection}{0pt}{4pt plus 1pt minus 1pt}{2pt plus 1pt minus 1pt}
+\titlespacing*{\subsubsection}{0pt}{3pt plus 1pt minus 1pt}{1pt plus 1pt minus 1pt}
+\setlength{\floatsep}{4pt plus 1pt minus 1pt}
+\setlength{\textfloatsep}{6pt plus 1pt minus 2pt}
+\setlength{\intextsep}{4pt plus 1pt minus 1pt}
 
-% Lời cảm ơn (Trang 1)
-\input{frontmatter/loi_cam_on}
-
-% Lời mở đầu (Trang 2)
-\input{frontmatter/loi_mo_dau}
-
-% Chương 1: Tổng quan về đề tài (Trang 3 trở đi)
+% Chương 1: Tổng quan về đề tài (Trang 1 trở đi)
 \input{chapters/ch1_tong_quan}
 
 % Chương 2: Cơ sở lý thuyết và công nghệ sử dụng
@@ -99,4 +105,8 @@
 % ------------------------------------------------------------------------------
 \input{chapters/tai_lieu_tham_khao}
 
+% Phụ lục A: Từ điển Cơ sở Dữ liệu Chi tiết
+\input{chapters/phu_luc}
+
 \end{document}
+

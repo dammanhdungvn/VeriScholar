@@ -21,9 +21,19 @@
 % Thụt lề đầu dòng đoạn văn 1.0cm và khoảng cách đoạn văn chuẩn học thuật
 \setlength{\parindent}{1.0cm}
 \setlength{\parskip}{3pt plus 1pt minus 1pt}
+\emergencystretch=2.5em
 
 % Chú thích chân trang (Footnote) đúng cỡ 10pt
 \renewcommand{\footnotesize}{\fontsize{10}{13}\selectfont}
+
+% Thiết lập thông số float cho phép bố cục chặt chẽ
+\renewcommand{\topfraction}{0.88}
+\renewcommand{\bottomfraction}{0.88}
+\renewcommand{\textfraction}{0.12}
+\renewcommand{\floatpagefraction}{0.75}
+\setlength{\floatsep}{8pt plus 2pt minus 2pt}
+\setlength{\textfloatsep}{10pt plus 2pt minus 3pt}
+\setlength{\intextsep}{8pt plus 2pt minus 2pt}
 
 % 3. Phông chữ XeLaTeX hỗ trợ tiếng Việt Unicode bản địa: 100% Times New Roman chuẩn
 \usepackage{fontspec}
@@ -104,7 +114,7 @@
 
 \newcommand{\setupdatnheaders}{%
     \fancyhf{}%
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\normalfont\upshape\thepage}%
     \renewcommand{\headrulewidth}{0pt}%
     \renewcommand{\footrulewidth}{0pt}%
     \renewcommand{\headrule}{}%
@@ -127,7 +137,7 @@
 % Chỉ hiển thị số trang La Mã ở chân trang góc phải, đứng (không in nghiêng)
 \fancypagestyle{adminform}{%
     \fancyhf{}%
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\thepage}%
+    \fancyfoot[R]{\fontsize{10}{12}\selectfont\normalfont\upshape\thepage}%
     \renewcommand{\headrulewidth}{0pt}%
     \renewcommand{\footrulewidth}{0pt}%
     \renewcommand{\headrule}{}%
@@ -188,10 +198,11 @@
 \renewcommand{\cfttabpresnum}{Bảng~}
 \renewcommand{\cfttabaftersnum}{\ }
 \newlength{\cfttablen}
-\settowidth{\cfttablen}{Bảng~9-99\ }
+\settowidth{\cfttablen}{Bảng~A-99\enspace}
 \setlength{\cfttabnumwidth}{\cfttablen}
 \cftsetindents{table}{0pt}{\cfttablen}
 \renewcommand{\cfttableader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforetabskip}{1.0pt}
 
 % --- Cấu hình Danh mục Hình ảnh (LoF): Chữ Hình và STT không in đậm, bỏ dấu hai chấm ---
 \renewcommand{\cftfigpresnum}{Hình~}
@@ -201,6 +212,7 @@
 \setlength{\cftfignumwidth}{\cftfiglen}
 \cftsetindents{figure}{0pt}{\cftfiglen}
 \renewcommand{\cftfigleader}{\cftdotfill{\cftdotsep}}
+\setlength{\cftbeforefigskip}{1.0pt}
 
 % 7. Phân cấp đề mục và độ sâu mục lục (Mục lục tối đa 3 cấp: Chapter, Section, Subsection)
 \usepackage{titlesec}

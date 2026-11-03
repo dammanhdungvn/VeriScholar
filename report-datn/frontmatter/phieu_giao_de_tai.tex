@@ -6,6 +6,7 @@
 % ==============================================================================
 
 \thispagestyle{adminform}
+\enlargethispage{1.5\baselineskip}
 \phantomsection
 \addcontentsline{toc}{chapter}{PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP}
 
@@ -21,15 +22,16 @@
 \vspace{0.02cm}
 
 \noindent
-\begin{tabular}{@{}p{2.4cm} p{12.4cm}@{}}
+\begin{tabular}{@{}p{2.4cm} p{12.15cm}@{}}
 \textbf{Tên đề tài:} & Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn \\[0.03cm]
 \end{tabular}
 
 \noindent
-\begin{tabular}{@{}p{7.4cm} p{7.4cm}@{}}
+\begin{tabular}{@{}p{7.25cm} p{7.25cm}@{}}
 Sinh viên: Đàm Mạnh Dũng & Mã sinh viên: 2221050359 \\[0.02cm]
 Điện thoại: 0978461865 & Email: dammanhdungvn@gmail.com \\[0.02cm]
 Lớp: DCCTCT67\_09B & Hệ đào tạo: Đại học chính quy \\[0.02cm]
+Ngành: Công nghệ thông tin & Chuyên ngành: Hệ thống thông tin \\[0.02cm]
 Nơi thực hiện: Trường ĐH Mỏ -- Địa chất & Thời gian làm ĐATN: Năm 2026 \\
 \end{tabular}
 
@@ -49,7 +51,7 @@ Nơi thực hiện: Trường ĐH Mỏ -- Địa chất & Thời gian làm ĐATN
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item[\textbf{--}] \textbf{Về sản phẩm:}
     \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
-        \item Phân hệ Khám phá: Tìm kiếm học thuật đa nguồn (Exa AI, arXiv, Semantic Scholar).
+        \item Phân hệ Khám phá: Tìm kiếm học thuật đa nguồn (arXiv, Semantic Scholar, CrossRef) và lưu trữ CAS SHA-256.
         \item Phân hệ Đọc sâu: Đọc PDF Canvas hai cột kết hợp kiểm chứng tọa độ Bounding Box.
         \item Phân hệ GraphRAG: Đồ thị tri thức 4 thực thể (Paper, Method, Dataset, MetricResult).
         \item Phân hệ Soạn thảo: Soạn thảo LaTeX trực tuyến, tự sửa lỗi trong sandbox E2B.
@@ -81,25 +83,25 @@ Nơi thực hiện: Trường ĐH Mỏ -- Địa chất & Thời gian làm ĐATN
     \item[--] Thiết kế kiến trúc Lục giác, mô hình CSDL quan hệ PostgreSQL kết hợp véc-tơ pgvector.
     \item[--] Cài đặt hệ thống Backend (FastAPI, pgvector, LangGraph) và Frontend (TypeScript, React 19).
     \item[--] Tích hợp sandbox E2B MicroVM biên dịch LaTeX cô lập an toàn, ngăn chặn mã độc hại.
-    \item[--] Triển khai toàn bộ quy trình kiểm thử TDD với hơn 330 kịch bản kiểm thử tự động.
+    \item[--] Triển khai toàn bộ quy trình kiểm thử TDD với 580 kịch bản kiểm thử tự động (340 Backend pytest và 240 Frontend vitest, 100\% pass).
     \item[--] Đánh giá thực nghiệm hệ thống trên các bài báo thực tế, đo độ trễ và độ chính xác tọa độ.
     \item[--] Viết báo cáo tổng kết đồ án tốt nghiệp, chuẩn bị slide thuyết trình và đóng gói sản phẩm.
 \end{itemize}
 
-\vspace{0.25cm}
+\vspace{0.20cm}
 \noindent \textbf{4. Lời cam đoan của sinh viên:}
 \vspace{0.04cm}
 
-Em -- Đàm Mạnh Dũng -- cam kết ĐATN là công trình nghiên cứu của bản thân em, làm dưới sự hướng dẫn của cô Vũ Lan Phương. Các kết quả nêu trên đồ án hoàn toàn là trung thực, không phải là sao chép toàn văn của bất kì công trình nào khác.
+Tôi -- Đàm Mạnh Dũng -- cam đoan ĐATN là công trình nghiên cứu độc lập của bản thân, được thực hiện dưới sự hướng dẫn của ThS. Vũ Lan Phương. Mọi kết quả, số liệu và mã nguồn trình bày trong đồ án hoàn toàn trung thực, không sao chép nguyên văn bất kỳ công trình nào khác.
 
-\vspace{0.35cm}
+\vspace{0.25cm}
 \hfill \textit{Hà Nội, ngày\dots\dots tháng\dots\dots năm 2026}
-\vspace{0.20cm}
+\vspace{0.15cm}
 
 \begin{center}
-\begin{tabular}{>{\centering\arraybackslash}p{7.0cm} >{\centering\arraybackslash}p{7.0cm}}
-  \textbf{Xác nhận của GVHD} & \textbf{Tác giả ĐATN} \\[0.2cm]
-  \textit{(Chữ ký)} & \textit{(Chữ ký)} \\[1.8cm]
-  \textbf{ThS. Vũ Lan Phương} & \textbf{Đàm Mạnh Dũng} \\
-\end{tabular}
+\begin{tabularx}{\textwidth}{@{}>{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X@{}}
+  \textbf{TRƯỞNG BỘ MÔN} & \textbf{GIẢNG VIÊN HƯỚNG DẪN} & \textbf{SINH VIÊN THỰC HIỆN} \\[0.08cm]
+  \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)} \\[1.6cm]
+  & \textbf{ThS. Vũ Lan Phương} & \textbf{Đàm Mạnh Dũng} \\
+\end{tabularx}
 \end{center}

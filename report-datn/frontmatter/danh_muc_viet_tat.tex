@@ -4,22 +4,13 @@
 \chapter*{DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT}
 \addcontentsline{toc}{chapter}{DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT}
 
-\begin{longtable}{|c|c|>{\raggedright\arraybackslash}p{9.5cm}|}
+\noindent
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{3.2cm}|X|}
 \hline
 \textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
 \hline
-\endfirsthead
-\hline
-\textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
-\hline
-\endhead
-\hline
-\endfoot
-\hline
-\endlastfoot
-
 1 & ACID & Atomicity, Consistency, Isolation, Durability -- Bốn thuộc tính toàn vẹn giao dịch cơ sở dữ liệu \\ \hline
-2 & AI & Artificial Intelligence -- Trí tuệ nhân tạo \\ \hline
+2 & AES-GCM & Advanced Encryption Standard -- Galois/Counter Mode -- Chuẩn mã hóa khối nâng cao xác thực két khóa BYOK \\ \hline
 3 & API & Application Programming Interface -- Giao diện lập trình ứng dụng \\ \hline
 4 & ASGI & Asynchronous Server Gateway Interface -- Giao diện cổng máy chủ bất đồng bộ Python \\ \hline
 5 & BBox & Bounding Box -- Khung hộp chữ nhật định vị tọa độ \\ \hline
@@ -27,24 +18,36 @@
 7 & BYOK & Bring Your Own Key -- Cơ chế người dùng tự cung cấp khóa API cá nhân \\ \hline
 8 & CAS & Content-Addressable Storage -- Hệ thống lưu trữ định danh theo nội dung băm \\ \hline
 9 & CI/CD & Continuous Integration / Continuous Deployment -- Tích hợp và Triển khai liên tục \\ \hline
-10 & CTE & Common Table Expression -- Bảng biểu thức chung trong truy vấn SQL đệ quy \\ \hline
-11 & DOI & Digital Object Identifier -- Định danh đối tượng kỹ thuật số bài báo khoa học \\ \hline
-12 & ERD & Entity-Relationship Diagram -- Sơ đồ quan hệ thực thể cơ sở dữ liệu \\ \hline
-13 & FTS & Full-Text Search -- Tìm kiếm toàn văn cơ sở dữ liệu \\ \hline
-14 & GIN & Generalized Inverted Index -- Chỉ mục đảo tổng quát trong PostgreSQL \\ \hline
-15 & GraphRAG & Graph Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất qua đồ thị \\ \hline
-16 & HNSW & Hierarchical Navigable Small World -- Cấu trúc đồ thị chỉ mục tìm kiếm vector gần đúng \\ \hline
-17 & IoU & Intersection over Union -- Chỉ số trùng khớp diện tích hộp tọa độ \\ \hline
-18 & JWT & JSON Web Token -- Chuỗi mã định danh phiên người dùng an toàn \\ \hline
-19 & LLM & Large Language Model -- Mô hình ngôn ngữ lớn \\ \hline
-20 & ORCID & Open Researcher and Contributor ID -- Mã định danh học giả quốc tế 16 số \\ \hline
-21 & PDF & Portable Document Format -- Định dạng tài liệu số di động \\ \hline
-22 & RAG & Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất thông tin \\ \hline
-23 & ReAct & Reason + Act -- Chu trình AI: Suy luận và Thực thi hành động \\ \hline
-24 & RRF & Reciprocal Rank Fusion -- Thuật toán hợp nhất xếp hạng đảo ngược \\ \hline
-25 & SHA-256 & Secure Hash Algorithm 256-bit -- Thuật toán băm mật mã an toàn 256 bit \\ \hline
-26 & SSE & Server-Sent Events -- Giao thức truyền sự kiện thời gian thực từ máy chủ \\ \hline
-27 & TDD & Test-Driven Development -- Phương pháp phát triển hướng kiểm thử \\ \hline
-28 & TTFT & Time To First Token -- Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu \\ \hline
-29 & UML & Unified Modeling Language -- Ngôn ngữ mô hình hóa thống nhất \\ \hline
-\end{longtable}
+10 & CRAG & Corrective Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất có cơ chế hiệu chỉnh \\ \hline
+11 & CSDL & Cơ sở dữ liệu -- Hệ thống lưu trữ và quản trị dữ liệu có cấu trúc \\ \hline
+12 & CTE & Common Table Expression -- Bảng biểu thức chung trong truy vấn SQL đệ quy \\ \hline
+13 & DOI & Digital Object Identifier -- Định danh đối tượng kỹ thuật số bài báo khoa học \\ \hline
+14 & E2B & E2B Sandbox / MicroVM -- Môi trường máy ảo đám mây thực thi và biên dịch cô lập an toàn \\ \hline
+15 & FTS & Full-Text Search -- Tìm kiếm toàn văn cơ sở dữ liệu \\ \hline
+16 & GIN & Generalized Inverted Index -- Chỉ mục đảo tổng quát trong PostgreSQL \\ \hline
+\end{tabularx}
+
+\newpage
+
+\noindent
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{3.2cm}|X|}
+\hline
+\textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
+\hline
+17 & GraphRAG & Graph Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất qua đồ thị \\ \hline
+18 & HNSW & Hierarchical Navigable Small World -- Cấu trúc đồ thị chỉ mục tìm kiếm vector gần đúng \\ \hline
+19 & IoU & Intersection over Union -- Chỉ số trùng khớp diện tích hộp tọa độ \\ \hline
+20 & JWT & JSON Web Token -- Chuỗi mã định danh phiên người dùng an toàn \\ \hline
+21 & LLM & Large Language Model -- Mô hình ngôn ngữ lớn \\ \hline
+22 & ORCID & Open Researcher and Contributor ID -- Mã định danh học giả quốc tế 16 số \\ \hline
+23 & RAG & Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất thông tin \\ \hline
+24 & ReAct & Reason + Act -- Chu trình AI: Suy luận và Thực thi hành động \\ \hline
+25 & REST & Representational State Transfer -- Kiến trúc dịch vụ web truyền trạng thái đại diện \\ \hline
+26 & RRF & Reciprocal Rank Fusion -- Thuật toán hợp nhất xếp hạng đảo ngược \\ \hline
+27 & SHA-256 & Secure Hash Algorithm 256-bit -- Thuật toán băm mật mã an toàn 256 bit \\ \hline
+28 & SQL & Structured Query Language -- Ngôn ngữ truy vấn cơ sở dữ liệu quan hệ \\ \hline
+29 & SSE & Server-Sent Events -- Giao thức truyền sự kiện thời gian thực từ máy chủ \\ \hline
+30 & TDD & Test-Driven Development -- Phương pháp phát triển hướng kiểm thử \\ \hline
+31 & TTFT & Time To First Token -- Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu \\ \hline
+32 & UI/UX & User Interface / User Experience -- Giao diện và trải nghiệm người dùng \\ \hline
+\end{tabularx}

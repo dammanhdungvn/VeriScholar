@@ -19,7 +19,7 @@
 * **Lớp sinh hoạt:** `DCCTCT67_09B` (Khóa K67)
 * **Ngành đào tạo:** Công nghệ thông tin
 * **Mã ngành đào tạo:** `7480201`
-* **Chuyên ngành:** Hệ thống thông tin và Tri thức
+* **Chuyên ngành:** Hệ thống thông tin
 * **Đơn vị đào tạo:** Khoa Công nghệ Thông tin, Trường Đại học Mỏ - Địa chất (HUMG)
 * **Số điện thoại liên hệ:** `0978461865`
 * **Email công vụ / cá nhân:** `dammanhdungvn@gmail.com`
@@ -64,7 +64,7 @@
 ### 2.3. Mô hình 4 Không gian khép kín (4 Spaces)
 Hệ thống VeriScholar được thiết kế kiến trúc phân tách thành 4 Không gian nghiên cứu độc lập nhưng tương hỗ chặt chẽ:
 1. **Discovery Space (Không gian Khám phá):** Tìm kiếm bài báo đa nguồn (arXiv, Semantic Scholar, CrossRef), chuẩn hóa metadata, lọc bài đã bình duyệt và lưu trữ nhị phân chống trùng lặp (CAS SHA-256 Deduplication).
-2. **Deep Reading Space (Không gian Đọc sâu & Đối soát):** Bộ đọc PDF bảo toàn bố cục 2 cột, chia đoạn thông minh, trích xuất tọa độ Bounding Box và kích hoạt chu trình hỏi đáp tăng cường truy xuất Hybrid RAG có kiểm chứng trích dẫn.
+2. **Deep Reading Space (Không gian Đọc sâu và Đối soát):** Bộ đọc PDF bảo toàn bố cục 2 cột, chia đoạn thông minh, trích xuất tọa độ Bounding Box và kích hoạt chu trình hỏi đáp tăng cường truy xuất Hybrid RAG có kiểm chứng trích dẫn.
 3. **Knowledge Library Space (Không gian Thư viện Tri thức):** Lưu trữ tài liệu yêu thích, cấu trúc cây thư mục phân cấp và xây dựng đồ thị tri thức (GraphRAG) với 4 thực thể học thuật lõi trên PostgreSQL.
 4. **Writing Studio Space (Không gian Soạn thảo Kiểm chứng):** Môi trường biên tập LaTeX trực tuyến, tích hợp tác nhân AI tự động hóa sửa lỗi cú pháp biên dịch trong máy ảo MicroVM cách ly an toàn.
 
@@ -84,12 +84,12 @@ Kế hoạch 10 tuần thực hiện đề tài ĐATN chính thức (từ ngày 
 | :---: | :---: | :--- | :--- |
 | **Tuần 1** | 24/08/2026 – 30/08/2026 | Khảo sát bài toán, nhận đề tài, thu thập tài liệu và viết Đề cương ĐATN. | Đề cương chi tiết được GVHD duyệt. |
 | **Tuần 2** | 31/08/2026 – 06/09/2026 | Nghiên cứu kiến trúc Lục giác, mô hình dữ liệu quan hệ PostgreSQL 16 và pgvector. | Schema 20 bảng SQLAlchemy ban đầu. |
-| **Tuần 3** | 07/09/2026 – 13/09/2026 | Cài đặt Discovery Space: Adapter API arXiv, Semantic Scholar, CrossRef, lưu trữ CAS SHA-256. | API Khám phá tài liệu & Deduplication test pass. |
+| **Tuần 3** | 07/09/2026 – 13/09/2026 | Cài đặt Discovery Space: Adapter API arXiv, Semantic Scholar, CrossRef, lưu trữ CAS SHA-256. | API Khám phá tài liệu và Deduplication test pass. |
 | **Tuần 4** | 14/09/2026 – 20/09/2026 | Cài đặt Deep Reading Space: Pipeline băm nhỏ văn bản 2 cột, tính toán BBox, Hybrid RAG và CRAG. | Luồng SSE trả về trích dẫn tọa độ viền vàng. |
-| **Tuần 5** | 21/09/2026 – 27/09/2026 | Cài đặt Knowledge Library: Đồ thị tri thức 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`), thuật toán Louvain. | Pipeline GraphRAG & Wiki tóm tắt cộng đồng. |
+| **Tuần 5** | 21/09/2026 – 27/09/2026 | Cài đặt Knowledge Library: Đồ thị tri thức 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`), thuật toán Louvain. | Pipeline GraphRAG và Wiki tóm tắt cộng đồng. |
 | **Tuần 6** | 28/09/2026 – 04/10/2026 | **CỘT MỐC ĐÁNH GIÁ TIẾN ĐỘ GIỮA KỲ VỚI BỘ MÔN VÀ GVHD.** Báo cáo khối lượng đã hoàn thành. | Demo chạy thử 3 Không gian; Biên bản xác nhận tiến độ Tuần 6. |
 | **Tuần 7** | 05/10/2026 – 11/10/2026 | Cài đặt Writing Studio: Trình soạn thảo Monaco Editor, máy ảo E2B MicroVM và tác nhân ReAct tự sửa lỗi LaTeX. | Luồng biên dịch PDF và tác nhân tự phục hồi cú pháp. |
-| **Tuần 8** | 12/10/2026 – 18/10/2026 | Kiểm thử toàn diện: Viết bộ 580 ca kiểm thử đơn vị & tích hợp, đo lường độ trễ CSDL và benchmark. | Báo cáo kiểm thử tự động đạt 100% exit code 0. |
+| **Tuần 8** | 12/10/2026 – 18/10/2026 | Kiểm thử toàn diện: Viết bộ 580 ca kiểm thử đơn vị và tích hợp, đo lường độ trễ CSDL và benchmark. | Báo cáo kiểm thử tự động đạt 100% exit code 0. |
 | **Tuần 9** | 19/10/2026 – 25/10/2026 | Triển khai hạ tầng VPS Azure, thiết lập giám sát Langfuse Cloud, tinh chỉnh giao diện Next.js tối giản. | Hệ thống hoạt động tại https://verischolar.duckdns.org. |
 | **Tuần 10** | 26/10/2026 – 02/11/2026 | Hoàn thiện toàn văn báo cáo XeLaTeX, rà soát liêm chính học thuật, chuẩn bị slide và bản nộp lưu chiểu. | Quyển báo cáo đóng bìa theo quy định và đĩa mềm/bản mềm lưu trữ. |
 
@@ -105,17 +105,17 @@ Toàn bộ đặc tả kỹ thuật chi tiết về mã nguồn, sơ đồ thi�
 
 | Phân Hệ / Miền Kỹ Thuật | Tài Liệu Đặc Tả Kỹ Thuật (Specs) | Tài Liệu Nghiệp Vụ (PRD) / Sơ Đồ | Vai Trò Kỹ Thuật & Phạm Vi Chi Tiết |
 | :--- | :--- | :--- | :--- |
-| **Kiến trúc Lục giác & CSDL** | [`00-foundation-architecture-and-db.md`](../docs/specs/00-foundation-architecture-and-db.md) | [`DATABASE_ERD.md`](../docs/DATABASE_ERD.md), [`00-overview-and-cleanup.md`](../docs/PRD/00-overview-and-cleanup.md) | Phân tầng Domain Core/Ports/Adapters, chuẩn hóa 20 bảng PostgreSQL pgvector, loại bỏ 4 bảng ảo. |
-| **Xác thực & Két Khóa BYOK** | [`01-auth-and-user-spec.md`](../docs/specs/01-auth-and-user-spec.md) | [`01-auth-and-user.md`](../docs/PRD/01-auth-and-user.md) | Xác thực JWT, quản lý phiên làm việc, két sắt lưu trữ khóa API cá nhân mã hóa AES-256-GCM với vector $J_0$. |
-| **Khám phá & Thu thập Đa nguồn** | [`02-discovery-and-documents-spec.md`](../docs/specs/02-discovery-and-documents-spec.md) | [`02-discovery-and-documents-crud.md`](../docs/PRD/02-discovery-and-documents-crud.md) | Adapter tích hợp arXiv, CrossRef, Semantic Scholar; bộ lưu trữ nhị phân CAS phân giải mã băm SHA-256 chống trùng lặp. |
-| **Đọc sâu & BBox Grounding** | [`03-sessions-and-deep-reading-spec.md`](../docs/specs/03-sessions-and-deep-reading-spec.md) | [`03-sessions-and-deep-reading-crud.md`](../docs/PRD/03-sessions-and-deep-reading-crud.md) | Phân tách văn bản 2 cột (`mid_x = 250`), trích xuất tọa độ Bounding Box, Hybrid RAG (HNSW + BM25), cổng CRAG và 5 luồng SSE. |
-| **Bảng Ngữ Cảnh & Tiến Trình** | [`04-context-table-and-roadmap-spec.md`](../docs/specs/04-context-table-and-roadmap-spec.md) | [`04-context-table-and-roadmap.md`](../docs/PRD/04-context-table-and-roadmap.md) | Bảng tổng hợp ngữ cảnh nghiên cứu cá nhân hóa và quản lý lộ trình học thuật của học giả. |
-| **Thư viện Tri thức & GraphRAG** | [`05-favorite-library-and-graphrag-spec.md`](../docs/specs/05-favorite-library-and-graphrag-spec.md) | [`05-favorite-library-and-graphrag.md`](../docs/PRD/05-favorite-library-and-graphrag.md) | Mô hình đồ thị tri thức 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`), thuật toán phân cụm Louvain và tóm tắt cộng đồng. |
-| **Soạn thảo Agentic & Sandbox** | [`06-agentic-overleaf-writing-spec.md`](../docs/specs/06-agentic-overleaf-writing-spec.md) | [`06-agentic-overleaf-writing.md`](../docs/PRD/06-agentic-overleaf-writing.md) | Môi trường biên dịch LaTeX E2B MicroVM, tác nhân ReAct tự động phân tích log và tự sửa lỗi cú pháp. |
-| **Giám sát & Langfuse Tracing** | [`07-monitoring-and-langfuse-spec.md`](../docs/specs/07-monitoring-and-langfuse-spec.md) | [`07-monitoring-and-langfuse.md`](../docs/PRD/07-monitoring-and-langfuse.md) | Đo lường độ trễ, Trace ID, đếm Token sử dụng và giám sát chi phí vận hành mô hình ngôn ngữ lớn qua Langfuse Cloud. |
+| **Kiến trúc Lục giác và CSDL** | [`00-foundation-architecture-and-db.md`](../docs/specs/00-foundation-architecture-and-db.md) | [`DATABASE_ERD.md`](../docs/DATABASE_ERD.md), [`00-overview-and-cleanup.md`](../docs/PRD/00-overview-and-cleanup.md) | Phân tầng Domain Core/Ports/Adapters, chuẩn hóa 20 bảng PostgreSQL pgvector, loại bỏ 4 bảng ảo. |
+| **Xác thực và Két Khóa BYOK** | [`01-auth-and-user-spec.md`](../docs/specs/01-auth-and-user-spec.md) | [`01-auth-and-user.md`](../docs/PRD/01-auth-and-user.md) | Xác thực JWT, quản lý phiên làm việc, két sắt lưu trữ khóa API cá nhân mã hóa AES-256-GCM với vector $J_0$. |
+| **Khám phá và Thu thập Đa nguồn** | [`02-discovery-and-documents-spec.md`](../docs/specs/02-discovery-and-documents-spec.md) | [`02-discovery-and-documents-crud.md`](../docs/PRD/02-discovery-and-documents-crud.md) | Adapter tích hợp arXiv, CrossRef, Semantic Scholar; bộ lưu trữ nhị phân CAS phân giải mã băm SHA-256 chống trùng lặp. |
+| **Đọc sâu và BBox Grounding** | [`03-sessions-and-deep-reading-spec.md`](../docs/specs/03-sessions-and-deep-reading-spec.md) | [`03-sessions-and-deep-reading-crud.md`](../docs/PRD/03-sessions-and-deep-reading-crud.md) | Phân tách văn bản 2 cột (`mid_x = 250`), trích xuất tọa độ Bounding Box, Hybrid RAG (HNSW + BM25), cổng CRAG và 5 luồng SSE. |
+| **Bảng Ngữ Cảnh và Tiến Trình** | [`04-context-table-and-roadmap-spec.md`](../docs/specs/04-context-table-and-roadmap-spec.md) | [`04-context-table-and-roadmap.md`](../docs/PRD/04-context-table-and-roadmap.md) | Bảng tổng hợp ngữ cảnh nghiên cứu cá nhân hóa và quản lý lộ trình học thuật của học giả. |
+| **Thư viện Tri thức và GraphRAG** | [`05-favorite-library-and-graphrag-spec.md`](../docs/specs/05-favorite-library-and-graphrag-spec.md) | [`05-favorite-library-and-graphrag.md`](../docs/PRD/05-favorite-library-and-graphrag.md) | Mô hình đồ thị tri thức 4 thực thể (`Paper`, `Method`, `Dataset`, `MetricResult`), thuật toán phân cụm Louvain và tóm tắt cộng đồng. |
+| **Soạn thảo Agentic và Sandbox** | [`06-agentic-overleaf-writing-spec.md`](../docs/specs/06-agentic-overleaf-writing-spec.md) | [`06-agentic-overleaf-writing.md`](../docs/PRD/06-agentic-overleaf-writing.md) | Môi trường biên dịch LaTeX E2B MicroVM, tác nhân ReAct tự động phân tích log và tự sửa lỗi cú pháp. |
+| **Giám sát và Langfuse Tracing** | [`07-monitoring-and-langfuse-spec.md`](../docs/specs/07-monitoring-and-langfuse-spec.md) | [`07-monitoring-and-langfuse.md`](../docs/PRD/07-monitoring-and-langfuse.md) | Đo lường độ trễ, Trace ID, đếm Token sử dụng và giám sát chi phí vận hành mô hình ngôn ngữ lớn qua Langfuse Cloud. |
 | **Tác tử Tự hành Harness** | [`08-universal-agent-harness-spec.md`](../docs/specs/08-universal-agent-harness-spec.md) | [`.agents/AGENTS.md`](../.agents/AGENTS.md) | Cấu trúc Monorepo Agent Harness, Router kỹ năng, quy tắc kiểm thử TDD bắt buộc và 4 Cổng kiểm định chất lượng. |
-| **Triển khai & Đánh giá Thực nghiệm** | [`09-deployment-cicd-and-evaluation-spec.md`](../docs/specs/09-deployment-cicd-and-evaluation-spec.md) | [`08-deployment-and-system-evaluation.md`](../docs/PRD/08-deployment-and-system-evaluation.md), [`thesis_benchmark_results.json`](../docs/benchmarks/thesis_benchmark_results.json) | Script triển khai 1-click VPS Azure, CI/CD pipeline và bộ số liệu đo lường định lượng thực nghiệm gốc của đề tài. |
-| **Cẩm nang Bảo vệ & Đề cương** | [`THESIS_DEFENSE_GUIDE.md`](../docs/THESIS_DEFENSE_GUIDE.md) | [`THESIS_OUTLINE_MAPPING.md`](../docs/THESIS_OUTLINE_MAPPING.md) | Cẩm nang trả lời phản biện trước Hội đồng tốt nghiệp và bảng ánh xạ cấu trúc đề cương 4 chương. |
+| **Triển khai và Đánh giá Thực nghiệm** | [`09-deployment-cicd-and-evaluation-spec.md`](../docs/specs/09-deployment-cicd-and-evaluation-spec.md) | [`08-deployment-and-system-evaluation.md`](../docs/PRD/08-deployment-and-system-evaluation.md), [`thesis_benchmark_results.json`](../docs/benchmarks/thesis_benchmark_results.json) | Script triển khai 1-click VPS Azure, CI/CD pipeline và bộ số liệu đo lường định lượng thực nghiệm gốc của đề tài. |
+| **Cẩm nang Bảo vệ và Đề cương** | [`THESIS_DEFENSE_GUIDE.md`](../docs/THESIS_DEFENSE_GUIDE.md) | [`THESIS_OUTLINE_MAPPING.md`](../docs/THESIS_OUTLINE_MAPPING.md) | Cẩm nang trả lời phản biện trước Hội đồng tốt nghiệp và bảng ánh xạ cấu trúc đề cương 4 chương. |
 
 ---
 
@@ -124,7 +124,7 @@ Toàn bộ đặc tả kỹ thuật chi tiết về mã nguồn, sơ đồ thi�
 Mọi số liệu thực nghiệm trong báo cáo tốt nghiệp bắt buộc phải đối chiếu khớp 100% với bộ số liệu đo lường định lượng thực tế đã được kiểm chứng độc lập:
 
 ### 5.1. Bộ chỉ số đo lường thực nghiệm gốc (Ground Truth Benchmarks)
-* **Tổng số bài kiểm thử tự động đã vượt qua:** Đúng **`580`** unit & integration tests (100% pass, exit code 0).
+* **Tổng số bài kiểm thử tự động đã vượt qua:** Đúng **`580`** unit và integration tests (100% pass, exit code 0).
 * **Tổng thời gian thực thi toàn bộ test suite:** Đúng **`13.02` giây** (`13.02s`).
 * **Độ trễ trung bình truy vấn cơ sở dữ liệu:** Đúng **`1.66` mili-giây** (`1.66ms`).
 * **Thời gian trả về token đầu tiên (TTFT - Time-to-First-Token):** Đạt ngưỡng **`< 1.5` giây** (`< 1.5s`).

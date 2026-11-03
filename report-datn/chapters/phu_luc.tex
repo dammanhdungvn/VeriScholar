@@ -1,0 +1,328 @@
+% !TEX root = ../main.tex
+% ==============================================================================
+% PHỤ LỤC A: TỪ ĐIỂN CƠ SỞ DỮ LIỆU CHI TIẾT
+% ==============================================================================
+\cleardoublepage
+\phantomsection
+\chapter*{PHỤ LỤC A: TỪ ĐIỂN CƠ SỞ DỮ LIỆU CHI TIẾT}
+\setcounter{table}{0}
+\renewcommand{\thetable}{A-\arabic{table}}
+\addcontentsline{toc}{chapter}{PHỤ LỤC A: TỪ ĐIỂN CƠ SỞ DỮ LIỆU CHI TIẾT}
+\label{ch:phu_luc_csdl}
+\setlength{\intextsep}{0.5pt}
+\captionsetup{skip=2pt}
+\titlespacing*{\chapter}{0pt}{-35pt}{8pt}
+\titlespacing*{\section}{0pt}{2pt}{1pt}
+
+Phụ lục này trình bày cấu trúc vật lý chi tiết, kiểu dữ liệu, các ràng buộc toàn vẹn khóa chính (PK), khóa ngoại (FK) và mô tả nghiệp vụ của các bảng cơ sở dữ liệu còn lại trong hệ thống \VS (bổ trợ cho 5 bảng hạt nhân đã được trình bày tại Mục~\ref{subsec:csdl_dac_ta}).
+
+\section*{A.1. Phân hệ Định danh và Bảo mật}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng users}
+\label{tab:app_users}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh duy nhất người dùng \tabularnewline \hline
+2 & email & VARCHAR(255) & Unique, Not Null & Địa chỉ email đăng nhập hệ thống \tabularnewline \hline
+3 & full\_name & VARCHAR(100) & Not Null & Họ và tên của học giả \tabularnewline \hline
+4 & hashed\_password & VARCHAR(255) & Not Null & Chuỗi băm mật khẩu xác thực an toàn \tabularnewline \hline
+5 & orcid\_id & VARCHAR(50) & Null & Mã định danh học giả quốc tế ORCID iD \tabularnewline \hline
+6 & role & VARCHAR(30) & Default 'researcher' & Vai trò tài khoản trong hệ thống \tabularnewline \hline
+7 & is\_active & BOOLEAN & Default TRUE & Trạng thái hoạt động của tài khoản \tabularnewline \hline
+8 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm khởi tạo tài khoản \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng scholar\_profiles}
+\label{tab:app_scholar_profiles}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính hồ sơ học giả \tabularnewline \hline
+2 & user\_id & UUID & FK users(id), Unique & Liên kết 1-1 với tài khoản người dùng \tabularnewline \hline
+3 & institution & VARCHAR(255) & Null & Đơn vị công tác, viện nghiên cứu \tabularnewline \hline
+4 & department & VARCHAR(255) & Null & Khoa viện / Phòng thí nghiệm chuyên sâu \tabularnewline \hline
+5 & bio & TEXT & Null & Tiểu sử nghiên cứu tóm tắt của học giả \tabularnewline \hline
+6 & research\_interests & TEXT[] & Null & Danh sách các từ khóa hướng nghiên cứu chính \tabularnewline \hline
+7 & total\_publications & INT & Default 0 & Tổng số bài báo khoa học đã công bố \tabularnewline \hline
+8 & total\_citations & INT & Default 0 & Tổng số lượt trích dẫn học thuật \tabularnewline \hline
+9 & h\_index & INT & Default 0 & Chỉ số ảnh hưởng học thuật H-index \tabularnewline \hline
+10 & updated\_at & TIMESTAMPTZ & Default NOW() & Thời điểm cập nhật hồ sơ gần nhất \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\section*{A.2. Phân hệ Lưu trữ CAS và Thư viện}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng document\_storage\_blobs}
+\label{tab:app_blobs}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh khối tệp nhị phân \tabularnewline \hline
+2 & sha256\_hash & VARCHAR(64) & Unique, Not Null & Mã băm SHA-256 khử trùng lặp nội dung (CAS) \tabularnewline \hline
+3 & file\_size\_bytes & BIGINT & Not Null & Dung lượng vật lý của tệp PDF (byte) \tabularnewline \hline
+4 & storage\_path & VARCHAR(512) & Not Null & Đường dẫn lưu trữ khối dữ liệu nhị phân \tabularnewline \hline
+5 & mime\_type & VARCHAR(100) & Default 'application/pdf' & Kiểu định dạng tài liệu nhị phân \tabularnewline \hline
+6 & ref\_count & INT & Default 1, Not Null & Biến đếm tham chiếu quản lý thu hồi mồ côi \tabularnewline \hline
+7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm khối tệp được lưu lần đầu \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng folders}
+\label{tab:app_folders}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh thư mục \tabularnewline \hline
+2 & user\_id & UUID & FK users(id), Not Null & Học giả sở hữu cây thư mục nghiên cứu \tabularnewline \hline
+3 & parent\_id & UUID & FK folders(id), Null & Thư mục cha (cấu trúc cây phân cấp) \tabularnewline \hline
+4 & name & VARCHAR(100) & Not Null & Tên thư mục hoặc chủ đề nghiên cứu \tabularnewline \hline
+5 & color & VARCHAR(20) & Default 'default' & Nhãn màu phân loại giao diện \tabularnewline \hline
+6 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm tạo lập thư mục \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng document\_summaries}
+\label{tab:app_summaries}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính bản ghi tóm tắt văn bản \tabularnewline \hline
+2 & document\_id & UUID & FK documents(id), Not Null & Liên kết tài liệu được tóm tắt \tabularnewline \hline
+3 & summary\_type & VARCHAR(50) & Not Null & Loại tóm tắt (Tổng quan, Đóng góp, Phương pháp) \tabularnewline \hline
+4 & content & TEXT & Not Null & Nội dung tóm tắt được cấu trúc hóa \tabularnewline \hline
+5 & key\_findings & JSONB & Null & Các phát hiện nghiên cứu chính dạng danh sách \tabularnewline \hline
+6 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm AI Agent kết xuất tóm tắt \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng reference\_items}
+\label{tab:app_references}
+\vspace{-6pt}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính danh mục tài liệu tham khảo \tabularnewline \hline
+2 & document\_id & UUID & FK documents(id), Not Null & Bài báo nguồn trích dẫn \tabularnewline \hline
+3 & raw\_text & TEXT & Not Null & Chuỗi trích dẫn thô trích xuất cuối bài \tabularnewline \hline
+4 & title & VARCHAR(500) & Null & Tiêu đề bài báo được dẫn chứng \tabularnewline \hline
+5 & authors & TEXT[] & Null & Danh sách tác giả của công trình dẫn chứng \tabularnewline \hline
+6 & year & INT & Null & Năm xuất bản của tài liệu tham khảo \tabularnewline \hline
+7 & doi & VARCHAR(100) & Null & Mã định danh số đối tượng (DOI) \tabularnewline \hline
+8 & matched\_doc\_id & UUID & FK documents(id), Null & Liên kết nếu tài liệu đã có trong kho hệ thống \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\section*{A.3. Phân hệ Hội thoại Nghiên cứu và Đọc sâu}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng research\_sessions}
+\label{tab:app_sessions}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh phiên làm việc \tabularnewline \hline
+2 & user\_id & UUID & FK users(id), Not Null & Học giả sở hữu phiên tương tác nghiên cứu \tabularnewline \hline
+3 & title & VARCHAR(255) & Not Null & Tiêu đề ngữ cảnh làm việc của phiên \tabularnewline \hline
+4 & active\_document\_id & UUID & FK documents(id), Null & Bài báo đang mở trên khung xem PDF Canvas \tabularnewline \hline
+5 & context\_metadata & JSONB & Null & Siêu dữ liệu lưu trạng thái phiên làm việc \tabularnewline \hline
+6 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm khởi tạo phiên nghiên cứu \tabularnewline \hline
+7 & updated\_at & TIMESTAMPTZ & Default NOW() & Thời điểm phát sinh tương tác gần nhất \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng session\_documents}
+\label{tab:app_session_documents}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & session\_id & UUID & PK, FK sessions(id) & Khóa ngoại liên kết phiên nghiên cứu \tabularnewline \hline
+2 & document\_id & UUID & PK, FK documents(id) & Khóa ngoại liên kết tài liệu nạp vào phiên \tabularnewline \hline
+3 & added\_at & TIMESTAMPTZ & Default NOW() & Thời điểm tài liệu được thêm vào phiên \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng session\_turns}
+\label{tab:app_session_turns}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh lượt hỏi đáp \tabularnewline \hline
+2 & session\_id & UUID & FK sessions(id), Not Null & Liên kết phiên làm việc đa tài liệu \tabularnewline \hline
+3 & turn\_index & INT & Not Null & Thứ tự tuần tự của lượt trao đổi trong phiên \tabularnewline \hline
+4 & query & TEXT & Not Null & Câu hỏi nghiên cứu do học giả đưa vào \tabularnewline \hline
+5 & answer & TEXT & Not Null & Phản hồi tổng hợp kèm thẻ minh chứng $[i]$ \tabularnewline \hline
+6 & grounding\_metadata & JSONB & Null & Tập siêu dữ liệu tọa độ BBox liên kết thẻ \tabularnewline \hline
+7 & crag\_status & VARCHAR(30) & Null & Trạng thái phân loại của cổng kiểm định CRAG \tabularnewline \hline
+8 & latency\_ms & INT & Null & Thời gian phản hồi tổng cộng của lượt (ms) \tabularnewline \hline
+9 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm ghi nhận lượt tương tác \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng research\_notes}
+\label{tab:app_notes}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh ghi chú học thuật \tabularnewline \hline
+2 & user\_id & UUID & FK users(id), Not Null & Học giả sở hữu ghi chú nghiên cứu \tabularnewline \hline
+3 & document\_id & UUID & FK documents(id), Not Null & Tài liệu chứa vùng văn bản được ghi chú \tabularnewline \hline
+4 & chunk\_id & UUID & FK chunks(id), Null & Liên kết phân đoạn văn bản cụ thể \tabularnewline \hline
+5 & page\_number & INT & Not Null & Số trang chứa vị trí neo giữ ghi chú \tabularnewline \hline
+6 & note\_text & TEXT & Not Null & Nội dung nhận xét, ghi chú của học giả \tabularnewline \hline
+7 & anchor\_bbox & FLOAT[] & Null & Tọa độ hộp bao neo giữ trên trang PDF \tabularnewline \hline
+8 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm tạo lập ghi chú \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\section*{A.4. Phân hệ Đồ thị Tri thức và Soạn thảo Bản thảo}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng graph\_edges}
+\label{tab:app_graph_edges}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh cạnh quan hệ \tabularnewline \hline
+2 & source\_id & UUID & FK graph\_\allowbreak nodes(id), Not Null & Khóa ngoại đỉnh nguồn của liên kết tri thức \tabularnewline \hline
+3 & target\_id & UUID & FK graph\_\allowbreak nodes(id), Not Null & Khóa ngoại đỉnh đích của liên kết tri thức \tabularnewline \hline
+4 & relation\_type & VARCHAR(50) & Not Null & Loại quan hệ (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}) \tabularnewline \hline
+5 & weight & FLOAT & Default 1.0 & Trọng số biểu thị độ tin cậy của liên kết \tabularnewline \hline
+6 & provenance & JSONB & Null & Bằng chứng trích dẫn và tài liệu nguồn \tabularnewline \hline
+7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm thiết lập quan hệ tri thức \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng folder\_community\_summaries}
+\label{tab:app_community_summaries}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính bản tóm tắt cộng đồng Louvain \tabularnewline \hline
+2 & folder\_id & UUID & FK folders(id), Not Null & Thư mục nghiên cứu chứa cụm tri thức \tabularnewline \hline
+3 & community\_level & INT & Not Null & Cấp độ phân cấp cộng đồng (0: cấp lá, 1: cấp gộp) \tabularnewline \hline
+4 & summary\_text & TEXT & Not Null & Nội dung tóm tắt chủ đề cụm tri thức \tabularnewline \hline
+5 & node\_count & INT & Not Null & Số lượng đỉnh thực thể nằm trong cụm \tabularnewline \hline
+6 & edge\_count & INT & Not Null & Số lượng cạnh quan hệ nội bộ cụm \tabularnewline \hline
+7 & embedding & VECTOR(1536) & Null & Véc-tơ nhúng phục vụ truy xuất toàn cục \tabularnewline \hline
+8 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm thuật toán Louvain phân cụm \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng wiki\_pages}
+\label{tab:app_wiki_pages}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh trang Wiki học thuật \tabularnewline \hline
+2 & folder\_id & UUID & FK folders(id), Not Null & Thư mục chủ đề tạo trang Wiki \tabularnewline \hline
+3 & title & VARCHAR(255) & Not Null & Tiêu đề chủ đề hoặc thực thể nghiên cứu \tabularnewline \hline
+4 & slug & VARCHAR(255) & Not Null & Chuỗi định danh URL thân thiện \tabularnewline \hline
+5 & content & TEXT & Not Null & Toàn văn nội dung trang Wiki kèm liên kết Wiki \tabularnewline \hline
+6 & yaml\_frontmatter & JSONB & Null & Siêu dữ liệu danh mục thực thể liên quan \tabularnewline \hline
+7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm biên dịch trang Wiki \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng draft\_assets}
+\label{tab:app_draft_assets}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính định danh tệp tài nguyên \tabularnewline \hline
+2 & draft\_id & UUID & FK drafts(id), Not Null & Bản thảo LaTeX liên kết tài nguyên \tabularnewline \hline
+3 & file\_name & VARCHAR(255) & Not Null & Tên tệp hình ảnh, sơ đồ hoặc bảng dữ liệu \tabularnewline \hline
+4 & file\_path & VARCHAR(512) & Not Null & Đường dẫn lưu trữ tài nguyên trên đĩa cứng \tabularnewline \hline
+5 & mime\_type & VARCHAR(100) & Not Null & Kiểu định dạng tài nguyên (PNG, PDF, EPS) \tabularnewline \hline
+6 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm tải tệp tài nguyên lên \tabularnewline \hline
+\end{tabularx}
+\end{table}
+
+\begin{table}[H]
+\centering
+\singlespacing
+\fontsize{9pt}{11.5pt}\selectfont
+\caption{Đặc tả bảng draft\_messages}
+\label{tab:app_draft_messages}
+\renewcommand{\arraystretch}{0.65}
+\begin{tabularx}{\textwidth}{|c|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}p{2.6cm}|>{\raggedright\arraybackslash}p{3.0cm}|>{\raggedright\arraybackslash}X|}
+\hline
+\textbf{STT} & \centering\textbf{Tên cột} & \centering\textbf{Kiểu dữ liệu} & \centering\textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính nhật ký sửa lỗi cú pháp \tabularnewline \hline
+2 & draft\_id & UUID & FK drafts(id), Not Null & Bản thảo đang trong chu trình tự sửa \tabularnewline \hline
+3 & role & VARCHAR(30) & Not Null & Vai trò đối thoại (\texttt{user}, \texttt{assistant}, \texttt{system}) \tabularnewline \hline
+4 & content & TEXT & Not Null & Nội dung thông báo lỗi hoặc giải trình bản vá \tabularnewline \hline
+5 & patch\_applied & TEXT & Null & Đoạn mã bản vá vi phẫu (\textit{Surgical Diff}) \tabularnewline \hline
+6 & was\_healed & BOOLEAN & Default FALSE & Trạng thái biên dịch thành công sau bản vá \tabularnewline \hline
+7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm ghi nhận thao tác sửa lỗi \tabularnewline \hline
+\end{tabularx}
+\end{table}

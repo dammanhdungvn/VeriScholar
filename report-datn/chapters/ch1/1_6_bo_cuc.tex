@@ -1,11 +1,11 @@
 % !TEX root = ../../main.tex
-\section{Bố cục của báo cáo đồ án tốt nghiệp}
+\section{Bố cục báo cáo đồ án}
 \label{sec:bo_cuc}
-Báo cáo đồ án tốt nghiệp được tổ chức thành 4 chương chính và phần kết luận, tài liệu tham khảo:
-\begin{itemize}
-    \item \textbf{Chương 1: Tổng quan về đề tài} -- Trình bày bối cảnh ra đời, tính cấp thiết của đề tài kèm bảng đối chiếu các công cụ hiện hành, các mục tiêu nghiên cứu tổng quát và cụ thể, nội dung nghiên cứu, phương pháp tiếp cận, phạm vi nghiên cứu và bố cục của báo cáo.
-    \item \textbf{Chương 2: Cơ sở lý thuyết và công nghệ} -- Trình bày có hệ thống các công nghệ nền tảng và cơ sở lý thuyết khoa học được ứng dụng trong đề tài, bao gồm: Hệ quản trị cơ sở dữ liệu PostgreSQL và Redis; Kiến trúc Lục giác (Hexagonal Architecture); Quy trình tạo sinh tăng cường truy xuất nâng cao (Advanced RAG), phân tích bố cục PDF hai cột, thuật toán RRF và tái xếp hạng Cross-Encoder; Đồ thị tri thức (Knowledge Graph), GraphRAG phân cụm cộng đồng Louvain và hệ tri thức biên dịch Graph Wiki; Mô hình Agent thông minh Agentic AI, mẫu chu trình ReAct và cơ chế tự đánh giá; Thư viện điều phối máy trạng thái LangGraph; Dịch vụ suy luận OpenAI API trên hạ tầng đám mây Microsoft Azure, Sandbox an toàn E2B và mô hình bảo mật quản lý khóa BYOK AES-256-GCM; Nền tảng truy vết và giám sát LLM Langfuse; cùng các ngôn ngữ, khung làm việc và công cụ phát triển phần mềm hiện đại.
-    \item \textbf{Chương 3: Phân tích và thiết kế hệ thống} -- Khảo sát các luồng nghiệp vụ học thuật và thiết kế các giải thuật cốt lõi, đặc tả các Use Case chuẩn BA, thiết kế biểu đồ tuần tự UML, kiến trúc Monorepo phân tách ranh giới và thiết kế chi tiết 20 bảng cơ sở dữ liệu vật lý thuộc 5 phân hệ kèm lược đồ thực thể quan hệ (ERD).
-    \item \textbf{Chương 4: Cài đặt và kết quả thực nghiệm} -- Trình bày cấu hình môi trường triển khai thực tế, giao diện trực quan của các phân hệ chức năng chính, kết quả kiểm thử tự động 100\% qua 4 Cổng xác minh (580 kịch bản kiểm thử), cùng các bảng kết quả thực nghiệm đối chứng (Ablation Study) về truy xuất lai, tự sửa lỗi LaTeX và số liệu giám sát vận hành trên nền tảng Langfuse Cloud.
-    \item \textbf{Kết luận và hướng phát triển} -- Tổng kết các kết quả đạt được của đề tài đối chiếu với mục tiêu ban đầu, phân tích khách quan các hạn chế kỹ thuật còn tồn tại và đề xuất các hướng phát triển mở rộng hệ thống trong tương lai.
+Báo cáo đồ án tốt nghiệp được cấu trúc thành 4 chương chính và phần kết luận:
+\begin{itemize}[noitemsep, topsep=1pt]
+    \item Chương 1 (Tổng quan về đề tài) -- Trình bày bối cảnh, tính cấp thiết học thuật kèm bảng đối chuẩn tính năng, mục tiêu nghiên cứu định lượng, nội dung, phương pháp tiếp cận và phạm vi nghiên cứu.
+    \item Chương 2 (Cơ sở lý thuyết và công nghệ) -- Trình bày cơ sở lý thuyết và các công nghệ nền tảng: Hệ quản trị cơ sở dữ liệu quan hệ và mở rộng vector (PostgreSQL, pgvector, Redis); Kỹ nghệ truy xuất thông tin hỗn hợp (Hybrid Search, Bounding Box); Mô hình ngôn ngữ lớn và tạo sinh tăng cường truy xuất nâng cao (Self-RAG, CRAG); Đồ thị tri thức học thuật (GraphRAG, Graph Wiki); Kiến trúc tác nhân tự chủ và môi trường Sandbox an toàn (ReAct, LangGraph, E2B, BYOK, Langfuse).
+    \item Chương 3 (Phân tích và thiết kế hệ thống) -- Trình bày khảo sát nghiệp vụ học thuật, thiết kế Kiến trúc Lục giác phân tầng và mô hình 4 không gian nghiên cứu, đặc tả các sơ đồ Use Case, biểu đồ tuần tự UML và thiết kế 20 bảng cơ sở dữ liệu quan hệ kèm lược đồ ERD.
+    \item Chương 4 (Cài đặt và kết quả thực nghiệm) -- Trình bày cấu hình môi trường triển khai, giao diện 4 không gian tương tác, bộ 580 kịch bản kiểm thử tự động, kết quả thực nghiệm đối chứng (Ablation Study) về tọa độ Bounding Box và khả năng tự phục hồi bản thảo LaTeX.
+    \item Kết luận và hướng phát triển -- Tổng kết bốn đóng góp kỹ thuật cốt lõi, đánh giá khách quan các hạn chế và đề xuất ba hướng nghiên cứu phát triển mở rộng hệ thống.
 \end{itemize}

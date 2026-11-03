@@ -1,56 +1,24 @@
 % !TEX root = ../../main.tex
-\section{Tìm hiểu về Azure OpenAI và E2B Sandbox}
-\label{sec:azure_openai_e2b}
+% Nội dung chi tiết về E2B Sandbox MicroVM và Két khóa cá nhân BYOK AES-256-GCM
+% đã được tích hợp chuẩn hóa vào Mục 2.5 (chapters/ch2/2_5_agentic_react.tex).
+% Tệp này được duy trì để bảo đảm tính tương thích với các module kiểm định hệ thống.
 
-\subsection{Dịch vụ suy luận OpenAI API và Hạ tầng đám mây Microsoft Azure}
-\label{subsec:azure_openai}
-Dịch vụ suy luận OpenAI API và nền tảng đám mây Microsoft Azure (\textit{Azure OpenAI Service}) cung cấp giao diện lập trình tiêu chuẩn công nghiệp để truy cập các mô hình ngôn ngữ lớn và mô hình biểu diễn vector ngữ nghĩa hiện đại (điển hình là mô hình suy luận \texttt{gpt-4o-mini} và mô hình nhúng \texttt{text-embedding-3-small}).
+\subsection{Dịch vụ suy luận OpenAI API và hạ tầng Microsoft Azure}
+\label{subsec:azure_openai_compat}
+Dịch vụ suy luận OpenAI API trên nền tảng đám mây Microsoft Azure cung cấp giao diện lập trình tiêu chuẩn để truy cập mô hình suy luận \texttt{gpt-4o-mini} và mô hình biểu diễn véc-tơ ngữ nghĩa hiện đại.
 
-\begin{figure}[H]
-\centering
-\includegraphics[height=3.2cm]{figures/logos/azure.png}
-\caption{Microsoft Azure}
-\label{fig:logo_azure}
-\end{figure}
+\subsection{Môi trường hộp cát an toàn E2B MicroVM}
+\label{subsec:e2b_sandbox_compat}
+E2B Sandbox dựa trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}, khởi tạo trong 200ms với khả năng cô lập ranh giới hạt nhân ngăn chặn tấn công thực thi mã từ xa.
 
-Khác biệt căn bản giữa dịch vụ API cấp doanh nghiệp trên hạ tầng đám mây và các giao diện trò chuyện tiêu dùng công cộng nằm ở các tiêu chuẩn bảo mật và vận hành khắt khe:
-\begin{itemize}
-    \item \textbf{Cam kết bảo vệ dữ liệu học thuật tuyệt đối:} Dữ liệu văn bản, tài liệu nghiên cứu và câu hỏi của học giả truyền qua cổng API không được sử dụng để tái huấn luyện hoặc cải tiến bất kỳ mô hình cơ sở nào của nhà cung cấp.
-    \item \textbf{Hạ tầng mạng cô lập cấp doanh nghiệp:} Hỗ trợ triển khai trên mạng riêng ảo (\textit{Virtual Network -- VNet}), các điểm cuối riêng tư (\textit{Private Endpoints}) và mã hóa đường truyền nghiêm ngặt theo chuẩn TLS 1.3, đáp ứng các tiêu chuẩn chứng nhận quốc tế như ISO/IEC 27001, SOC 2 Type II và GDPR.
-    \item \textbf{Độ sẵn sàng và độ ổn định cao (High Availability SLA):} Cung cấp cơ chế điều phối hạn ngạch thông lượng ổn định (\textit{Provisioned Throughput Units -- PTU}), bảo đảm thời gian phản hồi đồng đều và giảm thiểu nguy cơ nghẽn dịch vụ vào giờ cao điểm.
-\end{itemize}
-
-\subsection{E2B Sandbox là gì?}
-\label{subsec:e2b_sandbox}
-E2B Sandbox là nền tảng môi trường thực thi ảo hóa cô lập chuyên biệt cho các AI Agent, cho phép mô hình ngôn ngữ thực thi mã nguồn tự sinh trong một không gian an toàn.
-
-\begin{figure}[H]
-\centering
-\includegraphics[height=3.2cm]{figures/logos/e2b.png}
-\caption{E2B Sandbox}
-\label{fig:logo_e2b}
-\end{figure}
-
-Công nghệ nền tảng của E2B dựa trên kiến trúc máy ảo siêu nhỏ (\textit{MicroVM}) được phát triển từ công nghệ ảo hóa AWS Firecracker \cite{agache2020firecracker}:
-\begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item \textbf{Khởi động siêu tốc:} Mỗi môi trường MicroVM có thể khởi tạo hoàn tất trong thời gian chưa đầy 200 mili-giây, cung cấp đầy đủ một nhân Linux hoàn chỉnh với hệ điều hành và tài nguyên tính toán độc lập.
-    \item \textbf{Cô lập ranh giới hạt nhân (Kernel-level Isolation):} Mọi đoạn mã lập trình (chẳng hạn như kịch bản phân tích số liệu Python, trích xuất biểu đồ hoặc lệnh biên dịch tài liệu LaTeX) đều chạy bên trong ranh giới máy ảo riêng. Nếu kịch bản chứa mã độc hoặc gặp sự cố tràn bộ nhớ, sự cố hoàn toàn bị giới hạn bên trong MicroVM mà không thể lan truyền hay gây hại đến máy chủ chính của hệ thống, ngăn chặn nguy cơ tấn công thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
-    \item \textbf{Môi trường trạng thái linh hoạt:} Hỗ trợ tương tác hai chiều, truyền tệp nhị phân và thu nhận kết quả tính toán tức thời để đưa ngược lại vào chu trình suy luận của Agent.
-\end{enumerate}
-
-\subsection{Mô hình bảo mật BYOK (Bring Your Own Key)}
-\label{subsec:byok_security}
-Mô hình Mang theo khóa cá nhân (\textit{Bring Your Own Key -- BYOK}) là giải pháp kiến trúc bảo đảm quyền tự chủ tài nguyên và an toàn riêng tư cho các nhà khoa học. Trong mô hình này, học giả cung cấp khóa API cá nhân từ nhà cung cấp dịch vụ trí tuệ nhân tạo để trực tiếp thanh toán và kiểm soát hạn ngạch sử dụng; máy chủ của hệ thống không đứng ra thu phí trung gian hay lưu trữ khóa dưới dạng văn bản thô trên đĩa.
-
-Để bảo vệ khóa API của học giả trước nguy cơ lộ lọt dữ liệu từ tầng lưu trữ, đề tài triển khai chuẩn mã hóa đối xứng xác thực AEAD (\textit{Authenticated Encryption with Associated Data}) với thuật toán AES-256 theo chế độ GCM (\textit{Galois/Counter Mode}) \cite{dworkin2007}:
-
-Thuật toán sử dụng khóa bí mật 256 bits ($K$), khóa con băm trường hữu hạn $H = E_K(0^{128})$ và vectơ khởi tạo ngẫu nhiên 96 bits ($\text{IV}$) riêng biệt cho mỗi lần mã hóa. Từ $\text{IV}$ 96 bits, khối bộ đếm khởi đầu 128 bits $J_0$ được xác lập theo đặc tả NIST SP 800-38D là $J_0 = \text{IV} \parallel 0^{31} \parallel 1$. Bản rõ khóa API được mã hóa bằng chế độ bộ đếm GCTR bắt đầu từ $\text{inc}_{32}(J_0)$, đồng thời hàm băm vạn năng $\text{GHASH}_H$ kết hợp dữ liệu xác thực bổ sung ($\text{AAD}$) và bản mã ($C$) rồi thực hiện phép XOR với khối mã hóa $E_K(J_0)$ để tạo ra thẻ xác thực toàn vẹn 128 bits ($T$):
+\subsection{Mô hình bảo mật khóa cá nhân BYOK AES-256-GCM}
+\label{subsec:byok_security_compat}
+Chuẩn mã hóa đối xứng xác thực AEAD với thuật toán AES-256 ở chế độ GCM \cite{dworkin2007}:
 \begin{equation}
-\label{eq:aes_gcm}
+\label{eq:aes_gcm_compat}
 \begin{aligned}
 C &= \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad J_0 = \text{IV} \parallel 0^{31} \parallel 1 \\
 T &= \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0)
 \end{aligned}
 \end{equation}
-
-Quy trình giải mã tuân thủ nguyên tắc giải mã tạm thời trong bộ nhớ khả biến (\textit{In-Memory Ephemeral Decryption}): Khóa API bản rõ chỉ được khôi phục cục bộ trong không gian bộ nhớ RAM của tiến trình xử lý ngay tại thời điểm khởi tạo yêu cầu gọi mô hình ngôn ngữ, bị giải phóng ngay sau khi kết thúc phiên suy luận và tuyệt đối không bao giờ được ghi vào nhật ký hệ thống hay các bản ghi giám sát truy vết quan sát (\textit{Observability Traces}).
+Khóa API được giải mã tạm thời trong bộ nhớ khả biến và không bao giờ lưu vết trên đĩa.

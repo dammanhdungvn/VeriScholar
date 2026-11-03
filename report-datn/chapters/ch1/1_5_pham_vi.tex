@@ -2,9 +2,9 @@
 \section{Phạm vi và đối tượng nghiên cứu}
 \label{sec:pham_vi}
 Đề tài xác định rõ đối tượng và phạm vi nghiên cứu:
-\begin{itemize}
-    \item \textbf{Đối tượng nghiên cứu:} Quy trình nghiên cứu khoa học, phân tích bố cục tài liệu chuyên sâu, trích xuất mạng lưới tri thức học thuật và kỹ thuật biên dịch bản thảo khoa học chuẩn quốc tế.
-    \item \textbf{Khách thể thụ hưởng và bối cảnh đối chuẩn:} Đề tài lấy môi trường học thuật xuất bản quốc tế tại Trường Đại học VinUni (VinUniversity) làm bối cảnh đại học nghiên cứu đối chuẩn điển hình để xây dựng các yêu cầu nghiệp vụ; hệ thống đồng thời phục vụ rộng rãi giảng viên, nghiên cứu sinh, học viên cao học và sinh viên tại các cơ sở giáo dục đại học định hướng nghiên cứu.
-    \item \textbf{Định dạng tài liệu và ngôn ngữ đánh giá:} Phân hệ phân tích bố cục, truy xuất lai (Hybrid RAG) và đồ thị tri thức (GraphRAG) được thiết kế và đánh giá thực nghiệm trọng tâm trên các ấn phẩm khoa học chuẩn PDF bố cục 1--2 cột bằng tiếng Anh (ngôn ngữ chuẩn của các hội nghị IEEE, ACM, NeurIPS, ICLR); trong khi phân hệ soạn thảo bản thảo LaTeX và giao diện hệ thống hỗ trợ đầy đủ bảng mã Unicode tiếng Việt và tiếng Anh cùng định dạng trích dẫn BibTeX.
-    \item \textbf{Hạ tầng kỹ thuật triển khai:} Máy chủ đám mây Linux (Ubuntu 24.04 LTS trên Microsoft Azure), hệ quản trị PostgreSQL 16 tích hợp \texttt{pgvector}, bộ đệm Redis 7, nền tảng container Docker, môi trường Sandbox E2B và nền tảng giám sát LLM Langfuse.
+\begin{itemize}[noitemsep, topsep=0pt]
+    \item Đối tượng nghiên cứu: Quy trình nghiên cứu khoa học, phân tích bố cục tài liệu chuyên sâu, trích xuất mạng lưới tri thức học thuật và kỹ thuật biên dịch bản thảo khoa học chuẩn quốc tế.
+    \item Khách thể thụ hưởng và bối cảnh đối chuẩn: Lấy môi trường xuất bản quốc tế tại Trường Đại học VinUni làm bối cảnh đại học nghiên cứu đối chuẩn điển hình; phục vụ giảng viên, nghiên cứu sinh, học viên cao học và sinh viên các cơ sở giáo dục định hướng nghiên cứu.
+    \item Định dạng tài liệu và ngôn ngữ đánh giá: Phân hệ phân tích bố cục, truy xuất lai (Hybrid RAG) và đồ thị tri thức (GraphRAG \cite{edge2024}) tập trung đánh giá trên ấn phẩm khoa học chuẩn PDF 1--2 cột tiếng Anh (IEEE, ACM, NeurIPS, ICLR); phân hệ soạn thảo LaTeX và giao diện hỗ trợ đầy đủ Unicode tiếng Việt, tiếng Anh và trích dẫn BibTeX.
+    \item Hạ tầng kỹ thuật triển khai: Máy chủ Linux (Ubuntu 24.04 LTS trên Microsoft Azure), PostgreSQL 16 tích hợp \texttt{pgvector}, Redis 7, container Docker, môi trường Sandbox E2B \cite{agache2020firecracker} và nền tảng giám sát LLM Langfuse.
 \end{itemize}

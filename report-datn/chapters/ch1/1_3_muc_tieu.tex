@@ -4,14 +4,15 @@
 
 \subsection{Mục tiêu tổng quát}
 \label{subsec:muc_tieu_tong_quat}
-Xây dựng thành công nền tảng phần mềm \VS\ đóng vai trò trợ lý AI hỗ trợ nghiên cứu khoa học và biên soạn bài báo quốc tế theo chuẩn mực đại học nghiên cứu như VinUniversity, tích hợp khép kín 4 không gian làm việc học thuật trên nền kiến trúc phần mềm lục giác hiện đại, đảm bảo tính toàn vẹn dữ liệu và khả năng đối chiếu trích dẫn trực quan.
+Xây dựng thành công nền tảng phần mềm \VS đóng vai trò trợ lý AI hỗ trợ nghiên cứu khoa học và biên soạn bài báo quốc tế theo chuẩn mực đại học nghiên cứu như VinUniversity; tích hợp khép kín 4 không gian học thuật trên nền kiến trúc phần mềm lục giác hiện đại \cite{cockburn2005}; bảo đảm tính toàn vẹn dữ liệu, khả năng đối chiếu trích dẫn trực quan trên bản gốc PDF, tự động hóa sửa lỗi biên dịch \LaTeX\ và bảo vệ an toàn quyền riêng tư học giả.
 
 \subsection{Mục tiêu kỹ thuật cụ thể}
 \label{subsec:muc_tieu_cu_the}
-Đề tài hướng tới hoàn thành 4 mục tiêu kỹ thuật định lượng cụ thể:
-\begin{enumerate}[label=\textbf{(\arabic*)}]
-    \item Hiện thực hóa cơ chế nạp bài báo hai tầng kết hợp kho lưu trữ định danh theo nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã băm SHA-256 nhằm loại bỏ các bản lưu vật lý dư thừa khi nhiều học giả cùng nạp một ấn phẩm (tiết kiệm tới 98\% dung lượng lưu trữ tệp nhị phân trên máy chủ trong kịch bản 50 học giả cùng nạp một bài báo kinh điển), đồng thời hỗ trợ thu hồi an toàn tài liệu theo cơ chế đếm tham chiếu (\texttt{ref\_count}).
-    \item Phát triển công cụ tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất xếp hạng đảo ngược RRF (\textit{Reciprocal Rank Fusion}, $k=60$) giữa tìm kiếm vector ngữ nghĩa (HNSW Cosine 1536 chiều) và tìm kiếm từ vựng (chỉ mục GIN \texttt{tsvector} kết hợp tái chấm điểm Okapi BM25), đi kèm cơ chế đối chiếu khung viền tọa độ chuẩn hóa trên bản PDF gốc đạt độ chính xác trung bình $\text{IoU} \ge 0{,}85$ (thực nghiệm đạt $0{,}9266 \pm 0{,}0126$).
-    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG: \textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) và hệ thống trang tổng hợp tri thức cộng đồng (Graph Wiki) trực tiếp trên cơ sở dữ liệu quan hệ PostgreSQL 16 với tiện ích mở rộng vector hóa \texttt{pgvector}, bảo toàn tính toàn vẹn và nhất quán giao dịch ACID mà không cần duy trì các hệ quản trị cơ sở dữ liệu đồ thị rời rạc.
-    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct hoạt động trong môi trường đám mây cô lập E2B Sandbox MicroVM, có khả năng tự động phân tích nhật ký lỗi và vá lỗi biên dịch LaTeX đạt tỷ lệ thành công trên 90\% (thực nghiệm đạt $96\%$ trên tập 25 ca kiểm thử lỗi chuẩn).
-\end{enumerate}
+Đề tài hướng tới hoàn thành 5 mục tiêu kỹ thuật định lượng cụ thể:
+\begin{itemize}[itemsep=3pt, topsep=2pt]
+    \item Hiện thực hóa cơ chế nạp bài báo hai tầng kết hợp kho lưu trữ định danh theo nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã băm SHA-256 nhằm loại bỏ việc lưu trữ trùng lặp các tệp nhị phân PDF và quản lý an toàn vòng đời tài liệu theo cơ chế đếm tham chiếu (\texttt{ref\_count}).
+    \item Phát triển công cụ tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất thứ hạng RRF (\textit{Reciprocal Rank Fusion} \cite{cormack2009}, $k=60$) giữa tìm kiếm vector ngữ nghĩa và từ khóa toàn văn, đi kèm cơ chế đối chiếu khung tọa độ chuẩn hóa trên PDF gốc đạt ngưỡng trùng khớp $\text{IoU} \ge 0{,}85$.
+    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG \cite{edge2024}: \textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) và hệ thống trang bách khoa tri thức (Graph Wiki) trực tiếp trên PostgreSQL 16 với tiện ích mở rộng \texttt{pgvector}, bảo đảm toàn vẹn giao dịch ACID.
+    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct \cite{yao2022} trong môi trường cô lập E2B Sandbox MicroVM \cite{agache2020firecracker}, có khả năng tự động phân tích và khắc phục lỗi biên dịch \LaTeX\ với tỷ lệ tự phục hồi thành công trên 90\%.
+    \item Thiết lập cơ chế két khóa bảo mật cá nhân (BYOK -- \textit{Bring Your Own Key}) mã hóa bằng thuật toán AES-256-GCM \cite{dworkin2007}, bảo đảm tuyệt đối không lưu trữ khóa API ở dạng bản rõ và chỉ giải mã tạm thời trong bộ nhớ RAM khi tác vụ đang thực thi.
+\end{itemize}

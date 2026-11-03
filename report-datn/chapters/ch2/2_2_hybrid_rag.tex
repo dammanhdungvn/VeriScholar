@@ -1,0 +1,159 @@
+% !TEX root = ../../main.tex
+\section{Kỹ nghệ truy xuất thông tin hỗn hợp}
+\label{sec:hybrid_retrieval}
+
+\subsection{Phân tích bố cục tài liệu PDF hai cột và chuẩn hóa tọa độ Bounding Box}
+\label{subsec:pdf_layout_bbox}
+Các ấn phẩm khoa học quốc tế thường được định dạng theo bố cục hai cột (\textit{Two-Column PDF Layout}). Các công cụ trích xuất văn bản truyền thống thường đọc tuần tự theo dòng ngang, dẫn đến hiện tượng trộn lẫn các câu văn giữa cột trái và cột phải, phá vỡ tính mạch lạc của các luận điểm khoa học.
+
+Để giải quyết vấn đề này, đề tài xây dựng quy trình phân tích bố cục hình học trước khi phân đoạn tài liệu:
+\begin{itemize}
+    \item Phân tách ranh giới hình học: Dựa trên phân phối hoành độ tâm của các khối chữ nhật chứa ký tự, thuật toán thiết lập ngưỡng phân định cột tự động để gom nhóm và đọc trọn vẹn nội dung từ đỉnh đến đáy của cột bên trái trước khi chuyển tiếp sang cột bên phải.
+    \item Chuẩn hóa tọa độ Bounding Box (\textit{Bounding Box Normalization}): Tọa độ vật lý của các khối văn bản $(x_0, y_0, x_1, y_1)$ tính theo điểm ảnh PDF (\textit{points}) được chuẩn hóa về miền tỷ lệ không thứ nguyên $[0, 1]$ thông qua phép biến đổi hình học:
+    \begin{equation}
+    \label{eq:bbox_norm}
+    \bar{x}_0 = \frac{x_0}{W}, \quad \bar{y}_0 = \frac{y_0}{H}, \quad \bar{x}_1 = \frac{x_1}{W}, \quad \bar{y}_1 = \frac{y_1}{H}
+    \end{equation}
+    trong đó $W$ và $H$ lần lượt là chiều rộng và chiều cao thực tế của trang tài liệu PDF.
+    \item Thước đo độ chính xác định vị: Độ trùng khớp của Bounding Box dẫn chứng được đánh giá thông qua chỉ số tương đồng diện tích phủ (\textit{Intersection-over-Union -- IoU}):
+    \begin{equation}
+    \label{eq:iou_metric}
+    \text{IoU}(B_{\text{pred}}, B_{\text{gt}}) = \frac{\text{Area}(B_{\text{pred}} \cap B_{\text{gt}})}{\text{Area}(B_{\text{pred}} \cup B_{\text{gt}})}
+    \end{equation}
+    Hệ thống duy trì ngưỡng bảo đảm $\text{IoU} \ge 0{,}85$ (kết quả thực nghiệm đạt $0{,}88$), cho phép giao diện hiển thị khung viền dẫn chứng trực quan chính xác từng dòng văn bản gốc cho học giả.
+\end{itemize}
+
+\subsection{Không gian truy xuất Vector đặc và từ khóa thưa hai pha}
+\label{subsec:dense_sparse_retrieval}
+Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp đồng thời của hai không gian tìm kiếm bổ trợ:
+
+\begin{itemize}
+    \item Truy xuất Vector đặc (\textit{Dense Vector Retrieval}): Văn bản được biểu diễn thành các Vector Embedding ngữ nghĩa 1536 chiều. Mức độ tương đồng giữa truy vấn $\mathbf{u}$ của học giả và phân đoạn tài liệu $\mathbf{v}$ được lượng hóa thông qua hàm tương đồng Cosine:
+    \begin{equation}
+    \label{eq:cosine_sim}
+    \text{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^{d} u_i v_i}{\sqrt{\sum_{i=1}^{d} u_i^2} \sqrt{\sum_{i=1}^{d} v_i^2}}
+    \end{equation}
+    Ưu điểm của phương pháp là khả năng bắt trọn ngữ nghĩa khái quát và từ đồng nghĩa, song gặp khó khăn trước các thuật ngữ hiếm gặp, mã định danh hoặc công thức toán học.
+    
+    \item Truy xuất từ khóa thưa hai pha (\textit{Two-Stage Sparse Keyword Retrieval}): Kết hợp chỉ mục đảo tổng quát GIN trên trường \texttt{tsvector} với hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để sàng lọc nhanh tập ứng viên ban đầu trong cơ sở dữ liệu, sau đó áp dụng công thức chuẩn hóa Okapi BM25 \cite{robertson1995} để tái chấm điểm chính xác:
+    \begin{equation}
+    \label{eq:bm25}
+    \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
+    \end{equation}
+    trong đó $f(q_i, D)$ là tần suất từ khóa trong đoạn trích $D$, $|D|$ là độ dài đoạn trích, $\text{avgdl}$ là độ dài trung bình toàn tập, $k_1 = 1{,}5$ và $b = 0{,}75$. Cơ chế này bắt trúng các từ khóa chuyên ngành, số hiệu định danh và tên riêng tác giả.
+\end{itemize}
+
+\subsection{So sánh đặc tính kỹ thuật giữa hai không gian truy xuất}
+\label{subsec:search_comparison}
+Đặc tính kỹ thuật đối chứng giữa hai không gian tìm kiếm được tổng hợp trong Bảng~\ref{tab:search_comparison}.
+
+\begin{table}[!htbp]
+\centering
+\caption{So sánh đặc tính kỹ thuật giữa không gian Dense Vector và Sparse Search (BM25)}
+\label{tab:search_comparison}
+\singlespacing
+\small
+\renewcommand{\arraystretch}{1.0}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{3.0cm}|X|X|}
+\hline
+\textbf{Tiêu chí so sánh} & \textbf{Dense Vector (Cosine HNSW)} & \textbf{Sparse Keyword (BM25 GIN)} \\
+\hline
+\textbf{Không gian biểu diễn} & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc (\texttt{tsvector}) \\
+\hline
+\textbf{Khả năng ngữ nghĩa} & Bắt trọn từ đồng nghĩa và khái niệm tương đương & Hạn chế: Dựa trên sự trùng khớp ký tự chính xác \\
+\hline
+\textbf{Độ chính xác thuật ngữ} & Trung bình: Dễ bị nhiễu trước từ viết tắt và ký hiệu & Xuất sắc: Khớp tuyệt đối mã số DOI, tên riêng, công thức \\
+\hline
+\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng phân tầng HNSW \cite{malkov2018} & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + BM25 \\
+\hline
+\end{tabularx}
+\end{table}
+
+\subsection{Thuật toán hợp nhất xếp hạng đảo ngược và cơ chế tái xếp hạng}
+\label{subsec:rrf_rerank}
+Nhằm kết hợp hài hòa ưu thế của cả hai không gian truy xuất, hệ thống áp dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (\textit{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009}. Thay vì cộng gộp các điểm số có thang đo phân kỳ, RRF tính toán dựa trên thứ hạng nguyên vị trí của từng tài liệu trong các danh sách trả về:
+\begin{equation}
+\label{eq:rrf_calc}
+\text{Score}_{\text{RRF}}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}
+\end{equation}
+trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ bậc của phân đoạn $d$ trong danh sách $m$ ($r_m(d) \ge 1$), và $k = 60$ là hằng số làm mịn chuẩn hóa học thuật nhằm tránh ưu tiên thái quá cho tài liệu đứng đầu danh sách đơn lẻ. Sau pha hợp nhất RRF, danh sách các phân đoạn hội tụ được đưa qua bộ tái xếp hạng Cross-Encoder để chấm điểm tương tác sâu giữa câu hỏi và đoạn trích, bảo đảm thứ tự ưu tiên tối ưu trước khi nạp vào ngữ cảnh mô hình ngôn ngữ lớn (Hình~\ref{fig:hybrid_search_rrf}).
+
+\begin{figure}[!htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.52, transform shape,
+    box_dense/.style={draw=orange!85!black, fill=yellow!8, rounded corners=6pt, line width=1.0pt},
+    box_sparse/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.0pt},
+    box_rrf/.style={draw=gray!80, fill=gray!5, rounded corners=8pt, line width=1.0pt},
+    box_hybrid/.style={draw=teal!85!black, fill=teal!5, rounded corners=8pt, line width=1.1pt},
+    item_box/.style={draw=black!65, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=2.5pt, font=\linespread{1.0}\selectfont\footnotesize},
+    container_hybrid/.style={draw=teal!75!black, fill=teal!3, dashed, rounded corners=10pt, line width=1.1pt},
+    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85},
+    pipearrow/.style={-{Stealth[length=2.8mm]}, line width=1.2pt, draw=teal!85!black}
+]
+    % 1. Khối Truy vấn đầu vào (Scholar Query)
+    \node[draw=orange!85!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, minimum width=4.8cm, minimum height=0.9cm, align=center, font=\bfseries\small] (query) at (0, 8.2) {
+        Truy vấn học giả (Scholar Query)
+    };
+
+    % 2. TẦNG 1: KHUNG TÌM KIẾM LAI (HYBRID SEARCH CONTAINER)
+    \node[container_hybrid, minimum width=14.4cm, minimum height=5.5cm] (box_hybrid_search) at (0, 3.8) {};
+    
+    % Header của Khung Tìm Kiếm Lai
+    \node[font=\bfseries\normalsize, text=teal!90!black, align=center] at (0, 6.1) {CƠ CHẾ TÌM KIẾM LAI (HYBRID SEARCH)};
+    \node[font=\scriptsize\itshape, text=black!75, align=center] at (0, 5.7) {Không gian tìm kiếm song song bổ trợ ngữ nghĩa và từ khóa};
+
+    % Thành phần 1: Dense Search
+    \node[box_dense, text width=5.8cm, align=center, inner sep=4pt] (card_dense) at (-3.6, 3.0) {
+        {\bfseries\footnotesize\color{orange!90!black} Dense Vector Search (Ngữ nghĩa)}\\[1pt]
+        {\scriptsize\color{orange!80!black} Embedding 1536 chiều, chỉ mục Cosine HNSW}\\[4pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\cos = 0{,}94$)};}\\[2pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 3} \hfill \scriptsize (Hạng 2: $\cos = 0{,}89$)};}\\[2pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 3: $\cos = 0{,}85$)};}
+    };
+
+    % Thành phần 2: Sparse Search
+    \node[box_sparse, text width=5.8cm, align=center, inner sep=4pt] (card_sparse) at (3.6, 3.0) {
+        {\bfseries\footnotesize\color{blue!90!black} Sparse Keyword Search (Từ khóa)}\\[1pt]
+        {\scriptsize\color{blue!80!black} Chỉ mục GIN (\texttt{ts\_rank\_cd}) + BM25}\\[4pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 1} \hfill \scriptsize (Hạng 1: $\text{BM25} = 14{,}2$)};}\\[2pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 2} \hfill \scriptsize (Hạng 2: $\text{BM25} = 11{,}8$)};}\\[2pt]
+        \tikz{\node[item_box, text width=5.2cm] {\textbf{Chunk 4} \hfill \scriptsize (Hạng 3: $\text{BM25} = 9{,}5$)};}
+    };
+
+    % Phân nhánh từ Query vào 2 thành phần
+    \draw[arrowstyle] (query.south) -- ++(0, -0.4) -| (card_dense.north);
+    \draw[arrowstyle] (query.south) -- ++(0, -0.4) -| (card_sparse.north);
+    \node[font=\scriptsize\bfseries, text=orange!90!black, above=1pt] at (-2.0, 7.3) {Nhúng Vector};
+    \node[font=\scriptsize\bfseries, text=blue!90!black, above=1pt] at (2.0, 7.3) {Tách từ khóa};
+
+    % 3. TẦNG 2: ĐỘNG CƠ HỢP NHẤT XẾP HẠNG RRF (RRF SCORES ENGINE)
+    \node[box_rrf, text width=14.0cm, align=center, inner sep=5pt] (card_rrf) at (0, -0.6) {
+        {\bfseries\small Động cơ Hợp nhất Xếp hạng (RRF Scores Engine: $k=60$)}\\[4pt]
+        \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
+            \tikz{\node[item_box, text width=3.8cm, fill=white] {\textbf{Chunk 1}: $\frac{1}{60+1} + \frac{1}{60+1} = \mathbf{0{,}0328}$};} &
+            \tikz{\node[item_box, text width=3.8cm, fill=white] {\textbf{Chunk 2}: $\frac{1}{60+3} + \frac{1}{60+2} = \mathbf{0{,}0320}$};} &
+            \tikz{\node[item_box, text width=3.8cm, fill=white] {\textbf{Chunk 3}: $\frac{1}{60+2} + \frac{1}{60+4} = \mathbf{0{,}0318}$};}
+        \end{tabular}
+    };
+
+    % Mũi tên từ 2 thành phần Hybrid Search xuống RRF Engine
+    \draw[arrowstyle] (card_dense.south) -- (card_dense.south |- card_rrf.north);
+    \draw[arrowstyle] (card_sparse.south) -- (card_sparse.south |- card_rrf.north);
+
+    % 4. TẦNG 3: KẾT QUẢ XẾP HẠNG LAI TỐI ƯU
+    \node[box_hybrid, text width=14.0cm, align=center, inner sep=5pt] (card_hybrid) at (0, -3.4) {
+        {\bfseries\small\color{teal!90!black} Thứ hạng Lai Hợp nhất Tối ưu (Optimal Hybrid Rank)}\\[4pt]
+        \begin{tabular}{@{}c@{\hspace{8pt}}c@{\hspace{8pt}}c@{}}
+            \tikz{\node[item_box, text width=3.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 1] Chunk 1} (RRF: \textbf{0{,}0328})};} &
+            \tikz{\node[item_box, text width=3.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 2] Chunk 2} (RRF: \textbf{0{,}0320})};} &
+            \tikz{\node[item_box, text width=3.8cm, fill=white, draw=teal!80!black] {\textbf{[Top 3] Chunk 3} (RRF: \textbf{0{,}0318})};}
+        \end{tabular}
+    };
+
+    % Mũi tên từ RRF Engine xuống Thứ hạng Lai Tối ưu
+    \draw[pipearrow] (card_rrf.south) -- (card_hybrid.north) node[midway, right=4pt, font=\scriptsize\bfseries, text=teal!90!black] {Tái sắp xếp hợp nhất tối ưu};
+\end{tikzpicture}
+\caption{Cơ chế tìm kiếm lai (Hybrid Search) kết hợp thuật toán hợp nhất xếp hạng đảo ngược (RRF)}
+\label{fig:hybrid_search_rrf}
+\end{figure}

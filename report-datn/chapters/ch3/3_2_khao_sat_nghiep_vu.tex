@@ -2,102 +2,101 @@
 \section{Khảo sát nghiệp vụ và quy trình xử lý tài liệu nghiên cứu}
 \label{sec:khao_sat_nghiep_vu}
 
-Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, đề tài tiến hành phân tích quy trình làm việc học thuật quốc tế (\textit{Academic Research Workflow}) cùng thực trạng vận hành của các công cụ quản lý tài liệu và trợ lý AI hiện hành. Việc phân tích tập trung vào chu trình nghiên cứu tiêu chuẩn của các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp tại các đại học định hướng nghiên cứu (như VinUniversity), qua đó làm rõ các điểm nghẽn kỹ thuật trong quy trình truyền thống và xác lập các yêu cầu nghiệp vụ cũng như thiết kế thuật toán cốt lõi cho hệ thống.
+Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, đề tài tiến hành phân tích quy trình làm việc học thuật quốc tế (\textit{Academic Research Workflow}) cùng thực trạng vận hành của các công cụ hiện hành. Việc phân tích tập trung vào chu trình nghiên cứu tiêu chuẩn của các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp, qua đó làm rõ các điểm nghẽn kỹ thuật trong quy trình truyền thống và xác lập mô hình chuyển đổi quy trình nghiệp vụ cho hệ thống.
 
 \subsection{Khảo sát quy trình tìm kiếm và thu thập tài liệu nghiên cứu}
 \label{subsec:khao_sat_tim_kiem}
 Hiện nay, việc tìm kiếm bài báo khoa học chủ yếu dựa trên thao tác thủ công của học giả trên các công cụ tìm kiếm phổ quát và các cơ sở dữ liệu học thuật độc lập:
-\begin{itemize}
-    \item Học giả nhập từ khóa trên Google Scholar, arXiv hoặc Semantic Scholar, sau đó duyệt từng trang kết quả để tải tệp PDF về máy tính.
-    \item Việc tải tài liệu diễn ra phân tán ở nhiều thư mục máy tính cá nhân. Khi làm việc theo nhóm, các thành viên thường gửi tệp qua email hoặc ứng dụng nhắn tin, dẫn đến tình trạng nhiều người tải trùng một tệp PDF dung lượng từ $5\,\text{MB}$ đến $20\,\text{MB}$, gây lãng phí dung lượng lưu trữ và khó kiểm soát bản mới nhất.
-    \item Khó khăn trong việc phân loại sơ bộ: Nhiều bài báo trên arXiv chỉ là bản thảo chưa qua bình duyệt (\textit{Preprint}), trong khi các bài trên tạp chí đã trải qua phản biện kín (\textit{Peer-Reviewed}). Học giả mất nhiều thời gian tra cứu thủ công xem bài báo đã được chấp nhận xuất bản hay chưa.
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Học giả nhập từ khóa trên Google Scholar, arXiv hoặc Semantic Scholar, sau đó duyệt từng trang kết quả để tải tệp PDF về máy tính cá nhân.
+    \item Việc tải tài liệu diễn ra phân tán ở nhiều thư mục máy tính cá nhân. Khi làm việc theo nhóm, các thành viên dễ tải trùng một tệp PDF dung lượng từ $5\,\text{MB}$ đến $20\,\text{MB}$, gây lãng phí dung lượng lưu trữ và khó kiểm soát phiên bản.
+    \item Nhiều bài báo trên arXiv là bản thảo chưa qua bình duyệt (\textit{Preprint}), trong khi các bài trên tạp chí đã trải qua phản biện kín (\textit{Peer-Reviewed}). Học giả mất nhiều thời gian tra cứu thủ công tình trạng xuất bản.
 \end{itemize}
 
 \subsection{Khảo sát quy trình đọc sâu và thẩm định nguồn trích dẫn}
 \label{subsec:khao_sat_doc_sau}
 Trong giai đoạn đọc hiểu tài liệu chuyên ngành:
-\begin{itemize}
-    \item Hầu hết các bài báo quốc tế (định dạng IEEE, ACM, Springer) đều được trình bày dạng hai cột (\textit{two-column}). Khi sử dụng các công cụ trích xuất PDF thông thường, văn bản bị đọc nhảy ngang giữa hai cột, làm đảo lộn hoàn toàn thứ tự ngữ nghĩa của các công thức toán và đoạn văn.
-    \item Khi sử dụng các công cụ AI trò chuyện với tài liệu, câu trả lời do mô hình sinh ra thường chỉ dẫn chứng số trang chung chung (ví dụ: ``theo trang 4 của tài liệu''). Trong một trang chứa hàng nghìn chữ cùng nhiều bảng biểu và biểu đồ, học giả vẫn phải tự mắt tìm kiếm từng câu chữ để xác nhận.
-    \item Nguy cơ ảo giác: Mô hình ngôn ngữ lớn có xu hướng tự điền khuyết các số liệu đo lường khi không tìm thấy thông tin chính xác, dẫn đến nguy cơ sai lệch nghiêm trọng nếu học giả đưa số liệu này vào bài báo của mình. Do đó, yêu cầu hiển thị khung viền tọa độ Bounding Box định vị chính xác vị trí văn bản gốc là tiêu chí bắt buộc để bảo đảm liêm chính học thuật.
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Hầu hết bài báo quốc tế (IEEE, ACM, Springer) được trình bày dạng hai cột (\textit{two-column}). Công cụ trích xuất văn bản thông thường đọc nhảy ngang giữa hai cột, làm đảo lộn thứ tự ngữ nghĩa của công thức toán và đoạn văn. Quy trình yêu cầu phân lập ranh giới tọa độ trục dọc qua đường phân chia trung tuyến $\text{mid\_x} = 250$ (chuẩn hóa trên khổ trang $500\,\text{pt}$) và chia đoạn văn bản theo cửa sổ trượt tối đa $250$ từ.
+    \item Các công cụ trò chuyện với tài liệu hiện nay chỉ dẫn chứng số trang chung chung. Trong một trang chứa hàng nghìn chữ, học giả vẫn phải tự mắt tìm kiếm từng câu chữ để xác nhận. Hệ thống khảo sát đòi hỏi kiến trúc truy xuất lai kết hợp véc-tơ HNSW và chỉ mục đảo toàn văn qua hàm xếp hạng mật độ \texttt{ts\_rank\_cd}, đồng thời kiểm soát ảo giác qua hai ngưỡng tin cậy CRAG $0{,}35$ (chấp nhận) và $0{,}20$ (chủ động từ chối).
+    \item Nguy cơ ảo giác: Mô hình ngôn ngữ lớn có xu hướng tự điền khuyết số liệu đo lường khi không tìm thấy thông tin chính xác. Việc hiển thị khung viền tọa độ Bounding Box định vị chính xác vị trí văn bản gốc là tiêu chí bắt buộc để bảo đảm liêm chính học thuật.
 \end{itemize}
 
 \subsection{Khảo sát quy trình quản lý và liên kết đồ thị tri thức học thuật}
 \label{subsec:khao_sat_do_thi}
 Khi tiến hành tổng quan tài liệu (\textit{Literature Review}):
-\begin{itemize}
-    \item Nhà nghiên cứu cần đối chiếu xem các công trình tiền nhiệm đã sử dụng kiến trúc mô hình nào, thử nghiệm trên bộ dữ liệu chuẩn nào và đạt kết quả đo lường cụ thể ra sao.
-    \item Phương pháp truyền thống là tạo bảng tính Excel thủ công. Khi số lượng bài báo tăng lên hàng chục hoặc hàng trăm bài, bảng tính trở nên cồng kềnh, khó cập nhật và hoàn toàn mất đi khả năng truy vấn quan hệ bắc cầu giữa các thực thể tri thức.
-    \item Học giả có nhu cầu xây dựng tự động một mạng đồ thị tri thức liên kết 4 thực thể cốt lõi: \textit{Bài báo (Paper) $\rightarrow$ Phương pháp (Method) $\rightarrow$ Bộ dữ liệu (Dataset) $\rightarrow$ Kết quả đo lường (Metric Result)}, cho phép đặt câu hỏi so sánh liên tài liệu trong cùng một không gian nghiên cứu.
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Nhà nghiên cứu cần đối chiếu mô hình kiến trúc, bộ dữ liệu chuẩn và kết quả đo lường cụ thể giữa các công trình tiền nhiệm.
+    \item Phương pháp tạo bảng tính Excel thủ công trở nên cồng kềnh khi số lượng bài báo tăng lên, khó cập nhật và mất đi khả năng truy vấn quan hệ bắc cầu giữa các thực thể tri thức.
+    \item Nhu cầu thực tế là tự động xây dựng mạng đồ thị tri thức liên kết 4 thực thể cốt lõi (\textit{Paper $\rightarrow$ Method $\rightarrow$ Dataset $\rightarrow$ MetricResult}) thông qua cơ chế ép kiểu cấu trúc \texttt{OpenAI Structured Outputs}, hợp nhất đỉnh tương đồng ngữ nghĩa Cosine $\ge 0{,}90$ và phân cụm cộng đồng theo thuật toán Louvain.
 \end{itemize}
 
 \subsection{Khảo sát quy trình biên soạn bản thảo và sửa lỗi biên dịch LaTeX}
 \label{subsec:khao_sat_bien_soan}
-Biên soạn bản thảo là công đoạn tốn nhiều thời gian và công sức nhất trong toàn bộ chu trình nghiên cứu:
-\begin{itemize}
-    \item Ngôn ngữ LaTeX là tiêu chuẩn công bố bắt buộc của các hội nghị khoa học uy tín, nhưng có cú pháp rất chặt chẽ. Chỉ một lỗi nhỏ như quên đóng ngoặc môi trường toán học, sử dụng ký tự đặc biệt chưa thoát mã (như \texttt{\_}, \texttt{\%}, \texttt{\&}), hoặc sai nhãn trích dẫn BibTeX cũng khiến toàn bộ quá trình biên dịch bị đình trệ.
-    \item Tệp nhật ký lỗi (\texttt{.log}) của bộ biên dịch XeLaTeX thường dài hàng nghìn dòng với nhiều thông điệp kỹ thuật khó hiểu. Học giả, đặc biệt là sinh viên mới nghiên cứu, thường mất nhiều thời gian tra cứu Google để tìm cách khắc phục.
-    \item Nhu cầu thực tế là một trợ lý AI có khả năng tự động đọc tệp nhật ký lỗi, phát hiện nguyên nhân gốc rễ và tự tạo bản vá sửa lỗi chính xác trên mã nguồn LaTeX mà không làm biến dạng các phần nội dung khác.
+Biên soạn bản thảo là công đoạn tốn nhiều thời gian nhất trong chu trình nghiên cứu:
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Ngôn ngữ LaTeX có cú pháp rất chặt chẽ. Chỉ một lỗi nhỏ như quên đóng ngoặc môi trường toán học, ký tự đặc biệt chưa thoát mã (như \texttt{\_}, \texttt{\%}, \texttt{\&}), hoặc sai nhãn trích dẫn BibTeX cũng khiến toàn bộ quá trình biên dịch bị đình trệ.
+    \item Tệp nhật ký lỗi (\texttt{.log}) thường dài hàng nghìn dòng. Trợ lý AI có khả năng tự động đọc tệp log, vận hành chu trình ReAct gồm các trạng thái \texttt{reason\_and\_plan} và bộ định tuyến phục hồi \texttt{healing\_router}, kích hoạt bộ vá lỗi tự động \texttt{\_auto\_patch} kết hợp thuật toán sửa lỗi heuristic \texttt{apply\_heuristic\_repair} để tự tạo bản vá sửa lỗi trên mã nguồn LaTeX là nhu cầu cấp thiết.
 \end{itemize}
+
 
 \subsection{Khảo sát quy trình quản lý hồ sơ học giả và bảo mật khóa cá nhân}
 \label{subsec:khao_sat_ho_so}
 Đối với công tác quản trị và bảo mật thông tin nghiên cứu:
-\begin{itemize}
-    \item Học giả cần một định danh duy nhất toàn cầu để phân biệt với các tác giả trùng tên khác. Chuẩn quốc tế ORCID iD gồm 16 chữ số là chuẩn mực được cộng đồng học thuật toàn cầu công nhận.
-    \item Về tính bảo mật và quyền sở hữu trí tuệ: Các công trình nghiên cứu đang trong quá trình thực hiện chứa các phát kiến độc quyền chưa công bố. Học giả rất e ngại việc dữ liệu nghiên cứu bị các nền tảng AI thương mại sử dụng để huấn luyện mô hình.
-    \item Do đó, hệ thống cần trang bị cơ chế ``Tự mang khóa bí mật'' (\textit{Bring Your Own Key -- BYOK}), cho phép học giả sử dụng khóa API riêng của mình. Khóa phải được mã hóa bảo vệ nghiêm ngặt và tuân thủ quy chuẩn không lưu vết trên đĩa cứng, bảo đảm sự an tâm tuyệt đối cho nhà khoa học.
+\begin{itemize}[noitemsep, topsep=2pt]
+    \item Học giả cần định danh quốc tế chuẩn ORCID iD 16 chữ số để phân biệt với tác giả trùng tên.
+    \item Học giả e ngại dữ liệu nghiên cứu chưa công bố bị các nền tảng AI thương mại sử dụng để huấn luyện mô hình. Cơ chế tự mang khóa cá nhân (\textit{Bring Your Own Key -- BYOK}) mã hóa phân tầng và không lưu vết trên đĩa cứng bảo đảm tính an toàn tuyệt đối cho người dùng.
 \end{itemize}
 
-Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy trình nghiên cứu truyền thống (AS-IS) sang quy trình nghiên cứu mới (TO-BE) trên nền tảng \VS\ được mô hình hóa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
+Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy trình nghiên cứu truyền thống (AS-IS) sang quy trình nghiên cứu mới (TO-BE) trên nền tảng \VS được mô hình hóa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
 
-\begin{figure}[H]
+\begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
-    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
-    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=5pt, line width=0.9pt, align=center, inner sep=6pt, font=\linespread{1.0}\selectfont\small, text width=7.6cm, minimum width=7.6cm},
-    arrow_down/.style={-{Stealth[length=2.5mm]}, line width=1pt, draw=black!60},
-    trans_arrow/.style={-{Stealth[length=2.8mm]}, line width=1.3pt, draw=teal!80!black, dashed}
+    scale=0.72, transform shape,
+    box_asis/.style={draw=red!70!black, fill=red!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, text width=7.2cm, minimum width=7.2cm},
+    box_tobe/.style={draw=blue!70!black, fill=blue!6, rounded corners=4pt, line width=0.85pt, align=center, inner sep=4pt, font=\linespread{1.0}\selectfont\scriptsize, text width=7.2cm, minimum width=7.2cm},
+    arrow_down/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!60},
+    trans_arrow/.style={-{Stealth[length=2.4mm]}, line width=1.1pt, draw=teal!80!black, dashed}
 ]
     % Cột AS-IS (Truyền thống)
-    \node[draw=red!80!black, fill=red!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_asis) at (-4.4, 4.6) {QUY TRÌNH TRUYỀN THỐNG (AS-IS)};
+    \node[draw=red!80!black, fill=red!12, rounded corners=4pt, font=\bfseries\scriptsize, minimum width=7.2cm, inner sep=4pt] (h_asis) at (-4.2, 3.8) {QUY TRÌNH TRUYỀN THỐNG (AS-IS)};
     
-    \node[box_asis] (a1) at (-4.4, 3.0) {
-        \textbf{1. Tìm kiếm phân mảnh thủ công}\\
-        \footnotesize Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
+    \node[box_asis] (a1) at (-4.2, 2.5) {
+        \textbf{Tìm kiếm phân mảnh thủ công}\\
+        \tiny Tra cứu arXiv/Scholar riêng rẽ; Tải trùng tệp PDF
     };
-    \node[box_asis] (a2) at (-4.4, 0.8) {
-        \textbf{2. Đọc PDF \& Ghi chép rời rạc}\\
-        \footnotesize Trích xuất thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
+    \node[box_asis] (a2) at (-4.2, 0.9) {
+        \textbf{Đọc PDF và ghi chép rời rạc}\\
+        \tiny Trích xuất thô mất 2 cột; Ảo giác trích dẫn không bằng chứng
     };
-    \node[box_asis] (a3) at (-4.4, -1.4) {
-        \textbf{3. Lập bảng đối chiếu thủ công}\\
-        \footnotesize Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức
+    \node[box_asis] (a3) at (-4.2, -0.7) {
+        \textbf{Lập bảng đối chiếu thủ công}\\
+        \tiny Ghi chú Excel; Bỏ sót liên kết mạng lưới tri thức
     };
-    \node[box_asis] (a4) at (-4.4, -3.6) {
-        \textbf{4. Soạn thảo \& Tự dò lỗi LaTeX}\\
-        \footnotesize Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công
+    \node[box_asis] (a4) at (-4.2, -2.3) {
+        \textbf{Soạn thảo và tự dò lỗi LaTeX}\\
+        \tiny Đọc tệp log dài hàng nghìn dòng; Tự sửa cú pháp thủ công
     };
 
     % Cột TO-BE (Đề xuất VeriScholar)
-    \node[draw=blue!80!black, fill=blue!12, rounded corners=5pt, font=\bfseries\small, minimum width=7.6cm, inner sep=5pt] (h_tobe) at (4.4, 4.6) {QUY TRÌNH VERISCHOLAR (TO-BE)};
+    \node[draw=blue!80!black, fill=blue!12, rounded corners=4pt, font=\bfseries\scriptsize, minimum width=7.2cm, inner sep=4pt] (h_tobe) at (4.2, 3.8) {QUY TRÌNH VERISCHOLAR (TO-BE)};
 
-    \node[box_tobe] (b1) at (4.4, 3.0) {
-        \textbf{1. Tìm kiếm đa nguồn \& Deduplication CAS}\\
-        \footnotesize Tìm kiếm đa nguồn; Tiết kiệm 98\% dung lượng lưu trữ
+    \node[box_tobe] (b1) at (4.2, 2.5) {
+        \textbf{Tìm kiếm đa nguồn và Deduplication CAS}\\
+        \tiny Thu thập đa nguồn; Khử trùng lặp mã băm SHA-256
     };
-    \node[box_tobe] (b2) at (4.4, 0.8) {
-        \textbf{2. Đọc sâu có minh chứng tọa độ}\\
-        \footnotesize Agentic Hybrid RAG; Khung vàng BBox 1s ($\text{IoU} \ge 0{,}85$)
+    \node[box_tobe] (b2) at (4.2, 0.9) {
+        \textbf{Đọc sâu có minh chứng tọa độ}\\
+        \tiny Agentic Hybrid RAG; Khung vàng BBox 1s ($\text{IoU} \ge 0{,}85$)
     };
-    \node[box_tobe] (b3) at (4.4, -1.4) {
-        \textbf{3. Mạng tri thức tự động (GraphRAG)}\\
-        \footnotesize Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
+    \node[box_tobe] (b3) at (4.2, -0.7) {
+        \textbf{Mạng tri thức tự động (GraphRAG)}\\
+        \tiny Đồ thị 4 thực thể; Đối chiếu liên bài báo tức thời
     };
-    \node[box_tobe] (b4) at (4.4, -3.6) {
-        \textbf{4. Agent tự phục hồi bản thảo LaTeX}\\
-        \footnotesize Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $96{,}0\%$
+    \node[box_tobe] (b4) at (4.2, -2.3) {
+        \textbf{Agent tự phục hồi bản thảo LaTeX}\\
+        \tiny Hộp cát MicroVM cô lập; Tự động vá lỗi cú pháp $96{,}0\%$
     };
 
     % Mũi tên tuần tự dọc
@@ -112,39 +111,11 @@ Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy tr
     \draw[arrow_down] (b3) -- (b4);
 
     % Mũi tên chuyển đổi giữa 2 luồng
-    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Deduplication};
-    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Minh chứng};
-    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự động};
-    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=2pt, font=\scriptsize\bfseries, text=teal!90!black] {Tự sửa};
+    \draw[trans_arrow] (a1.east) -- (b1.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Deduplication};
+    \draw[trans_arrow] (a2.east) -- (b2.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Minh chứng};
+    \draw[trans_arrow] (a3.east) -- (b3.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Tự động};
+    \draw[trans_arrow] (a4.east) -- (b4.west) node[midway, fill=white, draw=teal!60, rounded corners=2pt, inner sep=1.5pt, font=\tiny\bfseries, text=teal!90!black] {Tự sửa};
 \end{tikzpicture}
 \caption{Mô hình đối chiếu chuyển đổi quy trình nghiên cứu khoa học AS-IS và TO-BE}
 \label{fig:workflow_as_is_to_be}
 \end{figure}
-
-\subsection{Thiết kế chi tiết các thuật toán xử lý cốt lõi của hệ thống}
-\label{subsec:thiet_ke_thuat_toan_cot_loi}
-
-Để hiện thực hóa quá trình chuyển đổi từ quy trình AS-IS sang TO-BE nêu trên, hệ thống \VS\ thiết kế và cài đặt bốn đường ống thuật toán cốt lõi xử lý xuyên suốt từ bước bóc tách hình học tài liệu, truy xuất lai tự kiểm định, tự phục hồi mã nguồn LaTeX đến tổng hợp đồ thị tri thức học thuật:
-
-\begin{enumerate}[label=\textbf{(\alph*)}]
-    \item \textbf{Thuật toán sắp xếp khối văn bản PDF hai cột và phân đoạn cửa sổ trượt bảo toàn tọa độ:}
-    Với mỗi trang tài liệu có kích thước vật lý $(W, H)$, bộ giải mã bố cục trích xuất tập các khối văn bản thô kèm hình chữ nhật bao quanh $(x_0, y_0, x_1, y_1)$. Thuật toán trước tiên loại bỏ các phần tử nhiễu đầu trang và chân trang thỏa mãn điều kiện $y_0 < 0{,}06 \times H$ hoặc $y_1 > 0{,}93 \times H$ có độ dài dưới $80$ ký tự. Tiếp theo, đường trung tuyến dọc $\text{mid\_x} = 0{,}5 \times W$ được thiết lập để phân loại từng khối văn bản theo ba vùng bố cục: khối trải rộng toàn trang (khi $x_0 < 0{,}35 \times W$ và $x_1 > 0{,}65 \times W$, như tiêu đề hoặc tóm tắt), khối thuộc cột trái ($x_{\text{center}} < \text{mid\_x}$) và khối thuộc cột phải ($x_{\text{center}} \ge \text{mid\_x}$). Các khối được sắp xếp tất định theo khóa bộ bốn $(\text{band}, \text{col}, y_0, x_0)$, bảo đảm luồng văn bản đọc hoàn chỉnh hết cột trái trước khi chuyển sang cột phải. Trên chuỗi từ đã sắp xếp, thuật toán áp dụng cửa sổ trượt kích thước tối đa $\text{max\_words} = 250$ từ với độ gối lấp ngữ cảnh $\text{overlap\_words} = 50$ từ, đồng thời chiếu chuẩn hóa mọi khung bao hình học về không gian đơn vị bất biến độ phân giải $[0, 1]^4$:
-    \begin{equation}
-    \label{eq:bbox_unit_projection}
-    \hat{B} = \left(\frac{x_0}{W},\, \frac{y_0}{H},\, \frac{x_1}{W},\, \frac{y_1}{H}\right) \in [0, 1]^4
-    \end{equation}
-
-    \item \textbf{Thuật toán truy xuất lai SQL CTE Hybrid Retrieval và cổng kiểm định độ tự tin CRAG:}
-    Khi tiếp nhận truy vấn của học giả, hệ thống thực thi truy vấn hợp nhất ngay trong PostgreSQL thông qua biểu thức bảng chung (\texttt{CTE}) gồm hai nhánh song song: nhánh ngữ nghĩa \texttt{dense\_search} quét chỉ mục đồ thị phân cấp \texttt{HNSW} với toán tử khoảng cách Cosine (\texttt{embedding <=> query\_vec}), và nhánh từ vựng \texttt{sparse\_search} quét chỉ mục đảo \texttt{GIN} trên cột \texttt{content\_tsv} bằng hàm mật độ bao phủ \texttt{ts\_rank\_cd} kết hợp tái chấm điểm Okapi BM25 ($k_1 = 1{,}5,\ b = 0{,}75$). Hai danh sách ứng viên được hợp nhất thứ hạng bằng công thức Reciprocal Rank Fusion (RRF) với hằng số làm trơn $k = 60$, sau đó đi qua tầng tái xếp hạng chéo (\texttt{Cross-Encoder Reranking}) để tính điểm hội tụ $\tau \in [0, 1]$. Trước khi gọi mô hình sinh câu trả lời, cổng kiểm định tiền sinh văn bản (\textit{CRAG Confidence Gating}) đối chiếu $\tau$ với hai ngưỡng quyết định:
-    \begin{itemize}[noitemsep, topsep=2pt]
-        \item Khi $\tau \ge 0{,}35$ (\texttt{CORRECT}): Ngữ cảnh đạt độ tin cậy cao, cho phép tổng hợp câu trả lời trực tiếp kèm thẻ dẫn nguồn.
-        \item Khi $0{,}20 \le \tau < 0{,}35$ (\texttt{AMBIGUOUS\_\allowbreak EXPANDED}): Hệ thống tự động kích hoạt hàm mở rộng truy vấn học thuật đa chiều (\texttt{expand\_\allowbreak academic\_\allowbreak query}) và thực hiện truy xuất bổ sung vòng hai trước khi tổng hợp.
-        \item Khi $\tau < 0{,}20$ (\texttt{ACTIVE\_\allowbreak ABSTENTION}): Hệ thống chủ động từ chối suy diễn nhằm triệt tiêu hoàn toàn nguy cơ ảo giác ngoại suy.
-    \end{itemize}
-
-    \item \textbf{Thuật toán tự phục hồi mã nguồn LaTeX qua đồ thị LangGraph ReAct:}
-    Quá trình biên dịch và tự sửa lỗi bản thảo được điều phối bởi đồ thị trạng thái hữu hạn gồm 4 nút chức năng: \texttt{reason\_\allowbreak and\_\allowbreak plan} (phân tích trạng thái và lập kế hoạch), \texttt{tool\_\allowbreak execution} (thực thi biên dịch trong hộp cát cô lập hoặc trích xuất ngữ cảnh), \texttt{healing\_\allowbreak router} (đánh giá mã thoát và điều phối chu trình tự vá lỗi với giới hạn tối đa $N_{\max} = 3$ vòng lặp), và \texttt{generate\_\allowbreak final\_\allowbreak answer} (kết xuất phản hồi). Khi phát hiện lỗi biên dịch ($\text{ExitCode} \ne 0$), hệ thống áp dụng cơ chế sửa lỗi hai tầng: (i) bộ vá lỗi tất định tốc độ cao (\texttt{\_auto\_patch} và \texttt{apply\_\allowbreak heuristic\_\allowbreak repair}) tự động nạp các gói lệnh bị thiếu (\texttt{amsmath}, \texttt{graphicx}, \texttt{booktabs}), thoát mã các ký tự đặc biệt (\texttt{\_}, \texttt{\%}, \texttt{\&}) ngoài môi trường toán và đóng các khối \texttt{\textbackslash begin\{...\}} bị khuyết; (ii) bộ sinh bản vá vi phẫu bằng mô hình ngôn ngữ (\texttt{generate\_patch}) phân tích tệp nhật ký \texttt{.log} để sửa các xung đột cú pháp phức tạp. Đặc biệt, chốt chặn chống dao động tuần hoàn (\textit{SHA-256 Anti-Oscillation Guard}) tính mã băm \texttt{SHA-256} của mã nguồn sau mỗi lần vá và đối chiếu với tập lịch sử \texttt{seen\_\allowbreak source\_\allowbreak hashes}; nếu phát hiện mã băm lặp lại hoặc mức độ lỗi không giảm, \texttt{healing\_\allowbreak router} lập tức dừng vòng lặp và khôi phục phiên bản tốt nhất (\texttt{best\_\allowbreak latex\_\allowbreak source}).
-
-    \item \textbf{Thuật toán trích xuất đồ thị tri thức 4 thực thể, hợp nhất ngữ nghĩa và phân cụm Louvain (GraphRAG):}
-    Đối với mỗi tài liệu trong thư viện nghiên cứu, đường ống GraphRAG sử dụng cơ chế ép kiểu lược đồ đầu ra \texttt{OpenAI Structured Outputs} (kết hợp bộ quy tắc biểu thức chính quy dự phòng \texttt{Rule Fallback}) để bóc tách 4 loại nút thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{Metric\allowbreak Result}) cùng 4 loại cạnh quan hệ có hướng (\texttt{PROPOSES}, \texttt{EVALUATED\_\allowbreak ON}, \texttt{ACHIEVES}, \texttt{CITES}). Để ngăn chặn sự phân mảnh đỉnh giữa các bài báo khác nhau, thuật toán chuẩn hóa tên thực thể (\texttt{canonical\_\allowbreak name}) và tính độ tương đồng Cosine giữa các vector nhúng thực thể; các nút cùng loại có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về một thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}. Cuối cùng, thuật toán phân cụm cộng đồng Louvain được thực thi trên đồ thị quy đổi vô hướng nhằm tối ưu hóa độ mô-đun hóa $Q$, từ đó tổng hợp bản tóm tắt cộng đồng theo thư mục (\texttt{folder\_\allowbreak community\_\allowbreak summaries}) và biên dịch hệ thống trang tri thức liên kết hai chiều (\texttt{wiki\_pages}).
-\end{enumerate}
