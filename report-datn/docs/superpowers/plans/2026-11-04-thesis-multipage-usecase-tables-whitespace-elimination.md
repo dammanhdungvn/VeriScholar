@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Eliminate large whitespace gaps at the bottom of pages containing Use Case sub-diagrams (pages 45, 47, 49, 51) and Sequence diagrams (page 54) by converting Use Case specification tables (Tables 3-2, 3-3, 3-4, 3-5) into breakable multipage tables (`xltabular`) with academic continuation headers (`Bảng 3-X (tiếp theo)`), removing forced `\clearpage` before Section 3.6, and ensuring continuous text flow while strictly preserving the 13pt Times New Roman and 1.5 Word line spacing invariants.
+**Goal:** Eliminate large whitespace gaps at the bottom of pages containing Use Case sub-diagrams (pages 45, 47, 49, 51) and Sequence diagrams (page 54), and conduct a comprehensive scan across all chapters (Chapters 1-4, Conclusion) to eliminate any other instances of unnatural whitespace spillovers or forced page breaks (`\clearpage`), by converting Use Case specification tables (Tables 3-2, 3-3, 3-4, 3-5) into breakable multipage tables (`xltabular`) with academic continuation headers (`Bảng 3-X (tiếp theo)`), removing forced `\clearpage` before Section 3.6, and ensuring continuous text flow while strictly preserving the 13pt Times New Roman and 1.5 Word line spacing invariants.
 
 **Architecture:** 
 1. Incorporates `xltabular` in `config/preamble.tex` to combine `longtable` multi-page breaking with `tabularx` full-width `\textwidth` column scaling.
@@ -223,7 +223,11 @@ Expected: FAIL (line 2 of `3_6_thiet_ke_csdl.tex` currently has `\clearpage`).
 
 In `chapters/ch3/3_6_thiet_ke_csdl.tex`, remove line 2 (`\clearpage`). Retain `\FloatBarrier` if appropriate or let content flow smoothly.
 
-- [ ] **Step 4: Run pytest to verify test passes (TDD Green step)**
+- [ ] **Step 4: Scan and audit entire report for any other forced internal `\clearpage` or excessive whitespace**
+
+Search all chapter subfiles (`chapters/**/*.tex`) for internal `\clearpage` or `\newpage` inside chapters (Rule 2 of The 3 Inviolable Rules). If any forced page break exists between sub-sections, eliminate it to allow natural flowing text layout.
+
+- [ ] **Step 5: Run pytest to verify test passes (TDD Green step)**
 
 Run:
 ```bash
@@ -231,11 +235,11 @@ cd /home/dammanhdungvn/Downloads/Workspace/VeriScholar && .venv/bin/pytest tests
 ```
 Expected: PASS.
 
-- [ ] **Step 5: Commit changes**
+- [ ] **Step 6: Commit changes**
 
 ```bash
 git add report-datn/chapters/ch3/3_6_thiet_ke_csdl.tex tests/report_datn/test_thesis_format_hieu.py
-git commit -m "fix(layout): remove forced clearpage before Section 3.6 to eliminate whitespace"
+git commit -m "fix(layout): remove forced clearpage before Section 3.6 and audit internal page breaks"
 ```
 
 ---
