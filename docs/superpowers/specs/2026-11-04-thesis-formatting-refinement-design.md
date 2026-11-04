@@ -121,8 +121,11 @@ The user provided advisor-mandated feedback requiring the graduation thesis repo
      - `Dense / Sparse` (instead of `Véc-tơ dày đặc / ma trận thưa`),
      - `BYOK` (instead of `Tự cung cấp khóa API cá nhân`),
      - `IoU` (instead of `Tỷ lệ chồng lấn bounding box`).
-4. **Step Formatting in Use Case Tables (Bảng 3-2, 3-3, 3-4, 3-5):**
-   - Main event flows format steps as `B1:`, `B2:`, `B3:...` matching `HIeu.pdf` (page 36) or dashes (`--`), strictly avoiding raw numbered lists (`1.`, `2.`). Alternative flows use dashes (`--`).
+4. **Table Content Itemization Rules (Tùy tính chất nội dung):**
+   - Đối với các bước thực hiện tuần tự (Steps / Luồng sự kiện chính trong Bảng 3-2 đến 3-5): Sử dụng tiền tố bước rõ ràng `Bước 1:`, `Bước 2:`, `Bước 3:`... (hoặc `B1:`, `B2:`... theo mẫu `HIeu.pdf` trang 36).
+   - Đối với các ý / luồng thay thế / ngoại lệ: Sử dụng dấu gạch đầu dòng (`--`).
+   - Đối với các mục liệt kê thành phần / đặc tính: Sử dụng bullet (`\textbullet`).
+   - Tuyệt đối cấm sử dụng số tự do (`1.`, `2.`, `3.`) trong phần nội dung bảng ngoài cột STT.
 
 ### 4.3 Per-Figure Sizing & Diagram Placement
 1. **Figure Size Matrix:**
