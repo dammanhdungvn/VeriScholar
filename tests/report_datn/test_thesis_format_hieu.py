@@ -420,3 +420,11 @@ def test_no_near_empty_chapter_end_pages():
             assert len(ch3_lines) >= 12, (
                 f"Chapter 3 end page {i} has only {len(ch3_lines)} lines, creating a gap!"
             )
+
+
+def test_xltabular_configured():
+    """Verify that xltabular is loaded in preamble.tex for breakable multi-page tables."""
+    preamble = (REPORT_DIR / "config/preamble.tex").read_text(encoding="utf-8")
+    assert "\\usepackage{xltabular}" in preamble, (
+        "preamble.tex must load xltabular to allow multi-page table breaking"
+    )
