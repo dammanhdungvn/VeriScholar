@@ -86,6 +86,14 @@ Bộ 11 Điều Răn sau đây là **Quy chuẩn Định dạng Tối thượng 
     - Trong Mục 3.4 (Phân tích các ca sử dụng), mỗi biểu đồ phân rã Use Case con (Hình 3-4, 3-5, 3-6, 3-7) bắt buộc phải được đặt đi liền kề ngay phía trước bảng đặc tả ca sử dụng tương ứng (Bảng 3-2, 3-3, 3-4, 3-5).
     - Ngay sau mỗi bảng đặc tả, BẮT BUỘC chèn lệnh `\FloatBarrier` trước khi mở đầu tiểu mục Use Case tiếp theo để khóa cứng cặp hình-bảng đi liền nhau, triệt tiêu hoàn toàn hiện tượng trôi nổi phân tán bảng biểu và sơ đồ sang các phần không liên quan.
 
+### BA QUY TẮC BẤT BIẾN VỀ TRÍCH DẪN VÀ DÒNG CHẢY BỐ CỤC (THE 3 INVIOLABLE RULES)
+
+Để bảo đảm tính chuyên nghiệp, văn phong học thuật thuần khiết và mật độ trang in tối ưu theo chuẩn mực quốc tế, AI Agent bắt buộc phải tuân thủ 3 quy tắc bất biến sau:
+
+1. **Quy tắc cấm trích dẫn số trong thân bài:** Nghiêm cấm đặt `\cite{...}` hoặc `[1]`, `[14]` trong các chương nội dung. Tuyệt đối cấm sử dụng các ký hiệu trích dẫn số học hoặc đại từ nhân xưng chủ quan. Câu văn phải diễn đạt khách quan, thuần kỹ thuật, không kể lể tên tác giả (ví dụ: không viết *"Lewis và cộng sự đề xuất..."*, mà viết *"Kỹ thuật tạo sinh tăng cường truy xuất kết hợp..."*). Mọi tri thức, thuật toán và công nghệ được diễn đạt trực tiếp dưới góc độ nguyên lý kỹ thuật.
+2. **Quy tắc dòng chảy liên tục:** Cấm chèn `\clearpage` hay `\newpage` cưỡng bức giữa các tiểu mục nhỏ trong chương; bố cục phải khít khao tự nhiên không để hổng trang. Nội dung chuyển tiếp mượt mà, lấp đầy trang in và tôn trọng dòng chảy văn bản.
+3. **Quy tắc Tài liệu tham khảo:** Đúng 10 bài báo kinh điển A--Z phẳng, không phân nhóm La Mã (loại bỏ hoàn toàn phân nhóm "I. Tài liệu tiếng Việt" và "II. Tài liệu tiếng Anh"). Toàn bộ 10 bài báo là các công trình khoa học quốc tế có bình duyệt, phản ánh nền tảng lý thuyết và công nghệ cốt lõi của đề tài, tuân thủ nghiêm ngặt trần $0 < N_{\text{refs}} \le 20$.
+
 ---
 
 ## PHẦN 1: MỤC TIÊU CỐT LÕI, QUY TRÌNH HỌC THUẬT VÀ KỶ LUẬT ĐATN
@@ -459,27 +467,20 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
    - **Tuyệt đối cấm viết tắt trong tên chương và tên mục chính**.
    - Lần đầu xuất hiện trong bài: Phải viết đầy đủ thuật ngữ kèm chữ viết tắt trong ngoặc đơn. Ví dụ: *Cơ sở dữ liệu (CSDL)* hoặc *Retrieval-Augmented Generation (RAG)*.
    - Bảng *Danh mục các ký hiệu và chữ viết tắt* ở phần Frontmatter bắt buộc phải sắp xếp theo **thứ tự bảng chữ cái ABC**.
-2. **Quy chuẩn sắp xếp Danh mục Tài liệu tham khảo (Phụ lục 3 HUMG):**
-   - **Phân nhóm ngôn ngữ bắt buộc:** Phân tách rõ ràng thành 2 nhóm:
-     - `I. Tài liệu tiếng Việt` (đặt lên đầu tiên).
-     - `II. Tài liệu tiếng Anh` (và tiếng nước ngoài khác đặt sau).
+2. **Quy chuẩn sắp xếp Danh mục Tài liệu tham khảo:**
+   - **Cấu trúc danh mục phẳng A--Z:** Toàn bộ danh mục tài liệu tham khảo là một danh sách phẳng duy nhất, tuyệt đối cấm phân nhóm La Mã (loại bỏ hoàn toàn phân nhóm `I. Tài liệu tiếng Việt` và `II. Tài liệu tiếng Anh`).
    - **Bảo toàn nguyên văn:** Tài liệu tiếng nước ngoài phải giữ nguyên văn, không phiên âm, không dịch.
-   - **Thứ tự sắp xếp bảng chữ cái ABC:**
-     - Tác giả Việt Nam: Xếp thứ tự ABC theo **TÊN** của tác giả, nhưng **giữ nguyên thứ tự thông thường Họ Tên** (ví dụ: *"Nguyễn Đình Thúc"* xếp vần T, không được đảo thành *"Thúc, Nguyễn Đình"*).
-     - Tác giả nước ngoài: Xếp thứ tự ABC theo **HỌ (Surname)** của tác giả (ví dụ: *"Vaswani A."* xếp vần V).
-     - Tài liệu không có tên tác giả cá nhân: Xếp thứ tự ABC theo chữ cái đầu của **tên cơ quan ban hành** ấn phẩm (ví dụ: *Bộ Giáo dục và Đào tạo* xếp vần B).
+   - **Thứ tự sắp xếp bảng chữ cái ABC:** Xếp thứ tự ABC theo **HỌ (Surname)** của tác giả đầu tiên (hoặc tên cơ quan ban hành ấn phẩm).
    - **Quy cách trình bày thông tin:**
-     - *Sách, đồ án, giáo trình:* Tên tác giả (Năm xuất bản), *Tên sách/đồ án (in nghiêng)*, Nhà xuất bản, Nơi xuất bản.
-     - *Bài báo tạp chí, kỷ yếu hội thảo:* Tên tác giả (Năm công bố), "Tên bài báo (ngoặc kép, đứng)", *Tên tạp chí/kỷ yếu (in nghiêng)*, Tập(Số), Các số trang.
+     - *Bài báo tạp chí, kỷ yếu hội thảo:* Tên tác giả (Năm công bố), ``Tên bài báo'', *Tên tạp chí/kỷ yếu*, Tập(Số), Các số trang.
    - **Quy cách thụt lề dòng thứ hai (Hanging Indent):** Nếu tài liệu dài hơn 1 dòng, từ **dòng thứ hai trở đi bắt buộc lùi vào $1{,}0\,\text{cm}$** so với dòng thứ nhất để danh mục rõ ràng, chuyên nghiệp.
-   - **Giới hạn số lượng tài liệu tham khảo ($\le 20$):**
-     - Toàn bộ danh mục tài liệu tham khảo bắt buộc phải thỏa mãn trần nghiêm ngặt: $\mathbf{0 < N_{\text{refs}} \le 20}$.
-     - Tuyệt đối không nhồi nhét tài liệu rác để kéo dài số lượng. Chỉ trích dẫn các công trình nền tảng có bình duyệt (Peer-reviewed) và tài liệu quy chế chính thức.
-   - **Cấm tuyệt đối trích dẫn mồ côi (Zero Orphan References):** 100% tài liệu liệt kê trong danh mục cuối bài bắt buộc phải được dẫn chiếu trực tiếp bằng lệnh `\cite{...}` (dạng `[1]`, `[2]`) ít nhất một lần trong phần nội dung thân bài.
-3. **Tinh giản trích dẫn tham chiếu và cấm rải dày đặc (Streamlined Citations):**
-   - **TUYỆT ĐỐI CẤM** rải các cụm trích dẫn dày đặc, rải rác lặp lại không thiết yếu trong các đoạn văn thân bài (đặc biệt tại Chương 3 và Chương 4).
-   - Các công trình nghiên cứu và tài liệu tham khảo phải được trích dẫn tập trung, đích đáng tại Chương 1 và Chương 2 nơi phân tích bối cảnh, cơ sở lý thuyết và công nghệ nền tảng.
-   - Chương 3 và Chương 4 chỉ tập trung vào thiết kế hệ thống và kết quả thực nghiệm của chính đề tài, không lặp lại trích dẫn lý thuyết chung chung.
+   - **Giới hạn số lượng tài liệu tham khảo (Đúng 10 bài báo kinh điển, $\le 20$):**
+     - Toàn bộ danh mục tài liệu tham khảo chuẩn hóa đúng 10 bài báo kinh điển quốc tế, thỏa mãn trần nghiêm ngặt: $\mathbf{0 < N_{\text{refs}} \le 20}$.
+     - Tuyệt đối không nhồi nhét tài liệu rác để kéo dài số lượng. Chỉ trích dẫn các công trình nền tảng có bình duyệt (Peer-reviewed).
+3. **Quy tắc cấm trích dẫn số và lệnh `\cite{...}` trong thân bài:**
+   - **TUYỆT ĐỐI CẤM** sử dụng các ký hiệu trích dẫn `[1]`, `[14]` hay lệnh `\cite{...}` trong các chương nội dung (Chương 1 đến Chương 4).
+   - Câu văn phải diễn đạt khách quan, thuần kỹ thuật, không kể lể tên tác giả.
+   - Mọi thuật toán, mô hình và công nghệ nền tảng được trình bày trực tiếp dưới góc độ nguyên lý kỹ thuật, cấu trúc toán học và kiến trúc giải pháp.
 
 ---
 
@@ -528,7 +529,7 @@ Một quyển đồ án 65 trang chứa hàng chục nghìn dòng LaTeX. Nếu n
 XeLaTeX là trình biên dịch nghiêm ngặt; một lỗi ký tự chưa thoát có thể làm đổ vỡ toàn bộ chu trình build:
 - **Thoát ký tự nhạy cảm:** Mọi ký tự `\_`, `\%`, `\&`, `\#`, `\$`, `\{`, `\}` xuất hiện trong văn bản thường, tên biến, tên trường CSDL bắt buộc phải thoát dấu gạch chéo ngược hoặc bọc trong `\texttt{...}`.
 - **Bất biến nhãn tham chiếu (`\label{...}` Invariance):** Tuyệt đối không xóa, đổi tên hoặc sửa nhãn của các Hình (`fig:...`) và Bảng (`tab:...`) đã được xác lập trong hệ thống kiểm thử tự động.
-- **Cấm để lộ mã thô:** Trong mọi bản nháp duyệt trước, trích dẫn phải hiển thị chuẩn dạng số `[1]`, `[2]`, tuyệt đối không để lộ mã LaTeX thô như `\cite{...}. T`.
+- **Cấm để lộ mã thô và cấm trích dẫn số:** Cấm đặt lệnh `\cite{...}` hoặc ký hiệu trích dẫn số `[1]`, `[2]` trong thân bài; câu văn diễn đạt khách quan thuần kỹ thuật.
 
 #### Nguyên Tắc 4: Lập luận "Tại sao chọn" (Justification-Driven)
 Khác với tài liệu hướng dẫn kỹ thuật thông thường, đồ án đại học đòi hỏi tư duy phản biện khoa học. Khi giới thiệu bất kỳ công nghệ hoặc giải pháp nào ở Chương 2, AI Agent không chỉ nêu khái niệm mà bắt buộc phải trả lời câu hỏi cốt tử của Hội đồng: *"Tại sao đề tài chọn giải pháp này mà không chọn giải pháp khác?"*:
@@ -551,7 +552,7 @@ Khác với tài liệu hướng dẫn kỹ thuật thông thường, đồ án 
 | **AP-02** | **Rò rỉ chi tiết mã nguồn vào Chương 2 (Source Code Spillover into Ch2)** | Chèn đường dẫn file repo (`packages/core/...`), tên interface code (`IAcademicSearchResolverPort`) vào Chương 2. | Vi phạm nguyên tắc phân tách ranh giới học thuật giữa Lý thuyết (Ch2) và Thiết kế/Cài đặt (Ch3/Ch4). | **Hàng rào Cách ly Học thuật Chương 2 (Chapter 2 Isolation):**<br>• Chương 2 chỉ trình bày mô hình toán học, nguyên lý thuật toán và kiến trúc khái niệm.<br>• Kiểm tra tự động bằng bài test `test_thesis_chapter2_academic_purity`. |
 | **AP-03** | **Dán mã nguồn thô hàng trăm dòng (Raw Source Code Dumps)** | Sao chép nguyên khối code dài hàng chục, hàng trăm dòng từ repo vào thân bài để "kéo trang". | Biến đồ án thành tệp in code; vi phạm nghiêm trọng tính cô đọng học thuật. | **Hàng rào Trích dẫn Tinh gọn:**<br>• Cấm dán code thô quá 15-20 dòng trong thân bài.<br>• Chỉ dùng mã giả giải thuật (`algorithm2e`) hoặc khối hàm logic hạt nhân.<br>• Toàn bộ code đầy đủ chuyển vào Phụ lục hoặc đĩa mềm. |
 | **AP-04** | **Số liệu thực nghiệm bịa đặt / Ảo giác chỉ số (Hallucinated Metrics)** | AI tự điền các con số không có thật: "độ chính xác đạt 99.8%", "thời gian phản hồi 0.001s", "đã kiểm thử 10.000 ca". | Gian lận học thuật; sinh viên sẽ bị trượt ngay khi Hội đồng yêu cầu mở log kiểm chứng. | **Hàng rào Bằng chứng Đo lường Thực tế (Empirical Proof):**<br>• Mọi số liệu trong Chương 4 phải khớp 100% với output thật được khóa cứng tại `report-datn/INFORMATION.md`. |
-| **AP-05** | **Trích dẫn ma và Thổi phồng số lượng tài liệu (Phantom and Bloated References)** | AI tự bịa bài báo không tồn tại, hoặc thêm 50-60 tài liệu từ blog không rõ nguồn gốc để làm danh mục đồ sộ. | Vi phạm liêm chính khoa học quốc tế; dễ bị phát hiện qua Google Scholar. | **Hàng rào Trần Tham Chiếu Tinh Hoa:**<br>• Bắt buộc số lượng tài liệu tham khảo $N_{\text{refs}} \le 20$.<br>• Chỉ trích dẫn bài báo gốc có bình duyệt từ danh mục chính thức tại `report-datn/INFORMATION.md`.<br>• Cấm trích dẫn mồ côi (100% ref đều phải có `\cite` trong thân bài). |
+| **AP-05** | **Trích dẫn ma và Thổi phồng số lượng tài liệu (Phantom and Bloated References)** | AI tự bịa bài báo không tồn tại, hoặc thêm 50-60 tài liệu từ blog không rõ nguồn gốc để làm danh mục đồ sộ. | Vi phạm liêm chính khoa học quốc tế; dễ bị phát hiện qua Google Scholar. | **Hàng rào Trần Tham Chiếu Tinh Hoa:**<br>• Bắt buộc số lượng tài liệu tham khảo $N_{\text{refs}} \le 20$ (chuẩn hóa đúng 10 bài báo kinh điển A--Z).<br>• Chỉ trích dẫn bài báo gốc có bình duyệt từ danh mục chính thức tại `report-datn/INFORMATION.md`.<br>• Cấm sử dụng các ký hiệu trích dẫn số `[1]`, `[14]` hay lệnh `\cite{...}` trong các chương thân bài. |
 | **AP-06** | **Thiết kế CSDL và Sơ đồ "ma" không thể tái lập (Irreproducible Architecture)** | Vẽ sơ đồ hoặc khai báo bảng CSDL không có thật trong code (như 4 bảng ảo `extracted_figures`, `latex_compilations`...). | Đồ án không có tính tái lập (*Non-reproducible*); không thể bảo vệ trước câu hỏi kỹ thuật. | **Hàng rào Đồng bộ Schema 1:1:**<br>• Bắt buộc mô tả đúng 20 bảng CSDL thực tế quy định tại `report-datn/INFORMATION.md`.<br>• Loại bỏ vĩnh viễn 4 bảng ảo: `extracted_figures`, `extracted_tables`, `draft_sections`, `latex_compilations`.<br>• Đúng tên khóa ngoại và thuật toán thực tế. |
 | **AP-07** | **Sơ đồ ríu rít, đâm thủng lề và Bảng biểu vỡ khung (Visual Overflow and Clutter)** | Vẽ TikZ mũi tên xiên chéo cắt qua mặt chữ, bảng dài vượt quá lề phải 15cm, tạo ra trang trắng mồ côi. | Báo cáo in ra bị lỗi hình thức nghiêm trọng, mất thẩm mỹ chuyên nghiệp. | **Hàng rào 7 Nguyên Tắc Vàng TikZ và Tabularx:**<br>• Bề rộng sơ đồ $\le 15{,}0\,\text{cm}$, scale 0.74 -- 0.80.<br>• Định tuyến góc vuông (`|-`), nhãn nền trắng `fill=white`.<br>• Bắt buộc dùng `tabularx` có viền khép kín `|...|`. |
 
@@ -771,7 +772,7 @@ Trước khi xác nhận hoàn thành bất kỳ tác vụ nào trong `report-da
 - [ ] 16. Phân cấp đề mục: Tối đa 4 cấp (X.Y.Z.W); CẤM TIỂU MỤC ĐƠN LẺ (mỗi nhóm >= 2 mục con); tiêu đề danh ngữ hóa 3-7 từ; không có tiêu đề mồ côi.
 - [ ] 17. Bảng biểu và Hình vẽ: Tiêu đề Bảng ở TRÊN; Tiêu đề Hình ở DƯỚI; đánh số theo chương dạng gạch nối Chương-Số (`Bảng X-Y`, `Hình X-Y`); TUYỆT ĐỐI CẤM tham chiếu tương đối ("hình dưới đây", "bảng sau").
 - [ ] 18. Bảng tabularx và TikZ: Bảng có viền khép kín `|...|` và `\hline`, cột `X` ngắt dòng; triệt tiêu 100% Overfull \hbox; sơ đồ TikZ tuân thủ 7 Nguyên tắc vàng, chiều ngang <= 15.0cm.
-- [ ] 19. Tài liệu tham khảo: Tiếng Việt trước, tiếng Anh sau; xếp ABC chuẩn; hanging indent 1.0cm; giới hạn <= 20 tài liệu; 100% tài liệu được trích dẫn (không mồ côi); tinh giản trích dẫn dày đặc.
+- [ ] 19. Tài liệu tham khảo: Danh mục phẳng đúng 10 bài báo kinh điển A--Z không phân nhóm La Mã; hanging indent 1.0cm; giới hạn <= 20 tài liệu; cấm sử dụng các ký hiệu trích dẫn số [1], [14] hay \cite{...} trong các chương thân bài.
 - [ ] 20. Tỷ lệ nội dung vàng: Lý thuyết (Ch1 + Ch2) <= 30%; Thiết kế và Thực nghiệm (Ch3 + Ch4) >= 70%; tổng dung lượng ruột đạt 50 -- 65 trang; Phụ lục không dày hơn phần chính.
 
 #### KHỐI III: QUY TẮC PHÒNG NGỪA ANTI-PATTERNS VÀ CHUẨN HÓA BẢN VẼ UML

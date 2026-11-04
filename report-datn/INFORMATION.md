@@ -6,7 +6,7 @@
 > - Toàn bộ mã nguồn thực tế, lược đồ cơ sở dữ liệu và kết quả kiểm thử đã vượt qua 100% trong Monorepo VeriScholar.  
 >
 > **Ranh giới thẩm quyền và Nguồn chân lý duy nhất (Single Source of Truth — SSOT):**  
-> Tài liệu này là **Nguồn Chân Lý Duy Nhất (SSOT)** lưu trữ toàn bộ thông tin định danh sinh viên, giảng viên hướng dẫn, tên đề tài, lịch trình 10 tuần, số liệu thực nghiệm khóa cứng, danh mục 20 tài liệu tham khảo chính thức và **Bản đồ mục lục phân loại đặc tả kỹ thuật coding** tại thư mục [`../docs`](../docs).  
+> Tài liệu này là **Nguồn Chân Lý Duy Nhất (SSOT)** lưu trữ toàn bộ thông tin định danh sinh viên, giảng viên hướng dẫn, tên đề tài, lịch trình 10 tuần, số liệu thực nghiệm khóa cứng, danh mục 10 tài liệu tham khảo chính thức (giới hạn tối đa <= 20) và **Bản đồ mục lục phân loại đặc tả kỹ thuật coding** tại thư mục [`../docs`](../docs).  
 > Toàn bộ quy chuẩn về kiểu chữ, cỡ chữ, căn lề trang, định dạng bảng `tabularx`, kỹ nghệ sơ đồ TikZ, phong cách hành văn học thuật và quy trình phối hợp của AI Agent tuân thủ nghiêm ngặt theo [**`report-datn/AGENTS.md`**](./AGENTS.md).
 
 ---
@@ -158,31 +158,18 @@ Cơ sở dữ liệu của VeriScholar gồm đúng **20 bảng** chuẩn hóa:
 
 ---
 
-## PHẦN 6: DANH MỤC 20 TÀI LIỆU THAM KHẢO CHÍNH THỨC CỦA ĐỀ TÀI
+## PHẦN 6: DANH MỤC 10 TÀI LIỆU THAM KHẢO CHÍNH THỨC CỦA ĐỀ TÀI (GIỚI HẠN TỐI ĐA <= 20)
 
-Toàn bộ 20 tài liệu tham khảo chính thức được chọn lọc tinh hoa, đồng bộ 100% với tệp `report-datn/chapters/tai_lieu_tham_khao.tex`, tuân thủ nghiêm ngặt trần $N_{\text{refs}} \le 20$:
+Toàn bộ 10 tài liệu tham khảo chính thức được chọn lọc tinh hoa, đồng bộ 100% với tệp `report-datn/chapters/tai_lieu_tham_khao.tex`, xếp thứ tự phẳng theo bảng chữ cái A--Z họ tác giả đầu tiên, tuân thủ nghiêm ngặt trần $N_{\text{refs}} \le 20$:
 
-### I. Tài liệu tiếng Việt
-1. **Khoa Công nghệ Thông tin — Trường Đại học Mỏ - Địa chất** (2022), *Hướng dẫn thực hiện Đồ án Tốt nghiệp Đại học*, Hà Nội.
-2. **Khoa Công nghệ Thông tin — Trường Đại học Mỏ - Địa chất** (2022), *Hướng dẫn viết và thể thức trình bày Đồ án Tốt nghiệp Đại học*, Hà Nội.
+1. **Asai, Akari, et al.** (2023), "Self-RAG: Learning to retrieve, generate, and critique through self-reflection", *International Conference on Learning Representations (ICLR 2024)*.
+2. **Cormack, Gordon V., Clarke, Charles L., and Buettcher, Stefan** (2009), "Reciprocal rank fusion outperforms condorcet and individual rank learning methods", *Proceedings of the 32nd international ACM SIGIR conference on Research and development in information retrieval*, pp. 758--759.
+3. **Edge, Darren, et al.** (2024), "From Local to Global: A Graph RAG Approach to Query-Focused Summarization", *arXiv preprint arXiv:2404.16130*.
+4. **Gao, Yunfan, et al.** (2023), "Retrieval-Augmented Generation for Large Language Models: A Survey", *arXiv preprint arXiv:2312.10997*.
+5. **Lewis, Patrick, et al.** (2020), "Retrieval-augmented generation for knowledge-intensive NLP tasks", *Advances in Neural Information Processing Systems (NeurIPS 2020)*, vol. 33, pp. 9459--9474.
+6. **Malkov, Yury A., and Yashunin, Dmitry A.** (2018), "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs", *IEEE Transactions on Pattern Analysis and Machine Intelligence*, vol. 42, no. 4, pp. 824--836.
+7. **Robertson, Stephen E., et al.** (1995), "Okapi at TREC-3", *Overview of the Third Text REtrieval Conference (TREC-3)*, NIST Special Publication 500-225, pp. 109--126.
+8. **Shinn, Noah, et al.** (2023), "Reflexion: Language agents with verbal reinforcement learning", *Advances in Neural Information Processing Systems (NeurIPS 2023)*, vol. 36, pp. 8634--8652.
+9. **Yan, Shi-Qi, et al.** (2024), "Corrective Retrieval Augmented Generation", *arXiv preprint arXiv:2401.15884*.
+10. **Yao, Shunyu, et al.** (2022), "ReAct: Synergizing reasoning and acting in language models", *International Conference on Learning Representations (ICLR 2023)*.
 
-### II. Tài liệu tiếng Anh
-3. **Agache, A., et al.** (2020), "Firecracker: Lightweight virtualization for serverless applications", *Proceedings of the 17th USENIX Symposium on Networked Systems Design and Implementation (NSDI '20)*, pp. 419--434.
-4. **Asai, A., et al.** (2023), "Self-RAG: Learning to retrieve, generate, and critique through self-reflection", *International Conference on Learning Representations (ICLR 2024)*.
-5. **Blondel, V. D., Guillaume, J.-L., Lambiotte, R., and Lefebvre, E.** (2008), "Fast unfolding of communities in large networks", *Journal of Statistical Mechanics: Theory and Experiment*, vol. 2008, no. 10, p. P10008.
-6. **Cockburn, A.** (2005), *Hexagonal Architecture (Ports and Adapters Pattern)*, Alistair Cockburn Blog.
-7. **Cormack, G. V., Clarke, C. L., and Buettcher, S.** (2009), "Reciprocal rank fusion outperforms condorcet and individual rank learning methods", *Proceedings of the 32nd international ACM SIGIR conference on Research and development in information retrieval*, pp. 758--759.
-8. **Dworkin, M.** (2007), "Recommendation for block cipher modes of operation: Galois/Counter Mode (GCM) and GMAC", *NIST Special Publication 800-38D*, National Institute of Standards and Technology.
-9. **Edge, D., et al.** (2024), "From Local to Global: A Graph RAG Approach to Query-Focused Summarization", *arXiv preprint arXiv:2404.16130*.
-10. **Gao, Y., Xiong, Y., Gao, X., Jia, K., Pan, J., Bi, Y., Dai, Y., Sun, J., and Wang, H.** (2023), "Retrieval-Augmented Generation for Large Language Models: A Survey", *arXiv preprint arXiv:2312.10997*.
-11. **Hogan, A., et al.** (2021), "Knowledge graphs", *ACM Computing Surveys (CSUR)*, vol. 54, no. 4, pp. 1--37.
-12. **Lewis, P., et al.** (2020), "Retrieval-augmented generation for knowledge-intensive NLP tasks", *Advances in Neural Information Processing Systems (NeurIPS 2020)*, vol. 33, pp. 9459--9474.
-13. **Malkov, Y. A., and Yashunin, D. A.** (2018), "Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs", *IEEE Transactions on Pattern Analysis and Machine Intelligence*, vol. 42, no. 4, pp. 824--836.
-14. **Ramírez, S.** (2024), *FastAPI: Modern, Fast (High-Performance) Web Framework for Python*, https://fastapi.tiangolo.com/.
-15. **Robertson, S. E., et al.** (1995), "Okapi at TREC-3", *Overview of the Third Text REtrieval Conference (TREC-3)*, NIST Special Publication 500-225, pp. 109--126.
-16. **Schick, T., et al.** (2023), "Toolformer: Language models can teach themselves to use tools", *Advances in Neural Information Processing Systems (NeurIPS 2023)*, vol. 36, pp. 68539--68551.
-17. **Shinn, N., et al.** (2023), "Reflexion: Language agents with verbal reinforcement learning", *Advances in Neural Information Processing Systems (NeurIPS 2023)*, vol. 36, pp. 8634--8652.
-18. **Vaswani, A., et al.** (2017), "Attention is all you need", *Advances in Neural Information Processing Systems (NeurIPS 2017)*, vol. 30, pp. 5998--6008.
-19. **Weng, L.** (2023), "LLM-powered Autonomous Agents", *Lil'Log*, https://lilianweng.github.io/posts/2023-06-23-agent/.
-20. **Yan, S.-Q., et al.** (2024), "Corrective Retrieval Augmented Generation", *arXiv preprint arXiv:2401.15884*.
-*(Kèm mở rộng thuật toán suy luận ReAct của Yao et al., ICLR 2023 trên nền tảng Chain-of-Thought).*

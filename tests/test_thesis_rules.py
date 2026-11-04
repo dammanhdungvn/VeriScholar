@@ -14,7 +14,7 @@ def test_thesis_rules_file_exists_and_valid():
         "KẾ HOẠCH THỰC HIỆN 10 TUẦN CHI TIẾT",
         "MỤC LỤC VÀ BẢN ĐỒ TRA CỨU ĐẶC TẢ KỸ THUẬT",
         "BẢNG THAM SỐ ĐỊNH LƯỢNG VÀ BENCHMARKS KHÓA CỨNG",
-        "DANH MỤC 20 TÀI LIỆU THAM KHẢO CHÍNH THỨC CỦA ĐỀ TÀI",
+        "DANH MỤC 10 TÀI LIỆU THAM KHẢO CHÍNH THỨC CỦA ĐỀ TÀI",
     ]
     for section in required_info_sections:
         assert section in content, f"Missing required section in INFORMATION.md: {section}"
@@ -112,7 +112,7 @@ def test_thesis_rules_academic_architecture_paradigm():
 
 def test_thesis_reference_count_within_cap():
     """Kiểm tra Giới hạn số lượng tài liệu tham khảo (Reference Cap Invariant):
-    Danh mục tài liệu tham khảo của báo cáo đồ án bắt buộc phải <= 20 tài liệu.
+    Danh mục tài liệu tham khảo của báo cáo đồ án bắt buộc phải đúng 10 bài báo kinh điển (N_refs == 10 <= 20).
     """
     import re
 
@@ -122,10 +122,11 @@ def test_thesis_reference_count_within_cap():
     content = ref_file.read_text(encoding="utf-8")
     bibitems = re.findall(r"\\bibitem\{([^}]+)\}", content)
 
-    assert 0 < len(bibitems) <= 20, (
+    assert len(bibitems) == 10, (
         f"Số lượng tài liệu tham khảo vi phạm quy chuẩn ({len(bibitems)} tài liệu). "
-        f"Bắt buộc: 0 < N_refs <= 20."
+        f"Bắt buộc: đúng 10 tài liệu kinh điển (N_refs == 10 <= 20)."
     )
+    assert 0 < len(bibitems) <= 20
 
     # Kiểm tra quy tắc đã được thể chế hóa trong INFORMATION.md và AGENTS.md
     info_content = Path("report-datn/INFORMATION.md").read_text(encoding="utf-8")
@@ -251,7 +252,7 @@ def test_no_subjective_pronouns_in_body_chapters():
 def test_frontmatter_ch1_and_bibliography_remediation():
     """Kiểm tra chuẩn hóa phần mở đầu (Frontmatter), Chương 1, Kết luận và Tài liệu tham khảo:
     - tai_lieu_tham_khao.tex sửa đúng tiêu đề & số trang bài báo RRF (Cormack et al., 2009),
-      bổ sung gao2023rag và blondel2008louvain, tổng số \\bibitem <= 20.
+      đồng bộ 10 bài báo kinh điển (gao2023rag, edge2024...), tổng số \\bibitem == 10.
     - phieu_giao_de_tai.tex đồng bộ 4 thực thể GraphRAG (Paper, Method, Dataset, MetricResult),
       không chứa LiteLLM hoặc mã hóa phía máy khách.
     - loi_cam_on.tex đồng bộ đại từ xưng hô, không trộn lẫn 'con xin' và 'em xin'.
@@ -267,8 +268,9 @@ def test_frontmatter_ch1_and_bibliography_remediation():
     assert "758--759" in ref_content
     assert "cite space algorithms" not in ref_content
     assert "\\bibitem{gao2023rag}" in ref_content
-    assert "\\bibitem{blondel2008louvain}" in ref_content
+    assert "\\bibitem{edge2024}" in ref_content
     bibitems = re.findall(r"\\bibitem\{([^}]+)\}", ref_content)
+    assert len(bibitems) == 10
     assert 0 < len(bibitems) <= 20
 
     phieu_content = Path("report-datn/frontmatter/phieu_giao_de_tai.tex").read_text(
@@ -293,13 +295,13 @@ def test_frontmatter_ch1_and_bibliography_remediation():
 
 
 def test_chapter2_theoretical_rigor_remediation():
-    """Kiểm tra chuẩn hóa cơ sở lý thuyết Chương 2 (Task 4):
+    """Kiểm tra chuẩn hóa cơ sở lý thuyết Chương 2:
     - 2_1_postgresql_redis.tex: sửa MVCC đọc không chặn ghi, bỏ 'không gây khóa chết'
       và 'Dedicated Vector Database'.
-    - 2_3_advanced_rag.tex: trích dẫn \\cite{gao2023rag}, nêu cơ chế ts_rank_cd + BM25
-      và Cross-Encoder, ví dụ RRF dùng k = 60 (bỏ 'k = 0 dùng để minh họa').
-    - 2_4_knowledge_graph_wiki.tex: trích dẫn \\cite{blondel2008louvain} (Louvain) và
-      loại bỏ 'Author Nodes' khỏi sơ đồ đồ thị tri thức (đồng bộ 4 loại nút).
+    - 2_3_advanced_rag.tex: trình bày kỹ thuật Advanced RAG, nêu cơ chế ts_rank_cd + BM25
+      và Cross-Encoder, ví dụ RRF dùng k = 60 (bỏ 'k = 0 dùng để minh họa'), không dùng ký hiệu trích dẫn số.
+    - 2_4_knowledge_graph_wiki.tex: trình bày thuật toán phân cụm cộng đồng Louvain và
+      loại bỏ 'Author Nodes' khỏi sơ đồ đồ thị tri thức (đồng bộ 4 loại nút), không dùng ký hiệu trích dẫn số.
     - 2_5_agentic_react.tex: không chứa trích dẫn thừa hong2023metagpt / wang2023planandsolve,
       đồng bộ biên độ cài đặt ReAct + Tool Use đơn tác tử.
     - 2_7_azure_e2b_byok.tex: bỏ 'GPT-5.6-luna', cập nhật công thức eq:aes_gcm chứa J_0.
@@ -312,14 +314,16 @@ def test_chapter2_theoretical_rigor_remediation():
     assert "đọc không chặn ghi" in ch2_1
 
     ch2_3 = (ch2_dir / "2_3_advanced_rag.tex").read_text(encoding="utf-8")
-    assert "\\cite{gao2023rag}" in ch2_3
+    assert "Advanced RAG" in ch2_3
+    assert "\\cite{" not in ch2_3
     assert "ts\\_rank\\_cd" in ch2_3 or "ts_rank_cd" in ch2_3
     assert "Cross-Encoder" in ch2_3
     assert "k = 0 \\text{ dùng để minh họa}" not in ch2_3
     assert "k = 0 dùng để minh họa" not in ch2_3
 
     ch2_4 = (ch2_dir / "2_4_knowledge_graph_wiki.tex").read_text(encoding="utf-8")
-    assert "\\cite{blondel2008louvain}" in ch2_4
+    assert "Louvain" in ch2_4
+    assert "\\cite{" not in ch2_4
     assert "Author Nodes" not in ch2_4
 
     ch2_5 = (ch2_dir / "2_5_agentic_react.tex").read_text(encoding="utf-8")
@@ -497,3 +501,18 @@ def test_root_agents_isolated_from_thesis_reporting():
         assert invariant in canonical_text, (
             f".agents/AGENTS.md must preserve non-thesis invariant: '{invariant}'"
         )
+
+
+def test_ssot_and_agents_reference_invariants():
+    """Kiểm tra tính đồng bộ SSOT của INFORMATION.md và AGENTS.md:
+    - Danh mục 10 tài liệu tham khảo phẳng, không phân nhóm La Mã (I. Tiếng Việt / II. Tiếng Anh).
+    - AGENTS.md quy định cấm sử dụng ký hiệu trích dẫn số trong thân bài.
+    """
+    info = Path("report-datn/INFORMATION.md").read_text(encoding="utf-8")
+    agents = Path("report-datn/AGENTS.md").read_text(encoding="utf-8")
+
+    assert "10 tài liệu tham khảo" in info or "10 TÀI LIỆU THAM KHẢO" in info
+    assert "I. Tài liệu tiếng Việt" not in info
+    assert "II. Tài liệu tiếng Anh" not in info
+    assert "cấm sử dụng các ký hiệu trích dẫn" in agents or "Tuyệt đối không sử dụng" in agents
+
