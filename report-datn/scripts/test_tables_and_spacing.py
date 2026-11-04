@@ -3,6 +3,7 @@ from pathlib import Path
 
 CHAPTERS_DIR = Path(__file__).resolve().parent.parent / "chapters"
 CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
+FRONTMATTER_DIR = Path(__file__).resolve().parent.parent / "frontmatter"
 
 
 def test_no_booktabs_rules():
@@ -47,3 +48,72 @@ def test_global_parindent_is_1cm():
     assert "\\setlength{\\parindent}{1.0cm}" in content, (
         "Thiếu \\setlength{\\parindent}{1.0cm} trong config/preamble.tex"
     )
+
+
+def test_phieu_giao_de_tai_matches_hieu_pdf():
+    """Đảm bảo Phiếu giao đề tài khớp 100% mẫu khoa và HIeu.pdf trang 3-4."""
+    phieu_file = FRONTMATTER_DIR / "phieu_giao_de_tai.tex"
+    content = phieu_file.read_text(encoding="utf-8")
+
+    # Tiêu đề
+    assert "PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP" in content
+
+    # Thông tin chung khớp cấu trúc HIeu.pdf
+    assert "Tên đề tài:" in content
+    assert "Họ và tên:" in content
+    assert "Điện thoại liên lạc:" in content
+    assert "Email:" in content
+    assert "Lớp:" in content
+    assert "Hệ đào tạo:" in content
+    assert "Đồ án tốt nghiệp được thực hiện tại:" in content
+    assert "Thời gian làm ĐATN:" in content
+
+    # Lời cam đoan
+    assert "Em -- Đàm Mạnh Dũng -- cam kết đồ án tốt nghiệp" in content
+    assert "cô Vũ Lan Phương" in content
+    assert "Hà Nội, ngày 06 tháng 11 năm 2026" in content
+
+    # Khối chữ ký: Xác nhận của GVHD & Tác giả ĐATN
+    assert "Xác nhận của GVHD" in content
+    assert "Tác giả ĐATN" in content
+    assert "(Ký và ghi rõ họ tên)" not in content
+
+    # Không in sẵn tên trong khối chữ ký
+    # Tách khối chữ ký sau dòng ngày tháng
+    signature_section = content.split("Hà Nội, ngày 06 tháng 11 năm 2026")[-1]
+    assert "Đàm Mạnh Dũng" not in signature_section
+    assert "Vũ Lan Phương" not in signature_section
+
+
+def test_de_cuong_datn_structure():
+    """Đảm bảo Đề cương ĐATN chuẩn theo mẫu khoa & HIeu.pdf."""
+    de_cuong_file = FRONTMATTER_DIR / "de_cuong_datn.tex"
+    content = de_cuong_file.read_text(encoding="utf-8")
+
+    # Bảng 1 & 2 dùng tabcolsep = 3.5pt
+    assert "\\tabcolsep = 3.5pt" in content or "\\setlength{\\tabcolsep}{3.5pt}" in content
+
+    # Chống tràn email với allowbreak
+    assert "\\allowbreak" in content
+
+    # Cột của Bảng 1 và Bảng 2: TT (0.7cm), Mã (2.3cm),
+    # Họ tên (2.8cm), Lớp/Đơn vị (2.2cm), SĐT (2.1cm), Email (X)
+    assert "m{0.7cm}" in content
+    assert "m{2.3cm}" in content
+    assert "m{2.8cm}" in content
+    assert "m{2.2cm}" in content
+    assert "m{2.1cm}" in content
+
+    # Bảng kế hoạch có arraystretch = 1.20 hoặc 1.2
+    assert (
+        "\\renewcommand{\\arraystretch}{1.20}" in content
+        or "\\renewcommand{\\arraystretch}{1.2}" in content
+    )
+    assert "\\renewcommand{\\arraystretch}{1.0}" not in content
+
+    # Mục 8 là mục cuối cùng, không có bảng chữ ký hay ngày tháng ở cuối
+    after_sec_8 = content.split("8. Nơi thực hiện đồ án:")[-1]
+    assert "Xác nhận của GVHD" not in after_sec_8
+    assert "Giảng viên hướng dẫn" not in after_sec_8
+    assert "Sinh viên thực hiện" not in after_sec_8
+    assert "ngày" not in after_sec_8
