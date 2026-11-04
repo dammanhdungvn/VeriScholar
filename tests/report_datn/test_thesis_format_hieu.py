@@ -303,3 +303,37 @@ def test_all_external_figures_png():
     for f in (REPORT_DIR / "figures").rglob("*"):
         if f.is_file() and not f.name.startswith("."):
             assert f.suffix.lower() == ".png", f"Non-png image found: {f}"
+
+
+def test_bibliography_10_milestone_papers_flat_alphabetical():
+    ref_file = REPORT_DIR / "chapters/tai_lieu_tham_khao.tex"
+    content = ref_file.read_text(encoding="utf-8")
+
+    # Không chứa phân nhóm La Mã và không chứa quy chế HUMG
+    assert "Tài liệu tiếng Việt" not in content, "Không được chứa tiêu đề 'Tài liệu tiếng Việt'"
+    assert "Tài liệu tiếng Anh" not in content, "Không được chứa tiêu đề 'Tài liệu tiếng Anh'"
+    assert "Khoa Công nghệ Thông tin" not in content, "Phải xóa bỏ tài liệu quy chế HUMG 2022"
+
+    bibitems = re.findall(r"\\bibitem\{([^}]+)\}", content)
+    assert len(bibitems) == 10, f"Danh mục phải có chính xác 10 bài báo, tìm thấy {len(bibitems)}"
+
+    # Thứ tự A-Z chuẩn xác theo họ tác giả đầu tiên
+    expected_order = [
+        "asai2023selfrag",
+        "cormack2009",
+        "edge2024",
+        "gao2023rag",
+        "lewis2020",
+        "malkov2018",
+        "robertson1995",
+        "shinn2023",
+        "yan2024crag",
+        "yao2022",
+    ]
+    assert bibitems == expected_order, f"Thứ tự tài liệu chưa đúng chuẩn A-Z: {bibitems}"
+
+    # Đảm bảo đầy đủ siêu dữ liệu số trang và năm
+    assert "758--759" in content
+    assert "824--836" in content
+    assert "9459--9474" in content
+
