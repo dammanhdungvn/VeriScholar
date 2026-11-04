@@ -344,8 +344,8 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
 | **Tiểu mục cấp 2 (`\subsection` X.Y.Z)** | 13pt | In đậm | Trái | Trước 9pt, Sau 4pt | `\titleformat{\subsection}` |
 | **Tiểu mục cấp 3 (`\subsubsection` X.Y.Z.W)** | 13pt | In đậm nghiêng | Trái | Trước 6pt, Sau 3pt | `\titleformat{\subsubsection}` |
 | **Thân bài (Body text)** | **13pt** | Thường, dãn dòng 1.5 | Đều 2 bên | Thụt lề 1.0cm | `\usepackage[fontsize=13pt]{scrextend}` |
-| **Tiêu đề Bảng (`\caption` trên)** | 12pt | Nhãn Đậm, Tên Nghiêng | Giữa | Trên bảng, cách 6pt | `\captionsetup[table]{position=top}` |
-| **Tiêu đề Hình (`\caption` dưới)** | 12pt | Nhãn Đậm, Tên Nghiêng | Giữa | Dưới hình, cách 6pt | `\captionsetup[figure]{position=bottom}` |
+| **Tiêu đề Bảng (`\caption` trên)** | 13pt | Nhãn Đậm, Tên Nghiêng | Giữa | Trên bảng, cách 6pt | `\captionsetup[table]{position=top}` |
+| **Tiêu đề Hình (`\caption` dưới)** | 13pt | Nhãn Đậm, Tên Nghiêng | Giữa | Dưới hình, cách 6pt | `\captionsetup[figure]{position=bottom}` |
 | **Số trang báo cáo** | 10pt | Footer Đứng (không in nghiêng) | Phải | Góc dưới bên phải | `\fontsize{10}{12}\selectfont\normalfont\upshape` |
 | **Chú thích chân trang (`\footnote`)** | 10pt | Thường, dãn đơn | Đều 2 bên | Dưới chân trang | `\fontsize{10}{13}\selectfont` |
 
@@ -390,8 +390,8 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
      - **Bảng biểu và Hình vẽ (dấu gạch nối `-`):** Bắt buộc đánh số theo định dạng `Chương-Số`: `Bảng X-Y` và `Hình X-Y` (ví dụ: `Bảng 1-1`, `Hình 3-1`), đồng bộ với macro `\thetable` và `\thefigure` trong `report-datn/config/preamble.tex` và danh mục LoT/LoF.
      - **Công thức toán (dấu chấm `.`):** Đánh số theo định dạng `(X.Y)` đặt trong ngoặc đơn sát lề phải trang (ví dụ: `(2.1)`, `(3.1)`).
 2. **Quy tắc vị trí đặt đầu đề (Caption Placement Invariant):**
-   - **ĐẦU ĐỀ BẢNG BIỂU: BẮT BUỘC ĐẶT Ở PHÍA TRÊN BẢNG**.
-   - **ĐẦU ĐỀ HÌNH VẼ: BẮT BUỘC ĐẶT Ở PHÍA DƯỚI HÌNH**.
+   - **ĐẦU ĐỀ BẢNG BIỂU: BẮT BUỘC ĐẶT Ở PHÍA TRÊN BẢNG** (Cỡ chữ chuẩn Word 13pt Times New Roman, Nhãn Đậm, Tên Nghiêng, cách lề trên bảng 6pt).
+   - **ĐẦU ĐỀ HÌNH VẼ: BẮT BUỘC ĐẶT Ở PHÍA DƯỚI HÌNH** (Cỡ chữ chuẩn Word 13pt Times New Roman, Nhãn Đậm, Tên Nghiêng, cách lề dưới hình 6pt).
    - Vi phạm vị trí đầu đề bảng/hình bị coi là lỗi định dạng nghiêm trọng bị trừ điểm trực tiếp trong quy chế chấm đồ án.
 3. **LUẬT TUYỆT ĐỐI CẤM THAM CHIẾU TƯƠNG ĐỐI (NO RELATIVE CITATIONS):**
    - Khi dẫn giải đến bất kỳ hình vẽ, bảng biểu hoặc công thức nào trong bài, **bắt buộc phải gọi đích danh mã định danh chính xác**: `"kết quả được tổng hợp trong Bảng 4.2"`, `"(xem Hình 3.1)"`, `"tính toán theo Công thức (2.3)"`.
@@ -769,7 +769,7 @@ Trước khi xác nhận hoàn thành bất kỳ tác vụ nào trong `report-da
 - [ ] 14. Kế hoạch 10 tuần: Phân bổ hợp lý từ tuần 1 đến tuần 10; nhấn mạnh cột mốc Tuần 6 (Mid-term Checkpoint) báo cáo Bộ môn.
 - [ ] 15. Kỷ luật và Nộp lưu trữ: Nêu rõ nghĩa vụ gặp GVHD hàng tuần, 4 điều kiện đình chỉ, 3 quyển bìa mềm trước bảo vệ, 1 bìa cứng mạ chữ nhũ vàng nộp trong vòng 10 ngày sau bảo vệ, thư mục bản mềm `MãSinhViên_HọTên_Khóa`.
 - [ ] 16. Phân cấp đề mục: Tối đa 4 cấp (X.Y.Z.W); CẤM TIỂU MỤC ĐƠN LẺ (mỗi nhóm >= 2 mục con); tiêu đề danh ngữ hóa 3-7 từ; không có tiêu đề mồ côi.
-- [ ] 17. Bảng biểu và Hình vẽ: Tiêu đề Bảng ở TRÊN; Tiêu đề Hình ở DƯỚI; đánh số theo chương dạng gạch nối Chương-Số (`Bảng X-Y`, `Hình X-Y`); TUYỆT ĐỐI CẤM tham chiếu tương đối ("hình dưới đây", "bảng sau").
+- [ ] 17. Bảng biểu và Hình vẽ: Tiêu đề Bảng ở TRÊN (chuẩn Word 13pt, Nhãn Đậm, Tên Nghiêng); Tiêu đề Hình ở DƯỚI (chuẩn Word 13pt, Nhãn Đậm, Tên Nghiêng); đánh số theo chương dạng gạch nối Chương-Số (`Bảng X-Y`, `Hình X-Y`); TUYỆT ĐỐI CẤM tham chiếu tương đối ("hình dưới đây", "bảng sau").
 - [ ] 18. Bảng tabularx và TikZ: Bảng có viền khép kín `|...|` và `\hline`, cột `X` ngắt dòng; triệt tiêu 100% Overfull \hbox; sơ đồ TikZ tuân thủ 7 Nguyên tắc vàng, chiều ngang <= 15.0cm.
 - [ ] 19. Tài liệu tham khảo: Danh mục phẳng đúng 10 bài báo kinh điển A--Z không phân nhóm La Mã; hanging indent 1.0cm; giới hạn <= 20 tài liệu; cấm sử dụng các ký hiệu trích dẫn số [1], [14] hay \cite{...} trong các chương thân bài.
 - [ ] 20. Tỷ lệ nội dung vàng: Lý thuyết (Ch1 + Ch2) <= 30%; Thiết kế và Thực nghiệm (Ch3 + Ch4) >= 70%; tổng dung lượng ruột đạt 50 -- 65 trang; Phụ lục không dày hơn phần chính.

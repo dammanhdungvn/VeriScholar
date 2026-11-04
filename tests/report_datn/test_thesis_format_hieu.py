@@ -357,3 +357,13 @@ def test_bibliography_10_milestone_papers_flat_alphabetical():
     assert "758--759" in content
     assert "824--836" in content
     assert "9459--9474" in content
+
+
+def test_caption_font_is_13pt():
+    """Verify that Table and Figure captions in preamble.tex use 13pt font matching Word standards."""
+    preamble = (REPORT_DIR / "config/preamble.tex").read_text(encoding="utf-8")
+    assert "fontsize{13" in preamble and "size13" in preamble, (
+        "Caption font in preamble.tex must be configured as size13 (13pt Times New Roman)"
+    )
+    assert "size12" not in preamble, "Found legacy size12 in preamble.tex; captions must be 13pt!"
+
