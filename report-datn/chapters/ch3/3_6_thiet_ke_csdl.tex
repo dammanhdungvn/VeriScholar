@@ -237,6 +237,7 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 
 \begin{table}[!htbp]
 \centering
+\vspace{-2pt}
 \caption{Phân tích các lớp thực thể miền và mối quan hệ cấu trúc trong hệ thống}
 \label{tab:class_relationships_analysis}
 \captionsetup{skip=2pt}
@@ -256,6 +257,7 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 9 & \texttt{Document} & \texttt{Graph\-Node} & Thu nạp (Aggregation) & 1 -- N & Tài liệu là cơ sở trích xuất thực thể tri thức (GraphRAG). \tabularnewline \hline
 10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent ReAct tự động sửa lỗi (Self-Healing). \tabularnewline \hline
 \end{tabularx}
+\vspace{-4pt}
 \end{table}
 
 \subsection{Cấu trúc các phân hệ dữ liệu của hệ thống}
@@ -280,6 +282,7 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 
 \begin{table}[!htbp]
 \centering
+\vspace{-2pt}
 \caption{Đặc tả bảng documents}
 \label{tab:spec_documents}
 \captionsetup{skip=2pt}
@@ -299,6 +302,7 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 9 & is\_peer\_reviewed & BOOLEAN & Default FALSE & Trạng thái bài báo đã qua phản biện kín \tabularnewline \hline
 10 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm bài báo được nạp vào hệ thống \tabularnewline \hline
 \end{tabularx}
+\vspace{-4pt}
 \end{table}
 
 \subsubsection{Đặc tả bảng document\_chunks (Phân hệ đọc sâu và kiểm chứng Bounding Box)}
@@ -306,6 +310,7 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục
 
 \begin{table}[!htbp]
 \centering
+\vspace{-2pt}
 \caption{Đặc tả bảng document\_chunks}
 \label{tab:spec_chunks}
 \captionsetup{skip=2pt}
@@ -323,6 +328,7 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục
 7 & embedding & VECTOR(1536) & Null & Vector nhúng Dense 1536 chiều phục vụ chỉ mục HNSW \tabularnewline \hline
 8 & content\_tsv & TSVECTOR & Generated Stored & Chỉ mục Sparse toàn văn phục vụ GIN BM25 \tabularnewline \hline
 \end{tabularx}
+\vspace{-4pt}
 \end{table}
 
 \subsubsection{Đặc tả bảng graph\_nodes (Phân hệ đồ thị tri thức GraphRAG)}
@@ -330,6 +336,7 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 
 \begin{table}[!htbp]
 \centering
+\vspace{-2pt}
 \caption{Đặc tả bảng graph\_nodes}
 \label{tab:spec_graph_nodes}
 \captionsetup{skip=2pt}
@@ -346,6 +353,7 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 6 & embedding & VECTOR(1536) & Null & Vector nhúng Dense đỉnh để khử trùng lặp theo Cosine \tabularnewline \hline
 7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm trích xuất thực thể vào đồ thị \tabularnewline \hline
 \end{tabularx}
+\vspace{-4pt}
 \end{table}
 
 \subsubsection{Đặc tả bảng drafts (Phân hệ soạn thảo học thuật và đồng tác giả AI)}
@@ -353,12 +361,13 @@ Bảng \texttt{drafts} lưu trữ bản thảo mã nguồn LaTeX, liên kết m�
 
 \begin{table}[!htbp]
 \centering
+\vspace{-4pt}
 \caption{Đặc tả bảng drafts}
 \label{tab:spec_drafts}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{5pt}
+\setlength{\tabcolsep}{4pt}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.25cm}|>{\centering\arraybackslash}m{3.20cm}|>{\centering\arraybackslash}m{2.75cm}|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.2cm}|>{\centering\arraybackslash}m{3.15cm}|>{\centering\arraybackslash}m{2.5cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh bản thảo khoa học \tabularnewline \hline
@@ -370,17 +379,18 @@ Bảng \texttt{drafts} lưu trữ bản thảo mã nguồn LaTeX, liên kết m�
 7 & last\_compiled\_at & TIMESTAMPTZ & Null & Thời điểm thực thi biên dịch gần nhất \tabularnewline \hline
 8 & updated\_at & TIMESTAMPTZ & Default NOW() & Thời điểm chỉnh sửa bản thảo gần nhất \tabularnewline \hline
 \end{tabularx}
+\vspace{-6pt}
 \end{table}
 
 
 \FloatBarrier
+\vspace{-6pt}
 \subsection{Thiết kế hạ tầng lưu trữ vector và đồ thị tri thức phụ trợ}
 \label{subsec:csdl_vector_graph}
-
+\vspace{-2pt}
 Hệ thống tích hợp trực tiếp chỉ mục vector và đồ thị tri thức trên PostgreSQL 16:
-
 {\sloppy
-\begin{itemize}[noitemsep, topsep=1pt]
+\begin{itemize}[noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item Chỉ mục vector và toàn văn (Hybrid Store): Cột \texttt{embedding} (1536 chiều) của các bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được đánh chỉ mục HNSW qua \texttt{pgvector}, song hành chỉ mục đảo GIN trên cột \texttt{content\_tsv}.
     \item Mô hình đồ thị tri thức đa thực thể (Graph Store): Phục vụ GraphRAG, 4 loại thực thể và 4 loại cạnh quan hệ được trích xuất qua \texttt{OpenAI Structured Outputs}, lưu vào bảng \texttt{graph\_nodes} và \texttt{graph\_edges}. Truy vấn bắc cầu 2-hop qua SQL CTE kết hợp phân cụm Louvain hỗ trợ đối chiếu liên tài liệu.
 \end{itemize}

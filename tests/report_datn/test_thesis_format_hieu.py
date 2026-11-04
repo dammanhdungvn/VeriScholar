@@ -398,3 +398,26 @@ def test_bibliography_fits_single_page():
     )
 
 
+def test_no_near_empty_chapter_end_pages():
+    """Verify that the final page of each chapter has adequate text density (>= 12 lines)."""
+    pdf_path = REPORT_DIR / "main.pdf"
+    if not pdf_path.exists():
+        pytest.skip("main.pdf not yet compiled")
+    out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
+    pages = out.split("\x0c")
+    for i, p in enumerate(pages):
+        if "CHƯƠNG 3:" in p and "..." not in p and i > 0:
+            ch2_end_page = pages[i - 1]
+            ch2_lines = [l for l in ch2_end_page.splitlines() if l.strip()]
+            assert len(ch2_lines) >= 12, (
+                f"Chapter 2 end page {i} has only {len(ch2_lines)} lines, creating an unsightly blank gap!"
+            )
+        if "CHƯƠNG 4:" in p and "..." not in p and i > 0:
+            ch3_end_page = pages[i - 1]
+            ch3_lines = [l for l in ch3_end_page.splitlines() if l.strip()]
+            assert len(ch3_lines) >= 12, (
+                f"Chapter 3 end page {i} has only {len(ch3_lines)} lines, creating an unsightly blank gap!"
+            )
+
+
+
