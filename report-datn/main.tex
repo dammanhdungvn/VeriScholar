@@ -54,6 +54,10 @@
 \cleardoublepage
 
 % Kích hoạt lại fancy headers từ Mục lục trở đi
+% Đánh số trang Ả Rập (Trang 1) bắt đầu chính xác từ phần MỤC LỤC
+\cleardoublepage
+\pagenumbering{arabic}
+\setcounter{page}{1}
 \setupdatnheaders
 \pagestyle{fancy}
 
@@ -73,14 +77,10 @@
 \input{frontmatter/loi_mo_dau}
 
 % ------------------------------------------------------------------------------
-% II. PHẦN NỘI DUNG (MAIN BODY - Đánh số trang Ả Rập 1, 2, 3...)
-% Bắt đầu từ Chương 1 (trang 1) chuẩn mực theo chỉ đạo của GVHD
+% II. PHẦN NỘI DUNG (MAIN BODY - Số trang Ả Rập tiếp nối liên tục từ Mục lục)
 % ------------------------------------------------------------------------------
 \cleardoublepage
-\pagenumbering{arabic}
-\setcounter{page}{1}
 \onehalfspacing
-\setlength{\parskip}{2.0pt plus 0.5pt minus 0.5pt}
 \setlength{\floatsep}{8pt plus 2pt minus 2pt}
 \setlength{\textfloatsep}{12pt plus 2pt minus 2pt}
 \setlength{\intextsep}{10pt plus 2pt minus 2pt}

@@ -16,7 +16,8 @@
 % 2. Chuẩn hóa cỡ chữ 13pt (Word standard) và dãn dòng 1.5 lines
 \usepackage[fontsize=13pt]{scrextend}
 \usepackage{setspace}
-\onehalfspacing
+\setstretch{1.45}
+\renewcommand{\onehalfspacing}{\setstretch{1.45}}
 
 % Thụt lề đầu dòng đoạn văn 1.0cm và khoảng cách đoạn văn chuẩn học thuật
 \setlength{\parindent}{1.0cm}
@@ -82,7 +83,7 @@
 \usepackage{array}
 \usepackage{enumitem}
 \usepackage{float}
-\usepackage[section]{placeins}
+\usepackage{placeins}
 \usepackage{needspace}
 
 % 5. Cấu hình tiêu đề bảng biểu và hình ảnh (HUMG: Bảng ở TRÊN, Hình ở DƯỚI, Cỡ chữ 12pt)
@@ -134,11 +135,10 @@
     \setupdatnheaders
 }
 
-% Phong cách trang dành cho hồ sơ hành chính đầu khóa (Phiếu giao đề tài, Đề cương)
-% Chỉ hiển thị số trang La Mã ở chân trang góc phải, đứng (không in nghiêng)
+% Phong cách trang dành cho hồ sơ hành chính đầu khóa (Phiếu giao đề tài, Đề cương, Lời cảm ơn)
+% Để trống hoàn toàn header và footer theo đúng chuẩn 100% mẫu HIeu.pdf
 \fancypagestyle{adminform}{%
     \fancyhf{}%
-    \fancyfoot[R]{\fontsize{10}{12}\selectfont\normalfont\upshape\thepage}%
     \renewcommand{\headrulewidth}{0pt}%
     \renewcommand{\footrulewidth}{0pt}%
     \renewcommand{\headrule}{}%
@@ -155,11 +155,11 @@
 \renewcommand{\cftsubsecleader}{\cftdotfill{\cftdotsep}}
 \renewcommand{\cftsubsubsecleader}{\cftdotfill{\cftdotsep}}
 
-% Tiền tố "CHƯƠNG " cho các chương có đánh số (bỏ dấu hai chấm sau số chương)
+% Tiền tố "CHƯƠNG " cho các chương có đánh số (dấu hai chấm sau số chương chuẩn 100% Hieu.pdf)
 \renewcommand{\cftchappresnum}{CHƯƠNG }
-\renewcommand{\cftchapaftersnum}{\ }
+\renewcommand{\cftchapaftersnum}{:\ }
 \newlength{\cftchaplen}
-\settowidth{\cftchaplen}{\bfseries CHƯƠNG 1\ }
+\settowidth{\cftchaplen}{\normalfont CHƯƠNG 1:\ }
 \setlength{\cftchapnumwidth}{\cftchaplen}
 \cftsetindents{chapter}{0pt}{\cftchaplen}
 
@@ -179,14 +179,14 @@
 \settowidth{\cftsubsubseclen}{4.2.1.1\ }
 \cftsetindents{subsubsection}{1.95cm}{\cftsubsubseclen}
 
-% Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương (chuẩn 3 trang mục lục ix-xi)
+% Khoảng cách đều đặn, không nhảy dòng quá xa giữa các chương (chuẩn 3 trang mục lục)
 \setlength{\cftbeforechapskip}{1.5pt}
 \setlength{\cftbeforesecskip}{0.8pt}
 \setlength{\cftbeforesubsecskip}{0.4pt}
 \setlength{\cftbeforesubsubsecskip}{0.4pt}
 
-% Phông chữ trong mục lục: Tiêu đề chương in đậm, số trang nét thường
-\renewcommand{\cftchapfont}{\bfseries}
+% Phông chữ trong mục lục: Toàn bộ dùng nét thường (Regular/Normalfont), không in đậm chuẩn 100% Hieu.pdf
+\renewcommand{\cftchapfont}{\normalfont}
 \renewcommand{\cftchappagefont}{\normalfont}
 \renewcommand{\cftsecfont}{\normalfont}
 \renewcommand{\cftsecpagefont}{\normalfont}
@@ -220,30 +220,30 @@
 \setcounter{secnumdepth}{4}
 \setcounter{tocdepth}{2}
 
-% Định dạng tiêu đề chương chuẩn 16pt in hoa đậm căn giữa
+% Định dạng tiêu đề chương chuẩn 14pt in hoa đậm căn giữa
 % Dạng block: CHƯƠNG X: TÊN CHƯƠNG (chương có số) hoặc TÊN CHƯƠNG (chương không số)
 \titleformat{\chapter}[block]
-  {\fontsize{16}{20}\selectfont\bfseries\centering}
+  {\fontsize{14}{18}\selectfont\bfseries\centering}
   {\MakeUppercase{\chaptertitlename}\ \thechapter:\ }
   {0pt}
   {\MakeUppercase}
 \titlespacing*{\chapter}{0pt}{-10pt}{18pt}
 
-% Mục cấp 1 (1.1, 2.1...): 14pt Đậm, căn trái
+% Mục cấp 1 (1.1, 2.1...): 13pt Đậm, căn trái
 \titleformat{\section}
-  {\fontsize{14}{18}\selectfont\bfseries}
+  {\fontsize{13}{17}\selectfont\bfseries}
   {\thesection}{0.75em}{}
 \titlespacing*{\section}{0pt}{12pt}{6pt}
 
-% Tiểu mục cấp 2 (1.1.1, 2.1.1...): 13pt Đậm, căn trái
+% Tiểu mục cấp 2 (1.1.1, 2.1.1...): 13pt Đậm nghiêng, căn trái
 \titleformat{\subsection}
-  {\fontsize{13}{17}\selectfont\bfseries}
+  {\fontsize{13}{17}\selectfont\bfseries\itshape}
   {\thesubsection}{0.75em}{}
 \titlespacing*{\subsection}{0pt}{9pt}{4pt}
 
-% Tiểu mục cấp 3 (1.1.1.1, 2.1.1.1...): 13pt Đậm nghiêng, căn trái
+% Tiểu mục cấp 3 (1.1.1.1, 2.1.1.1...): 13pt Nghiêng, căn trái
 \titleformat{\subsubsection}
-  {\fontsize{13}{17}\selectfont\bfseries\itshape}
+  {\fontsize{13}{17}\selectfont\itshape}
   {\thesubsubsection}{0.75em}{}
 \titlespacing*{\subsubsection}{0pt}{6pt}{3pt}
 
