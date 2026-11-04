@@ -457,3 +457,11 @@ def test_usecase_tables_use_xltabular_and_continuation_header():
         assert has_banner, (
             f"Missing continuation banner for Table {tab_num} in 3_4_phan_tich_usecase.tex"
         )
+
+
+def test_no_forced_page_break_before_sec_3_6():
+    r"""Verify Section 3.6 does not begin with forced \clearpage or \newpage."""
+    content = (REPORT_DIR / "chapters/ch3/3_6_thiet_ke_csdl.tex").read_text(encoding="utf-8")
+    first_lines = "\n".join(content.splitlines()[:5])
+    assert "\\clearpage" not in first_lines, "Section 3.6 starts with forbidden \\clearpage"
+    assert "\\newpage" not in first_lines, "Section 3.6 starts with forbidden \\newpage"

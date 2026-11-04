@@ -1,5 +1,4 @@
 % !TEX root = ../../main.tex
-\clearpage
 \FloatBarrier
 \section{Thiết kế cơ sở dữ liệu cho hệ thống}
 \label{sec:thiet_ke_csdl}
@@ -393,5 +392,6 @@ Hệ thống tích hợp trực tiếp chỉ mục vector và đồ thị tri th
 \begin{itemize}[noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item Chỉ mục vector và toàn văn (Hybrid Store): Cột \texttt{embedding} (1536 chiều) của các bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được đánh chỉ mục HNSW qua \texttt{pgvector}, song hành chỉ mục đảo GIN trên cột \texttt{content\_tsv}.
     \item Mô hình đồ thị tri thức đa thực thể (Graph Store): Phục vụ GraphRAG, 4 loại thực thể và 4 loại cạnh quan hệ được trích xuất qua \texttt{OpenAI Structured Outputs}, lưu vào bảng \texttt{graph\_nodes} và \texttt{graph\_edges}. Truy vấn bắc cầu 2-hop qua SQL CTE kết hợp phân cụm Louvain hỗ trợ đối chiếu liên tài liệu.
+    \item Hạ tầng đồng bộ trạng thái và bộ nhớ đệm (Session Store): Lưu trữ ngữ cảnh phiên đa tài liệu và hàng đợi tác vụ bất đồng bộ, tối ưu hóa độ trễ truy xuất lặp.
 \end{itemize}
 \par}
