@@ -8,9 +8,7 @@ Trong kỷ nguyên bùng nổ thông tin khoa học, khối lượng công bố 
 
 Nhằm giải quyết triệt để các hạn chế trên, đề tài: ``Xây dựng nền tảng AI hỗ trợ nghiên cứu và viết bài báo khoa học VinUni dựa trên Agentic RAG, truy xuất tri thức học thuật và kiểm chứng trích dẫn'' hiện thực hóa hệ thống phần mềm \VS. Nền tảng tích hợp tìm kiếm lai Hybrid RAG (kết hợp Dense Vector và Sparse BM25 với thuật toán RRF $k=60$), đối chiếu khung tọa độ chuẩn hóa trên bản PDF gốc, mạng tri thức 4 thực thể (GraphRAG: Paper, Method, Dataset, MetricResult), cùng tác nhân AI ReAct tự động sửa lỗi biên dịch LaTeX trong môi trường đám mây cô lập.
 
-Đối tượng nghiên cứu của đề tài bao gồm các ấn phẩm khoa học quốc tế định dạng PDF cấu trúc hai cột chuẩn IEEE/ACM, mô hình ngôn ngữ lớn, cơ chế kiểm chứng tọa độ khung viền Bounding Box và đồ thị tri thức học thuật.
-
-Phạm vi nghiên cứu tập trung xây dựng giải pháp hỗ trợ nghiên cứu cho học giả tại Trường Đại học VinUniversity (VinUni), bao gồm quy trình khép kín: Khám phá tài liệu đa nguồn (arXiv, Semantic Scholar, CrossRef), Đọc sâu kiểm chứng tọa độ Bounding Box, Quản lý đồ thị tri thức GraphRAG trên PostgreSQL và Tác nhân ReAct tự động sửa lỗi biên dịch LaTeX trong sandbox E2B cô lập.
+Đối tượng và phạm vi nghiên cứu tập trung vào các ấn phẩm khoa học quốc tế chuẩn IEEE/ACM, hỗ trợ học giả tại Trường Đại học VinUniversity (VinUni) qua quy trình khép kín: Khám phá tài liệu đa nguồn (arXiv, Semantic Scholar, CrossRef), Đọc sâu kiểm chứng tọa độ Bounding Box, Quản lý đồ thị tri thức GraphRAG trên PostgreSQL và Tác nhân ReAct tự động sửa lỗi biên dịch LaTeX trong sandbox E2B cô lập.
 
 Hệ thống được kiểm chứng qua 580 kịch bản kiểm thử tự động (340 kiểm thử Backend và 240 kiểm thử Frontend, 100\% pass trong thời gian $13{,}02\,\text{giây}$), đạt $\text{Recall@5} = 94{,}44\%$, $\text{IoU} \ge 0{,}85$ (thực tế trung bình $0{,}88$) và tỷ lệ tự sửa lỗi LaTeX $96{,}0\%$. Báo cáo gồm 4 chương chính phản ánh toàn diện quá trình nghiên cứu và phát triển hệ thống.
 

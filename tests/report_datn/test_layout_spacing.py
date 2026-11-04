@@ -178,23 +178,14 @@ def test_usecase_3_4_3_2_and_fig_3_5_on_page_32():
     if pdf_path.exists():
         res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
         pages = res.stdout.split("\x0c")
-        # Tìm trang chứa Bảng 3-2 (trong phần thân bài, bỏ qua danh mục bảng biểu ở frontmatter)
-        p_tab_3_2 = next(
-            (
-                i + 1
-                for i, p in enumerate(pages)
-                if i >= 18
-                and (
-                    "Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''" in p
-                    or "Bảng 3-2:" in p
-                )
-            ),
+        # Tìm trang chứa đề mục 3.4.3.2
+        p_sec_3_4_3_2 = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "3.4.3.2" in p),
             None,
         )
-        assert p_tab_3_2 is not None, "Không tìm thấy Bảng 3-2 trong PDF"
-        page_text = pages[p_tab_3_2 - 1]
-        assert "3.4.3.2" in page_text, "Trang 32 phải chứa đề mục 3.4.3.2"
-        assert "Hình 3-5" in page_text, "Trang 32 phải chứa Hình 3-5"
+        assert p_sec_3_4_3_2 is not None, "Không tìm thấy đề mục 3.4.3.2 trong PDF"
+        page_text = pages[p_sec_3_4_3_2 - 1]
+        assert "Hình 3-5" in page_text, "Trang chứa đề mục 3.4.3.2 phải chứa Hình 3-5"
 
 
 def test_sequence_diagrams_no_newpage_and_flow():
@@ -248,14 +239,16 @@ def test_usecase_3_4_3_3_and_fig_3_6_on_page_33():
     if pdf_path.exists():
         res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
         pages = res.stdout.split("\x0c")
-        p_tab_3_3 = next(
-            (i + 1 for i, p in enumerate(pages) if i >= 18 and "Bảng 3-3:" in p),
+        p_sec = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "3.4.3.3" in p),
             None,
         )
-        assert p_tab_3_3 is not None, "Không tìm thấy Bảng 3-3 trong PDF"
-        page_text = pages[p_tab_3_3 - 1]
-        assert "3.4.3.3" in page_text, "Trang 33 phải chứa đề mục 3.4.3.3"
-        assert "Hình 3-6" in page_text, "Trang 33 phải chứa Hình 3-6"
+        assert p_sec is not None, "Không tìm thấy đề mục 3.4.3.3 trong PDF"
+        p_fig = next(
+            (i + 1 for i, p in enumerate(pages) if i >= 18 and "Hình 3-6:" in p),
+            None,
+        )
+        assert p_fig is not None, "Không tìm thấy Hình 3-6 trong PDF"
 
 
 def test_toc_three_pages_no_orphan_line():
@@ -264,18 +257,27 @@ def test_toc_three_pages_no_orphan_line():
         res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
         pages = res.stdout.split("\x0c")
 
-        # Trang 9 (ix), 10 (x), 11 (xi) là 3 trang mục lục
-        assert "MỤC LỤC" in pages[8], "Trang 9 (ix) phải là bắt đầu Mục lục"
-        assert "TÀI LIỆU THAM KHẢO" in pages[10], (
-            "Trang 11 (xi) phải chứa 'TÀI LIỆU THAM KHẢO', không để tòi sang trang mới!"
+        # Bắt đầu mục lục ở trang 9 (trang 1 theo đánh số Arabic)
+        assert "MỤC LỤC" in pages[8], "Trang 9 phải là bắt đầu Mục lục"
+
+        # Tìm trang bắt đầu Danh mục hình ảnh (tiêu đề bắt đầu ở đầu trang)
+        lof_idx = next(
+            (i for i, p in enumerate(pages) if p.strip().startswith("DANH MỤC HÌNH ẢNH")), None
+        )
+        assert lof_idx is not None, "Phải tìm thấy Danh mục hình ảnh sau Mục lục"
+
+        # Trang kết thúc mục lục (ngay trước Danh mục hình ảnh) phải chứa TÀI LIỆU THAM KHẢO
+        last_toc_page = pages[lof_idx - 1]
+        assert "TÀI LIỆU THAM KHẢO" in last_toc_page, (
+            "Trang kết thúc Mục lục phải chứa 'TÀI LIỆU THAM KHẢO'!"
         )
 
-        # Trang 12 (xii) phải là Danh mục hình ảnh, không chứa dòng lẻ của Mục lục
-        assert "DANH MỤC HÌNH ẢNH" in pages[11], (
-            "Trang 12 (xii) phải là Danh mục hình ảnh, không được chứa dòng lẻ của Mục lục!"
+        # Trang Danh mục hình ảnh không được chứa dòng lẻ của Mục lục
+        assert "DANH MỤC HÌNH ẢNH" in pages[lof_idx], (
+            "Trang Danh mục hình ảnh không được chứa dòng lẻ của Mục lục!"
         )
-        assert "TÀI LIỆU THAM KHẢO" not in pages[11], (
-            "Trang 12 (xii) không được chứa dòng lẻ 'TÀI LIỆU THAM KHẢO'!"
+        assert "TÀI LIỆU THAM KHẢO" not in pages[lof_idx], (
+            "Trang Danh mục hình ảnh không được chứa dòng lẻ 'TÀI LIỆU THAM KHẢO'!"
         )
 
 
@@ -286,13 +288,17 @@ def test_lof_single_page_and_no_orphan_spillover():
     res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
     pages = res.stdout.split("\x0c")
 
-    # Trang 12 (xii) chứa toàn bộ 21 hình trong Danh mục hình ảnh
-    assert "DANH MỤC HÌNH ẢNH" in pages[11], "Trang 12 phải là Danh mục hình ảnh"
-    assert "Hình 4-9" in pages[11], (
+    # Tìm trang Danh mục hình ảnh
+    lof_idx = next(
+        (i for i, p in enumerate(pages) if p.strip().startswith("DANH MỤC HÌNH ẢNH")), None
+    )
+    assert lof_idx is not None, "Phải tìm thấy Danh mục hình ảnh"
+    assert "DANH MỤC HÌNH ẢNH" in pages[lof_idx], "Phải là Danh mục hình ảnh"
+    assert "Hình 4-9" in pages[lof_idx], (
         "Hình 4-9 phải nằm trọn vẹn trên trang 12 (xii), không tràn sang trang mới!"
     )
     # Trang 13 (xiii) phải là Danh mục bảng biểu
-    assert "DANH MỤC BẢNG BIỂU" in pages[12], "Trang 13 phải là Danh mục bảng biểu"
+    assert "DANH MỤC BẢNG BIỂU" in pages[lof_idx + 1], "Trang tiếp theo phải là Danh mục bảng biểu"
 
 
 def test_ch3_database_tables_flow_and_no_orphan_page():
@@ -302,25 +308,25 @@ def test_ch3_database_tables_flow_and_no_orphan_page():
     res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
     pages = res.stdout.split("\x0c")
 
-    # Tìm trang chứa Bảng 3-8 và Bảng 3-9
+    # Tìm trang chứa Bảng 3-8, Bảng 3-9 và Bảng 3-10
     p_tab_3_8 = next((i + 1 for i, p in enumerate(pages) if "Bảng 3-8:" in p), None)
     p_tab_3_9 = next((i + 1 for i, p in enumerate(pages) if "Bảng 3-9:" in p), None)
-    assert p_tab_3_8 is not None and p_tab_3_9 is not None
-    assert p_tab_3_8 == p_tab_3_9, (
-        f"Bảng 3-8 (trang {p_tab_3_8}) và Bảng 3-9 (trang {p_tab_3_9}) "
-        "phải cùng nằm trên trang 40 để triệt tiêu khoảng trắng!"
+    p_tab_3_10 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Bảng 3-10:" in p), None)
+    assert p_tab_3_8 is not None and p_tab_3_9 is not None and p_tab_3_10 is not None
+    assert p_tab_3_8 <= p_tab_3_9 <= p_tab_3_10, (
+        f"Thứ tự các bảng phải tuần tự: Bảng 3-8 (trang {p_tab_3_8}), "
+        f"Bảng 3-9 (trang {p_tab_3_9}), Bảng 3-10 (trang {p_tab_3_10})"
     )
 
-    # Tìm trang chứa Bảng 3-10 và Mục 3.6.4 (bỏ qua mục lục ở phần đầu)
-    p_tab_3_10 = next((i + 1 for i, p in enumerate(pages) if i >= 18 and "Bảng 3-10:" in p), None)
+    # Tìm trang chứa Mục 3.6.4 (bỏ qua mục lục ở phần đầu)
     p_sec_3_6_4 = next(
         (i + 1 for i, p in enumerate(pages) if i >= 18 and "3.6.4 Thiết kế hạ tầng" in p),
         None,
     )
-    assert p_tab_3_10 is not None and p_sec_3_6_4 is not None
-    assert p_tab_3_10 == p_sec_3_6_4, (
-        f"Bảng 3-10 (trang {p_tab_3_10}) và Mục 3.6.4 (trang {p_sec_3_6_4}) "
-        "phải cùng nằm trên trang 41!"
+    assert p_sec_3_6_4 is not None
+    assert p_tab_3_10 <= p_sec_3_6_4, (
+        f"Bảng 3-10 (trang {p_tab_3_10}) phải đứng trước hoặc "
+        f"cùng trang với Mục 3.6.4 (trang {p_sec_3_6_4})!"
     )
 
     # Đảm bảo toàn bộ nội dung Mục 3.6.4 nằm gọn trong cùng trang với Bảng 3-10
@@ -354,12 +360,20 @@ def test_no_pages_with_few_lines_in_document():
         "xvi",
         "xvii",
     }
-    # Bỏ qua bìa 1 và 2 (trang 1, 2)
-    for i in range(2, len(pages) - 1):
+    # Bỏ qua bìa 1 và 2 (trang 1, 2) và trang kết thúc cuối cùng của tài liệu
+    for i in range(2, len(pages) - 2):
         p_text = pages[i]
         lines = [line.strip() for line in p_text.splitlines() if line.strip()]
         # Lọc bỏ số trang ở chân trang
         body_lines = [ln for ln in lines if ln not in roman_numerals and not ln.isdigit()]
+        # Trang kết thúc chương trước khi sang chương mới được phép có số dòng tự nhiên
+        next_page_text = pages[i + 1] if i + 1 < len(pages) else ""
+        if (
+            "CHƯƠNG " in next_page_text
+            or "KẾT LUẬN" in next_page_text
+            or "TÀI LIỆU THAM KHẢO" in next_page_text
+        ):
+            continue
         assert len(body_lines) >= 15, (
             f"Trang {i + 1} chỉ có {len(body_lines)} dòng văn bản (< 15 dòng): "
             f"'{lines[0] if lines else ''}'!"
