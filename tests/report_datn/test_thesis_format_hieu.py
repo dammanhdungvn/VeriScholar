@@ -363,7 +363,7 @@ def test_bibliography_10_milestone_papers_flat_alphabetical():
 
 
 def test_caption_font_is_13pt():
-    """Verify that Table and Figure captions in preamble.tex use 13pt font matching Word standards."""
+    """Verify Table and Figure captions in preamble.tex use 13pt font matching Word standards."""
     preamble = (REPORT_DIR / "config/preamble.tex").read_text(encoding="utf-8")
     assert "fontsize{13" in preamble and "size13" in preamble, (
         "Caption font in preamble.tex must be configured as size13 (13pt Times New Roman)"
@@ -390,7 +390,9 @@ def test_bibliography_fits_single_page():
         pytest.skip("main.pdf not yet compiled")
     out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
     pages = out.split("\x0c")
-    heading_page = next((i + 1 for i, p in enumerate(pages) if "TÀI LIỆU THAM KHẢO" in p and "[1]" in p), None)
+    heading_page = next(
+        (i + 1 for i, p in enumerate(pages) if "TÀI LIỆU THAM KHẢO" in p and "[1]" in p), None
+    )
     yao_page = next((i + 1 for i, p in enumerate(pages) if "(ICLR 2023)" in p), None)
     assert heading_page is not None, "Missing TÀI LIỆU THAM KHẢO heading in PDF"
     assert yao_page == heading_page, (
@@ -408,16 +410,13 @@ def test_no_near_empty_chapter_end_pages():
     for i, p in enumerate(pages):
         if "CHƯƠNG 3:" in p and "..." not in p and i > 0:
             ch2_end_page = pages[i - 1]
-            ch2_lines = [l for l in ch2_end_page.splitlines() if l.strip()]
+            ch2_lines = [line for line in ch2_end_page.splitlines() if line.strip()]
             assert len(ch2_lines) >= 12, (
-                f"Chapter 2 end page {i} has only {len(ch2_lines)} lines, creating an unsightly blank gap!"
+                f"Chapter 2 end page {i} has only {len(ch2_lines)} lines, creating a gap!"
             )
         if "CHƯƠNG 4:" in p and "..." not in p and i > 0:
             ch3_end_page = pages[i - 1]
-            ch3_lines = [l for l in ch3_end_page.splitlines() if l.strip()]
+            ch3_lines = [line for line in ch3_end_page.splitlines() if line.strip()]
             assert len(ch3_lines) >= 12, (
-                f"Chapter 3 end page {i} has only {len(ch3_lines)} lines, creating an unsightly blank gap!"
+                f"Chapter 3 end page {i} has only {len(ch3_lines)} lines, creating a gap!"
             )
-
-
-
