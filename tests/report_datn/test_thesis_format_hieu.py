@@ -1,5 +1,8 @@
 import re
+import subprocess
 from pathlib import Path
+
+import pytest
 
 REPORT_DIR = Path(__file__).resolve().parents[2] / "report-datn"
 
@@ -378,5 +381,20 @@ def test_zero_citation_brackets_in_entire_body():
         for m in matches:
             leaks.append(f"{f.name}: found '{m.group(0)}'")
     assert not leaks, f"Found citation brackets in body chapters: {leaks}"
+
+
+def test_bibliography_fits_single_page():
+    """Verify that the 10 landmark papers in tai_lieu_tham_khao fit completely on a single page."""
+    pdf_path = REPORT_DIR / "main.pdf"
+    if not pdf_path.exists():
+        pytest.skip("main.pdf not yet compiled")
+    out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
+    pages = out.split("\x0c")
+    heading_page = next((i + 1 for i, p in enumerate(pages) if "TÀI LIỆU THAM KHẢO" in p and "[1]" in p), None)
+    yao_page = next((i + 1 for i, p in enumerate(pages) if "(ICLR 2023)" in p), None)
+    assert heading_page is not None, "Missing TÀI LIỆU THAM KHẢO heading in PDF"
+    assert yao_page == heading_page, (
+        f"Bibliography spilled over: heading on page {heading_page}, but end on page {yao_page}"
+    )
 
 
