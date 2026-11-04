@@ -376,6 +376,10 @@ def audit_global_preamble(reporter: AuditReporter):
             "Missing TOC non-bold chapter titles: \\renewcommand{\\cftchapfont}{\\normalfont}",
         )
 
+    # 9. xltabular package loaded for breakable Use Case tables
+    if "\\usepackage{xltabular}" not in content:
+        reporter.add_defect("config/preamble.tex", "Missing \\usepackage{xltabular}")
+
 
 def audit_file_generic(rel_path: str, content: str, reporter: AuditReporter):
     """Generic typography, spacing, and leak invariants for every .tex file."""
@@ -384,7 +388,9 @@ def audit_file_generic(rel_path: str, content: str, reporter: AuditReporter):
         reporter.add_defect(rel_path, "Found prohibited 1.241 line compression")
 
     # 2. No small/footnotesize in table environments
-    for tm in re.finditer(r"\\begin\{table\}(.*?)\\end\{table\}", content, re.DOTALL):
+    for tm in re.finditer(
+        r"\\begin\{(?:table|xltabular)\*?\}(.*?)\\end\{(?:table|xltabular)\*?\}", content, re.DOTALL
+    ):
         tab_text = tm.group(1)
         for forbidden_font in [
             r"\\small\b",
@@ -612,19 +618,20 @@ def audit_figures_and_tables_in_file(rel_path: str, content: str, reporter: Audi
                 rel_path, f"Figure {lbl}: Caption must be on BOTTOM, but appears above graphic"
             )
 
-    # Check tables
-    for m in re.finditer(r"\\begin\{table\}(.*?)\\end\{table\}", content, re.DOTALL):
-        tab_text = m.group(1)
+    # Check tables (both standard floating table and breakable multipage xltabular)
+    for m in re.finditer(r"\\begin\{(table|xltabular)\*?\}(.*?)\\end\{\1\*?\}", content, re.DOTALL):
+        env_type = m.group(1)
+        tab_text = m.group(2)
         reporter.audited_tables += 1
 
         lbl_m = re.search(r"\\label\{([^}]+)\}", tab_text)
         cap_m = re.search(r"\\caption\{([^}]+)\}", tab_text)
 
         if not lbl_m:
-            reporter.add_defect(rel_path, "Table missing \\label")
+            reporter.add_defect(rel_path, f"{env_type} table missing \\label")
             continue
         if not cap_m:
-            reporter.add_defect(rel_path, "Table missing \\caption")
+            reporter.add_defect(rel_path, f"{env_type} table missing \\caption")
             continue
 
         lbl = lbl_m.group(1)
@@ -642,18 +649,29 @@ def audit_figures_and_tables_in_file(rel_path: str, content: str, reporter: Audi
 
         # 2. Caption on TOP check
         cap_pos = tab_text.find("\\caption")
-        tabular_pos = tab_text.find("\\begin{tabular")
-
-        if tabular_pos != -1 and cap_pos > tabular_pos:
-            reporter.add_defect(
-                rel_path, f"Table {lbl}: Caption must be on TOP, but appears below tabular"
-            )
+        if env_type == "table":
+            tabular_pos = tab_text.find("\\begin{tabular")
+            if tabular_pos != -1 and cap_pos > tabular_pos:
+                reporter.add_defect(
+                    rel_path, f"Table {lbl}: Caption must be on TOP, but appears below tabular"
+                )
+        elif env_type == "xltabular":
+            firsthead_pos = tab_text.find("\\endfirsthead")
+            if firsthead_pos == -1:
+                reporter.add_defect(
+                    rel_path, f"Table {lbl}: Breakable xltabular table missing \\endfirsthead"
+                )
+            elif cap_pos == -1 or cap_pos > firsthead_pos:
+                reporter.add_defect(
+                    rel_path,
+                    f"Table {lbl}: Caption must be at the top before \\endfirsthead",
+                )
 
         # 3. Arraystretch >= 1.20 check
         astretch_m = re.search(r"\\renewcommand\{\\arraystretch\}\{([0-9.]+)\}", tab_text)
         if not astretch_m:
             # Check within preceding context in the file
-            pos_in_file = content.find(tab_text)
+            pos_in_file = m.start()
             preceding = content[max(0, pos_in_file - 400) : pos_in_file]
             astretch_m = re.search(r"\\renewcommand\{\\arraystretch\}\{([0-9.]+)\}", preceding)
 
@@ -663,9 +681,11 @@ def audit_figures_and_tables_in_file(rel_path: str, content: str, reporter: Audi
             )
         else:
             val = float(astretch_m.group(1))
-            if val < 1.15:
+            min_stretch = 1.20 if env_type == "xltabular" else 1.15
+            if val < min_stretch:
                 reporter.add_defect(
-                    rel_path, f"Table {lbl}: arraystretch {val} too compressed (< 1.15)"
+                    rel_path,
+                    f"Table {lbl}: arraystretch {val} too compressed (< {min_stretch:.2f})",
                 )
 
         # 4. Use Case and Spec conventions (en-dashes and no Bước 1:)
@@ -673,6 +693,18 @@ def audit_figures_and_tables_in_file(rel_path: str, content: str, reporter: Audi
             reporter.add_defect(
                 rel_path, f"Table {lbl}: Prohibited prefix 'Bước 1:', must use en-dashes \\item[--]"
             )
+
+        if env_type == "xltabular":
+            if "\\item[--]" not in tab_text:
+                reporter.add_defect(
+                    rel_path,
+                    f"Table {lbl}: xltabular Use Case table must enforce en-dash items (\\item[--])",
+                )
+            if re.search(r"\\item\b(?!\s*\[--\])", tab_text):
+                reporter.add_defect(
+                    rel_path,
+                    f"Table {lbl}: Found list items without en-dash [--] in Use Case table",
+                )
 
         # 5. Actors table STT rule (only 1 and 2)
         if lbl == "tab:actors_usecases":
