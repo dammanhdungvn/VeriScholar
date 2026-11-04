@@ -117,3 +117,21 @@ def test_de_cuong_datn_structure():
     assert "Giảng viên hướng dẫn" not in after_sec_8
     assert "Sinh viên thực hiện" not in after_sec_8
     assert "ngày" not in after_sec_8
+
+
+def test_no_singlespace_in_frontmatter():
+    """Đảm bảo không còn môi trường singlespace nào trong toàn bộ thư mục frontmatter."""
+    for tex_file in FRONTMATTER_DIR.glob("**/*.tex"):
+        content = tex_file.read_text(encoding="utf-8")
+        assert "singlespace" not in content, (
+            f"Phát hiện môi trường singlespace trong frontmatter: {tex_file.name}"
+        )
+
+
+def test_usecase_continuation_headers_13pt():
+    """Đảm bảo các continuation header Bảng 3-X (tiếp theo) không bị hạ cỡ chữ xuống 11pt."""
+    usecase_file = CHAPTERS_DIR / "ch3" / "3_4_phan_tich_usecase.tex"
+    content = usecase_file.read_text(encoding="utf-8")
+    assert "\\fontsize{11pt}" not in content, (
+        "Phát hiện \\fontsize{11pt} trong chapters/ch3/3_4_phan_tich_usecase.tex"
+    )
