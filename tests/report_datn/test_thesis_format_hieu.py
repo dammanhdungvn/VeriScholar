@@ -336,4 +336,3 @@ def test_bibliography_10_milestone_papers_flat_alphabetical():
     assert "758--759" in content
     assert "824--836" in content
     assert "9459--9474" in content
-

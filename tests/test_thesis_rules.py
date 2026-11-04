@@ -112,7 +112,8 @@ def test_thesis_rules_academic_architecture_paradigm():
 
 def test_thesis_reference_count_within_cap():
     """Kiểm tra Giới hạn số lượng tài liệu tham khảo (Reference Cap Invariant):
-    Danh mục tài liệu tham khảo của báo cáo đồ án bắt buộc phải đúng 10 bài báo kinh điển (N_refs == 10 <= 20).
+    Danh mục tài liệu tham khảo của báo cáo đồ án bắt buộc phải đúng 10 bài báo
+    kinh điển (N_refs == 10 <= 20).
     """
     import re
 
@@ -299,9 +300,11 @@ def test_chapter2_theoretical_rigor_remediation():
     - 2_1_postgresql_redis.tex: sửa MVCC đọc không chặn ghi, bỏ 'không gây khóa chết'
       và 'Dedicated Vector Database'.
     - 2_3_advanced_rag.tex: trình bày kỹ thuật Advanced RAG, nêu cơ chế ts_rank_cd + BM25
-      và Cross-Encoder, ví dụ RRF dùng k = 60 (bỏ 'k = 0 dùng để minh họa'), không dùng ký hiệu trích dẫn số.
+      và Cross-Encoder, ví dụ RRF dùng k = 60 (bỏ 'k = 0 dùng để minh họa'),
+      không dùng ký hiệu trích dẫn số.
     - 2_4_knowledge_graph_wiki.tex: trình bày thuật toán phân cụm cộng đồng Louvain và
-      loại bỏ 'Author Nodes' khỏi sơ đồ đồ thị tri thức (đồng bộ 4 loại nút), không dùng ký hiệu trích dẫn số.
+      loại bỏ 'Author Nodes' khỏi sơ đồ đồ thị tri thức (đồng bộ 4 loại nút),
+      không dùng ký hiệu trích dẫn số.
     - 2_5_agentic_react.tex: không chứa trích dẫn thừa hong2023metagpt / wang2023planandsolve,
       đồng bộ biên độ cài đặt ReAct + Tool Use đơn tác tử.
     - 2_7_azure_e2b_byok.tex: bỏ 'GPT-5.6-luna', cập nhật công thức eq:aes_gcm chứa J_0.
@@ -515,4 +518,3 @@ def test_ssot_and_agents_reference_invariants():
     assert "I. Tài liệu tiếng Việt" not in info
     assert "II. Tài liệu tiếng Anh" not in info
     assert "cấm sử dụng các ký hiệu trích dẫn" in agents or "Tuyệt đối không sử dụng" in agents
-
