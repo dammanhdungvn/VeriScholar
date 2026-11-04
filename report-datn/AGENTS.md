@@ -75,12 +75,12 @@ Bộ 11 Điều Răn sau đây là **Quy chuẩn Định dạng Tối thượng 
    - Trong Bảng 3-1 (`tab:actors_usecases`), cột "STT" chỉ đánh số thứ tự cho 2 nhóm tác nhân chính: ô số `1` gộp cho nhóm tác nhân Học giả (Scholar) và ô số `2` gộp cho nhóm tác nhân Quản trị viên (Admin).
    - Tuyệt đối CẤM đánh số thứ tự từng dòng riêng lẻ từ 3 đến 12 trong cột STT làm sai lệch cấu trúc gom nhóm Use Case của tài liệu chuẩn `HIeu.pdf`.
 
-10. **Quy cách trình bày nội dung bảng: Không dùng số thứ tự tự do, dùng `Bước 1:`, `--`, `\textbullet`:**
-    - Bên ngoài cột STT, tuyệt đối CẤM sử dụng các con số thứ tự tự do dạng `1.`, `2.`, `3.` hoặc `(1)`, `(2)` trong nội dung các ô bảng biểu.
+10. **Quy cách trình bày nội dung bảng: Dùng dấu gạch đầu dòng `--` cho các bước và luồng, `\textbullet` cho liệt kê:**
+    - Bên ngoài cột STT, tuyệt đối CẤM sử dụng các con số thứ tự tự do dạng `1.`, `2.`, `3.` hoặc `(1)`, `(2)` và cấm dùng tiền tố `Bước 1:`, `Bước 2:` trong nội dung các ô bảng biểu.
     - Quy chuẩn trình bày nội dung ô bảng tùy theo bản chất nghiệp vụ:
-      + Đối với các bước thực hiện tuần tự trong luồng sự kiện chính (Bảng đặc tả Use Case 3-2 đến 3-5): Bắt buộc sử dụng tiền tố bước chuẩn mực `Bước 1:`, `Bước 2:`, `Bước 3:`... theo đúng mẫu `HIeu.pdf` trang 36.
-      + Đối với các ý niệm, phân nhánh luồng thay thế / ngoại lệ: Sử dụng dấu gạch đầu dòng (`--`).
+      + Đối với các bước thực hiện tuần tự trong luồng sự kiện chính và luồng thay thế / ngoại lệ (Bảng đặc tả Use Case 3-2 đến 3-5): Bắt buộc sử dụng dấu gạch đầu dòng en-dash (`--` / `\item[--]`), tạo sự thống nhất toàn diện và thanh thoát theo đúng bản mẫu `HIeu.pdf`.
       + Đối với danh sách các thành phần, đặc tính liệt kê: Sử dụng bullet (`\textbullet`).
+      + Cấm mọi hành vi co ép dãn dòng bảng (`\arraystretch < 1.15`) hoặc giảm cỡ chữ để tiết kiệm giấy.
 
 11. **Khóa cứng cặp Sơ đồ phân rã Use Case và Bảng đặc tả bằng `\FloatBarrier`:**
     - Trong Mục 3.4 (Phân tích các ca sử dụng), mỗi biểu đồ phân rã Use Case con (Hình 3-4, 3-5, 3-6, 3-7) bắt buộc phải được đặt đi liền kề ngay phía trước bảng đặc tả ca sử dụng tương ứng (Bảng 3-2, 3-3, 3-4, 3-5).
@@ -411,8 +411,8 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
      + Chèn lệnh `\allowbreak` trước các ký tự phân cách trong chuỗi dài (như email) để tự động ngắt dòng, triệt tiêu va đập lề viền và dính chữ.
    - **Quy chuẩn đánh số cột STT và nội dung bảng (Bảng 3-1 và Bảng đặc tả Use Case):**
      + Cột STT trong Bảng 3-1 (`tab:actors_usecases`) CHỈ ĐƯỢC CHỨA nhóm tác nhân: `1` cho Học giả (Scholar) và `2` cho Quản trị viên (Admin). Tuyệt đối không đánh số chỉ mục dòng 3..12 trong cột STT.
-     + Ngoài cột STT, tuyệt đối CẤM sử dụng các con số thứ tự tự do dạng `1.`, `2.`, `3.` hoặc `(1)`, `(2)` trong nội dung các ô bảng biểu.
-     + Quy chuẩn trình bày nội dung ô bảng: Đối với các bước thực hiện tuần tự trong luồng sự kiện chính (Bảng 3-2 đến 3-5), sử dụng tiền tố `Bước 1:`, `Bước 2:`...; đối với luồng thay thế / ngoại lệ dùng gạch đầu dòng `--`; đối với danh sách liệt kê dùng bullet `\textbullet`.
+     + Ngoài cột STT, tuyệt đối CẤM sử dụng các con số thứ tự tự do dạng `1.`, `2.`, `3.` hoặc `(1)`, `(2)` và tiền tố `Bước 1:` trong nội dung các ô bảng biểu.
+     + Quy chuẩn trình bày nội dung ô bảng: Đối với các bước thực hiện tuần tự trong luồng sự kiện chính và luồng thay thế / ngoại lệ (Bảng 3-2 đến 3-5), sử dụng dấu gạch đầu dòng en-dash (`--`); đối với danh sách liệt kê dùng bullet `\textbullet`.
    - **Quy chuẩn thuật ngữ học thuật cô đọng (Academic Keywords):**
      + Trong tiêu đề cột, hàng và nội dung bảng biểu, bắt buộc sử dụng các thuật ngữ khoa học/kỹ thuật chuẩn quốc tế (*Retrieval*, *Chunking*, *Dense*, *Sparse*, *BYOK*, *IoU*) thay vì các cụm từ giải thích dài dòng mang tính văn nói hoặc kể lể (*"Truy xuất thông tin"*, *"Chia đoạn / phân mảnh"*, *"Tự cung cấp khóa API cá nhân"*).
      + Tiêu đề các cột trong bảng phải cô đọng trong 1 đến 2 từ khóa danh từ, giữ bảng biểu thanh thoát, chuẩn mực paper khoa học.
@@ -732,9 +732,8 @@ Nhằm phòng ngừa triệt để các sai sót định dạng và nội dung, 
 │ 9  │ Cột STT Bảng 3-1 đánh số dòng 3..12  │ Cột STT Bảng 3-1 chỉ chứa 1 (Học giả) và 2 │
 │    │ làm vỡ cấu trúc nhóm Use Case.       │ (Quản trị viên) khớp 100% mẫu Hieu.pdf.    │
 ├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
-│ 10 │ Dùng số thứ tự tự do 1, 2, 3... trong│ Luồng chính dùng Bước 1:, Bước 2:...; luồng│
-│    │ nội dung các ô bảng biểu ngoài STT.  │ thay thế dùng gạch đầu dòng --; liệt kê    │
-│    │                                      │ dùng \textbullet. Cấm số tự do ngoài STT.  │
+│ 10 │ Dùng tiền tố Bước 1:, số tự do trong │ Luồng chính và luồng phụ dùng gạch đầu dòng│
+│    │ nội dung các ô bảng biểu ngoài STT.  │ --; liệt kê dùng \textbullet. Cấm số tự do.│
 ├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
 │ 11 │ Để sơ đồ Use Case con và bảng đặc tả │ Đặt sơ đồ Use Case con (Hình 3-4 đến 3-7)  │
 │    │ trôi nổi phân tán xa nhau sang mục.  │ ngay trước bảng đặc tả (Bảng 3-2 đến 3-5)  │
@@ -761,7 +760,7 @@ Trước khi xác nhận hoàn thành bất kỳ tác vụ nào trong `report-da
 - [ ] 7. [ĐIỀU RĂN 7] THUẬT NGỮ HỌC THUẬT QUỐC TẾ VÀ TIÊU ĐỀ CÔ ĐỌNG: Sử dụng thuật ngữ chuẩn quốc tế (Retrieval, Chunking, Dense, Sparse, BYOK, IoU); tiêu đề cột cô đọng 1-2 từ khóa; loại bỏ văn phong kể lể dài dòng.
 - [ ] 8. [ĐIỀU RĂN 8] KÍCH THƯỚC HÌNH TỐI ƯU TỪNG LOẠI VÀ MŨI TÊN TIKZ CÁCH LỀ 3-4MM: UI 16:9 ngang width=0.95\textwidth; modal width=0.75\textwidth; Langfuse width=0.92\textwidth; mũi tên TikZ chừa lề 3-4mm; 100% ảnh định dạng .png tại figures/.
 - [ ] 9. [ĐIỀU RĂN 9] CỘT STT BẢNG 3-1 CHỈ CHỨA 1 (HỌC GIẢ) VÀ 2 (QUẢN TRỊ VIÊN): Cột STT trong Bảng 3-1 chỉ chứa 1 và 2 gom nhóm tác nhân, tuyệt đối không đánh số chỉ mục dòng 3..12 trong cột STT.
-- [ ] 10. [ĐIỀU RĂN 10] NỘI DUNG BẢNG DÙNG BƯỚC 1:, --, \textbullet, CẤM SỐ TỰ DO NGOÀI STT: Luồng chính dùng Bước 1:, Bước 2:...; luồng thay thế dùng gạch đầu dòng --; liệt kê dùng bullet \textbullet; tuyệt đối không dùng số tự do 1, 2, 3... trong nội dung bảng.
+- [ ] 10. [ĐIỀU RĂN 10] NỘI DUNG BẢNG DÙNG GẠCH ĐẦU DÒNG --, CẤM BƯỚC 1: VÀ SỐ TỰ DO: Luồng chính và phụ dùng gạch đầu dòng --; liệt kê dùng bullet \textbullet; tuyệt đối không dùng tiền tố Bước 1:, Bước 2: hoặc số tự do 1, 2, 3... trong nội dung bảng; duy trì arraystretch >= 1.20 chuẩn Word.
 - [ ] 11. [ĐIỀU RĂN 11] KHÓA CẶP SƠ ĐỒ USE CASE VÀ BẢNG ĐẶC TẢ BẰNG \FloatBarrier: Mỗi sơ đồ Use Case con (Hình 3-4 đến 3-7) đi liền kề ngay trước bảng đặc tả (Bảng 3-2 đến 3-5) và khóa cứng bằng \FloatBarrier.
 
 #### KHỐI II: QUY CHUẨN KỸ NGHỆ, KIẾN TRÚC VÀ HỌC THUẬT NỘI DUNG

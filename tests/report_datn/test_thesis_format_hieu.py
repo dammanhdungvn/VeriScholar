@@ -161,14 +161,22 @@ def test_usecase_spec_tables_step_conventions():
         )
         table_text = content[begin_table:end_table]
 
-        # Main flow must use step prefixes 'Bước 1:', 'Bước 2:', etc.
-        assert "Bước 1:" in table_text or "Bước 1." in table_text, (
-            f"{label}: Luồng sự kiện chính must use 'Bước 1:', 'Bước 2:' "
-            "conventions matching Hieu.pdf"
+        # Main flow must use en-dashes '--' and abolish 'Bước 1:', 'Bước 2:'
+        assert "Bước 1:" not in table_text and "Bước 2:" not in table_text, (
+            f"{label}: Luồng sự kiện chính must not use 'Bước 1:', 'Bước 2:' prefix"
         )
-        assert "Bước 2:" in table_text or "Bước 2." in table_text, (
-            f"{label}: Luồng sự kiện chính must use 'Bước 1:', 'Bước 2:' "
-            "conventions matching Hieu.pdf"
+        main_flow_marker = "Luồng sự kiện chính"
+        alt_flow_marker = "Luồng thay thế"
+        main_pos = table_text.find(main_flow_marker)
+        alt_pos = table_text.find(alt_flow_marker)
+        assert main_pos != -1, f"{label}: Missing 'Luồng sự kiện chính'"
+        main_part = table_text[main_pos:alt_pos] if alt_pos != -1 else table_text[main_pos:]
+        assert "--" in main_part or "\\item[--]" in main_part, (
+            f"{label}: Luồng sự kiện chính must use dashes '--'"
+        )
+        # Ensure no citation markers [1], [2], [i] in table
+        assert not re.search(r"\[[0-9i]+\]", table_text), (
+            f"{label}: Table contains citation-like brackets [number] or [i]"
         )
 
         # Alternative / exception flow must use dashes '--'
@@ -178,6 +186,18 @@ def test_usecase_spec_tables_step_conventions():
             alt_part = table_text[alt_pos:]
             assert "--" in alt_part or "\\item[--]" in alt_part, (
                 f"{label}: Luồng thay thế / Ngoại lệ must use dashes '--'"
+            )
+
+
+def test_no_table_arraystretch_compression():
+    ch_files = list((REPORT_DIR / "chapters").glob("ch*/*.tex"))
+    for f in ch_files:
+        content = f.read_text(encoding="utf-8")
+        matches = re.finditer(r"\\renewcommand\{\\arraystretch\}\{([0-9.]+)\}", content)
+        for m in matches:
+            val = float(m.group(1))
+            assert val >= 1.15, (
+                f"Found compressed arraystretch {val} in {f.name}, expected >= 1.15 to match Word 1.5 line spacing"
             )
 
 
