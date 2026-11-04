@@ -240,21 +240,21 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 \caption{Phân tích các lớp thực thể miền và mối quan hệ cấu trúc trong hệ thống}
 \label{tab:class_relationships_analysis}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{0.75}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.8cm}|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{0.9cm}|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.7cm}|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Lớp A} & \textbf{Lớp B} & \textbf{Kiểu quan hệ} & \textbf{Bản số} & \centering\textbf{Miêu tả ngữ nghĩa nghiệp vụ} \tabularnewline \hline
 1 & \texttt{User} & \texttt{Scholar\-Profile} & Hợp thành (Composition) & 1 -- 1 & Hồ sơ học giả phụ thuộc vào vòng đời tài khoản \texttt{User}. \tabularnewline \hline
 2 & \texttt{User} & \texttt{User\-Api\-Key} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu nhiều khóa API cá nhân theo cơ chế BYOK. \tabularnewline \hline
 3 & \texttt{User} & \texttt{Document} & Thu nạp (Aggregation) & 1 -- N & Học giả quản lý tài liệu nghiên cứu trong thư viện cá nhân. \tabularnewline \hline
 4 & \texttt{Storage\-Blob} & \texttt{Document} & Kết hợp (Association) & 1 -- N & Nhiều bài báo cùng trỏ tới 1 khối tệp CAS (Deduplication). \tabularnewline \hline
-5 & \texttt{Document} & \texttt{Document\-Chunk} & Hợp thành (Composition) & 1 -- N & Bài báo được tách thành phân đoạn văn bản kèm BBox và vector. \tabularnewline \hline
+5 & \texttt{Document} & \texttt{Document\-Chunk} & Hợp thành (Composition) & 1 -- N & Bài báo được phân mảnh (Chunking) kèm tọa độ Bounding Box (IoU) và vector Dense. \tabularnewline \hline
 6 & \texttt{User} & \texttt{Research\-Session} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu các phiên làm việc nghiên cứu đa tài liệu. \tabularnewline \hline
-7 & \texttt{Research\-Session} & \texttt{Session\-Turn} & Hợp thành (Composition) & 1 -- N & Phiên lưu trữ lịch sử các lượt hỏi đáp tăng cường Hybrid RAG. \tabularnewline \hline
+7 & \texttt{Research\-Session} & \texttt{Session\-Turn} & Hợp thành (Composition) & 1 -- N & Phiên lưu trữ lịch sử các lượt hỏi đáp truy xuất (Retrieval) Hybrid RAG. \tabularnewline \hline
 8 & \texttt{Research\-Session} & \texttt{Document} & Kết hợp (Association) & N -- N & Quan hệ nhiều--nhiều giữa phiên và tài liệu nạp vào Reader. \tabularnewline \hline
 9 & \texttt{Document} & \texttt{Graph\-Node} & Thu nạp (Aggregation) & 1 -- N & Tài liệu là cơ sở trích xuất thực thể tri thức (GraphRAG). \tabularnewline \hline
-10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent tự động sửa lỗi. \tabularnewline \hline
+10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent ReAct tự động sửa lỗi (Self-Healing). \tabularnewline \hline
 \end{tabularx}
 \end{table}
 
@@ -283,9 +283,9 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 \caption{Đặc tả bảng documents}
 \label{tab:spec_documents}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{1.05}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.25cm}|>{\centering\arraybackslash}m{3.20cm}|>{\centering\arraybackslash}m{2.75cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh tài liệu bài báo \tabularnewline \hline
@@ -309,19 +309,19 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục
 \caption{Đặc tả bảng document\_chunks}
 \label{tab:spec_chunks}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{0.96}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.25cm}|>{\centering\arraybackslash}m{3.20cm}|>{\centering\arraybackslash}m{2.75cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
-1 & id & UUID & PK, Not Null & Khóa chính phân đoạn văn bản \tabularnewline \hline
+1 & id & UUID & PK, Not Null & Khóa chính phân đoạn văn bản (Chunk) \tabularnewline \hline
 2 & document\_id & UUID & FK documents(id), Not Null & Khóa ngoại liên kết tài liệu gốc \tabularnewline \hline
-3 & chunk\_index & INT & Not Null & Thứ tự tuần tự của phân đoạn trong tài liệu \tabularnewline \hline
+3 & chunk\_index & INT & Not Null & Thứ tự tuần tự của phân đoạn (Chunking) trong tài liệu \tabularnewline \hline
 4 & page\_number & INT & Not Null & Số trang chứa nội dung phân đoạn trong PDF \tabularnewline \hline
-5 & content & TEXT & Not Null & Toàn văn nội dung đoạn văn bản đã phân tách \tabularnewline \hline
-6 & bbox & FLOAT[] & Not Null & Bộ 4 tọa độ hộp bao chuẩn hóa $[0, 1]^4$ \tabularnewline \hline
-7 & embedding & VECTOR(1536) & Null & Vector nhúng phục vụ chỉ mục HNSW \tabularnewline \hline
-8 & content\_tsv & TSVECTOR & Generated Stored & Chỉ mục từ vựng toàn văn phục vụ GIN BM25 \tabularnewline \hline
+5 & content & TEXT & Not Null & Toàn văn nội dung đoạn văn bản đã phân đoạn (Chunking) \tabularnewline \hline
+6 & bbox & FLOAT[] & Not Null & Bộ 4 tọa độ Bounding Box (chuẩn hóa $[0, 1]^4$, IoU) \tabularnewline \hline
+7 & embedding & VECTOR(1536) & Null & Vector nhúng Dense 1536 chiều phục vụ chỉ mục HNSW \tabularnewline \hline
+8 & content\_tsv & TSVECTOR & Generated Stored & Chỉ mục Sparse toàn văn phục vụ GIN BM25 \tabularnewline \hline
 \end{tabularx}
 \end{table}
 
@@ -333,9 +333,9 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 \caption{Đặc tả bảng graph\_nodes}
 \label{tab:spec_graph_nodes}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{0.96}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.25cm}|>{\centering\arraybackslash}m{3.20cm}|>{\centering\arraybackslash}m{2.75cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh đỉnh thực thể \tabularnewline \hline
@@ -343,7 +343,7 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 3 & name & VARCHAR(255) & Not Null & Tên thực thể trích xuất nguyên bản từ văn bản \tabularnewline \hline
 4 & canonical\_name & VARCHAR(255) & Not Null & Tên chuẩn tắc sau khi chuẩn hóa ký tự \tabularnewline \hline
 5 & entity\_type & VARCHAR(50) & Not Null & 4 loại: \texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult} \tabularnewline \hline
-6 & embedding & VECTOR(1536) & Null & Vector nhúng đỉnh để khử trùng lặp Cosine \tabularnewline \hline
+6 & embedding & VECTOR(1536) & Null & Vector nhúng Dense đỉnh để khử trùng lặp theo Cosine \tabularnewline \hline
 7 & created\_at & TIMESTAMPTZ & Default NOW() & Thời điểm trích xuất thực thể vào đồ thị \tabularnewline \hline
 \end{tabularx}
 \end{table}
@@ -356,9 +356,9 @@ Bảng \texttt{drafts} lưu trữ bản thảo mã nguồn LaTeX, liên kết m�
 \caption{Đặc tả bảng drafts}
 \label{tab:spec_drafts}
 \captionsetup{skip=2pt}
-\setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{0.80}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{5pt}
+\renewcommand{\arraystretch}{1.20}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{1.0cm}|>{\centering\arraybackslash}m{3.25cm}|>{\centering\arraybackslash}m{3.20cm}|>{\centering\arraybackslash}m{2.75cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh bản thảo khoa học \tabularnewline \hline
@@ -366,7 +366,7 @@ Bảng \texttt{drafts} lưu trữ bản thảo mã nguồn LaTeX, liên kết m�
 3 & title & VARCHAR(255) & Not Null & Tiêu đề bản thảo đang biên soạn \tabularnewline \hline
 4 & template & VARCHAR(50) & Default 'ieee' & Mẫu cấu trúc LaTeX (IEEE, ACM, Springer) \tabularnewline \hline
 5 & content & TEXT & Not Null & Toàn văn mã nguồn LaTeX của bản thảo \tabularnewline \hline
-6 & compile\_status & VARCHAR(30) & Default 'draft' & Trạng thái biên dịch (\texttt{success}, \texttt{failed}) \tabularnewline \hline
+6 & compile\_status & VARCHAR(30) & Default 'draft' & Trạng thái biên dịch và Self-Healing (\texttt{success}, \texttt{failed}) \tabularnewline \hline
 7 & last\_compiled\_at & TIMESTAMPTZ & Null & Thời điểm thực thi biên dịch gần nhất \tabularnewline \hline
 8 & updated\_at & TIMESTAMPTZ & Default NOW() & Thời điểm chỉnh sửa bản thảo gần nhất \tabularnewline \hline
 \end{tabularx}
