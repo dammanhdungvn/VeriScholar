@@ -6,7 +6,6 @@
 % ==============================================================================
 
 \thispagestyle{adminform}
-\enlargethispage{1.5\baselineskip}
 \phantomsection
 \addcontentsline{toc}{chapter}{PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP}
 
@@ -39,32 +38,12 @@ Nơi thực hiện: Trường ĐH Mỏ -- Địa chất & Thời gian làm ĐATN
 \noindent \textbf{2. Mục tiêu của ĐATN}
 \vspace{0.02cm}
 
-\noindent \textbf{Mục tiêu tổng quát:}
-\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
-    \item Xây dựng nền tảng Trợ lý AI nghiên cứu khoa học VeriScholar cho học giả VinUni.
-    \item Triệt tiêu ảo giác qua Hybrid RAG và kiểm chứng trích dẫn Bounding Box hai tầng.
-    \item Tự động hóa biên dịch LaTeX trong sandbox E2B và bảo mật khóa riêng BYOK.
-\end{itemize}
-
-\vspace{0.05cm}
-\noindent \textbf{Mục tiêu cụ thể:}
-\begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
-    \item[\textbf{--}] \textbf{Về sản phẩm:}
-    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
-        \item Phân hệ Khám phá: Tìm kiếm học thuật đa nguồn (arXiv, Semantic Scholar, CrossRef) và lưu trữ CAS SHA-256.
-        \item Phân hệ Đọc sâu: Đọc PDF Canvas hai cột kết hợp kiểm chứng tọa độ Bounding Box.
-        \item Phân hệ GraphRAG: Đồ thị tri thức 4 thực thể (Paper, Method, Dataset, MetricResult).
-        \item Phân hệ Soạn thảo: Soạn thảo LaTeX trực tuyến, tự sửa lỗi trong sandbox E2B.
-        \item Phân hệ Bảo mật: Quản lý kho khóa API cá nhân BYOK mã hóa AES-256-GCM.
-    \end{itemize}
-    \vspace{0.02cm}
-    \item[\textbf{--}] \textbf{Về kiến thức và kỹ năng:}
-    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
-        \item Vận dụng kiến thức: Kỹ nghệ phần mềm, CSDL nâng cao, Kiến trúc hệ thống, NLP.
-        \item Nắm vững quy trình phát triển phần mềm theo phương pháp kiểm thử TDD.
-        \item Làm chủ kỹ thuật Hybrid RAG, đồ thị tri thức GraphRAG và tác nhân ReAct tự chủ.
-        \item Rèn luyện năng lực nghiên cứu độc lập và tuân thủ liêm chính học thuật.
-    \end{itemize}
+\begin{itemize}[leftmargin=*, itemsep=1.5pt, topsep=2pt, parsep=0pt, partopsep=0pt]
+    \item Xây dựng nền tảng Trợ lý AI nghiên cứu khoa học VeriScholar cho học giả VinUni hỗ trợ tìm kiếm học thuật đa nguồn và kiểm chứng trích dẫn.
+    \item Triệt tiêu ảo giác thông qua kỹ thuật Hybrid RAG kết hợp pgvector Dense và BM25 Sparse cùng kiểm chứng tọa độ Bounding Box hai tầng.
+    \item Tự động hóa quy trình soạn thảo văn bản học thuật và tự sửa lỗi cú pháp biên dịch LaTeX trong sandbox E2B MicroVM an toàn.
+    \item Quản lý bảo mật kho khóa API cá nhân theo mô hình BYOK mã hóa AES-256-GCM.
+    \item Vận dụng toàn diện kiến thức Kỹ nghệ phần mềm, CSDL nâng cao, quy trình TDD và rèn luyện năng lực nghiên cứu độc lập.
 \end{itemize}
 
 \newpage
@@ -95,13 +74,13 @@ Nơi thực hiện: Trường ĐH Mỏ -- Địa chất & Thời gian làm ĐATN
 Tôi -- Đàm Mạnh Dũng -- cam đoan ĐATN là công trình nghiên cứu độc lập của bản thân, được thực hiện dưới sự hướng dẫn của ThS. Vũ Lan Phương. Mọi kết quả, số liệu và mã nguồn trình bày trong đồ án hoàn toàn trung thực, không sao chép nguyên văn bất kỳ công trình nào khác.
 
 \vspace{0.25cm}
-\hfill \textit{Hà Nội, ngày\dots\dots tháng\dots\dots năm 2026}
+\hfill \textit{Hà Nội, ngày 06 tháng 11 năm 2026}
 \vspace{0.15cm}
 
 \begin{center}
-\begin{tabularx}{\textwidth}{@{}>{\centering\arraybackslash}X >{\centering\arraybackslash}X >{\centering\arraybackslash}X@{}}
-  \textbf{TRƯỞNG BỘ MÔN} & \textbf{GIẢNG VIÊN HƯỚNG DẪN} & \textbf{SINH VIÊN THỰC HIỆN} \\[0.08cm]
-  \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)} \\[1.6cm]
-  & \textbf{ThS. Vũ Lan Phương} & \textbf{Đàm Mạnh Dũng} \\
+\begin{tabularx}{\textwidth}{@{}>{\centering\arraybackslash}X >{\centering\arraybackslash}X@{}}
+  \textbf{Giảng viên hướng dẫn} & \textbf{Sinh viên thực hiện} \\[0.08cm]
+  \textit{(Ký và ghi rõ họ tên)} & \textit{(Ký và ghi rõ họ tên)} \\[1.8cm]
+  \textbf{ThS. Vũ Lan Phương} & \textbf{Đàm Mạnh Dũng} \\
 \end{tabularx}
 \end{center}

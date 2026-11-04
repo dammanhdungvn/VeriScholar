@@ -3,6 +3,18 @@
 % TRANG BÌA CHÍNH (Phụ lục 1 HUMG - Theo chuẩn Hieu.pdf không khung viền)
 % ==============================================================================
 \begin{titlepage}
+\begin{tikzpicture}[remember picture, overlay]
+  % Sườn / gáy bìa chính chuẩn 100% theo trang bìa đầu tiên của Hieu.pdf
+  \node[rotate=-90, anchor=west] at ([xshift=1.4cm, yshift=-4.8cm]current page.north west) {%
+      \fontsize{13pt}{16pt}\selectfont\normalfont ĐÀM MẠNH DŨNG%
+  };
+  \node[rotate=-90, anchor=west] at ([xshift=1.4cm, yshift=-12.9cm]current page.north west) {%
+      \fontsize{13pt}{16pt}\selectfont\normalfont HỆ THỐNG THÔNG TIN%
+  };
+  \node[rotate=-90, anchor=west] at ([xshift=1.4cm, yshift=-23.0cm]current page.north west) {%
+      \fontsize{13pt}{16pt}\selectfont\normalfont KHOÁ 67%
+  };
+\end{tikzpicture}
 \vspace*{0.2cm}
 \begin{center}
   {\fontsize{16pt}{20pt}\selectfont \textbf{BỘ GIÁO DỤC VÀ ĐÀO TẠO}} \\[0.25cm]
@@ -17,8 +29,9 @@
 
   {\fontsize{16pt}{20pt}\selectfont \textbf{NGÀNH CÔNG NGHỆ THÔNG TIN}} \\[1.0cm]
 
-  {\fontsize{16pt}{20pt}\selectfont \textbf{TÊN ĐỀ TÀI:}} \\[0.35cm]
-  \parbox{13.2cm}{\centering \fontsize{16pt}{22pt}\selectfont \textbf{XÂY DỰNG NỀN TẢNG AI HỖ TRỢ NGHIÊN CỨU VÀ VIẾT BÀI BÁO KHOA HỌC VINUNI DỰA TRÊN AGENTIC RAG, TRUY XUẤT TRI THỨC HỌC THUẬT VÀ KIỂM CHỨNG TRÍCH DẪN}} \\[1.1cm]
+  \parbox{13.2cm}{\centering \fontsize{16pt}{22pt}\selectfont \textbf{XÂY DỰNG NỀN TẢNG AI HỖ TRỢ NGHIÊN CỨU VÀ VIẾT BÀI BÁO KHOA HỌC VINUNI DỰA TRÊN AGENTIC RAG, TRUY XUẤT TRI THỨC HỌC THUẬT VÀ KIỂM CHỨNG TRÍCH DẪN}} \\[0.9cm]
+
+  {\fontsize{16pt}{20pt}\selectfont \textbf{KHOÁ 67}}
 
   \vfill
 
