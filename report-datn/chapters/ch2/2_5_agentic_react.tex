@@ -49,7 +49,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.72, transform shape,
+    scale=0.68, transform shape,
     box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
     box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
@@ -100,7 +100,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     };
 
     % 7. Kết quả hoàn thành (Final Answer)
-    \node[box_final] (final) at (0, -3.3) {
+    \node[box_final] (final) at (0, -4.4) {
         Tài liệu PDF hoàn chỉnh\\[1pt]
         \scriptsize\normalfont Kết xuất thành công $\text{exit}=0$ (Hiển thị bản in)
     };
@@ -112,13 +112,13 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     \draw[arrowstyle] (sandbox.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {Trả kết quả} (cond.east);
     
     % Nhánh thành công
-    \draw[arrowstyle] (cond.south) -- node[midway, right=6pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
+    \draw[arrowstyle] (cond.south) -- node[midway, right=8pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Yes (Exit 0)} (final.north);
     
     % Nhánh lỗi -> Observation -> Loop ReAct
     \draw[arrowstyle] (cond.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=2pt] {No (Lỗi)} (obs.east);
     \draw[looparrow] (obs.north) to[out=110, in=250] node[midway, left=6pt, align=right, font=\scriptsize\bfseries, text=red!85!black, fill=white, inner sep=2pt] {Phản hồi vòng lặp\\sửa cú pháp} (agent.south);
 \end{tikzpicture}
-\vspace{-2pt}
+\vspace{4pt}
 \caption{Cơ chế tác nhân ReAct điều phối môi trường E2B MicroVM Sandbox tự động phục hồi lỗi cú pháp LaTeX}
 \label{fig:react_e2b_sandbox}
 \end{figure}
