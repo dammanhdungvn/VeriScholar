@@ -28,11 +28,17 @@ def test_loi_mo_dau_included_in_main():
     )
     assert pos_arabic != -1, r"Không tìm thấy \pagenumbering{arabic} trong main.tex"
 
+    pos_ch1 = content.find(r"\input{chapters/ch1_tong_quan}")
+    assert pos_ch1 != -1, r"Không tìm thấy \input{chapters/ch1_tong_quan} trong main.tex"
+
     assert pos_danh_muc_viet_tat < pos_loi_mo_dau, (
         r"\input{frontmatter/loi_mo_dau} phải đứng sau \input{frontmatter/danh_muc_viet_tat}"
     )
-    assert pos_loi_mo_dau < pos_arabic, (
-        r"\input{frontmatter/loi_mo_dau} phải nằm trong Frontmatter (trước \pagenumbering{arabic})"
+    assert pos_loi_mo_dau < pos_ch1, (
+        r"\input{frontmatter/loi_mo_dau} phải nằm trước \input{chapters/ch1_tong_quan}"
+    )
+    assert pos_arabic < pos_loi_mo_dau, (
+        r"\pagenumbering{arabic} bắt đầu từ Mục lục (trước \input{frontmatter/loi_mo_dau})"
     )
 
 

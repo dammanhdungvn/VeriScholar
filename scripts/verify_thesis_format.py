@@ -44,11 +44,11 @@ def test_toc_levels_in_pdf():
     assert "4.2.1.2" not in toc_text, "Mục lục hiển thị cấp 4 (4.2.1.2)!"
     assert "2.1.1.1" not in toc_text, "Mục lục hiển thị cấp 4!"
 
-    # Không có dấu hai chấm sau CHƯƠNG
-    assert "CHƯƠNG 1:" not in toc_text, "Mục lục vẫn còn dấu hai chấm sau CHƯƠNG 1"
-    assert "CHƯƠNG 2:" not in toc_text, "Mục lục vẫn còn dấu hai chấm sau CHƯƠNG 2"
-    assert "CHƯƠNG 3:" not in toc_text, "Mục lục vẫn còn dấu hai chấm sau CHƯƠNG 3"
-    assert "CHƯƠNG 4:" not in toc_text, "Mục lục vẫn còn dấu hai chấm sau CHƯƠNG 4"
+    # Có dấu hai chấm sau CHƯƠNG chuẩn 100% Hieu.pdf
+    assert "CHƯƠNG 1:" in toc_text, "Mục lục thiếu dấu hai chấm sau CHƯƠNG 1"
+    assert "CHƯƠNG 2:" in toc_text, "Mục lục thiếu dấu hai chấm sau CHƯƠNG 2"
+    assert "CHƯƠNG 3:" in toc_text, "Mục lục thiếu dấu hai chấm sau CHƯƠNG 3"
+    assert "CHƯƠNG 4:" in toc_text, "Mục lục thiếu dấu hai chấm sau CHƯƠNG 4"
 
     # Không có dấu chấm sau STT đề mục (1.1 thay vì 1.1.)
     assert "1.1. Giới thiệu" not in toc_text, "Mục lục vẫn còn dấu chấm sau 1.1."
@@ -82,57 +82,56 @@ def test_page_budget():
     res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
     pages = res.stdout.split("\x0c")
 
-    # Trang 3, 4: Phiếu giao đề tài (iii, iv) - Bố cục 2 trang liền mạch, không khoảng trắng thừa
+    # Trang 3, 4: Phiếu giao đề tài - Bố cục 2 trang liền mạch, không khoảng trắng thừa
     assert "PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP" in pages[2], (
         "Trang 3 không phải trang 1 của Phiếu giao đề tài"
     )
-    assert "Lời cam đoan của sinh viên" in pages[3], "Trang 4 không chứa Lời cam đoan (trang iv)"
-    assert "iii" in pages[2].strip().splitlines()[-1], (
-        f"Trang 3 chân trang không phải iii: {pages[2].strip().splitlines()[-1]}"
-    )
-    assert "iv" in pages[3].strip().splitlines()[-1], (
-        f"Trang 4 chân trang không phải iv: {pages[3].strip().splitlines()[-1]}"
-    )
+    assert "Lời cam đoan của sinh viên" in pages[3], "Trang 4 không chứa Lời cam đoan"
 
-    # Trang 5, 6, 7: Đề cương ĐATN (v, vi, vii)
+    # Trang 5, 6, 7: Đề cương ĐATN
     assert "ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC" in pages[4], (
         "Trang 5 không phải trang 1 của Đề cương"
     )
     assert "Nơi thực hiện đồ án:" in pages[6], "Trang 7 không phải trang cuối của Đề cương"
-    assert "v" in pages[4].strip().splitlines()[-1], (
-        f"Trang 5 chân trang không phải v: {pages[4].strip().splitlines()[-1]}"
-    )
-    assert "vi" in pages[5].strip().splitlines()[-1], (
-        f"Trang 6 chân trang không phải vi: {pages[5].strip().splitlines()[-1]}"
-    )
-    assert "vii" in pages[6].strip().splitlines()[-1], (
-        f"Trang 7 chân trang không phải vii: {pages[6].strip().splitlines()[-1]}"
-    )
 
-    # Trang 8: Lời cảm ơn (viii)
+    # Trang 8: Lời cảm ơn
     assert "LỜI CẢM ƠN" in pages[7], "Trang 8 không phải Lời cảm ơn"
-    assert "viii" in pages[7].strip().splitlines()[-1], (
-        f"Trang 8 chân trang không phải viii: {pages[7].strip().splitlines()[-1]}"
-    )
 
-    # Trang 9: Mục lục (ix)
+    # Kiểm tra quy chuẩn chân trang Frontmatter chuẩn 100% HIeu.pdf:
+    # Trang 1 đến trang 8 để trống hoàn toàn chân trang (không in số trang vật lý)
+    forbidden_page_tokens = {"iii", "iv", "v", "vi", "vii", "viii", "1", "2", "3", "4", "5", "6", "7", "8"}
+    for p_idx in range(8):
+        last_line = pages[p_idx].strip().splitlines()[-1] if pages[p_idx].strip().splitlines() else ""
+        assert last_line not in forbidden_page_tokens, (
+            f"Trang {p_idx + 1} chân trang không được in số trang (phải để trống theo chuẩn HIeu.pdf): '{last_line}'"
+        )
+
+    # Trang 9: Mục lục (bắt đầu đánh số 1 Ả Rập ở chân trang) - chuẩn 100% HIeu.pdf & R3
     assert "MỤC LỤC" in pages[8], "Trang 9 không phải Mục lục"
-    assert "ix" in pages[8].strip().splitlines()[-1], (
-        f"Trang 9 chân trang không phải ix: {pages[8].strip().splitlines()[-1]}"
+    assert pages[8].strip().splitlines()[-1] == "1", (
+        f"Trang 9 chân trang không phải 1: {pages[8].strip().splitlines()[-1]}"
     )
 
-    # Chương 1 bắt đầu bằng số trang 1 Ả Rập
+    # Mục lục ghi nhận đúng số trang La Mã logic cho các mục Frontmatter (khớp 100% HIeu.pdf)
+    assert "PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP" in pages[8] and "iii" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã iii cho Phiếu giao đề tài"
+    )
+    assert "ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC" in pages[8] and "v" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã v cho Đề cương"
+    )
+    assert "LỜI CẢM ƠN" in pages[8] and "viii" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã viii cho Lời cảm ơn"
+    )
+
+    # Chương 1 bắt đầu tiếp nối liên tục từ Mục lục
     ch1_idx = next(
-        (i for i, p in enumerate(pages) if "CHƯƠNG 1" in p and p.strip().splitlines()[-1] == "1"),
+        (i for i, p in enumerate(pages) if "CHƯƠNG 1" in p and "TỔNG QUAN VỀ ĐỀ TÀI" in p),
         None,
     )
-    assert ch1_idx is not None, "Không tìm thấy trang bắt đầu Chương 1 (số trang 1) trong PDF"
-    assert "TỔNG QUAN VỀ ĐỀ TÀI" in pages[ch1_idx], (
-        f"Trang {ch1_idx + 1} không chứa tiêu đề Chương 1"
-    )
+    assert ch1_idx is not None, "Không tìm thấy trang bắt đầu Chương 1 trong PDF"
 
     print(
-        "test_page_budget PASSED (Phiếu giao: iii-iv; Đề cương: v-vii; Lời cảm ơn: viii; Mục lục: ix; Chương 1: 1)"
+        "test_page_budget PASSED (Trang 1-8: chân trang trống theo HIeu.pdf; Mục lục: 1 Ả Rập; Frontmatter TOC: iii, v, viii)"
     )
 
 
