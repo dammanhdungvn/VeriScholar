@@ -2,6 +2,7 @@ import re
 from pathlib import Path
 
 CHAPTERS_DIR = Path(__file__).resolve().parent.parent / "chapters"
+CONFIG_DIR = Path(__file__).resolve().parent.parent / "config"
 
 
 def test_no_booktabs_rules():
@@ -28,3 +29,21 @@ def test_table_1_1_full_grid_borders():
     assert "\\begin{tabularx}{\\textwidth}{|>" in content, "Bảng 1-1 thiếu vạch biên dọc |"
     assert "\\hline" in content, "Bảng 1-1 thiếu đường kẻ ngang \\hline"
     assert "\\toprule" not in content and "\\bottomrule" not in content
+
+
+def test_indentfirst_loaded_in_preamble():
+    """Đảm bảo gói indentfirst được nạp trong config/preamble.tex để thụt lề cả đoạn đầu tiên."""
+    preamble = CONFIG_DIR / "preamble.tex"
+    content = preamble.read_text(encoding="utf-8")
+    assert "\\usepackage{indentfirst}" in content, (
+        "Thiếu \\usepackage{indentfirst} trong config/preamble.tex"
+    )
+
+
+def test_global_parindent_is_1cm():
+    """Đảm bảo thụt lề dòng đầu toàn cục được đặt là 1.0cm."""
+    preamble = CONFIG_DIR / "preamble.tex"
+    content = preamble.read_text(encoding="utf-8")
+    assert "\\setlength{\\parindent}{1.0cm}" in content, (
+        "Thiếu \\setlength{\\parindent}{1.0cm} trong config/preamble.tex"
+    )
