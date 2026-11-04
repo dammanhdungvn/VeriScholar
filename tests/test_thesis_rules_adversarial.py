@@ -156,9 +156,9 @@ def test_adversarial_negative_constraints_enforceable():
         in_tikz = False
         for idx, line in enumerate(lines, 1):
             s = line.strip()
-            if "\\begin{tabular" in s or "\\begin{table" in s:
+            if "\\begin{tabular" in s or "\\begin{table" in s or "\\begin{xltabular" in s:
                 in_table = True
-            if "\\end{tabular" in s or "\\end{table" in s:
+            if "\\end{tabular" in s or "\\end{table" in s or "\\end{xltabular" in s:
                 in_table = False
                 continue
             if in_table:

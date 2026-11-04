@@ -12,9 +12,17 @@ def find_casual_bolds():
         in_tikz = False
         for idx, line in enumerate(lines, 1):
             stripped = line.strip()
-            if "\\begin{tabular" in stripped or "\\begin{table" in stripped:
+            if (
+                "\\begin{tabular" in stripped
+                or "\\begin{table" in stripped
+                or "\\begin{xltabular" in stripped
+            ):
                 in_table = True
-            if "\\end{tabular" in stripped or "\\end{table" in stripped:
+            if (
+                "\\end{tabular" in stripped
+                or "\\end{table" in stripped
+                or "\\end{xltabular" in stripped
+            ):
                 in_table = False
                 continue
             if in_table:
