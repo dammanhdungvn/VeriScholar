@@ -367,3 +367,16 @@ def test_caption_font_is_13pt():
     )
     assert "size12" not in preamble, "Found legacy size12 in preamble.tex; captions must be 13pt!"
 
+
+def test_zero_citation_brackets_in_entire_body():
+    """Ensure no citation-like brackets [1], [2], [14] exist anywhere in body chapters."""
+    ch_files = list((REPORT_DIR / "chapters").glob("ch*/*.tex"))
+    leaks = []
+    for f in ch_files:
+        content = f.read_text(encoding="utf-8")
+        matches = re.finditer(r"\[\d+\]", content)
+        for m in matches:
+            leaks.append(f"{f.name}: found '{m.group(0)}'")
+    assert not leaks, f"Found citation brackets in body chapters: {leaks}"
+
+
