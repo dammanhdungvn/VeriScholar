@@ -197,7 +197,8 @@ def test_no_table_arraystretch_compression():
         for m in matches:
             val = float(m.group(1))
             assert val >= 1.15, (
-                f"Found compressed arraystretch {val} in {f.name}, expected >= 1.15 to match Word 1.5 line spacing"
+                f"Found compressed arraystretch {val} in {f.name}, "
+                "expected >= 1.15 to match Word 1.5 line spacing"
             )
 
 
