@@ -24,6 +24,61 @@ Báo cáo đồ án tốt nghiệp đại học không phải là một tập t�
 2. **Kỹ nghệ thực hành chuyên sâu (Engineering Rigor):** Tập trung làm nổi bật năng lực thiết kế kiến trúc, mô hình dữ liệu, thuật toán lõi và kết quả đo lường định lượng có khả năng tái lập (Reproducibility).
 3. **Tuân thủ thể thức tuyệt đối (Layout Compliance):** Mọi trang in, bảng biểu, hình vẽ và công thức toán học phải chuẩn xác theo từng milimét theo quy định của Khoa CNTT — Trường Đại học Mỏ - Địa chất.
 
+### NGUYÊN TẮC TỐI CAO: BẢO TOÀN ĐỊNH DẠNG 100% THEO `guide/HIeu.pdf` VÀ TUYỆT ĐỐI KHÔNG TỰ Ý SÁNG TẠO
+- Tài liệu mẫu đối chiếu chuẩn: `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/report-datn/guide/HIeu.pdf` (106 trang) là **Thước đo đối chiếu chuẩn mực duy nhất (Gold Standard)** cho mọi khía cạnh hình thức: Bìa ngoài có sườn/gáy, Bìa phụ, Phiếu giao đề tài, Đề cương, Lời cảm ơn, Mục lục không đậm, đánh số trang Ả Rập bắt đầu từ Mục lục, tỷ lệ lề trang 2.5 - 2.5 - 3.5 - 2.5 cm, phông chữ Times New Roman 13pt cho toàn văn bản và bảng biểu, dãn dòng 1.5.
+- Mọi điểm chưa rõ hoặc phát sinh trong quá trình biên soạn: AI Agent **BẮT BUỘC** phải mở tệp `HIeu.pdf` ra đối chiếu trực tiếp và làm theo y hệt.
+- **NGHIÊM CẤM TUYỆT ĐỐI** tự ý bịa thêm sáng kiến, hướng làm, tự ý sáng tạo kiểu dáng bảng biểu, tự ý đổi màu sắc, tự ý ngắt trang hoặc tự áp đặt các phong cách soạn thảo khác.
+
+### 11 ĐIỀU RĂN BẤT DI BẤT DỊCH TỪ HỒ SƠ HIEU.PDF (THE 11 IMMUTABLE COMMANDMENTS)
+
+Bộ 11 Điều Răn sau đây là **Quy chuẩn Định dạng Tối thượng (Zero-Tolerance Rules)** được đúc kết từ hồ sơ mẫu chuẩn mực `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/report-datn/guide/HIeu.pdf` (Khoa CNTT — HUMG). Mọi AI Agent tham gia nghiên cứu, biên soạn và hiệu chỉnh báo cáo ĐATN bắt buộc phải khắc cốt ghi tâm và tuân thủ vô điều kiện:
+
+1. **100% ảnh định dạng `.png` tại `figures/`, kích thước to rõ khổ A4:**
+   - Mọi hình ảnh (kiến trúc, sơ đồ thực thể, giao diện hệ thống, biểu đồ thực nghiệm) bắt buộc phải lưu ở định dạng `.png` không nén suy hao (lossless) tại thư mục `report-datn/figures/`. Tuyệt đối CẤM sử dụng định dạng `.jpg`, `.jpeg`, `.webp`, `.bmp`.
+   - Kích thước hiển thị trên văn bản phải to rõ, chiếm đa phần bề ngang trang A4 (`width=0.85\textwidth` đến `0.95\textwidth`, khuyến nghị chuẩn `0.92\textwidth` cho ảnh giao diện và số liệu). Tuyệt đối CẤM co nhỏ hình ảnh dưới $8\,\text{cm}$ hoặc $< 0.7\textwidth$ gây vỡ nét, mờ chữ khi in ấn hoặc photocopy.
+
+2. **Cấm chức danh "Trưởng Bộ môn" ở trang iv Phiếu giao đề tài:**
+   - Căn cứ trang 4 tài liệu chuẩn `HIeu.pdf`, phần ký duyệt ở trang 2 của Phiếu giao đề tài (`frontmatter/phieu_giao_de_tai.tex`) CHỈ CÓ 2 BÊN KÝ DUYỆT: **Giảng viên hướng dẫn** (bên trái) và **Sinh viên thực hiện** (bên phải).
+   - Tuyệt đối CẤM đưa chữ ký, chức danh "Trưởng Bộ môn", "Trưởng Khoa" vào Phiếu giao đề tài tốt nghiệp.
+
+3. **Cố định ngày `06/11/2026`; chức danh viết thường Title Case:**
+   - Mọi vị trí ghi ngày tháng ký duyệt trên toàn bộ biểu mẫu hành chính (Bìa phụ, Phiếu giao đề tài, Đề cương) phải được điền cố định chính xác: `Hà Nội, ngày 06 tháng 11 năm 2026` (hoặc `06/11/2026`). Tuyệt đối CẤM để trống hoặc dùng dấu chấm lửng (`ngày... tháng... năm 202...`).
+   - Các chức danh ký tên và đề mục hành chính viết hoa chữ cái đầu theo chuẩn Title Case tiếng Việt: `Giảng viên hướng dẫn`, `Sinh viên thực hiện`. Tuyệt đối CẤM viết hoa toàn bộ (`GIẢNG VIÊN HƯỚNG DẪN`, `SINH VIÊN THỰC HIỆN`).
+
+4. **Dãn dòng chuẩn 1.5 Word (`\setstretch{1.45}`), cấm `\setstretch{1.241}`:**
+   - Thiết lập dãn dòng chuẩn hóa tại cả `config/preamble.tex` và `main.tex:83` bằng lệnh `\setstretch{1.45}` để đạt khoảng cách dòng cơ sở (Baseline Skip) chuẩn Word 1.5 của tài liệu mẫu `HIeu.pdf` ($22{,}54\,\text{pt} - 23{,}22\,\text{pt}$).
+   - Tuyệt đối CẤM sử dụng hệ số nén `\setstretch{1.241}` (dãn dòng 1.2 ép trang sai quy chuẩn), và không dùng `\onehalfspacing` mặc định (vốn chỉ đạt $19{,}43\,\text{pt}$, nén chặt hơn ~15%).
+
+5. **Cỡ chữ toàn bài và trong bảng đạt 13pt (cấm `\small`, `\footnotesize`):**
+   - Phông chữ Times New Roman 13pt đồng nhất cho toàn bộ văn bản và TOÀN BỘ NỘI DUNG CHỮ TRONG BẢNG BIỂU (`tabular`, `tabularx`, `longtable`).
+   - Tuyệt đối CẤM bọc bảng bằng `\small` (11pt), `\footnotesize` (10pt), `\fontsize{8.5pt}{...}`, `\fontsize{9pt}{...}` để nhồi nhét nội dung. Cần thiết kế cấu trúc bảng hợp lý, ngắt dòng chuẩn hoặc chia tách bảng con.
+
+6. **Mục lục không in đậm bất kỳ dòng mục nào:**
+   - Khớp 100% trang 9 của `HIeu.pdf`, toàn bộ các dòng đề mục trong Mục lục (từ Chương, Lời mở đầu, Danh mục, đến Kết luận, Tài liệu tham khảo, Phụ lục) đều dùng phông chữ đứng thường (`\normalfont`), TUYỆT ĐỐI KHÔNG IN ĐẬM (`\bfseries`).
+   - Gói `tocloft` được cấu hình: `\renewcommand{\cftchapfont}{\normalfont}`, thêm dấu hai chấm sau số chương `\renewcommand{\cftchapaftersnum}{:\ }`, số trang in thường `\renewcommand{\cftchappagefont}{\normalfont}` và chấm dẫn `\cftchapleader{\cftdotfill{\cftdotsep}}`.
+
+7. **Bìa ngoài có sườn dọc xoay 90° font thường (`ĐÀM MẠNH DŨNG`, `HỆ THỐNG THÔNG TIN`, `KHOÁ 67`):**
+   - Trang bìa ngoài (Bìa chính — `frontmatter/bia_chinh.tex`) bắt buộc có dải sườn/gáy in dọc mép lề trái theo đúng mẫu vật lý trang 1 của `HIeu.pdf`.
+   - Dải sườn dọc được tạo bằng TikZ overlay xoay 90° ngược chiều kim đồng hồ, bao gồm 3 khối thông tin in hoa, phông đứng thường không đậm: `ĐÀM MẠNH DŨNG`, `HỆ THỐNG THÔNG TIN`, `KHOÁ 67`. Loại bỏ hoàn toàn tiền tố thừa "TÊN ĐỀ TÀI:".
+
+8. **Số trang Ả Rập 1 bắt đầu từ Mục lục; trang 1–8 để trống chân trang:**
+   - Theo đúng mẫu vật lý `HIeu.pdf`, các trang vật lý 1 đến 8 (Bìa chính, Bìa phụ, Phiếu giao đề tài, Đề cương, Lời cảm ơn) **chân trang hoàn toàn để trống (Clean Footers)**, tuyệt đối không in số trang vật lý. Lệnh `\thispagestyle{adminform}` / `empty` bảo đảm không có `\thepage`.
+   - Đánh số trang bằng **chữ số Ả Rập (`1, 2, 3...`) BẮT ĐẦU CHÍNH XÁC TỪ TRANG MỤC LỤC** (`frontmatter/muc_luc.tex` mang số trang 1 Ả Rập ở góc phải chân trang).
+   - Trong Mục lục, các mục Frontmatter đầu khóa hiển thị số trang La Mã logic khớp mẫu `HIeu.pdf` (Phiếu giao đề tài: `iii`, Đề cương: `v`, Lời cảm ơn: `viii`), và bản thân trang Mục lục có dòng tự tham chiếu `MỤC LỤC ........... 1`.
+
+9. **Bỏ hết in đậm/in nghiêng tùy tiện trong đoạn văn; chỉ mục mức 3 mới in nghiêng; tinh giản tham chiếu trích dẫn:**
+   - Bóc bỏ toàn bộ các thẻ in đậm (`\textbf`) và in nghiêng (`\textit`) tùy tiện trong các đoạn văn xuôi thân bài (Chương 1 đến Chương 4, Lời mở đầu, Kết luận) để bảo đảm văn phong khoa học liền mạch, trang nhã.
+   - CHỈ DUY NHẤT tiêu đề tiểu mục cấp 3 (`\subsubsection`) mới được phép in nghiêng theo quy định phân cấp đề mục.
+   - Tinh giản tham chiếu trích dẫn: Tuyệt đối không rải trích dẫn dày đặc liên tiếp trong từng câu hoặc dồn dập 5-6 trích dẫn vào một nhận định hiển nhiên; trích dẫn tập trung tại Chương 1 và Chương 2; tổng tài liệu tham khảo $N_{\text{refs}} \le 20$.
+
+10. **Bìa phụ và thể thức khớp 100% `HIeu.pdf`:**
+    - Toàn bộ trang Bìa trong (Bìa phụ — `frontmatter/bia_phu.tex`) phải đối chiếu và khớp 100% về bố cục, ngắt dòng, khoảng cách dọc (`\vspace`), tỷ lệ cỡ chữ, khối ký tên cán bộ hướng dẫn và sinh viên với trang 2 của `HIeu.pdf`.
+    - Thể thức tổng thể: Khổ giấy A4 chuẩn, lề Trên 2.5cm, Dưới 2.5cm, Trái 3.5cm, Phải 2.5cm. Tuyệt đối không xô lệch lề trang.
+
+11. **Tuyệt đối không tiết kiệm giấy làm sai quy cách:**
+    - Đồ án tốt nghiệp là ấn phẩm học thuật lưu trữ thư viện và hội đồng vĩnh viễn, không phải bản nháp tiết kiệm chi phí in ấn.
+    - CẤM MỌI HÀNH VI "tiết kiệm giấy" làm sai quy cách: Cấm nén dãn dòng xuống dưới 1.45, cấm giảm cỡ chữ xuống 10pt-11pt để ép trang, cấm co nhỏ sơ đồ hình vẽ dưới 8cm, cấm dồn ép biểu mẫu hành chính làm lệch phân trang quy định (Phiếu giao đề tài cố định 2 trang, Đề cương cố định 3 trang, Lời cảm ơn cố định 1 trang). Mỗi chương bắt đầu ở trang lẻ mới theo đúng cấu trúc chuẩn.
+
 ---
 
 ## PHẦN 1: MỤC TIÊU CỐT LÕI, QUY TRÌNH HỌC THUẬT VÀ KỶ LUẬT ĐATN
@@ -168,7 +223,7 @@ Căn cứ biểu mẫu quy chuẩn tại `Mau-De-cuong-DATN.md`, trang Đề cư
    - `4. Các nhiệm vụ cụ thể:` Phân rã phạm vi công việc kỹ thuật từ phân tích, thiết kế, cài đặt đến kiểm thử.
    - `5. Kế hoạch thực hiện:` Bảng kế hoạch chi tiết đúng **10 tuần** gồm 3 cột: `Tuần`, `Thời gian`, `Nội dung công việc` (nêu rõ mốc Tuần 6 báo cáo tiến độ với Bộ môn).
    - `6. Nơi thực hiện đồ án:` Bộ môn, Khoa hoặc cơ sở nghiên cứu tiếp nhận.
-5. **Khối xác nhận và Chữ ký:** Địa danh, ngày tháng năm tại Hà Nội; bảng 2 cột gồm chữ ký của `Giảng viên hướng dẫn` và `Sinh viên thực hiện`.
+5. **Khối xác nhận và Chữ ký:** Địa danh, ngày tháng năm tại Hà Nội (cố định chính thức: `Hà Nội, ngày 06 tháng 11 năm 2026`); bảng 2 cột gồm chữ ký của `Giảng viên hướng dẫn` và `Sinh viên thực hiện` (viết thường theo đúng Title Case tiếng Việt, TUYỆT ĐỐI KHÔNG VIẾT HOA TOÀN BỘ).
 
 ---
 
@@ -190,25 +245,25 @@ Căn cứ biểu mẫu pháp lý tại `Mẫu_HD_DATN.md` (Bản nhận xét ĐA
 ## PHẦN 2: BỐ CỤC TOÀN VĂN VÀ QUY CHUẨN ĐỊNH DẠNG XELATEX
 
 ### 2.1. Trật tự bố cục chuẩn mực toàn văn quyển đồ án
-Căn cứ Mục B.I, B.II `Huong-dan-viet-DATN.md`, toàn văn quyển đồ án phải sắp xếp theo đúng trình tự phân đoạn:
+Căn cứ Mục B.I, B.II `Huong-dan-viet-DATN.md` và tài liệu chuẩn `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/report-datn/guide/HIeu.pdf`, toàn văn quyển đồ án phải sắp xếp theo đúng trình tự phân đoạn:
 
 ```
 +─────────────────────────────────────────────────────────────────────────────────────────+
 │                       TRẬT TỰ BỐ CỤC TOÀN VĂN QUYỂN ĐỒ ÁN TỐT NGHIỆP                    │
 +─────────────────────────────────────────────────────────────────────────────────────────+
 │ [FRONTMATTER — PHẦN ĐẦU KHÓA] (Đánh số trang La Mã thường đứng: i, ii, iii...)          │
-│  1. Trang bìa ngoài (Bìa chính — in chữ nhũ vàng theo Mẫu Phụ lục 01)                  │
-│  2. Trang bìa trong (Bìa phụ — theo Mẫu Phụ lục 02, có chữ ký GVHD và SVTH)             │
-│  3. Phiếu giao đề tài tốt nghiệp (Bắt đầu đánh số La Mã thường: trang iii)              │
-│  4. Đề cương thực hiện đồ án tốt nghiệp (Kế hoạch 10 tuần chi tiết: trang v)            │
-│  5. Mục lục (Trang viii La Mã thường)                                                   │
-│  6. Danh mục các hình vẽ, đồ thị (LoF — Hình X-Y)                                       │
-│  7. Danh mục các bảng (LoT — Bảng X-Y)                                                  │
-│  8. Danh mục các ký hiệu và chữ viết tắt (sắp xếp theo thứ tự bảng chữ cái ABC)         │
+│  1. Trang bìa ngoài (Bìa chính — có dải sườn/gáy mép trái theo Mẫu trang 1 Hieu.pdf)    │
+│  2. Trang bìa trong (Bìa phụ — chức danh Title Case GVHD và SVTH, bỏ "TÊN ĐỀ TÀI:")     │
+│  3. Phiếu giao đề tài tốt nghiệp (Trang iii La Mã; KHÔNG CÓ TRƯỞNG BỘ MÔN; 06/11/2026)  │
+│  4. Đề cương thực hiện đồ án tốt nghiệp (Kế hoạch 10 tuần chi tiết: trang v; 06/11/2026)│
+│  5. Lời cảm ơn (Trang viii La Mã; ngày 06/11/2026)                                      │
 +─────────────────────────────────────────────────────────────────────────────────────────+
-│ [MAIN BODY — THÂN BÀI] (Đánh số trang Ả Rập đứng: 1, 2, 3... ở góc dưới bên phải)       │
-│  9. Lời cảm ơn (Trang 1 Ả Rập)                                                          │
-│ 10. Lời mở đầu (Trang 2 Ả Rập — Bối cảnh, mục tiêu, đối tượng, phạm vi nghiên cứu)       │
+│ [MAIN BODY & MỤC LỤC] (Đánh số trang Ả Rập đứng: 1, 2, 3... bắt đầu từ MỤC LỤC)         │
+│  6. Mục lục (Trang 1 Ả Rập — KHÔNG IN ĐẬM \normalfont, dấu hai chấm CHƯƠNG X: và chấm) │
+│  7. Danh mục các hình vẽ, đồ thị (LoF — Hình X-Y)                                       │
+│  8. Danh mục các bảng (LoT — Bảng X-Y)                                                  │
+│  9. Danh mục các ký hiệu và chữ viết tắt (sắp xếp theo thứ tự bảng chữ cái ABC)         │
+│ 10. Lời mở đầu (Bối cảnh, mục tiêu, đối tượng, phạm vi nghiên cứu)                      │
 │ 11. Chương 1: TỔNG QUAN VỀ ĐỀ TÀI (Mô tả bài toán, hiện trạng, yêu cầu)                 │
 │ 12. Chương 2: CƠ SỞ LÝ THUYẾT VÀ CÔNG NGHỆ (Lý thuyết, Why-chosen, mô hình toán)         │
 │ 13. Chương 3: PHÂN TÍCH VÀ THIẾT KẾ HỆ THỐNG (5 bước, Use Case, Kiến trúc, CSDL)        │
@@ -216,7 +271,7 @@ Căn cứ Mục B.I, B.II `Huong-dan-viet-DATN.md`, toàn văn quyển đồ án
 +─────────────────────────────────────────────────────────────────────────────────────────+
 │ [BACKMATTER — PHẦN KẾT THÚC] (Tiếp tục đánh số trang Ả Rập đứng)                         │
 │ 15. Kết luận và hướng phát triển (Đóng góp đạt được, tồn tại, hướng mở rộng)            │
-│ 16. Danh mục tài liệu tham khảo (Phân nhóm Việt trước, Anh sau; N_refs <= 20)           │
+│ 16. Danh mục tài liệu tham khảo (Phân nhóm Việt trước, Anh sau; N_refs <= 20; tinh gọn) │
 │ 17. Phụ lục (Mã nguồn thuật toán, biểu mẫu — BẮT BUỘC KHÔNG DÀY HƠN THÂN BÀI)           │
 +─────────────────────────────────────────────────────────────────────────────────────────+
 ```
@@ -235,25 +290,25 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
    - $\rightarrow$ **Chiều rộng thân bài khả dụng:** Đúng **$15{,}0\,\text{cm}$** ($21{,}0 - 3{,}5 - 2{,}5 = 15{,}0\,\text{cm}$).
 2. **Phông chữ, dãn dòng và thụt lề:**
    - Phông chữ tiêu chuẩn: `Times New Roman` (nhúng qua `fontspec` hỗ trợ đầy đủ 144 biến thể dấu tiếng Việt Unicode UTF-8).
-   - Cỡ chữ thân bài (Body text): Đúng **13pt** (`\usepackage[fontsize=13pt]{scrextend}`).
+   - Cỡ chữ thân bài (Body text) VÀ TẤT CẢ CÁC BẢNG BIỂU: Đúng **13pt** (`\usepackage[fontsize=13pt]{scrextend}`). Tuyệt đối cấm sử dụng `\small` (11pt), `\footnotesize` (10pt), hoặc các lệnh ép cỡ cục bộ (`\fontsize{8.5pt}`, `\fontsize{9pt}`) trong môi trường bảng biểu; toàn bộ nội dung trong bảng phải đồng nhất cỡ chữ 13pt.
    - Mật độ chữ: Bình thường, tuyệt đối **không được nén hoặc kéo dãn khoảng cách giữa các chữ**.
-   - Dãn dòng (Line spacing): Đặt ở chế độ **1.5 lines** (`\onehalfspacing` qua gói `setspace`) thống nhất toàn bài.
+   - Dãn dòng (Line spacing): Đặt hệ số **`\setstretch{1.45}`** (qua gói `setspace`) tại cả `config/preamble.tex` và `main.tex:83` để đạt khoảng cách dòng cơ sở (Baseline Skip) chuẩn Word 1.5 của tài liệu mẫu `HIeu.pdf` ($22{,}54\,\text{pt} - 23{,}22\,\text{pt}$). Lưu ý: Lệnh `\onehalfspacing` truyền thống trong LaTeX chỉ tạo ra $19{,}43\,\text{pt}$ (bị nén chặt hơn ~15% so với chuẩn 1.5 Word). Đối với các biểu mẫu hành chính (Phiếu giao đề tài, Đề cương), sử dụng dãn dòng cục bộ để cố định ngân sách 2 trang và 3 trang.
    - Thụt lề đầu dòng (First-line Indent): Chuẩn **$1{,}0\,\text{cm}$** (`\setlength{\parindent}{1.0cm}`).
    - Căn lề đoạn văn: Căn đều hai bên lề (Justified).
-3. **Quy tắc đánh số trang và Tiêu đề trang (Chuẩn form Khoa CNTT — HUMG):**
+3. **Quy tắc đánh số trang và Tiêu đề trang (Chuẩn form Khoa CNTT — HUMG & HIeu.pdf):**
    - **Header (Tiêu đề đầu trang):** **ĐỂ TRỐNG HOÀN TOÀN**, không có chữ chạy, không có tên đồ án, không có đường kẻ ngang (`\headrulewidth = 0pt`).
    - **Footer (Tiêu đề chân trang):** **KHÔNG CÓ TÊN SINH VIÊN**, không có thông tin lớp, không có đường kẻ chân trang (`\footrulewidth = 0pt`).
-   - **Vị trí và kiểu dáng số trang:** Đánh ở **dưới, phía bên phải mỗi trang giấy** (`\fancyfoot[R]{\normalfont\upshape\thepage}`), in đứng thông thường, **TUYỆT ĐỐI KHÔNG IN NGHIÊNG**.
-   - **Hệ số trang:**
-     - Phần mở đầu (Frontmatter): Đánh số bằng **chữ số La Mã thường** (`i, ii, iii, iv...`); trong đó Bìa chính và Bìa phụ không đánh số, bắt đầu đánh số từ `Phiếu giao đề tài tốt nghiệp` (trang `iii`), `Đề cương ĐATN` (trang `v`), `Mục lục` (trang `viii`).
-     - Phần nội dung chính (từ Lời cảm ơn / Lời mở đầu / Chương 1 đến hết Kết luận, TLTK, Phụ lục): Đánh số bằng **chữ số Ả Rập** (`1, 2, 3...`) bắt đầu trang 1 từ Lời cảm ơn.
+   - **Quy chuẩn chân trang Frontmatter (Trang 1--8):** Theo đúng mẫu vật lý `HIeu.pdf`, các trang 1 đến 8 (Bìa ngoài, Bìa phụ, Phiếu giao đề tài, Đề cương, Lời cảm ơn) **chân trang hoàn toàn để trống (Clean Footers)**, không in số trang. Lệnh `adminform` được định cấu hình không in `\thepage`.
+   - **Số trang logic trong Mục lục:** Bộ đếm trang nội bộ XeLaTeX vẫn được thiết lập `\pagenumbering{roman}\setcounter{page}{3}` để Mục lục ghi nhận đúng số trang La Mã logic: `Phiếu giao đề tài` $\to$ `iii`, `Đề cương ĐATN` $\to$ `v`, `Lời cảm ơn` $\to$ `viii`.
+   - **Phần Mục lục và Nội dung chính:** Đánh số bằng **chữ số Ả Rập** (`1, 2, 3...`) **BẮT ĐẦU CHÍNH XÁC TỪ TRANG MỤC LỤC** (`frontmatter/muc_luc.tex` mang số trang 1 Ả Rập in ở góc phải chân trang, khớp 100% trang 9 của `guide/HIeu.pdf`). Lệnh đặt trong `main.tex`: `\cleardoublepage\pagenumbering{arabic}\setcounter{page}{1}\setupdatnheaders\pagestyle{fancy}` ngay trước `\input{frontmatter/muc_luc}`. Số trang in đứng thông thường, **TUYỆT ĐỐI KHÔNG IN NGHIÊNG**.
 4. **Quy chuẩn bố cục dòng chảy văn bản và chống khoảng trống đáy trang (Anti-Bottom-Gap Standard):**
-   - Báo cáo đồ án phải có bố cục văn bản chặt chẽ, liên tục và điền đầy trang in một cách trang nhã theo đúng form của Khoa CNTT.
+   - Báo cáo đồ án phải có bố cục văn bản chặt chẽ, liên tục và điền đầy trang in một cách trang nhã theo đúng form của Khoa CNTT. Khoảng hở đáy trang phải $< 4{,}0\,\text{cm}$.
    - **TUYỆT ĐỐI CẤM** để lại khoảng trống lớn bất thường ở cuối trang giấy (ví dụ: ngắt trang sớm để lại 1/3 đến 1/2 trang giấy trắng phía dưới).
    - **Kỹ thuật xử lý bắt buộc trong XeLaTeX:**
-     - Tất cả các đối tượng trôi nổi (Floats: Bảng biểu và Hình vẽ) bắt buộc phải khai báo tham số vị trí linh hoạt: `\begin{table}[!htbp]` và `\begin{figure}[!htbp]`.
-     - Tuyệt đối không chèn thủ công lệnh `\newpage` hoặc `\clearpage` giữa các tiểu mục trong cùng một chương. Lệnh `\clearpage` chỉ được dùng duy nhất tại tệp điều phối chương để kết thúc hoàn toàn một chương trước khi sang chương mới.
-     - Sử dụng gói `needspace` trước các tiêu đề hoặc khối bảng để chống trôi dạt. Khi float quá lớn đẩy văn bản xuống trang sau, phải chủ động điều chỉnh vị trí đặt float trong file `.tex` hoặc bổ sung văn bản phân tích học thuật để trang in luôn được điền đầy cân đối.
+     - Tất cả các đối tượng trôi nổi (Floats: Bảng biểu và Hình vẽ) bắt buộc phải khai báo tham số vị trí linh hoạt: `\begin{table}[!htbp]` và `\begin{figure}[!htbp]`. Tuyệt đối tránh lạm dụng `[H]` gây hiện tượng dồn ứ trang mồ côi (Cascading Float Push).
+     - Không sử dụng tùy chọn `[section]` cho gói `placeins` (`\usepackage{placeins}`) để tránh ngăn cản dòng chảy văn bản lấp đầy đáy trang trước tiêu đề mục.
+     - Lệnh `needspace` chỉ dùng ở ngưỡng hợp lý (`\needspace{4\baselineskip}`) để chống mồ côi tiêu đề, cấm dùng ngưỡng quá lớn (`\needspace{20\baselineskip}`) gây ngắt trang giả tạo.
+     - Trong các bảng biểu, phải thiết lập độ rộng cột hợp lý (`m{...}`, `X`) và bổ sung âm tiết ngắt từ (`\-`) cho các định danh dài để triệt tiêu hoàn toàn cảnh báo Overfull `\hbox`.
 
 ---
 
@@ -301,6 +356,10 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
 8. **QUY CHUẨN VIẾT HOA CHÍNH TẢ TIẾNG VIỆT (CHỐNG LỖI TITLE CASE TIẾNG ANH):**
    - **TUYỆT ĐỐI CẤM** viết hoa tùy tiện chữ cái đầu của từng từ (Title Case) trong tiêu đề mục và nội dung thân bài theo phong cách tiếng Anh (ví dụ: SAI: *"Nghiên Cứu Cơ Sở Lý Thuyết Và Công Nghệ Mới"* $\rightarrow$ ĐÚNG: *"Nghiên cứu cơ sở lý thuyết và công nghệ mới"*).
    - Chỉ viết hoa chữ cái đầu câu/tiêu đề và các danh từ riêng, tên địa danh, tổ chức hợp pháp hoặc từ viết tắt chuyên ngành.
+9. **LUẬT TUYỆT ĐỐI CẤM IN NGHIÊNG TÙY TIỆN TRONG THÂN BÀI (NO ARBITRARY ITALICS):**
+   - Trong toàn bộ nội dung thân bài (Chương 1 đến Chương 4, Lời mở đầu, Kết luận), **chữ in nghiêng CHỈ ĐƯỢC PHÉP XUẤT HIỆN DUY NHẤT TẠI TIÊU ĐỀ TIỂU MỤC CẤP 3 (`\subsubsection`)**.
+   - **TUYỆT ĐỐI CẤM** sử dụng các lệnh `\textit{...}`, `\emph{...}` để in nghiêng các từ ngữ, thuật ngữ tiếng Anh, cụm từ nhấn mạnh trong các đoạn văn thân bài. Toàn bộ phải chuyển về chữ thường đứng (regular upright font).
+   - *Ngoại lệ chuẩn học thuật duy nhất bên ngoài thân bài:* (a) Tiêu đề sách, tạp chí trong danh mục tài liệu tham khảo (`tai_lieu_tham_khao.tex`) theo chuẩn trích dẫn Phụ lục 3 HUMG; (b) Tên đối tượng trong nhãn `\caption` của Bảng và Hình (`\textbf{Bảng X-Y:} \textit{Tên bảng}`); (c) Tiêu đề tiểu mục cấp 3 (`\subsubsection{...}`).
 
 ---
 
@@ -348,6 +407,18 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
    - Ngay sau công thức, bắt buộc có mệnh đề giải nghĩa toàn bộ biến số (*"Trong đó: $A$ là...; $B$ là..."*).
    - Biến số đơn ký tự in nghiêng (`$q, d$`); ký hiệu vector/ma trận in đậm (`\mathbf{u}`); tên độ đo nhiều ký tự bắt buộc bọc trong `\text{...}` hoặc `\operatorname{...}`: $\text{IoU} \ge 0{,}85$, $\text{RRF}(d)$, $\text{BLEU}$, $\text{F1-score}$.
    - Số thập phân tiếng Việt phải bọc dấu phẩy trong ngoặc nhọn: `$0{,}85$`, `$1{,}66\,\text{ms}$` để tránh khoảng trắng toán học.
+8. **QUY CHUẨN ĐỘC TÔN HÌNH ẢNH ĐỊNH DẠNG PNG VÀ KHỔ IN A4 (R1 COMPLIANCE):**
+   - 100% hình ảnh chèn vào báo cáo thông qua lệnh `\includegraphics` bắt buộc phải là định dạng `.png` và được lưu trữ tập trung tại `./report-datn/figures/` (hoặc các thư mục con bên trong).
+   - Tuyệt đối cấm sử dụng các tệp ảnh non-PNG như `.jpg`, `.jpeg`, `.pdf`, `.svg` trong lệnh chèn hình.
+   - Kích thước hình ảnh phải được thiết lập vừa vặn với khổ giấy A4 khả dụng ($15{,}0\,\text{cm}$), hiển thị rõ nét chi tiết khi in hoặc photo trên giấy A4. Khai báo tỷ lệ `width=0.85\textwidth` đến `0.95\textwidth` hoặc `width=14cm`.
+   - Tuyệt đối cấm co nhỏ hình ảnh quá mức (dưới 8cm) để kéo dồn trang gây mờ và khó đọc.
+9. **QUY CHUẨN SƯỜN/GÁY BÌA NGOÀI VÀ MỤC LỤC KHÔNG IN ĐẬM (R2, R3 COMPLIANCE):**
+   - **Sườn/gáy dọc bìa chính (Bìa 1):** Bắt buộc thiết kế dải sườn/gáy in dọc mép trái trang bìa ngoài (TikZ overlay xoay 90°) gồm 3 khối thông tin in hoa, in đậm theo đúng trang 1 của `guide/HIeu.pdf`:
+     + Khối trên: Tên sinh viên thực hiện (`ĐÀM MẠNH DŨNG` - 16pt Đậm)
+     + Khối giữa: Chuyên ngành (`HỆ THỐNG THÔNG TIN` - 16pt Đậm)
+     + Khối dưới: Khóa học (`KHÓA 67` - 16pt Đậm)
+     + Trang bìa chính và bìa phụ tuyệt đối không có tiền tố thừa `"TÊN ĐỀ TÀI:"`.
+   - **Mục lục không in đậm (No Bold in TOC):** Trong Mục lục, toàn bộ tiêu đề các chương, mục, tiểu mục đều phải hiển thị bằng nét thường (`\cftchapfont{\normalfont}`). Sau số chương có dấu hai chấm và dấu cách (`CHƯƠNG X: `) kèm chấm dẫn `\cftdotfill{\cftdotsep}` dẫn tới số trang.
 
 ---
 
@@ -375,6 +446,10 @@ Mọi tệp cấu hình và chế bản XeLaTeX trong `report-datn/` phải tuâ
      - Toàn bộ danh mục tài liệu tham khảo bắt buộc phải thỏa mãn trần nghiêm ngặt: $\mathbf{0 < N_{\text{refs}} \le 20}$.
      - Tuyệt đối không nhồi nhét tài liệu rác để kéo dài số lượng. Chỉ trích dẫn các công trình nền tảng có bình duyệt (Peer-reviewed) và tài liệu quy chế chính thức.
    - **Cấm tuyệt đối trích dẫn mồ côi (Zero Orphan References):** 100% tài liệu liệt kê trong danh mục cuối bài bắt buộc phải được dẫn chiếu trực tiếp bằng lệnh `\cite{...}` (dạng `[1]`, `[2]`) ít nhất một lần trong phần nội dung thân bài.
+3. **Tinh giản trích dẫn tham chiếu và cấm rải dày đặc (Streamlined Citations):**
+   - **TUYỆT ĐỐI CẤM** rải các cụm trích dẫn dày đặc, rải rác lặp lại không thiết yếu trong các đoạn văn thân bài (đặc biệt tại Chương 3 và Chương 4).
+   - Các công trình nghiên cứu và tài liệu tham khảo phải được trích dẫn tập trung, đích đáng tại Chương 1 và Chương 2 nơi phân tích bối cảnh, cơ sở lý thuyết và công nghệ nền tảng.
+   - Chương 3 và Chương 4 chỉ tập trung vào thiết kế hệ thống và kết quả thực nghiệm của chính đề tài, không lặp lại trích dẫn lý thuyết chung chung.
 
 ---
 
@@ -581,31 +656,115 @@ BƯỚC 6: Cập nhật trạng thái ROADMAP.md và lập báo cáo bàn giao (
 
 ---
 
-## PHẦN 6: BẢNG KIỂM TỰ ĐÁNH GIÁ TRƯỚC KHI BÀN GIAO (PRE-COMMIT CHECKLIST)
+## PHẦN 6: BẢNG TRA CỨU 11 ĐIỀU RĂN VÀ BÀI HỌC KINH NGHIỆM ĐÃ KHẮC PHỤC (MISTAKES CATALOG VÀ ĐỐI CHIẾU HIEU.PDF)
 
-Trước khi xác nhận hoàn thành bất kỳ tác vụ nào trong `report-datn/`, AI Agent bắt buộc phải tự đối chiếu và xác nhận đạt **100% các tiêu chí** trong Bảng kiểm tự đánh giá Pre-Commit Checklist (gồm 18 tiêu chí toàn diện):
+Nhằm phòng ngừa triệt để các sai sót định dạng và nội dung, toàn bộ các AI Agent tham gia dự án bắt buộc phải ghi nhớ sâu sắc **11 Điều răn và Bài học kinh nghiệm đã khắc phục** theo chuẩn mực `/home/dammanhdungvn/Downloads/Workspace/VeriScholar/report-datn/guide/HIeu.pdf`:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│         BẢNG TRA CỨU 11 ĐIỀU RĂN VÀ BÀI HỌC KINH NGHIỆM ĐÃ KHẮC PHỤC (HIEU.PDF)        │
+├────┬──────────────────────────────────────┬────────────────────────────────────────────┤
+│ STT│ Sai Lầm Phổ Biến Ban Đầu             │ Biện Pháp Khắc Phục Chuẩn Mực Tuyệt Đối    │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 1  │ Sử dụng ảnh .jpg, .jpeg và kích thước│ Chuyển đổi 100% ảnh sang .png tại figures/;│
+│    │ không tối ưu khổ in A4 (< 8cm).      │ kích thước to rõ width=0.85-0.95\textwidth │
+│    │                                      │ (chuẩn 0.92\textwidth); cấm co nhỏ < 8cm. │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 2  │ Tồn tại mục "TRƯỞNG BỘ MÔN" trang iv │ Xóa bỏ hoàn toàn cột "Trưởng Bộ môn" trong │
+│    │ trong Phiếu giao đề tài tốt nghiệp.  │ phieu_giao_de_tai.tex; chỉ giữ 2 bên ký    │
+│    │                                      │ là Giảng viên hướng dẫn và Sinh viên thực  │
+│    │                                      │ hiện khớp 100% trang 4 của Hieu.pdf.       │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 3  │ Viết hoa toàn bộ chức danh ký tên    │ Chuyển toàn bộ chức danh ký và đề mục sang │
+│    │ ("GIẢNG VIÊN HƯỚNG DẪN") và để trống │ viết thường Title Case ("Giảng viên hướng  │
+│    │ ngày tháng năm "ngày... tháng...".   │ dẫn", "Sinh viên thực hiện"); cố định ngày │
+│    │                                      │ chính thức: 06/11/2026 trên toàn biểu mẫu. │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 4  │ Nén dãn dòng \setstretch{1.241} hoặc │ Thiết lập đồng bộ \setstretch{1.45} tại cả │
+│    │ dùng \onehalfspacing mặc định.       │ preamble.tex và main.tex, đạt khoảng cách  │
+│    │                                      │ dòng Word 1.5 chuẩn Hieu.pdf (22.5-23.2pt).│
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 5  │ Lạm dụng \small (11pt) và            │ Bóc bỏ toàn bộ \small và \footnotesize     │
+│    │ \footnotesize (10pt) trong bảng biểu.│ trong tất cả các bảng biểu của đề tài.     │
+│    │                                      │ Toàn bộ nội dung chữ trong bảng đạt chuẩn  │
+│    │                                      │ cỡ chữ 13pt Times New Roman đồng nhất.     │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 6  │ Tiêu đề Chương trong Mục lục bị in   │ Đổi cấu hình tocloft: \renewcommand        │
+│    │ đậm (\cftchapfont{\bfseries}).       │ {\cftchapfont}{\normalfont}; bổ sung dấu   │
+│    │                                      │ hai chấm (\cftchapaftersnum}{:\ }) và chấm │
+│    │                                      │ dẫn thanh thoát theo đúng trang 9 Hieu.pdf.│
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 7  │ Trang bìa chính (Bìa 1) thiếu dải    │ Thiết kế dải sườn/gáy dọc mép lề trái theo │
+│    │ sườn/gáy dọc lề trái đóng sách.      │ đúng trang 1 Hieu.pdf bằng TikZ overlay:   │
+│    │                                      │ ĐÀM MẠNH DŨNG, HỆ THỐNG THÔNG TIN, KHOÁ 67 │
+│    │                                      │ font thường; bỏ tiền tố thừa "TÊN ĐỀ TÀI:".│
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 8  │ Đánh số trang Ả Rập bắt đầu từ       │ Trang 1–8 để trống chân trang (clean foot);│
+│    │ Chương 1 hoặc in số ở trang bìa.     │ Căn cứ trang 9 Hieu.pdf, số trang Ả Rập (1)│
+│    │                                      │ BẮT ĐẦU CHÍNH XÁC TỪ TRANG MỤC LỤC. Mục    │
+│    │                                      │ lục hiển thị số La Mã iii, v, viii.        │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 9  │ Rải trích dẫn dày đặc và lạm dụng chữ│ Tinh giản trích dẫn, chỉ trích dẫn trọng   │
+│    │ in đậm, in nghiêng trong thân bài.   │ tâm tại Ch1, Ch2 (N_refs <= 20); bóc bỏ    │
+│    │                                      │ toàn bộ \textbf, \textit trong thân bài;   │
+│    │                                      │ CHỈ DUY NHẤT cấp 3 (\subsubsection) nghiêng│
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 10 │ Bìa trong (Bìa 2) và thể thức chung  │ Đối chiếu khớp 100% trang 2 của Hieu.pdf   │
+│    │ bị xô lệch lề và khoảng cách dọc.    │ về khoảng cách dọc, tỷ lệ chữ, khối ký; lề │
+│    │                                      │ chuẩn A4: 2.5 - 2.5 - 3.5 - 2.5 cm.        │
+├────┼──────────────────────────────────────┼────────────────────────────────────────────┤
+│ 11 │ Tư duy "tiết kiệm giấy" làm sai quy  │ Tuyệt đối cấm co chữ, nén dòng, bóp méo    │
+│    │ cách, nén chữ, ép trang tùy tiện.    │ hình ảnh để ép trang; tuân thủ nghiêm ngặt │
+│    │                                      │ cấu trúc ấn phẩm học thuật chuẩn mực HUMG. │
+└────┴──────────────────────────────────────┴────────────────────────────────────────────┘
+```
+
+---
+
+## PHẦN 7: BẢNG KIỂM TỰ ĐÁNH GIÁ TRƯỚC KHI BÀN GIAO (PRE-COMMIT CHECKLIST)
+
+Trước khi xác nhận hoàn thành bất kỳ tác vụ nào trong `report-datn/`, AI Agent bắt buộc phải tự đối chiếu và xác nhận đạt **100% các tiêu chí** trong Bảng kiểm tự đánh giá Pre-Commit Checklist (gồm **30 tiêu chí toàn diện**, trong đó 11 Điều Răn từ hồ sơ HIeu.pdf là Cổng kiểm soát số 0 bắt buộc):
 
 ```markdown
 ### CHECKLIST TỰ KIỂM ĐỊNH CHẤT LƯỢNG ĐATN CỦA AI AGENT (PRE-COMMIT CHECKLIST)
 
-- [ ] 1. Mục tiêu và 3 Câu hỏi cốt lõi: Làm rõ Làm gì? (Ch1), Làm như thế nào? (Ch2 và Ch3), Kết quả ra sao? (Ch4).
-- [ ] 2. Quy trình 5 bước kỹ nghệ: Chương 3 trình bày đầy đủ Phân tích -> Thiết kế -> Cài đặt -> Kiểm thử -> Hiệu chỉnh.
-- [ ] 3. Kế hoạch 10 tuần: Phân bổ hợp lý từ tuần 1 đến tuần 10; nhấn mạnh cột mốc Tuần 6 (Mid-term Checkpoint) báo cáo Bộ môn.
-- [ ] 4. Kỷ luật và Nộp lưu trữ: Nêu rõ nghĩa vụ gặp GVHD hàng tuần, 4 điều kiện đình chỉ, 3 quyển bìa mềm trước bảo vệ, 1 bìa cứng mạ chữ nhũ vàng nộp trong vòng 10 ngày sau bảo vệ, thư mục bản mềm `MãSinhViên_HọTên_Khóa`.
-- [ ] 5. Bố cục toàn văn: Đúng trình tự Frontmatter (La Mã iii, iv... từ Phiếu giao đề tài, Đề cương, Mục lục) -> Main Body (Ả Rập 1, 2... từ Lời cảm ơn, Lời mở đầu, 4 chương) -> Backmatter (Kết luận, TLTK, Phụ lục).
-- [ ] 6. Căn lề và Typography: Khổ A4; lề Trên 2.5cm, Dưới 2.5cm, Trái 3.5cm, Phải 2.5cm; phông Times New Roman 13pt; dãn dòng 1.5; thụt lề 1.0cm; số trang góc dưới bên phải, in đứng (\normalfont\upshape), TUYỆT ĐỐI KHÔNG IN NGHIÊNG.
-- [ ] 7. Phân cấp đề mục: Tối đa 4 cấp (X.Y.Z.W); CẤM TIỂU MỤC ĐƠN LẺ (mỗi nhóm >= 2 mục con); tiêu đề danh ngữ hóa 3-7 từ; không có tiêu đề mồ côi.
-- [ ] 8. Bảng biểu và Hình vẽ: Tiêu đề Bảng ở TRÊN; Tiêu đề Hình ở DƯỚI; đánh số theo chương dạng gạch nối Chương-Số (`Bảng X-Y`, `Hình X-Y`); TUYỆT ĐỐI CẤM tham chiếu tương đối ("hình dưới đây", "bảng sau").
-- [ ] 9. Bảng tabularx và TikZ: Bảng có viền khép kín `|...|` và `\hline`, cột `X` ngắt dòng; sơ đồ TikZ tuân thủ 7 Nguyên tắc vàng, chiều ngang <= 15.0cm.
-- [ ] 10. Tài liệu tham khảo: Tiếng Việt trước, tiếng Anh sau; xếp ABC chuẩn; hanging indent 1.0cm; giới hạn <= 20 tài liệu; 100% tài liệu được trích dẫn (không mồ côi).
-- [ ] 11. Tỷ lệ nội dung vàng: Lý thuyết (Ch1 + Ch2) <= 30%; Thiết kế và Thực nghiệm (Ch3 + Ch4) >= 70%; tổng dung lượng ruột đạt 50 -- 65 trang; Phụ lục không dày hơn phần chính.
-- [ ] 12. Triệt tiêu 7 Anti-Patterns: Không chép giáo trình (AP-01), cô lập Chương 2 không lộ code (AP-02), không dán code thô > 20 dòng (AP-03), số liệu thực nghiệm trung thực (AP-04), trần 20 ref (AP-05), CSDL 20 bảng thực tế (AP-06), sơ đồ/bảng không đâm thủng lề (AP-07).
-- [ ] 13. [GÓP Ý GVHD] CẤM TỰ Ý ĐÁNH SỐ THỨ TỰ: Tuyệt đối không đánh số thứ tự dạng (1), (2), (3)... hoặc 1., 2., 3. trong đoạn văn liệt kê. Chỉ dùng gạch đầu dòng itemize hoặc viết đoạn văn liên tục.
-- [ ] 14. [GÓP Ý GVHD] CẤM TÙY TIỆN IN ĐẬM: Tuyệt đối không tự ý in đậm (\textbf) các cụm từ liệt kê hoặc phân đoạn trong thân bài; chỉ in đậm tiêu đề mục, tiêu đề bảng/hình và tên cột.
-- [ ] 15. [GÓP Ý GVHD] BIỂU TƯỢNG ACTOR NGƯỜI QUE: Mọi biểu đồ Use Case phải sử dụng Actor hình người que chuẩn UML (stick figure), TUYỆT ĐỐI CẤM vẽ Actor hình hộp chữ nhật.
-- [ ] 16. [GÓP Ý GVHD] SƠ ĐỒ USE CASE CON: Tất cả các Use Case con trong Chương 3 đều phải vẽ hình sơ đồ phân rã đặt trước bảng đặc tả tương ứng.
-- [ ] 17. [GÓP Ý GVHD] BIỂU ĐỒ LỚP (CLASS DIAGRAM): Biểu đồ lớp mô hình hóa thực thể bắt buộc phải có và đặt ở vị trí ngay trước các bảng dữ liệu CSDL tại Mục 3.6.
-- [ ] 18. [GÓP Ý GVHD] CẤM DẤU `&` VÀ TITLE CASE: Tuyệt đối cấm dùng ký tự `&` trong tiêu đề và nội dung tiếng Việt (phải viết chữ "và"); không tùy tiện viết hoa chữ cái đầu từng từ (Title Case); lấp đầy trang in, không để khoảng trống lớn ở cuối trang.
+#### KHỐI I: 11 ĐIỀU RĂN BẤT DI BẤT DỊCH TỪ HỒ SƠ HIEU.PDF (BẮT BUỘC ĐẠT 100% — ZERO TOLERANCE)
+- [ ] 1. [ĐIỀU RĂN 1] 100% HÌNH ẢNH ĐỊNH DẠNG PNG TẠI FIGURES/: Toàn bộ hình ảnh trong báo cáo phải là file .png, lưu tại ./report-datn/figures/, kích thước vừa vặn khổ A4 (width=0.85\textwidth đến 0.95\textwidth, khuyến nghị 0.92\textwidth), hiển thị sắc nét khi in/photo, cấm co nhỏ dưới 8cm hoặc < 0.7\textwidth.
+- [ ] 2. [ĐIỀU RĂN 2] CẤM CHỨC DANH "TRƯỞNG BỘ MÔN" TRANG IV: Trang 2 của Phiếu giao đề tài (trang iv) chỉ gồm 2 bên ký duyệt là "Giảng viên hướng dẫn" và "Sinh viên thực hiện"; tuyệt đối không có cột hoặc chức danh Trưởng Bộ môn / Trưởng Khoa (khớp 100% trang 4 HIeu.pdf).
+- [ ] 3. [ĐIỀU RĂN 3] CỐ ĐỊNH NGÀY 06/11/2026 VÀ CHỨC DANH TITLE CASE: Toàn bộ biểu mẫu hành chính cố định "Hà Nội, ngày 06 tháng 11 năm 2026" (06/11/2026), cấm để trống chấm lửng; chức danh ký tên viết thường Title Case ("Giảng viên hướng dẫn", "Sinh viên thực hiện"), cấm viết hoa toàn bộ.
+- [ ] 4. [ĐIỀU RĂN 4] DÃN DÒNG CHUẨN 1.5 WORD (\setstretch{1.45}): Thiết lập \setstretch{1.45} đồng bộ tại cả preamble.tex và main.tex:83, đạt khoảng cách dòng cơ sở chuẩn Word 1.5 (22.54pt - 23.22pt); TUYỆT ĐỐI CẤM dãn dòng nén \setstretch{1.241} hoặc \onehalfspacing mặc định (19.43pt).
+- [ ] 5. [ĐIỀU RĂN 5] CỠ CHỮ TOÀN BÀI VÀ TRONG BẢNG ĐẠT 13PT: Toàn bộ nội dung thân bài và 100% chữ trong tất cả các bảng biểu (tabular, tabularx, longtable) đạt chuẩn cỡ chữ 13pt Times New Roman; TUYỆT ĐỐI CẤM lạm dụng \small, \footnotesize, \fontsize{8.5pt}, \fontsize{9pt} để ép bảng.
+- [ ] 6. [ĐIỀU RĂN 6] MỤC LỤC KHÔNG IN ĐẬM BẤT KỲ DÒNG MỤC NÀO: Toàn bộ dòng mục trong Mục lục sử dụng \normalfont không in đậm (\bfseries), có dấu hai chấm sau số chương (\cftchapaftersnum{:\ }), số trang in đứng thường và chấm dẫn thanh thoát (khớp 100% trang 9 HIeu.pdf).
+- [ ] 7. [ĐIỀU RĂN 7] BÌA NGOÀI CÓ SƯỜN DỌC XOAY 90° FONT THƯỜNG: Trang bìa ngoài có dải sườn/gáy mép lề trái theo TikZ overlay xoay 90° gồm 3 khối chữ font đứng thường in hoa: ĐÀM MẠNH DŨNG, HỆ THỐNG THÔNG TIN, KHOÁ 67; loại bỏ tiền tố thừa "TÊN ĐỀ TÀI:".
+- [ ] 8. [ĐIỀU RĂN 8] SỐ TRANG Ả RẬP 1 TỪ MỤC LỤC, TRANG 1–8 CHÂN TRANG TRỐNG: Các trang vật lý 1–8 (Bìa 1, Bìa 2, Phiếu giao đề tài, Đề cương, Lời cảm ơn) chân trang hoàn toàn để trống; Mục lục bắt đầu in số Ả Rập 1 ở chân trang; Mục lục hiển thị số La Mã logic iii, v, viii cho các hồ sơ đầu khóa và có dòng tự tham chiếu MỤC LỤC ..... 1.
+- [ ] 9. [ĐIỀU RĂN 9] BỎ IN ĐẬM/IN NGHIÊNG TÙY TIỆN VÀ TINH GIẢN TRÍCH DẪN: Bóc sạch toàn bộ \textbf, \textit tùy tiện trong các đoạn văn xuôi thân bài; CHỈ DUY NHẤT tiêu đề tiểu mục cấp 3 (\subsubsection) mới được in nghiêng; tinh giản trích dẫn dày đặc, chỉ trích dẫn trọng tâm tại Ch1, Ch2 và khống chế trần N_refs <= 20.
+- [ ] 10. [ĐIỀU RĂN 10] BÌA PHỤ VÀ THỂ THỨC KHỚP 100% HIEU.PDF: Toàn bộ trang bìa trong (bìa phụ) khớp 100% trang 2 của HIeu.pdf về khoảng cách dọc, tỷ lệ chữ, khối ký tên; thể thức toàn văn chuẩn A4 lề 2.5 - 2.5 - 3.5 - 2.5 cm.
+- [ ] 11. [ĐIỀU RĂN 11] TUYỆT ĐỐI KHÔNG TIẾT KIỆM GIẤY LÀM SAI QUY CÁCH: Tuyệt đối cấm mọi thủ thuật ép trang, nén dãn dòng dưới 1.45, co nhỏ cỡ chữ, bóp méo hình ảnh hay dồn biểu mẫu hành chính làm hỏng bố cục chuẩn của ấn phẩm học thuật.
+
+#### KHỐI II: QUY CHUẨN KỸ NGHỆ, KIẾN TRÚC VÀ HỌC THUẬT NỘI DUNG
+- [ ] 12. Mục tiêu và 3 Câu hỏi cốt lõi: Làm rõ Làm gì? (Ch1), Làm như thế nào? (Ch2 và Ch3), Kết quả ra sao? (Ch4).
+- [ ] 13. Quy trình 5 bước kỹ nghệ: Chương 3 trình bày đầy đủ Phân tích -> Thiết kế -> Cài đặt -> Kiểm thử -> Hiệu chỉnh.
+- [ ] 14. Kế hoạch 10 tuần: Phân bổ hợp lý từ tuần 1 đến tuần 10; nhấn mạnh cột mốc Tuần 6 (Mid-term Checkpoint) báo cáo Bộ môn.
+- [ ] 15. Kỷ luật và Nộp lưu trữ: Nêu rõ nghĩa vụ gặp GVHD hàng tuần, 4 điều kiện đình chỉ, 3 quyển bìa mềm trước bảo vệ, 1 bìa cứng mạ chữ nhũ vàng nộp trong vòng 10 ngày sau bảo vệ, thư mục bản mềm `MãSinhViên_HọTên_Khóa`.
+- [ ] 16. Phân cấp đề mục: Tối đa 4 cấp (X.Y.Z.W); CẤM TIỂU MỤC ĐƠN LẺ (mỗi nhóm >= 2 mục con); tiêu đề danh ngữ hóa 3-7 từ; không có tiêu đề mồ côi.
+- [ ] 17. Bảng biểu và Hình vẽ: Tiêu đề Bảng ở TRÊN; Tiêu đề Hình ở DƯỚI; đánh số theo chương dạng gạch nối Chương-Số (`Bảng X-Y`, `Hình X-Y`); TUYỆT ĐỐI CẤM tham chiếu tương đối ("hình dưới đây", "bảng sau").
+- [ ] 18. Bảng tabularx và TikZ: Bảng có viền khép kín `|...|` và `\hline`, cột `X` ngắt dòng; triệt tiêu 100% Overfull \hbox; sơ đồ TikZ tuân thủ 7 Nguyên tắc vàng, chiều ngang <= 15.0cm.
+- [ ] 19. Tài liệu tham khảo: Tiếng Việt trước, tiếng Anh sau; xếp ABC chuẩn; hanging indent 1.0cm; giới hạn <= 20 tài liệu; 100% tài liệu được trích dẫn (không mồ côi); tinh giản trích dẫn dày đặc.
+- [ ] 20. Tỷ lệ nội dung vàng: Lý thuyết (Ch1 + Ch2) <= 30%; Thiết kế và Thực nghiệm (Ch3 + Ch4) >= 70%; tổng dung lượng ruột đạt 50 -- 65 trang; Phụ lục không dày hơn phần chính.
+
+#### KHỐI III: QUY TẮC PHÒNG NGỪA ANTI-PATTERNS VÀ CHUẨN HÓA BẢN VẼ UML
+- [ ] 21. Triệt tiêu 7 Anti-Patterns: Không chép giáo trình (AP-01), cô lập Chương 2 không lộ code (AP-02), không dán code thô > 20 dòng (AP-03), số liệu thực nghiệm trung thực (AP-04), trần 20 ref (AP-05), CSDL 20 bảng thực tế (AP-06), sơ đồ/bảng không đâm thủng lề (AP-07).
+- [ ] 22. [GÓP Ý GVHD] CẤM TỰ Ý ĐÁNH SỐ THỨ TỰ: Tuyệt đối không đánh số thứ tự dạng (1), (2), (3)... hoặc 1., 2., 3. trong đoạn văn liệt kê. Chỉ dùng gạch đầu dòng itemize hoặc viết đoạn văn liên tục.
+- [ ] 23. [GÓP Ý GVHD] CẤM TÙY TIỆN IN ĐẬM: Tuyệt đối không tự ý in đậm (\textbf) các cụm từ liệt kê hoặc phân đoạn trong thân bài; chỉ in đậm tiêu đề mục, tiêu đề bảng/hình và tên cột.
+- [ ] 24. [GÓP Ý GVHD] BIỂU TƯỢNG ACTOR NGƯỜI QUE: Mọi biểu đồ Use Case phải sử dụng Actor hình người que chuẩn UML (stick figure), TUYỆT ĐỐI CẤM vẽ Actor hình hộp chữ nhật.
+- [ ] 25. [GÓP Ý GVHD] SƠ ĐỒ USE CASE CON: Tất cả các Use Case con trong Chương 3 đều phải vẽ hình sơ đồ phân rã đặt trước bảng đặc tả tương ứng.
+- [ ] 26. [GÓP Ý GVHD] BIỂU ĐỒ LỚP (CLASS DIAGRAM): Biểu đồ lớp mô hình hóa thực thể bắt buộc phải có và đặt ở vị trí ngay trước các bảng dữ liệu CSDL tại Mục 3.6.
+- [ ] 27. [GÓP Ý GVHD] CẤM DẤU `&` VÀ TITLE CASE: Tuyệt đối cấm dùng ký tự `&` trong tiêu đề và nội dung tiếng Việt (phải viết chữ "và"); không tùy tiện viết hoa chữ cái đầu từng từ (Title Case); lấp đầy trang in, không để khoảng trống lớn ở cuối trang.
+
+#### KHỐI IV: CỔNG XÁC MINH TỰ ĐỘNG (AUTOMATED TEST GATES)
+- [ ] 28. [AUTOMATED GATE] TEST SUITE HIEU.PDF PASSED: Chạy `uv run pytest tests/report_datn/test_thesis_format_hieu.py` đạt 100% PASS (9/9 tests).
+- [ ] 29. [AUTOMATED GATE] TEST SUITE STRUCTURE PASSED: Chạy `uv run pytest tests/report_datn/test_thesis_structure.py scripts/test_preamble_config.py scripts/verify_thesis_format.py` đạt 100% PASS (11/11 tests).
+- [ ] 30. [AUTOMATED GATE] XELATEX CLEAN BUILD: Biên dịch `xelatex -interaction=nonstopmode main.tex` thành công 100%, không phát sinh lỗi biên dịch, không tràn lề nghiêm trọng.
 ```
 
 ---

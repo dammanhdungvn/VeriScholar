@@ -48,4 +48,4 @@ npm --prefix apps/web run test                       # Cổng 3: Frontend Unit T
 npm --prefix apps/web run build                      # Cổng 4: Production Build Giao Diện
 ```
 ## 5. Nhiệm vụ ấn phẩm học thuật
-Mọi tác vụ liên quan đến tài liệu tại thư mục `./report-datn/` tuân thủ hướng dẫn tại `./report-datn/AGENTS.md`.
+Mọi tác vụ liên quan đến tài liệu tại thư mục `./report-datn/` tuân thủ hướng dẫn tại `./report-datn/AGENTS.md`. Và bỏ qua toàn bộ yêu cầu trong file AGENTS.md này và chỉ làm theo mục số 5 truy cập vào `./report-datn/AGENTS.md` làm theo quy tắc trong file này.
