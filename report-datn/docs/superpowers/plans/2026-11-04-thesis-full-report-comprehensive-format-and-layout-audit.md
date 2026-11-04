@@ -1,36 +1,127 @@
-# Full Thesis Report Comprehensive Format and Layout Audit Implementation Plan
+# Full Thesis Report Comprehensive Format and Layout Audit Implementation Plan (Word-Standard 13pt & 1.5 Line Spacing)
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Conduct a rigorous, comprehensive, sequential audit of 100% of the graduation thesis report without skipping any section, eliminate all remaining large whitespace and trailing orphan pages (Page 42, Page 72, and Page 97), sanitize all residual in-body citation bracket tokens (`[1]`, `[2]`), verify that all 25 figures are strictly placed within their appropriate thematic context, ensure zero raw code leaks in the compiled PDF, and achieve 100% compliance with HUMG and `HIeu.pdf` standards.
+**Goal:** Conduct an exhaustive, sequential audit and remediation of 100% of the graduation thesis report without skipping any section, strictly enforcing the golden MS Word standards: uniform 13pt Times New Roman across all body text, table cells, figure captions, and table captions (elevating caption font from 12pt to 13pt); uniform 1.5 Word line spacing (`\setstretch{1.45}` globally, `\arraystretch{1.20}` in tables) with zero paper-saving compression; eliminating all trailing orphan pages (Page 42, Page 72, and Page 97); verifying that all 25 figures sit within their proper thematic sections; sanitizing all residual in-body citation bracket tokens (`[1]`, `[2]`); and ensuring zero code or cross-reference leaks in the compiled PDF.
 
-**Architecture:** Meticulously inspects every `.tex` component in `frontmatter/` and `chapters/ch1/` through `ch4/` sequentially. Removes citation bracket remnants in Figure 2-3 (nodes `Paper [1]`, `Paper [2]`) and Section 4.2 (`[1], [2]`). Optimizes vertical float and spacing density to eliminate 2-to-5-line spillovers at the end of Chapter 2 (page 42), Chapter 3 (page 72), and Bibliography (page 97). Codifies automated regression guards in `tests/report_datn/test_thesis_format_hieu.py`, builds clean 2-pass XeLaTeX output, and verifies all 4 Verification Gates in `verify.sh`.
+**Architecture:** 
+1. Reconfigures `config/preamble.tex` to elevate Table and Figure captions to genuine 13pt (`\DeclareCaptionFont{size13}{\fontsize{13pt}{17pt}\selectfont}`), replacing the legacy 12pt setting, and synchronizes `report-datn/AGENTS.md`.
+2. Sequentially audits every single `.tex` file in `frontmatter/` and `chapters/` to verify 13pt font, 1.5 Word line spacing, margins (2.5-2.5-3.5-2.5 cm), and paragraph indent (1.0 cm).
+3. Sanitizes residual in-body citation bracket tokens in Figure 2-3 TikZ diagram (`Paper [1]`, `Paper [2]` $\rightarrow$ `Paper 1`, `Paper 2`) and Section 4.2 text (`[1], [2]`).
+4. Eliminates the 3 major trailing whitespace spillovers: Page 42 (5 lines at end of Ch2 $\rightarrow$ pulled to Page 41), Page 72 (2 lines at end of Ch3 $\rightarrow$ pulled to Page 71), and Page 97 (1 line in Bibliography $\rightarrow$ pulled to Page 96).
+5. Audits all 25 figures for correct thematic placement (caption strictly on BOTTOM, 13pt Italic) and all 17 tables (caption strictly on TOP, 13pt Italic, `arraystretch >= 1.20`, en-dashes `\item[--]`).
+6. Codifies automated regression tests in `tests/report_datn/test_thesis_format_hieu.py` and verifies all 4 Verification Gates in `verify.sh`.
 
 **Tech Stack:** XeLaTeX 2024, Python 3.12, pytest 9.1.1, poppler-utils (`pdftoppm`, `pdftotext`), Bash, Git.
 
-**Spec:** User request requirements and `report-datn/AGENTS.md` (Điều 1 đến 11, The 3 Inviolable Rules, and 30-item Pre-Commit Checklist).
+**Spec:** User instructions, `report-datn/AGENTS.md` (Điều 1 đến 11, The 3 Inviolable Rules, and Pre-Commit Checklist).
 
 ## Global Constraints
 
 - **Zero-skipping principle:** Every section and chapter must be inspected in strict sequential order from Frontmatter to Chapter 4, Conclusion, and Bibliography.
-- **100% Times New Roman, 13pt body font, 1.5 Word line spacing** (`\setstretch{1.45}` globally, `\arraystretch{1.20}` in tables).
+- **Uniform 13pt Times New Roman throughout:** Body text, table cells, figure captions, table captions, lists, frontmatter, and headings must strictly adhere to 13pt (or 14pt/16pt for chapter titles). NO 12pt, NO 11pt, NO `\small`, NO `\footnotesize` anywhere in tables, figures, or body.
+- **Uniform 1.5 Word line spacing:** `\setstretch{1.45}` globally, `\arraystretch{1.20}` to `1.25` in tables. Zero paper-saving compression (`\arraystretch < 1.15` and `\setstretch < 1.45` are strictly prohibited).
+- **Margins & Spacing:** Top 2.5cm, Bottom 2.5cm, Left 3.5cm, Right 2.5cm, First line indent 1.0cm, Paragraph spacing `3pt plus 1pt minus 1pt`.
 - **Zero in-body citation tokens:** Absolutely no `\cite{...}`, `[1]`, `[2]`, `[i]` in body paragraphs, figures, or tables outside `tai_lieu_tham_khao.tex`.
 - **Zero orphan or near-empty pages:** Eliminate trailing spillovers (such as page 42 with 5 lines, page 72 with 2 lines, and page 97 with 1 line).
-- **Thematic Figure Placement:** All 25 figures must appear within their corresponding thematic section, locked with `\FloatBarrier` where appropriate, with caption strictly placed underneath in 12pt Italic.
-- **Table Captions:** Placed strictly ABOVE the table in 12pt Italic.
+- **Thematic Figure & Table Placement:** All 25 figures placed in correct sections with caption UNDERNEATH in 13pt Italic; all 17 tables with caption ABOVE in 13pt Italic.
+- **Zero raw code leaks:** No unescaped LaTeX markup, broken math, `??`, or `[?]` in compiled PDF.
 - **All 4 Verification Gates in `verify.sh` must pass 100% with exit code 0.**
 
 ## Review Focus
 
-1. **Chapter 2 Page 42 Spillover:** 5 trailing lines of Section 2.5.5 currently create an almost empty page before Chapter 3 begins. Pull them into page 41 so Chapter 2 terminates cleanly on page 41.
-2. **Chapter 3 Page 72 Spillover:** Exactly 2 trailing lines of Section 3.6 currently occupy an entire blank page before Chapter 4 begins. Pull them into page 71 so Chapter 3 terminates cleanly on page 71.
-3. **Bibliography Page 97 Spillover:** Exactly 1 trailing line `(ICLR 2023).` of reference [10] spills onto page 97. Tighten entry spacing so all 10 references fit completely on page 96.
-4. **Citation Bracket Sanitization:** Replace `Paper [1]` and `Paper [2]` in Figure 2-3 TikZ diagram (`2_4_knowledge_graph_wiki.tex`) with `Paper 1` and `Paper 2`, and remove `($[1]$, $[2]$)` in Section 4.2 (`4_2_giao_dien.tex`).
-5. **Sequential Completeness:** Ensure every single section (Frontmatter, 1.1-1.6, 2.1-2.5, 3.1-3.6, 4.1-4.4, Conclusion, References) is explicitly audited without omissions.
+1. **Caption Font Elevation to 13pt:** `config/preamble.tex` must be updated to define `size13` (`\fontsize{13pt}{17pt}\selectfont`) for both Table and Figure captions, eradicating the legacy 12pt setting.
+2. **Global 13pt & 1.5 Spacing Verification:** Every table cell and body paragraph must maintain 13pt Times New Roman and 1.5 Word spacing without exception.
+3. **Chapter 2 Page 42 Spillover:** 5 trailing lines of Section 2.5.5 must be pulled into page 41 so Chapter 2 terminates cleanly on page 41.
+4. **Chapter 3 Page 72 Spillover:** 2 trailing lines of Section 3.6 must be pulled into page 71 so Chapter 3 terminates cleanly on page 71.
+5. **Bibliography Page 97 Spillover:** Reference [10] trailing line `(ICLR 2023).` must be pulled into page 96 so all 10 references fit on page 96, eliminating page 97.
+6. **Citation Bracket Sanitization:** Replace `Paper [1]` and `Paper [2]` in Figure 2-3 TikZ diagram (`2_4_knowledge_graph_wiki.tex`) with `Paper 1` and `Paper 2`, and remove `($[1]$, $[2]$)` in Section 4.2 (`4_2_giao_dien.tex`).
+7. **Sequential Completeness:** Ensure every single section (Frontmatter, 1.1-1.6, 2.1-2.9, 3.1-3.6, 4.1-4.4, Conclusion, References) is explicitly audited without omissions.
 
 ---
 
-### Task 1: Sanitize Residual In-Body Citation Bracket Tokens in Chapter 2 and Chapter 4
+### Task 1: Elevate Table and Figure Captions to Standard 13pt and Update AGENTS.md
+
+**Files:**
+- Modify: `report-datn/config/preamble.tex:89-108`
+- Modify: `report-datn/AGENTS.md:347-348, 760`
+- Modify: `tests/report_datn/test_thesis_format_hieu.py`
+
+**Interfaces:**
+- Consumes: Existing preamble configuration
+- Produces: 13pt captions for all Tables and Figures, guarded by automated test `test_caption_font_is_13pt`
+
+- [ ] **Step 1: Write failing regression test `test_caption_font_is_13pt` in `tests/report_datn/test_thesis_format_hieu.py`**
+
+In `tests/report_datn/test_thesis_format_hieu.py`, add:
+```python
+def test_caption_font_is_13pt():
+    """Verify that Table and Figure captions in preamble.tex use 13pt font matching Word standards."""
+    preamble = (REPORT_DIR / "config/preamble.tex").read_text(encoding="utf-8")
+    assert "fontsize{13" in preamble and "size13" in preamble, (
+        "Caption font in preamble.tex must be configured as size13 (13pt Times New Roman)"
+    )
+    assert "size12" not in preamble, "Found legacy size12 in preamble.tex; captions must be 13pt!"
+```
+
+- [ ] **Step 2: Run pytest to verify the test fails (TDD Red step)**
+
+Run:
+```bash
+cd /home/dammanhdungvn/Downloads/Workspace/VeriScholar && .venv/bin/pytest tests/report_datn/test_thesis_format_hieu.py::test_caption_font_is_13pt -v
+```
+Expected: FAIL (because preamble.tex currently has `size12`).
+
+- [ ] **Step 3: Update `config/preamble.tex` to set 13pt captions**
+
+In `report-datn/config/preamble.tex`, replace lines 89-107:
+```latex
+% 5. Cấu hình tiêu đề bảng biểu và hình ảnh (Chuẩn Word: Bảng ở TRÊN, Hình ở DƯỚI, Cỡ chữ 13pt)
+\usepackage{caption}
+\DeclareCaptionFont{size13}{\fontsize{13pt}{17pt}\selectfont}
+\captionsetup[table]{
+    position=top,
+    font=size13,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Bảng}
+}
+\captionsetup[figure]{
+    position=bottom,
+    font=size13,
+    labelfont=bf,
+    textfont=it,
+    skip=6pt,
+    name={Hình}
+}
+```
+
+- [ ] **Step 4: Update `report-datn/AGENTS.md` to specify 13pt for captions**
+
+In `report-datn/AGENTS.md`:
+- Line 347: Change `Tiêu đề Bảng (\caption trên) | 12pt` to `13pt | Nhãn Đậm, Tên Nghiêng`.
+- Line 348: Change `Tiêu đề Hình (\caption dưới) | 12pt` to `13pt | Nhãn Đậm, Tên Nghiêng`.
+- Update text references to caption font size to emphasize 13pt Word standard.
+
+- [ ] **Step 5: Run pytest to verify `test_caption_font_is_13pt` passes (TDD Green step)**
+
+Run:
+```bash
+cd /home/dammanhdungvn/Downloads/Workspace/VeriScholar && .venv/bin/pytest tests/report_datn/test_thesis_format_hieu.py::test_caption_font_is_13pt -v
+```
+Expected: PASS.
+
+- [ ] **Step 6: Commit changes**
+
+```bash
+git add report-datn/config/preamble.tex report-datn/AGENTS.md tests/report_datn/test_thesis_format_hieu.py
+git commit -m "fix(format): elevate Table and Figure captions to standard 13pt"
+```
+
+---
+
+### Task 2: Sanitize Residual In-Body Citation Bracket Tokens in Chapter 2 and Chapter 4
 
 **Files:**
 - Modify: `report-datn/chapters/ch2/2_4_knowledge_graph_wiki.tex:42-43`
@@ -51,7 +142,6 @@ def test_zero_citation_brackets_in_entire_body():
     leaks = []
     for f in ch_files:
         content = f.read_text(encoding="utf-8")
-        # Match brackets containing digits, e.g. [1], [2], [10]
         matches = re.finditer(r"\[\d+\]", content)
         for m in matches:
             leaks.append(f"{f.name}: found '{m.group(0)}'")
@@ -107,7 +197,7 @@ git commit -m "fix(format): sanitize residual citation brackets in Figure 2-3 an
 
 ---
 
-### Task 2: Eliminate Trailing 1-Line Orphan Page in Bibliography (Page 96-97)
+### Task 3: Eliminate Trailing 1-Line Orphan Page in Bibliography (Page 96-97)
 
 **Files:**
 - Modify: `report-datn/chapters/tai_lieu_tham_khao.tex`
@@ -128,8 +218,6 @@ def test_bibliography_fits_single_page():
         pytest.skip("main.pdf not yet compiled")
     out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
     pages = out.split("\x0c")
-    bib_pages = [i + 1 for i, p in enumerate(pages) if "TÀI LIỆU THAM KHẢO" in p or "[10] Yao" in p]
-    # Reference [10] Yao must be on the same page as the TÀI LIỆU THAM KHẢO heading
     heading_page = next((i + 1 for i, p in enumerate(pages) if "TÀI LIỆU THAM KHẢO" in p), None)
     yao_page = next((i + 1 for i, p in enumerate(pages) if "(ICLR 2023)" in p), None)
     assert heading_page is not None, "Missing TÀI LIỆU THAM KHẢO heading in PDF"
@@ -141,8 +229,8 @@ def test_bibliography_fits_single_page():
 - [ ] **Step 2: Optimize vertical spacing in `chapters/tai_lieu_tham_khao.tex`**
 
 In `chapters/tai_lieu_tham_khao.tex`:
-1. Keep the standard 13pt Times New Roman and hanging indent `1.0cm`.
-2. Add `\setlength{\parskip}{2pt plus 0.5pt minus 0.5pt}` inside the bibliography group to reduce inter-entry gaps slightly from the default `3pt plus 1pt`, allowing paper [10] to fit cleanly on page 96.
+- Retain standard 13pt Times New Roman and hanging indent `1.0cm`.
+- Set `\setlength{\parskip}{2pt plus 0.5pt minus 0.5pt}` inside the bibliography group to reduce inter-entry gaps slightly from the default `3pt plus 1pt`, allowing paper [10] to fit cleanly on page 96.
 
 - [ ] **Step 3: Compile XeLaTeX and verify test passes**
 
@@ -151,7 +239,7 @@ Run:
 cd /home/dammanhdungvn/Downloads/Workspace/VeriScholar/report-datn && xelatex -interaction=nonstopmode main.tex
 cd /home/dammanhdungvn/Downloads/Workspace/VeriScholar && .venv/bin/pytest tests/report_datn/test_thesis_format_hieu.py::test_bibliography_fits_single_page -v
 ```
-Expected: PASS (All 10 papers comfortably fit on page 96; page 97 is eliminated).
+Expected: PASS (All 10 papers fit on page 96; page 97 is eliminated).
 
 - [ ] **Step 4: Commit changes**
 
@@ -162,7 +250,7 @@ git commit -m "fix(layout): eliminate trailing 1-line orphan page in bibliograph
 
 ---
 
-### Task 3: Eliminate Large Trailing Whitespace at End of Chapter 2 (Page 42) and Chapter 3 (Page 72)
+### Task 4: Eliminate Large Trailing Whitespace at End of Chapter 2 (Page 42) and Chapter 3 (Page 72)
 
 **Files:**
 - Modify: `report-datn/chapters/ch2/2_5_agentic_react.tex`
@@ -184,7 +272,6 @@ def test_no_near_empty_chapter_end_pages():
         pytest.skip("main.pdf not yet compiled")
     out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
     pages = out.split("\x0c")
-    # Identify pages immediately before CHƯƠNG 3 and CHƯƠNG 4
     for i, p in enumerate(pages):
         if "CHƯƠNG 3:" in p and i > 0:
             ch2_end_page = pages[i - 1]
@@ -232,7 +319,7 @@ git commit -m "fix(layout): eliminate large whitespace spillovers at end of Chap
 
 ---
 
-### Task 4: Meticulous Sequential Audit of Every Section (Frontmatter, Chapters 1-4, Figures, Tables, Code Leaks)
+### Task 5: Meticulous Sequential Audit of Every Section (13pt, 1.5 Spacing, Figures, Tables, Code Leaks)
 
 **Files:**
 - Create: `scripts/audit_full_thesis_sequential.py`
@@ -240,12 +327,16 @@ git commit -m "fix(layout): eliminate large whitespace spillovers at end of Chap
 
 **Interfaces:**
 - Consumes: All 44 `.tex` files in `report-datn/`
-- Produces: Exhaustive verification log validating that zero sections are skipped, all 25 figures sit in correct thematic sections, all tables have captions on TOP, all figures have captions on BOTTOM, and zero raw code tokens leak into PDF
+- Produces: Exhaustive verification log validating that zero sections are skipped, all 25 figures sit in correct thematic sections, all tables have captions on TOP in 13pt Italic, all figures have captions on BOTTOM in 13pt Italic, 100% of body text and table cells use 13pt Times New Roman, and zero raw code tokens leak into PDF
 
 - [ ] **Step 1: Create `scripts/audit_full_thesis_sequential.py`**
 
 The script must sequentially verify every file:
-1. **Frontmatter Sequential Checklist:**
+1. **Font Size & Line Spacing Invariant:**
+   - 100% body text and table cells must be 13pt Times New Roman (cấm `\small`, `\footnotesize`, `\fontsize{8.5`, `\fontsize{9`).
+   - Line spacing: `\setstretch{1.45}` globally, `\arraystretch >= 1.20` in tables.
+   - Captions: Table captions on TOP in 13pt Italic; Figure captions on BOTTOM in 13pt Italic.
+2. **Frontmatter Sequential Checklist:**
    - `bia_chinh.tex`: Spine 90° present, front has NO "KHOÁ 67".
    - `bia_phu.tex`: No title duplication, signatures with `(Chữ ký)`, year 2026.
    - `phieu_giao_de_tai.tex`: NO pre-printed student/lecturer names, `(Ký và ghi rõ họ tên)`, date `06/11/2026`, no Department/Faculty signatures.
@@ -255,11 +346,11 @@ The script must sequentially verify every file:
    - `danh_muc_hinh.tex` & `danh_muc_bang.tex`: `\setstretch{1.45}`, no singlespace.
    - `danh_muc_viet_tat.tex`: Alphabetical A-Z abbreviation list.
    - `loi_mo_dau.tex`: Standard format.
-2. **Body Chapters Sequential Checklist (1.1-1.6, 2.1-2.9, 3.1-3.6, 4.1-4.4):**
+3. **Body Chapters Sequential Checklist (1.1-1.6, 2.1-2.9, 3.1-3.6, 4.1-4.4):**
    - Headings adhere to 13pt/14pt titlesec standards.
    - Font size: strictly 13pt throughout.
-   - All 25 figures checked for caption on BOTTOM in 12pt Italic and verified against their thematic subsection.
-   - All 17 tables checked for caption on TOP in 12pt Italic, `\arraystretch >= 1.15`, and en-dashes (`\item[--]`).
+   - All 25 figures checked for caption on BOTTOM in 13pt Italic and verified against their thematic subsection.
+   - All 17 tables checked for caption on TOP in 13pt Italic, `\arraystretch >= 1.20`, and en-dashes (`\item[--]`).
    - Zero raw code leaks (`\texttt`, broken math, `??`, `[?]`, `nan`, `undefined`).
 
 - [ ] **Step 2: Run `scripts/audit_full_thesis_sequential.py`**
@@ -279,7 +370,7 @@ git commit -m "ci(audit): add comprehensive sequential thesis verification scrip
 
 ---
 
-### Task 5: Full 2-Pass Compilation, Visual Verification of Layouts & Final Push
+### Task 6: Full 2-Pass Compilation, Visual Verification of Layouts & Final Push
 
 **Files:**
 - Output: `report-datn/main.pdf`
@@ -287,7 +378,7 @@ git commit -m "ci(audit): add comprehensive sequential thesis verification scrip
 - Test: `scripts/dev/verify.sh`
 
 **Interfaces:**
-- Consumes: All fixes from Tasks 1-4
+- Consumes: All fixes from Tasks 1-5
 - Produces: Fully compiled `main.pdf` synchronized with GitHub `origin/main`
 
 - [ ] **Step 1: Execute clean 2-pass XeLaTeX compilation**
@@ -330,7 +421,7 @@ Expected: Gate 1 (Ruff) PASS, Gate 2 (Backend Pytest) PASS, Gate 3 (Frontend Vit
 Run:
 ```bash
 git add report-datn/main.pdf
-git commit -m "build: compile final verified thesis PDF with zero spillovers and clean layout"
+git commit -m "build: compile final verified thesis PDF with Word-standard 13pt captions and zero spillovers"
 SSH_AUTH_SOCK=/home/dammanhdungvn/.config/herdr/herdr.sock.agent git push origin main --no-verify
 ```
 Expected: Clean push to GitHub `origin/main`.
