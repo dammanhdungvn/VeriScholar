@@ -99,9 +99,26 @@ def test_page_budget():
 
     # Kiểm tra quy chuẩn chân trang Frontmatter chuẩn 100% HIeu.pdf:
     # Trang 1 đến trang 8 để trống hoàn toàn chân trang (không in số trang vật lý)
-    forbidden_page_tokens = {"iii", "iv", "v", "vi", "vii", "viii", "1", "2", "3", "4", "5", "6", "7", "8"}
+    forbidden_page_tokens = {
+        "iii",
+        "iv",
+        "v",
+        "vi",
+        "vii",
+        "viii",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+    }
     for p_idx in range(8):
-        last_line = pages[p_idx].strip().splitlines()[-1] if pages[p_idx].strip().splitlines() else ""
+        last_line = (
+            pages[p_idx].strip().splitlines()[-1] if pages[p_idx].strip().splitlines() else ""
+        )
         assert last_line not in forbidden_page_tokens, (
             f"Trang {p_idx + 1} chân trang không được in số trang (phải để trống theo chuẩn HIeu.pdf): '{last_line}'"
         )

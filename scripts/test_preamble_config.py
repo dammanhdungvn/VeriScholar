@@ -6,8 +6,12 @@ def test_preamble():
     assert "\\textit{\\thepage}" not in content, "Số trang vẫn còn in nghiêng"
     assert "cftsecaftersnum}{.}" not in content, "Mục lục section vẫn còn dấu chấm"
     assert "cftsubsecaftersnum}{.}" not in content, "Mục lục subsection vẫn còn dấu chấm"
-    assert "cftchapaftersnum}{:\\" in content, "Mục lục chapter phải có dấu hai chấm theo chuẩn Hieu.pdf"
-    assert "cftchapfont}{\\normalfont" in content, "Mục lục chapter không được in đậm theo chuẩn Hieu.pdf"
+    assert "cftchapaftersnum}{:\\" in content, (
+        "Mục lục chapter phải có dấu hai chấm theo chuẩn Hieu.pdf"
+    )
+    assert "cftchapfont}{\\normalfont" in content, (
+        "Mục lục chapter không được in đậm theo chuẩn Hieu.pdf"
+    )
     assert "cfttabpresnum}{\\bfseries" not in content, "LoT chữ Bảng vẫn còn in đậm"
     assert "cftfigpresnum}{\\bfseries" not in content, "LoF chữ Hình vẫn còn in đậm"
     assert "tocdepth}{2}" in content, "tocdepth phải là 2"
