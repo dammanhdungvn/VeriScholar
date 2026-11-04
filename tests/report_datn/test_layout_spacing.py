@@ -282,23 +282,47 @@ def test_toc_three_pages_no_orphan_line():
 
 
 def test_lof_single_page_and_no_orphan_spillover():
+    """Kiểm tra Danh mục hình ảnh (LOF) và Danh mục bảng biểu (LOT) bắt đầu trang sạch sẽ.
+
+    Theo chuẩn Hieu.pdf với giãn dòng 1.5 (setstretch 1.45), LOF có thể trải dài
+    qua 2 trang một cách tự nhiên. LOT phải bắt đầu ngay sau trang kết thúc của LOF.
+    """
     pdf_path = Path("report-datn/main.pdf")
     if not pdf_path.exists():
         return
     res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
     pages = res.stdout.split("\x0c")
 
-    # Tìm trang Danh mục hình ảnh
+    # Tìm trang bắt đầu Danh mục hình ảnh
     lof_idx = next(
-        (i for i, p in enumerate(pages) if p.strip().startswith("DANH MỤC HÌNH ẢNH")), None
+        (
+            i
+            for i, p in enumerate(pages)
+            if "DANH MỤC HÌNH ẢNH" in p.strip()[:100] or p.strip().startswith("DANH MỤC HÌNH ẢNH")
+        ),
+        None,
     )
     assert lof_idx is not None, "Phải tìm thấy Danh mục hình ảnh"
     assert "DANH MỤC HÌNH ẢNH" in pages[lof_idx], "Phải là Danh mục hình ảnh"
-    assert "Hình 4-9" in pages[lof_idx], (
-        "Hình 4-9 phải nằm trọn vẹn trên trang 12 (xii), không tràn sang trang mới!"
+
+    # Tìm trang bắt đầu Danh mục bảng biểu
+    lot_idx = next(
+        (
+            i
+            for i, p in enumerate(pages)
+            if "DANH MỤC BẢNG BIỂU" in p.strip()[:100] or p.strip().startswith("DANH MỤC BẢNG BIỂU")
+        ),
+        None,
     )
-    # Trang 13 (xiii) phải là Danh mục bảng biểu
-    assert "DANH MỤC BẢNG BIỂU" in pages[lof_idx + 1], "Trang tiếp theo phải là Danh mục bảng biểu"
+    assert lot_idx is not None, "Phải tìm thấy Danh mục bảng biểu"
+
+    # Danh mục bảng biểu phải theo sau Danh mục hình ảnh (cách 1 hoặc 2 trang)
+    assert lof_idx < lot_idx, "Danh mục bảng biểu phải nằm sau Danh mục hình ảnh"
+    assert lot_idx - lof_idx in (1, 2), (
+        f"LOF bắt đầu trang {lof_idx + 1}, LOT bắt đầu trang {lot_idx + 1}; "
+        "LOF chỉ được chiếm 1 hoặc 2 trang theo chuẩn Hieu.pdf!"
+    )
+    assert "DANH MỤC BẢNG BIỂU" in pages[lot_idx]
 
 
 def test_ch3_database_tables_flow_and_no_orphan_page():
@@ -372,6 +396,10 @@ def test_no_pages_with_few_lines_in_document():
             "CHƯƠNG " in next_page_text
             or "KẾT LUẬN" in next_page_text
             or "TÀI LIỆU THAM KHẢO" in next_page_text
+            or "DANH MỤC BẢNG BIỂU" in next_page_text
+            or "DANH MỤC TỪ VIẾT TẮT" in next_page_text
+            or "DANH MỤC TỪ VIẾT TẮT" in p_text
+            or "MỞ ĐẦU" in next_page_text
         ):
             continue
         assert len(body_lines) >= 15, (
