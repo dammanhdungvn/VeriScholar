@@ -4,14 +4,14 @@
 
 \subsection{Mô hình biểu diễn mạng lưới tri thức học thuật 4 thực thể}
 \label{subsec:academic_kg_model}
-Trong khi mô hình RAG véc-tơ xử lý hiệu quả các truy vấn tìm kiếm đoạn văn cục bộ, phương pháp này bộc lộ hạn chế cố hữu trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn: \textit{``Những phương pháp nào đã được áp dụng trên tập dữ liệu HotpotQA và đạt F1 trên 90\%?''}). Khi thông tin phân tán rải rác trên hàng chục công trình khác nhau, việc truy vấn tương đồng véc-tơ đơn lẻ không thể nắm bắt được các mối liên hệ chéo giữa các thực thể học thuật.
+Trong khi mô hình RAG véc-tơ xử lý hiệu quả các truy vấn tìm kiếm đoạn văn cục bộ, phương pháp này bộc lộ hạn chế cố hữu trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn: ``Những phương pháp nào đã được áp dụng trên tập dữ liệu HotpotQA và đạt F1 trên 90\%?''). Khi thông tin phân tán rải rác trên hàng chục công trình khác nhau, việc truy vấn tương đồng véc-tơ đơn lẻ không thể nắm bắt được các mối liên hệ chéo giữa các thực thể học thuật.
 
 Đề tài giải quyết thách thức này bằng cách mô hình hóa tri thức học thuật dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}. Mạng lưới tri thức được chuẩn hóa thành bốn loại thực thể hạt nhân, khớp hoàn toàn với cấu trúc cơ sở dữ liệu quan hệ của hệ thống:
 \begin{itemize}
-    \item Đỉnh Bài báo (\textit{Paper Nodes}): Đại diện cho các ấn phẩm nghiên cứu khoa học gốc, lưu trữ tiêu đề, tác giả, năm công bố và mã số định danh DOI.
-    \item Đỉnh Phương pháp (\textit{Method Nodes}): Đại diện cho các mô hình, thuật toán hoặc kỹ thuật đề xuất (ví dụ: \textit{Transformer, Self-Attention}~\cite{vaswani2017}, \textit{Self-RAG}).
-    \item Đỉnh Bộ dữ liệu (\textit{Dataset Nodes}): Đại diện cho các tập dữ liệu thực nghiệm chuẩn mực (ví dụ: \textit{HotpotQA, SQuAD, ImageNet}).
-    \item Đỉnh Chỉ số kết quả (\textit{Metric Nodes}): Đại diện cho các kết quả đo lường định lượng cụ thể (chẳng hạn: $\text{F1} = 91{,}2\%$, $\text{EM} = 84{,}5\%$).
+    \item Đỉnh Bài báo (Paper Nodes): Đại diện cho các ấn phẩm nghiên cứu khoa học gốc, lưu trữ tiêu đề, tác giả, năm công bố và mã số định danh DOI.
+    \item Đỉnh Phương pháp (Method Nodes): Đại diện cho các mô hình, thuật toán hoặc kỹ thuật đề xuất (ví dụ: Transformer, Self-Attention~\cite{vaswani2017}, Self-RAG).
+    \item Đỉnh Bộ dữ liệu (Dataset Nodes): Đại diện cho các tập dữ liệu thực nghiệm chuẩn mực (ví dụ: HotpotQA, SQuAD, ImageNet).
+    \item Đỉnh Chỉ số kết quả (Metric Nodes): Đại diện cho các kết quả đo lường định lượng cụ thể (chẳng hạn: $\text{F1} = 91{,}2\%$, $\text{EM} = 84{,}5\%$).
 \end{itemize}
 
 Các thực thể được liên kết thông qua các quan hệ ngữ nghĩa chuẩn tắc như $\text{ĐỀ XUẤT}$, $\text{PHÁT TRIỂN}$, $\text{KẾ THỪA}$, $\text{ĐÁNH GIÁ}$ và $\text{ĐO LƯỜNG}$. Cấu trúc đồ thị tri thức 4 thực thể và cơ chế ánh xạ sang trang bách khoa cộng đồng được mô hình hóa trong Hình~\ref{fig:academic_kg_wiki}.
@@ -73,7 +73,7 @@ Các thực thể được liên kết thông qua các quan hệ ngữ nghĩa ch
 
 \subsection{Thuật toán phân cụm Louvain và hàm mục tiêu Modularity $Q$}
 \label{subsec:louvain_modularity}
-Để phục vụ việc tổng hợp tri thức ở quy mô toàn cục theo mô hình GraphRAG \cite{edge2024}, hệ thống áp dụng thuật toán phát hiện cộng đồng Louvain (\textit{Louvain Community Detection Algorithm}) \cite{blondel2008louvain} (kèm mở rộng thuật toán Leiden \cite{traag2019leiden}). Mục tiêu của thuật toán là phân hoạch đồ thị thực thể thành các cụm cộng đồng có mật độ liên kết nội bộ dày đặc và mật độ liên kết giữa các cộng đồng thưa thớt, thông qua việc tối đa hóa hàm mục tiêu độ mô-đun (\textit{Modularity} $Q$):
+Để phục vụ việc tổng hợp tri thức ở quy mô toàn cục theo mô hình GraphRAG \cite{edge2024}, hệ thống áp dụng thuật toán phát hiện cộng đồng Louvain (Louvain Community Detection Algorithm) \cite{blondel2008louvain} (kèm mở rộng thuật toán Leiden \cite{traag2019leiden}). Mục tiêu của thuật toán là phân hoạch đồ thị thực thể thành các cụm cộng đồng có mật độ liên kết nội bộ dày đặc và mật độ liên kết giữa các cộng đồng thưa thớt, thông qua việc tối đa hóa hàm mục tiêu độ mô-đun (Modularity $Q$):
 
 \begin{equation}
 \label{eq:louvain_modularity}
@@ -92,9 +92,9 @@ Thuật toán Louvain vận hành lặp qua hai bước: tối ưu hóa cục b�
 
 \subsection{Cơ chế biên dịch trước trang bách khoa tri thức (Graph Wiki)}
 \label{subsec:graph_wiki}
-Dựa trên các phân cụm cộng đồng hội tụ từ thuật toán Louvain, hệ thống kích hoạt cơ chế biên dịch trước trang bách khoa tri thức (\textit{Pre-compiled Community Graph Wiki}). Thay vì duyệt đồ thị nhiều bước tốn thời gian thực trong mỗi phiên hỏi đáp, VeriScholar tự động tổng hợp mạng lưới thực thể thành các trang tài liệu Markdown có cấu trúc:
+Dựa trên các phân cụm cộng đồng hội tụ từ thuật toán Louvain, hệ thống kích hoạt cơ chế biên dịch trước trang bách khoa tri thức (Pre-compiled Community Graph Wiki). Thay vì duyệt đồ thị nhiều bước tốn thời gian thực trong mỗi phiên hỏi đáp, VeriScholar tự động tổng hợp mạng lưới thực thể thành các trang tài liệu Markdown có cấu trúc:
 \begin{itemize}
-    \item Trang chuyên đề phương pháp (\textit{Method Wiki Pages}): Trình bày nguyên lý giải thuật, nguồn gốc công bố ban đầu kèm sơ đồ phả hệ kế thừa giữa các mô hình khoa học.
-    \item Trang bảng xếp hạng thực nghiệm (\textit{Benchmark Leaderboard Pages}): Tổng hợp bảng đối chứng định lượng hiệu năng của các giải pháp trên từng tập dữ liệu kiểm chuẩn tiêu chuẩn.
-    \item Siêu liên kết hai chiều (\textit{Bidirectional Hyperlinks}): Thiết lập liên kết chéo giữa các khái niệm và đoạn trích dẫn PDF nguồn, hỗ trợ học giả truy xuất tức thì ngữ cảnh toàn cục mà không phát sinh độ trễ duyệt mạng trong thời gian thực.
+    \item Trang chuyên đề phương pháp (Method Wiki Pages): Trình bày nguyên lý giải thuật, nguồn gốc công bố ban đầu kèm sơ đồ phả hệ kế thừa giữa các mô hình khoa học.
+    \item Trang bảng xếp hạng thực nghiệm (Benchmark Leaderboard Pages): Tổng hợp bảng đối chứng định lượng hiệu năng của các giải pháp trên từng tập dữ liệu kiểm chuẩn tiêu chuẩn.
+    \item Siêu liên kết hai chiều (Bidirectional Hyperlinks): Thiết lập liên kết chéo giữa các khái niệm và đoạn trích dẫn PDF nguồn, hỗ trợ học giả truy xuất tức thì ngữ cảnh toàn cục mà không phát sinh độ trễ duyệt mạng trong thời gian thực.
 \end{itemize}

@@ -4,9 +4,9 @@
 
 \subsection{Mô hình suy luận và hành động ReAct phối hợp gọi công cụ}
 \label{subsec:react_framework}
-Trong tiến trình phát triển các hệ thống trí tuệ nhân tạo hỗ trợ nghiên cứu khoa học, các mô hình ngôn ngữ lớn truyền thống thường bộc lộ hạn chế khi giải quyết các nhiệm vụ phức tạp đòi hỏi nhiều bước tính toán. Hướng tiếp cận suy luận chuỗi tư duy thuần túy (\textit{Chain-of-Thought -- CoT}) \cite{wei2022cot} chỉ vận hành trên không gian tri thức tham số tĩnh nội tại, dễ dẫn đến hiện tượng suy diễn cảm tính và ảo giác số liệu. Ngược lại, các mô hình gọi công cụ độc lập (như \textit{Toolformer}) \cite{schick2023toolformer} tuy kết nối được với môi trường ngoài nhưng thiếu khả năng tự đánh giá và lập luận chiến lược trước các tình huống lỗi phát sinh.
+Trong tiến trình phát triển các hệ thống trí tuệ nhân tạo hỗ trợ nghiên cứu khoa học, các mô hình ngôn ngữ lớn truyền thống thường bộc lộ hạn chế khi giải quyết các nhiệm vụ phức tạp đòi hỏi nhiều bước tính toán. Hướng tiếp cận suy luận chuỗi tư duy thuần túy (Chain-of-Thought -- CoT) \cite{wei2022cot} chỉ vận hành trên không gian tri thức tham số tĩnh nội tại, dễ dẫn đến hiện tượng suy diễn cảm tính và ảo giác số liệu. Ngược lại, các mô hình gọi công cụ độc lập (như Toolformer) \cite{schick2023toolformer} tuy kết nối được với môi trường ngoài nhưng thiếu khả năng tự đánh giá và lập luận chiến lược trước các tình huống lỗi phát sinh.
 
-Để khắc phục nhược điểm trên, đề tài áp dụng mô hình kiến trúc ReAct (\textit{Synergizing Reasoning and Acting in Language Models}) do Yao và cộng sự đề xuất \cite{yao2022}. ReAct thiết lập một chu trình phối hợp chặt chẽ giữa năng lực tư duy trừu tượng (\textit{Reasoning}) và hành động tương tác môi trường (\textit{Acting}) theo vòng lặp có hồi tiếp:
+Để khắc phục nhược điểm trên, đề tài áp dụng mô hình kiến trúc ReAct do Yao và cộng sự đề xuất \cite{yao2022}, kết hợp cơ chế tự suy ngẫm Reflexion của Shinn và cộng sự \cite{shinn2023} và nguyên lý thiết kế tác nhân tự chủ của Weng \cite{weng2023agent}. ReAct thiết lập một chu trình phối hợp chặt chẽ giữa năng lực tư duy trừu tượng (Reasoning) và hành động tương tác môi trường (Acting) theo vòng lặp có hồi tiếp:
 \vspace{-6pt}
 \begin{equation}
 \label{eq:react_cycle}
@@ -24,27 +24,27 @@ trong đó $\text{Thought}_t$ là lập luận suy nghĩ nội tại hướng d�
 
 \subsection{Khung điều phối tác nhân có trạng thái LangGraph}
 \label{subsec:langgraph_orchestration}
-Nhằm hiện thực hóa chu trình ReAct vào một quy trình kỹ thuật có khả năng mở rộng và chịu lỗi, đề tài sử dụng khung điều phối LangGraph. Khác với các đường ống xử lý theo đồ thị có hướng không chu trình tuyến tính (\textit{DAG}), LangGraph cho phép thiết kế các hệ thống tác nhân đa bước có trạng thái (\textit{Stateful Multi-Agent Workflow}) với cấu trúc đồ thị có chu trình lặp (\textit{Cyclic Graphs}).
+Nhằm hiện thực hóa chu trình ReAct vào một quy trình kỹ thuật có khả năng mở rộng và chịu lỗi, đề tài sử dụng khung điều phối LangGraph. Khác với các đường ống xử lý theo đồ thị có hướng không chu trình tuyến tính (DAG), LangGraph cho phép thiết kế các hệ thống tác nhân đa bước có trạng thái (Stateful Multi-Agent Workflow) với cấu trúc đồ thị có chu trình lặp (Cyclic Graphs).
 
-Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy trạng thái hữu hạn (\textit{Finite State Machine -- FSM}) thông qua đối tượng \texttt{StateGraph}:
+Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy trạng thái hữu hạn (Finite State Machine -- FSM) thông qua đối tượng \texttt{StateGraph}:
 \begin{itemize}[noitemsep, topsep=2pt]
-    \item Lược đồ trạng thái dùng chung (\textit{Shared State Schema}): Định nghĩa cấu trúc dữ liệu nhất quán của phiên nghiên cứu (mã nguồn tài liệu, lịch sử thông điệp, danh sách dẫn chứng và nhật ký biên dịch).
-    \item Tập các nút tính toán (\textit{Nodes}): Mỗi nút thực hiện một đơn nguyên nghiệp vụ độc lập, nhận trạng thái hiện tại và trả về bản ghi biến đổi trạng thái tương ứng.
-    \item Cạnh điều hướng có điều kiện (\textit{Conditional Edges}): Đóng vai trò là các bộ định tuyến logic. Sau mỗi bước thực thi, hàm đánh giá điều kiện sẽ quyết định chuyển trạng thái sang bước tiếp theo hoặc quay lui lại vòng lặp để sửa lỗi.
-    \item Lưu vết trạng thái (\textit{Persistence Checkpointing}): Cây trạng thái lưu tạm sau mỗi bước, bảo đảm khôi phục phiên làm việc tức thì khi xảy ra sự cố.
+    \item Lược đồ trạng thái dùng chung (Shared State Schema): Định nghĩa cấu trúc dữ liệu nhất quán của phiên nghiên cứu (mã nguồn tài liệu, lịch sử thông điệp, danh sách dẫn chứng và nhật ký biên dịch).
+    \item Tập các nút tính toán (Nodes): Mỗi nút thực hiện một đơn nguyên nghiệp vụ độc lập, nhận trạng thái hiện tại và trả về bản ghi biến đổi trạng thái tương ứng.
+    \item Cạnh điều hướng có điều kiện (Conditional Edges): Đóng vai trò là các bộ định tuyến logic. Sau mỗi bước thực thi, hàm đánh giá điều kiện sẽ quyết định chuyển trạng thái sang bước tiếp theo hoặc quay lui lại vòng lặp để sửa lỗi.
+    \item Lưu vết trạng thái (Persistence Checkpointing): Cây trạng thái lưu tạm sau mỗi bước, bảo đảm khôi phục phiên làm việc tức thì khi xảy ra sự cố.
 \end{itemize}
 
 \subsection{Môi trường máy ảo MicroVM E2B cô lập cấp hệ điều hành và vòng lặp tự sửa lỗi LaTeX}
 \label{subsec:e2b_microvm_latex}
-Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các nhà khoa học soạn thảo ấn phẩm nghiên cứu là việc tự động biên dịch và sửa lỗi mã nguồn LaTeX. Việc cho phép mô hình AI tự sinh và chạy các lệnh hệ điều hành trực tiếp trên máy chủ tiềm ẩn nguy cơ bảo mật nghiêm trọng về thực thi mã độc từ xa (\textit{Remote Code Execution -- RCE}).
+Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các nhà khoa học soạn thảo ấn phẩm nghiên cứu là việc tự động biên dịch và sửa lỗi mã nguồn LaTeX. Việc cho phép mô hình AI tự sinh và chạy các lệnh hệ điều hành trực tiếp trên máy chủ tiềm ẩn nguy cơ bảo mật nghiêm trọng về thực thi mã độc từ xa (Remote Code Execution -- RCE).
 
-Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (\textit{E2B MicroVM Sandbox}) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}:
+Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (E2B MicroVM Sandbox) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}:
 \begin{itemize}[noitemsep, topsep=2pt]
-    \item Khởi tạo siêu tốc: Mỗi phiên làm việc được cấp phát một máy ảo siêu nhỏ (\textit{MicroVM}) độc lập trong thời gian dưới 200 mili-giây, cung cấp đầy đủ nhân Linux và môi trường TeX Live chuyên dụng.
-    \item Cô lập mức nhân hệ điều hành (\textit{Kernel-level Isolation}): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
+    \item Khởi tạo siêu tốc: Mỗi phiên làm việc được cấp phát một máy ảo siêu nhỏ (MicroVM) độc lập trong thời gian dưới 200 mili-giây, cung cấp đầy đủ nhân Linux và môi trường TeX Live chuyên dụng.
+    \item Cô lập mức nhân hệ điều hành (Kernel-level Isolation): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
 \end{itemize}
 
-Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để tự động biên dịch và phục hồi lỗi cú pháp LaTeX được thể hiện trong Hình~\ref{fig:react_e2b_sandbox}. Khi bản thảo gặp lỗi cú pháp (như thiếu gói lệnh, quên đóng môi trường toán học, hoặc ký tự chưa được thoát), quy trình tự phục hồi diễn ra hoàn toàn tự động: Trước hết, tác nhân gửi mã nguồn sang E2B MicroVM Sandbox để biên dịch thử nghiệm (\textit{Action}). Tiếp theo, môi trường MicroVM ghi nhận nhật ký lỗi biên dịch (\textit{Observation}) và gửi ngược lại cho tác nhân. Sau đó, tác nhân suy luận vị trí dòng lỗi và nguyên nhân cú pháp (\textit{Thought}), rồi tự động vá mã nguồn và kích hoạt vòng lặp biên dịch lại cho đến khi tài liệu kết xuất thành công với mã thoát bằng 0.
+Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để tự động biên dịch và phục hồi lỗi cú pháp LaTeX được thể hiện trong Hình~\ref{fig:react_e2b_sandbox}. Khi bản thảo gặp lỗi cú pháp (như thiếu gói lệnh, quên đóng môi trường toán học, hoặc ký tự chưa được thoát), quy trình tự phục hồi diễn ra hoàn toàn tự động: Trước hết, tác nhân gửi mã nguồn sang E2B MicroVM Sandbox để biên dịch thử nghiệm (Action). Tiếp theo, môi trường MicroVM ghi nhận nhật ký lỗi biên dịch (Observation) và gửi ngược lại cho tác nhân. Sau đó, tác nhân suy luận vị trí dòng lỗi và nguyên nhân cú pháp (Thought), rồi tự động vá mã nguồn và kích hoạt vòng lặp biên dịch lại cho đến khi tài liệu kết xuất thành công với mã thoát bằng 0.
 
 \begin{figure}[H]
 \centering
@@ -126,7 +126,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \FloatBarrier
 \subsection{Mô hình quản lý khóa người dùng tự cấp Bring Your Own Key (BYOK) và chuẩn mã hóa AES-256-GCM}
 \label{subsec:byok_aes_gcm}
-Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp (\textit{BYOK}). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
+Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp (BYOK). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
 
 Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM \cite{dworkin2007}:
 \vspace{-6pt}
@@ -135,12 +135,12 @@ Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM \c
 C = \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad T = \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0)
 \end{equation}
 \vspace{-6pt}
-trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (\textit{In-Memory Ephemeral Decryption}): khóa chỉ giải mã tạm thời trong RAM khi gọi API và giải phóng tức thì, bảo đảm không lưu vết trên đĩa.
+trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (In-Memory Ephemeral Decryption): khóa chỉ giải mã tạm thời trong RAM khi gọi API và giải phóng tức thì, bảo đảm không lưu vết trên đĩa.
 
 \subsection{Nền tảng quan sát vận hành và truy vết suy luận Langfuse}
 \label{subsec:langfuse_tracing}
 Nhằm bảo đảm tính minh bạch và kiểm toán suy luận AI, hệ thống tích hợp nền tảng quan sát vận hành Langfuse:
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item Truy vết phân tầng (\textit{Hierarchical Tracing}): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
-    \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (\textit{TTFT}) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
+    \item Truy vết phân tầng (Hierarchical Tracing): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
+    \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (TTFT) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
 \end{itemize}

@@ -4,22 +4,22 @@
 
 \subsection{Hạn chế của mô hình ngôn ngữ lớn và nguyên lý RAG}
 \label{subsec:rag_foundation}
-Mô hình ngôn ngữ lớn (\textit{Large Language Model -- LLM}) đã tạo nên bước ngoặt trong xử lý ngôn ngữ tự nhiên, song việc ứng dụng trực tiếp vào nghiên cứu khoa học bộc lộ ba điểm nghẽn nghiêm trọng:
+Mô hình ngôn ngữ lớn (Large Language Model -- LLM) đã tạo nên bước ngoặt trong xử lý ngôn ngữ tự nhiên, song việc ứng dụng trực tiếp vào nghiên cứu khoa học bộc lộ ba điểm nghẽn nghiêm trọng:
 \begin{itemize}
-    \item Giới hạn tri thức tĩnh (\textit{Knowledge Cutoff}): Mô hình hoàn toàn không thể cập nhật các khám phá hoặc công bố khoa học mới sau thời điểm hoàn tất tiền huấn luyện.
-    \item Hiện tượng ảo giác học thuật (\textit{Hallucination}): Khi đối mặt với các câu hỏi chuyên sâu, mô hình có xu hướng tự tạo ra các phát biểu, số liệu hoặc trích dẫn nghe có vẻ thuyết phục nhưng hoàn toàn giả mạo.
+    \item Giới hạn tri thức tĩnh (Knowledge Cutoff): Mô hình hoàn toàn không thể cập nhật các khám phá hoặc công bố khoa học mới sau thời điểm hoàn tất tiền huấn luyện.
+    \item Hiện tượng ảo giác học thuật (Hallucination): Khi đối mặt với các câu hỏi chuyên sâu, mô hình có xu hướng tự tạo ra các phát biểu, số liệu hoặc trích dẫn nghe có vẻ thuyết phục nhưng hoàn toàn giả mạo.
     \item Thiếu minh bạch và khả năng kiểm chứng: Các mô hình đóng gói thuần túy không thể chỉ ra chính xác nguồn gốc tài liệu, trang sách hay tọa độ dẫn chứng làm cơ sở cho câu trả lời.
 \end{itemize}
 
-Để giải quyết các thách thức trên, kỹ thuật Tạo sinh tăng cường truy xuất (\textit{Retrieval-Augmented Generation -- RAG}) do Lewis và cộng sự giới thiệu \cite{lewis2020} đã kết hợp năng lực suy luận ngôn ngữ của LLM với kho tri thức học thuật bên ngoài. Mặc dù kiến trúc RAG truyền thống (\textit{Naive RAG}) đã giải quyết được tính thời sự của thông tin thông qua việc phân đoạn văn bản và tìm kiếm Vector đơn lẻ, cách tiếp cận này thường làm đứt gãy ngữ cảnh của các ấn phẩm nghiên cứu phức tạp và bỏ sót các thuật ngữ khoa học đặc thù.
+Để giải quyết các thách thức trên, kỹ thuật Tạo sinh tăng cường truy xuất (Retrieval-Augmented Generation -- RAG) do Lewis và cộng sự giới thiệu \cite{lewis2020} đã kết hợp năng lực suy luận ngôn ngữ của LLM với kho tri thức học thuật bên ngoài. Mặc dù kiến trúc RAG truyền thống (Naive RAG) đã giải quyết được tính thời sự của thông tin thông qua việc phân đoạn văn bản và tìm kiếm Vector đơn lẻ, cách tiếp cận này thường làm đứt gãy ngữ cảnh của các ấn phẩm nghiên cứu phức tạp và bỏ sót các thuật ngữ khoa học đặc thù.
 
 \subsection{Kiến trúc RAG nâng cao đa giai đoạn}
 \label{subsec:advanced_rag_architecture}
-Khắc phục điểm nghẽn của Naive RAG, kiến trúc RAG Nâng cao (\textit{Advanced RAG}) theo khảo sát của Gao và cộng sự \cite{gao2023rag} tái cấu trúc toàn diện quy trình xử lý thành ba giai đoạn tinh chỉnh chuyên sâu:
+Khắc phục điểm nghẽn của Naive RAG, kiến trúc RAG Nâng cao (Advanced RAG) theo khảo sát của Gao và cộng sự \cite{gao2023rag} tái cấu trúc toàn diện quy trình xử lý thành ba giai đoạn tinh chỉnh chuyên sâu:
 \begin{itemize}
-    \item Tiền truy xuất (\textit{Pre-Retrieval}): Viết lại câu hỏi (\textit{Query Rewriting}), phân rã truy vấn con (\textit{Sub-queries}), phân tích cấu trúc bố cục PDF hai cột và chuẩn hóa tọa độ Bounding Box (\textit{Bounding Box Normalization}) về miền tỷ lệ $[0, 1]$.
-    \item Truy xuất (\textit{Retrieval}): Kết hợp không gian Vector đặc với chỉ mục đảo GIN \texttt{ts\_rank\_cd} và BM25 để lọc nhanh tập ứng viên tiềm năng có độ phủ từ khóa cao.
-    \item Hậu truy xuất (\textit{Post-Retrieval}): Sử dụng mô hình tái xếp hạng chéo Cross-Encoder chấm điểm tương tác sâu giữa câu hỏi và đoạn trích, kết hợp nén ngữ cảnh chọn lọc và kiểm chứng đối chiếu trích dẫn.
+    \item Tiền truy xuất (Pre-Retrieval): Viết lại câu hỏi (Query Rewriting), phân rã truy vấn con (Sub-queries), phân tích cấu trúc bố cục PDF hai cột và chuẩn hóa tọa độ Bounding Box (Bounding Box Normalization) về miền tỷ lệ $[0, 1]$.
+    \item Truy xuất (Retrieval): Kết hợp không gian Vector đặc với chỉ mục đảo GIN \texttt{ts\_rank\_cd} và BM25 để lọc nhanh tập ứng viên tiềm năng có độ phủ từ khóa cao.
+    \item Hậu truy xuất (Post-Retrieval): Sử dụng mô hình tái xếp hạng chéo Cross-Encoder chấm điểm tương tác sâu giữa câu hỏi và đoạn trích, kết hợp nén ngữ cảnh chọn lọc và kiểm chứng đối chiếu trích dẫn.
 \end{itemize}
 
 Kiến trúc Advanced RAG phối hợp đa tầng được mô hình hóa trong Hình~\ref{fig:advanced_rag}.
@@ -137,24 +137,24 @@ Kiến trúc Advanced RAG phối hợp đa tầng được mô hình hóa trong 
 
 \subsection{Cơ chế phản xạ tự đánh giá Self-RAG}
 \label{subsec:self_rag}
-Nhằm khắc phục hiện tượng truy xuất bừa bãi ngay cả khi không cần thiết, đề tài tham chiếu khung kiến trúc Self-RAG (\textit{Self-Reflective Retrieval-Augmented Generation}) do Asai và cộng sự đề xuất \cite{asai2023selfrag}. Nguyên lý của Self-RAG là tích hợp các tiêu chí phản xạ đặc biệt (\textit{Reflection Tokens}) vào chu trình xử lý:
+Nhằm khắc phục hiện tượng truy xuất bừa bãi ngay cả khi không cần thiết, đề tài tham chiếu khung kiến trúc Self-RAG (Self-Reflective Retrieval-Augmented Generation) do Asai và cộng sự đề xuất \cite{asai2023selfrag}. Nguyên lý của Self-RAG là tích hợp các tiêu chí phản xạ đặc biệt (Reflection Tokens) vào chu trình xử lý:
 \begin{itemize}
     \item Đánh giá quyết định truy xuất (\texttt{[Retrieve]}): Tự đánh giá xem câu hỏi hiện tại có cần thêm tri thức ngoại vi hay có thể trả lời trực tiếp từ tri thức tham số nội tại.
     \item Đánh giá mức độ liên quan (\texttt{[IsRel]}): Đánh giá xem từng đoạn văn bản truy xuất được có thực sự liên quan đến câu hỏi hay chứa thông tin gây nhiễu.
     \item Kiểm tra tính tương hỗ dẫn chứng (\texttt{[IsSup]}): Thẩm định xem từng câu văn tạo sinh có được hỗ trợ đầy đủ và trực tiếp từ ngữ cảnh trích dẫn hay không, loại trừ các suy đoán vô căn cứ.
     \item Đánh giá độ hữu ích tổng thể (\texttt{[IsUse]}): Đo lường chất lượng và độ hoàn chỉnh của câu trả lời đối với yêu cầu nghiên cứu của học giả.
 \end{itemize}
-Trong VeriScholar, nguyên lý tự phản xạ của Self-RAG được hiện thực hóa thông qua các bộ rào chắn quy tắc tất định (\textit{Deterministic Guardrails}) và chu trình kiểm tra trích dẫn chéo, bảo đảm hiệu quả kiểm soát ảo giác tối đa.
+Trong VeriScholar, nguyên lý tự phản xạ của Self-RAG được hiện thực hóa thông qua các bộ rào chắn quy tắc tất định (Deterministic Guardrails) và chu trình kiểm tra trích dẫn chéo, bảo đảm hiệu quả kiểm soát ảo giác tối đa.
 
 \subsection{Cơ chế hiệu chỉnh truy xuất và kiểm soát ảo giác (Corrective RAG)}
 \label{subsec:crag_hallucination}
-Mặc dù hệ thống truy xuất đã qua nhiều tầng tinh lọc, vẫn tồn tại trường hợp toàn bộ các đoạn văn bản tìm được trong kho dữ liệu cục bộ đều không thỏa mãn câu hỏi nghiên cứu. Để giải quyết triệt để vấn đề này, đề tài ứng dụng cơ chế RAG Hiệu chỉnh (\textit{Corrective RAG -- CRAG}) do Yan và cộng sự phát triển \cite{yan2024crag}.
+Mặc dù hệ thống truy xuất đã qua nhiều tầng tinh lọc, vẫn tồn tại trường hợp toàn bộ các đoạn văn bản tìm được trong kho dữ liệu cục bộ đều không thỏa mãn câu hỏi nghiên cứu. Để giải quyết triệt để vấn đề này, đề tài ứng dụng cơ chế RAG Hiệu chỉnh (Corrective RAG -- CRAG) do Yan và cộng sự phát triển \cite{yan2024crag}.
 
-CRAG thiết lập một cổng đánh giá độ tin cậy (\textit{Confidence Gate}) để phân loại kết quả truy xuất thành ba kịch bản xử lý linh hoạt:
+CRAG thiết lập một cổng đánh giá độ tin cậy (Confidence Gate) để phân loại kết quả truy xuất thành ba kịch bản xử lý linh hoạt:
 \begin{itemize}
-    \item \textit{Độ tin cậy cao (Correct):} Khi các đoạn văn bản đạt độ tương đồng vượt ngưỡng tin cậy, thuật toán thực hiện thao tác tinh chỉnh tri thức (\textit{Knowledge Refinement}) -- bóc tách các câu chứa thông tin then chốt và loại bỏ triệt để các câu nhiễu phụ trước khi nạp vào LLM.
-    \item \textit{Độ tin cậy thấp (Incorrect):} Khi điểm tin cậy của toàn bộ tập ứng viên nằm dưới ngưỡng an toàn (kho tài liệu nội bộ không chứa câu trả lời), hệ thống tự động kích hoạt cơ chế dự phòng (\textit{Fallback Mechanism}) thông qua việc gọi công cụ tra cứu học thuật bên ngoài để bổ sung nguồn tri thức mới, ngăn chặn việc LLM tự bịa đặt câu trả lời.
-    \item \textit{Độ tin cậy trung gian (Ambiguous):} Hệ thống kết hợp thông minh giữa các đoạn trích dẫn cục bộ chọn lọc với kết quả tra cứu bên ngoài, đồng thời gán nhãn cảnh báo để người dùng chủ động đối chiếu.
+    \item Độ tin cậy cao (Correct): Khi các đoạn văn bản đạt độ tương đồng vượt ngưỡng tin cậy, thuật toán thực hiện thao tác tinh chỉnh tri thức (Knowledge Refinement) -- bóc tách các câu chứa thông tin then chốt và loại bỏ triệt để các câu nhiễu phụ trước khi nạp vào LLM.
+    \item Độ tin cậy thấp (Incorrect): Khi điểm tin cậy của toàn bộ tập ứng viên nằm dưới ngưỡng an toàn (kho tài liệu nội bộ không chứa câu trả lời), hệ thống tự động kích hoạt cơ chế dự phòng (Fallback Mechanism) thông qua việc gọi công cụ tra cứu học thuật bên ngoài để bổ sung nguồn tri thức mới, ngăn chặn việc LLM tự bịa đặt câu trả lời.
+    \item Độ tin cậy trung gian (Ambiguous): Hệ thống kết hợp thông minh giữa các đoạn trích dẫn cục bộ chọn lọc với kết quả tra cứu bên ngoài, đồng thời gán nhãn cảnh báo để người dùng chủ động đối chiếu.
 \end{itemize}
 
 Nhờ sự kết hợp giữa Advanced RAG, Self-RAG và CRAG, VeriScholar thiết lập rào chắn ba lớp kiểm soát ảo giác học thuật, bảo đảm tính liêm chính và độ chính xác của mọi kết quả nghiên cứu.

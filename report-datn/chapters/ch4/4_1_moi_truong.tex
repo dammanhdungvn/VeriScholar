@@ -16,27 +16,25 @@ Nhằm đảm bảo tính nhất quán tuyệt đối giữa môi trường phá
 
 {\sloppy
 \begin{itemize}
-    \item Hệ quản trị cơ sở dữ liệu quan hệ và vector: Triển khai cụm container PostgreSQL 16.2 tích hợp tiện ích mở rộng \texttt{pgvector} v0.7.0. CSDL được cấu hình bảng mã ký tự UTF-8, kích hoạt chỉ mục HNSW \cite{malkov2018} phục vụ tính toán khoảng cách vector Cosine 1536 chiều và chỉ mục văn bản toàn văn GIN (\texttt{tsvector} kết hợp xếp hạng mật độ bao phủ \texttt{ts\_}\allowbreak\texttt{rank\_}\allowbreak\texttt{cd} và bộ tái chấm điểm Okapi BM25 \cite{robertson1995} tại tầng lõi miền nghiệp vụ), bảo đảm trọn vẹn các thuộc tính giao dịch ACID.
-    \item Hệ thống lưu trữ bộ đệm và điều phối phiên: Triển khai cụm dịch vụ Redis 7.0 (bản phân phối siêu nhẹ Alpine), vận hành tại cổng nội bộ 6379 nhằm quản lý bộ đệm kết quả tìm kiếm học thuật, mã hóa phiên làm việc và kiểm soát tần suất truy cập (\textit{Rate Limiting}).
-    \item Cấu hình dịch vụ Backend và Frontend: Tầng Backend sử dụng ngôn ngữ Python 3.12, khung FastAPI \cite{tiangolo2024fastapi} và thư viện ánh xạ quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg}. Tầng Frontend được xây dựng trên nền tảng React 19, hệ thống tạo kiểu Tailwind CSS, thư viện quản lý trạng thái Zustand và công cụ đóng gói siêu tốc Vite.
+    \item Hệ quản trị cơ sở dữ liệu quan hệ và vector: Triển khai cụm container PostgreSQL 16.2 tích hợp tiện ích mở rộng \texttt{pgvector} v0.7.0. CSDL được cấu hình bảng mã ký tự UTF-8, kích hoạt chỉ mục HNSW phục vụ tính toán khoảng cách vector Cosine 1536 chiều và chỉ mục văn bản toàn văn GIN (\texttt{tsvector} kết hợp xếp hạng mật độ bao phủ \texttt{ts\_}\allowbreak\texttt{rank\_}\allowbreak\texttt{cd} và bộ tái chấm điểm Okapi BM25 tại tầng lõi miền nghiệp vụ), bảo đảm trọn vẹn các thuộc tính giao dịch ACID.
+    \item Hệ thống lưu trữ bộ đệm và điều phối phiên: Triển khai cụm dịch vụ Redis 7.0 (bản phân phối siêu nhẹ Alpine), vận hành tại cổng nội bộ 6379 nhằm quản lý bộ đệm kết quả tìm kiếm học thuật, mã hóa phiên làm việc và kiểm soát tần suất truy cập (Rate Limiting).
+    \item Cấu hình dịch vụ Backend và Frontend: Tầng Backend sử dụng ngôn ngữ Python 3.12, khung FastAPI và thư viện ánh xạ quan hệ SQLAlchemy 2.0 Async kết hợp trình điều khiển \texttt{asyncpg}. Tầng Frontend được xây dựng trên nền tảng React 19, hệ thống tạo kiểu Tailwind CSS, thư viện quản lý trạng thái Zustand và công cụ đóng gói siêu tốc Vite.
 \end{itemize}
 \par}
 
-Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt \cite{cockburn2005} qua ba phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ chặt chẽ bằng rào chắn kiểm thử tự động AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
+Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorepo phân tách ranh giới lục giác nghiêm ngặt qua ba phân vùng trách nhiệm: \texttt{packages/core} (lõi miền nghiệp vụ thuần khiết), \texttt{apps/api} (bộ điều hợp dịch vụ và hạ tầng), và \texttt{apps/web} (giao diện người dùng học thuật). Tính toàn vẹn kiến trúc được bảo vệ chặt chẽ bằng rào chắn kiểm thử tự động AST thông qua kịch bản \texttt{test\_architecture\_boundary.py}. Cấu trúc Monorepo và quy tắc ranh giới được tổng hợp trong Bảng~\ref{tab:monorepo_structure}.
 
 \begin{table}[!htbp]
 \centering
-\singlespacing
-\small
 \renewcommand{\arraystretch}{1.2}
 \caption{Cấu trúc phân vùng kho mã nguồn Monorepo và quy tắc ranh giới kiến trúc}
 \label{tab:monorepo_structure}
 \begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.6cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Phân vùng} & \centering\textbf{Vai trò kiến trúc} & \centering\textbf{Công nghệ chủ đạo} & \centering\textbf{Quy tắc ranh giới và AST} \tabularnewline \hline
-1 & \texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (\textit{Domain and Ports}) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\ \hline
-2 & \texttt{apps/api} & Tầng hạ tầng dịch vụ và Bộ điều hợp (\textit{Adapters}) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\ \hline
-3 & \texttt{apps/web} & Giao diện người dùng học thuật (\textit{Frontend SPA}) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\ \hline
+1 & \texttt{packages/core} & Lõi miền nghiệp vụ thuần khiết (Domain and Ports) & Python 3.12, Pydantic, Python Standard Library & Cô lập 100\% khỏi I/O, DB, Web; AST chặn mọi import từ \texttt{apps.api}, FastAPI, SQLAlchemy, Redis. \\ \hline
+2 & \texttt{apps/api} & Tầng hạ tầng dịch vụ và Bộ điều hợp (Adapters) & FastAPI, SQLAlchemy 2.0 Async, asyncpg, Redis, Uvicorn & Cài đặt các Ports của Core; cung cấp REST API và 5 tuyến SSE; không import ngược từ \texttt{apps/web}. \\ \hline
+3 & \texttt{apps/web} & Giao diện người dùng học thuật (Frontend SPA) & React 19, Zustand, Tailwind CSS, Vite, PDF Canvas & Chỉ tương tác qua giao thức HTTP/2 và SSE; không chứa mã nguồn xử lý logic phía máy chủ. \\ \hline
 \end{tabularx}
 \end{table}
 
@@ -46,8 +44,8 @@ Hệ thống mã nguồn dự án được tổ chức theo kiến trúc Monorep
 Để chứng minh năng lực vận hành thực tế trong điều kiện mạng công cộng và phục vụ khảo sát người dùng thực tế, hệ thống \VS được cấu hình và triển khai thực nghiệm toàn diện trên môi trường máy chủ đám mây:
 
 \begin{itemize}
-    \item \textbf{Cấu hình máy chủ ảo VPS và tên miền công cộng:} Hệ thống được đóng gói container hóa và triển khai trên máy chủ ảo Azure Ubuntu 24.04 LTS cấu hình 4 vCPU, 16GB RAM, ổ cứng SSD NVMe tốc độ cao. Hệ thống được vận hành trên tên miền công cộng chính thức \url{https://}\allowbreak\url{verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới giao diện và chuyển tiếp các tuyến API/SSE tới dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}). Toàn bộ lưu lượng truyền tải được mã hóa đầu--cuối bằng chứng chỉ số SSL/TLS tự động qua Let's Encrypt Certbot, kết hợp tường lửa an ninh cô lập mạng nội bộ.
-    \item \textbf{Môi trường thực thi Sandbox đám mây E2B MicroVM:} Để phục vụ AI Agent tự động biên dịch và sửa lỗi mã nguồn LaTeX, hệ thống kết nối với nền tảng E2B Sandbox MicroVM ứng dụng công nghệ ảo hóa siêu nhẹ Firecracker \cite{agache2020firecracker}. Mỗi phiên biên dịch được cấp phát một MicroVM độc lập chỉ trong 150 mili-giây, cung cấp trọn vẹn bộ công cụ TeX Live 2024 đầy đủ, bảo đảm tính an toàn bảo mật tuyệt đối cho máy chủ chính trước nguy cơ tấn công mã độc qua mã macro LaTeX.
-    \item \textbf{Nền tảng quan sát và kiểm chứng thực nghiệm Langfuse Cloud:} Hệ thống tích hợp toàn diện với nền tảng Langfuse Cloud nhằm giám sát luồng suy luận của mô hình ngôn ngữ lớn, ghi vết độ trễ từng bước suy nghĩ (Thought), hành động (Action) và định lượng lượng token cùng chi phí vận hành theo thời gian thực.
+    \item Cấu hình máy chủ ảo VPS và tên miền công cộng: Hệ thống được đóng gói container hóa và triển khai trên máy chủ ảo Azure Ubuntu 24.04 LTS cấu hình 4 vCPU, 16GB RAM, ổ cứng SSD NVMe tốc độ cao. Hệ thống được vận hành trên tên miền công cộng chính thức \url{https://}\allowbreak\url{verischolar.duckdns.org}. Máy chủ web Nginx đóng vai trò Reverse Proxy, định tuyến các yêu cầu HTTPS (cổng 443) tới giao diện và chuyển tiếp các tuyến API/SSE tới dịch vụ Backend Uvicorn (\texttt{127.0.0.1:8000}). Toàn bộ lưu lượng truyền tải được mã hóa đầu--cuối bằng chứng chỉ số SSL/TLS tự động qua Let's Encrypt Certbot, kết hợp tường lửa an ninh cô lập mạng nội bộ.
+    \item Môi trường thực thi Sandbox đám mây E2B MicroVM: Để phục vụ AI Agent tự động biên dịch và sửa lỗi mã nguồn LaTeX, hệ thống kết nối với nền tảng E2B Sandbox MicroVM ứng dụng công nghệ ảo hóa siêu nhẹ Firecracker. Mỗi phiên biên dịch được cấp phát một MicroVM độc lập chỉ trong 150 mili-giây, cung cấp trọn vẹn bộ công cụ TeX Live 2024 đầy đủ, bảo đảm tính an toàn bảo mật tuyệt đối cho máy chủ chính trước nguy cơ tấn công mã độc qua mã macro LaTeX.
+    \item Nền tảng quan sát và kiểm chứng thực nghiệm Langfuse Cloud: Hệ thống tích hợp toàn diện với nền tảng Langfuse Cloud nhằm giám sát luồng suy luận của mô hình ngôn ngữ lớn, ghi vết độ trễ từng bước suy nghĩ (Thought), hành động (Action) và định lượng lượng token cùng chi phí vận hành theo thời gian thực.
 \end{itemize}
 

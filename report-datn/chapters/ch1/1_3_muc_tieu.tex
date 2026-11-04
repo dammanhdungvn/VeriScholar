@@ -4,15 +4,15 @@
 
 \subsection{Mục tiêu tổng quát}
 \label{subsec:muc_tieu_tong_quat}
-Xây dựng thành công nền tảng phần mềm \VS đóng vai trò trợ lý AI hỗ trợ nghiên cứu khoa học và biên soạn bài báo quốc tế theo chuẩn mực đại học nghiên cứu như VinUniversity; tích hợp khép kín 4 không gian học thuật trên nền kiến trúc phần mềm lục giác hiện đại \cite{cockburn2005}; bảo đảm tính toàn vẹn dữ liệu, khả năng đối chiếu trích dẫn trực quan trên bản gốc PDF, tự động hóa sửa lỗi biên dịch \LaTeX\ và bảo vệ an toàn quyền riêng tư học giả.
+Xây dựng thành công nền tảng phần mềm \VS đóng vai trò trợ lý AI hỗ trợ nghiên cứu khoa học và biên soạn bài báo quốc tế theo chuẩn mực đại học nghiên cứu như VinUniversity; tích hợp khép kín 4 không gian học thuật trên nền kiến trúc phần mềm lục giác hiện đại; bảo đảm tính toàn vẹn dữ liệu, khả năng đối chiếu trích dẫn trực quan trên bản gốc PDF, tự động hóa sửa lỗi biên dịch \LaTeX\ và bảo vệ an toàn quyền riêng tư học giả.
 
 \subsection{Mục tiêu kỹ thuật cụ thể}
 \label{subsec:muc_tieu_cu_the}
 Đề tài hướng tới hoàn thành 5 mục tiêu kỹ thuật định lượng cụ thể:
 \begin{itemize}[itemsep=3pt, topsep=2pt]
-    \item Hiện thực hóa cơ chế nạp bài báo hai tầng kết hợp kho lưu trữ định danh theo nội dung CAS (\textit{Content-Addressable Storage}) dựa trên mã băm SHA-256 nhằm loại bỏ việc lưu trữ trùng lặp các tệp nhị phân PDF và quản lý an toàn vòng đời tài liệu theo cơ chế đếm tham chiếu (\texttt{ref\_count}).
-    \item Phát triển công cụ tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất thứ hạng RRF (\textit{Reciprocal Rank Fusion} \cite{cormack2009}, $k=60$) giữa tìm kiếm vector ngữ nghĩa và từ khóa toàn văn, đi kèm cơ chế đối chiếu khung tọa độ chuẩn hóa trên PDF gốc đạt ngưỡng trùng khớp $\text{IoU} \ge 0{,}85$.
-    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG \cite{edge2024}: \textit{Paper}, \textit{Method}, \textit{Dataset}, \textit{MetricResult}) và hệ thống trang bách khoa tri thức (Graph Wiki) trực tiếp trên PostgreSQL 16 với tiện ích mở rộng \texttt{pgvector}, bảo đảm toàn vẹn giao dịch ACID.
-    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct \cite{yao2022} trong môi trường cô lập E2B Sandbox MicroVM \cite{agache2020firecracker}, có khả năng tự động phân tích và khắc phục lỗi biên dịch \LaTeX\ với tỷ lệ tự phục hồi thành công trên 90\%.
-    \item Thiết lập cơ chế quản lý khóa người dùng tự cấp theo mô hình Bring Your Own Key (BYOK -- \textit{Bring Your Own Key}) mã hóa bằng thuật toán AES-256-GCM \cite{dworkin2007}, bảo đảm tuyệt đối không lưu trữ khóa API ở dạng bản rõ và chỉ giải mã tạm thời trong bộ nhớ RAM khi tác vụ đang thực thi.
+    \item Hiện thực hóa cơ chế nạp bài báo hai tầng kết hợp kho lưu trữ định danh theo nội dung CAS (Content-Addressable Storage) dựa trên mã băm SHA-256 nhằm loại bỏ việc lưu trữ trùng lặp các tệp nhị phân PDF và quản lý an toàn vòng đời tài liệu theo cơ chế đếm tham chiếu (\texttt{ref\_count}).
+    \item Phát triển công cụ tìm kiếm lai Agentic Hybrid RAG kết hợp thuật toán hợp nhất thứ hạng RRF (Reciprocal Rank Fusion, $k=60$) giữa tìm kiếm vector ngữ nghĩa và từ khóa toàn văn, đi kèm cơ chế đối chiếu khung tọa độ chuẩn hóa trên PDF gốc đạt ngưỡng trùng khớp $\text{IoU} \ge 0{,}85$.
+    \item Xây dựng đồ thị tri thức học thuật 4 thực thể (GraphRAG: Paper, Method, Dataset, MetricResult) và hệ thống trang bách khoa tri thức (Graph Wiki) trực tiếp trên PostgreSQL 16 với tiện ích mở rộng \texttt{pgvector}, bảo đảm toàn vẹn giao dịch ACID.
+    \item Tích hợp tác nhân AI dựa trên máy trạng thái LangGraph ReAct trong môi trường cô lập E2B Sandbox MicroVM, có khả năng tự động phân tích và khắc phục lỗi biên dịch \LaTeX\ với tỷ lệ tự phục hồi thành công trên 90\%.
+    \item Thiết lập cơ chế quản lý khóa người dùng tự cấp theo mô hình Bring Your Own Key (BYOK -- Bring Your Own Key) mã hóa bằng thuật toán AES-256-GCM, bảo đảm tuyệt đối không lưu trữ khóa API ở dạng bản rõ và chỉ giải mã tạm thời trong bộ nhớ RAM khi tác vụ đang thực thi.
 \end{itemize}

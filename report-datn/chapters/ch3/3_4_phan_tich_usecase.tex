@@ -7,8 +7,8 @@
 
 Căn cứ vào khảo sát nghiệp vụ và mô hình kiến trúc Lục giác đã xác lập tại Mục~\ref{sec:khao_sat_nghiep_vu} và Mục~\ref{sec:thiet_ke_kien_truc}, hệ thống \VS được thiết kế phục vụ hai tác nhân chính (Actor):
 \begin{itemize}
-    \item \textbf{Học giả (Scholar / Researcher):} Là tác nhân trung tâm của nền tảng (gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với 4 Không gian nghiên cứu: khám phá tài liệu mở, đọc sâu kiểm chứng trích dẫn Bounding Box, khai phá mạng tri thức GraphRAG và biên soạn bản thảo khoa học có AI Agent tự động sửa lỗi.
-    \item \textbf{Quản trị viên (Administrator / DevOps):} Chịu trách nhiệm giám sát và bảo đảm an toàn hạ tầng: kích hoạt các kịch bản kiểm thử định lượng tự động qua điểm cuối REST vận hành (\texttt{/api/v1/evaluations/run-benchmark}), theo dõi \textit{Trace Logs} và chi phí Token suy luận trên Langfuse Cloud, giám sát tài nguyên máy chủ đám mây và hộp cát MicroVM cách ly.
+    \item Học giả (Scholar / Researcher): Là tác nhân trung tâm của nền tảng (gồm các giảng viên, nhà nghiên cứu, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp). Học giả tương tác trực tiếp với 4 Không gian nghiên cứu: khám phá tài liệu mở, đọc sâu kiểm chứng trích dẫn Bounding Box, khai phá mạng tri thức GraphRAG và biên soạn bản thảo khoa học có AI Agent tự động sửa lỗi.
+    \item Quản trị viên (Administrator / DevOps): Chịu trách nhiệm giám sát và bảo đảm an toàn hạ tầng: kích hoạt các kịch bản kiểm thử định lượng tự động qua điểm cuối REST vận hành (\texttt{/api/v1/evaluations/run-benchmark}), theo dõi Trace Logs và chi phí Token suy luận trên Langfuse Cloud, giám sát tài nguyên máy chủ đám mây và hộp cát MicroVM cách ly.
 \end{itemize}
 
 Mối quan hệ tương tác trực quan giữa các tác nhân và các phân hệ của \VS được mô hình hóa trong Biểu đồ Use Case tổng quan (Hình~\ref{fig:usecase_overview}). Toàn bộ các chức năng nghiên cứu chuyên sâu và quản lý khóa API cá nhân (BYOK) đều thuộc quyền sở hữu riêng của tác nhân Học giả, trong khi tác nhân Quản trị viên chỉ kết nối với các ca sử dụng giám sát và quản trị vận hành độc lập.
@@ -79,8 +79,6 @@ Trên cơ sở biểu đồ tổng quan, danh mục 12 ca sử dụng chính đ�
 
 \begin{table}[!htbp]
 \centering
-\singlespacing
-\small
 \caption{Các Use Case chính đối với mỗi Actor trong hệ thống VeriScholar}
 \label{tab:actors_usecases}
 \renewcommand{\arraystretch}{1.15}
@@ -108,7 +106,7 @@ Trên cơ sở biểu đồ tổng quan, danh mục 12 ca sử dụng chính đ�
 \subsection{Phân tích các Use Case phía Học giả}
 \label{subsec:uc_scholar}
 
-Nhằm làm rõ bản chất vận hành của 4 không gian nghiên cứu, tiểu mục này tiến hành đặc tả chi tiết 4 Use Case cốt lõi: \textit{Tra cứu và tải tài liệu nghiên cứu}, \textit{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}, \textit{Khai phá Đồ thị tri thức và biên soạn tri thức học thuật}, và \textit{Biên soạn bản thảo và tự phục hồi lỗi LaTeX}.
+Nhằm làm rõ bản chất vận hành của 4 không gian nghiên cứu, tiểu mục này tiến hành đặc tả chi tiết 4 Use Case cốt lõi: Tra cứu và tải tài liệu nghiên cứu, Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ, Khai phá Đồ thị tri thức và biên soạn tri thức học thuật, và Biên soạn bản thảo và tự phục hồi lỗi LaTeX.
 
 \subsubsection{Phân tích Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsubsec:uc_kham_pha}
@@ -162,14 +160,12 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \label{fig:uc_kham_pha_sub}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\fontsize{8.5pt}{10.2pt}\selectfont
 \setlength{\tabcolsep}{2.5pt}
 \caption{Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{tab:uc_kham_pha_spec}
-\renewcommand{\arraystretch}{0.80}
+\renewcommand{\arraystretch}{0.90}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tên Use Case} & \textbf{Tra cứu và tải tài liệu nghiên cứu} \tabularnewline \hline
@@ -180,15 +176,15 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI/arXiv vào thanh tìm kiếm.
-    \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (\textit{Skeleton loading}); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard ($J(Q, T) \ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
-    \item Học giả có thể kích hoạt nút lọc ``Đã bình duyệt'' (\textit{Peer-reviewed}) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
+    \item Giao diện người dùng phản hồi tức thì với khung xương tải trang (Skeleton loading); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard ($J(Q, T) \ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
+    \item Học giả có thể kích hoạt nút lọc ``Đã bình duyệt'' (Peer-reviewed) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
     \item Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
     \item Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
     \item Nếu tệp PDF đã tồn tại trong kho lưu trữ chung: Hệ thống tái sử dụng khối tệp vật lý sẵn có và tăng biến đếm tham chiếu (\texttt{ref\_count}), rút ngắn thời gian nạp xuống mức tức thời.
-    \item Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (\textit{Abstract}) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính.
+    \item Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (Abstract) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính.
 \end{itemize} \tabularnewline \hline
 \end{tabularx}
 \end{table}
@@ -246,14 +242,12 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \label{fig:uc_doc_sau_sub}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\fontsize{8.5pt}{10.2pt}\selectfont
 \setlength{\tabcolsep}{2.5pt}
 \caption{Đặc tả Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{tab:uc_doc_sau_spec}
-\renewcommand{\arraystretch}{0.80}
+\renewcommand{\arraystretch}{0.90}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
@@ -264,8 +258,8 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả nhập câu hỏi nghiên cứu vào khung hội thoại.
-    \item AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW~\cite{malkov2018} và từ khóa BM25~\cite{robertson1995} qua thuật toán RRF~\cite{cormack2009}) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
-    \item Cổng kiểm định tiền sinh văn bản CRAG~\cite{yan2024crag} đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn $[i]$ khớp với phân đoạn nguồn.
+    \item AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
+    \item Cổng kiểm định tiền sinh văn bản CRAG đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn $[i]$ khớp với phân đoạn nguồn.
     \item Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
     \item Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
 \end{enumerate} \tabularnewline \hline
@@ -329,14 +323,12 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \label{fig:uc_graphrag_sub}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\fontsize{8.5pt}{10.2pt}\selectfont
 \setlength{\tabcolsep}{2.5pt}
 \caption{Đặc tả Use Case ``Khai phá Đồ thị tri thức và biên soạn tri thức học thuật''}
 \label{tab:uc_graphrag_spec}
-\renewcommand{\arraystretch}{0.80}
+\renewcommand{\arraystretch}{0.90}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tên Use Case} & \textbf{Khai phá Đồ thị tri thức và biên soạn tri thức học thuật} \tabularnewline \hline
@@ -347,9 +339,9 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \textbf{Luồng sự kiện chính} & 
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả yêu cầu phân tích đồ thị tri thức cho một thư mục nghiên cứu trong Không gian Thư viện Tri thức.
-    \item Hệ thống kích hoạt đường ống GraphRAG~\cite{edge2024, hogan2021kg}: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
+    \item Hệ thống kích hoạt đường ống GraphRAG: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
     \item Hệ thống chuẩn hóa tên thực thể và tính độ tương đồng Cosine vector nhúng; các đỉnh có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}.
-    \item Thuật toán Louvain~\cite{blondel2008louvain} phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
+    \item Thuật toán Louvain phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
     \item Hệ thống hiển thị đồ thị tương tác và cho phép học giả thực thi truy vấn bắc cầu 2-hop qua biểu thức bảng chung SQL CTE hoặc đọc trang Wiki tổng hợp.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
@@ -411,14 +403,12 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \label{fig:uc_bien_soan_sub}
 \end{figure}
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\fontsize{8.5pt}{10.2pt}\selectfont
 \setlength{\tabcolsep}{2.5pt}
 \caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{tab:uc_bien_soan_spec}
-\renewcommand{\arraystretch}{0.80}
+\renewcommand{\arraystretch}{0.90}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi LaTeX} \tabularnewline \hline
@@ -430,7 +420,7 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \begin{enumerate}[leftmargin=*, noitemsep, topsep=1pt]
     \item Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
     \item Học giả nhấp nút ``Biên dịch bản thảo''.
-    \item Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM~\cite{agache2020firecracker} cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
+    \item Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
     \item Nếu biên dịch thành công ($\text{ExitCode} = 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{enumerate} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
@@ -438,7 +428,7 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
     \item Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):
     \begin{itemize}[noitemsep, topsep=1pt]
         \item Hệ thống trích xuất tệp nhật ký lỗi \texttt{main.log}.
-        \item AI Agent theo cơ chế ReAct và Reflexion~\cite{yao2022, shinn2023} phân tích lỗi và tạo bản vá sửa đổi vi phẫu (\textit{Surgical Diff}).
+        \item AI Agent theo cơ chế ReAct và Reflexion phân tích lỗi và tạo bản vá sửa đổi vi phẫu (Surgical Diff).
         \item Hệ thống tự động áp dụng bản vá và kích hoạt tái biên dịch ($N_{\max} = 3$).
         \item Khi thành công, thông báo lỗi được xóa bỏ và giao diện cập nhật PDF mới.
     \end{itemize}
@@ -451,10 +441,10 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 
 Tuân thủ nguyên tắc tối giản hóa sản phẩm 80/20, các tác vụ quản trị vận hành trong \VS không tách thành giao diện người dùng cồng kềnh mà được thiết kế vận hành tự động qua các cơ chế lõi và điểm cuối REST chuyên biệt:
 \begin{itemize}[noitemsep, topsep=2pt]
-    \item \textbf{Cơ chế bảo mật tài khoản tự động:} Tầng xác thực áp dụng chính sách tạm khóa tài khoản 15 phút sau 5 lần đăng nhập thất bại liên tiếp nhằm chống lại các cuộc tấn công vét cạn (\textit{Brute-force}).
-    \item \textbf{Bảo vệ kho khóa API cá nhân (BYOK):} Khóa API của học giả được mã hóa phân tầng bằng thuật toán Envelope Encryption kết hợp chuẩn mã hóa đối xứng AES-256-GCM~\cite{dworkin2007} với vector khởi tạo $J_0$. Khóa chỉ được giải mã trên bộ nhớ RAM tại thời điểm thực thi suy luận và tuyệt đối không bao giờ được ghi xuống đĩa cứng hoặc nhật ký máy chủ.
-    \item \textbf{Thu hồi khối tệp mồ côi CAS:} Cơ chế tự động quản lý biến đếm tham chiếu (\texttt{ref\_count}) trên bảng \texttt{document\_storage\_blobs}; khi một bài báo bị học giả xóa khỏi thư viện, biến đếm giảm đi 1. Khối tệp nhị phân chỉ bị xóa vật lý khi $\text{ref\_count} = 0$, giúp tối ưu hóa dung lượng lưu trữ trên máy chủ.
-    \item \textbf{Giám sát từ xa và kiểm định tự động:} Quản trị viên thực thi đo lường hiệu năng định lượng thông qua điểm cuối \texttt{/api/v1/evaluations/run-benchmark}, theo dõi thời gian phản hồi, độ trễ cơ sở dữ liệu và chi phí Token suy luận thông qua nền tảng giám sát phân tán Langfuse Cloud và Azure Portal.
+    \item Cơ chế bảo mật tài khoản tự động: Tầng xác thực áp dụng chính sách tạm khóa tài khoản 15 phút sau 5 lần đăng nhập thất bại liên tiếp nhằm chống lại các cuộc tấn công vét cạn (Brute-force).
+    \item Bảo vệ kho khóa API cá nhân (BYOK): Khóa API của học giả được mã hóa phân tầng bằng thuật toán Envelope Encryption kết hợp chuẩn mã hóa đối xứng AES-256-GCM với vector khởi tạo $J_0$. Khóa chỉ được giải mã trên bộ nhớ RAM tại thời điểm thực thi suy luận và tuyệt đối không bao giờ được ghi xuống đĩa cứng hoặc nhật ký máy chủ.
+    \item Thu hồi khối tệp mồ côi CAS: Cơ chế tự động quản lý biến đếm tham chiếu (\texttt{ref\_count}) trên bảng \texttt{document\_storage\_blobs}; khi một bài báo bị học giả xóa khỏi thư viện, biến đếm giảm đi 1. Khối tệp nhị phân chỉ bị xóa vật lý khi $\text{ref\_count} = 0$, giúp tối ưu hóa dung lượng lưu trữ trên máy chủ.
+    \item Giám sát từ xa và kiểm định tự động: Quản trị viên thực thi đo lường hiệu năng định lượng thông qua điểm cuối \texttt{/api/v1/evaluations/run-benchmark}, theo dõi thời gian phản hồi, độ trễ cơ sở dữ liệu và chi phí Token suy luận thông qua nền tảng giám sát phân tán Langfuse Cloud và Azure Portal.
 \end{itemize}
 
 % Tham chiếu mô hình hóa ca sử dụng quản trị hệ thống:

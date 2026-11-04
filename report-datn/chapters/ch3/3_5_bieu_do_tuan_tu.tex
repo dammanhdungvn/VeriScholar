@@ -2,7 +2,7 @@
 \section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
 \label{sec:bieu_do_tuan_tu}
 
-Biểu đồ tuần tự (Sequence Diagram) mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng khi thực thi Use Case. Nhằm làm rõ cơ chế phối hợp giữa giao diện, lõi nghiệp vụ và dịch vụ hạ tầng, tiểu mục này trình bày bốn chuỗi quy trình đại diện cho 4 Không gian nghiên cứu của \VS dưới dạng chuỗi các giai đoạn thực thi liên hoàn (\textit{Execution Stage Pipeline}) chuẩn mực và cô đọng.
+Biểu đồ tuần tự (Sequence Diagram) mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng khi thực thi Use Case. Nhằm làm rõ cơ chế phối hợp giữa giao diện, lõi nghiệp vụ và dịch vụ hạ tầng, tiểu mục này trình bày bốn chuỗi quy trình đại diện cho 4 Không gian nghiên cứu của \VS dưới dạng chuỗi các giai đoạn thực thi liên hoàn (Execution Stage Pipeline) chuẩn mực và cô đọng.
 
 \subsection{Biểu đồ tuần tự Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsec:seq_kham_pha}
@@ -59,7 +59,7 @@ Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã b
 \subsection{Biểu đồ tuần tự Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
 \label{subsec:seq_doc_sau}
 
-Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW~\cite{malkov2018} và từ khóa BM25~\cite{robertson1995} qua RRF~\cite{cormack2009}), cổng kiểm định độ tự tin tiền sinh văn bản CRAG~\cite{yan2024crag}, xác thực trích dẫn hậu sinh (\texttt{verify\_output\_grounding}), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
+Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector HNSW và từ khóa BM25 qua RRF), cổng kiểm định độ tự tin tiền sinh văn bản CRAG, xác thực trích dẫn hậu sinh (\texttt{verify\_output\_grounding}), truyền luồng sự kiện SSE và tô sáng khung viền tọa độ Bounding Box được mô hình hóa trong Hình~\ref{fig:seq_doc_sau}.
 
 \begin{figure}[H]
 \centering
@@ -79,7 +79,7 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
     \node[stage_card] (s2) at (4.4, 0) {
         \textbf{\textcolor{teal!90!black}{Giai đoạn 2: Hybrid RAG}}\\[2pt]
         Quét vector HNSW\\
-        \& từ vựng BM25 (RRF)
+        và từ vựng BM25 (RRF)
     };
     \node[stage_highlight] (s3) at (8.8, 0) {
         \textbf{\textcolor{teal!95!black}{Giai đoạn 3: Cổng CRAG}}\\[2pt]
@@ -102,10 +102,11 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
 \end{figure}
 \FloatBarrier
 
+\needspace{4\baselineskip}
 \subsection{Biểu đồ tuần tự Use Case ``Khai phá Đồ thị tri thức và truy vấn liên tài liệu''}
 \label{subsec:seq_graphrag}
 
-Chu trình trích xuất 4 thực thể học thuật (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}), khử trùng lặp đỉnh bằng Cosine $\ge 0{,}90$, phân cụm cộng đồng Louvain~\cite{blondel2008louvain} và truy vấn bắc cầu 2-hop Graph Traversal qua SQL CTE trong phân hệ GraphRAG~\cite{edge2024, hogan2021kg} được mô hình hóa trong Hình~\ref{fig:seq_graphrag}.
+Chu trình trích xuất 4 thực thể học thuật (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}), khử trùng lặp đỉnh bằng Cosine $\ge 0{,}90$, phân cụm cộng đồng Louvain và truy vấn bắc cầu 2-hop Graph Traversal qua SQL CTE trong phân hệ GraphRAG được mô hình hóa trong Hình~\ref{fig:seq_graphrag}.
 
 \begin{figure}[H]
 \centering
@@ -151,7 +152,7 @@ Chu trình trích xuất 4 thực thể học thuật (\texttt{Paper}, \texttt{M
 \subsection{Biểu đồ tuần tự Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{subsec:seq_bien_soan}
 
-Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, hộp cát E2B MicroVM~\cite{agache2020firecracker} cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion~\cite{yao2022, shinn2023} khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
+Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, hộp cát E2B MicroVM cách ly an toàn và chu trình tự sửa lỗi ReAct Reflexion khi phát hiện lỗi cú pháp được minh họa trong Hình~\ref{fig:seq_bien_soan}.
 
 \begin{figure}[H]
 \centering

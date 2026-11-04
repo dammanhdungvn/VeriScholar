@@ -4,18 +4,18 @@
 
 \subsection{Phân tích bố cục tài liệu PDF hai cột và chuẩn hóa tọa độ Bounding Box}
 \label{subsec:pdf_layout_bbox}
-Các ấn phẩm khoa học quốc tế thường được định dạng theo bố cục hai cột (\textit{Two-Column PDF Layout}). Các công cụ trích xuất văn bản truyền thống thường đọc tuần tự theo dòng ngang, dẫn đến hiện tượng trộn lẫn các câu văn giữa cột trái và cột phải, phá vỡ tính mạch lạc của các luận điểm khoa học.
+Các ấn phẩm khoa học quốc tế thường được định dạng theo bố cục hai cột (Two-Column PDF Layout). Các công cụ trích xuất văn bản truyền thống thường đọc tuần tự theo dòng ngang, dẫn đến hiện tượng trộn lẫn các câu văn giữa cột trái và cột phải, phá vỡ tính mạch lạc của các luận điểm khoa học.
 
 Để giải quyết vấn đề này, đề tài xây dựng quy trình phân tích bố cục hình học trước khi phân đoạn tài liệu:
 \begin{itemize}
     \item Phân tách ranh giới hình học: Dựa trên phân phối hoành độ tâm của các khối chữ nhật chứa ký tự, thuật toán thiết lập ngưỡng phân định cột tự động để gom nhóm và đọc trọn vẹn nội dung từ đỉnh đến đáy của cột bên trái trước khi chuyển tiếp sang cột bên phải.
-    \item Chuẩn hóa tọa độ Bounding Box (\textit{Bounding Box Normalization}): Tọa độ vật lý của các khối văn bản $(x_0, y_0, x_1, y_1)$ tính theo điểm ảnh PDF (\textit{points}) được chuẩn hóa về miền tỷ lệ không thứ nguyên $[0, 1]$ thông qua phép biến đổi hình học:
+    \item Chuẩn hóa tọa độ Bounding Box (Bounding Box Normalization): Tọa độ vật lý của các khối văn bản $(x_0, y_0, x_1, y_1)$ tính theo điểm ảnh PDF (points) được chuẩn hóa về miền tỷ lệ không thứ nguyên $[0, 1]$ thông qua phép biến đổi hình học:
     \begin{equation}
     \label{eq:bbox_norm}
     \bar{x}_0 = \frac{x_0}{W}, \quad \bar{y}_0 = \frac{y_0}{H}, \quad \bar{x}_1 = \frac{x_1}{W}, \quad \bar{y}_1 = \frac{y_1}{H}
     \end{equation}
     trong đó $W$ và $H$ lần lượt là chiều rộng và chiều cao thực tế của trang tài liệu PDF.
-    \item Thước đo độ chính xác định vị: Độ trùng khớp của Bounding Box dẫn chứng được đánh giá thông qua chỉ số tương đồng diện tích phủ (\textit{Intersection-over-Union -- IoU}):
+    \item Thước đo độ chính xác định vị: Độ trùng khớp của Bounding Box dẫn chứng được đánh giá thông qua chỉ số tương đồng diện tích phủ (Intersection-over-Union -- IoU):
     \begin{equation}
     \label{eq:iou_metric}
     \text{IoU}(B_{\text{pred}}, B_{\text{gt}}) = \frac{\text{Area}(B_{\text{pred}} \cap B_{\text{gt}})}{\text{Area}(B_{\text{pred}} \cup B_{\text{gt}})}
@@ -28,14 +28,14 @@ Các ấn phẩm khoa học quốc tế thường được định dạng theo b
 Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp đồng thời của hai không gian tìm kiếm bổ trợ:
 
 \begin{itemize}
-    \item Truy xuất Vector đặc (\textit{Dense Vector Retrieval}): Văn bản được biểu diễn thành các Vector Embedding ngữ nghĩa 1536 chiều. Mức độ tương đồng giữa truy vấn $\mathbf{u}$ của học giả và phân đoạn tài liệu $\mathbf{v}$ được lượng hóa thông qua hàm tương đồng Cosine:
+    \item Truy xuất Vector đặc (Dense Vector Retrieval): Văn bản được biểu diễn thành các Vector Embedding ngữ nghĩa 1536 chiều. Mức độ tương đồng giữa truy vấn $\mathbf{u}$ của học giả và phân đoạn tài liệu $\mathbf{v}$ được lượng hóa thông qua hàm tương đồng Cosine:
     \begin{equation}
     \label{eq:cosine_sim}
     \text{CosineSimilarity}(\mathbf{u}, \mathbf{v}) = \frac{\mathbf{u} \cdot \mathbf{v}}{\|\mathbf{u}\|_2 \|\mathbf{v}\|_2} = \frac{\sum_{i=1}^{d} u_i v_i}{\sqrt{\sum_{i=1}^{d} u_i^2} \sqrt{\sum_{i=1}^{d} v_i^2}}
     \end{equation}
     Ưu điểm của phương pháp là khả năng bắt trọn ngữ nghĩa khái quát và từ đồng nghĩa, song gặp khó khăn trước các thuật ngữ hiếm gặp, mã định danh hoặc công thức toán học.
     
-    \item Truy xuất từ khóa thưa hai pha (\textit{Two-Stage Sparse Keyword Retrieval}): Kết hợp chỉ mục đảo tổng quát GIN trên trường \texttt{tsvector} với hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để sàng lọc nhanh tập ứng viên ban đầu trong cơ sở dữ liệu, sau đó áp dụng công thức chuẩn hóa Okapi BM25 \cite{robertson1995} để tái chấm điểm chính xác:
+    \item Truy xuất từ khóa thưa hai pha (Two-Stage Sparse Keyword Retrieval): Kết hợp chỉ mục đảo tổng quát GIN trên trường \texttt{tsvector} với hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để sàng lọc nhanh tập ứng viên ban đầu trong cơ sở dữ liệu, sau đó áp dụng công thức chuẩn hóa Okapi BM25 \cite{robertson1995} để tái chấm điểm chính xác:
     \begin{equation}
     \label{eq:bm25}
     \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
@@ -51,8 +51,6 @@ Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp �
 \centering
 \caption{So sánh đặc tính kỹ thuật giữa không gian Dense Vector và Sparse Search (BM25)}
 \label{tab:search_comparison}
-\singlespacing
-\small
 \renewcommand{\arraystretch}{1.0}
 \begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{3.0cm}|X|X|}
 \hline
@@ -71,7 +69,7 @@ Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp �
 
 \subsection{Thuật toán hợp nhất xếp hạng đảo ngược và cơ chế tái xếp hạng}
 \label{subsec:rrf_rerank}
-Nhằm kết hợp hài hòa ưu thế của cả hai không gian truy xuất, hệ thống áp dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (\textit{Reciprocal Rank Fusion -- RRF}) \cite{cormack2009}. Thay vì cộng gộp các điểm số có thang đo phân kỳ, RRF tính toán dựa trên thứ hạng nguyên vị trí của từng tài liệu trong các danh sách trả về:
+Nhằm kết hợp hài hòa ưu thế của cả hai không gian truy xuất, hệ thống áp dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (Reciprocal Rank Fusion -- RRF) \cite{cormack2009}. Thay vì cộng gộp các điểm số có thang đo phân kỳ, RRF tính toán dựa trên thứ hạng nguyên vị trí của từng tài liệu trong các danh sách trả về:
 \begin{equation}
 \label{eq:rrf_calc}
 \text{Score}_{\text{RRF}}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}

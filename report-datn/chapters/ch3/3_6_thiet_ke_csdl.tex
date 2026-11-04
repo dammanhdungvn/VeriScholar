@@ -8,7 +8,7 @@ Cơ sở dữ liệu là thành phần nền tảng quyết định độ tin c�
 \subsection{Xây dựng biểu đồ lớp (Class Diagram) của hệ thống}
 \label{subsec:csdl_class_diagram}
 
-Mô hình hóa cấu trúc tĩnh theo phương pháp hướng đối tượng là bước cầu nối then chốt giữa các phân tích ca sử dụng (Use Case) và thiết kế cơ sở dữ liệu quan hệ vật lý. Hệ thống \VS được thiết kế xoay quanh các thực thể miền thuần khiết (\textit{Domain POPO Entities}), bảo đảm nguyên tắc cô lập nghiệp vụ của Kiến trúc Lục giác và tính nhất quán miền (\textit{Domain-Driven Design}).
+Mô hình hóa cấu trúc tĩnh theo phương pháp hướng đối tượng là bước cầu nối then chốt giữa các phân tích ca sử dụng (Use Case) và thiết kế cơ sở dữ liệu quan hệ vật lý. Hệ thống \VS được thiết kế xoay quanh các thực thể miền thuần khiết (Domain POPO Entities), bảo đảm nguyên tắc cô lập nghiệp vụ của Kiến trúc Lục giác và tính nhất quán miền (Domain-Driven Design).
 
 Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn trực quan trong Hình~\ref{fig:class_diagram_model}. Các lớp thực thể miền chỉ chứa logic nghiệp vụ và kiểm định trạng thái hợp lệ nội tại, tuyệt đối không chứa các phương thức phụ thuộc hạ tầng I/O như truy vấn cơ sở dữ liệu hay điều phối máy ảo biên dịch.
 
@@ -236,26 +236,24 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 
 \begin{table}[!htbp]
 \centering
-\singlespacing
-\fontsize{9pt}{11pt}\selectfont
 \caption{Phân tích các lớp thực thể miền và mối quan hệ cấu trúc trong hệ thống}
 \label{tab:class_relationships_analysis}
 \captionsetup{skip=2pt}
 \setlength{\tabcolsep}{2.5pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.8cm}|>{\centering\arraybackslash}m{1.4cm}|>{\raggedright\arraybackslash}X|}
+\renewcommand{\arraystretch}{0.75}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.8cm}|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Lớp A} & \textbf{Lớp B} & \textbf{Kiểu quan hệ} & \textbf{Bản số} & \centering\textbf{Miêu tả ngữ nghĩa nghiệp vụ} \tabularnewline \hline
-1 & \texttt{User} & \texttt{ScholarProfile} & Hợp thành (Composition) & 1 -- 1 & Hồ sơ học giả phụ thuộc hoàn toàn vào vòng đời tài khoản \texttt{User}. \tabularnewline \hline
-2 & \texttt{User} & \texttt{UserApiKey} & Hợp thành (Composition) & 1 -- N & Mỗi học giả sở hữu nhiều khóa API cá nhân theo cơ chế BYOK. \tabularnewline \hline
-3 & \texttt{User} & \texttt{Document} & Thu nạp (Aggregation) & 1 -- N & Học giả quản lý nhiều tài liệu nghiên cứu trong thư viện cá nhân. \tabularnewline \hline
-4 & \texttt{StorageBlob} & \texttt{Document} & Kết hợp (Association) & 1 -- N & Nhiều hồ sơ bài báo cùng trỏ tới 1 khối tệp nhị phân CAS (Deduplication SHA-256). \tabularnewline \hline
-5 & \texttt{Document} & \texttt{DocumentChunk} & Hợp thành (Composition) & 1 -- N & Bài báo được bóc tách thành nhiều phân đoạn văn bản kèm tọa độ BBox và vector. \tabularnewline \hline
-6 & \texttt{User} & \texttt{ResearchSession} & Hợp thành (Composition) & 1 -- N & Học giả khởi tạo và sở hữu các phiên làm việc nghiên cứu đa tài liệu. \tabularnewline \hline
-7 & \texttt{ResearchSession} & \texttt{SessionTurn} & Hợp thành (Composition) & 1 -- N & Phiên nghiên cứu lưu trữ lịch sử các lượt hỏi đáp tăng cường truy xuất Hybrid RAG. \tabularnewline \hline
-8 & \texttt{ResearchSession} & \texttt{Document} & Kết hợp (Association) & N -- N & Quan hệ nhiều--nhiều giữa phiên nghiên cứu và các tài liệu được nạp vào Reader. \tabularnewline \hline
-9 & \texttt{Document} & \texttt{GraphNode} & Thu nạp (Aggregation) & 1 -- N & Tài liệu là cơ sở trích xuất các thực thể tri thức học thuật 4 loại (GraphRAG). \tabularnewline \hline
-10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu các bản thảo LaTeX; bản thảo tích hợp Agent tự động sửa lỗi. \tabularnewline \hline
+1 & \texttt{User} & \texttt{Scholar\-Profile} & Hợp thành (Composition) & 1 -- 1 & Hồ sơ học giả phụ thuộc vào vòng đời tài khoản \texttt{User}. \tabularnewline \hline
+2 & \texttt{User} & \texttt{User\-Api\-Key} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu nhiều khóa API cá nhân theo cơ chế BYOK. \tabularnewline \hline
+3 & \texttt{User} & \texttt{Document} & Thu nạp (Aggregation) & 1 -- N & Học giả quản lý tài liệu nghiên cứu trong thư viện cá nhân. \tabularnewline \hline
+4 & \texttt{Storage\-Blob} & \texttt{Document} & Kết hợp (Association) & 1 -- N & Nhiều bài báo cùng trỏ tới 1 khối tệp CAS (Deduplication). \tabularnewline \hline
+5 & \texttt{Document} & \texttt{Document\-Chunk} & Hợp thành (Composition) & 1 -- N & Bài báo được tách thành phân đoạn văn bản kèm BBox và vector. \tabularnewline \hline
+6 & \texttt{User} & \texttt{Research\-Session} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu các phiên làm việc nghiên cứu đa tài liệu. \tabularnewline \hline
+7 & \texttt{Research\-Session} & \texttt{Session\-Turn} & Hợp thành (Composition) & 1 -- N & Phiên lưu trữ lịch sử các lượt hỏi đáp tăng cường Hybrid RAG. \tabularnewline \hline
+8 & \texttt{Research\-Session} & \texttt{Document} & Kết hợp (Association) & N -- N & Quan hệ nhiều--nhiều giữa phiên và tài liệu nạp vào Reader. \tabularnewline \hline
+9 & \texttt{Document} & \texttt{Graph\-Node} & Thu nạp (Aggregation) & 1 -- N & Tài liệu là cơ sở trích xuất thực thể tri thức (GraphRAG). \tabularnewline \hline
+10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent tự động sửa lỗi. \tabularnewline \hline
 \end{tabularx}
 \end{table}
 
@@ -264,11 +262,11 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 
 Cơ sở dữ liệu của hệ thống \VS được thiết kế bám sát đặc tả kỹ thuật và mô hình quan hệ nghiệp vụ, triển khai trên nền tảng PostgreSQL 16 tích hợp extension \texttt{pgvector}. Nhằm tối ưu hóa năng lực mở rộng, dữ liệu được phân định rành mạch thành 5 phân hệ chức năng độc lập:
 \begin{itemize}[noitemsep, topsep=2pt]
-    \item \textbf{Phân hệ Định danh và Bảo mật Khóa (Auth và BYOK):} Quản trị danh tính học giả, cơ chế đăng nhập JWT, mật khẩu băm (\texttt{hashed\_password}), hồ sơ chuyên môn và kho lưu trữ khóa API cá nhân theo mô hình BYOK (\texttt{users}, \texttt{scholar\_profiles}, \texttt{user\_api\_keys}).
-    \item \textbf{Phân hệ Lưu trữ CAS và Thư viện Khoa học (CAS và Library):} Quản lý khối nhị phân PDF qua mã băm SHA-256 chống trùng lặp dữ liệu, cấu trúc cây thư mục tài liệu cá nhân, thông tin bài báo khoa học và danh mục tài liệu trích dẫn đối chiếu chéo (\texttt{document\_storage\_blobs}, \texttt{documents}, \texttt{document\_chunks}, \texttt{document\_summaries}, \texttt{reference\_items}, \texttt{folders}).
-    \item \textbf{Phân hệ Hội thoại Nghiên cứu và Đọc sâu (Research Sessions và Notes):} Quản trị các phiên làm việc nghiên cứu đa tài liệu, bảng liên kết phiên--bài báo, lịch sử các lượt hỏi đáp tăng cường truy xuất và ghi chú học thuật có neo giữ tọa độ trên trang PDF (\texttt{research\_sessions}, \texttt{session\_documents}, \texttt{session\_turns}, \texttt{research\_notes}).
-    \item \textbf{Phân hệ Đồ thị Tri thức Học thuật và Wiki Liên kết (GraphRAG):} Lưu trữ mạng lưới đồ thị 4 loại thực thể, các cạnh quan hệ học thuật có hướng, các bản tóm tắt cộng đồng phân cụm Louvain và các trang Wiki học thuật liên kết hai chiều (\texttt{graph\_nodes}, \texttt{graph\_edges}, \texttt{folder\_community\_summaries}, \texttt{wiki\_pages}).
-    \item \textbf{Phân hệ Soạn thảo Học thuật và Đồng tác giả AI (Agentic Writing):} Lưu trữ bản thảo bài báo khoa học định dạng LaTeX chuẩn IEEE/ACM, các tài nguyên đa phương tiện và nhật ký trao đổi đồng tác giả cùng Tác nhân AI tự phục hồi lỗi biên dịch (\texttt{drafts}, \texttt{draft\_assets}, \texttt{draft\_messages}).
+    \item Phân hệ Định danh và Bảo mật Khóa (Auth và BYOK): Quản trị danh tính học giả, cơ chế đăng nhập JWT, mật khẩu băm (\texttt{hashed\_password}), hồ sơ chuyên môn và kho lưu trữ khóa API cá nhân theo mô hình BYOK (\texttt{users}, \texttt{scholar\_profiles}, \texttt{user\_api\_keys}).
+    \item Phân hệ Lưu trữ CAS và Thư viện Khoa học (CAS và Library): Quản lý khối nhị phân PDF qua mã băm SHA-256 chống trùng lặp dữ liệu, cấu trúc cây thư mục tài liệu cá nhân, thông tin bài báo khoa học và danh mục tài liệu trích dẫn đối chiếu chéo (\texttt{document\_storage\_blobs}, \texttt{documents}, \texttt{document\_chunks}, \texttt{document\_summaries}, \texttt{reference\_items}, \texttt{folders}).
+    \item Phân hệ Hội thoại Nghiên cứu và Đọc sâu (Research Sessions và Notes): Quản trị các phiên làm việc nghiên cứu đa tài liệu, bảng liên kết phiên--bài báo, lịch sử các lượt hỏi đáp tăng cường truy xuất và ghi chú học thuật có neo giữ tọa độ trên trang PDF (\texttt{research\_sessions}, \texttt{session\_documents}, \texttt{session\_turns}, \texttt{research\_notes}).
+    \item Phân hệ Đồ thị Tri thức Học thuật và Wiki Liên kết (GraphRAG): Lưu trữ mạng lưới đồ thị 4 loại thực thể, các cạnh quan hệ học thuật có hướng, các bản tóm tắt cộng đồng phân cụm Louvain và các trang Wiki học thuật liên kết hai chiều (\texttt{graph\_nodes}, \texttt{graph\_edges}, \texttt{folder\_community\_summaries}, \texttt{wiki\_pages}).
+    \item Phân hệ Soạn thảo Học thuật và Đồng tác giả AI (Agentic Writing): Lưu trữ bản thảo bài báo khoa học định dạng LaTeX chuẩn IEEE/ACM, các tài nguyên đa phương tiện và nhật ký trao đổi đồng tác giả cùng Tác nhân AI tự phục hồi lỗi biên dịch (\texttt{drafts}, \texttt{draft\_assets}, \texttt{draft\_messages}).
 \end{itemize}
 
 \subsection{Đặc tả chi tiết các bảng cơ sở dữ liệu hạt nhân}
@@ -276,18 +274,17 @@ Cơ sở dữ liệu của hệ thống \VS được thiết kế bám sát đ�
 
 Nhằm làm nổi bật các đóng góp kỹ thuật cốt lõi và tối ưu hóa dung lượng báo cáo theo chuẩn 80/20, tiểu mục này trình bày đặc tả chi tiết 4 bảng cơ sở dữ liệu hạt nhân đại diện cho các phân hệ công nghệ trọng tâm của hệ thống: \texttt{documents}, \texttt{document\_chunks}, \texttt{graph\_nodes} và \texttt{drafts}. Các phân hệ bổ trợ như định danh người dùng (bao gồm bảng \texttt{users}\label{tab:spec_users} và \texttt{scholar\_profiles}), quản lý phiên làm việc đa tài liệu (\texttt{session\_documents} với ràng buộc FK $\to$ research\_sessions(id)) được xây dựng tuân thủ đầy đủ chuẩn toàn vẹn giao dịch và mô hình quan hệ đã phân tích.
 
-\subsubsection{Đặc tả bảng documents (Phân hệ Thư viện và Lưu trữ CAS)}
-Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} (ràng buộc FK $\to$ document\_storage\_blobs(id)) và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}).
+\subsubsection{Đặc tả bảng documents (Phân hệ thư viện và lưu trữ CAS)}
+Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kết khối tệp nhị phân CAS thông qua khóa ngoại \texttt{blob\_id} (ràng buộc FK $\to$ document\_storage\_blobs(id)) và các chỉ số học thuật chuẩn hóa (Bảng~\ref{tab:spec_documents}). Cấu trúc bảng áp dụng định dạng UUIDv4 làm khóa chính, đồng thời kích hoạt các chỉ mục tìm kiếm trên các cột siêu dữ liệu \texttt{doi} và \texttt{arxiv\_id} nhằm bảo đảm tốc độ truy vấn cao.
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\footnotesize
 \caption{Đặc tả bảng documents}
 \label{tab:spec_documents}
 \captionsetup{skip=2pt}
-\renewcommand{\arraystretch}{1.15}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh tài liệu bài báo \tabularnewline \hline
@@ -303,19 +300,17 @@ Bảng \texttt{documents} quản lý thông tin bài báo khoa học, liên kế
 \end{tabularx}
 \end{table}
 
-\subsubsection{Đặc tả bảng document\_chunks (Phân hệ Đọc sâu và Kiểm chứng Bounding Box)}
+\subsubsection{Đặc tả bảng document\_chunks (Phân hệ đọc sâu và kiểm chứng Bounding Box)}
 Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục vụ đọc sâu và kiểm chứng trích dẫn Bounding Box, tích hợp vector nhúng 1536 chiều (Bảng~\ref{tab:spec_chunks}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\footnotesize
 \caption{Đặc tả bảng document\_chunks}
 \label{tab:spec_chunks}
 \captionsetup{skip=2pt}
 \setlength{\tabcolsep}{2.5pt}
 \renewcommand{\arraystretch}{0.96}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính phân đoạn văn bản \tabularnewline \hline
@@ -329,19 +324,17 @@ Bảng \texttt{document\_chunks} lưu trữ các phân đoạn văn bản phục
 \end{tabularx}
 \end{table}
 
-\subsubsection{Đặc tả bảng graph\_nodes (Phân hệ Đồ thị Tri thức GraphRAG)}
+\subsubsection{Đặc tả bảng graph\_nodes (Phân hệ đồ thị tri thức GraphRAG)}
 Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thuật 4 loại phục vụ GraphRAG, hỗ trợ hợp nhất đỉnh theo độ tương đồng Cosine (Bảng~\ref{tab:spec_graph_nodes}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\footnotesize
 \caption{Đặc tả bảng graph\_nodes}
 \label{tab:spec_graph_nodes}
 \captionsetup{skip=2pt}
 \setlength{\tabcolsep}{2.5pt}
 \renewcommand{\arraystretch}{0.96}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh đỉnh thực thể \tabularnewline \hline
@@ -354,18 +347,17 @@ Bảng \texttt{graph\_nodes} lưu trữ các thực thể tri thức học thu�
 \end{tabularx}
 \end{table}
 
-\subsubsection{Đặc tả bảng drafts (Phân hệ Soạn thảo Học thuật và Đồng tác giả AI)}
-Bảng \texttt{drafts} lưu trữ bản thảo bài báo khoa học định dạng mã nguồn LaTeX, liên kết trực tiếp với môi trường máy ảo biên dịch và AI Agent đồng tác giả (Bảng~\ref{tab:spec_drafts}).
+\subsubsection{Đặc tả bảng drafts (Phân hệ soạn thảo học thuật và đồng tác giả AI)}
+Bảng \texttt{drafts} lưu trữ bản thảo mã nguồn LaTeX, liên kết môi trường biên dịch và AI Agent (Bảng~\ref{tab:spec_drafts}).
 
-\begin{table}[H]
+\begin{table}[!htbp]
 \centering
-\singlespacing
-\footnotesize
 \caption{Đặc tả bảng drafts}
 \label{tab:spec_drafts}
 \captionsetup{skip=2pt}
-\renewcommand{\arraystretch}{1.0}
-\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.0cm}|>{\centering\arraybackslash}m{2.5cm}|>{\centering\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\setlength{\tabcolsep}{2.5pt}
+\renewcommand{\arraystretch}{0.80}
+\begin{tabularx}{\textwidth}{|c|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{3.3cm}|>{\centering\arraybackslash}m{2.9cm}|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{STT} & \textbf{Tên cột} & \textbf{Kiểu dữ liệu} & \textbf{Ràng buộc} & \centering\textbf{Mô tả} \tabularnewline \hline
 1 & id & UUID & PK, Not Null & Khóa chính định danh bản thảo khoa học \tabularnewline \hline
@@ -383,11 +375,11 @@ Bảng \texttt{drafts} lưu trữ bản thảo bài báo khoa học định dạ
 \subsection{Thiết kế hạ tầng lưu trữ vector và đồ thị tri thức phụ trợ}
 \label{subsec:csdl_vector_graph}
 
-Nhằm hỗ trợ năng lực suy luận ngữ nghĩa của AI Agent và khai phá mạng lưới học thuật trong cùng không gian giao dịch ACID, hệ thống tích hợp trực tiếp hai cơ chế chỉ mục và truy vấn đồ thị trên PostgreSQL 16:
+Hệ thống tích hợp trực tiếp chỉ mục vector và đồ thị tri thức trên PostgreSQL 16:
 
 {\sloppy
 \begin{itemize}[noitemsep, topsep=1pt]
-    \item \textbf{Chỉ mục không gian vector và từ vựng toàn văn (Hybrid Store):} Cột \texttt{embedding} (1536 chiều) của các bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được đánh chỉ mục phân cấp HNSW~\cite{malkov2018} (\texttt{vector\_cosine\_ops}) qua tiện ích \texttt{pgvector}, song hành chỉ mục đảo GIN trên cột \texttt{content\_tsv} phục vụ Hybrid Search.
-    \item \textbf{Mô hình đồ thị tri thức đa thực thể (Graph Store):} Phục vụ GraphRAG~\cite{edge2024, hogan2021kg}, 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và 4 loại cạnh (\texttt{PROPOSES}, \texttt{EVALUATED\_ON}, \texttt{ACHIEVES}, \texttt{CITES}) được trích xuất qua \texttt{OpenAI Structured Outputs} và lưu vào bảng \texttt{graph\_nodes}, \texttt{graph\_edges}. Truy vấn bắc cầu 2-hop được thực thi qua SQL CTE kết hợp phân cụm Louvain~\cite{blondel2008louvain}, hỗ trợ học giả đối chiếu liên tài liệu tức thời.
+    \item Chỉ mục vector và toàn văn (Hybrid Store): Cột \texttt{embedding} (1536 chiều) của các bảng \texttt{document\_chunks}, \texttt{graph\_nodes}, \texttt{folder\_community\_summaries} và \texttt{wiki\_pages} được đánh chỉ mục HNSW qua \texttt{pgvector}, song hành chỉ mục đảo GIN trên cột \texttt{content\_tsv}.
+    \item Mô hình đồ thị tri thức đa thực thể (Graph Store): Phục vụ GraphRAG, 4 loại thực thể và 4 loại cạnh quan hệ được trích xuất qua \texttt{OpenAI Structured Outputs}, lưu vào bảng \texttt{graph\_nodes} và \texttt{graph\_edges}. Truy vấn bắc cầu 2-hop qua SQL CTE kết hợp phân cụm Louvain hỗ trợ đối chiếu liên tài liệu.
 \end{itemize}
 \par}

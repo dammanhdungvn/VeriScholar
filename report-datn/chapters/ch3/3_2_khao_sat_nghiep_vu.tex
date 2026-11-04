@@ -2,7 +2,7 @@
 \section{Khảo sát nghiệp vụ và quy trình xử lý tài liệu nghiên cứu}
 \label{sec:khao_sat_nghiep_vu}
 
-Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, đề tài tiến hành phân tích quy trình làm việc học thuật quốc tế (\textit{Academic Research Workflow}) cùng thực trạng vận hành của các công cụ hiện hành. Việc phân tích tập trung vào chu trình nghiên cứu tiêu chuẩn của các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp, qua đó làm rõ các điểm nghẽn kỹ thuật trong quy trình truyền thống và xác lập mô hình chuyển đổi quy trình nghiệp vụ cho hệ thống.
+Để xây dựng nền tảng trợ lý AI hỗ trợ nghiên cứu khoa học sát với nhu cầu thực tiễn của học giả, đề tài tiến hành phân tích quy trình làm việc học thuật quốc tế (Academic Research Workflow) cùng thực trạng vận hành của các công cụ hiện hành. Việc phân tích tập trung vào chu trình nghiên cứu tiêu chuẩn của các nhà khoa học, giảng viên, nghiên cứu sinh và sinh viên làm đồ án tốt nghiệp, qua đó làm rõ các điểm nghẽn kỹ thuật trong quy trình truyền thống và xác lập mô hình chuyển đổi quy trình nghiệp vụ cho hệ thống.
 
 \subsection{Khảo sát quy trình tìm kiếm và thu thập tài liệu nghiên cứu}
 \label{subsec:khao_sat_tim_kiem}
@@ -10,25 +10,25 @@ Hiện nay, việc tìm kiếm bài báo khoa học chủ yếu dựa trên thao
 \begin{itemize}[noitemsep, topsep=2pt]
     \item Học giả nhập từ khóa trên Google Scholar, arXiv hoặc Semantic Scholar, sau đó duyệt từng trang kết quả để tải tệp PDF về máy tính cá nhân.
     \item Việc tải tài liệu diễn ra phân tán ở nhiều thư mục máy tính cá nhân. Khi làm việc theo nhóm, các thành viên dễ tải trùng một tệp PDF dung lượng từ $5\,\text{MB}$ đến $20\,\text{MB}$, gây lãng phí dung lượng lưu trữ và khó kiểm soát phiên bản.
-    \item Nhiều bài báo trên arXiv là bản thảo chưa qua bình duyệt (\textit{Preprint}), trong khi các bài trên tạp chí đã trải qua phản biện kín (\textit{Peer-Reviewed}). Học giả mất nhiều thời gian tra cứu thủ công tình trạng xuất bản.
+    \item Nhiều bài báo trên arXiv là bản thảo chưa qua bình duyệt (Preprint), trong khi các bài trên tạp chí đã trải qua phản biện kín (Peer-Reviewed). Học giả mất nhiều thời gian tra cứu thủ công tình trạng xuất bản.
 \end{itemize}
 
 \subsection{Khảo sát quy trình đọc sâu và thẩm định nguồn trích dẫn}
 \label{subsec:khao_sat_doc_sau}
 Trong giai đoạn đọc hiểu tài liệu chuyên ngành:
 \begin{itemize}[noitemsep, topsep=2pt]
-    \item Hầu hết bài báo quốc tế (IEEE, ACM, Springer) được trình bày dạng hai cột (\textit{two-column}). Công cụ trích xuất văn bản thông thường đọc nhảy ngang giữa hai cột, làm đảo lộn thứ tự ngữ nghĩa của công thức toán và đoạn văn. Quy trình yêu cầu phân lập ranh giới tọa độ trục dọc qua đường phân chia trung tuyến $\text{mid\_x} = 250$ (chuẩn hóa trên khổ trang $500\,\text{pt}$) và chia đoạn văn bản theo cửa sổ trượt tối đa $250$ từ.
+    \item Hầu hết bài báo quốc tế (IEEE, ACM, Springer) được trình bày dạng hai cột (two-column). Công cụ trích xuất văn bản thông thường đọc nhảy ngang giữa hai cột, làm đảo lộn thứ tự ngữ nghĩa của công thức toán và đoạn văn. Quy trình yêu cầu phân lập ranh giới tọa độ trục dọc qua đường phân chia trung tuyến $\text{mid\_x} = 250$ (chuẩn hóa trên khổ trang $500\,\text{pt}$) và chia đoạn văn bản theo cửa sổ trượt tối đa $250$ từ.
     \item Các công cụ trò chuyện với tài liệu hiện nay chỉ dẫn chứng số trang chung chung. Trong một trang chứa hàng nghìn chữ, học giả vẫn phải tự mắt tìm kiếm từng câu chữ để xác nhận. Hệ thống khảo sát đòi hỏi kiến trúc truy xuất lai kết hợp véc-tơ HNSW và chỉ mục đảo toàn văn qua hàm xếp hạng mật độ \texttt{ts\_rank\_cd}, đồng thời kiểm soát ảo giác qua hai ngưỡng tin cậy CRAG $0{,}35$ (chấp nhận) và $0{,}20$ (chủ động từ chối).
     \item Nguy cơ ảo giác: Mô hình ngôn ngữ lớn có xu hướng tự điền khuyết số liệu đo lường khi không tìm thấy thông tin chính xác. Việc hiển thị khung viền tọa độ Bounding Box định vị chính xác vị trí văn bản gốc là tiêu chí bắt buộc để bảo đảm liêm chính học thuật.
 \end{itemize}
 
 \subsection{Khảo sát quy trình quản lý và liên kết đồ thị tri thức học thuật}
 \label{subsec:khao_sat_do_thi}
-Khi tiến hành tổng quan tài liệu (\textit{Literature Review}):
+Khi tiến hành tổng quan tài liệu (Literature Review):
 \begin{itemize}[noitemsep, topsep=2pt]
     \item Nhà nghiên cứu cần đối chiếu mô hình kiến trúc, bộ dữ liệu chuẩn và kết quả đo lường cụ thể giữa các công trình tiền nhiệm.
     \item Phương pháp tạo bảng tính Excel thủ công trở nên cồng kềnh khi số lượng bài báo tăng lên, khó cập nhật và mất đi khả năng truy vấn quan hệ bắc cầu giữa các thực thể tri thức.
-    \item Nhu cầu thực tế là tự động xây dựng mạng đồ thị tri thức liên kết 4 thực thể cốt lõi (\textit{Paper $\rightarrow$ Method $\rightarrow$ Dataset $\rightarrow$ MetricResult}) thông qua cơ chế ép kiểu cấu trúc \texttt{OpenAI Structured Outputs}, hợp nhất đỉnh tương đồng ngữ nghĩa Cosine $\ge 0{,}90$ và phân cụm cộng đồng theo thuật toán Louvain.
+    \item Nhu cầu thực tế là tự động xây dựng mạng đồ thị tri thức liên kết 4 thực thể cốt lõi (Paper $\rightarrow$ Method $\rightarrow$ Dataset $\rightarrow$ MetricResult) thông qua cơ chế ép kiểu cấu trúc \texttt{OpenAI Structured Outputs}, hợp nhất đỉnh tương đồng ngữ nghĩa Cosine $\ge 0{,}90$ và phân cụm cộng đồng theo thuật toán Louvain.
 \end{itemize}
 
 \subsection{Khảo sát quy trình biên soạn bản thảo và sửa lỗi biên dịch LaTeX}
@@ -45,7 +45,7 @@ Biên soạn bản thảo là công đoạn tốn nhiều thời gian nhất tro
 Đối với công tác quản trị và bảo mật thông tin nghiên cứu:
 \begin{itemize}[noitemsep, topsep=2pt]
     \item Học giả cần định danh quốc tế chuẩn ORCID iD 16 chữ số để phân biệt với tác giả trùng tên.
-    \item Học giả e ngại dữ liệu nghiên cứu chưa công bố bị các nền tảng AI thương mại sử dụng để huấn luyện mô hình. Cơ chế tự mang khóa cá nhân (\textit{Bring Your Own Key -- BYOK}) mã hóa phân tầng và không lưu vết trên đĩa cứng bảo đảm tính an toàn tuyệt đối cho người dùng.
+    \item Học giả e ngại dữ liệu nghiên cứu chưa công bố bị các nền tảng AI thương mại sử dụng để huấn luyện mô hình. Cơ chế tự mang khóa cá nhân (Bring Your Own Key -- BYOK) mã hóa phân tầng và không lưu vết trên đĩa cứng bảo đảm tính an toàn tuyệt đối cho người dùng.
 \end{itemize}
 
 Từ kết quả khảo sát thực tế trên, sự chuyển dịch từ quy trình nghiên cứu truyền thống (AS-IS) sang quy trình nghiên cứu mới (TO-BE) trên nền tảng \VS được mô hình hóa trực quan trong Hình~\ref{fig:workflow_as_is_to_be}.
