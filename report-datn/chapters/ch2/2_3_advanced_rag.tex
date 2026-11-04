@@ -11,11 +11,11 @@ Mô hình ngôn ngữ lớn (Large Language Model -- LLM) đã tạo nên bướ
     \item Thiếu minh bạch và khả năng kiểm chứng: Các mô hình đóng gói thuần túy không thể chỉ ra chính xác nguồn gốc tài liệu, trang sách hay tọa độ dẫn chứng làm cơ sở cho câu trả lời.
 \end{itemize}
 
-Để giải quyết các thách thức trên, kỹ thuật Tạo sinh tăng cường truy xuất (Retrieval-Augmented Generation -- RAG) do Lewis và cộng sự giới thiệu \cite{lewis2020} đã kết hợp năng lực suy luận ngôn ngữ của LLM với kho tri thức học thuật bên ngoài. Mặc dù kiến trúc RAG truyền thống (Naive RAG) đã giải quyết được tính thời sự của thông tin thông qua việc phân đoạn văn bản và tìm kiếm Vector đơn lẻ, cách tiếp cận này thường làm đứt gãy ngữ cảnh của các ấn phẩm nghiên cứu phức tạp và bỏ sót các thuật ngữ khoa học đặc thù.
+Để giải quyết các thách thức trên, kỹ thuật Tạo sinh tăng cường truy xuất (Retrieval-Augmented Generation -- RAG) kết hợp năng lực suy luận ngôn ngữ của LLM với kho tri thức học thuật bên ngoài. Mặc dù kiến trúc RAG truyền thống (Naive RAG) giải quyết được tính thời sự của thông tin thông qua việc phân đoạn văn bản và tìm kiếm Vector đơn lẻ, cách tiếp cận này thường làm đứt gãy ngữ cảnh của các ấn phẩm nghiên cứu phức tạp và bỏ sót các thuật ngữ khoa học đặc thù.
 
 \subsection{Kiến trúc RAG nâng cao đa giai đoạn}
 \label{subsec:advanced_rag_architecture}
-Khắc phục điểm nghẽn của Naive RAG, kiến trúc RAG Nâng cao (Advanced RAG) theo khảo sát của Gao và cộng sự \cite{gao2023rag} tái cấu trúc toàn diện quy trình xử lý thành ba giai đoạn tinh chỉnh chuyên sâu:
+Khắc phục điểm nghẽn của Naive RAG, kiến trúc RAG Nâng cao (Advanced RAG) tái cấu trúc toàn diện quy trình xử lý thành ba giai đoạn tinh chỉnh chuyên sâu:
 \begin{itemize}
     \item Tiền truy xuất (Pre-Retrieval): Viết lại câu hỏi (Query Rewriting), phân rã truy vấn con (Sub-queries), phân tích cấu trúc bố cục PDF hai cột và chuẩn hóa tọa độ Bounding Box (Bounding Box Normalization) về miền tỷ lệ $[0, 1]$.
     \item Truy xuất (Retrieval): Kết hợp không gian Vector đặc với chỉ mục đảo GIN \texttt{ts\_rank\_cd} và BM25 để lọc nhanh tập ứng viên tiềm năng có độ phủ từ khóa cao.
@@ -137,7 +137,7 @@ Kiến trúc Advanced RAG phối hợp đa tầng được mô hình hóa trong 
 
 \subsection{Cơ chế phản xạ tự đánh giá Self-RAG}
 \label{subsec:self_rag}
-Nhằm khắc phục hiện tượng truy xuất bừa bãi ngay cả khi không cần thiết, đề tài tham chiếu khung kiến trúc Self-RAG (Self-Reflective Retrieval-Augmented Generation) do Asai và cộng sự đề xuất \cite{asai2023selfrag}. Nguyên lý của Self-RAG là tích hợp các tiêu chí phản xạ đặc biệt (Reflection Tokens) vào chu trình xử lý:
+Nhằm khắc phục hiện tượng truy xuất bừa bãi ngay cả khi không cần thiết, đề tài áp dụng khung kiến trúc Self-RAG (Self-Reflective Retrieval-Augmented Generation). Nguyên lý của Self-RAG là tích hợp các tiêu chí phản xạ đặc biệt (Reflection Tokens) vào chu trình xử lý:
 \begin{itemize}
     \item Đánh giá quyết định truy xuất (\texttt{[Retrieve]}): Tự đánh giá xem câu hỏi hiện tại có cần thêm tri thức ngoại vi hay có thể trả lời trực tiếp từ tri thức tham số nội tại.
     \item Đánh giá mức độ liên quan (\texttt{[IsRel]}): Đánh giá xem từng đoạn văn bản truy xuất được có thực sự liên quan đến câu hỏi hay chứa thông tin gây nhiễu.
@@ -148,7 +148,7 @@ Trong VeriScholar, nguyên lý tự phản xạ của Self-RAG được hiện t
 
 \subsection{Cơ chế hiệu chỉnh truy xuất và kiểm soát ảo giác (Corrective RAG)}
 \label{subsec:crag_hallucination}
-Mặc dù hệ thống truy xuất đã qua nhiều tầng tinh lọc, vẫn tồn tại trường hợp toàn bộ các đoạn văn bản tìm được trong kho dữ liệu cục bộ đều không thỏa mãn câu hỏi nghiên cứu. Để giải quyết triệt để vấn đề này, đề tài ứng dụng cơ chế RAG Hiệu chỉnh (Corrective RAG -- CRAG) do Yan và cộng sự phát triển \cite{yan2024crag}.
+Mặc dù hệ thống truy xuất đã qua nhiều tầng tinh lọc, vẫn tồn tại trường hợp toàn bộ các đoạn văn bản tìm được trong kho dữ liệu cục bộ đều không thỏa mãn câu hỏi nghiên cứu. Để giải quyết triệt để vấn đề này, đề tài ứng dụng cơ chế RAG Hiệu chỉnh (Corrective RAG -- CRAG).
 
 CRAG thiết lập một cổng đánh giá độ tin cậy (Confidence Gate) để phân loại kết quả truy xuất thành ba kịch bản xử lý linh hoạt:
 \begin{itemize}

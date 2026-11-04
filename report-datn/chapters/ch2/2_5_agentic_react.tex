@@ -4,9 +4,9 @@
 
 \subsection{Mô hình suy luận và hành động ReAct phối hợp gọi công cụ}
 \label{subsec:react_framework}
-Trong tiến trình phát triển các hệ thống trí tuệ nhân tạo hỗ trợ nghiên cứu khoa học, các mô hình ngôn ngữ lớn truyền thống thường bộc lộ hạn chế khi giải quyết các nhiệm vụ phức tạp đòi hỏi nhiều bước tính toán. Hướng tiếp cận suy luận chuỗi tư duy thuần túy (Chain-of-Thought -- CoT) \cite{wei2022cot} chỉ vận hành trên không gian tri thức tham số tĩnh nội tại, dễ dẫn đến hiện tượng suy diễn cảm tính và ảo giác số liệu. Ngược lại, các mô hình gọi công cụ độc lập (như Toolformer) \cite{schick2023toolformer} tuy kết nối được với môi trường ngoài nhưng thiếu khả năng tự đánh giá và lập luận chiến lược trước các tình huống lỗi phát sinh.
+Trong tiến trình phát triển các hệ thống trí tuệ nhân tạo hỗ trợ nghiên cứu khoa học, các mô hình ngôn ngữ lớn truyền thống thường bộc lộ hạn chế khi giải quyết các nhiệm vụ phức tạp đòi hỏi nhiều bước tính toán. Hướng tiếp cận suy luận chuỗi tư duy thuần túy (Chain-of-Thought -- CoT) chỉ vận hành trên không gian tri thức tham số tĩnh nội tại, dễ dẫn đến hiện tượng suy diễn cảm tính và ảo giác số liệu. Ngược lại, các mô hình gọi công cụ độc lập (như Toolformer) tuy kết nối được với môi trường ngoài nhưng thiếu khả năng tự đánh giá và lập luận chiến lược trước các tình huống lỗi phát sinh.
 
-Để khắc phục nhược điểm trên, đề tài áp dụng mô hình kiến trúc ReAct do Yao và cộng sự đề xuất \cite{yao2022}, kết hợp cơ chế tự suy ngẫm Reflexion của Shinn và cộng sự \cite{shinn2023} và nguyên lý thiết kế tác nhân tự chủ của Weng \cite{weng2023agent}. ReAct thiết lập một chu trình phối hợp chặt chẽ giữa năng lực tư duy trừu tượng (Reasoning) và hành động tương tác môi trường (Acting) theo vòng lặp có hồi tiếp:
+Để khắc phục nhược điểm trên, đề tài áp dụng mô hình kiến trúc ReAct, kết hợp cơ chế tự suy ngẫm Reflexion và nguyên lý thiết kế tác nhân tự chủ có hồi tiếp. ReAct thiết lập một chu trình phối hợp chặt chẽ giữa năng lực tư duy trừu tượng (Reasoning) và hành động tương tác môi trường (Acting) theo vòng lặp có hồi tiếp:
 \vspace{-6pt}
 \begin{equation}
 \label{eq:react_cycle}
@@ -38,7 +38,7 @@ Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy
 \label{subsec:e2b_microvm_latex}
 Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các nhà khoa học soạn thảo ấn phẩm nghiên cứu là việc tự động biên dịch và sửa lỗi mã nguồn LaTeX. Việc cho phép mô hình AI tự sinh và chạy các lệnh hệ điều hành trực tiếp trên máy chủ tiềm ẩn nguy cơ bảo mật nghiêm trọng về thực thi mã độc từ xa (Remote Code Execution -- RCE).
 
-Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (E2B MicroVM Sandbox) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}:
+Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (E2B MicroVM Sandbox) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker:
 \begin{itemize}[noitemsep, topsep=2pt]
     \item Khởi tạo siêu tốc: Mỗi phiên làm việc được cấp phát một máy ảo siêu nhỏ (MicroVM) độc lập trong thời gian dưới 200 mili-giây, cung cấp đầy đủ nhân Linux và môi trường TeX Live chuyên dụng.
     \item Cô lập mức nhân hệ điều hành (Kernel-level Isolation): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
@@ -128,7 +128,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \label{subsec:byok_aes_gcm}
 Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp (BYOK). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
 
-Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM \cite{dworkin2007}:
+Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM:
 \vspace{-6pt}
 \begin{equation}
 \label{eq:aes_gcm}

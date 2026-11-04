@@ -35,7 +35,7 @@ Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp �
     \end{equation}
     Ưu điểm của phương pháp là khả năng bắt trọn ngữ nghĩa khái quát và từ đồng nghĩa, song gặp khó khăn trước các thuật ngữ hiếm gặp, mã định danh hoặc công thức toán học.
     
-    \item Truy xuất từ khóa thưa hai pha (Two-Stage Sparse Keyword Retrieval): Kết hợp chỉ mục đảo tổng quát GIN trên trường \texttt{tsvector} với hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để sàng lọc nhanh tập ứng viên ban đầu trong cơ sở dữ liệu, sau đó áp dụng công thức chuẩn hóa Okapi BM25 \cite{robertson1995} để tái chấm điểm chính xác:
+    \item Truy xuất từ khóa thưa hai pha (Two-Stage Sparse Keyword Retrieval): Kết hợp chỉ mục đảo tổng quát GIN trên trường \texttt{tsvector} với hàm xếp hạng mật độ bao phủ \texttt{ts\_rank\_cd} để sàng lọc nhanh tập ứng viên ban đầu trong cơ sở dữ liệu, sau đó áp dụng công thức chuẩn hóa Okapi BM25 để tái chấm điểm chính xác:
     \begin{equation}
     \label{eq:bm25}
     \text{Score}_{\text{BM25}}(D, Q) = \sum_{i=1}^{n} \text{IDF}(q_i) \cdot \frac{f(q_i, D) \cdot (k_1 + 1)}{f(q_i, D) + k_1 \cdot \left(1 - b + b \cdot \frac{|D|}{\text{avgdl}}\right)}
@@ -62,14 +62,14 @@ Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp �
 \hline
 \textbf{Độ chính xác thuật ngữ} & Trung bình: Dễ bị nhiễu trước từ viết tắt và ký hiệu & Xuất sắc: Khớp tuyệt đối mã số DOI, tên riêng, công thức \\
 \hline
-\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng phân tầng HNSW \cite{malkov2018} & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + BM25 \\
+\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng phân tầng HNSW & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + BM25 \\
 \hline
 \end{tabularx}
 \end{table}
 
 \subsection{Thuật toán hợp nhất xếp hạng đảo ngược và cơ chế tái xếp hạng}
 \label{subsec:rrf_rerank}
-Nhằm kết hợp hài hòa ưu thế của cả hai không gian truy xuất, hệ thống áp dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (Reciprocal Rank Fusion -- RRF) \cite{cormack2009}. Thay vì cộng gộp các điểm số có thang đo phân kỳ, RRF tính toán dựa trên thứ hạng nguyên vị trí của từng tài liệu trong các danh sách trả về:
+Nhằm kết hợp hài hòa ưu thế của cả hai không gian truy xuất, hệ thống áp dụng thuật toán Hợp nhất Xếp hạng Đảo ngược (Reciprocal Rank Fusion -- RRF). Thay vì cộng gộp các điểm số có thang đo phân kỳ, RRF tính toán dựa trên thứ hạng nguyên vị trí của từng tài liệu trong các danh sách trả về:
 \begin{equation}
 \label{eq:rrf_calc}
 \text{Score}_{\text{RRF}}(d) = \sum_{m \in M} \frac{1}{k + r_m(d)}

@@ -2,7 +2,7 @@
 \section{Thiết kế kiến trúc hệ thống và phân tầng Lục giác}
 \label{sec:thiet_ke_kien_truc}
 
-Để bảo đảm tính bền vững, khả năng kiểm thử độc lập và ngăn chặn triệt để sự phụ thuộc vòng giữa các thành phần nghiệp vụ và hạ tầng công nghệ, hệ thống \VS được thiết kế tuân thủ nghiêm ngặt mô hình Kiến trúc Lục giác (Hexagonal Architecture / Ports and Adapters Pattern) của Cockburn. Kiến trúc này chia tách rành mạch ba phân tầng: Lõi miền nghiệp vụ thuần khiết (Domain Core), Tầng Cổng trừu tượng (Ports) và Tầng Bộ điều hợp hạ tầng (Adapters), đồng thời tổ chức không gian nghiên cứu của học giả thành 4 không gian nghiệp vụ độc lập (4 Research Spaces).
+Để bảo đảm tính bền vững, khả năng kiểm thử độc lập và ngăn chặn triệt để sự phụ thuộc vòng giữa các thành phần nghiệp vụ và hạ tầng công nghệ, hệ thống \VS được thiết kế tuân thủ nghiêm ngặt mô hình Kiến trúc Lục giác (Hexagonal Architecture / Ports and Adapters Pattern). Kiến trúc này chia tách rành mạch ba phân tầng: Lõi miền nghiệp vụ thuần khiết (Domain Core), Tầng Cổng trừu tượng (Ports) và Tầng Bộ điều hợp hạ tầng (Adapters), đồng thời tổ chức không gian nghiên cứu của học giả thành 4 không gian nghiệp vụ độc lập (4 Research Spaces).
 
 \needspace{6\baselineskip}
 \subsection{Nguyên lý phân tầng Kiến trúc Lục giác}

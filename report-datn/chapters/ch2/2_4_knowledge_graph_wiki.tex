@@ -6,10 +6,10 @@
 \label{subsec:academic_kg_model}
 Trong khi mô hình RAG véc-tơ xử lý hiệu quả các truy vấn tìm kiếm đoạn văn cục bộ, phương pháp này bộc lộ hạn chế cố hữu trước các câu hỏi tổng hợp mang tính vĩ mô (chẳng hạn: ``Những phương pháp nào đã được áp dụng trên tập dữ liệu HotpotQA và đạt F1 trên 90\%?''). Khi thông tin phân tán rải rác trên hàng chục công trình khác nhau, việc truy vấn tương đồng véc-tơ đơn lẻ không thể nắm bắt được các mối liên hệ chéo giữa các thực thể học thuật.
 
-Đề tài giải quyết thách thức này bằng cách mô hình hóa tri thức học thuật dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$ \cite{hogan2021kg}. Mạng lưới tri thức được chuẩn hóa thành bốn loại thực thể hạt nhân, khớp hoàn toàn với cấu trúc cơ sở dữ liệu quan hệ của hệ thống:
+Đề tài giải quyết thách thức này bằng cách mô hình hóa tri thức học thuật dưới dạng một đồ thị có hướng có gán nhãn $G = (V, E)$. Mạng lưới tri thức được chuẩn hóa thành bốn loại thực thể hạt nhân, khớp hoàn toàn với cấu trúc cơ sở dữ liệu quan hệ của hệ thống:
 \begin{itemize}
     \item Đỉnh Bài báo (Paper Nodes): Đại diện cho các ấn phẩm nghiên cứu khoa học gốc, lưu trữ tiêu đề, tác giả, năm công bố và mã số định danh DOI.
-    \item Đỉnh Phương pháp (Method Nodes): Đại diện cho các mô hình, thuật toán hoặc kỹ thuật đề xuất (ví dụ: Transformer, Self-Attention~\cite{vaswani2017}, Self-RAG).
+    \item Đỉnh Phương pháp (Method Nodes): Đại diện cho các mô hình, thuật toán hoặc kỹ thuật đề xuất (ví dụ: Transformer, Self-Attention, Self-RAG).
     \item Đỉnh Bộ dữ liệu (Dataset Nodes): Đại diện cho các tập dữ liệu thực nghiệm chuẩn mực (ví dụ: HotpotQA, SQuAD, ImageNet).
     \item Đỉnh Chỉ số kết quả (Metric Nodes): Đại diện cho các kết quả đo lường định lượng cụ thể (chẳng hạn: $\text{F1} = 91{,}2\%$, $\text{EM} = 84{,}5\%$).
 \end{itemize}
@@ -73,7 +73,7 @@ Các thực thể được liên kết thông qua các quan hệ ngữ nghĩa ch
 
 \subsection{Thuật toán phân cụm Louvain và hàm mục tiêu Modularity $Q$}
 \label{subsec:louvain_modularity}
-Để phục vụ việc tổng hợp tri thức ở quy mô toàn cục theo mô hình GraphRAG \cite{edge2024}, hệ thống áp dụng thuật toán phát hiện cộng đồng Louvain (Louvain Community Detection Algorithm) \cite{blondel2008louvain} (kèm mở rộng thuật toán Leiden \cite{traag2019leiden}). Mục tiêu của thuật toán là phân hoạch đồ thị thực thể thành các cụm cộng đồng có mật độ liên kết nội bộ dày đặc và mật độ liên kết giữa các cộng đồng thưa thớt, thông qua việc tối đa hóa hàm mục tiêu độ mô-đun (Modularity $Q$):
+Để phục vụ việc tổng hợp tri thức ở quy mô toàn cục theo mô hình GraphRAG, hệ thống áp dụng thuật toán phát hiện cộng đồng Louvain (Louvain Community Detection Algorithm) (kèm mở rộng thuật toán Leiden). Mục tiêu của thuật toán là phân hoạch đồ thị thực thể thành các cụm cộng đồng có mật độ liên kết nội bộ dày đặc và mật độ liên kết giữa các cộng đồng thưa thớt, thông qua việc tối đa hóa hàm mục tiêu độ mô-đun (Modularity $Q$):
 
 \begin{equation}
 \label{eq:louvain_modularity}

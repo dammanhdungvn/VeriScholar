@@ -9,11 +9,11 @@ Dịch vụ suy luận OpenAI API trên nền tảng đám mây Microsoft Azure 
 
 \subsection{Môi trường hộp cát an toàn E2B MicroVM}
 \label{subsec:e2b_sandbox_compat}
-E2B Sandbox dựa trên công nghệ ảo hóa siêu nhỏ AWS Firecracker \cite{agache2020firecracker}, khởi tạo trong 200ms với khả năng cô lập mức nhân hệ điều hành ngăn chặn tấn công thực thi mã từ xa.
+E2B Sandbox dựa trên công nghệ ảo hóa siêu nhỏ AWS Firecracker, khởi tạo trong 200ms với khả năng cô lập mức nhân hệ điều hành ngăn chặn tấn công thực thi mã từ xa.
 
 \subsection{Mô hình bảo mật khóa cá nhân BYOK AES-256-GCM}
 \label{subsec:byok_security_compat}
-Chuẩn mã hóa đối xứng xác thực AEAD với thuật toán AES-256 ở chế độ GCM \cite{dworkin2007}:
+Chuẩn mã hóa đối xứng xác thực AEAD với thuật toán AES-256 ở chế độ GCM:
 \begin{equation}
 \label{eq:aes_gcm_compat}
 \begin{aligned}

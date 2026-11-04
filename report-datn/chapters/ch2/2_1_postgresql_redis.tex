@@ -13,16 +13,16 @@ Các đặc điểm kỹ thuật then chốt của PostgreSQL bao gồm:
     \item Kiến trúc mở rộng mạnh mẽ (Extensibility): Cho phép tích hợp các kiểu dữ liệu mới, hàm người dùng tự định nghĩa và các tiện ích mở rộng (extensions) cấp thấp chạy trực tiếp trong nhân cơ sở dữ liệu.
 \end{itemize}
 
-Trong đề tài VeriScholar, PostgreSQL giữ vai trò là xương sống lưu trữ dữ liệu trung tâm, kết hợp cùng dịch vụ giao diện lập trình ứng dụng FastAPI~\cite{tiangolo2024fastapi} và kiến trúc phần mềm phân tầng cô lập miền nghiệp vụ của Cockburn~\cite{cockburn2005} bám sát quy chế và hướng dẫn thực hiện đồ án tốt nghiệp đại học~\cite{humg2022hd}, quản lý toàn bộ thực thể học thuật, lịch sử phiên nghiên cứu, siêu dữ liệu phân đoạn tài liệu và bản đồ băm định danh nội dung (CAS).
+Trong hệ thống VeriScholar, PostgreSQL giữ vai trò là xương sống lưu trữ dữ liệu trung tâm, kết hợp cùng dịch vụ giao diện lập trình ứng dụng FastAPI và mô hình kiến trúc phân tầng cô lập miền nghiệp vụ bám sát quy chế và hướng dẫn thực hiện đồ án tốt nghiệp đại học, quản lý toàn bộ thực thể học thuật, lịch sử phiên nghiên cứu, siêu dữ liệu phân đoạn tài liệu và bản đồ băm định danh nội dung (CAS).
 
 \subsection{Tiện ích mở rộng pgvector và cấu trúc chỉ mục HNSW}
 \label{subsec:pgvector_hnsw}
 \texttt{pgvector} là một tiện ích mở rộng mã nguồn mở dành riêng cho PostgreSQL, bổ sung kiểu dữ liệu \texttt{vector} và các phép toán đo lường khoảng cách không gian đa chiều (khoảng cách Euclid $L_2$, khoảng cách Cosine, và tích vô hướng Inner Product). Nhờ \texttt{pgvector}, PostgreSQL hoạt động như một hệ quản trị cơ sở dữ liệu tích hợp đa mô hình quan hệ -- Vector (Integrated Relational-Vector DBMS), cho phép lưu trữ và truy vấn trực tiếp các Vector Embedding ngữ nghĩa 1536 chiều ngay bên cạnh dữ liệu quan hệ chuẩn ACID.
 
-Điểm đột phá trong việc tối ưu hóa tốc độ tìm kiếm láng giềng gần nhất xấp xỉ (Approximate Nearest Neighbor -- ANN) của \texttt{pgvector} là việc hiện thực hóa thuật toán chỉ mục HNSW (Hierarchical Navigable Small World) \cite{malkov2018}:
+Điểm đột phá trong việc tối ưu hóa tốc độ tìm kiếm láng giềng gần nhất xấp xỉ (Approximate Nearest Neighbor -- ANN) của \texttt{pgvector} là việc hiện thực hóa thuật toán chỉ mục HNSW (Hierarchical Navigable Small World):
 \begin{itemize}
     \item Nguyên lý phân tầng đa lớp: HNSW tổ chức không gian Vector thành cấu trúc đồ thị phân tầng tương tự như danh sách liên kết bước nhảy (Skip List). Các tầng trên cùng chứa các liên kết xa với mật độ thưa giúp định vị nhanh vùng lân cận tổng quát; các tầng dưới có mật độ nút dày đặc dần cho phép thu hẹp chính xác không gian tìm kiếm.
-    \item Độ phức tạp truy vấn kỳ vọng thực nghiệm $O(\log N)$: Thay vì phải tính toán khoảng cách tuần tự trên toàn bộ kho vector (Flat Search với độ phức tạp $O(N)$), thuật toán định tuyến tham lam (Greedy Routing) trên đồ thị thế giới nhỏ phân tầng của HNSW đạt độ phức tạp kỳ vọng thực nghiệm tỷ lệ logarit $O(\log N)$ theo số lượng đỉnh $N$ trên các tập dữ liệu thực tế \cite{malkov2018}.
+    \item Độ phức tạp truy vấn kỳ vọng thực nghiệm $O(\log N)$: Thay vì phải tính toán khoảng cách tuần tự trên toàn bộ kho vector (Flat Search với độ phức tạp $O(N)$), thuật toán định tuyến tham lam (Greedy Routing) trên đồ thị thế giới nhỏ phân tầng của HNSW đạt độ phức tạp kỳ vọng thực nghiệm tỷ lệ logarit $O(\log N)$ theo số lượng đỉnh $N$ trên các tập dữ liệu thực tế.
     \item Cập nhật linh hoạt và kiểm soát độ thu hồi theo siêu tham số: Khác với thuật toán IVFFlat đòi hỏi phải huấn luyện lại tâm cụm khi phân phối dữ liệu biến động lớn, HNSW cho phép chèn mới Vector trực tuyến. Độ thu hồi (Recall) và tốc độ truy vấn của chỉ mục được điều chỉnh linh hoạt thông qua ba siêu tham số cốt lõi: số liên kết hai chiều tối đa trên mỗi nút (\texttt{m}), kích thước danh sách ứng viên động khi dựng đồ thị (\texttt{ef\_construction}) và kích thước danh sách ứng viên khi tìm kiếm (\texttt{ef\_search}).
 \end{itemize}
 
