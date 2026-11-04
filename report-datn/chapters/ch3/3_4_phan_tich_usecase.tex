@@ -176,11 +176,11 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \textbf{Điều kiện kết thúc} & Tài liệu được tải vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item[\textbf{Bước 1:}] Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI/arXiv vào thanh tìm kiếm.
-    \item[\textbf{Bước 2:}] Giao diện người dùng phản hồi tức thì với khung xương tải trang (Skeleton loading); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard ($J(Q, T) \ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
-    \item[\textbf{Bước 3:}] Học giả có thể kích hoạt nút lọc ``Đã bình duyệt'' (Peer-reviewed) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
-    \item[\textbf{Bước 4:}] Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
-    \item[\textbf{Bước 5:}] Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
+    \item[--] Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI/arXiv vào thanh tìm kiếm.
+    \item[--] Giao diện người dùng phản hồi tức thì với khung xương tải trang (Skeleton loading); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard ($J(Q, T) \ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
+    \item[--] Học giả có thể kích hoạt nút lọc ``Đã bình duyệt'' (Peer-reviewed) để hệ thống tái sắp xếp thứ tự ưu tiên các bài báo uy tín lên đầu.
+    \item[--] Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
+    \item[--] Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
 \end{itemize} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
@@ -256,14 +256,14 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
 \textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập, cấu hình khóa API cá nhân (BYOK) hợp lệ và mở tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số $[1]$, $[2]$ liên kết với tọa độ Bounding Box. \tabularnewline \hline
+\textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số thứ nhất và thứ hai liên kết với tọa độ Bounding Box. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item[\textbf{Bước 1:}] Học giả nhập câu hỏi nghiên cứu vào khung hội thoại.
-    \item[\textbf{Bước 2:}] AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
-    \item[\textbf{Bước 3:}] Cổng kiểm định tiền sinh văn bản CRAG đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn $[i]$ khớp với phân đoạn nguồn.
-    \item[\textbf{Bước 4:}] Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
-    \item[\textbf{Bước 5:}] Học giả nhấp chuột vào thẻ trích dẫn $[1]$ trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
+    \item[--] Học giả nhập câu hỏi nghiên cứu vào khung hội thoại.
+    \item[--] AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
+    \item[--] Cổng kiểm định tiền sinh văn bản CRAG đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn minh chứng khớp với phân đoạn nguồn.
+    \item[--] Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
+    \item[--] Học giả nhấp chuột vào thẻ trích dẫn minh chứng trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
 \end{itemize} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
@@ -341,11 +341,11 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \textbf{Điều kiện kết thúc} & Đồ thị tri thức được cập nhật trên các bảng \texttt{graph\_nodes}, \texttt{graph\_edges}; bản tóm tắt cộng đồng và trang Wiki sẵn sàng phục vụ truy vấn. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item[\textbf{Bước 1:}] Học giả yêu cầu phân tích đồ thị tri thức cho một thư mục nghiên cứu trong Không gian Thư viện Tri thức.
-    \item[\textbf{Bước 2:}] Hệ thống kích hoạt đường ống GraphRAG: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
-    \item[\textbf{Bước 3:}] Hệ thống chuẩn hóa tên thực thể và tính độ tương đồng Cosine vector nhúng; các đỉnh có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}.
-    \item[\textbf{Bước 4:}] Thuật toán Louvain phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
-    \item[\textbf{Bước 5:}] Hệ thống hiển thị đồ thị tương tác và cho phép học giả thực thi truy vấn bắc cầu 2-hop qua biểu thức bảng chung SQL CTE hoặc đọc trang Wiki tổng hợp.
+    \item[--] Học giả yêu cầu phân tích đồ thị tri thức cho một thư mục nghiên cứu trong Không gian Thư viện Tri thức.
+    \item[--] Hệ thống kích hoạt đường ống GraphRAG: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
+    \item[--] Hệ thống chuẩn hóa tên thực thể và tính độ tương đồng Cosine vector nhúng; các đỉnh có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}.
+    \item[--] Thuật toán Louvain phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
+    \item[--] Hệ thống hiển thị đồ thị tương tác và cho phép học giả thực thi truy vấn bắc cầu 2-hop qua biểu thức bảng chung SQL CTE hoặc đọc trang Wiki tổng hợp.
 \end{itemize} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
@@ -422,10 +422,10 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
 \textbf{Luồng sự kiện chính} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
-    \item[\textbf{Bước 1:}] Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
-    \item[\textbf{Bước 2:}] Học giả nhấp nút ``Biên dịch bản thảo''.
-    \item[\textbf{Bước 3:}] Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
-    \item[\textbf{Bước 4:}] Nếu biên dịch thành công ($\text{ExitCode} = 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
+    \item[--] Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
+    \item[--] Học giả nhấp nút ``Biên dịch bản thảo''.
+    \item[--] Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
+    \item[--] Nếu biên dịch thành công ($\text{ExitCode} = 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{itemize} \tabularnewline \hline
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
