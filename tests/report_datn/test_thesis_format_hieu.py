@@ -157,8 +157,19 @@ def test_usecase_spec_tables_step_conventions():
         lbl_pos = content.find(f"\\label{{{label}}}")
         assert lbl_pos != -1, f"Missing {label} in {file_path}"
 
-        begin_table = content.rfind("\\begin{table", 0, lbl_pos)
-        end_table = content.find("\\end{table}", lbl_pos)
+        begin_table = max(
+            content.rfind("\\begin{table", 0, lbl_pos),
+            content.rfind("\\begin{xltabular", 0, lbl_pos),
+        )
+        end_candidates = [
+            pos
+            for pos in [
+                content.find("\\end{table}", lbl_pos),
+                content.find("\\end{xltabular}", lbl_pos),
+            ]
+            if pos != -1
+        ]
+        end_table = min(end_candidates) if end_candidates else -1
         assert begin_table != -1 and end_table != -1, (
             f"Cannot locate table environment for {label} in {file_path}"
         )
@@ -272,12 +283,14 @@ def test_no_arbitrary_bold_or_italic_in_body():
     env_tokens = (
         "\\begin{table}",
         "\\begin{tabular",
+        "\\begin{xltabular",
         "\\begin{tikzpicture}",
         "\\begin{figure}",
     )
     end_tokens = (
         "\\end{table}",
         "\\end{tabular",
+        "\\end{xltabular}",
         "\\end{tikzpicture}",
         "\\end{figure}",
     )
@@ -428,3 +441,19 @@ def test_xltabular_configured():
     assert "\\usepackage{xltabular}" in preamble, (
         "preamble.tex must load xltabular to allow multi-page table breaking"
     )
+
+
+def test_usecase_tables_use_xltabular_and_continuation_header():
+    """Verify that Tables 3-2 to 3-5 use xltabular and include continuation headers."""
+    content = (REPORT_DIR / "chapters/ch3/3_4_phan_tich_usecase.tex").read_text(encoding="utf-8")
+    spec_section = content[content.find("\\label{subsec:uc_scholar}") :]
+    assert "\\begin{table}" not in spec_section, (
+        "3_4_phan_tich_usecase.tex should not wrap Use Case spec tables in rigid table floats"
+    )
+    for tab_num in ["3-2", "3-3", "3-4", "3-5"]:
+        has_banner = (
+            f"Bảng~{tab_num} (tiếp theo)" in content or f"Bảng {tab_num} (tiếp theo)" in content
+        )
+        assert has_banner, (
+            f"Missing continuation banner for Table {tab_num} in 3_4_phan_tich_usecase.tex"
+        )

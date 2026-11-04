@@ -161,14 +161,23 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \label{fig:uc_kham_pha_sub}
 \end{figure}
 
-\begin{table}[!htbp]
-\centering
+\begingroup
 \setlength{\tabcolsep}{6pt}
-\caption{Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
-\label{tab:uc_kham_pha_spec}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{xltabular}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\caption{Đặc tả Use Case ``Tra cứu và tải tài liệu nghiên cứu''} \label{tab:uc_kham_pha_spec} \\
 \hline
+\endfirsthead
+
+\multicolumn{2}{r}{\fontsize{11pt}{13pt}\selectfont\textit{Bảng~3-2 (tiếp theo)}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
 \textbf{Tên Use Case} & \textbf{Tra cứu và tải tài liệu nghiên cứu} \tabularnewline \hline
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Tìm kiếm bài báo khoa học theo từ khóa hoặc mã DOI/arXiv, lọc bài báo đã bình duyệt và lưu trữ vào thư viện nghiên cứu cá nhân. \tabularnewline \hline
@@ -186,9 +195,9 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu tệp PDF đã tồn tại trong kho lưu trữ chung: Hệ thống tái sử dụng khối tệp vật lý sẵn có và tăng biến đếm tham chiếu (\texttt{ref\_count}), rút ngắn thời gian nạp xuống mức tức thời.
     \item[--] Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (Abstract) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính.
-\end{itemize} \tabularnewline \hline
-\end{tabularx}
-\end{table}
+\end{itemize} \tabularnewline
+\end{xltabular}
+\endgroup
 \FloatBarrier
 
 \subsubsection{Phân tích Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
@@ -244,14 +253,23 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \label{fig:uc_doc_sau_sub}
 \end{figure}
 
-\begin{table}[!htbp]
-\centering
+\begingroup
 \setlength{\tabcolsep}{6pt}
-\caption{Đặc tả Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''}
-\label{tab:uc_doc_sau_spec}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{xltabular}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\caption{Đặc tả Use Case ``Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ''} \label{tab:uc_doc_sau_spec} \\
 \hline
+\endfirsthead
+
+\multicolumn{2}{r}{\fontsize{11pt}{13pt}\selectfont\textit{Bảng~3-3 (tiếp theo)}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
 \textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
@@ -269,9 +287,9 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu điểm tự tin CRAG $\tau < 0{,}20$ (trạng thái \texttt{ACTIVE\_ABSTENTION}): Hệ thống chủ động từ chối suy diễn và thông báo rõ tài liệu không cung cấp đủ bằng chứng, không tự bịa đặt số liệu.
     \item[--] Nếu khóa API cá nhân (BYOK) hết hạn ngạch hoặc không hợp lệ: Hệ thống điều hướng mở hộp thoại cập nhật khóa và bảo lưu nội dung câu hỏi.
-\end{itemize} \tabularnewline \hline
-\end{tabularx}
-\end{table}
+\end{itemize} \tabularnewline
+\end{xltabular}
+\endgroup
 \FloatBarrier
 
 \subsubsection{Phân tích Use Case ``Khai phá Đồ thị tri thức và biên soạn tri thức học thuật''}
@@ -326,14 +344,23 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \label{fig:uc_graphrag_sub}
 \end{figure}
 
-\begin{table}[!htbp]
-\centering
+\begingroup
 \setlength{\tabcolsep}{6pt}
-\caption{Đặc tả Use Case ``Khai phá Đồ thị tri thức và biên soạn tri thức học thuật''}
-\label{tab:uc_graphrag_spec}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{xltabular}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\caption{Đặc tả Use Case ``Khai phá Đồ thị tri thức và biên soạn tri thức học thuật''} \label{tab:uc_graphrag_spec} \\
 \hline
+\endfirsthead
+
+\multicolumn{2}{r}{\fontsize{11pt}{13pt}\selectfont\textit{Bảng~3-4 (tiếp theo)}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
 \textbf{Tên Use Case} & \textbf{Khai phá Đồ thị tri thức và biên soạn tri thức học thuật} \tabularnewline \hline
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Tự động trích xuất mạng lưới tri thức học thuật 4 thực thể, khử trùng lặp đỉnh, phân cụm cộng đồng Louvain và thực hiện truy vấn quan hệ bắc cầu 2-hop hoặc sinh trang Wiki. \tabularnewline \hline
@@ -350,9 +377,9 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \textbf{Luồng thay thế / Ngoại lệ} & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu số lượng thực thể trích xuất dưới ngưỡng tối thiểu ($N < 2$): Hệ thống thông báo học giả cần bổ sung tài liệu để hình thành mạng lưới liên kết có ý nghĩa.
-\end{itemize} \tabularnewline \hline
-\end{tabularx}
-\end{table}
+\end{itemize} \tabularnewline
+\end{xltabular}
+\endgroup
 \FloatBarrier
 
 \subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
@@ -407,14 +434,23 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \label{fig:uc_bien_soan_sub}
 \end{figure}
 
-\begin{table}[!htbp]
-\centering
+\begingroup
 \setlength{\tabcolsep}{6pt}
-\caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
-\label{tab:uc_bien_soan_spec}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\begin{xltabular}{\textwidth}{|>{\raggedright\arraybackslash}m{3.2cm}|>{\raggedright\arraybackslash}X|}
+\caption{Đặc tả Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''} \label{tab:uc_bien_soan_spec} \\
 \hline
+\endfirsthead
+
+\multicolumn{2}{r}{\fontsize{11pt}{13pt}\selectfont\textit{Bảng~3-5 (tiếp theo)}} \\ \hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
 \textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi LaTeX} \tabularnewline \hline
 \textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
 \textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct trong môi trường máy ảo cách ly. \tabularnewline \hline
@@ -436,9 +472,10 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
         \item[--] Hệ thống tự động áp dụng bản vá và kích hoạt tái biên dịch ($N_{\max} = 3$).
         \item[--] Khi thành công, thông báo lỗi được xóa bỏ và giao diện cập nhật PDF mới.
     \end{itemize}
-\end{itemize} \tabularnewline \hline
-\end{tabularx}
-\end{table}
+\end{itemize} \tabularnewline
+\end{xltabular}
+\endgroup
+\FloatBarrier
 
 \subsection{Cơ chế bảo mật và vận hành hệ thống phía Quản trị viên}
 \label{subsec:uc_admin}
