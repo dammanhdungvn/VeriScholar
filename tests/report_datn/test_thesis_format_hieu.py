@@ -276,6 +276,29 @@ def test_no_arbitrary_bold_or_italic_in_body():
         assert "\\textbf{" not in clean_text, f"Found \\textbf in {f}"
 
 
+def test_de_cuong_sections_numbering_and_table_layout():
+    file_path = REPORT_DIR / "frontmatter/de_cuong_datn.tex"
+    content = file_path.read_text(encoding="utf-8")
+
+    expected_sections = [
+        "1. Sinh viên thực hiện",
+        "2. Giảng viên hướng dẫn",
+        "3. Tên đề tài",
+        "4. Lý do chọn đề tài",
+        "5. Mục tiêu của đề tài",
+        "6. Các nhiệm vụ cụ thể",
+        "7. Kế hoạch thực hiện",
+        "8. Nơi thực hiện đồ án:",
+    ]
+    for sec in expected_sections:
+        assert sec in content, f"Missing section '{sec}' in {file_path} (must match Hieu.pdf 1-8)"
+
+    # Class name must be broken across lines to prevent border collision
+    assert "DCCTCT67\\newline" in content or "DCCTCT67-" in content, (
+        f"Class name in {file_path} must be line-wrapped to avoid overflowing into phone column"
+    )
+
+
 def test_all_external_figures_png():
     for f in (REPORT_DIR / "figures").rglob("*"):
         if f.is_file() and not f.name.startswith("."):
