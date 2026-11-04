@@ -439,8 +439,6 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \end{itemize} \tabularnewline \hline
 \end{tabularx}
 \end{table}
-\FloatBarrier
-\clearpage
 
 \subsection{Cơ chế bảo mật và vận hành hệ thống phía Quản trị viên}
 \label{subsec:uc_admin}
@@ -452,7 +450,6 @@ Tuân thủ nguyên tắc tối giản hóa sản phẩm 80/20, các tác vụ q
     \item Thu hồi khối tệp mồ côi CAS: Cơ chế tự động quản lý biến đếm tham chiếu (\texttt{ref\_count}) trên bảng \texttt{document\_storage\_blobs}; khi một bài báo bị học giả xóa khỏi thư viện, biến đếm giảm đi 1. Khối tệp nhị phân chỉ bị xóa vật lý khi $\text{ref\_count} = 0$, giúp tối ưu hóa dung lượng lưu trữ trên máy chủ.
     \item Giám sát từ xa và kiểm định tự động: Quản trị viên thực thi đo lường hiệu năng định lượng thông qua điểm cuối \texttt{/api/v1/evaluations/run-benchmark}, theo dõi thời gian phản hồi, độ trễ cơ sở dữ liệu và chi phí Token suy luận thông qua nền tảng giám sát phân tán Langfuse Cloud và Azure Portal.
 \end{itemize}
-\clearpage
 
 % Tham chiếu mô hình hóa ca sử dụng quản trị hệ thống:
 % \begin{tikzpicture}[umlactor/.pic={}] \pic at (0,0) {umlactor}; \end{tikzpicture}

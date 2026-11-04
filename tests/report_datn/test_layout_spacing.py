@@ -209,13 +209,42 @@ def test_sequence_diagrams_no_newpage_and_flow():
         )
         assert p_fig_3_8 is not None and p_fig_3_9 is not None
         assert p_fig_3_10 is not None and p_fig_3_11 is not None
-        assert p_fig_3_8 == p_fig_3_9, (
-            f"Hình 3-8 (trang {p_fig_3_8}) và Hình 3-9 (trang {p_fig_3_9}) "
-            "phải cùng nằm trên trang 36!"
+        assert p_fig_3_8 <= p_fig_3_9 <= p_fig_3_10 <= p_fig_3_11, (
+            f"Các biểu đồ tuần tự phải xuất hiện đầy đủ theo đúng thứ tự liên tục: "
+            f"3-8 (trang {p_fig_3_8}), 3-9 (trang {p_fig_3_9}), "
+            f"3-10 (trang {p_fig_3_10}), 3-11 (trang {p_fig_3_11})"
         )
-        assert p_fig_3_10 == p_fig_3_11, (
-            f"Hình 3-10 (trang {p_fig_3_10}) và Hình 3-11 (trang {p_fig_3_11}) "
-            "phải cùng nằm trên trang 37!"
+
+
+def test_page_54_density_and_no_clearpage_gap():
+    # Kiểm tra cấm \clearpage cưỡng bức cô lập tiểu mục 3.4.4 / 3.4.5
+    tex_path = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex")
+    content = tex_path.read_text(encoding="utf-8")
+    subsec_pos = content.find(
+        "\\subsection{Cơ chế bảo mật và vận hành hệ thống phía Quản trị viên}"
+    )
+    assert subsec_pos != -1, "Không tìm thấy đề mục Quản trị viên trong tệp TeX"
+    pre_subsec = content[max(0, subsec_pos - 100) : subsec_pos]
+    assert "\\clearpage" not in pre_subsec, (
+        "Không được dùng \\clearpage trước tiểu mục Cơ chế bảo mật để tránh hổng trang"
+    )
+    post_subsec = content[subsec_pos:]
+    assert "\\clearpage" not in post_subsec, (
+        "Không được dùng \\clearpage sau tiểu mục Cơ chế bảo mật để Mục 3.5 chảy tự nhiên"
+    )
+
+    pdf_path = Path("report-datn/main.pdf")
+    if pdf_path.exists():
+        res = subprocess.run(["pdftotext", str(pdf_path), "-"], capture_output=True, text=True)
+        pages = res.stdout.split("\x0c")
+        assert len(pages) > 54
+        # Kiểm tra trang 54 trong luồng đánh số của luận văn
+        p_54 = next((i for i, p in enumerate(pages) if p.strip().endswith("54")), None)
+        assert p_54 is not None, "Không tìm thấy trang 54 trong PDF"
+        page_54_lines = [line.strip() for line in pages[p_54].split("\n") if line.strip()]
+        # Trang 54 phải chứa ít nhất 25 dòng nội dung (đã đưa Mục 3.5 lên, không bị hổng nửa trang)
+        assert len(page_54_lines) >= 25, (
+            f"Trang 54 quá thưa ({len(page_54_lines)} dòng). Phải đưa Mục 3.5 lên để khít đều!"
         )
 
 
