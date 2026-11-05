@@ -9,10 +9,23 @@
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.20}
 \noindent
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{3.2cm}|X|}
+\begin{xltabular}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{3.2cm}|X|}
 \hline
 \textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
 \hline
+\endfirsthead
+
+\hline
+\textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
+\hline
+\endhead
+
+\hline
+\endfoot
+
+\hline
+\endlastfoot
+
 1 & ACID & Atomicity, Consistency, Isolation, Durability -- Bốn thuộc tính toàn vẹn giao dịch cơ sở dữ liệu \\ \hline
 2 & AES-GCM & Advanced Encryption Standard -- Galois/Counter Mode -- Chuẩn mã hóa khối nâng cao xác thực khóa API BYOK \\ \hline
 3 & API & Application Programming Interface -- Giao diện lập trình ứng dụng \\ \hline
@@ -29,15 +42,6 @@
 14 & E2B & E2B Sandbox / MicroVM -- Môi trường máy ảo đám mây thực thi và biên dịch cô lập an toàn \\ \hline
 15 & FTS & Full-Text Search -- Tìm kiếm toàn văn cơ sở dữ liệu \\ \hline
 16 & GIN & Generalized Inverted Index -- Chỉ mục đảo tổng quát trong PostgreSQL \\ \hline
-\end{tabularx}
-
-\newpage
-
-\noindent
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}p{1.0cm}|>{\centering\arraybackslash}p{3.2cm}|X|}
-\hline
-\textbf{STT} & \textbf{Ký hiệu / viết tắt} & \centering\textbf{Ý nghĩa} \tabularnewline
-\hline
 17 & GraphRAG & Graph Retrieval-Augmented Generation -- Sinh văn bản tăng cường truy xuất qua đồ thị \\ \hline
 18 & HNSW & Hierarchical Navigable Small World -- Cấu trúc đồ thị chỉ mục tìm kiếm vector gần đúng \\ \hline
 19 & IoU & Intersection over Union -- Chỉ số trùng khớp diện tích hộp tọa độ \\ \hline
@@ -53,7 +57,7 @@
 29 & SSE & Server-Sent Events -- Giao thức truyền sự kiện thời gian thực từ máy chủ \\ \hline
 30 & TDD & Test-Driven Development -- Phương pháp phát triển hướng kiểm thử \\ \hline
 31 & TTFT & Time To First Token -- Thời gian đáp ứng từ lúc gửi câu hỏi đến token đầu \\ \hline
-32 & UI/UX & User Interface / User Experience -- Giao diện và trải nghiệm người dùng \\ \hline
-\end{tabularx}
+32 & UI/UX & User Interface / User Experience -- Giao diện và trải nghiệm người dùng \\
+\end{xltabular}
 \clearpage
 \endgroup

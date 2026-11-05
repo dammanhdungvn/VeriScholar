@@ -53,17 +53,17 @@ Hệ thống truy xuất thông tin học thuật đòi hỏi sự kết hợp �
 \label{tab:search_comparison}
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash\bfseries}p{3.0cm}|X|X|}
+\begin{tabularx}{\textwidth}{|>{\raggedright\arraybackslash}p{3.0cm}|X|X|}
 \hline
 \textbf{Tiêu chí so sánh} & \textbf{Dense Vector (Cosine HNSW)} & \textbf{Sparse Keyword (BM25 GIN)} \\
 \hline
-\textbf{Không gian biểu diễn} & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc (\texttt{tsvector}) \\
+Không gian biểu diễn & Vector thực liên tục đa chiều (1536 chiều) & Vector từ khóa thưa rời rạc (\texttt{tsvector}) \\
 \hline
-\textbf{Khả năng ngữ nghĩa} & Bắt trọn từ đồng nghĩa và khái niệm tương đương & Hạn chế: Dựa trên sự trùng khớp ký tự chính xác \\
+Khả năng ngữ nghĩa & Bắt trọn từ đồng nghĩa và khái niệm tương đương & Hạn chế: Dựa trên sự trùng khớp ký tự chính xác \\
 \hline
-\textbf{Độ chính xác thuật ngữ} & Trung bình: Dễ bị nhiễu trước từ viết tắt và ký hiệu & Xuất sắc: Khớp tuyệt đối mã số DOI, tên riêng, công thức \\
+Độ chính xác thuật ngữ & Trung bình: Dễ bị nhiễu trước từ viết tắt và ký hiệu & Xuất sắc: Khớp tuyệt đối mã số DOI, tên riêng, công thức \\
 \hline
-\textbf{Cấu trúc chỉ mục} & Đồ thị láng giềng phân tầng HNSW & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + BM25 \\
+Cấu trúc chỉ mục & Đồ thị láng giềng phân tầng HNSW & Danh sách nghịch đảo GIN (\texttt{ts\_rank\_cd}) + BM25 \\
 \hline
 \end{tabularx}
 \end{table}
@@ -80,15 +80,15 @@ trong đó $M = \{\text{Dense Vector}, \text{Sparse BM25}\}$, $r_m(d)$ là thứ
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.72, transform shape,
+    scale=0.80, transform shape,
     box_dense/.style={draw=orange!85!black, fill=yellow!8, rounded corners=6pt, line width=1.0pt},
     box_sparse/.style={draw=blue!80!black, fill=blue!6, rounded corners=6pt, line width=1.0pt},
     box_rrf/.style={draw=gray!80, fill=gray!5, rounded corners=8pt, line width=1.0pt},
     box_hybrid/.style={draw=teal!85!black, fill=teal!5, rounded corners=8pt, line width=1.1pt},
     item_box/.style={draw=black!65, fill=white, rounded corners=3pt, line width=0.7pt, align=center, inner sep=2.5pt, font=\linespread{1.0}\selectfont\footnotesize},
     container_hybrid/.style={draw=teal!75!black, fill=teal!3, dashed, rounded corners=10pt, line width=1.1pt},
-    arrowstyle/.style={-{Stealth[length=2.5mm]}, line width=1.0pt, draw=black!85},
-    pipearrow/.style={-{Stealth[length=2.8mm]}, line width=1.2pt, draw=teal!85!black}
+    arrowstyle/.style={-{Stealth[length=3.0mm]}, line width=1.0pt, draw=black!85},
+    pipearrow/.style={-{Stealth[length=3.2mm]}, line width=1.2pt, draw=teal!85!black}
 ]
     % 1. Khối Truy vấn đầu vào (Scholar Query)
     \node[draw=orange!85!black, fill=orange!10, rounded corners=6pt, line width=1.1pt, minimum width=5.2cm, minimum height=0.95cm, align=center, font=\bfseries\small] (query) at (0, 8.2) {

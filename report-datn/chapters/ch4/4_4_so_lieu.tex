@@ -38,7 +38,7 @@ Bảng~\ref{tab:ablation_retrieval} trình bày kết quả đối chứng giữ
 \centering\textbf{Cấu hình Retrieval} & \textbf{Recall@5} & \textbf{MRR@10} & \textbf{nDCG@10} & \textbf{Mean BBox} \newline \textbf{IoU} & \textbf{Độ trễ} \newline \textbf{$P_{50}$/$P_{95}$} \tabularnewline \hline
 -- Dense (\texttt{pgvector} HNSW) & $0{,}8056$ ($80{,}56\%$) & $0{,}7882$ & $0{,}7985$ & $0{,}7865$ \newline $\pm 0{,}0254$ & $65{,}12$ / \newline $80{,}24\,\text{ms}$ \\ \hline
 -- Sparse (\texttt{ts\_\allowbreak rank\_\allowbreak cd} + BM25) & $0{,}8333$ ($83{,}33\%$) & $0{,}7964$ & $0{,}8241$ & $0{,}8210$ \newline $\pm 0{,}0277$ & $46{,}21$ / \newline $56{,}73\,\text{ms}$ \\ \hline
-\textbf{-- Hybrid: RRF ($k=60$) + Cross-Encoder} & $\mathbf{0{,}9444}$ ($\mathbf{94{,}44\%}$) & $\mathbf{0{,}9444}$ & $\mathbf{0{,}9444}$ & $\mathbf{0{,}9266}$ \newline $\mathbf{\pm 0{,}0126}$ & $\mathbf{93{,}95}$ / \newline $\mathbf{116{,}50\,\text{ms}}$ \\ \hline
+-- Hybrid: RRF ($k=60$) + Cross-Encoder & $0{,}9444$ ($94{,}44\%$) & $0{,}9444$ & $0{,}9444$ & $0{,}9266$ \newline $\pm 0{,}0126$ & $93{,}95$ / \newline $116{,}50\,\text{ms}$ \\ \hline
 \end{tabularx}
 \end{table}
 
@@ -63,7 +63,7 @@ Bảng~\ref{tab:ablation_latex_healing} chứng minh sự kết hợp giữa b�
 \centering\textbf{Cấu hình Self-Healing} & \textbf{Biên dịch thành công} & \textbf{Bảo toàn ngữ nghĩa} & \textbf{Số vòng lặp TB} \tabularnewline \hline
 -- Quy tắc cú pháp cơ bản & $11/25$ ($44{,}0\%$) & $44{,}0\%$ & $1{,}00$ vòng \\ \hline
 -- Quy tắc Heuristic mở rộng & $21/25$ ($84{,}0\%$) & $84{,}0\%$ & $1{,}00$ vòng \\ \hline
-\textbf{-- Hybrid: Quy tắc tĩnh + ReAct Agent} & $\mathbf{24/25}$ ($\mathbf{96{,}0\%}$) & $\mathbf{96{,}0\%}$ & $\mathbf{1{,}16}$ \textbf{vòng} \\ \hline
+-- Hybrid: Quy tắc tĩnh + ReAct Agent & $24/25$ ($96{,}0\%$) & $96{,}0\%$ & $1{,}16$ vòng \\ \hline
 \end{tabularx}
 \end{table}
 

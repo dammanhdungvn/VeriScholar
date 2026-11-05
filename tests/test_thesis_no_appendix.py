@@ -45,11 +45,17 @@ def test_tikz_diagram_spacing_refinements():
 def test_tables_center_aligned():
     # 1. Bảng 1-1: Cột nền tảng căn giữa
     ch1_tex = Path("report-datn/chapters/ch1/1_2_tinh_cap_thiet.tex").read_text(encoding="utf-8")
-    assert ">{\\bfseries\\centering\\arraybackslash}m{2.3cm}" in ch1_tex
+    assert (
+        ">{\\centering\\arraybackslash}m{2.3cm}" in ch1_tex
+        or ">{\\bfseries\\centering\\arraybackslash}m{2.3cm}" in ch1_tex
+    )
 
     # 2. Bảng 2-1: Cột tiêu chí căn giữa
     ch2_tex = Path("report-datn/chapters/ch2/2_1_postgresql_redis.tex").read_text(encoding="utf-8")
-    assert ">{\\centering\\arraybackslash\\bfseries}m{3.0cm}" in ch2_tex
+    assert (
+        ">{\\centering\\arraybackslash}m{3.0cm}" in ch2_tex
+        or ">{\\centering\\arraybackslash\\bfseries}m{3.0cm}" in ch2_tex
+    )
 
     # 3. Bảng 3-1: Cột tên Actor căn giữa
     ch3_uc = Path("report-datn/chapters/ch3/3_4_phan_tich_usecase.tex").read_text(encoding="utf-8")

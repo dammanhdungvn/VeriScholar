@@ -44,19 +44,19 @@ Một câu hỏi mang tính then chốt trong thiết kế hệ thống là: T�
 \label{tab:vector_db_comparison}
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash\bfseries}m{3.0cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
+\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{3.0cm}|>{\raggedright\arraybackslash}X|>{\raggedright\arraybackslash}X|}
 \hline
 \textbf{Tiêu chí} & \centering\textbf{PostgreSQL + pgvector (Đề tài chọn)} & \centering\textbf{Cơ sở dữ liệu Vector chuyên dụng (Milvus, Pinecone, Qdrant)} \tabularnewline
 \hline
-\textbf{Giao dịch ACID} & Tuyệt đối: Cập nhật bản ghi quan hệ và Vector nhúng đồng thời trong một giao dịch duy nhất. & Nhất quán cuối cùng: Rủi ro dữ liệu mồ côi hoặc bất đồng bộ giữa hai hệ thống lưu trữ. \\
+Giao dịch ACID & Tuyệt đối: Cập nhật bản ghi quan hệ và Vector nhúng đồng thời trong một giao dịch duy nhất. & Nhất quán cuối cùng: Rủi ro dữ liệu mồ côi hoặc bất đồng bộ giữa hai hệ thống lưu trữ. \\
 \hline
-\textbf{Kiến trúc vận hành} & Tối giản: Vận hành một cụm duy nhất, không phụ thuộc cụm dịch vụ trung gian (etcd, MinIO). & Phức tạp: Đòi hỏi cụm phân tán riêng biệt kèm hạ tầng điều phối tốn kém tài nguyên. \\
+Kiến trúc vận hành & Tối giản: Vận hành một cụm duy nhất, không phụ thuộc cụm dịch vụ trung gian (etcd, MinIO). & Phức tạp: Đòi hỏi cụm phân tán riêng biệt kèm hạ tầng điều phối tốn kém tài nguyên. \\
 \hline
-\textbf{Truy vấn kết hợp} & Linh hoạt: Kết hợp trực tiếp bộ lọc quan hệ (\texttt{WHERE}) và tìm kiếm Vector trong cùng một câu lệnh SQL. & Phân mảnh: Đòi hỏi cơ chế lọc hai pha tách rời gây phát sinh độ trễ mạng và nén ứng viên. \\
+Truy vấn kết hợp & Linh hoạt: Kết hợp trực tiếp bộ lọc quan hệ (\texttt{WHERE}) và tìm kiếm Vector trong cùng một câu lệnh SQL. & Phân mảnh: Đòi hỏi cơ chế lọc hai pha tách rời gây phát sinh độ trễ mạng và nén ứng viên. \\
 \hline
-\textbf{Sao lưu phục hồi} & Chuẩn hóa: Sao lưu toàn diện và đồng bộ qua cơ chế nhật ký WAL và công cụ \texttt{pg\_dump}. & Tách rời: Cần quy trình đồng bộ sao lưu riêng lẻ giữa cơ sở dữ liệu nghiệp vụ và kho Vector. \\
+Sao lưu phục hồi & Chuẩn hóa: Sao lưu toàn diện và đồng bộ qua cơ chế nhật ký WAL và công cụ \texttt{pg\_dump}. & Tách rời: Cần quy trình đồng bộ sao lưu riêng lẻ giữa cơ sở dữ liệu nghiệp vụ và kho Vector. \\
 \hline
-\textbf{Chi phí hạ tầng} & Tiết kiệm: Mã nguồn mở 100\%, tối ưu hóa trên cấu hình máy chủ đám mây Azure đơn lẻ. & Tốn kém: Chi phí bản quyền SaaS định kỳ cao hoặc yêu cầu phần cứng RAM/CPU vượt trội. \\
+Chi phí hạ tầng & Tiết kiệm: Mã nguồn mở 100\%, tối ưu hóa trên cấu hình máy chủ đám mây Azure đơn lẻ. & Tốn kém: Chi phí bản quyền SaaS định kỳ cao hoặc yêu cầu phần cứng RAM/CPU vượt trội. \\
 \hline
 \end{tabularx}
 \end{table}

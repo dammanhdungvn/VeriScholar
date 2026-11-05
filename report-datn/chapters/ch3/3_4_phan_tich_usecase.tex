@@ -16,7 +16,7 @@ Mối quan hệ tương tác trực quan giữa các tác nhân và các phân h
 \begin{figure}[!htbp]
 \centering
 \begin{tikzpicture}[
-    scale=0.62, transform shape,
+    scale=0.75, transform shape,
     umlactor/.pic={
         \draw[line width=0.85pt, fill=blue!10] (0, 0.42) circle (0.22);
         \draw[line width=0.85pt] (0, 0.20) -- (0, -0.30);
@@ -87,7 +87,7 @@ Trên cơ sở biểu đồ tổng quan, danh mục 12 ca sử dụng chính đ�
 \hline
 \textbf{STT} & \textbf{Tên Actor} & \centering\textbf{Use Case} \tabularnewline
 \hline
-\multirow{8}{=}{\centering\textbf{1}} & \multirow{8}{=}{\centering\textbf{Học giả\\(Scholar)}} & -- Đăng ký / Đăng nhập và xác thực tài khoản \\ \cline{3-3}
+\multirow{8}{=}{\centering 1} & \multirow{8}{=}{\centering Học giả\\(Scholar)} & -- Đăng ký / Đăng nhập và xác thực tài khoản \\ \cline{3-3}
 & & -- Tìm kiếm và thu thập tài liệu học thuật đa nguồn \\ \cline{3-3}
 & & -- Tải tài liệu cá nhân và Deduplication lưu trữ CAS \\ \cline{3-3}
 & & -- Đọc sâu tài liệu PDF hai cột và Hỏi đáp với AI \\ \cline{3-3}
@@ -96,7 +96,7 @@ Trên cơ sở biểu đồ tổng quan, danh mục 12 ca sử dụng chính đ�
 & & -- Quản lý hồ sơ định danh ORCID và Kho khóa API BYOK \\ \cline{3-3}
 & & -- Biên soạn bản thảo LaTeX và Tự phục hồi lỗi biên dịch \\
 \hline
-\multirow{4}{=}{\centering\textbf{2}} & \multirow{4}{=}{\centering\textbf{Quản trị viên\\(Admin)}} & -- Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
+\multirow{4}{=}{\centering 2} & \multirow{4}{=}{\centering Quản trị viên\\(Admin)} & -- Quản lý tài khoản người dùng và phân quyền \\ \cline{3-3}
 & & -- Giám sát sức khỏe hạ tầng hộp cát E2B MicroVM \\ \cline{3-3}
 & & -- Theo dõi Trace mô hình ngôn ngữ và Chi phí Token \\ \cline{3-3}
 & & -- Cấu hình chính sách lưu trữ và an toàn dữ liệu \\
@@ -117,7 +117,7 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
+    scale=0.85, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -178,12 +178,12 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \hline
 \endlastfoot
 
-\textbf{Tên Use Case} & \textbf{Tra cứu và tải tài liệu nghiên cứu} \tabularnewline \hline
-\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Tìm kiếm bài báo khoa học theo từ khóa hoặc mã DOI/arXiv, lọc bài báo đã bình duyệt và lưu trữ vào thư viện nghiên cứu cá nhân. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập vào hệ thống \VS. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Tài liệu được tải vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
-\textbf{Luồng sự kiện chính} & 
+Tên Use Case & Tra cứu và tải tài liệu nghiên cứu \tabularnewline \hline
+Actor & Học giả (Scholar) \tabularnewline \hline
+Mục tiêu & Tìm kiếm bài báo khoa học theo từ khóa hoặc mã DOI/arXiv, lọc bài báo đã bình duyệt và lưu trữ vào thư viện nghiên cứu cá nhân. \tabularnewline \hline
+Điều kiện tiên quyết & Học giả đã đăng nhập vào hệ thống \VS. \tabularnewline \hline
+Điều kiện kết thúc & Tài liệu được tải vào không gian làm việc; bản ghi thư mục và khối tệp CAS được tạo lập thành công. \tabularnewline \hline
+Luồng sự kiện chính & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Học giả nhập từ khóa tìm kiếm hoặc mã định danh DOI/arXiv vào thanh tìm kiếm.
     \item[--] Giao diện người dùng phản hồi tức thì với khung xương tải trang (Skeleton loading); đối với truy vấn từ khóa từ 3 từ trở lên, hệ thống áp dụng bộ lọc độ tương đồng tiêu đề bằng chỉ số Jaccard ($J(Q, T) \ge 0{,}2$) nhằm ngăn chặn bài báo lạc đề, đồng thời truy vấn qua các cổng học thuật mở và hiển thị danh sách kết quả.
@@ -191,7 +191,7 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
     \item[--] Học giả chọn bài báo mong muốn và nhấp nút ``Tải tài liệu''.
     \item[--] Hệ thống tải tệp PDF toàn văn, tính mã băm SHA-256 để kiểm tra Deduplication trong kho lưu trữ CAS, và liên kết tài liệu vào không gian làm việc của học giả.
 \end{itemize} \tabularnewline \hline
-\textbf{Luồng thay thế / Ngoại lệ} & 
+Luồng thay thế / Ngoại lệ & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu tệp PDF đã tồn tại trong kho lưu trữ chung: Hệ thống tái sử dụng khối tệp vật lý sẵn có và tăng biến đếm tham chiếu (\texttt{ref\_count}), rút ngắn thời gian nạp xuống mức tức thời.
     \item[--] Nếu bài báo thuộc diện thu phí bản quyền: Hệ thống thông báo chỉ hỗ trợ hiển thị tóm tắt (Abstract) và cho phép học giả tự tải lên tệp PDF cá nhân từ máy tính.
@@ -208,7 +208,7 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
+    scale=0.85, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -270,12 +270,12 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \hline
 \endlastfoot
 
-\textbf{Tên Use Case} & \textbf{Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ} \tabularnewline \hline
-\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Học giả đã đăng nhập, cấu hình khóa API cá nhân (BYOK) hợp lệ và mở tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số thứ nhất và thứ hai liên kết với tọa độ Bounding Box. \tabularnewline \hline
-\textbf{Luồng sự kiện chính} & 
+Tên Use Case & Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ \tabularnewline \hline
+Actor & Học giả (Scholar) \tabularnewline \hline
+Mục tiêu & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
+Điều kiện tiên quyết & Học giả đã đăng nhập, cấu hình khóa API cá nhân (BYOK) hợp lệ và mở tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
+Điều kiện kết thúc & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số thứ nhất và thứ hai liên kết với tọa độ Bounding Box. \tabularnewline \hline
+Luồng sự kiện chính & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Học giả nhập câu hỏi nghiên cứu vào khung hội thoại.
     \item[--] AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
@@ -283,7 +283,7 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
     \item[--] Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
     \item[--] Học giả nhấp chuột vào thẻ trích dẫn minh chứng trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
 \end{itemize} \tabularnewline \hline
-\textbf{Luồng thay thế / Ngoại lệ} & 
+Luồng thay thế / Ngoại lệ & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu điểm tự tin CRAG $\tau < 0{,}20$ (trạng thái \texttt{ACTIVE\_ABSTENTION}): Hệ thống chủ động từ chối suy diễn và thông báo rõ tài liệu không cung cấp đủ bằng chứng, không tự bịa đặt số liệu.
     \item[--] Nếu khóa API cá nhân (BYOK) hết hạn ngạch hoặc không hợp lệ: Hệ thống điều hướng mở hộp thoại cập nhật khóa và bảo lưu nội dung câu hỏi.
@@ -300,7 +300,7 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
+    scale=0.85, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -361,12 +361,12 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \hline
 \endlastfoot
 
-\textbf{Tên Use Case} & \textbf{Khai phá Đồ thị tri thức và biên soạn tri thức học thuật} \tabularnewline \hline
-\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Tự động trích xuất mạng lưới tri thức học thuật 4 thực thể, khử trùng lặp đỉnh, phân cụm cộng đồng Louvain và thực hiện truy vấn quan hệ bắc cầu 2-hop hoặc sinh trang Wiki. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Học giả đã đưa ít nhất một tài liệu nghiên cứu vào thư mục nghiên cứu. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Đồ thị tri thức được cập nhật trên các bảng \texttt{graph\_nodes}, \texttt{graph\_edges}; bản tóm tắt cộng đồng và trang Wiki sẵn sàng phục vụ truy vấn. \tabularnewline \hline
-\textbf{Luồng sự kiện chính} & 
+Tên Use Case & Khai phá Đồ thị tri thức và biên soạn tri thức học thuật \tabularnewline \hline
+Actor & Học giả (Scholar) \tabularnewline \hline
+Mục tiêu & Tự động trích xuất mạng lưới tri thức học thuật 4 thực thể, khử trùng lặp đỉnh, phân cụm cộng đồng Louvain và thực hiện truy vấn quan hệ bắc cầu 2-hop hoặc sinh trang Wiki. \tabularnewline \hline
+Điều kiện tiên quyết & Học giả đã đưa ít nhất một tài liệu nghiên cứu vào thư mục nghiên cứu. \tabularnewline \hline
+Điều kiện kết thúc & Đồ thị tri thức được cập nhật trên các bảng \texttt{graph\_nodes}, \texttt{graph\_edges}; bản tóm tắt cộng đồng và trang Wiki sẵn sàng phục vụ truy vấn. \tabularnewline \hline
+Luồng sự kiện chính & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Học giả yêu cầu phân tích đồ thị tri thức cho một thư mục nghiên cứu trong Không gian Thư viện Tri thức.
     \item[--] Hệ thống kích hoạt đường ống GraphRAG: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
@@ -374,7 +374,7 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
     \item[--] Thuật toán Louvain phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
     \item[--] Hệ thống hiển thị đồ thị tương tác và cho phép học giả thực thi truy vấn bắc cầu 2-hop qua biểu thức bảng chung SQL CTE hoặc đọc trang Wiki tổng hợp.
 \end{itemize} \tabularnewline \hline
-\textbf{Luồng thay thế / Ngoại lệ} & 
+Luồng thay thế / Ngoại lệ & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu số lượng thực thể trích xuất dưới ngưỡng tối thiểu ($N < 2$): Hệ thống thông báo học giả cần bổ sung tài liệu để hình thành mạng lưới liên kết có ý nghĩa.
 \end{itemize} \tabularnewline
@@ -390,7 +390,7 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.76, transform shape,
+    scale=0.85, transform shape,
     umlactor/.pic={
         \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
         \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
@@ -451,19 +451,19 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \hline
 \endlastfoot
 
-\textbf{Tên Use Case} & \textbf{Biên soạn bản thảo và tự phục hồi lỗi LaTeX} \tabularnewline \hline
-\textbf{Actor} & Học giả (Scholar) \tabularnewline \hline
-\textbf{Mục tiêu} & Biên soạn mã nguồn bài báo khoa học LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct trong môi trường máy ảo cách ly. \tabularnewline \hline
-\textbf{Điều kiện tiên quyết} & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
-\textbf{Điều kiện kết thúc} & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
-\textbf{Luồng sự kiện chính} & 
+Tên Use Case & Biên soạn bản thảo và tự phục hồi lỗi LaTeX \tabularnewline \hline
+Actor & Học giả (Scholar) \tabularnewline \hline
+Mục tiêu & Biên soạn mã nguồn bài báo khoa học LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct trong môi trường máy ảo cách ly. \tabularnewline \hline
+Điều kiện tiên quyết & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
+Điều kiện kết thúc & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
+Luồng sự kiện chính & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
     \item[--] Học giả nhấp nút ``Biên dịch bản thảo''.
     \item[--] Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
     \item[--] Nếu biên dịch thành công ($\text{ExitCode} = 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{itemize} \tabularnewline \hline
-\textbf{Luồng thay thế / Ngoại lệ} & 
+Luồng thay thế / Ngoại lệ & 
 \begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
     \item[--] Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):
     \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]

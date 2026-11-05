@@ -294,3 +294,92 @@ def test_casual_inline_bolds():
     assert len(findings) == 0, (
         f"Phát hiện {len(findings)} lỗi in đậm tùy tiện trong văn xuôi:\n" + "\n".join(findings)
     )
+
+
+def test_no_bold_in_table_bodies():
+    """Đảm bảo không tự ý in đậm trong thân các bảng dữ liệu (chỉ header mới được in đậm)."""
+    import glob
+
+    violations = []
+    # Quét toàn bộ bảng trong chapters/ và bảng danh mục viết tắt
+    files_to_check = sorted(glob.glob(str(CHAPTERS_DIR / "**/*.tex"), recursive=True)) + [
+        str(FRONTMATTER_DIR / "danh_muc_viet_tat.tex")
+    ]
+    header_keywords = [
+        "\\textbf{STT}",
+        "\\textbf{Tiêu chí",
+        "\\textbf{Nền tảng",
+        "\\textbf{Tên Actor",
+        "\\textbf{Lớp A}",
+        "\\textbf{Phân vùng}",
+        "\\textbf{Cổng kiểm thử}",
+        "\\textbf{Cấu hình",
+        "\\textbf{TT}",
+        "\\textbf{Ký hiệu",
+    ]
+    for f in files_to_check:
+        with open(f, encoding="utf-8") as fp:
+            lines = fp.readlines()
+        in_table = False
+        for i, line in enumerate(lines, 1):
+            if "\\begin{tabular" in line or "\\begin{xltabular" in line:
+                in_table = True
+                if "bfseries" in line and ("m{" in line or "p{" in line or "X" in line):
+                    violations.append(f"{f}:{i}: bfseries in column spec: {line.strip()}")
+                continue
+            if "\\end{tabular" in line or "\\end{xltabular" in line:
+                in_table = False
+                continue
+            if in_table:
+                if any(
+                    x in line
+                    for x in ["\\endhead", "\\endfirsthead", "\\caption", "tiếp theo", "Bảng"]
+                ):
+                    continue
+                # Skip header rows
+                if any(kw in line for kw in header_keywords):
+                    continue
+                # Check for bold
+                if "\\textbf" in line or "\\bfseries" in line:
+                    # Ignore tikz inside tabular in 2_2_hybrid_rag (calculation formulas)
+                    if "2_2_hybrid_rag.tex" in f and "item_box" in line:
+                        continue
+                    violations.append(f"{f}:{i}: {line.strip()}")
+
+    assert len(violations) == 0, "Phát hiện in đậm trong thân bảng:\n" + "\n".join(violations)
+
+
+def test_figure_arrow_lengths_at_least_3mm():
+    """Đảm bảo toàn bộ mũi tên Stealth trong các hình TikZ đều có length >= 3.0mm."""
+    for tex_file in sorted(CHAPTERS_DIR.rglob("*.tex")):
+        content = tex_file.read_text(encoding="utf-8")
+        lengths = re.findall(r"Stealth\[length=([0-9\.]+)mm\]", content)
+        for arrow_len in lengths:
+            assert float(arrow_len) >= 3.0, (
+                f"{tex_file.name}: Mũi tên Stealth có chiều dài {arrow_len}mm < 3.0mm"
+            )
+
+
+def test_no_blank_page_8_in_pdf():
+    """Đảm bảo trang in số 8 không bị rỗng và chứa Danh mục ký hiệu và chữ viết tắt."""
+    import subprocess
+
+    pdf_path = Path(__file__).resolve().parent.parent / "main.pdf"
+    if not pdf_path.exists():
+        return
+    out = subprocess.check_output(["pdftotext", "-f", "16", "-l", "16", str(pdf_path), "-"]).decode(
+        "utf-8"
+    )
+    lines = [item.strip() for item in out.splitlines() if item.strip()]
+    assert len(lines) >= 5, f"Trang 16 (trang in 8) bị rỗng hoặc quá ít dòng: {lines}"
+    assert any("DANH MỤC CÁC KÝ HIỆU VÀ CHỮ VIẾT TẮT" in item for item in lines), (
+        "Trang in 8 phải là Danh mục các ký hiệu và chữ viết tắt"
+    )
+
+
+def test_table_3_6_xltabular_and_break():
+    """Đảm bảo Bảng 3-6 sử dụng xltabular, có continuation header, và không bị cắt xén."""
+    csdl_file = CHAPTERS_DIR / "ch3" / "3_6_thiet_ke_csdl.tex"
+    content = csdl_file.read_text(encoding="utf-8")
+    assert "\\begin{xltabular}" in content
+    assert "Bảng~3-6 (tiếp theo)" in content or "Bảng 3-6 (tiếp theo)" in content

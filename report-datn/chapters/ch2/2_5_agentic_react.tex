@@ -49,7 +49,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.47, transform shape,
+    scale=0.68, transform shape,
     box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
     box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
@@ -57,8 +57,8 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.45, line width=1pt, text width=2.0cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
     box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
-    arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
-    looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
+    arrowstyle/.style={-{Stealth[length=3.0mm]}, line width=1pt, draw=black!85},
+    looparrow/.style={-{Stealth[length=3.0mm]}, line width=1pt, draw=red!80!black, dashed}
 ]
     % 1. Bản thảo LaTeX đầu vào
     \node[box_query] (input) at (0, 2.5) {
@@ -143,4 +143,7 @@ Nhằm bảo đảm tính minh bạch và kiểm toán suy luận AI, hệ thố
 \begin{itemize}[noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item Truy vết phân tầng (Hierarchical Tracing): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
     \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (TTFT) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
+    \item Định lượng độ trễ và thông lượng suy luận: Hệ thống ghi nhận chi tiết thời gian thực thi của từng công cụ trong đường ống xử lý RAG và vòng lặp tự sửa lỗi ReAct, cho phép nhận diện tức thời các nút thắt cổ chai về độ trễ mạng hoặc tắc nghẽn I/O.
+    \item Kiểm soát ngân sách Token và chi phí mô hình: Mỗi lượt suy luận qua \texttt{gpt-4o-mini} đều được ghi nhận số lượng Prompt Tokens, Completion Tokens và tổng chi phí quy đổi theo biểu giá nhà cung cấp, bảo đảm quyền tự chủ tài chính minh bạch cho học giả.
+    \item Đánh giá chất lượng sinh văn bản trực tiếp: Tích hợp thang đo phản hồi chất lượng câu trả lời, phục vụ quá trình hậu kiểm tính bám sát bằng chứng và kiểm toán độ chính xác của các thẻ trích dẫn tọa độ.
 \end{itemize}

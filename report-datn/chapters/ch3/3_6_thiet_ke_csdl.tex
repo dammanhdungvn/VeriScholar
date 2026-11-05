@@ -15,14 +15,14 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.68, transform shape,
+    scale=0.78, transform shape,
     umlclass/.style={
         draw=black!85, fill=white, rounded corners=3pt, line width=0.85pt,
         align=left, inner ysep=3.0pt, inner xsep=2.5pt, text width=3.6cm, font=\fontsize{7pt}{8.2pt}\selectfont
     },
     assoc/.style={line width=0.85pt, draw=black!80},
-    comp/.style={{Diamond[fill=black, length=2.4mm]}-, line width=0.85pt, draw=black!85},
-    aggr/.style={{Diamond[fill=white, length=2.4mm]}-, line width=0.85pt, draw=black!85},
+    comp/.style={{Diamond[fill=black, length=3.0mm]}-, line width=0.85pt, draw=black!85},
+    aggr/.style={{Diamond[fill=white, length=3.0mm]}-, line width=0.85pt, draw=black!85},
     card/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\bfseries, fill=white, inner sep=1.0pt, rounded corners=1pt}
 ]
     % =========================================================================
@@ -234,17 +234,20 @@ Biểu đồ lớp (Class Diagram) của hệ thống được biểu diễn tr�
 
 Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng được tổng hợp và phân tích chi tiết trong Bảng~\ref{tab:class_relationships_analysis}.
 
-\begin{table}[!htbp]
-\centering
-\vspace{-2pt}
-\caption{Phân tích các lớp thực thể miền và mối quan hệ cấu trúc trong hệ thống}
-\label{tab:class_relationships_analysis}
-\captionsetup{skip=2pt}
+\begingroup
 \setlength{\tabcolsep}{5pt}
 \renewcommand{\arraystretch}{1.20}
-\begin{tabularx}{\textwidth}{|>{\centering\arraybackslash}m{0.9cm}|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.7cm}|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}X|}
-\hline
+\begin{xltabular}{\textwidth}{|>{\centering\arraybackslash}m{0.9cm}|>{\centering\arraybackslash}m{2.2cm}|>{\centering\arraybackslash}m{2.3cm}|>{\centering\arraybackslash}m{2.7cm}|>{\centering\arraybackslash}m{1.2cm}|>{\raggedright\arraybackslash}X|}
+\caption{Phân tích các lớp thực thể miền và mối quan hệ cấu trúc trong hệ thống} \label{tab:class_relationships_analysis} \\ \hline
 \textbf{STT} & \textbf{Lớp A} & \textbf{Lớp B} & \textbf{Kiểu quan hệ} & \textbf{Bản số} & \centering\textbf{Miêu tả ngữ nghĩa nghiệp vụ} \tabularnewline \hline
+\endfirsthead
+\multicolumn{6}{r}{\fontsize{13pt}{17pt}\selectfont\textit{Bảng~3-6 (tiếp theo)}} \\ \hline
+\textbf{STT} & \textbf{Lớp A} & \textbf{Lớp B} & \textbf{Kiểu quan hệ} & \textbf{Bản số} & \centering\textbf{Miêu tả ngữ nghĩa nghiệp vụ} \tabularnewline \hline
+\endhead
+\hline
+\endfoot
+\hline
+\endlastfoot
 1 & \texttt{User} & \texttt{Scholar\-Profile} & Hợp thành (Composition) & 1 -- 1 & Hồ sơ học giả phụ thuộc vào vòng đời tài khoản \texttt{User}. \tabularnewline \hline
 2 & \texttt{User} & \texttt{User\-Api\-Key} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu nhiều khóa API cá nhân theo cơ chế BYOK. \tabularnewline \hline
 3 & \texttt{User} & \texttt{Document} & Thu nạp (Aggregation) & 1 -- N & Học giả quản lý tài liệu nghiên cứu trong thư viện cá nhân. \tabularnewline \hline
@@ -254,10 +257,9 @@ Các lớp thực thể và các mối quan hệ cấu trúc giữa chúng đư�
 7 & \texttt{Research\-Session} & \texttt{Session\-Turn} & Hợp thành (Composition) & 1 -- N & Phiên lưu trữ lịch sử các lượt hỏi đáp truy xuất (Retrieval) Hybrid RAG. \tabularnewline \hline
 8 & \texttt{Research\-Session} & \texttt{Document} & Kết hợp (Association) & N -- N & Quan hệ nhiều--nhiều giữa phiên và tài liệu nạp vào Reader. \tabularnewline \hline
 9 & \texttt{Document} & \texttt{Graph\-Node} & Thu nạp (Aggregation) & 1 -- N & Tài liệu là cơ sở trích xuất thực thể tri thức (GraphRAG). \tabularnewline \hline
-10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent ReAct tự động sửa lỗi (Self-Healing). \tabularnewline \hline
-\end{tabularx}
-\vspace{-4pt}
-\end{table}
+10 & \texttt{User} & \texttt{Draft} & Hợp thành (Composition) & 1 -- N & Học giả sở hữu bản thảo LaTeX có Agent ReAct tự động sửa lỗi (Self-Healing). \tabularnewline
+\end{xltabular}
+\endgroup
 
 \subsection{Cấu trúc các phân hệ dữ liệu của hệ thống}
 \label{subsec:csdl_tong_quan}
