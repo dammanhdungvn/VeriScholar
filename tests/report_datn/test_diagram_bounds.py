@@ -95,9 +95,10 @@ def test_sequence_diagrams_spacing_and_float_padding():
     seq_path = Path("report-datn/chapters/ch3/3_5_bieu_do_tuan_tu.tex")
     seq_content = seq_path.read_text(encoding="utf-8")
 
-    # Kiểm tra cả 4 hình sử dụng style stage_card và stage_arrow
-    assert "stage_card" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_card"
-    assert "stage_arrow" in seq_content, "Các sơ đồ Mục 3.5 phải dùng style stage_arrow"
+    # Kiểm tra cả 4 hình là biểu đồ tuần tự UML chuẩn mực với umlactor, participant và lifeline
+    assert "umlactor" in seq_content, "Các sơ đồ Mục 3.5 phải dùng tác nhân umlactor"
+    assert "participant" in seq_content, "Các sơ đồ Mục 3.5 phải có các hộp participant"
+    assert "lifeline" in seq_content, "Các sơ đồ Mục 3.5 phải có các đường đời lifeline"
 
     # Kiểm tra không còn lifeline kéo dài quá -10cm
     assert "-- (0, -10.5)" not in seq_content, "Không còn sử dụng lifeline kéo dài gây choán trang"

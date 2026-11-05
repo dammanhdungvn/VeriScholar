@@ -181,7 +181,7 @@ def test_arabic_page_numbering_starts_at_muc_luc():
     )
 
     idx_arabic = content.find(r"\pagenumbering{arabic}")
-    idx_page_1 = content.find(r"\setcounter{page}{1}")
+    idx_page_1 = content.find(r"\setcounter{page}{1}", idx_arabic)
     idx_muc_luc = content.find(r"\input{frontmatter/muc_luc}")
 
     assert idx_arabic != -1, "Không tìm thấy \\pagenumbering{arabic} trong main.tex"
@@ -378,8 +378,8 @@ def test_no_blank_page_8_in_pdf():
 
 
 def test_table_3_6_xltabular_and_break():
-    """Đảm bảo Bảng 3-6 sử dụng xltabular, có continuation header, và không bị cắt xén."""
+    """Đảm bảo Bảng 3-6 sử dụng xltabular và không có nhãn tiếp theo theo yêu cầu GVHD."""
     csdl_file = CHAPTERS_DIR / "ch3" / "3_6_thiet_ke_csdl.tex"
     content = csdl_file.read_text(encoding="utf-8")
     assert "\\begin{xltabular}" in content
-    assert "Bảng~3-6 (tiếp theo)" in content or "Bảng 3-6 (tiếp theo)" in content
+    assert "Bảng~3-6 (tiếp theo)" not in content and "Bảng 3-6 (tiếp theo)" not in content

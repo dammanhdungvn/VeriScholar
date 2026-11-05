@@ -169,7 +169,7 @@ Use Case này cho phép học giả tìm kiếm các bài báo khoa học từ c
 \hline
 \endfirsthead
 
-\multicolumn{2}{r}{\fontsize{13pt}{17pt}\selectfont\textit{Bảng~3-2 (tiếp theo)}} \\ \hline
+\hline
 \endhead
 
 \hline
@@ -261,7 +261,7 @@ Use Case này hỗ trợ học giả phân tích chuyên sâu nội dung bài b�
 \hline
 \endfirsthead
 
-\multicolumn{2}{r}{\fontsize{13pt}{17pt}\selectfont\textit{Bảng~3-3 (tiếp theo)}} \\ \hline
+\hline
 \endhead
 
 \hline
@@ -275,16 +275,19 @@ Actor & Học giả (Scholar) \tabularnewline \hline
 Mục tiêu & Học giả đặt câu hỏi nghiên cứu về tài liệu đang đọc; trợ lý AI phản hồi kèm định vị chính xác vị trí câu văn bằng chứng trên trang PDF gốc. \tabularnewline \hline
 Điều kiện tiên quyết & Học giả đã đăng nhập, cấu hình khóa API cá nhân (BYOK) hợp lệ và mở tài liệu PDF trong phân hệ Đọc sâu. \tabularnewline \hline
 Điều kiện kết thúc & Câu trả lời được truyền phát qua luồng SSE kèm theo các thẻ minh chứng số thứ nhất và thứ hai liên kết với tọa độ Bounding Box. \tabularnewline \hline
-Luồng sự kiện chính & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\multirow{2}{=}{Luồng sự kiện chính} & 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Học giả nhập câu hỏi nghiên cứu vào khung hội thoại.
     \item[--] AI Agent kích hoạt công cụ tìm kiếm lai Hybrid Search (kết hợp vector HNSW và từ khóa BM25 qua thuật toán RRF) cùng tầng tái xếp hạng chéo để trích xuất các phân đoạn văn bản liên quan nhất.
     \item[--] Cổng kiểm định tiền sinh văn bản CRAG đánh giá ngưỡng tự tin ($\tau \ge 0{,}35$: tổng hợp trực tiếp; $0{,}20 \le \tau < 0{,}35$: mở rộng truy vấn; $\tau < 0{,}20$: từ chối suy diễn), sau đó mô hình tổng hợp câu trả lời và thực thi hàm kiểm chứng hậu sinh tất định (\texttt{verify\_output\_grounding}) nhằm xác thực mọi thẻ trích dẫn minh chứng khớp với phân đoạn nguồn.
+\end{itemize} \tabularnewline \cline{2-2}
+& 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Trợ lý AI truyền luồng phản hồi theo thời gian thực cùng siêu dữ liệu tọa độ chuẩn hóa $[0, 1]^4$ về giao diện người dùng.
     \item[--] Học giả nhấp chuột vào thẻ trích dẫn minh chứng trong câu trả lời; trình xem PDF lập tức tự động cuộn trang và vẽ khung viền vàng nhấp nháy 1 giây bao quanh đúng đoạn văn bản gốc (đạt ngưỡng kiểm định thực nghiệm $\text{IoU} \ge 0{,}85$).
 \end{itemize} \tabularnewline \hline
 Luồng thay thế / Ngoại lệ & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Nếu điểm tự tin CRAG $\tau < 0{,}20$ (trạng thái \texttt{ACTIVE\_ABSTENTION}): Hệ thống chủ động từ chối suy diễn và thông báo rõ tài liệu không cung cấp đủ bằng chứng, không tự bịa đặt số liệu.
     \item[--] Nếu khóa API cá nhân (BYOK) hết hạn ngạch hoặc không hợp lệ: Hệ thống điều hướng mở hộp thoại cập nhật khóa và bảo lưu nội dung câu hỏi.
 \end{itemize} \tabularnewline
@@ -352,7 +355,7 @@ Use Case này cho phép học giả tự động xây dựng mạng lưới tri 
 \hline
 \endfirsthead
 
-\multicolumn{2}{r}{\fontsize{13pt}{17pt}\selectfont\textit{Bảng~3-4 (tiếp theo)}} \\ \hline
+\hline
 \endhead
 
 \hline
@@ -366,16 +369,19 @@ Actor & Học giả (Scholar) \tabularnewline \hline
 Mục tiêu & Tự động trích xuất mạng lưới tri thức học thuật 4 thực thể, khử trùng lặp đỉnh, phân cụm cộng đồng Louvain và thực hiện truy vấn quan hệ bắc cầu 2-hop hoặc sinh trang Wiki. \tabularnewline \hline
 Điều kiện tiên quyết & Học giả đã đưa ít nhất một tài liệu nghiên cứu vào thư mục nghiên cứu. \tabularnewline \hline
 Điều kiện kết thúc & Đồ thị tri thức được cập nhật trên các bảng \texttt{graph\_nodes}, \texttt{graph\_edges}; bản tóm tắt cộng đồng và trang Wiki sẵn sàng phục vụ truy vấn. \tabularnewline \hline
-Luồng sự kiện chính & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\multirow{2}{=}{Luồng sự kiện chính} & 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Học giả yêu cầu phân tích đồ thị tri thức cho một thư mục nghiên cứu trong Không gian Thư viện Tri thức.
     \item[--] Hệ thống kích hoạt đường ống GraphRAG: trích xuất 4 loại thực thể (\texttt{Paper}, \texttt{Method}, \texttt{Dataset}, \texttt{MetricResult}) và các cạnh quan hệ có hướng từ văn bản tài liệu bằng cơ chế ép kiểu đầu ra có cấu trúc.
     \item[--] Hệ thống chuẩn hóa tên thực thể và tính độ tương đồng Cosine vector nhúng; các đỉnh có $\text{Cosine} \ge 0{,}90$ được tự động hợp nhất về thực thể chuẩn tắc duy nhất trong bảng \texttt{graph\_nodes}.
+\end{itemize} \tabularnewline \cline{2-2}
+& 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Thuật toán Louvain phân cụm cộng đồng theo cấu trúc thư mục, tổng hợp bản tóm tắt cộng đồng toàn cục (\texttt{folder\_community\_summaries}).
     \item[--] Hệ thống hiển thị đồ thị tương tác và cho phép học giả thực thi truy vấn bắc cầu 2-hop qua biểu thức bảng chung SQL CTE hoặc đọc trang Wiki tổng hợp.
 \end{itemize} \tabularnewline \hline
 Luồng thay thế / Ngoại lệ & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Nếu số lượng thực thể trích xuất dưới ngưỡng tối thiểu ($N < 2$): Hệ thống thông báo học giả cần bổ sung tài liệu để hình thành mạng lưới liên kết có ý nghĩa.
 \end{itemize} \tabularnewline
 \end{xltabular}
@@ -442,7 +448,7 @@ Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa
 \hline
 \endfirsthead
 
-\multicolumn{2}{r}{\fontsize{13pt}{17pt}\selectfont\textit{Bảng~3-5 (tiếp theo)}} \\ \hline
+\hline
 \endhead
 
 \hline

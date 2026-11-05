@@ -397,6 +397,8 @@ def test_no_pages_with_few_lines_in_document():
     pages = res.stdout.split("\x0c")
 
     roman_numerals = {
+        "i",
+        "ii",
         "iii",
         "iv",
         "v",

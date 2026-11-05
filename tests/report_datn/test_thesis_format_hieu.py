@@ -444,18 +444,20 @@ def test_xltabular_configured():
 
 
 def test_usecase_tables_use_xltabular_and_continuation_header():
-    """Verify that Tables 3-2 to 3-5 use xltabular and include continuation headers."""
+    """Verify Tables 3-2 to 3-5 use xltabular and DO NOT include (tiếp theo) banners."""
     content = (REPORT_DIR / "chapters/ch3/3_4_phan_tich_usecase.tex").read_text(encoding="utf-8")
     spec_section = content[content.find("\\label{subsec:uc_scholar}") :]
     assert "\\begin{table}" not in spec_section, (
         "3_4_phan_tich_usecase.tex should not wrap Use Case spec tables in rigid table floats"
     )
+    assert content.count("\\begin{xltabular}") >= 4, "Tables 3-2 to 3-5 must use xltabular"
     for tab_num in ["3-2", "3-3", "3-4", "3-5"]:
         has_banner = (
             f"Bảng~{tab_num} (tiếp theo)" in content or f"Bảng {tab_num} (tiếp theo)" in content
         )
-        assert has_banner, (
-            f"Missing continuation banner for Table {tab_num} in 3_4_phan_tich_usecase.tex"
+        assert not has_banner, (
+            f"Continuation banner for Table {tab_num} in 3_4_phan_tich_usecase.tex "
+            "must be removed per advisor review"
         )
 
 

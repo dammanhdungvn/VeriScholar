@@ -27,7 +27,7 @@ trong đó $\text{Thought}_t$ là lập luận suy nghĩ nội tại hướng d�
 Nhằm hiện thực hóa chu trình ReAct vào một quy trình kỹ thuật có khả năng mở rộng và chịu lỗi, đề tài sử dụng khung điều phối LangGraph. Khác với các đường ống xử lý theo đồ thị có hướng không chu trình tuyến tính (DAG), LangGraph cho phép thiết kế các hệ thống tác nhân đa bước có trạng thái (Stateful Multi-Agent Workflow) với cấu trúc đồ thị có chu trình lặp (Cyclic Graphs).
 
 Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy trạng thái hữu hạn (Finite State Machine -- FSM) thông qua đối tượng \texttt{StateGraph}:
-\begin{itemize}[noitemsep, topsep=2pt]
+\begin{itemize}
     \item Lược đồ trạng thái dùng chung (Shared State Schema): Định nghĩa cấu trúc dữ liệu nhất quán của phiên nghiên cứu (mã nguồn tài liệu, lịch sử thông điệp, danh sách dẫn chứng và nhật ký biên dịch).
     \item Tập các nút tính toán (Nodes): Mỗi nút thực hiện một đơn nguyên nghiệp vụ độc lập, nhận trạng thái hiện tại và trả về bản ghi biến đổi trạng thái tương ứng.
     \item Cạnh điều hướng có điều kiện (Conditional Edges): Đóng vai trò là các bộ định tuyến logic. Sau mỗi bước thực thi, hàm đánh giá điều kiện sẽ quyết định chuyển trạng thái sang bước tiếp theo hoặc quay lui lại vòng lặp để sửa lỗi.
@@ -39,7 +39,7 @@ Cốt lõi kiến trúc của LangGraph được tổ chức dưới dạng máy
 Một trong những thách thức kỹ thuật lớn nhất khi hỗ trợ các nhà khoa học soạn thảo ấn phẩm nghiên cứu là việc tự động biên dịch và sửa lỗi mã nguồn LaTeX. Việc cho phép mô hình AI tự sinh và chạy các lệnh hệ điều hành trực tiếp trên máy chủ tiềm ẩn nguy cơ bảo mật nghiêm trọng về thực thi mã độc từ xa (Remote Code Execution -- RCE).
 
 Để bảo đảm an toàn, hệ thống tích hợp nền tảng Sandbox E2B (E2B MicroVM Sandbox) được xây dựng trên công nghệ ảo hóa siêu nhỏ AWS Firecracker:
-\begin{itemize}[noitemsep, topsep=2pt]
+\begin{itemize}
     \item Khởi tạo siêu tốc: Mỗi phiên làm việc được cấp phát một máy ảo siêu nhỏ (MicroVM) độc lập trong thời gian dưới 200 mili-giây, cung cấp đầy đủ nhân Linux và môi trường TeX Live chuyên dụng.
     \item Cô lập mức nhân hệ điều hành (Kernel-level Isolation): Mọi lệnh biên dịch (\texttt{xelatex}, \texttt{bibtex}) đều diễn ra bên trong máy ảo cô lập hoàn toàn với máy chủ chính. Mọi sự cố mã độc, vòng lặp vô hạn hay cạn kiệt tài nguyên đều bị khóa chặt bên trong máy ảo và tự hủy sau khi phiên kết thúc.
 \end{itemize}
@@ -137,10 +137,11 @@ C = \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad T = \
 \vspace{-12pt}
 trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (In-Memory Ephemeral Decryption): khóa chỉ giải mã tạm thời trong RAM khi gọi API và giải phóng tức thì, bảo đảm không lưu vết trên đĩa.
 
+\enlargethispage{\baselineskip}
 \subsection{Nền tảng quan sát vận hành và truy vết suy luận Langfuse}
 \label{subsec:langfuse_tracing}
 Nhằm bảo đảm tính minh bạch và kiểm toán suy luận AI, hệ thống tích hợp nền tảng quan sát vận hành Langfuse:
-\begin{itemize}[noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
+\begin{itemize}
     \item Truy vết phân tầng (Hierarchical Tracing): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
     \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (TTFT) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
     \item Định lượng độ trễ và thông lượng suy luận: Hệ thống ghi nhận chi tiết thời gian thực thi của từng công cụ trong đường ống xử lý RAG và vòng lặp tự sửa lỗi ReAct, cho phép nhận diện tức thời các nút thắt cổ chai về độ trễ mạng hoặc tắc nghẽn I/O.

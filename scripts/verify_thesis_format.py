@@ -97,47 +97,42 @@ def test_page_budget():
     # Trang 8: Lời cảm ơn
     assert "LỜI CẢM ƠN" in pages[7], "Trang 8 không phải Lời cảm ơn"
 
-    # Kiểm tra quy chuẩn chân trang Frontmatter chuẩn 100% HIeu.pdf:
-    # Trang 1 đến trang 8 để trống hoàn toàn chân trang (không in số trang vật lý)
-    forbidden_page_tokens = {
-        "iii",
-        "iv",
-        "v",
-        "vi",
-        "vii",
-        "viii",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-    }
-    for p_idx in range(8):
+    # Kiểm tra quy chuẩn chân trang Frontmatter theo yêu cầu GVHD:
+    # Trang 1 và trang 2 (Bìa ngoài, Bìa phụ) để trống hoàn toàn chân trang
+    for p_idx in [0, 1]:
         last_line = (
             pages[p_idx].strip().splitlines()[-1] if pages[p_idx].strip().splitlines() else ""
         )
-        assert last_line not in forbidden_page_tokens, (
-            f"Trang {p_idx + 1} chân trang không được in số trang (phải để trống theo chuẩn HIeu.pdf): '{last_line}'"
+        assert not last_line.isdigit() and last_line not in {"i", "ii", "iii"}, (
+            f"Trang bìa {p_idx + 1} chân trang không được in số trang: '{last_line}'"
         )
 
-    # Trang 9: Mục lục (bắt đầu đánh số 1 Ả Rập ở chân trang) - chuẩn 100% HIeu.pdf & R3
+    # Trang 3 đến trang 8: Đánh số trang La Mã thường i, ii, iii, iv, v, vi
+    expected_romans = ["i", "ii", "iii", "iv", "v", "vi"]
+    for p_offset, expected_roman in enumerate(expected_romans):
+        p_idx = 2 + p_offset
+        last_line = (
+            pages[p_idx].strip().splitlines()[-1] if pages[p_idx].strip().splitlines() else ""
+        )
+        assert last_line == expected_roman, (
+            f"Trang {p_idx + 1} chân trang phải là số La Mã '{expected_roman}': '{last_line}'"
+        )
+
+    # Trang 9: Mục lục (bắt đầu đánh số 1 Ả Rập ở chân trang)
     assert "MỤC LỤC" in pages[8], "Trang 9 không phải Mục lục"
     assert pages[8].strip().splitlines()[-1] == "1", (
         f"Trang 9 chân trang không phải 1: {pages[8].strip().splitlines()[-1]}"
     )
 
-    # Mục lục ghi nhận đúng số trang La Mã logic cho các mục Frontmatter (khớp 100% HIeu.pdf)
-    assert "PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP" in pages[8] and "iii" in pages[8], (
-        "Mục lục thiếu chỉ mục trang La Mã iii cho Phiếu giao đề tài"
+    # Mục lục ghi nhận đúng số trang La Mã cho các mục Frontmatter (i, iii, vi)
+    assert "PHIẾU GIAO ĐỀ TÀI TỐT NGHIỆP" in pages[8] and "i" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã i cho Phiếu giao đề tài"
     )
-    assert "ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC" in pages[8] and "v" in pages[8], (
-        "Mục lục thiếu chỉ mục trang La Mã v cho Đề cương"
+    assert "ĐỀ CƯƠNG ĐỒ ÁN TỐT NGHIỆP ĐẠI HỌC" in pages[8] and "iii" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã iii cho Đề cương"
     )
-    assert "LỜI CẢM ƠN" in pages[8] and "viii" in pages[8], (
-        "Mục lục thiếu chỉ mục trang La Mã viii cho Lời cảm ơn"
+    assert "LỜI CẢM ƠN" in pages[8] and "vi" in pages[8], (
+        "Mục lục thiếu chỉ mục trang La Mã vi cho Lời cảm ơn"
     )
 
     # Chương 1 bắt đầu tiếp nối liên tục từ Mục lục
@@ -148,7 +143,7 @@ def test_page_budget():
     assert ch1_idx is not None, "Không tìm thấy trang bắt đầu Chương 1 trong PDF"
 
     print(
-        "test_page_budget PASSED (Trang 1-8: chân trang trống theo HIeu.pdf; Mục lục: 1 Ả Rập; Frontmatter TOC: iii, v, viii)"
+        "test_page_budget PASSED (Bìa 1-2 trống; Trang 3-8: i-vi La Mã; Mục lục: 1 Ả Rập; Frontmatter TOC: i, iii, vi)"
     )
 
 

@@ -2,7 +2,7 @@
 \section{Phân tích một số biểu đồ tuần tự chính của hệ thống}
 \label{sec:bieu_do_tuan_tu}
 
-Biểu đồ tuần tự (Sequence Diagram) mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng khi thực thi Use Case. Nhằm làm rõ cơ chế phối hợp giữa giao diện, lõi nghiệp vụ và dịch vụ hạ tầng, tiểu mục này trình bày bốn chuỗi quy trình đại diện cho 4 Không gian nghiên cứu của \VS dưới dạng chuỗi các giai đoạn thực thi liên hoàn (Execution Stage Pipeline) chuẩn mực và cô đọng.
+Biểu đồ tuần tự (Sequence Diagram) mô hình hóa sự tương tác theo dòng thời gian giữa các đối tượng khi thực thi Use Case. Nhằm làm rõ cơ chế phối hợp giữa giao diện người dùng, dịch vụ điều phối nghiệp vụ và các dịch vụ hạ tầng lưu trữ, tính toán, tiểu mục này xây dựng và phân tích bốn biểu đồ tuần tự chuẩn mực tương ứng với 4 Không gian nghiên cứu của hệ thống \VS.
 
 \subsection{Biểu đồ tuần tự Use Case ``Tra cứu và tải tài liệu nghiên cứu''}
 \label{subsec:seq_kham_pha}
@@ -13,43 +13,49 @@ Quy trình tra cứu đa nguồn, kiểm tra Deduplication nội dung theo mã b
 \centering
 \begin{tikzpicture}[
     scale=0.88, transform shape,
-    stage_card/.style={draw=blue!80!black, fill=blue!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.60cm},
-    stage_highlight/.style={draw=blue!90!black, fill=blue!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.60cm},
-    stage_arrow/.style={-{Stealth[length=3.0mm]}, line width=1.05pt, draw=black!75},
-    arrow_lbl/.style={font=\fontsize{5.5pt}{6.5pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=blue!90!black}
+    umlactor/.pic={
+        \draw[line width=0.9pt, fill=blue!10] (0, 0.35) circle (0.18);
+        \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
+        \draw[line width=0.9pt] (-0.28, 0.04) -- (0.28, 0.04);
+        \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
+        \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
+    },
+    participant/.style={draw=blue!85!black, fill=blue!8, rounded corners=2pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\fontsize{7.5pt}{9.2pt}\selectfont\bfseries, minimum width=2.6cm, minimum height=0.65cm},
+    msg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=3.0mm]}, dashed, line width=0.75pt, draw=blue!85!black},
+    selfmsg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    lifeline/.style={draw=black!45, dashed, line width=0.65pt},
+    msglbl/.style={font=\fontsize{6.8pt}{8.0pt}\selectfont, fill=white, inner sep=1.2pt}
 ]
-    % 5 Thẻ giai đoạn tuần tự
-    \node[stage_card] (c1) at (0, 0) {
-        \textbf{\textcolor{blue!90!black}{Bước 1: Khởi tạo}}\\[2pt]
-        Học giả nhập\\
-        từ khóa / mã DOI
-    };
-    \node[stage_card] (c2) at (3.5, 0) {
-        \textbf{\textcolor{blue!90!black}{Bước 2: Tìm kiếm}}\\[2pt]
-        Truy vấn đa nguồn\\
-        arXiv, CrossRef
-    };
-    \node[stage_highlight] (c3) at (7.0, 0) {
-        \textbf{\textcolor{blue!95!black}{Bước 3: Khử trùng CAS}}\\[2pt]
-        Băm SHA-256\\
-        Kiểm tra trùng kho
-    };
-    \node[stage_card] (c4) at (10.5, 0) {
-        \textbf{\textcolor{blue!90!black}{Bước 4: Lưu trữ}}\\[2pt]
-        Lưu trữ Blob CAS\\
-        Ghi bản ghi CSDL
-    };
-    \node[stage_card] (c5) at (14.0, 0) {
-        \textbf{\textcolor{blue!90!black}{Bước 5: Thư viện}}\\[2pt]
-        Liên kết Thư viện\\
-        Tải PDF tức thì
-    };
+    % 4 Đối tượng tham gia (Participants)
+    \coordinate (p1) at (0.8, 0);
+    \pic at (p1) {umlactor};
+    \node[font=\fontsize{7.5pt}{9pt}\selectfont\bfseries, below=0.65cm of p1] (p1lbl) {Học giả};
 
-    % Đường kết nối luồng xử lý
-    \draw[stage_arrow] (c1) -- node[above=2pt, arrow_lbl] {Truy vấn} (c2);
-    \draw[stage_arrow] (c2) -- node[above=2pt, arrow_lbl] {Kết quả} (c3);
-    \draw[stage_arrow] (c3) -- node[above=2pt, arrow_lbl] {Lưu trữ} (c4);
-    \draw[stage_arrow] (c4) -- node[above=2pt, arrow_lbl] {Hoàn tất} (c5);
+    \node[participant] (p2) at (4.8, -0.4) {Giao diện Web\\(\texttt{apps/web})};
+    \node[participant] (p3) at (9.4, -0.4) {Discovery Service\\(\texttt{FastAPI})};
+    \node[participant] (p4) at (13.8, -0.4) {CAS \& CSDL\\(\texttt{PostgreSQL})};
+
+    % Đường đời (Lifelines)
+    \draw[lifeline] (p1lbl.south) -- (0.8, -5.8);
+    \draw[lifeline] (p2.south) -- (4.8, -5.8);
+    \draw[lifeline] (p3.south) -- (9.4, -5.8);
+    \draw[lifeline] (p4.south) -- (13.8, -5.8);
+
+    % Thông điệp tuần tự (Messages)
+    \draw[msg] (0.8, -1.3) -- node[above, msglbl] {1: Nhập từ khóa / mã DOI/arXiv} (4.8, -1.3);
+    \draw[msg] (4.8, -1.9) -- node[above, msglbl] {2: Gửi truy vấn tìm kiếm đa nguồn} (9.4, -1.9);
+    
+    % Tự gọi: Lọc trùng Jaccard
+    \draw[selfmsg] (9.4, -2.4) -- ++(0.7, 0) -- ++(0, -0.4) -- ++(-0.7, 0);
+    \node[right, msglbl] at (10.1, -2.6) {3: Lọc trùng Jaccard ($J \ge 0{,}2$)};
+
+    \draw[msg] (9.4, -3.3) -- node[above, msglbl] {4: Băm SHA-256 \& kiểm tra trùng lặp CAS} (13.8, -3.3);
+    \draw[retmsg] (13.8, -3.9) -- node[above, msglbl] {5: Trả kết quả deduplication \& lưu blob} (9.4, -3.9);
+
+    \draw[msg] (9.4, -4.5) -- node[above, msglbl] {6: Ghi nhận bản ghi tài liệu vào CSDL} (13.8, -4.5);
+    \draw[retmsg] (9.4, -5.1) -- node[above, msglbl] {7: Danh sách bài báo kèm liên kết tải} (4.8, -5.1);
+    \draw[retmsg] (4.8, -5.6) -- node[above, msglbl] {8: Hiển thị tài liệu trong Thư viện cá nhân} (0.8, -5.6);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Tra cứu và tải tài liệu nghiên cứu}
 \label{fig:seq_kham_pha}
@@ -64,38 +70,53 @@ Chu trình hỏi đáp tăng cường truy xuất Hybrid RAG (kết hợp vector
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.90, transform shape,
-    stage_card/.style={draw=teal!80!black, fill=teal!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=3.4cm, minimum height=1.75cm},
-    stage_highlight/.style={draw=teal!90!black, fill=teal!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=3.4cm, minimum height=1.75cm},
-    stage_arrow/.style={-{Stealth[length=3.0mm]}, line width=1.05pt, draw=black!75},
-    arrow_lbl/.style={font=\fontsize{5.2pt}{6.2pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=teal!90!black}
+    scale=0.88, transform shape,
+    umlactor/.pic={
+        \draw[line width=0.9pt, fill=teal!10] (0, 0.35) circle (0.18);
+        \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
+        \draw[line width=0.9pt] (-0.28, 0.04) -- (0.28, 0.04);
+        \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
+        \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
+    },
+    participant/.style={draw=teal!85!black, fill=teal!8, rounded corners=2pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\fontsize{7.5pt}{9.2pt}\selectfont\bfseries, minimum width=2.6cm, minimum height=0.65cm},
+    msg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=3.0mm]}, dashed, line width=0.75pt, draw=teal!85!black},
+    selfmsg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    lifeline/.style={draw=black!45, dashed, line width=0.65pt},
+    msglbl/.style={font=\fontsize{6.8pt}{8.0pt}\selectfont, fill=white, inner sep=1.2pt}
 ]
-    % 4 Thẻ giai đoạn tuần tự
-    \node[stage_card] (s1) at (0, 0) {
-        \textbf{\textcolor{teal!90!black}{Giai đoạn 1: Truy vấn}}\\[2pt]
-        Học giả đặt câu hỏi\\
-        Khởi tạo luồng SSE
-    };
-    \node[stage_card] (s2) at (4.4, 0) {
-        \textbf{\textcolor{teal!90!black}{Giai đoạn 2: Hybrid RAG}}\\[2pt]
-        Quét vector HNSW\\
-        và từ vựng BM25 (RRF)
-    };
-    \node[stage_highlight] (s3) at (8.8, 0) {
-        \textbf{\textcolor{teal!95!black}{Giai đoạn 3: Cổng CRAG}}\\[2pt]
-        Đánh giá $\tau \ge 0{,}35$\\
-        Tái xếp hạng Cross-Encoder
-    };
-    \node[stage_card] (s4) at (13.2, 0) {
-        \textbf{\textcolor{teal!90!black}{Giai đoạn 4: Minh chứng}}\\[2pt]
-        Stream câu trả lời\\
-        Tô sáng BBox tọa độ $1\,\text{s}$
-    };
+    % 4 Đối tượng tham gia
+    \coordinate (p1) at (0.8, 0);
+    \pic at (p1) {umlactor};
+    \node[font=\fontsize{7.5pt}{9pt}\selectfont\bfseries, below=0.65cm of p1] (p1lbl) {Học giả};
 
-    % Đường kết nối luồng
-    \draw[stage_arrow] (s1) -- node[above=2pt, arrow_lbl] {Khởi tạo} (s2);
-    \draw[stage_arrow] (s2) -- node[above=2pt, arrow_lbl] {Ngữ cảnh} (s3);
-    \draw[stage_arrow] (s3) -- node[above=2pt, arrow_lbl] {Dẫn chứng} (s4);
+    \node[participant] (p2) at (4.8, -0.4) {Giao diện Đọc sâu\\(\texttt{PDF Canvas})};
+    \node[participant] (p3) at (9.4, -0.4) {Trợ lý AI \& RAG\\(\texttt{LangGraph})};
+    \node[participant] (p4) at (13.8, -0.4) {PostgreSQL 16\\(\texttt{pgvector / GIN})};
+
+    % Đường đời (Lifelines)
+    \draw[lifeline] (p1lbl.south) -- (0.8, -5.8);
+    \draw[lifeline] (p2.south) -- (4.8, -5.8);
+    \draw[lifeline] (p3.south) -- (9.4, -5.8);
+    \draw[lifeline] (p4.south) -- (13.8, -5.8);
+
+    % Thông điệp tuần tự
+    \draw[msg] (0.8, -1.3) -- node[above, msglbl] {1: Nhập câu hỏi nghiên cứu về tài liệu} (4.8, -1.3);
+    \draw[msg] (4.8, -1.9) -- node[above, msglbl] {2: Khởi tạo luồng hỏi đáp sự kiện SSE} (9.4, -1.9);
+    \draw[msg] (9.4, -2.5) -- node[above, msglbl] {3: Truy xuất Hybrid RRF (Vector HNSW + BM25)} (13.8, -2.5);
+    \draw[retmsg] (13.8, -3.1) -- node[above, msglbl] {4: Trả tập đoạn trích (Chunks) kèm Bounding Box} (9.4, -3.1);
+
+    % Tự gọi: Cổng CRAG
+    \draw[selfmsg] (9.4, -3.6) -- ++(0.7, 0) -- ++(0, -0.4) -- ++(-0.7, 0);
+    \node[right, msglbl] at (10.1, -3.8) {5: Cổng CRAG ($\tau \ge 0{,}35$) \& Reranker};
+
+    \draw[retmsg] (9.4, -4.5) -- node[above, msglbl] {6: Truyền luồng SSE (Stream tokens \& thẻ BBox)} (4.8, -4.5);
+
+    % Tự gọi: Vẽ BBox
+    \draw[selfmsg] (4.8, -4.9) -- ++(0.6, 0) -- ++(0, -0.35) -- ++(-0.6, 0);
+    \node[right, msglbl] at (5.4, -5.1) {7: Ánh xạ tọa độ chuẩn hóa $[0..1000]$};
+
+    \draw[retmsg] (4.8, -5.6) -- node[above, msglbl] {8: Hiển thị phản hồi \& tô sáng viền vàng ($\text{IoU} \ge 0{,}85$)} (0.8, -5.6);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Hỏi đáp đọc sâu và kiểm chứng trích dẫn tọa độ}
 \label{fig:seq_doc_sau}
@@ -111,38 +132,49 @@ Chu trình trích xuất 4 thực thể học thuật (\texttt{Paper}, \texttt{M
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.90, transform shape,
-    stage_card/.style={draw=purple!80!black, fill=purple!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=3.4cm, minimum height=1.75cm},
-    stage_highlight/.style={draw=purple!90!black, fill=purple!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=3.4cm, minimum height=1.75cm},
-    stage_arrow/.style={-{Stealth[length=3.0mm]}, line width=1.05pt, draw=black!75},
-    arrow_lbl/.style={font=\fontsize{5.2pt}{6.2pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=purple!90!black}
+    scale=0.88, transform shape,
+    umlactor/.pic={
+        \draw[line width=0.9pt, fill=purple!10] (0, 0.35) circle (0.18);
+        \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
+        \draw[line width=0.9pt] (-0.28, 0.04) -- (0.28, 0.04);
+        \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
+        \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
+    },
+    participant/.style={draw=purple!85!black, fill=purple!8, rounded corners=2pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\fontsize{7.5pt}{9.2pt}\selectfont\bfseries, minimum width=2.6cm, minimum height=0.65cm},
+    msg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=3.0mm]}, dashed, line width=0.75pt, draw=purple!85!black},
+    selfmsg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    lifeline/.style={draw=black!45, dashed, line width=0.65pt},
+    msglbl/.style={font=\fontsize{6.8pt}{8.0pt}\selectfont, fill=white, inner sep=1.2pt}
 ]
-    % 4 Thẻ giai đoạn tuần tự
-    \node[stage_card] (g1) at (0, 0) {
-        \textbf{\textcolor{purple!90!black}{Giai đoạn 1: Trích xuất}}\\[2pt]
-        LLM Structured Outputs\\
-        Bóc tách 4 loại thực thể
-    };
-    \node[stage_card] (g2) at (4.4, 0) {
-        \textbf{\textcolor{purple!90!black}{Giai đoạn 2: Khử trùng}}\\[2pt]
-        Tính tương đồng vector\\
-        Hợp nhất Cosine $\ge 0{,}90$
-    };
-    \node[stage_highlight] (g3) at (8.8, 0) {
-        \textbf{\textcolor{purple!95!black}{Giai đoạn 3: Phân cụm}}\\[2pt]
-        Thuật toán Louvain\\
-        Tóm tắt cụm tri thức
-    };
-    \node[stage_card] (g4) at (13.2, 0) {
-        \textbf{\textcolor{purple!90!black}{Giai đoạn 4: Truy vấn}}\\[2pt]
-        SQL CTE bắc cầu 2-hop\\
-        Khám phá trang Wiki
-    };
+    % 4 Đối tượng tham gia
+    \coordinate (p1) at (0.8, 0);
+    \pic at (p1) {umlactor};
+    \node[font=\fontsize{7.5pt}{9pt}\selectfont\bfseries, below=0.65cm of p1] (p1lbl) {Học giả};
 
-    % Đường kết nối luồng
-    \draw[stage_arrow] (g1) -- node[above=2pt, arrow_lbl] {Bóc tách} (g2);
-    \draw[stage_arrow] (g2) -- node[above=2pt, arrow_lbl] {Hợp nhất} (g3);
-    \draw[stage_arrow] (g3) -- node[above=2pt, arrow_lbl] {Phân cụm} (g4);
+    \node[participant] (p2) at (4.8, -0.4) {Giao diện Graph\\(\texttt{Academic Wiki})};
+    \node[participant] (p3) at (9.4, -0.4) {Dịch vụ GraphRAG\\(\texttt{packages/core})};
+    \node[participant] (p4) at (13.8, -0.4) {LLM API \& CSDL\\(\texttt{Gemini / PostgreSQL})};
+
+    % Đường đời (Lifelines)
+    \draw[lifeline] (p1lbl.south) -- (0.8, -5.8);
+    \draw[lifeline] (p2.south) -- (4.8, -5.8);
+    \draw[lifeline] (p3.south) -- (9.4, -5.8);
+    \draw[lifeline] (p4.south) -- (13.8, -5.8);
+
+    % Thông điệp tuần tự
+    \draw[msg] (0.8, -1.3) -- node[above, msglbl] {1: Yêu cầu phân tích Đồ thị tri thức cho thư mục} (4.8, -1.3);
+    \draw[msg] (4.8, -1.9) -- node[above, msglbl] {2: Kích hoạt đường ống trích xuất mạng tri thức} (9.4, -1.9);
+    \draw[msg] (9.4, -2.5) -- node[above, msglbl] {3: Bóc tách 4 thực thể \& quan hệ có cấu trúc} (13.8, -2.5);
+    \draw[retmsg] (13.8, -3.1) -- node[above, msglbl] {4: Trả danh sách thực thể và cạnh quan hệ} (9.4, -3.1);
+
+    % Tự gọi: Khử trùng lặp & Louvain
+    \draw[selfmsg] (9.4, -3.6) -- ++(0.7, 0) -- ++(0, -0.4) -- ++(-0.7, 0);
+    \node[right, msglbl] at (10.1, -3.8) {5: Khử trùng ($\text{Cosine} \ge 0{,}90$) \& Louvain};
+
+    \draw[msg] (9.4, -4.5) -- node[above, msglbl] {6: Ghi CSDL \& truy vấn SQL CTE bắc cầu 2-hop} (13.8, -4.5);
+    \draw[retmsg] (9.4, -5.1) -- node[above, msglbl] {7: Trả dữ liệu trực quan đồ thị và trang Wiki} (4.8, -5.1);
+    \draw[retmsg] (4.8, -5.6) -- node[above, msglbl] {8: Hiển thị Đồ thị tương tác và Academic Wiki} (0.8, -5.6);
 \end{tikzpicture}
 \caption{Biểu đồ tuần tự Use Case Khai phá Đồ thị tri thức và truy vấn liên tài liệu}
 \label{fig:seq_graphrag}
@@ -157,51 +189,62 @@ Cơ chế phối hợp khép kín giữa trình soạn thảo Monaco, hộp cát
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.90, transform shape,
-    stage_card/.style={draw=orange!80!black, fill=orange!5, rounded corners=5pt, line width=0.9pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.75cm},
-    stage_highlight/.style={draw=orange!90!black, fill=orange!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.75cm},
-    stage_final/.style={draw=teal!90!black, fill=teal!12, rounded corners=5pt, line width=1.1pt, align=center, inner sep=3.5pt, font=\linespread{0.95}\selectfont\fontsize{7.5pt}{9.2pt}\selectfont, minimum width=2.8cm, minimum height=1.75cm},
-    stage_arrow/.style={-{Stealth[length=3.0mm]}, line width=1.05pt, draw=black!75},
-    stage_loop/.style={-{Stealth[length=3.0mm]}, line width=1.05pt, dashed, draw=red!80!black},
-    arrow_lbl/.style={font=\fontsize{5.2pt}{6.2pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=orange!90!black}
+    scale=0.86, transform shape,
+    umlactor/.pic={
+        \draw[line width=0.9pt, fill=orange!10] (0, 0.35) circle (0.18);
+        \draw[line width=0.9pt] (0, 0.17) -- (0, -0.25);
+        \draw[line width=0.9pt] (-0.28, 0.04) -- (0.28, 0.04);
+        \draw[line width=0.9pt] (0, -0.25) -- (-0.24, -0.62);
+        \draw[line width=0.9pt] (0, -0.25) -- (0.24, -0.62);
+    },
+    participant/.style={draw=orange!85!black, fill=orange!8, rounded corners=2pt, line width=0.85pt, align=center, inner sep=3.5pt, font=\fontsize{7.5pt}{9.2pt}\selectfont\bfseries, minimum width=2.6cm, minimum height=0.65cm},
+    msg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    retmsg/.style={-{Stealth[length=3.0mm]}, dashed, line width=0.75pt, draw=orange!85!black},
+    selfmsg/.style={-{Stealth[length=3.0mm]}, line width=0.75pt, draw=black!85},
+    lifeline/.style={draw=black!45, dashed, line width=0.65pt},
+    msglbl/.style={font=\fontsize{6.8pt}{8.0pt}\selectfont, fill=white, inner sep=1.2pt},
+    altframe/.style={draw=black!70, line width=0.75pt},
+    altlbl/.style={font=\fontsize{6.5pt}{7.5pt}\selectfont\bfseries, fill=orange!12, draw=black!70, inner sep=1.8pt}
 ]
-    % 5 Thẻ giai đoạn tuần tự
-    \node[stage_card] (b1) at (0, 0) {
-        \textbf{\textcolor{orange!90!black}{Bước 1: Soạn thảo}}\\[2pt]
-        Trình biên soạn Monaco\\
-        Chuyển mã nguồn \LaTeX
-    };
-    \node[stage_card] (b2) at (3.5, 0) {
-        \textbf{\textcolor{orange!90!black}{Bước 2: Sandbox}}\\[2pt]
-        E2B MicroVM Sandbox\\
-        Chạy \texttt{xelatex} Linux
-    };
-    \node[stage_card] (b3) at (7.0, 0) {
-        \textbf{\textcolor{orange!90!black}{Bước 3: Bóc tách log}}\\[2pt]
-        Thu thập nhật ký .log\\
-        Nhận diện $\text{ExitCode} \ne 0$
-    };
-    \node[stage_highlight] (b4) at (10.5, 0) {
-        \textbf{\textcolor{orange!95!black}{Bước 4: Vá ReAct}}\\[2pt]
-        Tác nhân tự suy ngẫm\\
-        Sinh bản vá vi phẫu
-    };
-    \node[stage_final] (b5) at (14.0, 0) {
-        \textbf{\textcolor{teal!95!black}{Bước 5: PDF In}}\\[2pt]
-        Kết xuất thành công\\
-        Mã thoát $\text{ExitCode}=0$
-    };
+    % 4 Đối tượng tham gia
+    \coordinate (p1) at (0.8, 0);
+    \pic at (p1) {umlactor};
+    \node[font=\fontsize{7.5pt}{9pt}\selectfont\bfseries, below=0.65cm of p1] (p1lbl) {Học giả};
 
-    % Đường kết nối luồng
-    \draw[stage_arrow] (b1) -- node[above=2pt, arrow_lbl] {Biên dịch} (b2);
-    \draw[stage_arrow] (b2) -- node[above=2pt, arrow_lbl] {Báo lỗi} (b3);
-    \draw[stage_arrow] (b3) -- node[above=2pt, arrow_lbl] {Chuyển log} (b4);
-    \draw[stage_arrow] (b4) -- node[above=2pt, font=\fontsize{5.2pt}{6.2pt}\selectfont\bfseries, fill=white, inner sep=1.2pt, text=teal!90!black] {Xuất bản} (b5);
+    \node[participant] (p2) at (4.8, -0.4) {Trình soạn Monaco\\(\texttt{apps/web})};
+    \node[participant] (p3) at (9.4, -0.4) {Tác nhân ReAct\\(\texttt{LangGraph})};
+    \node[participant] (p4) at (13.8, -0.4) {E2B MicroVM\\(Linux Sandbox)};
 
-    % Vòng lặp tái biên dịch ReAct
-    \draw[stage_loop] (b4.south) to[out=-150, in=-30] node[midway, below=2pt, font=\fontsize{6.5pt}{7.8pt}\selectfont\bfseries, text=red!85!black, fill=white, inner sep=1.5pt] {Tái biên dịch kiểm thử trong MicroVM (Vòng lặp sửa lỗi $N \le 3$)} (b2.south);
+    % Đường đời (Lifelines)
+    \draw[lifeline] (p1lbl.south) -- (0.8, -7.6);
+    \draw[lifeline] (p2.south) -- (4.8, -7.6);
+    \draw[lifeline] (p3.south) -- (9.4, -7.6);
+    \draw[lifeline] (p4.south) -- (13.8, -7.6);
+
+    % Thông điệp khởi tạo biên dịch
+    \draw[msg] (0.8, -1.2) -- node[above, msglbl] {1: Nhấp nút ``Biên dịch bản thảo''} (4.8, -1.2);
+    \draw[msg] (4.8, -1.7) -- node[above, msglbl] {2: Chuyển toàn bộ mã nguồn \LaTeX} (9.4, -1.7);
+    \draw[msg] (9.4, -2.2) -- node[above, msglbl] {3: Nạp tệp \& thực thi lệnh \texttt{xelatex}} (13.8, -2.2);
+    \draw[retmsg] (13.8, -2.7) -- node[above, msglbl] {4: Trả kết quả thực thi (\texttt{ExitCode}, nhật ký .log)} (9.4, -2.7);
+
+    % Khung alt (Rẽ nhánh điều kiện)
+    \draw[altframe] (0.3, -3.1) rectangle (14.5, -7.4);
+    \node[altlbl, anchor=north west] at (0.3, -3.1) {\textbf{alt} [Nhánh 1: ExitCode = 0 -- Biên dịch thành công]};
+
+    \draw[retmsg] (9.4, -3.6) -- node[above, msglbl] {5a: Trả về tệp PDF bản in kết xuất thành công} (4.8, -3.6);
+    \draw[retmsg] (4.8, -4.1) -- node[above, msglbl] {6a: Hiển thị bản xem trước PDF trực tiếp} (0.8, -4.1);
+
+    % Vạch phân cách nhánh lỗi
+    \draw[altframe, dashed] (0.3, -4.5) -- (14.5, -4.5);
+    \node[font=\fontsize{6.5pt}{7.5pt}\selectfont\bfseries, text=red!80!black, anchor=north west] at (0.3, -4.5) {[Nhánh 2: ExitCode $\ne$ 0 -- Tự động phục hồi lỗi ReAct]};
+
+    \draw[selfmsg] (9.4, -5.0) -- ++(0.7, 0) -- ++(0, -0.35) -- ++(-0.7, 0);
+    \node[right, msglbl] at (10.1, -5.2) {5b: Bóc tách lỗi .log \& ReAct sinh bản vá};
+
+    \draw[msg] (9.4, -5.8) -- node[above, msglbl] {6b: Tái biên dịch kiểm thử trong MicroVM (vòng lặp $N \le 3$)} (13.8, -5.8);
+    \draw[retmsg] (9.4, -6.4) -- node[above, msglbl] {7b: Đồng bộ mã nguồn đã vá lỗi kèm giải trình vi phẫu} (4.8, -6.4);
+    \draw[retmsg] (4.8, -7.0) -- node[above, msglbl] {8b: Cập nhật trình soạn thảo Monaco \& hiển thị PDF đã sửa} (0.8, -7.0);
 \end{tikzpicture}
-\vspace{6pt}
 \caption{Biểu đồ tuần tự Use Case Biên soạn bản thảo và tự phục hồi lỗi LaTeX}
 \label{fig:seq_bien_soan}
 \end{figure}
