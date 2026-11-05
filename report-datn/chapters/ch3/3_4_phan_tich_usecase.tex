@@ -391,7 +391,7 @@ Luồng thay thế / Ngoại lệ &
 \subsubsection{Phân tích Use Case ``Biên soạn bản thảo và tự phục hồi lỗi LaTeX''}
 \label{subsubsec:uc_bien_soan}
 
-Use Case này hỗ trợ học giả soạn thảo trực tuyến bài báo khoa học trên Monaco Editor, biên dịch tài liệu sang định dạng PDF trong môi trường máy ảo E2B cách ly, và tự động sửa các lỗi cú pháp khi biên dịch thất bại thông qua tác nhân ReAct ($N_{\max} = 3$). Sơ đồ phân rã ca sử dụng con được thể hiện trong Hình~\ref{fig:uc_bien_soan_sub} và đặc tả chi tiết trong Bảng~\ref{tab:uc_bien_soan_spec}.
+Use Case này hỗ trợ học giả soạn thảo bài báo \LaTeX{} trên Monaco Editor, biên dịch sang PDF trong máy ảo E2B cách ly và tự sửa lỗi cú pháp qua tác nhân ReAct ($N_{\max} = 3$). Sơ đồ ca sử dụng con thể hiện trong Hình~\ref{fig:uc_bien_soan_sub} và đặc tả trong Bảng~\ref{tab:uc_bien_soan_spec}.
 
 \begin{figure}[H]
 \centering
@@ -462,17 +462,20 @@ Actor & Học giả (Scholar) \tabularnewline \hline
 Mục tiêu & Biên soạn mã nguồn bài báo khoa học LaTeX, biên dịch sang PDF và tự động sửa lỗi cú pháp thông qua AI Agent ReAct trong môi trường máy ảo cách ly. \tabularnewline \hline
 Điều kiện tiên quyết & Học giả đang mở dự án bản thảo trong phân hệ Soạn thảo. \tabularnewline \hline
 Điều kiện kết thúc & Bản thảo được biên dịch thành công; tệp PDF xem trước hiển thị trực tiếp trên giao diện. \tabularnewline \hline
-Luồng sự kiện chính & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\multirow{2}{=}{Luồng sự kiện chính} & 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Học giả chỉnh sửa mã nguồn LaTeX trên trình biên tập Monaco Editor.
     \item[--] Học giả nhấp nút ``Biên dịch bản thảo''.
     \item[--] Hệ thống chuyển mã nguồn vào hộp cát E2B MicroVM cách ly và kích hoạt lệnh biên dịch \texttt{xelatex}.
+\end{itemize} \tabularnewline \cline{2-2}
+& 
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Nếu biên dịch thành công ($\text{ExitCode} = 0$): Tệp PDF được trả về và hiển thị trên khung xem trước thời gian thực.
 \end{itemize} \tabularnewline \hline
 Luồng thay thế / Ngoại lệ & 
-\begin{itemize}[leftmargin=*, noitemsep, topsep=2pt]
+\begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
     \item[--] Nếu quá trình biên dịch thất bại ($\text{ExitCode} \ne 0$):
-    \begin{itemize}[leftmargin=*, noitemsep, topsep=1pt]
+    \begin{itemize}[leftmargin=*, noitemsep, topsep=0pt]
         \item[--] Hệ thống trích xuất tệp nhật ký lỗi \texttt{main.log}.
         \item[--] AI Agent theo cơ chế ReAct và Reflexion phân tích lỗi và tạo bản vá sửa đổi vi phẫu (Surgical Diff).
         \item[--] Hệ thống tự động áp dụng bản vá và kích hoạt tái biên dịch ($N_{\max} = 3$).

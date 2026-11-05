@@ -467,3 +467,22 @@ def test_no_forced_page_break_before_sec_3_6():
     first_lines = "\n".join(content.splitlines()[:5])
     assert "\\clearpage" not in first_lines, "Section 3.6 starts with forbidden \\clearpage"
     assert "\\newpage" not in first_lines, "Section 3.6 starts with forbidden \\newpage"
+
+
+def test_usecase_table_3_5_no_gap_page_51():
+    """Verify Page 51 has high text density (>= 30 lines) and contains Table 3-5 rows."""
+    pdf_path = REPORT_DIR / "main.pdf"
+    if not pdf_path.exists():
+        pytest.skip("main.pdf not yet compiled")
+    out = subprocess.check_output(["pdftotext", str(pdf_path), "-"]).decode("utf-8")
+    pages = out.split("\x0c")
+    p51 = None
+    for p in pages:
+        lines = [line.strip() for line in p.splitlines() if line.strip()]
+        if lines and lines[-1] == "51":
+            p51 = lines
+            break
+    assert p51 is not None, "Could not find Page 51 in PDF"
+    assert len(p51) >= 30, f"Page 51 has only {len(p51)} lines, indicating an empty gap!"
+    assert any("Bảng 3-5" in line for line in p51), "Page 51 missing Table 3-5"
+    assert any("Monaco Editor" in line for line in p51), "Page 51 missing Luồng sự kiện chính items"
