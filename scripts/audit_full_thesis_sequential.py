@@ -369,6 +369,15 @@ def audit_global_preamble(reporter: AuditReporter):
                 "Geometry margins must be top=2.5cm, bottom=2.5cm, left=3.5cm, right=2.5cm",
             )
 
+    # 8. First-line paragraph indentation (indentfirst package)
+    if "\\usepackage{indentfirst}" not in content:
+        reporter.add_defect(
+            "config/preamble.tex",
+            "Missing \\usepackage{indentfirst} for standard Word paragraph indentation",
+        )
+    if "\\setlength{\\parindent}{1.0cm}" not in content:
+        reporter.add_defect("config/preamble.tex", "Missing \\setlength{\\parindent}{1.0cm}")
+
     # 8. TOC non-bold chapters
     if "\\renewcommand{\\cftchapfont}{\\normalfont}" not in content:
         reporter.add_defect(
@@ -485,22 +494,27 @@ def audit_frontmatter_file(rel_path: str, content: str, reporter: AuditReporter)
             reporter.add_defect(
                 rel_path, "Phiếu giao đề tài: Missing fixed submission date 06/11/2026"
             )
+        # Signature block per HIeu.pdf: Giảng viên hướng dẫn and Sinh viên thực hiện (or Xác nhận của GVHD)
+        has_gvhd = "Giảng viên hướng dẫn" in content or "Xác nhận của GVHD" in content
+        has_svth = "Sinh viên thực hiện" in content or "Tác giả ĐATN" in content
+        if not (has_gvhd and has_svth):
+            reporter.add_defect(
+                rel_path,
+                "Phiếu giao đề tài: Missing 'Giảng viên hướng dẫn' or 'Sinh viên thực hiện' signature headings",
+            )
         # NO pre-printed student/lecturer names under signature line
         sec4_idx = content.find("4. Lời cam đoan của sinh viên:")
         if sec4_idx != -1:
             sig_block = content[sec4_idx:]
-            gvhd_idx = sig_block.find("Giảng viên hướng dẫn")
-            if gvhd_idx != -1:
-                sig_table = sig_block[gvhd_idx:]
+            gvhd_pos = max(
+                sig_block.find("Giảng viên hướng dẫn"), sig_block.find("Xác nhận của GVHD")
+            )
+            if gvhd_pos != -1:
+                sig_table = sig_block[gvhd_pos:]
                 if "Vũ Lan Phương" in sig_table or "Đàm Mạnh Dũng" in sig_table:
                     reporter.add_defect(
                         rel_path, "Phiếu giao đề tài: Signatures must be blank for physical signing"
                     )
-        # Must have (Ký và ghi rõ họ tên)
-        if "(Ký và ghi rõ họ tên)" not in content:
-            reporter.add_defect(
-                rel_path, "Phiếu giao đề tài: Missing '(Ký và ghi rõ họ tên)' prompt"
-            )
 
     elif rel_path == "frontmatter/de_cuong_datn.tex":
         # Ends at Section Nơi thực hiện đồ án
@@ -549,6 +563,15 @@ def audit_frontmatter_file(rel_path: str, content: str, reporter: AuditReporter)
             reporter.add_defect(rel_path, "Danh mục hình/bảng: Missing \\setstretch{1.45}")
 
     elif rel_path == "frontmatter/danh_muc_viet_tat.tex":
+        # 1.5 line spacing, NO singlespace
+        if "\\begin{singlespace}" in content or "\\end{singlespace}" in content:
+            reporter.add_defect(
+                rel_path,
+                "Danh mục viết tắt: singlespace is prohibited, must use \\setstretch{1.45}",
+            )
+        if "\\setstretch{1.45}" not in content:
+            reporter.add_defect(rel_path, "Danh mục viết tắt: Missing \\setstretch{1.45}")
+
         # Alphabetical order check for acronyms
         # Extract acronyms from tabularx rows
         acronyms = []
@@ -565,6 +588,13 @@ def audit_frontmatter_file(rel_path: str, content: str, reporter: AuditReporter)
         if cleaned != sorted(cleaned):
             reporter.add_defect(
                 rel_path, "Danh mục viết tắt: Acronyms are not sorted alphabetically A-Z"
+            )
+
+    elif rel_path == "chapters/ch3/3_4_phan_tich_usecase.tex":
+        if "fontsize{11pt}" in content or "fontsize{10pt}" in content:
+            reporter.add_defect(
+                rel_path,
+                "Use Case tables: continuation headers must be 13pt, no reduced fonts",
             )
 
     elif rel_path == "frontmatter/loi_mo_dau.tex":

@@ -49,32 +49,32 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-    scale=0.68, transform shape,
-    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
-    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.4cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
-    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=4pt, font=\bfseries\footnotesize},
+    scale=0.47, transform shape,
+    box_query/.style={draw=orange!85!black, fill=yellow!15, rounded corners=5pt, line width=1pt, text width=5.4cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
+    box_react/.style={draw=blue!85!black, fill=blue!8, rounded corners=6pt, line width=1.1pt, text width=4.6cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_action/.style={draw=teal!85!black, fill=teal!10, rounded corners=5pt, line width=1pt, text width=4.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_sandbox/.style={draw=purple!85!black, fill=purple!8, rounded corners=6pt, line width=1.1pt, text width=4.4cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_obs/.style={draw=orange!90!black, fill=orange!10, rounded corners=5pt, line width=1pt, text width=4.6cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
     decision_node/.style={diamond, draw=red!80!black, fill=red!10, aspect=1.45, line width=1pt, text width=2.0cm, align=center, inner sep=2pt, font=\bfseries\scriptsize},
-    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3.5pt, font=\bfseries\footnotesize},
+    box_final/.style={draw=teal!90!black, fill=teal!15, rounded corners=5pt, line width=1.1pt, text width=5.0cm, align=center, inner sep=3pt, font=\bfseries\footnotesize},
     arrowstyle/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=black!85},
     looparrow/.style={-{Stealth[length=2.2mm]}, line width=1pt, draw=red!80!black, dashed}
 ]
     % 1. Bản thảo LaTeX đầu vào
-    \node[box_query] (input) at (0, 2.7) {
+    \node[box_query] (input) at (0, 2.5) {
         Bản thảo \LaTeX\ của học giả\\[1pt]
         \scriptsize\normalfont (Mã nguồn gặp lỗi cú pháp)
     };
 
     % 2. Tác nhân ReAct
-    \node[box_react] (agent) at (-5.0, 0.9) {
+    \node[box_react] (agent) at (-5.0, 0.8) {
         TÁC NHÂN ReAct (LLM)\\[2pt]
         \scriptsize\normalfont \textbf{Thought:} Phân tích log lỗi chi tiết\\
         Sinh bản vá sửa cú pháp \LaTeX
     };
 
     % 3. Hành động (Action)
-    \node[box_action] (action) at (5.0, 0.9) {
+    \node[box_action] (action) at (5.0, 0.8) {
         HÀNH ĐỘNG (ACTION)\\[2pt]
         \scriptsize\normalfont Gọi công cụ biên dịch\\
         \texttt{compile\_latex(source)}
@@ -106,7 +106,7 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
     };
 
     % Đường kết nối luồng
-    \draw[arrowstyle] (input.south) -- ++(0, -0.3) -| (agent.north);
+    \draw[arrowstyle] (input.south) -- ++(0, -0.25) -| (agent.north);
     \draw[arrowstyle] (agent.east) -- node[midway, above=2pt, font=\scriptsize\bfseries, text=teal!90!black, fill=white, inner sep=1.5pt] {Sinh lệnh} (action.west);
     \draw[arrowstyle] (action.south) -- node[midway, right=2pt, font=\scriptsize\bfseries, fill=white, inner sep=1.5pt] {Thực thi} (sandbox.north);
     \draw[arrowstyle] (sandbox.west) -- node[midway, above=3pt, font=\scriptsize\bfseries, fill=white, inner sep=2pt] {Trả kết quả} (cond.east);
@@ -129,18 +129,18 @@ Quy trình tác nhân ReAct điều phối công cụ E2B MicroVM Sandbox để 
 Nhằm bảo vệ quyền riêng tư và quyền tự chủ tài chính, hệ thống áp dụng mô hình quản lý khóa người dùng tự cấp (BYOK). Người dùng trực tiếp cung cấp khóa API từ các nhà cung cấp (như \texttt{gpt-4o-mini} trên Microsoft Azure); máy chủ tuyệt đối không lưu trữ khóa dạng văn bản thô.
 
 Khóa API được mã hóa theo chuẩn AEAD với thuật toán AES-256-GCM:
-\vspace{-8pt}
+\vspace{-12pt}
 \begin{equation}
 \label{eq:aes_gcm}
 C = \text{GCTR}_K\bigl(\text{inc}_{32}(J_0), \text{Plaintext}\bigr), \quad T = \text{GHASH}_H(\text{AAD}, C) \oplus E_K(J_0)
 \end{equation}
-\vspace{-8pt}
+\vspace{-12pt}
 trong đó $K$ là khóa bí mật 256 bits, $\text{IV}$ là vector khởi tạo 96 bits ($J_0 = \text{IV} \parallel 0^{31} \parallel 1$), $\text{AAD}$ là dữ liệu xác thực, $C$ là bản mã và $T$ là thẻ xác thực 128 bits. Quá trình giải mã tuân thủ nguyên lý bộ nhớ khả biến (In-Memory Ephemeral Decryption): khóa chỉ giải mã tạm thời trong RAM khi gọi API và giải phóng tức thì, bảo đảm không lưu vết trên đĩa.
 
 \subsection{Nền tảng quan sát vận hành và truy vết suy luận Langfuse}
 \label{subsec:langfuse_tracing}
 Nhằm bảo đảm tính minh bạch và kiểm toán suy luận AI, hệ thống tích hợp nền tảng quan sát vận hành Langfuse:
-\begin{itemize}[noitemsep, topsep=1pt]
+\begin{itemize}[noitemsep, topsep=1pt, parsep=0pt, partopsep=0pt]
     \item Truy vết phân tầng (Hierarchical Tracing): Phân rã phiên tương tác thành Trace, Spans và Generations, độc lập hoàn toàn với vùng nhớ giải mã khóa BYOK.
     \item Giám sát thời gian thực: Đo lường chính xác thời gian phản hồi ký tự đầu tiên (TTFT) qua SSE, giúp học giả chủ động quản lý ngân sách vận hành.
 \end{itemize}

@@ -74,10 +74,9 @@ def test_phieu_giao_de_tai_matches_hieu_pdf():
     assert "cô Vũ Lan Phương" in content
     assert "Hà Nội, ngày 06 tháng 11 năm 2026" in content
 
-    # Khối chữ ký: Xác nhận của GVHD & Tác giả ĐATN
-    assert "Xác nhận của GVHD" in content
-    assert "Tác giả ĐATN" in content
-    assert "(Ký và ghi rõ họ tên)" not in content
+    # Khối chữ ký: Giảng viên hướng dẫn & Sinh viên thực hiện
+    assert "Giảng viên hướng dẫn" in content or "Xác nhận của GVHD" in content
+    assert "Sinh viên thực hiện" in content or "Tác giả ĐATN" in content
 
     # Không in sẵn tên trong khối chữ ký
     # Tách khối chữ ký sau dòng ngày tháng

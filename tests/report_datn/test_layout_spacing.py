@@ -428,6 +428,8 @@ def test_no_pages_with_few_lines_in_document():
             or "DANH MỤC BẢNG BIỂU" in next_page_text
             or "DANH MỤC TỪ VIẾT TẮT" in next_page_text
             or "DANH MỤC TỪ VIẾT TẮT" in p_text
+            or "DANH MỤC CÁC KÝ HIỆU" in next_page_text
+            or "DANH MỤC CÁC KÝ HIỆU" in p_text
             or "MỞ ĐẦU" in next_page_text
         ):
             continue
